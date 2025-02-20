@@ -1,0 +1,12 @@
+{
+  "Index": {
+    "title": "Bienvenue sur Automai",
+    "description": "Une plateforme SaaS multi-locataire pour l'automatisation des tests sur les environnements web, bureau et mobile"
+  },
+  "Navigation": {
+    "home": "Accueil",
+    "dashboard": "Tableau de bord",
+    "scripts": "Scripts",
+    "settings": "Paramètres"
+  }
+} 

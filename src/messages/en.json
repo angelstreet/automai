@@ -1,0 +1,12 @@
+{
+  "Index": {
+    "title": "Welcome to Automai",
+    "description": "A multi-tenant SaaS platform for test automation on web, desktop, and mobile environments"
+  },
+  "Navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "scripts": "Scripts",
+    "settings": "Settings"
+  }
+} 
