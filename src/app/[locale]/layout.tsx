@@ -1,35 +1,46 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { notFound } from 'next/navigation';
+import { locales } from '@/config';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Inter } from 'next/font/google';
+import { getMessages } from '@/i18n';
 
-const locales = ['en', 'fr'];
+const inter = Inter({ subsets: ['latin'] });
 
-export function generateStaticParams() {
-  return locales.map((locale) => ({ locale }));
-}
-
-export default async function LocaleLayout({
-  children,
-  params,
-}: {
+type Props = {
   children: React.ReactNode;
   params: { locale: string };
-}) {
-  // Access the locale parameter safely
-  const locale = params?.locale;
+};
 
-  // Validate the locale
-  if (!locales.includes(locale)) notFound();
+async function validateLocale(locale: string) {
+  // Simulate async validation
+  await Promise.resolve();
+  return locales.includes(locale as any) ? locale : null;
+}
 
-  let messages;
-  try {
-    messages = (await import(`../../messages/${locale}.json`)).default;
-  } catch (error) {
+export default async function LocaleLayout({ children, params }: Props) {
+  const validLocale = await validateLocale(params.locale);
+  
+  if (!validLocale) {
     notFound();
   }
 
+  const messages = await getMessages(validLocale);
+  
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
-      {children}
-    </NextIntlClientProvider>
+    <html lang={validLocale} suppressHydrationWarning>
+      <body className={inter.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <NextIntlClientProvider locale={validLocale} messages={messages}>
+            {children}
+          </NextIntlClientProvider>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

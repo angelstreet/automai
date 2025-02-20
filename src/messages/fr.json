@@ -1,12 +1,41 @@
 {
   "Index": {
-    "title": "Bienvenue sur Automai",
-    "description": "Une plateforme SaaS multi-locataire pour l'automatisation des tests sur les environnements web, bureau et mobile"
+    "title": "Automatisez votre flux de tests avec l'IA",
+    "description": "Rationalisez votre processus de test avec l'automatisation intelligente. Gagnez du temps, réduisez les erreurs et livrez de meilleurs logiciels plus rapidement.",
+    "getStarted": "Commencer",
+    "learnMore": "En savoir plus"
   },
   "Navigation": {
     "home": "Accueil",
     "dashboard": "Tableau de bord",
     "scripts": "Scripts",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "features": "Fonctionnalités",
+    "pricing": "Tarifs",
+    "docs": "Documentation",
+    "signIn": "Se connecter",
+    "signUp": "S'inscrire"
+  },
+  "Auth": {
+    "signIn": {
+      "title": "Se connecter",
+      "description": "Entrez votre email et mot de passe pour vous connecter",
+      "email": "Email",
+      "password": "Mot de passe",
+      "rememberMe": "Se souvenir de moi",
+      "forgotPassword": "Mot de passe oublié ?",
+      "noAccount": "Vous n'avez pas de compte ?",
+      "signUp": "S'inscrire"
+    },
+    "signUp": {
+      "title": "Créer un compte",
+      "description": "Entrez votre email ci-dessous pour créer votre compte",
+      "email": "Email",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "terms": "J'accepte les conditions d'utilisation",
+      "hasAccount": "Vous avez déjà un compte ?",
+      "signIn": "Se connecter"
+    }
   }
 } 

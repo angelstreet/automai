@@ -5,11 +5,14 @@ export const defaultLocale = 'en' as const;
 
 export const pathnames = {
   '/': '/',
+  '/login': '/login',
+  '/signup': '/signup',
+  '/features': '/features',
+  '/pricing': '/pricing',
+  '/docs': '/docs',
   '/dashboard': '/dashboard',
   '/scripts': '/scripts',
-  '/settings': '/settings',
-  '/login': '/login',
-  '/signup': '/signup'
+  '/settings': '/settings'
 } satisfies Pathnames<typeof locales>;
 
 // Use the default: `always`

@@ -1,12 +1,37 @@
 {
   "Index": {
-    "title": "Welcome to Automai",
-    "description": "A multi-tenant SaaS platform for test automation on web, desktop, and mobile environments"
+    "title": "Automate Your Testing Workflow with AI",
+    "description": "Streamline your testing process with intelligent automation. Save time, reduce errors, and deliver better software faster.",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More"
   },
   "Navigation": {
-    "home": "Home",
-    "dashboard": "Dashboard",
-    "scripts": "Scripts",
-    "settings": "Settings"
+    "features": "Features",
+    "pricing": "Pricing",
+    "docs": "Documentation",
+    "signIn": "Sign in",
+    "signUp": "Sign up"
+  },
+  "Auth": {
+    "signIn": {
+      "title": "Sign in",
+      "description": "Enter your email and password to sign in",
+      "email": "Email",
+      "password": "Password",
+      "rememberMe": "Remember me",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up"
+    },
+    "signUp": {
+      "title": "Create an account",
+      "description": "Enter your email below to create your account",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "terms": "I agree to the terms and conditions",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in"
+    }
   }
 } 
