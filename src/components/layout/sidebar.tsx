@@ -66,7 +66,7 @@ const menuItems: MenuItem[] = [
   {
     icon: Code2,
     label: 'Development',
-    roles: ['admin', 'developer', 'tester'],
+    roles: ['admin', 'developer'],
     submenu: [
       { icon: FileCode, label: 'Project', href: '/development/project' },
       { icon: TestTube, label: 'Use Case', href: '/development/use-case' },
@@ -94,7 +94,7 @@ const menuItems: MenuItem[] = [
   {
     icon: BarChart3,
     label: 'Reports',
-    roles: ['admin', 'tester', 'viewer'],
+    roles: ['admin', 'developer', 'tester', 'viewer'],
     submenu: [
       { icon: LineChart, label: 'Results', href: '/reports/results' },
       { icon: Gauge, label: 'Performance', href: '/reports/metrics' },
@@ -103,10 +103,11 @@ const menuItems: MenuItem[] = [
   {
     icon: Settings,
     label: 'Settings',
-    roles: ['admin', 'developer'],
+    roles: ['admin'],
     submenu: [
       { icon: Users, label: 'Team', href: '/settings/team' },
-      { icon: Plug, label: 'Integrations', href: '/settings/integrations' },
+      { icon: Plug, label: 'Configuration', href: '/settings/configuration' },
+      { icon: Plug, label: 'Integration', href: '/settings/integration' },
     ]
   },
 ];

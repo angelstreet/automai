@@ -1,105 +1,107 @@
-# Frontend Guidelines
+# AppFlow: User Journey (Plain Text)
 
-## 1. Overview
-### 1.1 Purpose
-This document defines the **frontend requirements** for the Automai SaaS platform, structured for a **Next.js (React) TypeScript implementation**. It includes a **detailed sidebar structure**, role-based UI behavior, global layout, and an outline of all necessary pages and components. Each section will have its own dedicated page description to ensure developers can build the app page by page and component by component.
+## 1. Landing Page
+- User visits the **landing page**.
+- Can view **product overview, pricing, and features**.
+- Option to **sign up or log in**.
 
-### 1.2 Scope
-- **Platform:** Web-based SaaS UI (Next.js + TypeScript + Tailwind CSS)
-- **Multi-Language Support:** i18n (Internationalization) with JSON-based translations
-- **Multi-Tenancy Support:** Role-based access and isolated workspaces
-- **Routing Strategy:** Next.js App Router with Layout Components
-- **Authentication:** JWT-based Auth (NextAuth.js or Custom)
-- **State Management:** React Context or Zustand
-- **Dynamic UI Based on Role Permissions**
-- **Collapsible Sidebar & Adaptive Layout**
-- **Role Switcher for Development:** Temporary role switcher for testing UI across different roles
+## 2. Authentication Flow
+- User clicks **Sign Up/Login**.
+- Enters **email/password or uses OAuth** (Google/GitHub).
+- Redirected to **dashboard** upon successful authentication.
+
+## 3. Dashboard Navigation
+- User lands on the **main dashboard**.
+- Sees **recent test executions, project statuses, and quick actions**.
+- Sidebar provides access to:
+  - **Test Development**
+  - **Execution & Scheduling**
+  - **Reports & Analytics**
+  - **Team Management**
+  - **Settings**
+
+## 4. Multi-Tenant Workspace Selection
+- If user belongs to **multiple tenants**, they must select a **workspace**.
+- Each tenant has **isolated data, users, and configurations**.
+- Workspace switcher is available in the **header**.
+- Example URL structure: `http://localhost:3000/en/tenant1/dashboard`
+
+## 5. Test Development
+- User navigates to **Test Development**.
+- Creates a **new test script**.
+- Uses the **built-in editor** for modifications.
+- Saves and commits changes.
+
+## 6. Execution & Scheduling
+- User selects **test cases** for execution.
+- Chooses **environment & device settings**.
+- Can run **immediately** or **schedule for later**.
+- Receives **execution logs and results**.
+
+## 7. Reports & Analytics
+- User navigates to **Reports & Analytics**.
+- Views **test results, pass/fail trends, error logs**.
+- Exports reports in **CSV/PDF format**.
+- Can set up **alerts & notifications**.
+
+## 8. Team & Collaboration
+- Admin manages **team roles & permissions**.
+- Assigns **developers/testers/viewers**.
+- Users receive **in-app and email notifications**.
+- Collaboration tools available: **comments, task assignments**.
+
+## 9. Settings & Integrations
+- User accesses **Settings**.
+- Configures **API integrations** (GitHub, Slack, CI/CD tools).
+- Updates **profile & preferences**.
+- Manages **billing & subscription** (if applicable).
+
+## 10. Subscription Plans & Limitations
+### 10.1 Trial Plan
+- **Users:** Individual developers exploring the platform.
+- **Limitations:**
+  - **1 Project Only**
+  - **Max 5 Use Cases**
+  - **1 Campaign**
+  - **Only 1 Web Environment Execution**
+  - **No Team Management**
+- **Upgrade Path:** Redirect to `/pricing` when limits are reached.
+
+### 10.2 Pro Plan
+- **Users:** Individual developers who need full platform access.
+- **Features:**
+  - **Unlimited Projects, Use Cases, and Campaigns**
+  - **Supports Multiple Environments (Web, Mobile, Cloud)**
+  - **No Team Management (Single User Only)**
+  - **Access to Advanced Reports & Integrations**
+- **Upgrade Path:** Users can upgrade from trial or sign up directly.
+
+### 10.3 Enterprise Plan
+- **Users:** Companies needing team collaboration.
+- **Features:**
+  - **Everything in Pro + Team Management**
+  - **Admin Panel & Billing Management**
+  - **Integration Support (Jira, Slack, CI/CD)**
+  - **Multi-Tenant Workspaces**
+- **Signup:** Users can upgrade from Pro or sign up directly.
+
+### 10.4 Billing & Payment Integration
+- **Stripe / Paddle Integration for Payments**
+- **API Endpoints for Subscription Management:**
+  - `POST /api/billing/checkout` → Initiates payment.
+  - `GET /api/billing/status` → Checks user plan.
+  - `POST /api/tenants` → Auto-create tenant on Pro/Enterprise signup.
+
+## 11. Navigation Logic
+- **Default route:** `/dashboard` after login.
+- **Public pages:** Landing page, pricing, documentation.
+- **Tenant-aware routing:** Users are redirected based on workspace selection.
+- **Direct menu access:** Allowed for authenticated users.
+
+## 12. Logout
+- User logs out from the app.
+- Redirected back to **landing page**.
 
 ---
 
-## 2. Global Layout Definition
-### 2.1 Layout Structure
-The global layout consists of:
-1. **Header (Top Navigation, Global Search, Quick Actions, User Profile)**
-2. **Collapsible Sidebar (Primary Navigation with Automai Branding)**
-3. **Main Content Area (Dynamically Updates Based on Page)**
-4. **Footer (Status Information, Legal Notices, Versioning)**
-5. **Temporary Role Switcher (For Development & Testing Only)**
-
-### 2.2 Page Routing Strategy (Next.js App Router)
-- **Public Pages**
-  - `/` → Landing Page (Marketing, Signup, Pricing, with Header & Footer)
-  - `/login` → Login Page (Auth & Password Recovery, with Header & Footer)
-  - `/signup` → Registration Page
-  - `/pricing` → Plan Details & Subscription Options
-- **Protected Pages (Requires Auth & Role-Based Access, No Header/Footer)**
-  - `/dashboard` → Main Dashboard
-  - `/projects` → List of Test Projects
-  - `/projects/[id]` → Project Details (Tests, Reports, Settings)
-  - `/scripts` → Test Script Editor & Management
-  - `/deployments` → Scheduled Test Executions
-  - `/devices` → Device & Environment Control
-  - `/reports` → Test Reports & Analytics
-  - `/team` → User Management & Collaboration
-  - `/settings` → Account Settings & Integrations
-- **Admin-Only Pages**
-  - `/admin` → Global Tenant Management
-  - `/admin/billing` → Subscription & Payment Management
-
----
-
-## 3. UI Layout
-### Header
-- **Height:** 48px
-- **Components:** 
-  - Tenant Logo (32px height max)
-  - Global Search Bar (Expandable)
-  - Right Section:
-    - Theme Toggle (Light/Dark Mode)
-    - User Profile Dropdown (Avatar, Settings, Logout)
-
-### Sidebar
-- **States:**
-  - **Expanded (240px width):** Full menu with icons + labels
-  - **Collapsed (64px width):** Icons only with tooltips
-  - **Hidden (0px width):** Used in full-screen workflows
-- **Navigation Structure:**
-  - Dashboard
-  - Test Development
-  - Execution & Scheduling
-  - Reports & Analytics
-  - Team Management
-  - Settings
-
-### Workspace Grid Structure
-```
-+----------------+------------------+
-|     Header     |  Theme/Profile  |
-+----------------+------------------+
-|   Breadcrumb (collapsible)       |
-+----------------+------------------+
-|                |                 |
-|    Sidebar     |   Main Content  |
-|                |                 |
-|                |                 |
-+----------------+------------------+
-```
-
----
-
-## 4. Role-Based UI & Multi-Tenancy Support
-- **Multi-Tenancy Support:** Role-based access and isolated workspaces per tenant.
-- **Dynamic UI Based on Role Permissions:**
-  - **Admin:** Full access, manages users, settings, and reports.
-  - **Developer:** Can edit test scripts, manage deployments, and view reports.
-  - **Tester:** Executes tests, views reports, but cannot modify configurations.
-  - **Viewer:** Read-only access to reports and dashboard.
-- **Temporary Role Switcher** (for testing different roles in development mode).
-
-## 5. Multi-Language Support (i18n)
-- Uses **next-translate** or **next-i18next**.
-- Default Language: **English**.
-- Supports additional languages via JSON translation files.
-- Language selection dropdown in settings.
-
----
+This document provides a **plain-text user journey** ensuring **AI-driven development alignment**, including **multi-tenancy support, navigation logic, and workspace selection.**

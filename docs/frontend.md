@@ -17,8 +17,25 @@ This document defines the **frontend requirements** for the Automai SaaS platfor
 
 ---
 
-## 2. Global Layout Definition
-### 2.1 Layout Structure
+## 2. Authentication Flow & Subscription-Based Access
+- User clicks **Sign Up/Login**.
+- Enters **email/password or uses OAuth** (Google/GitHub).
+- **Selects Plan:** Trial, Pro, or Enterprise.
+- Redirected to **dashboard** upon successful authentication.
+- **Feature Restrictions Based on Plan:**
+  - **Trial:** Can only create **1 project, 5 use cases, 1 campaign**.
+  - **Pro:** Unlimited projects but **no team management**.
+  - **Enterprise:** Full access with **team and admin features**.
+
+**API Calls:**
+- `POST /api/auth/signup` → Handles user authentication & plan selection.
+- `POST /api/billing/checkout` → Redirects Pro/Enterprise users to payment.
+- `GET /api/tenants` → Fetches assigned workspace.
+
+---
+
+## 3. Global Layout Definition
+### 3.1 Layout Structure
 The global layout consists of:
 1. **Header (Top Navigation, Global Search, Quick Actions, User Profile)**
 2. **Collapsible Sidebar (Primary Navigation with Automai Branding)**
@@ -26,80 +43,53 @@ The global layout consists of:
 4. **Footer (Status Information, Legal Notices, Versioning)**
 5. **Temporary Role Switcher (For Development & Testing Only)**
 
-### 2.2 Page Routing Strategy (Next.js App Router)
-- **Public Pages**
-  - `/` → Landing Page (Marketing, Signup, Pricing, with Header & Footer)
-  - `/login` → Login Page (Auth & Password Recovery, with Header & Footer)
-  - `/signup` → Registration Page
-  - `/pricing` → Plan Details & Subscription Options
-- **Protected Pages (Requires Auth & Role-Based Access, No Header/Footer)**
-  - `/dashboard` → Main Dashboard
-  - `/projects` → List of Test Projects
-  - `/projects/[id]` → Project Details (Tests, Reports, Settings)
-  - `/scripts` → Test Script Editor & Management
-  - `/deployments` → Scheduled Test Executions
-  - `/devices` → Device & Environment Control
-  - `/reports` → Test Reports & Analytics
-  - `/team` → User Management & Collaboration
-  - `/settings` → Account Settings & Integrations
-- **Admin-Only Pages**
-  - `/admin` → Global Tenant Management
-  - `/admin/billing` → Subscription & Payment Management
-
----
-
-## 3. Sidebar & Navigation Structure
-### Sidebar States
-- **Expanded (240px width):** Full menu with icons + labels
-- **Collapsed (64px width):** Icons only with tooltips
-- **Hidden (0px width):** Used in full-screen workflows
-
-### Sidebar Menu Structure
+### 3.2 Sidebar & Navigation Updates
+- Modify sidebar **dynamically based on user plan**:
+  - **Trial Users:** Hide Billing & Team Management.
+  - **Pro Users:** Hide Team Management.
+  - **Enterprise Users:** Full access.
+- **Sidebar Menu Structure**
 | **Section**               | **Subsections**                | **Access Roles** |
 |--------------------------|-------------------------------|-----------------|
 | **🏠 Dashboard**         | no subsections           | All Roles       |
-| **✍️  Development** | Project, Use Case, Campaign | Admin, Dev |
-| **🚀 Execution** | Schedule, Deployment Table | Admin, Dev, QA  |
-| **🖥️ Devices** | Web, Mobile | Admin, Dev, QA  |
-| **📊 Reports** | Results, Performance  | Admin, Dev, QA, Viewer |
-| **⚙️ Settings** | Team, Configuration,Integration  | Admin, Dev      |
+| **✍️  Development** | Project, Use Case, Campaign | Trial, Pro, Enterprise |
+| **🚀 Execution** | Schedule, Deployment Table | Pro, Enterprise  |
+| **📊 Reports** | Results, Performance  | Pro, Enterprise |
+| **⚙️ Settings** | Team, Configuration, Integration | Enterprise only  |
+| **💳 Billing** | Subscription Management | Pro, Enterprise |
 
 ---
 
-## 4. UI Layout
-### Header
-- **Height:** 48px
-- **Components:** 
-  - Tenant Logo (32px height max)
-  - Global Search Bar (Expandable)
-  - Right Section:
-    - Theme Toggle (Light/Dark Mode)
-    - User Profile Dropdown (Avatar, Settings, Logout)
+## 4. Subscription Plan UI & Billing
+### 4.1 UI Changes
+- **Signup Page** (`/signup`):
+  - Users select **Trial, Pro, or Enterprise** during signup.
+- **Dashboard Upgrade CTA:**
+  - **Trial Users** see an **Upgrade to Pro/Enterprise** button.
+- **Billing Page (`/admin/billing`)**
+  - **For Pro & Enterprise only**.
+  - Shows **current plan & upgrade options**.
 
-### Workspace Grid Structure
-```
-+----------------+------------------+
-|     Header     |  Theme/Profile  |
-+----------------+------------------+
-|   Breadcrumb (collapsible)       |
-+----------------+------------------+
-|                |                 |
-|    Sidebar     |   Main Content  |
-|                |                 |
-|                |                 |
-+----------------+------------------+
-```
+**API Calls:**
+- `GET /api/billing/status` → Fetch user subscription.
+- `POST /api/billing/checkout` → Redirects users to payment.
 
 ---
 
-## 5. Role-Based UI & Multi-Tenancy Support
-- **Multi-Tenancy Support:** Role-based access and isolated workspaces per tenant.
+## 5. Role-Based UI & Feature Restrictions
+- **Trial Users:** Limited to 1 project, 5 use cases, 1 campaign.
+- **Pro Users:** No team management.
+- **Enterprise Users:** Full access.
 - **Dynamic UI Based on Role Permissions:**
-  - **Admin:** Full access, manages users, settings, and reports.
-  - **Developer:** Can edit test scripts, manage deployments, and view reports.
-  - **Tester:** Executes tests, views reports, but cannot modify configurations.
-  - **Viewer:** Read-only access to reports and dashboard.
-- **Temporary Role Switcher** (for testing different roles in development mode).
+  - Hide **Team & Billing for Trial**.
+  - Show **Billing but hide Team for Pro**.
+  - Show **Everything for Enterprise**.
+
+**API Calls:**
+- `GET /api/users/me` → Fetch role & plan type.
+- `GET /api/tenants` → Check multi-tenant access.
+
+---
 
 ## 6. Multi-Language Support (i18n)
 - Uses **next-translate** or **next-i18next**.
@@ -109,4 +99,4 @@ The global layout consists of:
 
 ---
 
-This document ensures a **consistent frontend implementation** for Automai, integrating **UI/UX best practices, multi-tenancy support, role-based UI behavior, sidebar navigation, and page structure**.
+This document ensures a **consistent frontend implementation** for Automai, integrating **UI/UX best practices, multi-tenancy support, subscription-based feature restrictions, dynamic navigation, and API integration.**
