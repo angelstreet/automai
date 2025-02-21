@@ -57,13 +57,12 @@ The global layout consists of:
 ### Sidebar Menu Structure
 | **Section**               | **Subsections**                | **Access Roles** |
 |--------------------------|-------------------------------|-----------------|
-| **🏠 Dashboard**         | Overview, Analytics          | All Roles       |
-| **✍️ Test Development** | Projects, Test Cases, Suites | Admin, Dev, QA  |
-| **🚀 Execution & Scheduling** | Manual, Scheduled, CI/CD Runs | Admin, Dev, QA  |
-| **🖥️ Device Management** | Environments, Virtual Devices | Admin, Dev, QA  |
-| **📊 Reports & Analytics** | Test Results, Performance Metrics | Admin, QA, Viewer |
-| **🤝 Team Management**  | Users, Roles, Collaboration  | Admin, Dev, QA  |
-| **⚙️ Settings**        | Profile, API, Integrations   | Admin, Dev      |
+| **🏠 Dashboard**         | no subsections           | All Roles       |
+| **✍️  Development** | Project, Use Case, Campaign | Admin, Dev |
+| **🚀 Execution** | Schedule, Deployment Table | Admin, Dev, QA  |
+| **🖥️ Devices** | Web, Mobile | Admin, Dev, QA  |
+| **📊 Reports** | Results, Performance  | Admin, Dev, QA, Viewer |
+| **⚙️ Settings** | Team, Configuration,Integration  | Admin, Dev      |
 
 ---
 

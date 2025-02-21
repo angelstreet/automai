@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 type Props = {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 };
 
 async function validateLocale(locale: string) {
@@ -20,14 +20,14 @@ async function validateLocale(locale: string) {
 
 export default async function LocaleLayout(props: Props) {
   const { children, params } = props;
-  // Await params explicitly
-  const awaitedParams = await Promise.resolve(params);
-  if (!awaitedParams.locale) {
+  const resolvedParams = await params;
+  
+  if (!resolvedParams.locale) {
     notFound();
     return null;
   }
 
-  const validLocale = await validateLocale(awaitedParams.locale);
+  const validLocale = await validateLocale(resolvedParams.locale);
   
   if (!validLocale) {
     notFound();

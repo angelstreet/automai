@@ -1,70 +1,270 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
-  Bot,
-  Code,
-  Home,
   LayoutDashboard,
+  Code2,
+  Rocket,
+  Monitor,
+  BarChart3,
   Settings,
-  TestTube2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  Globe,
+  Smartphone,
+  FileCode,
+  TestTube,
+  Flag,
+  Calendar,
+  Table,
+  LineChart,
+  Gauge,
+  Users,
+  Plug,
 } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Role } from '@/components/ui/role-switcher';
 
 interface SidebarProps {
   expanded: boolean;
   onToggle: () => void;
 }
 
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-  { icon: Code, label: 'Scripts', href: '/scripts' },
-  { icon: TestTube2, label: 'Test Cases', href: '/test-cases' },
-  { icon: Bot, label: 'AI Assistant', href: '/ai-assistant' },
-  { icon: Settings, label: 'Settings', href: '/settings' },
+type SubMenuItem = {
+  icon: any;
+  label: string;
+  href: string;
+};
+
+type MenuItem = {
+  icon: any;
+  label: string;
+  href?: string;
+  roles: Role[];
+  tooltip?: string;
+  submenu?: SubMenuItem[];
+};
+
+const menuItems: MenuItem[] = [
+  {
+    icon: LayoutDashboard,
+    label: 'Dashboard',
+    href: '/dashboard',
+    roles: ['admin', 'developer', 'tester', 'viewer'],
+  },
+  {
+    icon: Code2,
+    label: 'Development',
+    roles: ['admin', 'developer', 'tester'],
+    submenu: [
+      { icon: FileCode, label: 'Project', href: '/development/project' },
+      { icon: TestTube, label: 'Use Case', href: '/development/use-case' },
+      { icon: Flag, label: 'Campaign', href: '/development/campaign' },
+    ]
+  },
+  {
+    icon: Rocket,
+    label: 'Execution',
+    roles: ['admin', 'developer', 'tester'],
+    submenu: [
+      { icon: Calendar, label: 'Schedule', href: '/execution/schedule' },
+      { icon: Table, label: 'Deployment Table', href: '/execution/deployment' },
+    ]
+  },
+  {
+    icon: Monitor,
+    label: 'Devices',
+    roles: ['admin', 'developer', 'tester'],
+    submenu: [
+      { icon: Globe, label: 'Web', href: '/devices/web' },
+      { icon: Smartphone, label: 'Mobile', href: '/devices/mobile' },
+    ]
+  },
+  {
+    icon: BarChart3,
+    label: 'Reports',
+    roles: ['admin', 'tester', 'viewer'],
+    submenu: [
+      { icon: LineChart, label: 'Results', href: '/reports/results' },
+      { icon: Gauge, label: 'Performance', href: '/reports/metrics' },
+    ]
+  },
+  {
+    icon: Settings,
+    label: 'Settings',
+    roles: ['admin', 'developer'],
+    submenu: [
+      { icon: Users, label: 'Team', href: '/settings/team' },
+      { icon: Plug, label: 'Integrations', href: '/settings/integrations' },
+    ]
+  },
 ];
+
+function MenuItem({ 
+  item, 
+  expanded, 
+  pathname, 
+  params,
+  currentRole,
+}: { 
+  item: MenuItem; 
+  expanded: boolean; 
+  pathname: string;
+  params: any;
+  currentRole: Role;
+}) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const hasSubmenu = item.submenu && item.submenu.length > 0;
+  const isActive = item.href ? pathname.includes(item.href) : 
+    item.submenu?.some(sub => pathname.includes(sub.href));
+
+  // Check if the current role has access to this menu item
+  if (!item.roles.includes(currentRole)) {
+    return null;
+  }
+
+  const handleClick = () => {
+    if (hasSubmenu) {
+      setIsOpen(!isOpen);
+    }
+  };
+
+  const content = (
+    <div className={cn(
+      'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground select-none',
+      isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+    )}>
+      <item.icon className="h-5 w-5 flex-shrink-0" />
+      {expanded && (
+        <span className="ml-3 flex-1">{item.label}</span>
+      )}
+    </div>
+  );
+
+  const mainElement = hasSubmenu ? (
+    <div 
+      onClick={handleClick}
+      className="cursor-pointer"
+    >
+      {content}
+    </div>
+  ) : item.href ? (
+    <Link 
+      href={`/${params.locale}/${params.tenant}${item.href}`}
+    >
+      {content}
+    </Link>
+  ) : content;
+
+  const wrappedContent = expanded ? (
+    mainElement
+  ) : (
+    <Tooltip delayDuration={0}>
+      <TooltipTrigger asChild>
+        {mainElement}
+      </TooltipTrigger>
+      <TooltipContent side="right" className="flex items-center select-none">
+        {item.label}
+      </TooltipContent>
+    </Tooltip>
+  );
+
+  return hasSubmenu ? (
+    <Collapsible 
+      open={isOpen && expanded}
+    >
+      {wrappedContent}
+      <CollapsibleContent 
+        className="pl-6 pt-1"
+      >
+        {expanded && item.submenu?.map((subItem) => (
+          <Link
+            key={subItem.href}
+            href={`/${params.locale}/${params.tenant}${subItem.href}`}
+            className={cn(
+              'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground select-none',
+              pathname.includes(subItem.href) ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+            )}
+          >
+            <subItem.icon className="h-4 w-4 flex-shrink-0" />
+            <span className="ml-3">{subItem.label}</span>
+          </Link>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  ) : wrappedContent;
+}
 
 export function Sidebar({ expanded, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const params = useParams();
+  const [currentRole, setCurrentRole] = React.useState<Role>('admin');
+
+  // Subscribe to role changes from the RoleSwitcher
+  React.useEffect(() => {
+    const handleRoleChange = (event: CustomEvent<Role>) => {
+      setCurrentRole(event.detail);
+    };
+
+    window.addEventListener('roleChange' as any, handleRoleChange);
+    return () => {
+      window.removeEventListener('roleChange' as any, handleRoleChange);
+    };
+  }, []);
 
   return (
     <div
       className={cn(
         'flex h-screen flex-col border-r bg-background transition-all duration-300',
-        expanded ? 'w-64' : 'w-16'
+        expanded ? 'w-60' : 'w-16'
       )}
     >
-      <div className="flex h-14 items-center border-b px-4">
-        <button
-          onClick={onToggle}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 w-9"
+      <div className="flex h-14 items-center justify-between border-b px-4">
+        <Link 
+          href={`/${params.locale}/${params.tenant}/dashboard`}
+          className="flex items-center"
         >
-          <Home className="h-5 w-5" />
-          {expanded && (
-            <span className="ml-2 text-sm font-semibold">Automai</span>
+          {expanded ? (
+            <span className="text-lg font-semibold">Automai</span>
+          ) : (
+            <span className="text-lg font-semibold">A</span>
           )}
-        </button>
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggle}
+          className="h-8 w-8"
+        >
+          {expanded ? (
+            <ChevronLeft className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </Button>
       </div>
       <nav className="flex-1 space-y-1 p-2">
-        {menuItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground',
-                isActive
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-muted-foreground'
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              {expanded && <span className="ml-3">{item.label}</span>}
-            </Link>
-          );
-        })}
+        {menuItems.map((item) => (
+          <MenuItem
+            key={item.label}
+            item={item}
+            expanded={expanded}
+            pathname={pathname}
+            params={params}
+            currentRole={currentRole}
+          />
+        ))}
       </nav>
     </div>
   );
