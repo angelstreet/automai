@@ -8,7 +8,7 @@ let page: Page;
 beforeAll(async () => {
   // Launch browser
   browser = await puppeteer.launch({
-    headless: true, // Use headless mode
+    headless: 'new', // Use new headless mode
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 
