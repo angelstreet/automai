@@ -1,4 +1,4 @@
-# AppFlow: User Journey (Plain Text)
+# AppFlow: User Journey (Updated for Test Execution & Reporting)
 
 ## 1. Landing Page
 - User visits the **landing page**.
@@ -26,23 +26,53 @@
 - Workspace switcher is available in the **header**.
 - Example URL structure: `http://localhost:3000/en/tenant1/dashboard`
 
-## 5. Test Development
-- User navigates to **Test Development**.
-- Creates a **new test script**.
-- Uses the **built-in editor** for modifications.
-- Saves and commits changes.
+## 5. Test Development (Project & Use Case Creation)
+### **Example Flow: Creating a Project & Test Case**
+#### **Step 1: Create a Project**
+- User navigates to **Test Development** → `Projects`.
+- Clicks **Create Project**.
+- Enters project details (Name, Description).
+- Saves and sees the project listed.
+
+#### **Step 2: Create a Test Case**
+- Inside a project, user clicks **Add Test Case**.
+- Defines:
+  - **Test Name**
+  - **Test Steps** (Navigate, Click, Type, Verify, etc.).
+- Saves and **version is tracked in Git**.
+- **Test Case Locking:** Prevents multiple users from editing the same test case.
+- **Test Case is stored in PostgreSQL and Git.**
 
 ## 6. Execution & Scheduling
-- User selects **test cases** for execution.
-- Chooses **environment & device settings**.
-- Can run **immediately** or **schedule for later**.
-- Receives **execution logs and results**.
+### **Example Flow: Running a Test (Manual & Deployed)**
+#### **Step 1: Run Test Manually (Local Execution)**
+- User navigates to **Execution → Deployment Table**.
+- Selects a test case and clicks **Run Locally**.
+- **Playwright executes the test in the browser.**
+- **Logs, screenshots, and video are captured.**
+- **An HTML report (`report.html`) is generated.**
+- **Report is uploaded to Supabase Storage.**
+- Execution record is stored in PostgreSQL with `reportUrl`.
+- User can open `report.html` from **Kibana or in-app Execution UI**.
+
+#### **Step 2: Run Test on Deployed VM (Cloud Execution - Planned)**
+- User selects **Deploy Test** instead of manual execution.
+- System provisions a **VM/Dockerized instance** for execution.
+- **Playwright runs in headless mode on the remote VM.**
+- **Logs, screenshots, and video are captured & stored in Supabase.**
+- **Execution logs sent to Kibana for real-time tracking.**
+- User accesses `report.html` via execution table.
 
 ## 7. Reports & Analytics
-- User navigates to **Reports & Analytics**.
-- Views **test results, pass/fail trends, error logs**.
-- Exports reports in **CSV/PDF format**.
-- Can set up **alerts & notifications**.
+### **Example Flow: Viewing Test Execution Reports**
+- User navigates to **Reports → Results**.
+- **Filters executions by Project, Test Case, Date, Status.**
+- Sees:
+  - **Test Execution Status (Running, Passed, Failed).**
+  - **Execution Time & Logs (via Kibana).**
+  - **View Report Button → Opens `report.html`.**
+  - **Screenshots & Video linked in the report.**
+- **Exports execution summary to CSV/PDF.**
 
 ## 8. Team & Collaboration
 - Admin manages **team roles & permissions**.
@@ -104,4 +134,5 @@
 
 ---
 
-This document provides a **plain-text user journey** ensuring **AI-driven development alignment**, including **multi-tenancy support, navigation logic, and workspace selection.**
+This document provides a **structured user journey**, integrating **project creation, test execution, reporting via `report.html`, local & cloud execution, Kibana insights, and Supabase storage.** 🚀
+

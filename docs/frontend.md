@@ -1,102 +1,116 @@
-# Frontend Guidelines
+# Frontend Architecture & UI Components
 
 ## 1. Overview
-### 1.1 Purpose
-This document defines the **frontend requirements** for the Automai SaaS platform, structured for a **Next.js (React) TypeScript implementation**. It includes a **detailed sidebar structure**, role-based UI behavior, global layout, and an outline of all necessary pages and components. Each section will have its own dedicated page description to ensure developers can build the app page by page and component by component.
+The frontend is built with **Next.js + TypeScript**, designed to handle:
+- **Project & Test Case Management** (CRUD Operations, Git Versioning).
+- **Test Execution UI** (Live Execution Table, Logs, Screenshots, Videos via Report HTML).
+- **Integration with Kibana for Deep Reporting.**
+- **Authentication & Multi-Tenant Support.**
 
-### 1.2 Scope
-- **Platform:** Web-based SaaS UI (Next.js + TypeScript + Tailwind CSS)
-- **Multi-Language Support:** i18n (Internationalization) with JSON-based translations
-- **Multi-Tenancy Support:** Role-based access and isolated workspaces
-- **Routing Strategy:** Next.js App Router with Layout Components
-- **Authentication:** JWT-based Auth (NextAuth.js or Custom)
-- **State Management:** React Context or Zustand
-- **Dynamic UI Based on Role Permissions**
-- **Collapsible Sidebar & Adaptive Layout**
-- **Role Switcher for Development:** Temporary role switcher for testing UI across different roles
+## 2. Tech Stack
+- **Framework:** Next.js (React) + TypeScript
+- **State Management:** Zustand / React Context
+- **Styling:** Tailwind CSS, shadcn-ui
+- **Authentication:** NextAuth.js (JWT, OAuth via Supabase)
+- **Storage:** Supabase Storage (For HTML Reports, Screenshots & Videos)
+- **API Integration:** Fetching execution logs & Kibana links
+- **Testing UI:** Playwright integration for test execution visualization
+
+## 3. UI Components & Pages
+
+### **3.1 Sidebar Navigation**
+| **Section**        | **Subsections**                 | **Access Roles** |
+|--------------------|--------------------------------|-----------------|
+| **🏠 Dashboard**    | Overview of project executions | All Roles       |
+| **✍️ Development** | Project, Use Case, Campaign   | Trial, Pro, Enterprise |
+| **🚀 Execution**   | Schedule, Deployment Table    | Pro, Enterprise  |
+| **📊 Reports**     | Results, Performance          | Pro, Enterprise |
+| **⚙️ Settings**    | Team, Configuration, Integration | Enterprise only  |
+| **💳 Billing**     | Subscription Management       | Pro, Enterprise |
+
+### **3.2 Project & Test Case Management**
+- **Page:** `/projects`
+- **Features:**
+  - Create, edit, and delete projects.
+  - View all test cases within a project.
+  - **Git versioning:** Track changes and revert if needed.
+  - **Locking system:** Prevents multiple users from editing the same test case.
+
+### **3.3 Execution UI (Live Test Execution Tracking)**
+- **Page:** `/executions`
+- **Features:**
+  - **Execution Table:**
+    - Lists all running & completed test executions.
+    - Displays status (Running, Success, Failed).
+    - **Links to execution report (report.html stored in Supabase).**
+    - Provides quick filters (project, user, date range, execution ID).
+  - **Integration with Kibana:**
+    - Direct links to logs stored in **Elasticsearch/Kibana**.
+    - Filters by execution timestamp.
+  - **Action Buttons:**
+    - **View Report:** Opens `report.html` from Supabase Storage.
+    - **Re-run Test (Optional):** Trigger a retry for failed test cases.
+
+### **3.4 Reports & Analytics**
+- **Page:** `/reports`
+- **Features:**
+  - **Filters for test execution history** (status, project, user, timeframe).
+  - **Performance metrics:** Average execution time, pass/fail rate.
+  - **Visualizations (Planned):** Graphs & charts for execution insights.
+  - **Export to CSV/PDF.**
+  - **Direct Open Report Button:**
+    - Links to `report.html` for each test execution.
+
+## 4. API Calls & Data Fetching
+### **Fetching Executions**
+```javascript
+const fetchExecutions = async () => {
+  const res = await fetch("/api/executions");
+  return await res.json();
+};
+```
+
+### **Fetching Report HTML Link for an Execution**
+```javascript
+const fetchExecutionDetails = async (executionId) => {
+  const res = await fetch(`/api/executions/${executionId}`);
+  return await res.json();
+};
+```
+
+### **Displaying Execution Table with Report Link**
+```jsx
+<Table>
+  <thead>
+    <tr>
+      <th>Execution ID</th>
+      <th>Status</th>
+      <th>Duration</th>
+      <th>Report</th>
+    </tr>
+  </thead>
+  <tbody>
+    {executions.map(exec => (
+      <tr key={exec.id}>
+        <td>{exec.id}</td>
+        <td>{exec.status}</td>
+        <td>{exec.duration} sec</td>
+        <td>
+          <a href={exec.reportUrl} target="_blank">View Report</a>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</Table>
+```
+
+## 5. Future Enhancements
+- **CI/CD Integration (Trigger test runs from GitHub/GitLab).**
+- **Real-time execution updates (WebSockets for instant status updates).**
+- **Dark mode UI & better analytics visualizations.**
+- **Slack/MS Teams alerting for failed test cases.**
 
 ---
+This frontend update ensures **seamless test management, execution tracking, and integration with Kibana & Supabase Storage.** 🚀
 
-## 2. Authentication Flow & Subscription-Based Access
-- User clicks **Sign Up/Login**.
-- Enters **email/password or uses OAuth** (Google/GitHub).
-- **Selects Plan:** Trial, Pro, or Enterprise.
-- Redirected to **dashboard** upon successful authentication.
-- **Feature Restrictions Based on Plan:**
-  - **Trial:** Can only create **1 project, 5 use cases, 1 campaign**.
-  - **Pro:** Unlimited projects but **no team management**.
-  - **Enterprise:** Full access with **team and admin features**.
-
-**API Calls:**
-- `POST /api/auth/signup` → Handles user authentication & plan selection.
-- `POST /api/billing/checkout` → Redirects Pro/Enterprise users to payment.
-- `GET /api/tenants` → Fetches assigned workspace.
-
----
-
-## 3. Global Layout Definition
-### 3.1 Layout Structure
-The global layout consists of:
-1. **Header (Top Navigation, Global Search, Quick Actions, User Profile)**
-2. **Collapsible Sidebar (Primary Navigation with Automai Branding)**
-3. **Main Content Area (Dynamically Updates Based on Page)**
-4. **Footer (Status Information, Legal Notices, Versioning)**
-5. **Temporary Role Switcher (For Development & Testing Only)**
-
-### 3.2 Sidebar & Navigation Updates
-- Modify sidebar **dynamically based on user plan**:
-  - **Trial Users:** Hide Billing & Team Management.
-  - **Pro Users:** Hide Team Management.
-  - **Enterprise Users:** Full access.
-- **Sidebar Menu Structure**
-| **Section**               | **Subsections**                | **Access Roles** |
-|--------------------------|-------------------------------|-----------------|
-| **🏠 Dashboard**         | no subsections           | All Roles       |
-| **✍️  Development** | Project, Use Case, Campaign | Trial, Pro, Enterprise |
-| **🚀 Execution** | Schedule, Deployment Table | Pro, Enterprise  |
-| **📊 Reports** | Results, Performance  | Pro, Enterprise |
-| **⚙️ Settings** | Team, Configuration, Integration | Enterprise only  |
-| **💳 Billing** | Subscription Management | Pro, Enterprise |
-
----
-
-## 4. Subscription Plan UI & Billing
-### 4.1 UI Changes
-- **Signup Page** (`/signup`):
-  - Users select **Trial, Pro, or Enterprise** during signup.
-- **Dashboard Upgrade CTA:**
-  - **Trial Users** see an **Upgrade to Pro/Enterprise** button.
-- **Billing Page (`/admin/billing`)**
-  - **For Pro & Enterprise only**.
-  - Shows **current plan & upgrade options**.
-
-**API Calls:**
-- `GET /api/billing/status` → Fetch user subscription.
-- `POST /api/billing/checkout` → Redirects users to payment.
-
----
-
-## 5. Role-Based UI & Feature Restrictions
-- **Trial Users:** Limited to 1 project, 5 use cases, 1 campaign.
-- **Pro Users:** No team management.
-- **Enterprise Users:** Full access.
-- **Dynamic UI Based on Role Permissions:**
-  - Hide **Team & Billing for Trial**.
-  - Show **Billing but hide Team for Pro**.
-  - Show **Everything for Enterprise**.
-
-**API Calls:**
-- `GET /api/users/me` → Fetch role & plan type.
-- `GET /api/tenants` → Check multi-tenant access.
-
----
-
-## 6. Multi-Language Support (i18n)
-- Uses **next-translate** or **next-i18next**.
-- Default Language: **English**.
-- Supports additional languages via JSON translation files.
-- Language selection dropdown in settings.
-
----
-
-This document ensures a **consistent frontend implementation** for Automai, integrating **UI/UX best practices, multi-tenancy support, subscription-based feature restrictions, dynamic navigation, and API integration.**
+  
