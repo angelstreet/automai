@@ -1,116 +1,57 @@
-# Frontend Architecture & UI Components
+# Product Requirements Document (PRD)
 
 ## 1. Overview
-The frontend is built with **Next.js + TypeScript**, designed to handle:
-- **Project & Test Case Management** (CRUD Operations, Git Versioning).
-- **Test Execution UI** (Live Execution Table, Logs, Screenshots, Videos via Report HTML).
-- **Integration with Kibana for Deep Reporting.**
-- **Authentication & Multi-Tenant Support.**
+**Project Name:** Automai SaaS Platform  
+**Purpose:** A multi-tenant SaaS platform for test automation across web, desktop, and mobile environments.  
+**Primary Users:** Developers, Testers, QA Managers, Product Managers  
 
-## 2. Tech Stack
-- **Framework:** Next.js (React) + TypeScript
-- **State Management:** Zustand / React Context
-- **Styling:** Tailwind CSS, shadcn-ui
-- **Authentication:** NextAuth.js (JWT, OAuth via Supabase)
-- **Storage:** Supabase Storage (For HTML Reports, Screenshots & Videos)
-- **API Integration:** Fetching execution logs & Kibana links
-- **Testing UI:** Playwright integration for test execution visualization
+## 2. Core Features
+- **Test Script Development**: Web-based script editor with Git-based versioning.
+- **Test Execution & Deployment**: Manual & scheduled test execution with CI/CD integration.
+- **Device & Environment Control**: Manage cloud and physical test environments.
+- **Reports & Analytics**: Graphical reports with pass/fail trends and error logs.
+- **Multi-Tenancy**: Each customer gets an isolated workspace.
+- **Role-Based Access Control**: Admin, Developer, Tester, Viewer.
+- **Integrations**: GitHub, Jenkins, Grafana, Slack.
+- **Unified Test Case Representation**: Test cases for Web, Mobile, and Desktop are stored in the same structure but visually differentiated by icons.
+- **Exportable Tests**: Users can download and run scripts externally in an IDE-friendly format.
+- **Vision AI Integration**: Omniparser for UI detection-based automation.
+- **Test Case Versioning System**: Full Git-like version control inside the SaaS to track changes in scripts over time.
 
-## 3. UI Components & Pages
+## 3. User Flow
+1. **Login/Signup** → User registers or logs in.
+2. **Dashboard** → Overview of test execution and project status.
+3. **Test Development** → Users create/edit test scripts (Playwright, Appium, Pywinauto, Vision AI).
+4. **Execution & Scheduling** → Tests are run manually or scheduled.
+5. **Reports & Analytics** → Users analyze test results and generate reports.
+6. **Team & Collaboration** → Admins manage users and permissions.
+7. **Export & IDE Compatibility** → Users can export test cases in script format (Python/JS) to run externally.
+8. **Versioning & Rollback** → Users can track changes in scripts, compare versions, and roll back if needed.
 
-### **3.1 Sidebar Navigation**
-| **Section**        | **Subsections**                 | **Access Roles** |
-|--------------------|--------------------------------|-----------------|
-| **🏠 Dashboard**    | Overview of project executions | All Roles       |
-| **✍️ Development** | Project, Use Case, Campaign   | Trial, Pro, Enterprise |
-| **🚀 Execution**   | Schedule, Deployment Table    | Pro, Enterprise  |
-| **📊 Reports**     | Results, Performance          | Pro, Enterprise |
-| **⚙️ Settings**    | Team, Configuration, Integration | Enterprise only  |
-| **💳 Billing**     | Subscription Management       | Pro, Enterprise |
+## 4. Tech Stack & APIs
+- **Frontend:** Next.js, TypeScript, Tailwind CSS, Zustand.
+- **Backend:** Node.js, FastAPI, PostgreSQL, Supabase, Prisma.
+- **Auth:** NextAuth.js (JWT + OAuth support).
+- **Storage:** Supabase or AWS S3 for test scripts, reports, and execution logs.
+- **Integrations:** Webhooks, GitHub API, Slack API, Appium, Playwright, Pywinauto.
+- **Vision AI:** Omniparser for visual UI automation.
+- **Version Control:** Internal Git-based system for test case versioning.
 
-### **3.2 Project & Test Case Management**
-- **Page:** `/projects`
-- **Features:**
-  - Create, edit, and delete projects.
-  - View all test cases within a project.
-  - **Git versioning:** Track changes and revert if needed.
-  - **Locking system:** Prevents multiple users from editing the same test case.
+## 5. Scope Definition
+### In-Scope
+✅ Multi-Tenant SaaS with role-based access  
+✅ Web-based script development and execution  
+✅ CI/CD and API integrations  
+✅ Dashboard, Reports, and Analytics  
+✅ Authentication and security (RBAC)  
+✅ On-premise deployment  
+✅ Multi-platform automation (Web, Mobile, Desktop)  
+✅ Unified storage for test cases with icon-based differentiation  
+✅ Exportable test scripts for external IDE execution  
+✅ AI-driven Vision-based UI automation  
+✅ **Test Case Versioning & Rollback System**  
 
-### **3.3 Execution UI (Live Test Execution Tracking)**
-- **Page:** `/executions`
-- **Features:**
-  - **Execution Table:**
-    - Lists all running & completed test executions.
-    - Displays status (Running, Success, Failed).
-    - **Links to execution report (report.html stored in Supabase).**
-    - Provides quick filters (project, user, date range, execution ID).
-  - **Integration with Kibana:**
-    - Direct links to logs stored in **Elasticsearch/Kibana**.
-    - Filters by execution timestamp.
-  - **Action Buttons:**
-    - **View Report:** Opens `report.html` from Supabase Storage.
-    - **Re-run Test (Optional):** Trigger a retry for failed test cases.
+### Out-of-Scope
+❌ Native Mobile App Development  
+❌ Full AI-driven test generation (Future Enhancement)  
 
-### **3.4 Reports & Analytics**
-- **Page:** `/reports`
-- **Features:**
-  - **Filters for test execution history** (status, project, user, timeframe).
-  - **Performance metrics:** Average execution time, pass/fail rate.
-  - **Visualizations (Planned):** Graphs & charts for execution insights.
-  - **Export to CSV/PDF.**
-  - **Direct Open Report Button:**
-    - Links to `report.html` for each test execution.
-
-## 4. API Calls & Data Fetching
-### **Fetching Executions**
-```javascript
-const fetchExecutions = async () => {
-  const res = await fetch("/api/executions");
-  return await res.json();
-};
-```
-
-### **Fetching Report HTML Link for an Execution**
-```javascript
-const fetchExecutionDetails = async (executionId) => {
-  const res = await fetch(`/api/executions/${executionId}`);
-  return await res.json();
-};
-```
-
-### **Displaying Execution Table with Report Link**
-```jsx
-<Table>
-  <thead>
-    <tr>
-      <th>Execution ID</th>
-      <th>Status</th>
-      <th>Duration</th>
-      <th>Report</th>
-    </tr>
-  </thead>
-  <tbody>
-    {executions.map(exec => (
-      <tr key={exec.id}>
-        <td>{exec.id}</td>
-        <td>{exec.status}</td>
-        <td>{exec.duration} sec</td>
-        <td>
-          <a href={exec.reportUrl} target="_blank">View Report</a>
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</Table>
-```
-
-## 5. Future Enhancements
-- **CI/CD Integration (Trigger test runs from GitHub/GitLab).**
-- **Real-time execution updates (WebSockets for instant status updates).**
-- **Dark mode UI & better analytics visualizations.**
-- **Slack/MS Teams alerting for failed test cases.**
-
----
-This frontend update ensures **seamless test management, execution tracking, and integration with Kibana & Supabase Storage.** 🚀
-
-  

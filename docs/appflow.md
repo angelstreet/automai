@@ -1,4 +1,4 @@
-# AppFlow: User Journey (Updated for Test Execution & Reporting)
+# AppFlow: User Journey (Updated for Multi-Platform Use Cases & Test Execution)
 
 ## 1. Landing Page
 - User visits the **landing page**.
@@ -27,28 +27,30 @@
 - Example URL structure: `http://localhost:3000/en/tenant1/dashboard`
 
 ## 5. Test Development (Project & Use Case Creation)
-### **Example Flow: Creating a Project & Test Case**
+### **Example Flow: Creating a Project & Use Case**
 #### **Step 1: Create a Project**
 - User navigates to **Test Development** → `Projects`.
 - Clicks **Create Project**.
 - Enters project details (Name, Description).
 - Saves and sees the project listed.
 
-#### **Step 2: Create a Test Case**
-- Inside a project, user clicks **Add Test Case**.
+#### **Step 2: Create a Use Case**
+- Inside a project, user clicks **Add Use Case**.
 - Defines:
-  - **Test Name**
-  - **Test Steps** (Navigate, Click, Type, Verify, etc.).
+  - **Use Case Name**
+  - **Platform Type (Web, Mobile, Desktop, Vision AI)**
+  - **Test Steps** (Navigate, Click, Type, Verify, AI Detection, etc.).
 - Saves and **version is tracked in Git**.
-- **Test Case Locking:** Prevents multiple users from editing the same test case.
-- **Test Case is stored in PostgreSQL and Git.**
+- **Use Case Locking:** Prevents multiple users from editing the same test case.
+- **Stored in PostgreSQL and Git.**
+- **Icon Differentiation:** Each use case is visually categorized by platform (Web 🌐, Mobile 📱, Desktop 💻, Vision AI 👁️).
 
 ## 6. Execution & Scheduling
 ### **Example Flow: Running a Test (Manual & Deployed)**
 #### **Step 1: Run Test Manually (Local Execution)**
 - User navigates to **Execution → Deployment Table**.
-- Selects a test case and clicks **Run Locally**.
-- **Playwright executes the test in the browser.**
+- Selects a use case and clicks **Run Locally**.
+- **Playwright (Web), Appium (Mobile), or Pywinauto (Desktop) executes the test.**
 - **Logs, screenshots, and video are captured.**
 - **An HTML report (`report.html`) is generated.**
 - **Report is uploaded to Supabase Storage.**
@@ -58,7 +60,7 @@
 #### **Step 2: Run Test on Deployed VM (Cloud Execution - Planned)**
 - User selects **Deploy Test** instead of manual execution.
 - System provisions a **VM/Dockerized instance** for execution.
-- **Playwright runs in headless mode on the remote VM.**
+- **Playwright, Appium, or Pywinauto runs in headless mode on the remote VM.**
 - **Logs, screenshots, and video are captured & stored in Supabase.**
 - **Execution logs sent to Kibana for real-time tracking.**
 - User accesses `report.html` via execution table.
@@ -66,7 +68,7 @@
 ## 7. Reports & Analytics
 ### **Example Flow: Viewing Test Execution Reports**
 - User navigates to **Reports → Results**.
-- **Filters executions by Project, Test Case, Date, Status.**
+- **Filters executions by Project, Use Case, Platform, Date, Status.**
 - Sees:
   - **Test Execution Status (Running, Passed, Failed).**
   - **Execution Time & Logs (via Kibana).**
@@ -101,7 +103,7 @@
 - **Users:** Individual developers who need full platform access.
 - **Features:**
   - **Unlimited Projects, Use Cases, and Campaigns**
-  - **Supports Multiple Environments (Web, Mobile, Cloud)**
+  - **Supports Multiple Environments (Web, Mobile, Cloud, Desktop, Vision AI)**
   - **No Team Management (Single User Only)**
   - **Access to Advanced Reports & Integrations**
 - **Upgrade Path:** Users can upgrade from trial or sign up directly.
@@ -134,5 +136,5 @@
 
 ---
 
-This document provides a **structured user journey**, integrating **project creation, test execution, reporting via `report.html`, local & cloud execution, Kibana insights, and Supabase storage.** 🚀
+This document provides a **structured user journey**, integrating **multi-platform test case creation, execution, and reporting via `report.html`, local & cloud execution, Kibana insights, and Supabase storage.** 🚀
 
