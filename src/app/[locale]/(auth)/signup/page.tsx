@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
+
 import {
   Card,
   CardContent,
@@ -13,13 +15,9 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SiteHeader } from '@/components/layout/site-header';
-import { useTranslations } from 'next-intl';
 
-export default function SignUpPage({
-  params: { locale }
-}: {
-  params: { locale: string }
-}) {
+export default function SignUpPage() {
+  const { locale } = useParams();
   const t = useTranslations('Auth');
 
   return (
@@ -103,7 +101,7 @@ export default function SignUpPage({
               </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
-              <Button className="w-full">{t('signupButton')}</Button>
+              <button className="w-full btn btn-primary">{t('signupButton')}</button>
               <div className="text-sm text-muted-foreground text-center">
                 {t('haveAccount')}{' '}
                 <Link 

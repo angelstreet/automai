@@ -48,26 +48,7 @@ The global layout consists of:
 
 ---
 
-## 3. Sidebar & Navigation Structure
-### Sidebar States
-- **Expanded (240px width):** Full menu with icons + labels
-- **Collapsed (64px width):** Icons only with tooltips
-- **Hidden (0px width):** Used in full-screen workflows
-
-### Sidebar Menu Structure
-| **Section**               | **Subsections**                | **Access Roles** |
-|--------------------------|-------------------------------|-----------------|
-| **🏠 Dashboard**         | Overview, Analytics          | All Roles       |
-| **✍️ Test Development** | Projects, Test Cases, Suites | Admin, Dev, QA  |
-| **🚀 Execution & Scheduling** | Manual, Scheduled, CI/CD Runs | Admin, Dev, QA  |
-| **🖥️ Device Management** | Environments, Virtual Devices | Admin, Dev, QA  |
-| **📊 Reports & Analytics** | Test Results, Performance Metrics | Admin, QA, Viewer |
-| **🤝 Team Management**  | Users, Roles, Collaboration  | Admin, Dev, QA  |
-| **⚙️ Settings**        | Profile, API, Integrations   | Admin, Dev      |
-
----
-
-## 4. UI Layout
+## 3. UI Layout
 ### Header
 - **Height:** 48px
 - **Components:** 
@@ -76,6 +57,19 @@ The global layout consists of:
   - Right Section:
     - Theme Toggle (Light/Dark Mode)
     - User Profile Dropdown (Avatar, Settings, Logout)
+
+### Sidebar
+- **States:**
+  - **Expanded (240px width):** Full menu with icons + labels
+  - **Collapsed (64px width):** Icons only with tooltips
+  - **Hidden (0px width):** Used in full-screen workflows
+- **Navigation Structure:**
+  - Dashboard
+  - Test Development
+  - Execution & Scheduling
+  - Reports & Analytics
+  - Team Management
+  - Settings
 
 ### Workspace Grid Structure
 ```
@@ -93,7 +87,7 @@ The global layout consists of:
 
 ---
 
-## 5. Role-Based UI & Multi-Tenancy Support
+## 4. Role-Based UI & Multi-Tenancy Support
 - **Multi-Tenancy Support:** Role-based access and isolated workspaces per tenant.
 - **Dynamic UI Based on Role Permissions:**
   - **Admin:** Full access, manages users, settings, and reports.
@@ -102,12 +96,10 @@ The global layout consists of:
   - **Viewer:** Read-only access to reports and dashboard.
 - **Temporary Role Switcher** (for testing different roles in development mode).
 
-## 6. Multi-Language Support (i18n)
+## 5. Multi-Language Support (i18n)
 - Uses **next-translate** or **next-i18next**.
 - Default Language: **English**.
 - Supports additional languages via JSON translation files.
 - Language selection dropdown in settings.
 
 ---
-
-This document ensures a **consistent frontend implementation** for Automai, integrating **UI/UX best practices, multi-tenancy support, role-based UI behavior, sidebar navigation, and page structure**.

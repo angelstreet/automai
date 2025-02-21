@@ -18,11 +18,20 @@ async function validateLocale(locale: string) {
   return locales.includes(locale as any) ? locale : null;
 }
 
-export default async function LocaleLayout({ children, params }: Props) {
-  const validLocale = await validateLocale(params.locale);
+export default async function LocaleLayout(props: Props) {
+  const { children, params } = props;
+  // Await params explicitly
+  const awaitedParams = await Promise.resolve(params);
+  if (!awaitedParams.locale) {
+    notFound();
+    return null;
+  }
+
+  const validLocale = await validateLocale(awaitedParams.locale);
   
   if (!validLocale) {
     notFound();
+    return null;
   }
 
   const messages = await getMessages(validLocale);

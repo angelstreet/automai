@@ -14,12 +14,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { SiteHeader } from '@/components/layout/site-header';
 import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
 
-export default function LoginPage({
-  params: { locale }
-}: {
-  params: { locale: string }
-}) {
+export default function LoginPage() {
+  const { locale } = useParams();
   const t = useTranslations('Auth');
 
   return (
