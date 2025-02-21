@@ -2,3 +2,5 @@ node_modules
 .next
 .env
 screenshot
+screenshot/*.png
+screenshot/*.jpg
