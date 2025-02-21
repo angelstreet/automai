@@ -1,6 +1,5 @@
 /** @type {import('jest').Config} */
 const config = {
-  preset: 'ts-jest',
   testEnvironment: 'jsdom',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
   moduleNameMapper: {
@@ -8,18 +7,17 @@ const config = {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.json',
-    }],
+    '^.+\\.(ts|tsx|js|jsx)$': 'babel-jest',
   },
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
   testMatch: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json',
-    },
-  },
+  transformIgnorePatterns: [
+    '/node_modules/(?!(@radix-ui|@next-intl|next-intl|lucide-react)/)',
+  ],
+  moduleDirectories: ['node_modules', '<rootDir>'],
+  roots: ['<rootDir>'],
+  modulePaths: ['<rootDir>'],
 }
 
 module.exports = config; 
