@@ -13,94 +13,86 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { SiteHeader } from '@/components/layout/site-header';
+import { useTranslations } from 'next-intl';
 
-export default function LoginPage() {
-  const [isLoading, setIsLoading] = React.useState(false);
-
-  async function onSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setIsLoading(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-  }
+export default function LoginPage({
+  params: { locale }
+}: {
+  params: { locale: string }
+}) {
+  const t = useTranslations('Auth');
 
   return (
-    <div className="relative flex min-h-screen flex-col">
-      <SiteHeader showAuth={false} />
-      <main className="flex-1">
-        <div className="container flex h-screen w-screen flex-col items-center justify-center">
-          <Card className="w-full max-w-[350px]">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl">Sign in</CardTitle>
-              <CardDescription>
-                Enter your email and password to sign in
-              </CardDescription>
+    <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
+        <div className="absolute inset-0 bg-zinc-900" />
+        <div className="relative z-20 flex items-center text-lg font-medium">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mr-2 h-6 w-6"
+          >
+            <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
+          </svg>
+          Automai
+        </div>
+        <div className="relative z-20 mt-auto">
+          <blockquote className="space-y-2">
+            <p className="text-lg">
+              {t('loginHeroText')}
+            </p>
+          </blockquote>
+        </div>
+      </div>
+      <div className="lg:p-8">
+        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('loginTitle')}</CardTitle>
+              <CardDescription>{t('loginDescription')}</CardDescription>
             </CardHeader>
-            <form onSubmit={onSubmit}>
-              <CardContent className="grid gap-4">
+            <CardContent>
+              <div className="grid gap-4">
                 <div className="grid gap-2">
                   <Input
                     id="email"
+                    placeholder={t('emailPlaceholder')}
                     type="email"
-                    placeholder="name@example.com"
                     autoCapitalize="none"
                     autoComplete="email"
                     autoCorrect="off"
-                    disabled={isLoading}
-                    required
                   />
                 </div>
                 <div className="grid gap-2">
                   <Input
                     id="password"
+                    placeholder={t('passwordPlaceholder')}
                     type="password"
-                    placeholder="Password"
-                    autoCapitalize="none"
                     autoComplete="current-password"
-                    disabled={isLoading}
-                    required
                   />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <label
-                    htmlFor="remember"
-                    className="text-sm text-muted-foreground"
-                  >
-                    Remember me
-                  </label>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col space-y-4">
-                <Button className="w-full" type="submit" disabled={isLoading}>
-                  {isLoading ? 'Signing in...' : 'Sign in'}
-                </Button>
-                <div className="text-sm text-muted-foreground">
-                  Don't have an account?{' '}
-                  <Link
-                    href="/signup"
-                    className="text-primary underline-offset-4 hover:underline"
-                  >
-                    Sign up
-                  </Link>
-                </div>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-primary underline-offset-4 hover:underline"
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button className="w-full">{t('loginButton')}</Button>
+              <div className="text-sm text-muted-foreground text-center">
+                {t('noAccount')}{' '}
+                <Link 
+                  href={`/${locale}/signup`}
+                  className="text-primary underline-offset-4 hover:underline"
                 >
-                  Forgot your password?
+                  {t('signupLink')}
                 </Link>
-              </CardFooter>
-            </form>
+              </div>
+            </CardFooter>
           </Card>
         </div>
-      </main>
+      </div>
     </div>
   );
 } 

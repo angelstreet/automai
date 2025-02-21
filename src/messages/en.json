@@ -13,25 +13,63 @@
     "signUp": "Sign up"
   },
   "Auth": {
-    "signIn": {
-      "title": "Sign in",
-      "description": "Enter your email and password to sign in",
-      "email": "Email",
-      "password": "Password",
-      "rememberMe": "Remember me",
-      "forgotPassword": "Forgot your password?",
-      "noAccount": "Don't have an account?",
-      "signUp": "Sign up"
-    },
-    "signUp": {
-      "title": "Create an account",
-      "description": "Enter your email below to create your account",
-      "email": "Email",
-      "password": "Password",
-      "confirmPassword": "Confirm Password",
-      "terms": "I agree to the terms and conditions",
-      "hasAccount": "Already have an account?",
-      "signIn": "Sign in"
-    }
+    "loginTitle": "Sign in",
+    "loginDescription": "Enter your email and password to sign in",
+    "loginButton": "Sign in",
+    "loginHeroText": "Automate your testing workflow with AI-powered solutions.",
+    "signupTitle": "Create account",
+    "signupDescription": "Enter your details to create your account",
+    "signupButton": "Create account",
+    "signupHeroText": "Join thousands of teams automating their testing workflow.",
+    "emailPlaceholder": "name@example.com",
+    "passwordPlaceholder": "Enter your password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "termsText": "I agree to the",
+    "termsLink": "terms and conditions",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "signupLink": "Sign up",
+    "loginLink": "Sign in",
+    "forgotPassword": "Forgot password?"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "overview": "Overview",
+    "description": "Welcome to your dashboard"
+  },
+  "Scripts": {
+    "title": "Scripts",
+    "scriptsList": "Your Scripts",
+    "description": "Manage your automation scripts"
+  },
+  "Settings": {
+    "title": "Settings",
+    "generalSettings": "General Settings",
+    "description": "Manage your account settings"
+  },
+  "Tests": {
+    "title": "Tests",
+    "testsList": "Your Tests",
+    "description": "View and manage your tests"
+  },
+  "Reports": {
+    "title": "Reports",
+    "reportsList": "Test Reports",
+    "description": "View your test reports and analytics"
+  },
+  "Profile": {
+    "title": "Profile",
+    "personalInfo": "Personal Information",
+    "description": "Manage your profile information"
+  },
+  "Team": {
+    "title": "Team",
+    "teamMembers": "Team Members",
+    "description": "Manage your team members"
+  },
+  "Billing": {
+    "title": "Billing",
+    "billingInfo": "Billing Information",
+    "description": "Manage your billing and subscription"
   }
 } 

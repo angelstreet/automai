@@ -10,5 +10,13 @@ export default createMiddleware({
 });
 
 export const config = {
-  matcher: ['/', '/(fr|en)/:path*']
+  // Match all routes including tenant routes
+  matcher: [
+    // Match all public routes
+    '/',
+    // Match all locale routes
+    '/(fr|en)/:path*',
+    // Match all tenant routes
+    '/(fr|en)/[tenant]/:path*'
+  ]
 };

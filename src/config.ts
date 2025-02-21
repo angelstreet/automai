@@ -4,15 +4,26 @@ export const locales = ['en', 'fr'] as const;
 export const defaultLocale = 'en' as const;
 
 export const pathnames = {
+  // Marketing routes
   '/': '/',
-  '/login': '/login',
-  '/signup': '/signup',
   '/features': '/features',
   '/pricing': '/pricing',
   '/docs': '/docs',
-  '/dashboard': '/dashboard',
-  '/scripts': '/scripts',
-  '/settings': '/settings'
+
+  // Auth routes
+  '/login': '/login',
+  '/signup': '/signup',
+  '/forgot-password': '/forgot-password',
+
+  // Workspace/Tenant routes
+  '/[tenant]/dashboard': '/[tenant]/dashboard',
+  '/[tenant]/scripts': '/[tenant]/scripts',
+  '/[tenant]/settings': '/[tenant]/settings',
+  '/[tenant]/tests': '/[tenant]/tests',
+  '/[tenant]/reports': '/[tenant]/reports',
+  '/[tenant]/profile': '/[tenant]/profile',
+  '/[tenant]/team': '/[tenant]/team',
+  '/[tenant]/billing': '/[tenant]/billing'
 } satisfies Pathnames<typeof locales>;
 
 // Use the default: `always`
