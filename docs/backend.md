@@ -1,62 +1,50 @@
-# Backend Structure
+# Tech Stack & Dependencies
 
-## 1. Overview
-The Automai SaaS platform backend is designed to handle **multi-tenant test automation**, providing secure authentication, API integrations, role-based access, and scalable execution management.
+## 1. Frontend
+- **Framework**: Next.js (React) + TypeScript
+- **Styling**: Tailwind CSS, shadcn-ui
+- **State Management**: Zustand / React Context
+- **Authentication**: NextAuth.js (JWT, OAuth via Supabase, Plan-Based Access Control)
+- **Routing**: Next.js App Router
+- **Internationalization**: Next-translate / i18next
+- **Component Library**: Shadcn, Lucide-react (icons)
+- **Testing**: Jest, React Testing Library
+- **Package Manager**: npm / pnpm
 
-## 2. Tech Stack
-- **Framework:** Node.js (Express) or FastAPI (Python)
-- **Database:** PostgreSQL (Supabase) or MongoDB (Prisma ORM)
-- **Authentication:** JWT (NextAuth.js for OAuth support)
-- **Subscription Management:** Stripe / Paddle Integration
-- **Storage:** Supabase Storage / AWS S3
-- **Queue System:** BullMQ / RabbitMQ for test execution scheduling
-- **CI/CD:** GitHub Actions / Jenkins
-- **Logging & Monitoring:** Grafana / Kibana
-- **Containerization:** Docker + Kubernetes (Optional for Scaling)
+## 2. Backend
+- **Language & Frameworks**: Node.js, FastAPI (Python for ML tasks)
+- **Database**: PostgreSQL (Supabase) / Prisma ORM for API Access
+- **Authentication**: NextAuth.js (JWT, OAuth via Supabase, Multi-Tenant Support)
+- **API**: REST & GraphQL support
+- **Subscription Management**: Stripe / Paddle Integration
+- **Execution Queue**: BullMQ / RabbitMQ for test execution
+- **CI/CD**: GitHub Actions, Jenkins
+- **Security**: Role-Based Access Control (RBAC), Rate Limiting, Subscription-Based API Restrictions
 
-## 3. API Structure
-### 3.1 Authentication API (Updated for Plan-Based Access)
-- **`POST /api/auth/login`** → User authentication with plan verification.
-- **`POST /api/auth/signup`** → User registration with plan selection (**Trial, Pro, Enterprise**).
-- **`POST /api/auth/logout`** → Session termination.
-- **`GET /api/auth/me`** → Get current user details, including `planType`.
-- **OAuth Support:** Google, GitHub authentication.
-
-### 3.2 Subscription & Billing API
-- **`POST /api/billing/checkout`** → Redirects users to Stripe/Paddle for payment.
-- **`GET /api/billing/status`** → Fetches user plan & payment status.
-- **`POST /api/tenants`** → Auto-create tenant on Pro/Enterprise signup.
-- **`PATCH /api/users/:id`** → Upgrade user plan.
-
-### 3.3 Tenant & User Management
-- **`GET /api/tenants`** → List available tenants.
-- **`POST /api/tenants`** → Create a new tenant.
-- **`GET /api/tenants/:id`** → Get tenant details & enforce **plan-based feature access**.
-- **`POST /api/users`** → Invite a new user (Enterprise only, blocked for Pro users).
-
-### 3.4 Feature-Based Access Restrictions
-- **`POST /api/projects`** →
-  - **Trial:** Max 1 project.
-  - **Pro & Enterprise:** Unlimited projects.
-- **`POST /api/users`** →
-  - **Enterprise only:** Can invite team members.
-  - **Pro:** Team management disabled.
-
-### 3.5 Database Schema Adjustments
-#### Tables
-- **Users** (`id`, `email`, `role`, `tenant_id`, `planType`, `created_at`)
-- **Tenants** (`id`, `name`, `created_at`)
-- **Billing** (`id`, `user_id`, `planType`, `status`, `created_at`)
-
-### 3.6 Multi-Tenancy & Role-Based Access Control (RBAC)
-- **Row-Level Security:** Ensures data isolation.
-- **Scoped API Access:** Enforces user restrictions based on `planType`.
-- **Rate Limiting:** Trial users have API request restrictions.
+## 3. Storage & Integrations
+- **File Storage**: Supabase Storage / AWS S3
+- **Logging & Monitoring**: Grafana, Kibana
+- **Error Tracking**: Sentry, LogRocket
+- **Version Control**: GitHub / GitLab
+- **Notifications**: Slack, MS Teams
+- **Testing Infrastructure**: Puppeteer, Cypress for E2E testing
+- **Containerization & Deployment**: Docker, Kubernetes
 
 ## 4. Deployment Strategy
-- **Frontend:** Hosted on Vercel.
-- **Backend:** Supabase (Preferred) or AWS Lambda / Firebase Functions.
-- **Database:** Supabase (PostgreSQL) / AWS RDS.
-- **Infrastructure as Code:** Terraform / Pulumi.
+- **Frontend:** Hosted on Vercel (Preferred) / Netlify
+- **Backend:** Supabase (Preferred) / AWS Lambda / Firebase Functions
+- **Database:** Supabase (PostgreSQL) / Prisma ORM for DB Access
+- **Infrastructure as Code:** Terraform / Pulumi
+
+## 5. API Documentation
+- **Documentation Tools**: Swagger / Postman Collections
+- **API Standards**: OpenAPI 3.0 / GraphQL Schema
+- **Updated Authentication Endpoints:**
+  - `POST /api/auth/signup` → Supports Trial, Pro, and Enterprise plans via NextAuth.js & Supabase Auth.
+  - `POST /api/auth/login` → Handles JWT authentication & OAuth authentication via Supabase.
+  - `GET /api/auth/me` → Fetches user details, including `planType`, `tenantId`.
+  - `POST /api/billing/checkout` → Handles Stripe/Paddle payments.
+  - `GET /api/billing/status` → Returns user plan & subscription info.
 
 ---
+
