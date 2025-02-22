@@ -43,17 +43,50 @@ API endpoints:
 
 ## Database Management
 
-Initialize and manage the database:
+### Setup
+1. Make sure PostgreSQL is installed and running locally
+2. Set up your database connection URL in `src/server/config/env/.env.development`:
+   ```env
+   DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db"
+   ```
+
+### Prisma Commands
 ```bash
-# Generate Prisma client
-npm run prisma:generate
+# Navigate to server directory
+cd src/server
 
-# Run migrations
-npm run prisma:migrate
+# Generate Prisma client after schema changes
+npx prisma generate
 
-# Seed the database
-npm run prisma:seed
+# Create and apply migrations
+npx prisma migrate dev
+
+# Apply migrations in production
+npx prisma migrate deploy
+
+# Seed the database with initial data
+npx prisma db seed
+
+# Open Prisma Studio (GUI database browser)
+npx prisma studio
 ```
+
+### Common Database Tasks
+```bash
+# Reset database (drops all data and recreates tables)
+npx prisma migrate reset
+
+# View current database schema
+npx prisma format
+
+# Pull changes from database to schema
+npx prisma db pull
+
+# Push schema changes to database
+npx prisma db push
+```
+
+Note: Always ensure you're in the `src/server` directory when running Prisma commands, as the schema is located at `prisma/schema.prisma`.
 
 ## Running Tests
 

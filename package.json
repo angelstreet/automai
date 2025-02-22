@@ -20,7 +20,8 @@
     "prisma:migrate:prod": "prisma migrate deploy --schema=src/server/prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=src/server/prisma/schema.prisma",
     "prisma:seed": "NODE_ENV=development ts-node src/server/prisma/seed.ts",
-    "prisma:seed:test": "NODE_ENV=test ts-node src/server/prisma/seed.ts"
+    "prisma:seed:test": "NODE_ENV=test ts-node src/server/prisma/seed.ts",
+    "delete-user": "cd src/server && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/automai npx ts-node -e \"const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); (async () => { try { await prisma.user.delete({ where: { email: 'joachim_djibril@hotmail.com' } }); console.log('User deleted'); } catch (e) { console.error(e); } finally { await prisma.$disconnect(); } })();\""
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",

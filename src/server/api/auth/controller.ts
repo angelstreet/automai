@@ -469,6 +469,68 @@ const githubCallback = (req: express.Request, res: express.Response, next: expre
   })(req, res, next);
 };
 
+/**
+ * Delete user account
+ */
+const deleteUser = async (req: express.Request, res: express.Response) => {
+  try {
+    const { email } = req.params;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        projects: {
+          include: {
+            testcases: {
+              include: {
+                executions: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete in order of dependencies
+    for (const project of user.projects) {
+      for (const testcase of project.testcases) {
+        // Delete executions
+        await prisma.execution.deleteMany({
+          where: { testcaseId: testcase.id }
+        });
+      }
+      // Delete testcases
+      await prisma.testCase.deleteMany({
+        where: { projectId: project.id }
+      });
+    }
+    
+    // Delete projects
+    await prisma.project.deleteMany({
+      where: { ownerId: user.id }
+    });
+
+    // Finally delete the user
+    await prisma.user.delete({
+      where: { email }
+    });
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error in deleteUser:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -481,4 +543,5 @@ module.exports = {
   googleCallback,
   githubAuth,
   githubCallback,
+  deleteUser,
 }; 
