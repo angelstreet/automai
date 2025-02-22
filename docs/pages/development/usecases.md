@@ -1,4 +1,4 @@
-Apologies for the mix-up—I’ll stick with "Use Case" as the terminology, as you’ve confirmed it’s your preference. Below is the **Design Document** and **Instructions for the AI Agent** specifically for the **Use Cases Listing Page**, based on your improved artifact, without touching the edit page yet. This focuses solely on listing use cases grouped by project, with sorting, favorites, search, and modals for creation and details, integrated with your backend.
+Apologies for the mix-up—I'll stick with "Use Case" as the terminology, as you've confirmed it's your preference. Below is the **Design Document** and **Instructions for the AI Agent** specifically for the **Use Cases Listing Page**, based on your improved artifact, without touching the edit page yet. This focuses solely on listing use cases grouped by project, with sorting, favorites, search, and modals for creation and details, integrated with your backend.
 
 ---
 
@@ -16,7 +16,6 @@ Apologies for the mix-up—I’ll stick with "Use Case" as the terminology, as y
 | **Section**         | **Description**                                                                 | **Components**                     |
 |---------------------|--------------------------------------------------------------------------------|------------------------------------|
 | **Header**          | Search bar and "New" button                                                   | `<Input>`, `<Button>` (shadcn-ui)  |
-| **Sidebar**         | Navigation to Dashboard, Development, Execution, Reports, Settings            | `<Sidebar>` (layout component)     |
 | **Main Content**    | Favorites section (if any) + Accordion of projects with use case tables       | `<Accordion>` (shadcn-ui)          |
 | **Modal (Create)**  | Form to select project and enter use case name                                | Custom modal                       |
 | **Modal (Use Case)**| Detailed view of selected use case with actions (Edit, Delete, Close)         | Custom modal                       |
@@ -504,7 +503,7 @@ test("Use Cases page lists, creates, and deletes", async ({ page }) => {
 
 ### Notes
 - **Terminology**: Switched to "Use Case" throughout as requested.
-- **Scope**: Limited to the listing page only—edit page will come next once you’re ready.
+- **Scope**: Limited to the listing page only—edit page will come next once you're ready.
 - **Backend**: Fully integrated with your existing APIs, with schema extensions for new fields (`lastModified`, etc.).
 
-Let me know if this is spot-on or if you’d like any adjustments before moving to the edit page!
+Let me know if this is spot-on or if you'd like any adjustments before moving to the edit page!

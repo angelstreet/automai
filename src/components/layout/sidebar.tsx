@@ -69,8 +69,8 @@ const menuItems: MenuItem[] = [
     roles: ['admin', 'developer'],
     submenu: [
       { icon: FileCode, label: 'Projects', href: '/development/projects' },
-      { icon: TestTube, label: 'Use Case', href: '/development/use-case' },
-      { icon: Flag, label: 'Campaign', href: '/development/campaign' },
+      { icon: TestTube, label: 'Use Cases', href: '/development/usecases' },
+      { icon: Flag, label: 'Campaigns', href: '/development/campaigns' },
     ]
   },
   {
