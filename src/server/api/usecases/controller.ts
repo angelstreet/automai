@@ -4,37 +4,55 @@ const crypto = require('crypto');
 
 const prisma = new PrismaClient();
 
-// Generate a short ID (10 chars, alphanumeric with - and _)
-const generateShortId = () => {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
-  let result = '';
-  const randomBytes = crypto.randomBytes(10);
-  for (let i = 0; i < 10; i++) {
-    result += chars[randomBytes[i] % chars.length];
+// Find the next available number for a prefix
+const findNextNumber = async (prefix: string) => {
+  // Get all use cases with this prefix
+  const useCases = await prisma.useCase.findMany({
+    where: {
+      shortId: {
+        startsWith: `${prefix}-`
+      }
+    },
+    orderBy: {
+      shortId: 'desc'
+    }
+  });
+
+  if (useCases.length === 0) {
+    return 1; // Start with 1 if no existing use cases with this prefix
   }
-  return result;
+
+  // Find the highest number among the existing shortIds
+  let highestNumber = 0;
+  for (const useCase of useCases) {
+    const parts = useCase.shortId.split('-');
+    if (parts.length === 2) {
+      const num = parseInt(parts[1], 10);
+      if (!isNaN(num) && num > highestNumber) {
+        highestNumber = num;
+      }
+    }
+  }
+
+  return highestNumber + 1;
+};
+
+// Generate a sequential short ID (e.g., WEB-1, WEB-2, etc.)
+const generateShortId = async (prefix: string) => {
+  const nextNumber = await findNextNumber(prefix);
+  return `${prefix}-${nextNumber}`;
 };
 
 const createUseCase = async (req: express.Request, res: express.Response) => {
   try {
-    const { name, projectId, steps } = req.body;
+    const { name, projectId, steps, shortIdPrefix } = req.body;
 
-    if (!name || !projectId || !steps) {
-      return res.status(400).json({ error: 'Name, projectId, and steps are required' });
+    if (!name || !projectId || !steps || !shortIdPrefix) {
+      return res.status(400).json({ error: 'Name, projectId, steps, and shortIdPrefix are required' });
     }
 
-    // Generate a unique short ID
-    let shortId;
-    let isUnique = false;
-    while (!isUnique) {
-      shortId = generateShortId();
-      const existing = await prisma.useCase.findUnique({
-        where: { shortId },
-      });
-      if (!existing) {
-        isUnique = true;
-      }
-    }
+    // Generate the short ID
+    const shortId = await generateShortId(shortIdPrefix);
 
     const useCase = await prisma.useCase.create({
       data: {
