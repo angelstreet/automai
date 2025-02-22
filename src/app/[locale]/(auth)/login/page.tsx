@@ -58,8 +58,11 @@ export default function LoginPage() {
         throw new Error(data.error || 'Failed to login');
       }
 
-      // Store token
+      // Store token in both localStorage and cookie for redundancy
       localStorage.setItem('token', data.token);
+      
+      // Set token as cookie
+      document.cookie = `token=${data.token}; path=/; max-age=86400; samesite=lax`;
       
       // Immediately refresh user data which will trigger the redirect
       await refreshUser();

@@ -37,6 +37,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Set token as cookie if not already set
+      if (!document.cookie.includes('token=')) {
+        document.cookie = `token=${token}; path=/; max-age=86400; samesite=lax`;
+      }
+
       const response = await fetch('http://localhost:5001/api/auth/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -77,6 +82,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
     setUser(null);
   };
 
