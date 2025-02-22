@@ -201,12 +201,12 @@ export default function UseCasesPage() {
       
       // Get the platform prefix for shortID
       const platformPrefix = 
-        newUseCase.platform === "python" ? "pyt" :
-        newUseCase.platform === "web" ? "web" :
-        newUseCase.platform === "desktop" ? "desk" :
-        newUseCase.platform === "android" ? "and" :
-        newUseCase.platform === "ios" ? "ios" :
-        newUseCase.platform === "api" ? "api" : "unk";
+        newUseCase.platform === "python" ? "PYT" :
+        newUseCase.platform === "web" ? "WEB" :
+        newUseCase.platform === "desktop" ? "DSK" :
+        newUseCase.platform === "android" ? "AND" :
+        newUseCase.platform === "ios" ? "IOS" :
+        newUseCase.platform === "api" ? "API" : "API";
 
       const res = await fetch("http://localhost:5001/api/usecases", {
         method: "POST",
@@ -219,7 +219,7 @@ export default function UseCasesPage() {
           name: newUseCase.name,
           description: newUseCase.description,
           platform: newUseCase.platform,
-          prefix: platformPrefix,
+          shortIdPrefix: platformPrefix,
           steps: { 
             platform: newUseCase.platform, 
             code: "" 
@@ -232,7 +232,12 @@ export default function UseCasesPage() {
         throw new Error(errorData?.message || 'Failed to create use case');
       }
       const createdUseCase = await res.json();
-      router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${createdUseCase.shortId}`);
+      
+      // Get project name before redirecting
+      const project = projects.find(p => p.id === newUseCase.projectId);
+      router.push(
+        `/${params.locale}/${params.tenant}/development/usecases/edit/${createdUseCase.shortId}?projectName=${encodeURIComponent(project?.name || '')}`
+      );
       setIsCreateDialogOpen(false);
       setNewUseCase({ projectId: "", name: "", description: "", platform: "web" });
     } catch (err) {
@@ -286,12 +291,22 @@ export default function UseCasesPage() {
 
   const handleDuplicate = async (useCase: UseCase) => {
     try {
+      // Get the platform prefix for shortID
+      const platformPrefix = 
+        useCase.steps.platform === "python" ? "PYT" :
+        useCase.steps.platform === "web" ? "WEB" :
+        useCase.steps.platform === "desktop" ? "DSK" :
+        useCase.steps.platform === "android" ? "AND" :
+        useCase.steps.platform === "ios" ? "IOS" :
+        useCase.steps.platform === "api" ? "API" : "API";
+
       const payload = {
         name: `${useCase.name} (Copy)`,
         projectId: useCase.projectId || useCase.project_id,
         steps: useCase.steps,
         description: "",
-        platform: useCase.steps.platform
+        platform: useCase.steps.platform,
+        shortIdPrefix: platformPrefix
       };
       
       const res = await fetch("http://localhost:5001/api/usecases", {
@@ -396,23 +411,22 @@ export default function UseCasesPage() {
           />
         </div>
       )}
-      <button onClick={() => handleSort("id")} className="col-span-2 flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
+      <button onClick={() => handleSort("id")} className="col-span-2 flex items-center justify-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
         ID {getSortIcon("id")}
       </button>
-      <button onClick={() => handleSort("name")} className="col-span-4 flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90 text-left">
+      <button onClick={() => handleSort("name")} className="col-span-4 flex items-center justify-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
         Name {getSortIcon("name")}
       </button>
-      <button onClick={() => handleSort("steps.platform")} className="col-span-2 flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
+      <button onClick={() => handleSort("steps.platform")} className="col-span-2 flex items-center justify-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
         Platform {getSortIcon("steps.platform")}
       </button>
-      <button onClick={() => handleSort("status")} className="col-span-2 flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
+      <button onClick={() => handleSort("status")} className="col-span-2 flex items-center justify-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
         Status {getSortIcon("status")}
       </button>
-      <div className="col-span-2 flex items-center justify-end">
-        <button onClick={() => handleSort("lastModified")} className="flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
-          Modified {getSortIcon("lastModified")}
-        </button>
-      </div>
+      <button onClick={() => handleSort("lastModified")} className="col-span-1 flex items-center justify-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
+        Modified {getSortIcon("lastModified")}
+      </button>
+      <div className="col-span-1 flex items-center justify-center">Info</div>
     </div>
   );
 
@@ -436,41 +450,46 @@ export default function UseCasesPage() {
           />
         </div>
       )}
-      <div
-        className="col-span-10 grid grid-cols-10 gap-2 cursor-pointer"
-        onClick={() => {
-          const project = projects.find(p => p.usecases.some(u => u.id === uc.id));
-          router.push(
-            `/${params.locale}/${params.tenant}/development/usecases/edit/${uc.shortId}?projectName=${encodeURIComponent(project?.name || '')}`
-          );
-        }}
-      >
-        <div className="col-span-2 font-mono">{uc.shortId}</div>
-        <div className="col-span-4 font-medium flex items-center gap-1">
-          {favorites.has(uc.id) && <span className="text-yellow-500 dark:text-yellow-400">★</span>}
-          {uc.name}
+      <div className="col-span-11 grid grid-cols-11 gap-2">
+        <div
+          className="col-span-10 grid grid-cols-10 gap-2 cursor-pointer"
+          onClick={() => {
+            const project = projects.find(p => p.usecases.some(u => u.id === uc.id));
+            router.push(
+              `/${params.locale}/${params.tenant}/development/usecases/edit/${uc.shortId}?projectName=${encodeURIComponent(project?.name || '')}`
+            );
+          }}
+        >
+          <div className="col-span-2 font-mono flex items-center justify-center">{uc.shortId}</div>
+          <div className="col-span-4 font-medium flex items-center justify-center gap-1">
+            {favorites.has(uc.id) && <span className="text-yellow-500 dark:text-yellow-400">★</span>}
+            {uc.name}
+          </div>
+          <div className="col-span-2 flex items-center justify-center">
+            {uc.steps.platform === "web" ? "🌐" : 
+             uc.steps.platform === "android" ? "🤖" : 
+             uc.steps.platform === "ios" ? "📱" : 
+             uc.steps.platform === "desktop" ? "💻" : 
+             uc.steps.platform === "python" ? "🐍" : 
+             uc.steps.platform === "api" ? "🔌" : "Unknown"}
+          </div>
+          <div className="col-span-2 flex items-center justify-center">
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-xs ${
+                uc.status === "active" ? "bg-success/20 dark:bg-success/30 text-success dark:text-success/90" :
+                uc.status === "draft" ? "bg-warning/20 dark:bg-warning/30 text-warning dark:text-warning/90" :
+                "bg-muted dark:bg-muted/40 text-muted-foreground dark:text-muted-foreground/90"
+              }`}
+            >
+              {uc.status || "N/A"}
+            </span>
+          </div>
         </div>
-        <div className="col-span-2">
-          {uc.steps.platform === "web" ? "🌐" : 
-           uc.steps.platform === "android" ? "🤖" : 
-           uc.steps.platform === "ios" ? "📱" : 
-           uc.steps.platform === "desktop" ? "💻" : 
-           uc.steps.platform === "python" ? "🐍" : 
-           uc.steps.platform === "api" ? "🔌" : "Unknown"}
-        </div>
-        <div className="col-span-2">
-          <span
-            className={`px-1.5 py-0.5 rounded-full text-xs ${
-              uc.status === "active" ? "bg-success/20 dark:bg-success/30 text-success dark:text-success/90" :
-              uc.status === "draft" ? "bg-warning/20 dark:bg-warning/30 text-warning dark:text-warning/90" :
-              "bg-muted dark:bg-muted/40 text-muted-foreground dark:text-muted-foreground/90"
-            }`}
-          >
-            {uc.status || "N/A"}
-          </span>
+        <div className="col-span-1 flex items-center justify-center text-xs text-muted-foreground min-h-[20px]">
+          {uc.lastModified ? new Date(uc.lastModified).toLocaleDateString() : "N/A"}
         </div>
       </div>
-      <div className="col-span-1 flex justify-end gap-2">
+      <div className="col-span-1 flex items-center justify-center">
         <Button
           variant="ghost"
           size="sm"
