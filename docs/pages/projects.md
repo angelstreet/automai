@@ -246,7 +246,7 @@ export default function ProjectsPage() {
           <h1 className="text-2xl font-bold">Projects</h1>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button>Create New Project</Button>
+              <Button>New</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
