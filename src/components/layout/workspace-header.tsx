@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { RoleSwitcher, type Role } from '@/components/ui/role-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -8,11 +9,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { User } from 'lucide-react';
+import { useUser } from '@/lib/contexts/UserContext';
+import { useParams } from 'next/navigation';
 
 interface WorkspaceHeaderProps {
   className?: string;
@@ -21,6 +23,15 @@ interface WorkspaceHeaderProps {
 
 export function WorkspaceHeader({ className, tenant }: WorkspaceHeaderProps) {
   const [currentRole, setCurrentRole] = React.useState<Role>('admin');
+  const { logout } = useUser();
+  const router = useRouter();
+  const params = useParams();
+  const locale = params.locale as string;
+
+  const handleSignOut = async () => {
+    logout();
+    router.push(`/${locale}/login`);
+  };
 
   return (
     <header className={`sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${className}`}>
@@ -39,12 +50,16 @@ export function WorkspaceHeader({ className, tenant }: WorkspaceHeaderProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/profile`)}>
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings`)}>
+                Settings
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Sign out</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSignOut}>
+                Sign out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
