@@ -1,7 +1,19 @@
 const { PrismaClient } = require('@prisma/client');
 const express = require('express');
+const crypto = require('crypto');
 
 const prisma = new PrismaClient();
+
+// Generate a short ID (10 chars, alphanumeric with - and _)
+const generateShortId = () => {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+  let result = '';
+  const randomBytes = crypto.randomBytes(10);
+  for (let i = 0; i < 10; i++) {
+    result += chars[randomBytes[i] % chars.length];
+  }
+  return result;
+};
 
 const createTestCase = async (req: express.Request, res: express.Response) => {
   try {
@@ -11,11 +23,25 @@ const createTestCase = async (req: express.Request, res: express.Response) => {
       return res.status(400).json({ error: 'Name, projectId, and steps are required' });
     }
 
+    // Generate a unique short ID
+    let shortId;
+    let isUnique = false;
+    while (!isUnique) {
+      shortId = generateShortId();
+      const existing = await prisma.testCase.findUnique({
+        where: { shortId },
+      });
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+
     const testCase = await prisma.testCase.create({
       data: {
         name,
         projectId,
         steps,
+        shortId,
       },
       include: {
         project: true,
@@ -63,8 +89,13 @@ const getTestCase = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
 
-    const testCase = await prisma.testCase.findUnique({
-      where: { id },
+    const testCase = await prisma.testCase.findFirst({
+      where: {
+        OR: [
+          { id },
+          { shortId: id }
+        ]
+      },
       include: {
         project: true,
         executions: {

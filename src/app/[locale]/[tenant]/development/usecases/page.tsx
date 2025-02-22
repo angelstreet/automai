@@ -17,6 +17,7 @@ type Project = {
 
 type TestCase = {
   id: string;
+  shortId: string;
   name: string;
   steps: { platform: string; code: string };
   createdAt: string;
@@ -78,13 +79,14 @@ export default function UseCasesPage() {
                 headers: { Authorization: `Bearer ${token}` },
               });
               let testcases = [];
-              if (tcRes.status === 400) {
-                // If 400 Bad Request, treat it as no test cases available
+              if (tcRes.status === 400 || !tcRes.ok) {
+                // If 400 Bad Request or any other error, treat it as no test cases available
+                console.log(`No test cases found for project ${p.id} or error occurred`);
                 testcases = [];
-              } else if (tcRes.ok) {
+              } else {
                 testcases = await tcRes.json();
               }
-              // Always return the project, even if test cases fetch fails
+              // Always return the project with its test cases array (empty if none)
               return { ...p, testcases };
             } catch (err) {
               console.error(`Failed to fetch test cases for project ${p.id}:`, err);
@@ -177,7 +179,7 @@ export default function UseCasesPage() {
         throw new Error('Failed to create use case');
       }
       const newTestCase = await res.json();
-      router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${newTestCase.id}`);
+      router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${newTestCase.shortId}`);
       setIsCreateDialogOpen(false);
       setNewUseCase({ projectId: "", name: "", description: "", platform: "web" });
     } catch (err) {
@@ -208,20 +210,20 @@ export default function UseCasesPage() {
   };
 
   const TableHeader = () => (
-    <div className="grid grid-cols-12 gap-2 py-2 px-3 bg-gray-50 border-b border-gray-200 text-xs font-medium text-gray-500">
-      <button onClick={() => handleSort("id")} className="col-span-2 flex items-center gap-1 hover:text-gray-700">
+    <div className="grid grid-cols-12 gap-2 py-2 px-3 bg-muted/50 dark:bg-muted/20 border-b border-border text-xs font-medium text-muted-foreground">
+      <button onClick={() => handleSort("id")} className="col-span-2 flex items-center gap-1 hover:text-foreground">
         ID {getSortIcon("id")}
       </button>
-      <button onClick={() => handleSort("name")} className="col-span-4 flex items-center gap-1 hover:text-gray-700 text-left">
+      <button onClick={() => handleSort("name")} className="col-span-4 flex items-center gap-1 hover:text-foreground text-left">
         Name {getSortIcon("name")}
       </button>
-      <button onClick={() => handleSort("steps.platform")} className="col-span-2 flex items-center gap-1 hover:text-gray-700">
+      <button onClick={() => handleSort("steps.platform")} className="col-span-2 flex items-center gap-1 hover:text-foreground">
         Platform {getSortIcon("steps.platform")}
       </button>
-      <button onClick={() => handleSort("status")} className="col-span-2 flex items-center gap-1 hover:text-gray-700">
+      <button onClick={() => handleSort("status")} className="col-span-2 flex items-center gap-1 hover:text-foreground">
         Status {getSortIcon("status")}
       </button>
-      <button onClick={() => handleSort("lastModified")} className="col-span-2 flex items-center gap-1 hover:text-gray-700">
+      <button onClick={() => handleSort("lastModified")} className="col-span-2 flex items-center gap-1 hover:text-foreground">
         Modified {getSortIcon("lastModified")}
       </button>
     </div>
@@ -230,9 +232,9 @@ export default function UseCasesPage() {
   const TestCaseRow = ({ tc }: { tc: TestCase }) => (
     <div
       onClick={() => setSelectedUseCase(tc)}
-      className="grid grid-cols-12 gap-2 py-1.5 px-3 hover:bg-gray-50 border-b border-gray-100 cursor-pointer text-sm"
+      className="grid grid-cols-12 gap-2 py-1.5 px-3 hover:bg-muted/50 dark:hover:bg-muted/20 border-b border-border cursor-pointer text-sm text-foreground"
     >
-      <div className="col-span-2 font-mono">{tc.id}</div>
+      <div className="col-span-2 font-mono">{tc.shortId}</div>
       <div className="col-span-4 font-medium flex items-center gap-1">
         {favorites.has(tc.id) && <span className="text-yellow-500">★</span>}
         {tc.name}
@@ -243,32 +245,32 @@ export default function UseCasesPage() {
       <div className="col-span-2">
         <span
           className={`px-1.5 py-0.5 rounded-full text-xs ${
-            tc.status === "active" ? "bg-green-100 text-green-800" :
-            tc.status === "draft" ? "bg-yellow-100 text-yellow-800" :
-            "bg-gray-100 text-gray-800"
+            tc.status === "active" ? "bg-success/20 text-success" :
+            tc.status === "draft" ? "bg-warning/20 text-warning" :
+            "bg-muted text-muted-foreground"
           }`}
         >
           {tc.status || "N/A"}
         </span>
       </div>
-      <div className="col-span-2 text-gray-500">
+      <div className="col-span-2 text-muted-foreground">
         {tc.lastModified ? new Date(tc.lastModified).toLocaleDateString() : "N/A"}
       </div>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background">
       <div className="flex-1 p-6 overflow-hidden">
         {error && (
-          <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg">
+          <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg">
             {error}
           </div>
         )}
         
         {userLoading || isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
           </div>
         ) : (
           <div className="flex justify-between items-center mb-4 gap-4">
@@ -287,9 +289,9 @@ export default function UseCasesPage() {
         {!isLoading && !error && (
           <>
             {getFavoriteUseCases().length > 0 && (
-              <div className="mb-6 bg-white rounded-lg shadow">
-                <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-100">
-                  <h3 className="font-semibold text-yellow-800">★ Favorite Use Cases</h3>
+              <div className="mb-6 bg-background rounded-lg shadow border border-border">
+                <div className="px-4 py-2 bg-muted border-b border-border">
+                  <h3 className="font-semibold text-foreground">★ Favorite Use Cases</h3>
                 </div>
                 <TableHeader />
                 <div className="max-h-40 overflow-y-auto">
@@ -302,30 +304,34 @@ export default function UseCasesPage() {
 
             <div className="space-y-4">
               {projects.map((project) => (
-                <div key={project.id} className="bg-white rounded-lg shadow">
+                <div key={project.id} className="bg-background rounded-lg shadow border border-border">
                   <button
                     onClick={() => setExpandedProject(expandedProject === project.id ? null : project.id)}
-                    className="w-full flex justify-between items-center px-4 py-2 text-left hover:bg-gray-50"
+                    className="w-full flex justify-between items-center px-4 py-2 text-left hover:bg-muted/50 dark:hover:bg-muted/20"
                   >
                     <div>
-                      <span className="text-lg font-semibold">{project.name}</span>
-                      <span className="ml-2 text-sm text-gray-500">
-                        ({project.testcases.length} use cases)
+                      <span className="text-lg font-semibold text-foreground">{project.name}</span>
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        {project.testcases.length === 0 ? (
+                          "No test cases yet"
+                        ) : (
+                          `${project.testcases.length} test case${project.testcases.length === 1 ? '' : 's'}`
+                        )}
                       </span>
                     </div>
                     <span
-                      className="transform transition-transform duration-200"
+                      className="transform transition-transform duration-200 text-muted-foreground"
                       style={{ transform: expandedProject === project.id ? "rotate(180deg)" : "rotate(0deg)" }}
                     >
                       ▼
                     </span>
                   </button>
                   {expandedProject === project.id && (
-                    <div className="border-t border-gray-200">
+                    <div className="border-t border-border">
                       <TableHeader />
                       <div className="max-h-96 overflow-y-auto">
                         {project.testcases.length === 0 ? (
-                          <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                             <p className="mb-2">No test cases found in this project</p>
                             <Button 
                               variant="outline" 
@@ -350,8 +356,8 @@ export default function UseCasesPage() {
             </div>
 
             {isCreateDialogOpen && (
-              <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center">
-                <div className="bg-background border border-border w-[500px] rounded-lg shadow-lg">
+              <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[49]">
+                <div className="bg-background border border-border w-[500px] rounded-lg shadow-lg relative z-[50] select-none">
                   <div className="p-6">
                     <h2 className="text-xl font-bold mb-4 text-foreground">New Test Case</h2>
                     <div className="space-y-4">
@@ -359,10 +365,10 @@ export default function UseCasesPage() {
                         onValueChange={(value) => setNewUseCase({ ...newUseCase, projectId: value })}
                         value={newUseCase.projectId}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Project" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent position="popper" className="z-[51]">
                           {projects.map((p) => (
                             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                           ))}
@@ -373,13 +379,15 @@ export default function UseCasesPage() {
                         placeholder="Test Case Name"
                         value={newUseCase.name}
                         onChange={(e) => setNewUseCase({ ...newUseCase, name: e.target.value })}
+                        className="bg-background"
                       />
 
                       <Select 
                         onValueChange={(value) => setNewUseCase({ ...newUseCase, platform: value })}
                         value={newUseCase.platform}
+                        defaultOpen={false}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Platform" />
                         </SelectTrigger>
                         <SelectContent>
@@ -422,78 +430,80 @@ export default function UseCasesPage() {
             )}
 
             {selectedUseCase && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                <div className="bg-white p-6 rounded-lg w-[600px]">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="flex-1">
-                      <h2 className="text-xl font-bold flex items-center gap-2">
-                        {selectedUseCase.name}
-                        <button
-                          onClick={() => toggleFavorite(selectedUseCase.id)}
-                          className="text-yellow-500 hover:text-yellow-600"
+              <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[100]">
+                <div className="bg-background border border-border w-[600px] rounded-lg shadow-lg relative z-[101]">
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex-1">
+                        <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
+                          {selectedUseCase.name}
+                          <button
+                            onClick={() => toggleFavorite(selectedUseCase.id)}
+                            className="text-yellow-500 hover:text-yellow-600"
+                          >
+                            {favorites.has(selectedUseCase.id) ? "★" : "☆"}
+                          </button>
+                        </h2>
+                        <p className="text-sm text-muted-foreground font-mono">{selectedUseCase.shortId}</p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedUseCase(null)}>
+                        ✕
+                      </Button>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">Platform</label>
+                          <div className="mt-1 text-foreground">{selectedUseCase.steps.platform}</div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">Status</label>
+                          <div className="mt-1 text-foreground">{selectedUseCase.status || "N/A"}</div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">Created</label>
+                          <div className="mt-1 text-foreground">{new Date(selectedUseCase.createdAt).toLocaleString()}</div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">Last Modified</label>
+                          <div className="mt-1 text-foreground">
+                            {selectedUseCase.lastModified ? new Date(selectedUseCase.lastModified).toLocaleString() : "N/A"}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">Author</label>
+                          <div className="mt-1 text-foreground">{selectedUseCase.author || "N/A"}</div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">Tags</label>
+                          <div className="mt-1 text-foreground flex gap-1">
+                            {selectedUseCase.tags?.map((tag) => (
+                              <span key={tag} className="px-2 py-1 bg-muted rounded-full text-xs">
+                                {tag}
+                              </span>
+                            )) || "N/A"}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
+                        <Button variant="outline" onClick={() => setSelectedUseCase(null)}>
+                          Close
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(selectedUseCase.id)}
                         >
-                          {favorites.has(selectedUseCase.id) ? "★" : "☆"}
-                        </button>
-                      </h2>
-                      <p className="text-sm text-gray-500 font-mono">{selectedUseCase.id}</p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedUseCase(null)}>
-                      ✕
-                    </Button>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Platform</label>
-                        <div className="mt-1">{selectedUseCase.steps.platform}</div>
+                          Delete
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${selectedUseCase.shortId}`)
+                          }
+                        >
+                          Edit
+                        </Button>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Status</label>
-                        <div className="mt-1">{selectedUseCase.status || "N/A"}</div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Created</label>
-                        <div className="mt-1">{new Date(selectedUseCase.createdAt).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Last Modified</label>
-                        <div className="mt-1">
-                          {selectedUseCase.lastModified ? new Date(selectedUseCase.lastModified).toLocaleString() : "N/A"}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Author</label>
-                        <div className="mt-1">{selectedUseCase.author || "N/A"}</div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-500">Tags</label>
-                        <div className="mt-1 flex gap-1">
-                          {selectedUseCase.tags?.map((tag) => (
-                            <span key={tag} className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                              {tag}
-                            </span>
-                          )) || "N/A"}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-                      <Button variant="outline" onClick={() => setSelectedUseCase(null)}>
-                        Close
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleDelete(selectedUseCase.id)}
-                      >
-                        Delete
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${selectedUseCase.id}`)
-                        }
-                      >
-                        Edit
-                      </Button>
                     </div>
                   </div>
                 </div>

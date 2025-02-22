@@ -68,7 +68,7 @@ export function WorkspaceHeader({ className, tenant }: WorkspaceHeaderProps) {
   };
 
   return (
-    <header className={`sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${className}`}>
+    <header className={`sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${className}`}>
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-4">
           <span className="font-semibold">{tenant}</span>
