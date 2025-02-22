@@ -16,20 +16,32 @@ import { Input } from '@/components/ui/input';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { Github, Chrome } from 'lucide-react';
+import { useUser } from '@/lib/contexts/UserContext';
+import { useEffect } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
   const { locale } = useParams();
+  const { user, isLoading, refreshUser } = useUser();
   const t = useTranslations('Auth');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // Check if user is already authenticated
+  useEffect(() => {
+    if (!isLoading && user) {
+      // User is already logged in, redirect to appropriate dashboard
+      const tenant = user.tenantId || (user.plan === 'TRIAL' ? 'trial' : 'pro');
+      router.push(`/${locale}/${tenant}/dashboard`);
+    }
+  }, [user, isLoading, router, locale]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
       const response = await fetch('http://localhost:5001/api/auth/login', {
@@ -46,18 +58,31 @@ export default function LoginPage() {
         throw new Error(data.error || 'Failed to login');
       }
 
+      // Store token
       localStorage.setItem('token', data.token);
-      router.push(`/${locale}/dashboard`);
+      
+      // Immediately refresh user data which will trigger the redirect
+      await refreshUser();
     } catch (err: any) {
       setError(err.message || 'An error occurred during login');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleOAuthLogin = (provider: 'google' | 'github') => {
     window.location.href = `http://localhost:5001/api/auth/${provider}`;
   };
+
+  // Show nothing while checking initial auth state
+  if (isLoading) {
+    return null;
+  }
+
+  // Show nothing if already authenticated (will be redirected)
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -128,9 +153,9 @@ export default function LoginPage() {
             <Button 
               type="submit" 
               className="w-full h-11 text-base"
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
-              {isLoading ? t('loggingIn') : t('loginButton')}
+              {isSubmitting ? t('loggingIn') : t('loginButton')}
             </Button>
           </form>
 

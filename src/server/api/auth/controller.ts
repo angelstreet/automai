@@ -72,6 +72,14 @@ const login = async (req: express.Request, res: express.Response) => {
       { expiresIn: '24h' }
     );
 
+    // Set token as httpOnly cookie for server-side authentication
+    res.cookie('token', token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: '/'
+    });
+
     // Return user info and token (exclude password)
     const { password: _, ...userWithoutPassword } = user;
     res.json({

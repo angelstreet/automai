@@ -1,8 +1,8 @@
 // src/middleware.ts
-import createMiddleware from 'next-intl/middleware';
+import createIntlMiddleware from 'next-intl/middleware';
 import { locales, defaultLocale, pathnames } from './config';
 
-export default createMiddleware({
+export default createIntlMiddleware({
   locales,
   defaultLocale,
   pathnames,
@@ -10,13 +10,9 @@ export default createMiddleware({
 });
 
 export const config = {
-  // Match all routes including tenant routes
   matcher: [
-    // Match all public routes
+    // Match all routes
     '/',
-    // Match all locale routes
-    '/(fr|en)/:path*',
-    // Match all tenant routes
-    '/(fr|en)/[tenant]/:path*'
+    '/(fr|en)/:path*'
   ]
 };

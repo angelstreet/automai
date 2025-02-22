@@ -6,8 +6,14 @@ const express = require('express');
  */
 const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   try {
+    // Check Authorization header first
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    let token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    // If no token in header, check cookies
+    if (!token && req.cookies) {
+      token = req.cookies.token;
+    }
 
     if (!token) {
       return res.status(401).json({ error: 'Authentication token is required' });

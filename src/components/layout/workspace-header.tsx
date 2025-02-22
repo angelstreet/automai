@@ -30,52 +30,39 @@ export function WorkspaceHeader({ className, tenant }: WorkspaceHeaderProps) {
 
   const handleSignOut = async () => {
     try {
-      const token = localStorage.getItem('token');
+      // Immediately redirect to login page (root path)
+      router.push(`/${locale}/login`);
       
-      // Determine the auth provider
-      const provider = user?.provider;
+      // Clear auth token cookie (this is the main one we need)
+      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       
-      if (provider) {
-        // Handle OAuth provider-specific logout
-        const providerToken = localStorage.getItem(`${provider}Token`);
-        
-        if (providerToken) {
-          try {
-            // Revoke provider access
-            await fetch(`http://localhost:5001/api/auth/${provider}/revoke`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              }
-            });
-          } catch (error) {
-            console.error(`Failed to revoke ${provider} token:`, error);
-          }
-        }
-      }
-
-      // Clear all auth-related data from localStorage
+      // Clear local storage in the background
       localStorage.removeItem('token');
-      localStorage.removeItem('googleToken');
-      localStorage.removeItem('githubToken');
-      localStorage.removeItem('authProvider');
       
-      // Clear session cookies
-      document.cookie.split(";").forEach((c) => {
-        document.cookie = c
-          .replace(/^ +/, "")
-          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-      });
-
       // Call the context logout function
       logout();
       
-      // Redirect to login page
-      router.push(`/${locale}/login`);
+      // Clean up other tokens in the background
+      setTimeout(() => {
+        try {
+          localStorage.removeItem('googleToken');
+          localStorage.removeItem('githubToken');
+          localStorage.removeItem('authProvider');
+          
+          // If needed, revoke provider tokens
+          const provider = user?.provider;
+          if (provider) {
+            fetch(`http://localhost:5001/api/auth/${provider}/revoke`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            }).catch(console.error);
+          }
+        } catch (error) {
+          console.error('Error during cleanup:', error);
+        }
+      }, 0);
     } catch (error) {
       console.error('Error during sign out:', error);
-      // Even if there's an error, try to redirect to login
       router.push(`/${locale}/login`);
     }
   };
