@@ -55,6 +55,7 @@ export default function ProjectsPage() {
   const [newProject, setNewProject] = useState({ name: "", description: "" });
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const params = useParams();
   const { data: session } = useSession();
@@ -66,50 +67,42 @@ export default function ProjectsPage() {
     const fetchProjects = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch("/api/projects", {
-          headers: { Authorization: `Bearer ${session?.accessToken}` },
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const res = await fetch("http://localhost:5001/api/projects", {
+          headers: { 
+            Authorization: `Bearer ${token}` 
+          },
         });
         if (res.ok) {
           const data = await res.json();
           setProjects(data);
         } else {
-          toast({
-            title: "Error",
-            description: "Failed to fetch projects",
-            variant: "destructive",
-          });
+          throw new Error('Failed to fetch projects');
         }
       } catch (error) {
         console.error("Error fetching projects:", error);
         toast({
           title: "Error",
-          description: "Failed to fetch projects",
+          description: error instanceof Error ? error.message : "Failed to fetch projects",
           variant: "destructive",
         });
       } finally {
         setIsLoading(false);
       }
     };
-    if (session) fetchProjects();
-  }, [session, toast]);
+    if (user) fetchProjects();
+  }, [user, toast]);
 
   // Define table columns
   const columns: ColumnDef<Project>[] = [
     {
       accessorKey: "name",
       header: "Name",
-      cell: ({ row }: { row: Row<Project> }) => (
-        <span
-          className="cursor-pointer text-blue-600 hover:underline"
-          onClick={() =>
-            router.push(
-              `/${params.locale}/${params.tenant}/development/projects/${row.original.id}/usecases`
-            )
-          }
-        >
-          {row.getValue("name")}
-        </span>
-      ),
+      cell: ({ row }: { row: Row<Project> }) => row.getValue("name"),
       enableSorting: true,
     },
     { 
@@ -155,65 +148,116 @@ export default function ProjectsPage() {
 
   // CRUD handlers
   const handleCreate = async () => {
-    if (!session?.user?.id) return;
+    console.log('handleCreate called');
+    console.log('user:', user);
+    console.log('newProject:', newProject);
+
+    if (!user?.id || !newProject.name.trim()) {
+      console.log('Validation failed:', { 
+        hasUserId: !!user?.id, 
+        projectName: newProject.name.trim() 
+      });
+      toast({
+        title: "Error",
+        description: "Please make sure you are logged in and have entered a project name.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsCreating(true);
+    console.log('Creating project...');
+
+    // Check for duplicate project name
+    const trimmedName = newProject.name.trim();
+    const isDuplicate = projects.some(
+      (project) => project.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+    
+    if (isDuplicate) {
+      console.log('Duplicate project name found');
+      toast({
+        title: "Error",
+        description: "A project with this name already exists. Please choose a different name.",
+        variant: "destructive",
+      });
+      setIsCreating(false);
+      return;
+    }
 
     // Check trial limitations
     if (!checkCanCreateMore("maxProjects", projects.length)) {
+      console.log('Trial limit reached');
       toast({
         title: "Trial Limit Reached",
         description: getUpgradeMessage(user?.plan as PlanType, "maxProjects"),
         variant: "destructive",
       });
+      setIsCreating(false);
       return;
     }
 
     try {
-      const res = await fetch("/api/projects", {
+      console.log('Making API request...');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const res = await fetch("http://localhost:5001/api/projects", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name: newProject.name,
-          description: newProject.description,
-          ownerId: session.user.id,
+          name: newProject.name.trim(),
+          description: newProject.description?.trim(),
+          ownerId: user.id,
         }),
       });
-      if (res.ok) {
-        const createdProject = await res.json();
-        setProjects([...projects, createdProject]);
-        setIsDialogOpen(false);
-        setNewProject({ name: "", description: "" });
-        toast({
-          title: "Success",
-          description: "Project created successfully",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to create project",
-          variant: "destructive",
-        });
+      
+      console.log('API response:', res);
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
       }
+      
+      const createdProject = await res.json();
+      console.log('Created project:', createdProject);
+      setProjects([...projects, createdProject]);
+      setIsDialogOpen(false);
+      setNewProject({ name: "", description: "" });
+      toast({
+        title: "Success",
+        description: "Project created successfully",
+      });
     } catch (error) {
       console.error("Error creating project:", error);
       toast({
         title: "Error",
-        description: "Failed to create project",
+        description: error instanceof Error ? error.message : "Failed to create project. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsCreating(false);
     }
   };
 
   const handleEdit = async () => {
-    if (!editingProject || !session) return;
+    if (!editingProject || !user) return;
     try {
-      const res = await fetch(`/api/projects/${editingProject.id}`, {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const res = await fetch(`http://localhost:5001/api/projects/${editingProject.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: editingProject.name,
@@ -231,30 +275,34 @@ export default function ProjectsPage() {
           description: "Project updated successfully",
         });
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to update project",
-          variant: "destructive",
-        });
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to update project');
       }
     } catch (error) {
       console.error("Error updating project:", error);
       toast({
         title: "Error",
-        description: "Failed to update project",
+        description: error instanceof Error ? error.message : "Failed to update project",
         variant: "destructive",
       });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!session) return;
+    if (!user) return;
     if (!confirm("Are you sure you want to delete this project?")) return;
 
     try {
-      const res = await fetch(`/api/projects/${id}`, {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const res = await fetch(`http://localhost:5001/api/projects/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${session.accessToken}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (res.ok) {
         setProjects(projects.filter((p) => p.id !== id));
@@ -263,24 +311,22 @@ export default function ProjectsPage() {
           description: "Project deleted successfully",
         });
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete project",
-          variant: "destructive",
-        });
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to delete project');
       }
     } catch (error) {
       console.error("Error deleting project:", error);
       toast({
         title: "Error",
-        description: "Failed to delete project",
+        description: error instanceof Error ? error.message : "Failed to delete project",
         variant: "destructive",
       });
     }
   };
 
-  // Trial limitation warning
-  const showTrialWarning = user?.plan === "TRIAL" && projects.length >= 1;
+  // Trial limitation warning and check
+  const hasReachedTrialLimit = user?.plan === "TRIAL" && !checkCanCreateMore("maxProjects", projects.length);
+  const showTrialWarning = hasReachedTrialLimit;
 
   return (
     <div className="p-6">
@@ -288,7 +334,9 @@ export default function ProjectsPage() {
         <h1 className="text-2xl font-bold">Projects</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>New</Button>
+            <Button disabled={hasReachedTrialLimit}>
+              New
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -311,16 +359,34 @@ export default function ProjectsPage() {
               />
             </div>
             <DialogFooter>
-              <Button onClick={handleCreate}>Save</Button>
+              <Button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log('Save button clicked');
+                  console.log('Button state:', {
+                    isDisabled: !newProject.name.trim() || isCreating,
+                    nameEmpty: !newProject.name.trim(),
+                    isCreating
+                  });
+                  handleCreate();
+                }}
+                type="button"
+                disabled={!newProject.name.trim() || isCreating || hasReachedTrialLimit}
+              >
+                {isCreating ? "Creating..." : "Save"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
       {showTrialWarning && (
-        <Alert className="mb-4">
-          <AlertDescription>
-            {getUpgradeMessage("TRIAL", "maxProjects")}
+        <Alert className="mb-4" variant="destructive">
+          <AlertDescription className="flex items-center justify-between">
+            <span>You have reached the limitation - Upgrade to Pro for unlimited projects</span>
+            <Button variant="outline" size="sm" onClick={() => router.push('/settings/billing')}>
+              Upgrade to Pro
+            </Button>
           </AlertDescription>
         </Alert>
       )}
@@ -370,7 +436,7 @@ export default function ProjectsPage() {
                   <TableHead
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className={header.column.getCanSort() ? "cursor-pointer" : ""}
+                    className={`select-none ${header.column.getCanSort() ? "cursor-pointer" : ""}`}
                   >
                     {flexRender(
                       header.column.columnDef.header,
@@ -400,7 +466,10 @@ export default function ProjectsPage() {
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="hover:bg-gray-100">
+                <TableRow 
+                  key={row.id} 
+                  className="select-none hover:bg-muted"
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(

@@ -79,7 +79,7 @@ const menuItems: MenuItem[] = [
     roles: ['admin', 'developer', 'tester'],
     submenu: [
       { icon: Calendar, label: 'Schedule', href: '/execution/schedule' },
-      { icon: Table, label: 'Deployment Table', href: '/execution/deployment' },
+      { icon: Table, label: 'Deployment', href: '/execution/deployment' },
     ]
   },
   {
@@ -228,7 +228,7 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
     <div
       className={cn(
         'flex h-screen flex-col border-r bg-background transition-all duration-300',
-        expanded ? 'w-60' : 'w-16'
+        expanded ? 'w-54' : 'w-16'
       )}
     >
       <div className="flex h-14 items-center justify-between border-b px-4">
@@ -239,7 +239,7 @@ export function Sidebar({ expanded, onToggle }: SidebarProps) {
           {expanded ? (
             <span className="text-lg font-semibold">Automai</span>
           ) : (
-            <span className="text-lg font-semibold">A</span>
+            <span className="text-lg font-semibold"></span>
           )}
         </Link>
         <Button
