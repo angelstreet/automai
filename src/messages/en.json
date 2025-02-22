@@ -16,6 +16,7 @@
     "loginTitle": "Sign in",
     "loginDescription": "Enter your email and password to sign in",
     "loginButton": "Sign in",
+    "loggingIn": "Signing in...",
     "loginHeroText": "Automate your testing workflow with AI-powered solutions.",
     "signupTitle": "Create account",
     "signupDescription": "Enter your details to create your account",
@@ -30,12 +31,21 @@
     "haveAccount": "Already have an account?",
     "signupLink": "Sign up",
     "loginLink": "Sign in",
-    "forgotPassword": "Forgot password?"
+    "forgotPassword": "Forgot password?",
+    "orContinueWith": "Or continue with"
   },
   "Dashboard": {
     "title": "Dashboard",
     "overview": "Overview",
-    "description": "Welcome to your dashboard"
+    "description": "Welcome to your dashboard",
+    "welcome": "Welcome back!",
+    "projects": "Projects",
+    "testCases": "Test Cases",
+    "totalProjects": "Total Projects",
+    "totalTestCases": "Total Test Cases",
+    "totalExecutions": "Total Executions",
+    "recentActivity": "Recent Activity",
+    "quickActions": "Quick Actions"
   },
   "Scripts": {
     "title": "Scripts",

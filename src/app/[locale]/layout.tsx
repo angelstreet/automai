@@ -4,6 +4,8 @@ import { locales } from '@/config';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Inter } from 'next/font/google';
 import { getMessages } from '@/i18n';
+import { UserProvider } from '@/lib/contexts/UserContext';
+import { RouteGuard } from '@/components/route-guard';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -39,16 +41,22 @@ export default async function LocaleLayout(props: Props) {
   return (
     <html lang={validLocale} suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <NextIntlClientProvider locale={validLocale} messages={messages}>
-            {children}
-          </NextIntlClientProvider>
-        </ThemeProvider>
+        <UserProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <NextIntlClientProvider 
+              locale={validLocale} 
+              messages={messages}
+              timeZone="UTC"
+            >
+              <RouteGuard>{children}</RouteGuard>
+            </NextIntlClientProvider>
+          </ThemeProvider>
+        </UserProvider>
       </body>
     </html>
   );

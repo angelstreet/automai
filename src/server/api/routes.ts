@@ -1,5 +1,9 @@
 const { Router } = require('express');
 
+console.log('Loading auth routes...');
+const authRoutes = require('./auth/routes');
+console.log('Auth routes loaded successfully');
+
 console.log('Loading project routes...');
 const projectRoutes = require('./projects/routes');
 console.log('Project routes loaded successfully');
@@ -8,6 +12,10 @@ console.log('Loading test case routes...');
 const testCaseRoutes = require('./testcases/routes');
 console.log('Test case routes loaded successfully');
 
+console.log('Loading stats routes...');
+const statsRoutes = require('./stats/routes');
+console.log('Stats routes loaded successfully');
+
 const router = Router();
 
 // Health check endpoint
@@ -15,6 +23,11 @@ router.get('/health', (req, res) => {
   console.log('Health check endpoint called');
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Auth routes
+console.log('Setting up auth routes...');
+router.use('/auth', authRoutes);
+console.log('Auth routes set up successfully');
 
 // Project routes
 console.log('Setting up project routes...');
@@ -25,5 +38,10 @@ console.log('Project routes set up successfully');
 console.log('Setting up test case routes...');
 router.use('/testcases', testCaseRoutes);
 console.log('Test case routes set up successfully');
+
+// Stats routes
+console.log('Setting up stats routes...');
+router.use('/stats', statsRoutes);
+console.log('Stats routes set up successfully');
 
 module.exports = router; 

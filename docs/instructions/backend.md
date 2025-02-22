@@ -15,6 +15,9 @@ src/
 │   ├── prisma/        # Database
 │   │   ├── schema.prisma
 │   │   └── migrations/
+│   ├── config/        # Configuration
+│   │   ├── env/      # Environment configs
+│   │   └── passport.ts # OAuth config
 │   ├── lib/           # Shared utilities
 │   │   ├── supabase.ts
 │   │   └── elasticsearch.ts
@@ -37,6 +40,19 @@ src/
 ## 2. Database & Storage Setup 🟡
 ### 2.1 Prisma Schema Setup 🟢
 ```prisma
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String?
+  name      String?
+  role      String    @default("USER")
+  provider  String?
+  providerId String?
+  providerAccessToken String?
+  providerRefreshToken String?
+  // ... other fields
+}
+
 model Project {
   id        String     @id @default(uuid())
   name      String
@@ -77,13 +93,78 @@ model Execution {
 ## 3. API Implementation 🟡
 
 ### 3.0 Authentication & Authorization 🟡
-See detailed implementation in [Backend Auth Guide](./backend-auth.md)
-- [ ] OAuth Providers setup (Google, GitHub)
-- [ ] Email/Password authentication
-- [ ] JWT implementation
-- [ ] Multi-tenant support
+#### OAuth Setup Instructions
+
+##### Google OAuth Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable the OAuth2 API:
+   - Navigate to "APIs & Services" > "Library"
+   - Search for "Google+ API" or "Google OAuth2 API"
+   - Click "Enable"
+4. Create credentials:
+   - Go to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "OAuth client ID"
+   - Choose "Web application"
+   - Add authorized redirect URIs:
+     ```
+     Development: http://localhost:5001/api/auth/google/callback
+     Production: https://your-domain.com/api/auth/google/callback
+     ```
+5. Store credentials:
+   - Add to appropriate .env file:
+     ```
+     GOOGLE_CLIENT_ID="your-client-id"
+     GOOGLE_CLIENT_SECRET="your-client-secret"
+     ```
+
+##### GitHub OAuth Setup
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click "OAuth Apps" > "New OAuth App"
+3. Register application:
+   - Application name: "Automai" (or your app name)
+   - Homepage URL: Your application URL
+   - Authorization callback URLs:
+     ```
+     Development: http://localhost:5001/api/auth/github/callback
+     Production: https://your-domain.com/api/auth/github/callback
+     ```
+4. Store credentials:
+   - Add to appropriate .env file:
+     ```
+     GITHUB_CLIENT_ID="your-client-id"
+     GITHUB_CLIENT_SECRET="your-client-secret"
+     ```
+
+##### Environment-Specific Configuration
+- Development (.env.development):
+  ```env
+  NODE_ENV=development
+  PORT=5001
+  GOOGLE_CALLBACK_URL="http://localhost:5001/api/auth/google/callback"
+  GITHUB_CALLBACK_URL="http://localhost:5001/api/auth/github/callback"
+  ```
+- Production (.env.production):
+  ```env
+  NODE_ENV=production
+  PORT=5001
+  GOOGLE_CALLBACK_URL="https://your-domain.com/api/auth/google/callback"
+  GITHUB_CALLBACK_URL="https://your-domain.com/api/auth/github/callback"
+  ```
+
+#### Authentication Features
+- [x] JWT implementation
+- [x] Multi-tenant support
+- [x] Session management
+- [x] Role-based access control
+- [x] Password reset functionality
+- [x] Email verification
+- [ ] OAuth Providers:
+  - [ ] Google authentication
+  - [ ] GitHub authentication
+- [ ] Rate limiting
 - [ ] Session management
-- [ ] Role-based access control
+- [ ] Security headers
 
 ### 3.1 Project Management 🟢
 - [x] POST /api/projects (Create)
@@ -156,6 +237,12 @@ SUPABASE_KEY=your_supabase_key
 DATABASE_URL=your_database_url
 ELASTICSEARCH_URL=your_elasticsearch_url
 JWT_SECRET=your_jwt_secret
+
+# OAuth Configuration
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
 ```
 
 ### Running the Backend
@@ -164,8 +251,10 @@ JWT_SECRET=your_jwt_secret
 npm run server:dev
 
 # Production
-npm run build
-npm start
+npm run server:prod
+
+# Testing
+npm run server:test
 ```
 
 ### Database Management
@@ -173,12 +262,31 @@ npm start
 # Generate Prisma client
 npx prisma generate
 
-# Run migrations
+# Development migrations
 npx prisma migrate dev
+
+# Production migrations
+npx prisma migrate deploy
 
 # Reset database
 npx prisma reset
+
+# Seed database
+npm run prisma:seed        # Development
+npm run prisma:seed:test   # Testing
 ```
+
+## Security Checklist 🔴
+- [ ] Implement rate limiting
+- [ ] Set up security headers
+- [ ] Enable CORS properly
+- [ ] Implement input validation
+- [ ] Set up audit logging
+- [ ] Configure SSL/TLS
+- [ ] Implement API authentication
+- [ ] Set up error handling
+- [ ] Configure session management
+- [ ] Implement data validation
 
 ## Deployment Checklist 🔴
 - [ ] Environment variables configuration
@@ -189,6 +297,10 @@ npx prisma reset
 - [ ] Security review
 - [ ] Performance testing
 - [ ] Load testing
+- [ ] SSL/TLS setup
+- [ ] Domain configuration
+- [ ] Monitoring setup
+- [ ] Backup configuration
 
 ## Status Tracking
 To mark a task as complete, change its status emoji:

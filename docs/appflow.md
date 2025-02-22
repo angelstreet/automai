@@ -8,16 +8,23 @@
 ## 2. Authentication Flow
 - User clicks **Sign Up/Login**.
 - Enters **email/password or uses OAuth** (Google/GitHub).
-- Redirected to **dashboard** upon successful authentication.
+- Upon successful authentication:
+  - TRIAL users are redirected to `/en/trial/dashboard`
+  - PRO users are redirected to `/en/pro/dashboard`
+  - ENTERPRISE users are redirected to `/en/{tenantId}/dashboard`
 
 ## 3. Dashboard Navigation
-- User lands on the **main dashboard**.
+- User lands on the **tenant-specific dashboard**.
+- URL structure follows: `/{locale}/{tenantId}/dashboard` where:
+  - `tenantId` is "trial" for TRIAL users
+  - `tenantId` is "pro" for PRO users
+  - `tenantId` is the actual tenant ID for ENTERPRISE users
 - Sees **recent test executions, project statuses, and quick actions**.
 - Sidebar provides access to:
   - **Test Development**
   - **Execution & Scheduling**
   - **Reports & Analytics**
-  - **Team Management**
+  - **Team Management** (ENTERPRISE only)
   - **Settings**
 
 ## 4. Multi-Tenant Workspace Selection
@@ -91,6 +98,7 @@
 ## 10. Subscription Plans & Limitations
 ### 10.1 Trial Plan
 - **Users:** Individual developers exploring the platform.
+- **URL Structure:** `/{locale}/trial/*`
 - **Limitations:**
   - **1 Project Only**
   - **Max 5 Use Cases**
@@ -101,6 +109,7 @@
 
 ### 10.2 Pro Plan
 - **Users:** Individual developers who need full platform access.
+- **URL Structure:** `/{locale}/pro/*`
 - **Features:**
   - **Unlimited Projects, Use Cases, and Campaigns**
   - **Supports Multiple Environments (Web, Mobile, Cloud, Desktop, Vision AI)**
@@ -110,6 +119,7 @@
 
 ### 10.3 Enterprise Plan
 - **Users:** Companies needing team collaboration.
+- **URL Structure:** `/{locale}/{tenantId}/*`
 - **Features:**
   - **Everything in Pro + Team Management**
   - **Admin Panel & Billing Management**
@@ -125,10 +135,13 @@
   - `POST /api/tenants` → Auto-create tenant on Pro/Enterprise signup.
 
 ## 11. Navigation Logic
-- **Default route:** `/dashboard` after login.
+- **Tenant-based routing:** All routes include tenant identifier:
+  - TRIAL users: `/trial`
+  - PRO users: `/pro`
+  - ENTERPRISE users: `/{tenantId}`
 - **Public pages:** Landing page, pricing, documentation.
-- **Tenant-aware routing:** Users are redirected based on workspace selection.
-- **Direct menu access:** Allowed for authenticated users.
+- **Protected routes:** All routes under `/{locale}/{tenantId}/*` require authentication.
+- **Feature flags:** Control access to features based on user's plan.
 
 ## 12. Logout
 - User logs out from the app.

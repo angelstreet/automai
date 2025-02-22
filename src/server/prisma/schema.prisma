@@ -11,13 +11,35 @@ datasource db {
 }
 
 model User {
+  id                     String    @id @default(uuid())
+  email                  String    @unique
+  password              String?
+  name                  String?
+  role                  String    @default("USER") // USER, ADMIN
+  provider              String?   // For OAuth (google, github, etc.)
+  providerId           String?   // External provider's user ID
+  providerAccessToken  String?   // OAuth access token
+  providerRefreshToken String?   // OAuth refresh token
+  tenantId              String?
+  tenant                Tenant?   @relation(fields: [tenantId], references: [id])
+  projects              Project[]
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  emailVerified         Boolean   @default(false)
+  verificationToken     String?
+  verificationTokenExpiry DateTime?
+  resetToken           String?
+  resetTokenExpiry     DateTime?
+
+  @@unique([provider, providerId]) // Ensure unique provider+providerId combination
+}
+
+model Tenant {
   id        String    @id @default(uuid())
-  email     String    @unique
-  password  String?
-  name      String?
-  role      String    @default("trial")
+  name      String    @unique
+  users     User[]
   createdAt DateTime  @default(now())
-  projects  Project[]
+  updatedAt DateTime  @updatedAt
 }
 
 model Project {
@@ -26,6 +48,7 @@ model Project {
   ownerId   String     
   owner     User       @relation(fields: [ownerId], references: [id])
   createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
   testcases TestCase[]
 }
 
@@ -37,6 +60,7 @@ model TestCase {
   steps      Json
   lockedBy   String?
   createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
   executions Execution[]
 }
 
@@ -48,4 +72,5 @@ model Execution {
   status     String    @default("pending")
   reportUrl  String?   
   createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 } 

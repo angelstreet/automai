@@ -7,3 +7,4 @@ src/.DS_Store
 src/app/.DS_Store
 docs/.DS_Store
 .DS_Store
+src/server/config/env/.env.*

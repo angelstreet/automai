@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,19 +13,56 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SiteHeader } from '@/components/layout/site-header';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
+import { Github, Chrome } from 'lucide-react';
 
 export default function LoginPage() {
+  const router = useRouter();
   const { locale } = useParams();
   const t = useTranslations('Auth');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [error, setError] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5001/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to login');
+      }
+
+      localStorage.setItem('token', data.token);
+      router.push(`/${locale}/dashboard`);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during login');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOAuthLogin = (provider: 'google' | 'github') => {
+    window.location.href = `http://localhost:5001/api/auth/${provider}`;
+  };
 
   return (
-    <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
-        <div className="absolute inset-0 bg-zinc-900" />
-        <div className="relative z-20 flex items-center text-lg font-medium">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="absolute top-8 left-8">
+        <div className="flex items-center space-x-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -33,62 +71,119 @@ export default function LoginPage() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="mr-2 h-6 w-6"
+            className="h-8 w-8 text-primary"
           >
             <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
           </svg>
-          Automai
-        </div>
-        <div className="relative z-20 mt-auto">
-          <blockquote className="space-y-2">
-            <p className="text-lg">
-              {t('loginHeroText')}
-            </p>
-          </blockquote>
+          <span className="text-2xl font-bold text-primary">Automai</span>
         </div>
       </div>
-      <div className="lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('loginTitle')}</CardTitle>
-              <CardDescription>{t('loginDescription')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Input
-                    id="email"
-                    placeholder={t('emailPlaceholder')}
-                    type="email"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    autoCorrect="off"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Input
-                    id="password"
-                    placeholder={t('passwordPlaceholder')}
-                    type="password"
-                    autoComplete="current-password"
-                  />
-                </div>
+
+      <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
+        <div className="flex flex-col space-y-2 text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t('loginTitle')}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {t('loginDescription')}
+          </p>
+        </div>
+
+        <div className="grid gap-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-2">
+              <div className="grid gap-1">
+                <Input
+                  id="email"
+                  placeholder={t('emailPlaceholder')}
+                  type="email"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect="off"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-11"
+                />
               </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-              <Button className="w-full">{t('loginButton')}</Button>
-              <div className="text-sm text-muted-foreground text-center">
-                {t('noAccount')}{' '}
-                <Link 
-                  href={`/${locale}/signup`}
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  {t('signupLink')}
-                </Link>
+              <div className="grid gap-1">
+                <Input
+                  id="password"
+                  placeholder={t('passwordPlaceholder')}
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-11"
+                />
               </div>
-            </CardFooter>
-          </Card>
+              {error && (
+                <div className="text-sm text-red-500 text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                  {error}
+                </div>
+              )}
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-base"
+              disabled={isLoading}
+            >
+              {isLoading ? t('loggingIn') : t('loginButton')}
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                {t('orContinueWith')}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11"
+              onClick={() => handleOAuthLogin('google')}
+            >
+              <Chrome className="mr-2 h-5 w-5" />
+              Google
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11"
+              onClick={() => handleOAuthLogin('github')}
+            >
+              <Github className="mr-2 h-5 w-5" />
+              GitHub
+            </Button>
+          </div>
+        </div>
+
+        <div className="text-sm text-muted-foreground text-center">
+          {t('noAccount')}{' '}
+          <Link 
+            href={`/${locale}/signup`}
+            className="text-primary underline-offset-4 hover:underline font-medium"
+          >
+            {t('signupLink')}
+          </Link>
+        </div>
+
+        <div className="text-sm text-muted-foreground text-center">
+          <Link 
+            href={`/${locale}/forgot-password`}
+            className="text-primary underline-offset-4 hover:underline font-medium"
+          >
+            {t('forgotPassword')}
+          </Link>
         </div>
       </div>
     </div>
