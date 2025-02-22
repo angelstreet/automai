@@ -75,6 +75,16 @@ model Execution {
   - Execution logs
 
 ## 3. API Implementation 🟡
+
+### 3.0 Authentication & Authorization 🟡
+See detailed implementation in [Backend Auth Guide](./backend-auth.md)
+- [ ] OAuth Providers setup (Google, GitHub)
+- [ ] Email/Password authentication
+- [ ] JWT implementation
+- [ ] Multi-tenant support
+- [ ] Session management
+- [ ] Role-based access control
+
 ### 3.1 Project Management 🟢
 - [x] POST /api/projects (Create)
 - [x] GET /api/projects (List)
@@ -151,7 +161,7 @@ JWT_SECRET=your_jwt_secret
 ### Running the Backend
 ```bash
 # Development
-npm run dev
+npm run server:dev
 
 # Production
 npm run build
