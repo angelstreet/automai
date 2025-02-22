@@ -7,10 +7,12 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Editor from '@monaco-editor/react';
 import { useUser } from '@/lib/contexts/UserContext';
+import { useSession } from 'next-auth/react';
 
 type TestCase = {
   id: string;
   projectId: string;
+  project_id?: string;
   name: string;
   steps: { platform: string; code: string };
   createdAt: string;
@@ -19,6 +21,7 @@ type TestCase = {
 export default function UseCaseEditPage() {
   const [activeTab, setActiveTab] = useState("editor");
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [script, setScript] = useState("");
   const [previewUrl, setPreviewUrl] = useState("");
   const [useCase, setUseCase] = useState<TestCase | null>(null);
@@ -27,8 +30,10 @@ export default function UseCaseEditPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { useCaseId } = useParams();
+  const params = useParams();
+  const { useCaseId } = params;
   const { user } = useUser();
+  const { data: session } = useSession();
 
   // Fetch use case and project data
   useEffect(() => {
@@ -36,33 +41,42 @@ export default function UseCaseEditPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const token = localStorage.getItem('token');
+
+        if (!session?.accessToken) {
+          router.push(`/${params.locale}/login`);
+          return;
+        }
+
         const tcRes = await fetch(`http://localhost:5001/api/usecases/${useCaseId}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.accessToken}` 
+          },
         });
         if (!tcRes.ok) {
           throw new Error('Failed to fetch use case');
         }
         const data = await tcRes.json();
+        console.log('Use case data:', data);
         setUseCase(data);
         setScript(data.steps.code || getDefaultScript(data.steps.platform));
         
-        // Fetch project name
-        const projRes = await fetch(`http://localhost:5001/api/projects/${data.projectId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!projRes.ok) {
-          throw new Error('Failed to fetch project details');
+        // Get project name from URL search params
+        const searchParams = new URLSearchParams(window.location.search);
+        const projectNameFromUrl = searchParams.get('projectName');
+        if (projectNameFromUrl) {
+          setProjectName(decodeURIComponent(projectNameFromUrl));
+        } else {
+          setError('Project name not found');
         }
-        setProjectName((await projRes.json()).name);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setIsLoading(false);
       }
     };
-    if (user) fetchData();
-  }, [user, useCaseId]);
+    if (user && session) fetchData();
+  }, [user, session, useCaseId, router, params.locale]);
 
   const getDefaultScript = (platform: string) => {
     switch (platform) {
@@ -81,18 +95,18 @@ export default function UseCaseEditPage() {
 
   const handleSave = async () => {
     try {
-      if (!useCase) return;
-      const token = localStorage.getItem('token');
+      if (!useCase || !session?.accessToken) return;
+      
       const payload = {
         name: useCase.name,
-        projectId: useCase.projectId,
+        projectId: useCase.projectId || useCase.project_id,
         steps: { platform: useCase.steps.platform, code: script },
       };
       const res = await fetch(`http://localhost:5001/api/usecases/${useCaseId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -103,7 +117,10 @@ export default function UseCaseEditPage() {
       // Sync with Git
       const syncRes = await fetch(`http://localhost:5001/api/usecases/${useCaseId}/sync`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.accessToken}` 
+        },
       });
       if (!syncRes.ok) {
         throw new Error('Failed to sync with Git');
@@ -117,13 +134,13 @@ export default function UseCaseEditPage() {
 
   const handleRun = async () => {
     try {
-      if (!useCase) return;
-      const token = localStorage.getItem('token');
+      if (!useCase || !session?.accessToken) return;
+      
       const res = await fetch("http://localhost:5001/api/execute", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({ useCaseId, script }),
       });
@@ -158,15 +175,41 @@ export default function UseCaseEditPage() {
             <>
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold text-foreground dark:text-foreground">{projectName} / {useCase?.name || "New Use Case"}</h1>
-                  <span className="text-sm px-2 py-1 bg-muted dark:bg-muted/80 rounded text-muted-foreground dark:text-muted-foreground">
-                    {useCase?.steps.platform === "web" ? "Web 🌐" :
-                     useCase?.steps.platform === "mobile" ? "Mobile 📱" :
-                     useCase?.steps.platform === "desktop" ? "Desktop 💻" : "Vision 👁️"}
-                  </span>
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.back()}
+                    className="hover:bg-muted/50 dark:hover:bg-muted/20"
+                  >
+                    ←
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-foreground dark:text-foreground">{projectName} / {useCase?.name || "New Use Case"}</h1>
+                    <span className="text-sm px-2 py-1 bg-muted dark:bg-muted/80 rounded text-muted-foreground dark:text-muted-foreground">
+                      {useCase?.steps.platform === "web" ? "Web 🌐" :
+                       useCase?.steps.platform === "android" ? "Android 📱" :
+                       useCase?.steps.platform === "ios" ? "iOS 📱" :
+                       useCase?.steps.platform === "desktop" ? "Desktop 💻" :
+                       useCase?.steps.platform === "python" ? "Python 🐍" :
+                       useCase?.steps.platform === "api" ? "API 🔌" : "Unknown"}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      if (script !== useCase?.steps.code) {
+                        setIsCancelModalOpen(true);
+                      } else {
+                        router.back();
+                      }
+                    }}
+                  >
+                    Cancel
+                  </Button>
                   <Button variant="outline" size="sm" onClick={handleSave}>
                     Save
                   </Button>
@@ -184,76 +227,137 @@ export default function UseCaseEditPage() {
                       <TabsTrigger value="editor">Editor</TabsTrigger>
                       <TabsTrigger value="preview">Preview</TabsTrigger>
                     </TabsList>
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="text-sm text-muted-foreground dark:text-muted-foreground flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90"
                       onClick={() => setIsVersionsOpen(!isVersionsOpen)}
                     >
-                      <span>Version History</span>
-                      <span className="transform transition-transform">
-                        {isVersionsOpen ? "▼" : "▶"}
-                      </span>
-                    </button>
+                      Version History
+                    </Button>
                   </div>
 
-                  <div className="flex gap-4 h-full">
-                    <div className="flex-1">
-                      <TabsContent value="editor" className="h-full m-0">
-                        <Card className="h-full border-border dark:border-border/80 bg-background dark:bg-[#1E1E1E]">
-                          <Editor
-                            height="100%"
-                            language={useCase?.steps.platform === "web" ? "javascript" : "python"}
-                            value={script}
-                            onChange={(value) => setScript(value || "")}
-                            theme="vs-dark"
-                            options={{ 
-                              minimap: { enabled: false },
-                              fontSize: 14,
-                              lineHeight: 21,
-                              padding: { top: 16, bottom: 16 },
-                              scrollBeyondLastLine: false,
-                              renderLineHighlight: "all",
-                              contextmenu: true,
-                              scrollbar: {
-                                verticalScrollbarSize: 8,
-                                horizontalScrollbarSize: 8
-                              }
-                            }}
-                            className="min-h-[300px]"
-                          />
-                        </Card>
-                      </TabsContent>
-                      <TabsContent value="preview" className="h-full m-0">
-                        <Card className="h-full border-border dark:border-border/80">
-                          {previewUrl ? (
-                            <iframe src={previewUrl} className="w-full h-full" title="Preview" />
+                  <div className="flex h-full">
+                    <TabsContent value="editor" className="h-full m-0 w-full">
+                      <Card className="h-full border-border dark:border-border/80 bg-background dark:bg-[#1E1E1E]">
+                        <Editor
+                          height="70vh"
+                          language={useCase?.steps.platform === "web" ? "javascript" : "python"}
+                          value={script}
+                          onChange={(value) => setScript(value || "")}
+                          theme="vs-dark"
+                          options={{ 
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineHeight: 21,
+                            padding: { top: 16, bottom: 16 },
+                            scrollBeyondLastLine: false,
+                            renderLineHighlight: "all",
+                            contextmenu: true,
+                            scrollbar: {
+                              verticalScrollbarSize: 8,
+                              horizontalScrollbarSize: 8
+                            }
+                          }}
+                        />
+                      </Card>
+                    </TabsContent>
+                    <TabsContent value="preview" className="h-full m-0 w-full">
+                      <Card className="h-full border-border dark:border-border/80">
+                        {previewUrl ? (
+                          <iframe src={previewUrl} className="w-full h-full" title="Preview" />
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-muted-foreground dark:text-muted-foreground">
+                            Run the script to see a preview (Web only).
+                          </div>
+                        )}
+                      </Card>
+                    </TabsContent>
+                  </div>
+
+                  {isVersionsOpen && (
+                    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[100]">
+                      <div className="bg-background dark:bg-background border border-border w-[500px] max-h-[80vh] rounded-lg shadow-lg relative z-[101] flex flex-col">
+                        <div className="flex justify-between items-center p-6 border-b border-border">
+                          <h3 className="text-xl font-bold text-foreground dark:text-foreground">Version History</h3>
+                          <Button variant="ghost" size="sm" onClick={() => setIsVersionsOpen(false)}>
+                            ✕
+                          </Button>
+                        </div>
+                        <div className="p-6 overflow-y-auto flex-1">
+                          {versions.length ? (
+                            <div className="space-y-4">
+                              {versions.map((version, index) => (
+                                <div 
+                                  key={index}
+                                  className="flex items-center justify-between p-3 rounded-md border border-border bg-muted/10 dark:bg-muted/5"
+                                >
+                                  <div className="flex-1">
+                                    <p className="text-sm text-foreground dark:text-foreground/90">{version}</p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="ml-2"
+                                    onClick={() => {
+                                      // TODO: Implement version restore functionality
+                                      console.log('Restore version:', version);
+                                    }}
+                                  >
+                                    Restore
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
                           ) : (
-                            <div className="h-full flex items-center justify-center text-muted-foreground dark:text-muted-foreground">
-                              Run the script to see a preview (Web only).
+                            <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
+                              <p className="text-muted-foreground dark:text-muted-foreground">No versions available</p>
+                              <p className="text-sm mt-1 text-muted-foreground dark:text-muted-foreground">Save changes to create a new version</p>
                             </div>
                           )}
-                        </Card>
-                      </TabsContent>
-                    </div>
-
-                    {isVersionsOpen && (
-                      <Card className="w-64 p-4 overflow-auto border-border dark:border-border/80 bg-background dark:bg-background">
-                        <h3 className="font-medium mb-2 text-foreground dark:text-foreground">Version History</h3>
-                        <div className="space-y-2 text-sm text-muted-foreground dark:text-muted-foreground">
-                          {versions.length ? (
-                            versions.map((v, i) => <p key={i}>{v}</p>)
-                          ) : (
-                            <p>No versions yet.</p>
-                          )}
                         </div>
-                      </Card>
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </Tabs>
               </div>
             </>
           )}
         </div>
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[100]">
+          <div className="bg-background dark:bg-background border border-border w-[400px] rounded-lg shadow-lg relative z-[101]">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-foreground dark:text-foreground mb-2">Unsaved Changes</h3>
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-6">
+                You have unsaved changes. Are you sure you want to leave?
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsCancelModalOpen(false)}
+                >
+                  Stay
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setIsCancelModalOpen(false);
+                    router.back();
+                  }}
+                >
+                  Leave
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

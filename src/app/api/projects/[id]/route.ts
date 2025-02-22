@@ -17,18 +17,38 @@ export async function GET(
       headers: {
         'Authorization': `Bearer ${token.accessToken}`,
       },
+    }).catch(error => {
+      console.error('Failed to fetch project:', error);
+      return null;
     });
 
-    const data = await response.json();
+    if (!response) {
+      return NextResponse.json(
+        { error: 'Failed to connect to backend service' },
+        { status: 503 }
+      );
+    }
+
+    const data = await response.text();
+    let jsonData;
+    try {
+      jsonData = JSON.parse(data);
+    } catch (e) {
+      console.error('Invalid JSON response:', data);
+      return NextResponse.json(
+        { error: 'Invalid response from backend service' },
+        { status: 502 }
+      );
+    }
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.error || 'Failed to fetch project' },
+        { error: jsonData.error || 'Failed to fetch project' },
         { status: response.status }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(jsonData);
   } catch (error) {
     console.error('Error fetching project:', error);
     return NextResponse.json(

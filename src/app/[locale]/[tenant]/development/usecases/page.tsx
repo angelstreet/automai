@@ -20,6 +20,8 @@ type UseCase = {
   id: string;
   shortId: string;
   name: string;
+  projectId: string;
+  project_id?: string;
   steps: { platform: string; code: string };
   createdAt: string;
   lastModified?: string;
@@ -29,6 +31,8 @@ type UseCase = {
 };
 
 export default function UseCasesPage() {
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedUseCases, setSelectedUseCases] = useState<Set<string>>(new Set());
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedUseCase, setSelectedUseCase] = useState<UseCase | null>(null);
   const [newUseCase, setNewUseCase] = useState({ 
@@ -88,7 +92,7 @@ export default function UseCasesPage() {
         const projectsWithUsecases = await Promise.all(
           projectsData.map(async (p: Project) => {
             try {
-              const ucRes = await fetch(`http://localhost:5001/api/usecases?project_id=${p.id}`, {
+              const ucRes = await fetch(`http://localhost:5001/api/usecases?projectId=${encodeURIComponent(p.id)}`, {
                 method: 'GET',
                 headers: { 
                   "Content-Type": "application/json",
@@ -125,6 +129,13 @@ export default function UseCasesPage() {
 
     if (user) fetchData();
   }, [user, session, params.locale, router, toast]);
+
+  // Set first project as expanded by default
+  useEffect(() => {
+    if (projects.length > 0 && !expandedProject) {
+      setExpandedProject(projects[0].id);
+    }
+  }, [projects]);
 
   const toggleFavorite = async (useCaseId: string) => {
     try {
@@ -188,37 +199,14 @@ export default function UseCasesPage() {
     try {
       if (!newUseCase.projectId || !newUseCase.name) return;
       
-      // Get the platform name for shortID (lowercase)
-      const platformName = 
-        newUseCase.platform === "python" ? "python" :
+      // Get the platform prefix for shortID
+      const platformPrefix = 
+        newUseCase.platform === "python" ? "pyt" :
         newUseCase.platform === "web" ? "web" :
-        newUseCase.platform === "desktop" ? "desktop" :
-        newUseCase.platform === "android" ? "android" :
+        newUseCase.platform === "desktop" ? "desk" :
+        newUseCase.platform === "android" ? "and" :
         newUseCase.platform === "ios" ? "ios" :
-        newUseCase.platform === "api" ? "api" : "unknown";
-
-      // Get ALL existing test cases across all projects to ensure unique numbering
-      const ucRes = await fetch(`http://localhost:5001/api/usecases?project_id=${newUseCase.projectId}`, {
-        method: 'GET',
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.accessToken}`
-        }
-      });
-      
-      let nextNumber = 1;
-      if (ucRes.ok) {
-        const existingCases = await ucRes.json();
-        const platformCases = existingCases.filter((uc: UseCase) => 
-          uc.shortId?.startsWith(platformName));
-        if (platformCases.length > 0) {
-          const numbers = platformCases.map((uc: UseCase) => 
-            parseInt(uc.shortId.replace(`${platformName}-`, '')));
-          nextNumber = Math.max(...numbers) + 1;
-        }
-      }
-
-      const shortId = `${platformName}-${nextNumber}`;
+        newUseCase.platform === "api" ? "api" : "unk";
 
       const res = await fetch("http://localhost:5001/api/usecases", {
         method: "POST",
@@ -230,10 +218,15 @@ export default function UseCasesPage() {
           projectId: newUseCase.projectId,
           name: newUseCase.name,
           description: newUseCase.description,
-          shortId,
-          steps: { platform: newUseCase.platform, code: "" },
+          platform: newUseCase.platform,
+          prefix: platformPrefix,
+          steps: { 
+            platform: newUseCase.platform, 
+            code: "" 
+          }
         }),
       });
+
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
         throw new Error(errorData?.message || 'Failed to create use case');
@@ -245,6 +238,99 @@ export default function UseCasesPage() {
     } catch (err) {
       console.error('Create use case error:', err);
       setError(err instanceof Error ? err.message : 'Failed to create use case');
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedUseCases.size} use case(s)?`)) {
+      return;
+    }
+
+    try {
+      const deletePromises = Array.from(selectedUseCases).map(async (id) => {
+        const response = await fetch(`http://localhost:5001/api/usecases/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.accessToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to delete use case ${id}`);
+        }
+      });
+
+      await Promise.all(deletePromises);
+
+      // Remove deleted use cases from state
+      setProjects(projects.map(project => ({
+        ...project,
+        usecases: project.usecases.filter(uc => !selectedUseCases.has(uc.id))
+      })));
+
+      setSelectedUseCases(new Set());
+      toast({
+        title: "Success",
+        description: "Selected use cases deleted successfully",
+      });
+    } catch (err) {
+      console.error('Error deleting use cases:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to delete use cases',
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDuplicate = async (useCase: UseCase) => {
+    try {
+      const payload = {
+        name: `${useCase.name} (Copy)`,
+        projectId: useCase.projectId || useCase.project_id,
+        steps: useCase.steps,
+        description: "",
+        platform: useCase.steps.platform
+      };
+      
+      const res = await fetch("http://localhost:5001/api/usecases", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.accessToken}`
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to duplicate use case');
+      }
+
+      const duplicated = await res.json();
+      
+      // Update state with the new use case
+      setProjects(projects.map(project => {
+        if (project.id === (useCase.projectId || useCase.project_id)) {
+          return {
+            ...project,
+            usecases: [...project.usecases, duplicated]
+          };
+        }
+        return project;
+      }));
+
+      toast({
+        title: "Success",
+        description: "Use case duplicated successfully",
+      });
+    } catch (err) {
+      console.error('Error duplicating use case:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to duplicate use case',
+        variant: "destructive",
+      });
     }
   };
 
@@ -293,6 +379,23 @@ export default function UseCasesPage() {
 
   const TableHeader = () => (
     <div className="grid grid-cols-12 gap-2 py-2 px-3 bg-muted/50 dark:bg-muted/90 border-b border-border text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
+      {isSelectionMode && (
+        <div className="col-span-1 flex items-center justify-center">
+          <input
+            type="checkbox"
+            className="rounded border-border"
+            checked={selectedUseCases.size > 0}
+            onChange={(e) => {
+              if (e.target.checked) {
+                const allIds = projects.flatMap(p => p.usecases.map(uc => uc.id));
+                setSelectedUseCases(new Set(allIds));
+              } else {
+                setSelectedUseCases(new Set());
+              }
+            }}
+          />
+        </div>
+      )}
       <button onClick={() => handleSort("id")} className="col-span-2 flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
         ID {getSortIcon("id")}
       </button>
@@ -305,42 +408,80 @@ export default function UseCasesPage() {
       <button onClick={() => handleSort("status")} className="col-span-2 flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
         Status {getSortIcon("status")}
       </button>
-      <button onClick={() => handleSort("lastModified")} className="col-span-2 flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
-        Modified {getSortIcon("lastModified")}
-      </button>
+      <div className="col-span-2 flex items-center justify-end">
+        <button onClick={() => handleSort("lastModified")} className="flex items-center gap-1 hover:text-foreground dark:hover:text-foreground/90">
+          Modified {getSortIcon("lastModified")}
+        </button>
+      </div>
     </div>
   );
 
   const UseCaseRow = ({ uc }: { uc: UseCase }) => (
-    <div
-      onClick={() => setSelectedUseCase(uc)}
-      className="grid grid-cols-12 gap-2 py-1.5 px-3 hover:bg-muted/50 dark:hover:bg-muted/30 border-b border-border cursor-pointer text-sm text-foreground dark:text-foreground/90"
-    >
-      <div className="col-span-2 font-mono">{uc.shortId}</div>
-      <div className="col-span-4 font-medium flex items-center gap-1">
-        {favorites.has(uc.id) && <span className="text-yellow-500 dark:text-yellow-400">★</span>}
-        {uc.name}
+    <div className="grid grid-cols-12 gap-2 py-1.5 px-3 hover:bg-muted/50 dark:hover:bg-muted/30 border-b border-border text-sm text-foreground dark:text-foreground/90">
+      {isSelectionMode && (
+        <div className="col-span-1 flex items-center justify-center">
+          <input
+            type="checkbox"
+            className="rounded border-border"
+            checked={selectedUseCases.has(uc.id)}
+            onChange={(e) => {
+              const newSelected = new Set(selectedUseCases);
+              if (e.target.checked) {
+                newSelected.add(uc.id);
+              } else {
+                newSelected.delete(uc.id);
+              }
+              setSelectedUseCases(newSelected);
+            }}
+          />
+        </div>
+      )}
+      <div
+        className="col-span-10 grid grid-cols-10 gap-2 cursor-pointer"
+        onClick={() => {
+          const project = projects.find(p => p.usecases.some(u => u.id === uc.id));
+          router.push(
+            `/${params.locale}/${params.tenant}/development/usecases/edit/${uc.shortId}?projectName=${encodeURIComponent(project?.name || '')}`
+          );
+        }}
+      >
+        <div className="col-span-2 font-mono">{uc.shortId}</div>
+        <div className="col-span-4 font-medium flex items-center gap-1">
+          {favorites.has(uc.id) && <span className="text-yellow-500 dark:text-yellow-400">★</span>}
+          {uc.name}
+        </div>
+        <div className="col-span-2">
+          {uc.steps.platform === "web" ? "🌐" : 
+           uc.steps.platform === "android" ? "🤖" : 
+           uc.steps.platform === "ios" ? "📱" : 
+           uc.steps.platform === "desktop" ? "💻" : 
+           uc.steps.platform === "python" ? "🐍" : 
+           uc.steps.platform === "api" ? "🔌" : "Unknown"}
+        </div>
+        <div className="col-span-2">
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-xs ${
+              uc.status === "active" ? "bg-success/20 dark:bg-success/30 text-success dark:text-success/90" :
+              uc.status === "draft" ? "bg-warning/20 dark:bg-warning/30 text-warning dark:text-warning/90" :
+              "bg-muted dark:bg-muted/40 text-muted-foreground dark:text-muted-foreground/90"
+            }`}
+          >
+            {uc.status || "N/A"}
+          </span>
+        </div>
       </div>
-      <div className="col-span-2">
-        {uc.steps.platform === "web" ? "🌐" : 
-         uc.steps.platform === "mobile" ? "📱" : 
-         uc.steps.platform === "desktop" ? "💻" : 
-         uc.steps.platform === "python" ? "🐍" : 
-         uc.steps.platform === "api" ? "🔌" : "👁️"}
-      </div>
-      <div className="col-span-2">
-        <span
-          className={`px-1.5 py-0.5 rounded-full text-xs ${
-            uc.status === "active" ? "bg-success/20 dark:bg-success/30 text-success dark:text-success/90" :
-            uc.status === "draft" ? "bg-warning/20 dark:bg-warning/30 text-warning dark:text-warning/90" :
-            "bg-muted dark:bg-muted/40 text-muted-foreground dark:text-muted-foreground/90"
-          }`}
+      <div className="col-span-1 flex justify-end gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedUseCase(uc);
+          }}
         >
-          {uc.status || "N/A"}
-        </span>
-      </div>
-      <div className="col-span-2 text-muted-foreground dark:text-muted-foreground/80">
-        {uc.lastModified ? new Date(uc.lastModified).toLocaleDateString() : "N/A"}
+          ℹ️
+        </Button>
       </div>
     </div>
   );
@@ -360,15 +501,49 @@ export default function UseCasesPage() {
           </div>
         ) : (
           <div className="flex justify-between items-center mb-4 gap-4">
-            <div className="flex-1 max-w-2xl">
-              <Input
-                placeholder="Search by ID, name, platform, tags..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full"
-              />
+            <div className="flex items-center gap-4">
+              <div className="flex-1 max-w-2xl">
+                <Input
+                  placeholder="Search by ID, name, platform, tags..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
             </div>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>New</Button>
+            <div className="flex gap-2">
+              {isSelectionMode ? (
+                <>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                    disabled={selectedUseCases.size === 0}
+                  >
+                    Delete ({selectedUseCases.size})
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsSelectionMode(false);
+                      setSelectedUseCases(new Set());
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSelectionMode(true)}
+                >
+                  Select
+                </Button>
+              )}
+              <Button onClick={() => setIsCreateDialogOpen(true)}>New</Button>
+            </div>
           </div>
         )}
 
@@ -533,7 +708,7 @@ export default function UseCasesPage() {
                         </h2>
                         <p className="text-sm text-muted-foreground font-mono">{selectedUseCase.shortId}</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedUseCase(null)}>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedUseCase(null)}>
                         ✕
                       </Button>
                     </div>
@@ -573,9 +748,6 @@ export default function UseCasesPage() {
                         </div>
                       </div>
                       <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
-                        <Button variant="outline" onClick={() => setSelectedUseCase(null)}>
-                          Close
-                        </Button>
                         <Button
                           variant="outline"
                           className="text-destructive hover:text-destructive"
@@ -584,9 +756,21 @@ export default function UseCasesPage() {
                           Delete
                         </Button>
                         <Button
-                          onClick={() =>
-                            router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${selectedUseCase.shortId}`)
-                          }
+                          variant="outline"
+                          onClick={() => {
+                            handleDuplicate(selectedUseCase);
+                            setSelectedUseCase(null);
+                          }}
+                        >
+                          Duplicate
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            const project = projects.find(p => p.usecases.some(uc => uc.id === selectedUseCase.id));
+                            router.push(
+                              `/${params.locale}/${params.tenant}/development/usecases/edit/${selectedUseCase.shortId}?projectName=${encodeURIComponent(project?.name || '')}`
+                            );
+                          }}
                         >
                           Edit
                         </Button>
