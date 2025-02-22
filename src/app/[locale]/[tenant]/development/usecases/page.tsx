@@ -459,7 +459,7 @@ export default function UseCasesPage() {
       )}
       <div className="col-span-11 grid grid-cols-11 gap-2">
         <div
-          className="col-span-11 grid grid-cols-11 gap-2 cursor-pointer"
+          className="col-span-10 grid grid-cols-10 gap-2 cursor-pointer"
           onClick={() => {
             const project = projects.find(p => p.usecases.some(u => u.id === uc.id));
             router.push(
@@ -491,21 +491,23 @@ export default function UseCasesPage() {
               {uc.status || "N/A"}
             </span>
           </div>
-          <div className="col-span-1 flex items-center justify-center text-xs text-muted-foreground min-h-[20px] gap-2">
-            {uc.lastModified ? new Date(uc.lastModified).toLocaleDateString() : "N/A"}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedUseCase(uc);
-              }}
-            >
-              ℹ️
-            </Button>
-          </div>
         </div>
+        <div className="col-span-1 flex items-center justify-center text-xs text-muted-foreground min-h-[20px]">
+          {uc.lastModified ? new Date(uc.lastModified).toLocaleDateString() : "N/A"}
+        </div>
+      </div>
+      <div className="col-span-1 flex items-center justify-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedUseCase(uc);
+          }}
+        >
+          ℹ️
+        </Button>
       </div>
     </div>
   );
