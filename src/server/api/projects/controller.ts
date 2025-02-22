@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 const createProject = async (req: express.Request, res: express.Response) => {
   try {
-    const { name, ownerId } = req.body;
+    const { name, description, ownerId } = req.body;
 
     if (!name || !ownerId) {
       return res.status(400).json({ error: 'Name and ownerId are required' });
@@ -14,6 +14,7 @@ const createProject = async (req: express.Request, res: express.Response) => {
     const project = await prisma.project.create({
       data: {
         name,
+        description,
         ownerId,
       },
     });
@@ -81,7 +82,7 @@ const getProject = async (req: express.Request, res: express.Response) => {
 const updateProject = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, description } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -89,7 +90,10 @@ const updateProject = async (req: express.Request, res: express.Response) => {
 
     const project = await prisma.project.update({
       where: { id },
-      data: { name },
+      data: { 
+        name,
+        description 
+      },
     });
 
     res.json(project);

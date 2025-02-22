@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
-import { useUser } from '@/lib/contexts/UserContext';
+import { signIn } from 'next-auth/react';
 
 export default function AuthRedirectPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { refreshUser } = useUser();
   const { locale } = useParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
@@ -27,40 +26,21 @@ export default function AuthRedirectPage() {
     const handleRedirect = async () => {
       setIsRedirecting(true);
       try {
-        // Store the token
-        localStorage.setItem('token', token);
-        
-        // Refresh user context
-        await refreshUser();
-        
-        // Clean up URL
-        window.history.replaceState({}, '', window.location.pathname);
-        
-        // Get updated user info after refresh
-        const response = await fetch('http://localhost:5001/api/auth/profile', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        // Sign in with the token
+        const result = await signIn('credentials', {
+          token,
+          redirect: false,
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch user profile');
+        if (result?.error) {
+          throw new Error(result.error);
         }
 
-        const userData = await response.json();
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
 
-        // Determine tenant ID based on user plan
-        let tenantId;
-        if (userData.tenantId) {
-          // Enterprise users use their actual tenant ID
-          tenantId = userData.tenantId;
-        } else {
-          // Trial and Pro users use fixed tenant IDs
-          tenantId = userData.plan.toLowerCase();
-        }
-
-        // Redirect to the appropriate dashboard
-        router.replace(`/${locale}/${tenantId}/dashboard`);
+        // Redirect to the dashboard
+        router.replace(`/${locale}/trial/dashboard`);
       } catch (error) {
         console.error('Error during redirect:', error);
         router.replace(`/${locale}/login?error=Failed to authenticate`);
@@ -68,7 +48,7 @@ export default function AuthRedirectPage() {
     };
 
     handleRedirect();
-  }, [token, locale]); // Keep minimal dependencies
+  }, [token, locale, router, isRedirecting]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

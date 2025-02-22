@@ -4,9 +4,9 @@ import { getToken } from 'next-auth/jwt';
 // GET /api/projects
 export async function GET(request: Request) {
   try {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request as any });
     
-    if (!token) {
+    if (!token?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -38,9 +38,9 @@ export async function GET(request: Request) {
 // POST /api/projects
 export async function POST(request: Request) {
   try {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request as any });
     
-    if (!token) {
+    if (!token?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -77,9 +77,9 @@ export async function POST(request: Request) {
 // PATCH /api/projects/[id]
 export async function PATCH(request: Request) {
   try {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request as any });
     
-    if (!token) {
+    if (!token?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -117,9 +117,9 @@ export async function PATCH(request: Request) {
 // DELETE /api/projects/[id]
 export async function DELETE(request: Request) {
   try {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request as any });
     
-    if (!token) {
+    if (!token?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

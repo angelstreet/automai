@@ -1,50 +1,49 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { PlanType, getPlanFeatures, isFeatureEnabled, canCreateMore } from '../features';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
+import { useSession } from 'next-auth/react';
 
-interface User {
+type User = {
   id: string;
   email: string;
-  name?: string;
-  tenantId?: string;
+  name: string | null;
   role: string;
-  plan: PlanType;
-}
+  tenantId: string | null;
+  plan: string;
+};
 
-interface UserContextType {
+type UserContextType = {
   user: User | null;
   isLoading: boolean;
   error: string | null;
   isFeatureEnabled: (feature: string) => boolean;
-  canCreateMore: (feature: 'maxProjects' | 'maxUseCases' | 'maxCampaigns', currentCount: number) => boolean;
+  canCreateMore: (
+    feature: 'maxProjects' | 'maxUseCases' | 'maxCampaigns',
+    currentCount: number
+  ) => boolean;
   logout: () => void;
   refreshUser: () => Promise<void>;
-}
+};
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      if (!session?.accessToken) {
         setUser(null);
         return;
       }
 
-      // Set token as cookie if not already set
-      if (!document.cookie.includes('token=')) {
-        document.cookie = `token=${token}; path=/; max-age=86400; samesite=lax`;
-      }
-
       const response = await fetch('http://localhost:5001/api/auth/profile', {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${session.accessToken}`
         }
       });
 
@@ -64,8 +63,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    fetchUser();
-  }, []);
+    if (status === 'authenticated') {
+      fetchUser();
+    } else if (status === 'unauthenticated') {
+      setUser(null);
+      setIsLoading(false);
+    }
+  }, [status, session]);
 
   const checkFeature = (feature: string): boolean => {
     if (!user) return false;
@@ -80,15 +84,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return canCreateMore(user.plan, feature, currentCount);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+  const logout = async () => {
     setUser(null);
   };
 
   const value = {
     user,
-    isLoading,
+    isLoading: isLoading || status === 'loading',
     error,
     isFeatureEnabled: checkFeature,
     canCreateMore: checkCanCreateMore,

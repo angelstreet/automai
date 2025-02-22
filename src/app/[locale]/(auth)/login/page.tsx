@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,11 +18,12 @@ import { useParams } from 'next/navigation';
 import { Github, Chrome } from 'lucide-react';
 import { useUser } from '@/lib/contexts/UserContext';
 import { useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 
 export default function LoginPage() {
   const router = useRouter();
   const { locale } = useParams();
-  const { user, isLoading, refreshUser } = useUser();
+  const { data: session, status } = useSession();
   const t = useTranslations('Auth');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -31,12 +32,12 @@ export default function LoginPage() {
 
   // Check if user is already authenticated
   useEffect(() => {
-    if (!isLoading && user) {
+    if (status === 'authenticated' && session?.user) {
       // User is already logged in, redirect to appropriate dashboard
-      const tenant = user.tenantId || (user.plan === 'TRIAL' ? 'trial' : 'pro');
+      const tenant = session.user.tenantId || (session.user.plan === 'TRIAL' ? 'trial' : 'pro');
       router.push(`/${locale}/${tenant}/dashboard`);
     }
-  }, [user, isLoading, router, locale]);
+  }, [session, status, router, locale]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,28 +45,21 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://localhost:5001/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+        callbackUrl: `/${locale}/trial/dashboard`,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to login');
+      if (result?.error) {
+        setError(result.error);
+        return;
       }
 
-      // Store token in both localStorage and cookie for redundancy
-      localStorage.setItem('token', data.token);
-      
-      // Set token as cookie
-      document.cookie = `token=${data.token}; path=/; max-age=86400; samesite=lax`;
-      
-      // Immediately refresh user data which will trigger the redirect
-      await refreshUser();
+      if (result?.ok) {
+        router.push(`/${locale}/trial/dashboard`);
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred during login');
     } finally {
@@ -74,16 +68,16 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = (provider: 'google' | 'github') => {
-    window.location.href = `http://localhost:5001/api/auth/${provider}`;
+    signIn(provider, { callbackUrl: `/${locale}/auth-redirect` });
   };
 
   // Show nothing while checking initial auth state
-  if (isLoading) {
+  if (status === 'loading') {
     return null;
   }
 
   // Show nothing if already authenticated (will be redirected)
-  if (user) {
+  if (status === 'authenticated') {
     return null;
   }
 
@@ -173,21 +167,19 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="grid gap-2">
+          <div className="grid grid-cols-2 gap-4">
             <Button
-              type="button"
               variant="outline"
-              className="h-11"
               onClick={() => handleOAuthLogin('google')}
+              className="h-11"
             >
               <Chrome className="mr-2 h-5 w-5" />
               Google
             </Button>
             <Button
-              type="button"
               variant="outline"
-              className="h-11"
               onClick={() => handleOAuthLogin('github')}
+              className="h-11"
             >
               <Github className="mr-2 h-5 w-5" />
               GitHub

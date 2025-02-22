@@ -1,17 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useUser } from '@/lib/contexts/UserContext';
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
+import { useUser } from "@/lib/contexts/UserContext";
 import { UpgradePrompt } from '@/components/UpgradePrompt';
-import { Button } from '@/components/ui/button';
-import { useTranslations } from 'next-intl';
-import { useParams } from 'next/navigation';
 
-interface Stats {
+type Stats = {
   projects: number;
   testCases: number;
   campaigns: number;
-}
+};
 
 export default function DashboardPage() {
   const { user, isLoading, canCreateMore } = useUser();
@@ -20,16 +21,16 @@ export default function DashboardPage() {
   const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string;
+  const { data: session } = useSession();
 
   useEffect(() => {
     const fetchStats = async () => {
-      if (!user) return;
+      if (!user || !session?.accessToken) return;
       
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5001/api/stats', {
+        const response = await fetch('/api/stats', {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${session.accessToken}`
           }
         });
         
@@ -43,7 +44,7 @@ export default function DashboardPage() {
     };
 
     fetchStats();
-  }, [user]);
+  }, [user, session]);
 
   if (isLoading) {
     return (

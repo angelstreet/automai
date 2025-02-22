@@ -7,9 +7,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request as any });
     
-    if (!token) {
+    if (!token?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -44,9 +44,9 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request as any });
     
-    if (!token) {
+    if (!token?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -86,9 +86,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = await getToken({ req: request });
+    const token = await getToken({ req: request as any });
     
-    if (!token) {
+    if (!token?.accessToken) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

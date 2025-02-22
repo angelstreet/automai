@@ -15,7 +15,7 @@ const generateShortId = () => {
   return result;
 };
 
-const createTestCase = async (req: express.Request, res: express.Response) => {
+const createUseCase = async (req: express.Request, res: express.Response) => {
   try {
     const { name, projectId, steps } = req.body;
 
@@ -28,7 +28,7 @@ const createTestCase = async (req: express.Request, res: express.Response) => {
     let isUnique = false;
     while (!isUnique) {
       shortId = generateShortId();
-      const existing = await prisma.testCase.findUnique({
+      const existing = await prisma.useCase.findUnique({
         where: { shortId },
       });
       if (!existing) {
@@ -36,7 +36,7 @@ const createTestCase = async (req: express.Request, res: express.Response) => {
       }
     }
 
-    const testCase = await prisma.testCase.create({
+    const useCase = await prisma.useCase.create({
       data: {
         name,
         projectId,
@@ -48,14 +48,14 @@ const createTestCase = async (req: express.Request, res: express.Response) => {
       },
     });
 
-    res.status(201).json(testCase);
+    res.status(201).json(useCase);
   } catch (error) {
-    console.error('Error creating test case:', error);
-    res.status(500).json({ error: 'Failed to create test case' });
+    console.error('Error creating use case:', error);
+    res.status(500).json({ error: 'Failed to create use case' });
   }
 };
 
-const getTestCases = async (req: express.Request, res: express.Response) => {
+const getUseCases = async (req: express.Request, res: express.Response) => {
   try {
     const { projectId } = req.query;
 
@@ -63,7 +63,7 @@ const getTestCases = async (req: express.Request, res: express.Response) => {
       return res.status(400).json({ error: 'Project ID is required' });
     }
 
-    const testCases = await prisma.testCase.findMany({
+    const useCases = await prisma.useCase.findMany({
       where: {
         projectId: String(projectId),
       },
@@ -78,18 +78,18 @@ const getTestCases = async (req: express.Request, res: express.Response) => {
       },
     });
 
-    res.json(testCases);
+    res.json(useCases);
   } catch (error) {
-    console.error('Error fetching test cases:', error);
-    res.status(500).json({ error: 'Failed to fetch test cases' });
+    console.error('Error fetching use cases:', error);
+    res.status(500).json({ error: 'Failed to fetch use cases' });
   }
 };
 
-const getTestCase = async (req: express.Request, res: express.Response) => {
+const getUseCase = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
 
-    const testCase = await prisma.testCase.findFirst({
+    const useCase = await prisma.useCase.findFirst({
       where: {
         OR: [
           { id },
@@ -107,18 +107,18 @@ const getTestCase = async (req: express.Request, res: express.Response) => {
       },
     });
 
-    if (!testCase) {
-      return res.status(404).json({ error: 'Test case not found' });
+    if (!useCase) {
+      return res.status(404).json({ error: 'Use case not found' });
     }
 
-    res.json(testCase);
+    res.json(useCase);
   } catch (error) {
-    console.error('Error fetching test case:', error);
-    res.status(500).json({ error: 'Failed to fetch test case' });
+    console.error('Error fetching use case:', error);
+    res.status(500).json({ error: 'Failed to fetch use case' });
   }
 };
 
-const updateTestCase = async (req: express.Request, res: express.Response) => {
+const updateUseCase = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     const { name, steps } = req.body;
@@ -127,7 +127,7 @@ const updateTestCase = async (req: express.Request, res: express.Response) => {
       return res.status(400).json({ error: 'Name or steps are required' });
     }
 
-    const testCase = await prisma.testCase.update({
+    const useCase = await prisma.useCase.update({
       where: { id },
       data: {
         ...(name && { name }),
@@ -135,29 +135,29 @@ const updateTestCase = async (req: express.Request, res: express.Response) => {
       },
     });
 
-    res.json(testCase);
+    res.json(useCase);
   } catch (error) {
-    console.error('Error updating test case:', error);
-    res.status(500).json({ error: 'Failed to update test case' });
+    console.error('Error updating use case:', error);
+    res.status(500).json({ error: 'Failed to update use case' });
   }
 };
 
-const deleteTestCase = async (req: express.Request, res: express.Response) => {
+const deleteUseCase = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
 
-    await prisma.testCase.delete({
+    await prisma.useCase.delete({
       where: { id },
     });
 
     res.status(204).send();
   } catch (error) {
-    console.error('Error deleting test case:', error);
-    res.status(500).json({ error: 'Failed to delete test case' });
+    console.error('Error deleting use case:', error);
+    res.status(500).json({ error: 'Failed to delete use case' });
   }
 };
 
-const lockTestCase = async (req: express.Request, res: express.Response) => {
+const lockUseCase = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
@@ -166,31 +166,31 @@ const lockTestCase = async (req: express.Request, res: express.Response) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const testCase = await prisma.testCase.findUnique({
+    const useCase = await prisma.useCase.findUnique({
       where: { id },
     });
 
-    if (!testCase) {
-      return res.status(404).json({ error: 'Test case not found' });
+    if (!useCase) {
+      return res.status(404).json({ error: 'Use case not found' });
     }
 
-    if (testCase.lockedBy && testCase.lockedBy !== userId) {
-      return res.status(403).json({ error: 'Test case is locked by another user' });
+    if (useCase.lockedBy && useCase.lockedBy !== userId) {
+      return res.status(403).json({ error: 'Use case is locked by another user' });
     }
 
-    const updatedTestCase = await prisma.testCase.update({
+    const updatedUseCase = await prisma.useCase.update({
       where: { id },
       data: { lockedBy: userId },
     });
 
-    res.json(updatedTestCase);
+    res.json(updatedUseCase);
   } catch (error) {
-    console.error('Error locking test case:', error);
-    res.status(500).json({ error: 'Failed to lock test case' });
+    console.error('Error locking use case:', error);
+    res.status(500).json({ error: 'Failed to lock use case' });
   }
 };
 
-const unlockTestCase = async (req: express.Request, res: express.Response) => {
+const unlockUseCase = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     const { userId } = req.body;
@@ -199,36 +199,36 @@ const unlockTestCase = async (req: express.Request, res: express.Response) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const testCase = await prisma.testCase.findUnique({
+    const useCase = await prisma.useCase.findUnique({
       where: { id },
     });
 
-    if (!testCase) {
-      return res.status(404).json({ error: 'Test case not found' });
+    if (!useCase) {
+      return res.status(404).json({ error: 'Use case not found' });
     }
 
-    if (testCase.lockedBy !== userId) {
-      return res.status(403).json({ error: 'Test case is not locked by you' });
+    if (useCase.lockedBy !== userId) {
+      return res.status(403).json({ error: 'Use case is not locked by you' });
     }
 
-    const updatedTestCase = await prisma.testCase.update({
+    const updatedUseCase = await prisma.useCase.update({
       where: { id },
       data: { lockedBy: null },
     });
 
-    res.json(updatedTestCase);
+    res.json(updatedUseCase);
   } catch (error) {
-    console.error('Error unlocking test case:', error);
-    res.status(500).json({ error: 'Failed to unlock test case' });
+    console.error('Error unlocking use case:', error);
+    res.status(500).json({ error: 'Failed to unlock use case' });
   }
 };
 
 module.exports = {
-  createTestCase,
-  getTestCases,
-  getTestCase,
-  updateTestCase,
-  deleteTestCase,
-  lockTestCase,
-  unlockTestCase,
+  createUseCase,
+  getUseCases,
+  getUseCase,
+  updateUseCase,
+  deleteUseCase,
+  lockUseCase,
+  unlockUseCase,
 }; 

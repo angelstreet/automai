@@ -30,9 +30,11 @@ const generateJWT = (user: any) => {
 const login = async (req: express.Request, res: express.Response) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for email:', email);
 
     // Validate input
     if (!email || !password) {
+      console.log('Missing email or password');
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
@@ -40,24 +42,37 @@ const login = async (req: express.Request, res: express.Response) => {
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
-        tenant: true, // Fixed relation name from Tenant to tenant
+        tenant: true,
       },
     });
 
+    console.log('User found:', user ? 'yes' : 'no');
+
     // Check if user exists
     if (!user) {
+      console.log('User not found');
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
     // Check if user has a password (might be OAuth user)
     if (!user.password) {
+      console.log('User has no password (OAuth user)');
       return res.status(401).json({ error: 'This account uses a different login method' });
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
+    console.log('Password valid:', isValidPassword);
+    
     if (!isValidPassword) {
+      console.log('Invalid password');
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Determine user's plan based on tenant status
+    let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+    if (user.tenant) {
+      plan = 'ENTERPRISE';
     }
 
     // Generate JWT token
@@ -72,18 +87,13 @@ const login = async (req: express.Request, res: express.Response) => {
       { expiresIn: '24h' }
     );
 
-    // Set token as httpOnly cookie for server-side authentication
-    res.cookie('token', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      path: '/'
-    });
-
     // Return user info and token (exclude password)
     const { password: _, ...userWithoutPassword } = user;
     res.json({
-      user: userWithoutPassword,
+      user: {
+        ...userWithoutPassword,
+        plan,
+      },
       token,
     });
   } catch (error) {

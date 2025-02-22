@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useParams } from 'next/navigation';
 import { useUser } from '@/lib/contexts/UserContext';
+import { useSession } from 'next-auth/react';
+import { useToast } from '@/components/ui/use-toast';
 
 type Project = {
   id: string;
@@ -46,6 +47,8 @@ export default function UseCasesPage() {
   const { user, isLoading: userLoading } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { data: session } = useSession();
+  const { toast } = useToast();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -60,10 +63,19 @@ export default function UseCasesPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const token = localStorage.getItem('token');
-        const projRes = await fetch("http://localhost:5001/api/projects", {
-          headers: { Authorization: `Bearer ${token}` },
+
+        if (!session?.accessToken) {
+          router.push(`/${params.locale}/login`);
+          return;
+        }
+
+        const projRes = await fetch("/api/projects", {
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.accessToken}`
+          },
         });
+
         if (!projRes.ok) {
           if (projRes.status === 401) {
             router.push(`/${params.locale}/login`);
@@ -71,26 +83,27 @@ export default function UseCasesPage() {
           }
           throw new Error('Failed to fetch projects');
         }
+
         const projectsData = await projRes.json();
         const projectsWithTestcases = await Promise.all(
           projectsData.map(async (p: Project) => {
             try {
-              const tcRes = await fetch(`http://localhost:5001/api/testcases?project_id=${p.id}`, {
-                headers: { Authorization: `Bearer ${token}` },
+              const tcRes = await fetch(`/api/testcases?project_id=${p.id}`, {
+                headers: { 
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${session.accessToken}`
+                },
               });
               let testcases = [];
               if (tcRes.status === 400 || !tcRes.ok) {
-                // If 400 Bad Request or any other error, treat it as no test cases available
                 console.log(`No test cases found for project ${p.id} or error occurred`);
                 testcases = [];
               } else {
                 testcases = await tcRes.json();
               }
-              // Always return the project with its test cases array (empty if none)
               return { ...p, testcases };
             } catch (err) {
               console.error(`Failed to fetch test cases for project ${p.id}:`, err);
-              // Return project with empty test cases array if fetch fails
               return { ...p, testcases: [] };
             }
           })
@@ -98,12 +111,18 @@ export default function UseCasesPage() {
         setProjects(projectsWithTestcases);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
+        toast({
+          title: "Error",
+          description: err instanceof Error ? err.message : 'Failed to fetch data',
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
+
     if (user) fetchData();
-  }, [user]);
+  }, [user, session, params.locale, router, toast]);
 
   const toggleFavorite = async (useCaseId: string) => {
     try {
@@ -187,25 +206,45 @@ export default function UseCasesPage() {
     }
   };
 
-  const handleDelete = async (useCaseId: string) => {
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this use case?')) {
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5001/api/testcases/${useCaseId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+      if (!session?.accessToken) {
+        router.push(`/${params.locale}/login`);
+        return;
+      }
+
+      const response = await fetch(`/api/usecases/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-      if (!res.ok) {
+
+      if (!response.ok) {
         throw new Error('Failed to delete use case');
       }
-      setProjects((prev) =>
-        prev.map((p) => ({
-          ...p,
-          testcases: p.testcases.filter((tc) => tc.id !== useCaseId),
-        }))
-      );
-      setSelectedUseCase(null);
+
+      // Remove the deleted use case from state
+      setProjects(projects.map(project => ({
+        ...project,
+        testcases: project.testcases.filter(tc => tc.id !== id)
+      })));
+
+      toast({
+        title: "Success",
+        description: "Use case deleted successfully",
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete use case');
+      console.error('Error deleting use case:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : 'Failed to delete use case',
+        variant: "destructive",
+      });
     }
   };
 

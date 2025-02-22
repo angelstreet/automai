@@ -1,4 +1,5 @@
-const { Router } = require('express');
+const express = require('express');
+const router = express.Router();
 
 console.log('Loading auth routes...');
 const authRoutes = require('./auth/routes');
@@ -9,14 +10,12 @@ const projectRoutes = require('./projects/routes');
 console.log('Project routes loaded successfully');
 
 console.log('Loading test case routes...');
-const testCaseRoutes = require('./testcases/routes');
+const useCaseRoutes = require('./usecases/routes');
 console.log('Test case routes loaded successfully');
 
 console.log('Loading stats routes...');
 const statsRoutes = require('./stats/routes');
 console.log('Stats routes loaded successfully');
-
-const router = Router();
 
 // Health check endpoint
 router.get('/health', (req, res) => {
@@ -36,7 +35,7 @@ console.log('Project routes set up successfully');
 
 // Test case routes
 console.log('Setting up test case routes...');
-router.use('/testcases', testCaseRoutes);
+router.use('/usecases', useCaseRoutes);
 console.log('Test case routes set up successfully');
 
 // Stats routes

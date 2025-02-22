@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { RoleSwitcher, type Role } from '@/components/ui/role-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -14,11 +14,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { User } from 'lucide-react';
 import { useUser } from '@/lib/contexts/UserContext';
-import { useParams } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 
 interface WorkspaceHeaderProps {
   className?: string;
-  tenant: string;
+  tenant?: string;
 }
 
 export function WorkspaceHeader({ className, tenant }: WorkspaceHeaderProps) {
@@ -30,37 +30,14 @@ export function WorkspaceHeader({ className, tenant }: WorkspaceHeaderProps) {
 
   const handleSignOut = async () => {
     try {
-      // Immediately redirect to login page (root path)
-      router.push(`/${locale}/login`);
-      
-      // Clear auth token cookie (this is the main one we need)
-      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      
-      // Clear local storage in the background
-      localStorage.removeItem('token');
+      // Call Next-Auth signOut
+      await signOut({ redirect: false });
       
       // Call the context logout function
       logout();
       
-      // Clean up other tokens in the background
-      setTimeout(() => {
-        try {
-          localStorage.removeItem('googleToken');
-          localStorage.removeItem('githubToken');
-          localStorage.removeItem('authProvider');
-          
-          // If needed, revoke provider tokens
-          const provider = user?.provider;
-          if (provider) {
-            fetch(`http://localhost:5001/api/auth/${provider}/revoke`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            }).catch(console.error);
-          }
-        } catch (error) {
-          console.error('Error during cleanup:', error);
-        }
-      }, 0);
+      // Redirect to login page
+      router.push(`/${locale}/login`);
     } catch (error) {
       console.error('Error during sign out:', error);
       router.push(`/${locale}/login`);

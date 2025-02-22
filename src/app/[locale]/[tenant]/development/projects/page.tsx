@@ -58,7 +58,7 @@ export default function ProjectsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const params = useParams();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { toast } = useToast();
   const { user, canCreateMore: checkCanCreateMore } = useUser();
 
@@ -67,14 +67,14 @@ export default function ProjectsPage() {
     const fetchProjects = async () => {
       setIsLoading(true);
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
+        if (!session?.accessToken) {
+          throw new Error('Not authenticated');
         }
 
-        const res = await fetch("http://localhost:5001/api/projects", {
+        const res = await fetch("/api/projects", {
           headers: { 
-            Authorization: `Bearer ${token}` 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session.accessToken}`
           },
         });
         if (res.ok) {
@@ -94,8 +94,8 @@ export default function ProjectsPage() {
         setIsLoading(false);
       }
     };
-    if (user) fetchProjects();
-  }, [user, toast]);
+    if (status === 'authenticated') fetchProjects();
+  }, [session, status, toast]);
 
   // Define table columns
   const columns: ColumnDef<Project>[] = [
@@ -148,15 +148,7 @@ export default function ProjectsPage() {
 
   // CRUD handlers
   const handleCreate = async () => {
-    console.log('handleCreate called');
-    console.log('user:', user);
-    console.log('newProject:', newProject);
-
-    if (!user?.id || !newProject.name.trim()) {
-      console.log('Validation failed:', { 
-        hasUserId: !!user?.id, 
-        projectName: newProject.name.trim() 
-      });
+    if (!session?.accessToken || !user?.id || !newProject.name.trim()) {
       toast({
         title: "Error",
         description: "Please make sure you are logged in and have entered a project name.",
@@ -166,7 +158,6 @@ export default function ProjectsPage() {
     }
     
     setIsCreating(true);
-    console.log('Creating project...');
 
     // Check for duplicate project name
     const trimmedName = newProject.name.trim();
@@ -175,7 +166,6 @@ export default function ProjectsPage() {
     );
     
     if (isDuplicate) {
-      console.log('Duplicate project name found');
       toast({
         title: "Error",
         description: "A project with this name already exists. Please choose a different name.",
@@ -187,7 +177,6 @@ export default function ProjectsPage() {
 
     // Check trial limitations
     if (!checkCanCreateMore("maxProjects", projects.length)) {
-      console.log('Trial limit reached');
       toast({
         title: "Trial Limit Reached",
         description: getUpgradeMessage(user?.plan as PlanType, "maxProjects"),
@@ -198,17 +187,11 @@ export default function ProjectsPage() {
     }
 
     try {
-      console.log('Making API request...');
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const res = await fetch("http://localhost:5001/api/projects", {
+      const res = await fetch("/api/projects", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          "Authorization": `Bearer ${session.accessToken}`
         },
         body: JSON.stringify({
           name: newProject.name.trim(),
@@ -217,15 +200,12 @@ export default function ProjectsPage() {
         }),
       });
       
-      console.log('API response:', res);
-      
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
       }
       
       const createdProject = await res.json();
-      console.log('Created project:', createdProject);
       setProjects([...projects, createdProject]);
       setIsDialogOpen(false);
       setNewProject({ name: "", description: "" });
@@ -246,18 +226,13 @@ export default function ProjectsPage() {
   };
 
   const handleEdit = async () => {
-    if (!editingProject || !user) return;
+    if (!editingProject || !session?.accessToken) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const res = await fetch(`http://localhost:5001/api/projects/${editingProject.id}`, {
+      const res = await fetch(`/api/projects/${editingProject.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${session.accessToken}`
         },
         body: JSON.stringify({
           name: editingProject.name,
@@ -289,19 +264,15 @@ export default function ProjectsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!user) return;
+    if (!session?.accessToken) return;
     if (!confirm("Are you sure you want to delete this project?")) return;
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const res = await fetch(`http://localhost:5001/api/projects/${id}`, {
+      const res = await fetch(`/api/projects/${id}`, {
         method: "DELETE",
         headers: {
-          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.accessToken}`
         },
       });
       if (res.ok) {
@@ -360,16 +331,7 @@ export default function ProjectsPage() {
             </div>
             <DialogFooter>
               <Button 
-                onClick={(e) => {
-                  e.preventDefault();
-                  console.log('Save button clicked');
-                  console.log('Button state:', {
-                    isDisabled: !newProject.name.trim() || isCreating,
-                    nameEmpty: !newProject.name.trim(),
-                    isCreating
-                  });
-                  handleCreate();
-                }}
+                onClick={handleCreate}
                 type="button"
                 disabled={!newProject.name.trim() || isCreating || hasReachedTrialLimit}
               >

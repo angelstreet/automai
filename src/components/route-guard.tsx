@@ -2,18 +2,20 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useUser } from '@/lib/contexts/UserContext';
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
+  const { data: session, status } = useSession();
   const { user, isLoading } = useUser();
   const locale = params.locale as string;
   const currentTenant = params.tenant as string;
 
   useEffect(() => {
-    if (isLoading) return;
+    if (status === 'loading' || isLoading) return;
 
     const handleRouting = async () => {
       // Public routes don't need tenant
@@ -22,47 +24,35 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         pathname.includes('/auth-redirect') ||
         pathname === `/${locale}`;
 
-      console.log('RouteGuard: Checking route', {
-        pathname,
-        isPublicRoute,
-        user: user ? 'logged in' : 'not logged in'
-      });
-
       if (isPublicRoute) {
         // If user is logged in and trying to access auth pages, redirect to dashboard
-        if (user && (pathname.includes('/login') || pathname.includes('/signup'))) {
-          const tenantId = user.tenantId || user.plan.toLowerCase();
-          console.log('RouteGuard: Logged in user accessing auth page, redirecting to dashboard');
+        if (session && (pathname.includes('/login') || pathname.includes('/signup'))) {
+          const tenantId = user?.tenantId || user?.plan?.toLowerCase();
           router.replace(`/${locale}/${tenantId}/dashboard`);
         }
         return;
       }
 
-      // If no user, redirect to login
-      if (!user) {
-        console.log('RouteGuard: No user found, redirecting to login');
+      // If no session, redirect to login
+      if (!session) {
         router.replace(`/${locale}/login`);
         return;
       }
 
+      // If no user data yet, wait
+      if (!user) return;
+
       // Determine expected tenant ID
       const expectedTenantId = user.tenantId || user.plan.toLowerCase();
 
-      console.log('RouteGuard: Checking tenant', {
-        currentTenant,
-        expectedTenantId
-      });
-
-      // If not in correct tenant route, redirect
+      // If current tenant doesn't match expected tenant, redirect
       if (currentTenant !== expectedTenantId) {
-        console.log('RouteGuard: Tenant mismatch, redirecting to correct tenant');
-        const newPath = pathname.replace(currentTenant, expectedTenantId);
-        router.replace(newPath);
+        router.replace(`/${locale}/${expectedTenantId}/dashboard`);
       }
     };
 
     handleRouting();
-  }, [pathname, user, isLoading, locale, currentTenant, router]);
+  }, [pathname, router, locale, currentTenant, session, status, user, isLoading]);
 
   // Show loading state
   if (isLoading) {
