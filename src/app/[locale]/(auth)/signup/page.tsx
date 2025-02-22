@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { useUser } from '@/lib/contexts/UserContext';
 
 import {
   Card,
@@ -23,6 +24,7 @@ export default function SignUpPage() {
   const { locale } = useParams();
   const router = useRouter();
   const t = useTranslations('Auth');
+  const { refreshUser } = useUser();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -85,16 +87,10 @@ export default function SignUpPage() {
       // Store the token
       localStorage.setItem('token', data.token);
       
-      // Determine tenant ID based on user plan
-      let tenantId;
-      if (data.user.tenantId) {
-        tenantId = data.user.tenantId;
-      } else {
-        tenantId = 'trial'; // Default to trial for new users
-      }
+      // Refresh user data which will trigger the redirect
+      await refreshUser();
 
-      // Redirect to dashboard
-      router.push(`/${locale}/${tenantId}/dashboard`);
+      // Note: No need for manual redirect here as RouteGuard will handle it
     } catch (err) {
       console.error('Registration error:', err);
       setError(err instanceof Error ? err.message : 'Failed to register');

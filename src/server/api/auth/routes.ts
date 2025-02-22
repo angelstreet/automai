@@ -17,21 +17,21 @@ const {
 const { authenticateToken } = require('../../middleware/auth');
 
 // Auth routes
-router.post('/auth/login', login);
-router.post('/auth/register', register);
-router.post('/auth/reset-password/request', requestPasswordReset);
-router.post('/auth/reset-password', resetPassword);
-router.get('/auth/profile', authenticateToken, getProfile);
-router.post('/auth/verify-email/send', authenticateToken, sendVerificationEmail);
-router.post('/auth/verify-email', verifyEmail);
+router.post('/login', login);
+router.post('/register', register);
+router.post('/reset-password/request', requestPasswordReset);
+router.post('/reset-password', resetPassword);
+router.get('/profile', authenticateToken, getProfile);
+router.post('/verify-email/send', authenticateToken, sendVerificationEmail);
+router.post('/verify-email', verifyEmail);
 
 // OAuth routes
-router.get('/auth/google', googleAuth);
-router.get('/auth/google/callback', googleCallback);
-router.get('/auth/github', githubAuth);
-router.get('/auth/github/callback', githubCallback);
+router.get('/google', googleAuth);
+router.get('/google/callback', googleCallback);
+router.get('/github', githubAuth);
+router.get('/github/callback', githubCallback);
 
 // User management
-router.delete('/auth/users/:email', deleteUser);
+router.delete('/users/:email', deleteUser);
 
 module.exports = router; 
