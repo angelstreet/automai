@@ -23,14 +23,61 @@ interface WorkspaceHeaderProps {
 
 export function WorkspaceHeader({ className, tenant }: WorkspaceHeaderProps) {
   const [currentRole, setCurrentRole] = React.useState<Role>('admin');
-  const { logout } = useUser();
+  const { logout, user } = useUser();
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
 
   const handleSignOut = async () => {
-    logout();
-    router.push(`/${locale}/login`);
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Determine the auth provider
+      const provider = user?.provider;
+      
+      if (provider) {
+        // Handle OAuth provider-specific logout
+        const providerToken = localStorage.getItem(`${provider}Token`);
+        
+        if (providerToken) {
+          try {
+            // Revoke provider access
+            await fetch(`http://localhost:5001/api/auth/${provider}/revoke`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              }
+            });
+          } catch (error) {
+            console.error(`Failed to revoke ${provider} token:`, error);
+          }
+        }
+      }
+
+      // Clear all auth-related data from localStorage
+      localStorage.removeItem('token');
+      localStorage.removeItem('googleToken');
+      localStorage.removeItem('githubToken');
+      localStorage.removeItem('authProvider');
+      
+      // Clear session cookies
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, "")
+          .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+
+      // Call the context logout function
+      logout();
+      
+      // Redirect to login page
+      router.push(`/${locale}/login`);
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Even if there's an error, try to redirect to login
+      router.push(`/${locale}/login`);
+    }
   };
 
   return (

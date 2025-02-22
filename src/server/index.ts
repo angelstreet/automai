@@ -22,6 +22,9 @@ const prisma = new PrismaClient();
 app.use(cors({
   origin: ['http://localhost:3000'], // Add your frontend URL
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
 // Body parser middleware

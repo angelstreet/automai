@@ -84,6 +84,7 @@ passport.use(
 
         return done(null, user);
       } catch (error) {
+        console.error('Error in Google strategy:', error);
         return done(error);
       }
     }
@@ -101,6 +102,8 @@ passport.use(
     },
     async (accessToken: string, refreshToken: string, profile: any, done: any) => {
       try {
+        console.log('GitHub profile:', JSON.stringify(profile, null, 2));
+        
         // Check if user exists
         let user = await prisma.user.findFirst({
           where: {
@@ -114,8 +117,11 @@ passport.use(
           // Get primary email from GitHub
           const primaryEmail = profile.emails?.find((email: any) => email.primary)?.value;
           if (!primaryEmail) {
+            console.error('No primary email found in GitHub profile');
             return done(null, false, { message: 'No primary email found' });
           }
+
+          console.log('Found primary email:', primaryEmail);
 
           // Check if email is already registered
           user = await prisma.user.findUnique({
@@ -124,6 +130,7 @@ passport.use(
           });
 
           if (user) {
+            console.error('Email already registered:', primaryEmail);
             // Email exists but with different provider
             return done(null, false, {
               message: 'Email already registered with different method',
@@ -143,6 +150,8 @@ passport.use(
             },
             include: { tenant: true },
           });
+          
+          console.log('Created new user:', user.email);
         } else {
           // Update existing user
           user = await prisma.user.update({
@@ -153,10 +162,13 @@ passport.use(
             },
             include: { tenant: true },
           });
+          
+          console.log('Updated existing user:', user.email);
         }
 
         return done(null, user);
       } catch (error) {
+        console.error('Error in GitHub strategy:', error);
         return done(error);
       }
     }

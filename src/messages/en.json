@@ -21,6 +21,7 @@
     "signupTitle": "Create account",
     "signupDescription": "Enter your details to create your account",
     "signupButton": "Create account",
+    "signingUp": "Creating account...",
     "signupHeroText": "Join thousands of teams automating their testing workflow.",
     "emailPlaceholder": "name@example.com",
     "passwordPlaceholder": "Enter your password",
@@ -32,7 +33,10 @@
     "signupLink": "Sign up",
     "loginLink": "Sign in",
     "forgotPassword": "Forgot password?",
-    "orContinueWith": "Or continue with"
+    "orContinueWith": "Or continue with",
+    "allFieldsRequired": "All fields are required",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "acceptTermsRequired": "Please accept the terms and conditions"
   },
   "Dashboard": {
     "title": "Dashboard",

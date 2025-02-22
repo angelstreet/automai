@@ -89,10 +89,17 @@ const login = async (req: express.Request, res: express.Response) => {
  */
 const register = async (req: express.Request, res: express.Response) => {
   try {
+    console.log('Registration request received:', { 
+      email: req.body.email,
+      hasPassword: !!req.body.password,
+      tenantName: req.body.tenantName 
+    });
+
     const { email, password, name, tenantName } = req.body;
 
     // Validate input
     if (!email || !password) {
+      console.log('Registration validation failed: missing email or password');
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
@@ -102,6 +109,7 @@ const register = async (req: express.Request, res: express.Response) => {
     });
 
     if (existingUser) {
+      console.log('Registration failed: email already exists:', email);
       return res.status(400).json({ error: 'Email already registered' });
     }
 
@@ -111,6 +119,7 @@ const register = async (req: express.Request, res: express.Response) => {
     // Create tenant if name provided
     let tenant = null;
     if (tenantName) {
+      console.log('Creating tenant:', tenantName);
       tenant = await prisma.tenant.create({
         data: {
           name: tenantName,
@@ -119,6 +128,7 @@ const register = async (req: express.Request, res: express.Response) => {
     }
 
     // Create user
+    console.log('Creating user with email:', email);
     const user = await prisma.user.create({
       data: {
         email,
@@ -128,9 +138,10 @@ const register = async (req: express.Request, res: express.Response) => {
         role: tenant ? 'ADMIN' : 'USER', // Make user admin if they created a tenant
       },
       include: {
-        tenant: true, // Fixed relation name
+        tenant: true,
       },
     });
+    console.log('User created successfully:', { id: user.id, email: user.email });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -152,6 +163,10 @@ const register = async (req: express.Request, res: express.Response) => {
     });
   } catch (error) {
     console.error('Error in register:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     res.status(500).json({ error: 'Failed to register user' });
   }
 };
