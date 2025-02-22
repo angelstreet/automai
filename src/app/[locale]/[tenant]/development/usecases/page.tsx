@@ -269,12 +269,19 @@ export default function UseCasesPage() {
       await Promise.all(deletePromises);
 
       // Remove deleted use cases from state
-      setProjects(projects.map(project => ({
+      const updatedProjects = projects.map(project => ({
         ...project,
         usecases: project.usecases.filter(uc => !selectedUseCases.has(uc.id))
-      })));
+      }));
 
+      setProjects(updatedProjects);
       setSelectedUseCases(new Set());
+      
+      // Exit selection mode if no use cases remain
+      if (!updatedProjects.some(p => p.usecases.length > 0)) {
+        setIsSelectionMode(false);
+      }
+
       toast({
         title: "Success",
         description: "Selected use cases deleted successfully",
@@ -452,7 +459,7 @@ export default function UseCasesPage() {
       )}
       <div className="col-span-11 grid grid-cols-11 gap-2">
         <div
-          className="col-span-10 grid grid-cols-10 gap-2 cursor-pointer"
+          className="col-span-11 grid grid-cols-11 gap-2 cursor-pointer"
           onClick={() => {
             const project = projects.find(p => p.usecases.some(u => u.id === uc.id));
             router.push(
@@ -484,23 +491,21 @@ export default function UseCasesPage() {
               {uc.status || "N/A"}
             </span>
           </div>
+          <div className="col-span-1 flex items-center justify-center text-xs text-muted-foreground min-h-[20px] gap-2">
+            {uc.lastModified ? new Date(uc.lastModified).toLocaleDateString() : "N/A"}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedUseCase(uc);
+              }}
+            >
+              ℹ️
+            </Button>
+          </div>
         </div>
-        <div className="col-span-1 flex items-center justify-center text-xs text-muted-foreground min-h-[20px]">
-          {uc.lastModified ? new Date(uc.lastModified).toLocaleDateString() : "N/A"}
-        </div>
-      </div>
-      <div className="col-span-1 flex items-center justify-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedUseCase(uc);
-          }}
-        >
-          ℹ️
-        </Button>
       </div>
     </div>
   );
@@ -531,16 +536,17 @@ export default function UseCasesPage() {
               </div>
             </div>
             <div className="flex gap-2">
-              {isSelectionMode ? (
+              {isSelectionMode && projects.some(p => p.usecases.length > 0) ? (
                 <>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={handleDeleteSelected}
-                    disabled={selectedUseCases.size === 0}
-                  >
-                    Delete ({selectedUseCases.size})
-                  </Button>
+                  {selectedUseCases.size > 0 && (
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={handleDeleteSelected}
+                    >
+                      Delete ({selectedUseCases.size})
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -553,13 +559,15 @@ export default function UseCasesPage() {
                   </Button>
                 </>
               ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsSelectionMode(true)}
-                >
-                  Select
-                </Button>
+                projects.some(p => p.usecases.length > 0) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsSelectionMode(true)}
+                  >
+                    Select
+                  </Button>
+                )
               )}
               <Button onClick={() => setIsCreateDialogOpen(true)}>New</Button>
             </div>
