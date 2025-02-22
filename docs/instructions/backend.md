@@ -1,214 +1,189 @@
-# **Backend Installation & Configuration Guide**
+# Backend Implementation Guide
 
-## **1️⃣ System Requirements**
-### **Prerequisites**
-Ensure you have the following installed:
-- **Node.js (v18 or later)** → Backend API development
-- **PostgreSQL** → Database for authentication & test execution
-- **Supabase CLI** → Managing database & storage
-- **Git** → Version control for test cases
-- **Docker (Optional)** → Running services like Elasticsearch & Kibana in containers
-- **Playwright & Appium** → Web & Mobile automation frameworks
+## Status Indicators
+🔴 Not Started | 🟡 In Progress | 🟢 Completed
 
+## Project Structure 🟢
 ```bash
-# Install Node.js
-sudo apt update && sudo apt install -y nodejs npm
-
-# Install PostgreSQL
-sudo apt install -y postgresql postgresql-contrib
-
-# Install Supabase CLI
-npm install -g supabase
-
-# Install Git
-sudo apt install -y git
-
-# Install Docker & Docker Compose
-sudo apt install -y docker.io docker-compose
+src/
+├── server/              # Backend code
+│   ├── api/            # API routes
+│   │   ├── auth/      # Authentication endpoints
+│   │   ├── projects/  # Project management
+│   │   ├── testcases/ # Test case management
+│   │   └── execution/ # Test execution
+│   ├── prisma/        # Database
+│   │   ├── schema.prisma
+│   │   └── migrations/
+│   ├── lib/           # Shared utilities
+│   │   ├── supabase.ts
+│   │   └── elasticsearch.ts
+│   └── middleware/    # API middleware
 ```
 
----
+## 1. Core Setup 🟢
+### 1.1 Project Initialization
+- [x] Initialize backend directory structure
+- [x] Set up TypeScript configuration
+- [x] Configure ESLint and Prettier
+- [x] Set up environment variables
 
-## **2️⃣ Setup & Configuration**
-### **2.1 Initialize Git for Version Control**
-```bash
-# Initialize Git repository
-cd ~/automation-saas
-git init
+### 1.2 Dependencies Installation
+- [x] Core dependencies installed
+- [x] Database dependencies installed
+- [ ] Testing framework dependencies
+- [ ] Logging dependencies
 
-# Add remote repository
-git remote add origin https://github.com/your-org/your-repo.git
-```
-
-### **2.2 Configure Supabase for Authentication & Storage**
-```bash
-# Login to Supabase
-supabase login
-
-# Initialize a new Supabase project
-supabase init
-
-# Start Supabase services locally
-supabase start
-```
-
-Update **.env** file with Supabase credentials:
-```ini
-SUPABASE_URL=https://your-instance.supabase.co
-SUPABASE_KEY=your-supabase-key
-DATABASE_URL=postgresql://user:password@localhost:5432/test_db
-```
-
-### **2.3 Setup Authentication System**
-```bash
-npm install next-auth supabase-js jsonwebtoken bcrypt
-```
-Modify **prisma/schema.prisma**:
+## 2. Database & Storage Setup 🟡
+### 2.1 Prisma Schema Setup 🟢
 ```prisma
-model User {
-  id       String  @id @default(uuid())
-  email    String  @unique
-  password String?
-  role     String  @default("trial")
-  tenants  Tenant[]
+model Project {
+  id        String     @id @default(uuid())
+  name      String
+  ownerId   String     
+  createdAt DateTime   @default(now())
+  testcases TestCase[]
 }
-```
-Run migration:
-```bash
-npx prisma migrate dev --name auth_setup
-```
 
----
+model TestCase {
+  id        String     @id @default(uuid())
+  projectId String     
+  name      String
+  steps     Json
+  lockedBy  String?
+  createdAt DateTime   @default(now())
+  executions Execution[]
+}
 
-## **3️⃣ Install & Configure API Backend**
-```bash
-npm install express cors dotenv prisma @prisma/client
-```
-Create **server.js**:
-```javascript
-const express = require("express");
-const cors = require("cors");
-const dotenv = require("dotenv");
-dotenv.config();
-const { PrismaClient } = require("@prisma/client");
-
-const prisma = new PrismaClient();
-const app = express();
-app.use(cors());
-app.use(express.json());
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
-```
-Run the backend:
-```bash
-node server.js
-```
-
----
-
-## **4️⃣ Setup & Configure Elasticsearch & Kibana**
-```bash
-# Start Elasticsearch & Kibana using Docker
-sudo docker-compose up -d
-```
-Create **docker-compose.yml**:
-```yaml
-version: '3.7'
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
-    container_name: elasticsearch
-    environment:
-      - discovery.type=single-node
-    ports:
-      - "9200:9200"
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.10.2
-    container_name: kibana
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch
-```
-
-Test connection:
-```bash
-curl -X GET "http://localhost:9200/_cat/health?v"
-```
-
-Install Elasticsearch client for backend:
-```bash
-npm install @elastic/elasticsearch
-```
-Add logging function in **server.js**:
-```javascript
-const { Client } = require("@elastic/elasticsearch");
-const elasticsearch = new Client({ node: process.env.ELASTICSEARCH_URL });
-async function logExecution(executionId, logs) {
-  await elasticsearch.index({
-    index: "test_executions",
-    body: { executionId, logs, timestamp: new Date().toISOString() }
-  });
+model Execution {
+  id          String    @id @default(uuid())
+  testcaseId  String    
+  projectId   String    
+  status      String    @default("pending")
+  reportUrl   String?   
+  createdAt   DateTime  @default(now())
 }
 ```
 
----
+### 2.2 Supabase Configuration 🔴
+- [ ] Set up Supabase project
+- [ ] Configure authentication
+- [ ] Set up storage buckets for:
+  - Test reports
+  - Screenshots
+  - Videos
+  - Execution logs
 
-## **5️⃣ Setup Test Execution (Playwright & Appium)**
-### **5.1 Install Dependencies**
+## 3. API Implementation 🟡
+### 3.1 Project Management 🟢
+- [x] POST /api/projects (Create)
+- [x] GET /api/projects (List)
+- [x] GET /api/projects/:id (Read)
+- [x] PUT /api/projects/:id (Update)
+- [x] DELETE /api/projects/:id (Delete)
+
+### 3.2 Test Case Management 🟢
+- [x] POST /api/testcases (Create)
+- [x] GET /api/testcases?project_id=... (List)
+- [x] GET /api/testcases/:id (Read)
+- [x] PUT /api/testcases/:id (Update)
+- [x] DELETE /api/testcases/:id (Delete)
+- [x] POST /api/testcases/:id/lock (Lock)
+- [x] POST /api/testcases/:id/unlock (Unlock)
+
+### 3.3 Test Execution 🔴
+- [ ] POST /api/execute (Local)
+- [ ] POST /api/cloud-execute (Cloud)
+- [ ] GET /api/executions (List)
+- [ ] GET /api/executions/:id (Status)
+
+## 4. Test Execution Engine 🔴
+### 4.1 Local Execution
+- [ ] Playwright setup for web testing
+- [ ] Appium setup for mobile testing
+- [ ] Pywinauto setup for desktop testing
+- [ ] Test execution orchestrator
+- [ ] Report generation (HTML)
+
+### 4.2 Cloud Execution (Future)
+- [ ] VM provisioning system
+- [ ] Docker container setup
+- [ ] Cloud execution orchestrator
+- [ ] Load balancing
+
+## 5. Logging & Monitoring 🔴
+### 5.1 Elasticsearch Setup
+- [ ] Configure Elasticsearch cluster
+- [ ] Set up Kibana dashboards
+- [ ] Implement log shipping
+
+### 5.2 Monitoring
+- [ ] Execution metrics
+- [ ] Performance monitoring
+- [ ] Error tracking
+- [ ] Real-time log viewing
+
+## 6. Integration Testing 🔴
+### 6.1 API Tests
+- [ ] Project management endpoints
+- [ ] Test case endpoints
+- [ ] Execution endpoints
+- [ ] Authentication flows
+
+### 6.2 End-to-End Tests
+- [ ] Local execution flows
+- [ ] Cloud execution flows
+- [ ] Report generation
+- [ ] Storage integration
+
+## Development Guidelines
+
+### Environment Setup
 ```bash
-npm install playwright appium
+# Required environment variables
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+DATABASE_URL=your_database_url
+ELASTICSEARCH_URL=your_elasticsearch_url
+JWT_SECRET=your_jwt_secret
 ```
-### **5.2 Setup Playwright for Web Automation**
+
+### Running the Backend
 ```bash
-npx playwright install
-```
-### **5.3 Execution API Endpoint**
-```javascript
-const { chromium } = require("playwright");
-app.post("/api/execute/local", async (req, res) => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await page.goto("https://example.com");
-  await browser.close();
-  res.json({ status: "completed" });
-});
+# Development
+npm run dev
+
+# Production
+npm run build
+npm start
 ```
 
----
-
-## **6️⃣ Setup Storage & Reporting (Supabase)**
-### **6.1 Configure Supabase Storage**
-```javascript
-const supabase = require("@supabase/supabase-js").createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
-```
-### **6.2 Store Execution Reports in Supabase**
-```javascript
-async function uploadReportToSupabase(filePath, executionId) {
-    const fileBuffer = fs.readFileSync(filePath);
-    const fileName = `${executionId}_report.html`;
-    const { data, error } = await supabase.storage.from("test-reports").upload(fileName, fileBuffer);
-    if (error) throw error;
-    return data.path;
-}
-```
-
----
-
-## **7️⃣ Final Steps: Run Everything**
+### Database Management
 ```bash
-# Start authentication & API server
-node server.js
+# Generate Prisma client
+npx prisma generate
 
-# Start Supabase
-supabase start
+# Run migrations
+npx prisma migrate dev
 
-# Start Elasticsearch & Kibana
-sudo docker-compose up -d
+# Reset database
+npx prisma reset
 ```
 
-### **🎯 Now the system is fully set up and ready for frontend integration.** 🚀
+## Deployment Checklist 🔴
+- [ ] Environment variables configuration
+- [ ] Database migrations
+- [ ] Storage bucket setup
+- [ ] Elasticsearch cluster setup
+- [ ] API documentation
+- [ ] Security review
+- [ ] Performance testing
+- [ ] Load testing
+
+## Status Tracking
+To mark a task as complete, change its status emoji:
+- 🔴 → 🟡 → 🟢
+- Also check the checkbox: [ ] → [x]
+
+Remember to commit your changes with clear messages indicating what was completed.
 

@@ -1,9 +1,105 @@
 ---
-description:
-globs:
+description: backend
+globs: 
+---
+# Backend CursorRules
+
+## **1️⃣ General Guidelines**
+- Keep APIs RESTful with clean, predictable endpoint structures.
+- Use JWT authentication for secured access to all endpoints.
+- Follow Role-Based Access Control (RBAC) to manage permissions.
+- Version APIs using `/api/v1/...` for backward compatibility.
+- Rate-limit requests to prevent abuse.
+- All API responses should follow:
+  ```json
+  {
+    "success": true/false,
+    "message": "Description",
+    "data": {...}
+  }
+  ```
+
 ---
 
-# Your rule content
+## **2️⃣ Authentication Rules**
+- OAuth (Google, GitHub) and email/password supported via NextAuth.js.
+- Passwords must be hashed using bcrypt before storage.
+- JWT expiration should be set to 1 hour; refresh tokens available.
+- Multi-Tenancy Support: Every request must be scoped to a tenant.
+- Session Middleware: Attach authenticated user details to `req.user`.
+- Logout API must revoke tokens from active sessions.
 
-- You can @ files here
-- You can use markdown but dont have to
+---
+
+## **3️⃣ API Design Rules**
+### **Projects & Use Cases**
+- `POST /api/projects` → Create new project
+- `GET /api/projects/:id` → Fetch project details
+- `DELETE /api/projects/:id` → Soft-delete project
+- `POST /api/usecases` → Create a new test case
+- `GET /api/usecases/:id` → Fetch test case details
+- Ensure all API endpoints validate user ownership of resources.
+
+### **Test Execution Rules**
+- `POST /api/execute/local` → Runs the test case locally
+- `POST /api/execute/cloud` → Runs the test case on cloud infrastructure
+- `GET /api/executions` → Fetch test run history
+- Store execution logs in Elasticsearch for debugging.
+- Store test results, videos, and screenshots in Supabase Storage.
+- Rate-limit execution API to prevent excessive automated calls.
+
+---
+
+## **4️⃣ Data Storage Rules**
+- PostgreSQL (Supabase) as the primary database.
+- Use Prisma ORM for structured queries and migrations.
+- Store test execution logs in Elasticsearch for fast querying.
+- Use Supabase Storage / AWS S3 for storing test reports & assets.
+- Implement soft deletes instead of hard deletes where possible.
+- Use database transactions for creating and updating related resources.
+
+---
+
+## **5️⃣ Security & Performance Rules**
+- Implement CORS policy to allow only whitelisted origins.
+- Validate all user inputs to prevent SQL injection & XSS.
+- Use Redis or a caching mechanism for frequently accessed data.
+- Monitor API performance metrics with Prometheus & Grafana.
+- Enforce strict API rate limits (e.g., max 10 requests/sec per user).
+
+---
+
+## **6️⃣ Error Handling & Logging**
+- Use a global error handler to return structured API responses.
+- Store logs in Kibana (Elasticsearch) for debugging & analysis.
+- Return appropriate HTTP status codes:
+  - `200 OK` for successful requests.
+  - `201 Created` for successful resource creation.
+  - `400 Bad Request` for validation errors.
+  - `401 Unauthorized` for authentication failures.
+  - `403 Forbidden` for permission issues.
+  - `500 Internal Server Error` for unexpected failures.
+- Critical errors must trigger alerts to Slack/Email.
+
+---
+
+## **7️⃣ Deployment & CI/CD Rules**
+- Use GitHub Actions for CI/CD pipelines.
+- Deploy to Vercel (Frontend) & Supabase/AWS (Backend).
+- Automate database migrations during deployment.
+- Perform zero-downtime deployments with rolling updates.
+- Enable auto-scaling in production environments.
+
+---
+
+## **8️⃣ Future Enhancements**
+- WebSockets for real-time execution tracking.
+- AI-assisted test script generation & failure analysis.
+- Integration with CI/CD tools (GitHub Actions, Jenkins, CircleCI).
+- Automated test scheduling & parallel execution on cloud VMs.
+
+---
+
+### **Conclusion**
+These rules establish a structured, secure, and scalable backend to support automation script development, execution, and analysis.
+
