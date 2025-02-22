@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useParams } from 'next/navigation';
+import { useUser } from '@/lib/contexts/UserContext';
 
 type Project = {
   id: string;
@@ -29,19 +29,29 @@ type TestCase = {
 export default function UseCasesPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedUseCase, setSelectedUseCase] = useState<TestCase | null>(null);
-  const [newUseCase, setNewUseCase] = useState({ projectId: "", name: "" });
+  const [newUseCase, setNewUseCase] = useState({ 
+    projectId: "", 
+    name: "", 
+    description: "",
+    platform: "web" 
+  });
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
   const [favorites, setFavorites] = useState(new Set<string>());
   const [projects, setProjects] = useState<Project[]>([]);
   const router = useRouter();
-  const { data: session } = useSession();
   const params = useParams();
-
-  // Add loading and error states
+  const { user, isLoading: userLoading } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!userLoading && !user) {
+      router.push(`/${params.locale}/login`);
+    }
+  }, [userLoading, user, router, params.locale]);
 
   // Fetch projects and use cases
   useEffect(() => {
@@ -49,22 +59,38 @@ export default function UseCasesPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const projRes = await fetch("/api/projects", {
-          headers: { Authorization: `Bearer ${session?.accessToken}` },
+        const token = localStorage.getItem('token');
+        const projRes = await fetch("http://localhost:5001/api/projects", {
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!projRes.ok) {
+          if (projRes.status === 401) {
+            router.push(`/${params.locale}/login`);
+            return;
+          }
           throw new Error('Failed to fetch projects');
         }
         const projectsData = await projRes.json();
         const projectsWithTestcases = await Promise.all(
           projectsData.map(async (p: Project) => {
-            const tcRes = await fetch(`/api/usecases?project_id=${p.id}`, {
-              headers: { Authorization: `Bearer ${session?.accessToken}` },
-            });
-            if (!tcRes.ok) {
-              throw new Error(`Failed to fetch use cases for project ${p.id}`);
+            try {
+              const tcRes = await fetch(`http://localhost:5001/api/testcases?project_id=${p.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              let testcases = [];
+              if (tcRes.status === 400) {
+                // If 400 Bad Request, treat it as no test cases available
+                testcases = [];
+              } else if (tcRes.ok) {
+                testcases = await tcRes.json();
+              }
+              // Always return the project, even if test cases fetch fails
+              return { ...p, testcases };
+            } catch (err) {
+              console.error(`Failed to fetch test cases for project ${p.id}:`, err);
+              // Return project with empty test cases array if fetch fails
+              return { ...p, testcases: [] };
             }
-            return { ...p, testcases: await tcRes.json() };
           })
         );
         setProjects(projectsWithTestcases);
@@ -74,23 +100,24 @@ export default function UseCasesPage() {
         setIsLoading(false);
       }
     };
-    if (session) fetchData();
-  }, [session]);
+    if (user) fetchData();
+  }, [user]);
 
   const toggleFavorite = async (useCaseId: string) => {
     try {
+      const token = localStorage.getItem('token');
       const newFavorites = new Set(favorites);
       if (newFavorites.has(useCaseId)) {
         newFavorites.delete(useCaseId);
-        await fetch(`/api/usecases/${useCaseId}/favorite`, {
+        await fetch(`http://localhost:5001/api/testcases/${useCaseId}/favorite`, {
           method: "DELETE",
-          headers: { Authorization: `Bearer ${session?.accessToken}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
       } else {
         newFavorites.add(useCaseId);
-        await fetch(`/api/usecases/${useCaseId}/favorite`, {
+        await fetch(`http://localhost:5001/api/testcases/${useCaseId}/favorite`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${session?.accessToken}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
       }
       setFavorites(newFavorites);
@@ -132,16 +159,18 @@ export default function UseCasesPage() {
   const handleCreate = async () => {
     try {
       if (!newUseCase.projectId || !newUseCase.name) return;
-      const res = await fetch("/api/usecases", {
+      const token = localStorage.getItem('token');
+      const res = await fetch("http://localhost:5001/api/testcases", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           projectId: newUseCase.projectId,
           name: newUseCase.name,
-          steps: { platform: "web", code: "" },
+          description: newUseCase.description,
+          steps: { platform: newUseCase.platform, code: "" },
         }),
       });
       if (!res.ok) {
@@ -150,7 +179,7 @@ export default function UseCasesPage() {
       const newTestCase = await res.json();
       router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${newTestCase.id}`);
       setIsCreateDialogOpen(false);
-      setNewUseCase({ projectId: "", name: "" });
+      setNewUseCase({ projectId: "", name: "", description: "", platform: "web" });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create use case');
     }
@@ -158,9 +187,10 @@ export default function UseCasesPage() {
 
   const handleDelete = async (useCaseId: string) => {
     try {
-      const res = await fetch(`/api/usecases/${useCaseId}`, {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5001/api/testcases/${useCaseId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${session?.accessToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
         throw new Error('Failed to delete use case');
@@ -236,7 +266,7 @@ export default function UseCasesPage() {
           </div>
         )}
         
-        {isLoading ? (
+        {userLoading || isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
@@ -254,162 +284,222 @@ export default function UseCasesPage() {
           </div>
         )}
 
-        {getFavoriteUseCases().length > 0 && (
-          <div className="mb-6 bg-white rounded-lg shadow">
-            <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-100">
-              <h3 className="font-semibold text-yellow-800">★ Favorite Use Cases</h3>
-            </div>
-            <TableHeader />
-            <div className="max-h-40 overflow-y-auto">
-              {sortTestcases(getFavoriteUseCases()).map((tc) => (
-                <TestCaseRow key={tc.id} tc={tc} />
+        {!isLoading && !error && (
+          <>
+            {getFavoriteUseCases().length > 0 && (
+              <div className="mb-6 bg-white rounded-lg shadow">
+                <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-100">
+                  <h3 className="font-semibold text-yellow-800">★ Favorite Use Cases</h3>
+                </div>
+                <TableHeader />
+                <div className="max-h-40 overflow-y-auto">
+                  {sortTestcases(getFavoriteUseCases()).map((tc) => (
+                    <TestCaseRow key={tc.id} tc={tc} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {projects.map((project) => (
+                <div key={project.id} className="bg-white rounded-lg shadow">
+                  <button
+                    onClick={() => setExpandedProject(expandedProject === project.id ? null : project.id)}
+                    className="w-full flex justify-between items-center px-4 py-2 text-left hover:bg-gray-50"
+                  >
+                    <div>
+                      <span className="text-lg font-semibold">{project.name}</span>
+                      <span className="ml-2 text-sm text-gray-500">
+                        ({project.testcases.length} use cases)
+                      </span>
+                    </div>
+                    <span
+                      className="transform transition-transform duration-200"
+                      style={{ transform: expandedProject === project.id ? "rotate(180deg)" : "rotate(0deg)" }}
+                    >
+                      ▼
+                    </span>
+                  </button>
+                  {expandedProject === project.id && (
+                    <div className="border-t border-gray-200">
+                      <TableHeader />
+                      <div className="max-h-96 overflow-y-auto">
+                        {project.testcases.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-8 text-gray-500">
+                            <p className="mb-2">No test cases found in this project</p>
+                            <Button 
+                              variant="outline" 
+                              onClick={() => {
+                                setNewUseCase({ projectId: project.id, name: "", description: "", platform: "web" });
+                                setIsCreateDialogOpen(true);
+                              }}
+                            >
+                              Create your first test case
+                            </Button>
+                          </div>
+                        ) : (
+                          sortTestcases(project.testcases).map((tc) => (
+                            <TestCaseRow key={tc.id} tc={tc} />
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
-          </div>
-        )}
 
-        <div className="space-y-4">
-          {projects.map((project) => (
-            <div key={project.id} className="bg-white rounded-lg shadow">
-              <button
-                onClick={() => setExpandedProject(expandedProject === project.id ? null : project.id)}
-                className="w-full flex justify-between items-center px-4 py-2 text-left hover:bg-gray-50"
-              >
-                <div>
-                  <span className="text-lg font-semibold">{project.name}</span>
-                  <span className="ml-2 text-sm text-gray-500">
-                    ({project.testcases.length} use cases)
-                  </span>
-                </div>
-                <span
-                  className="transform transition-transform duration-200"
-                  style={{ transform: expandedProject === project.id ? "rotate(180deg)" : "rotate(0deg)" }}
-                >
-                  ▼
-                </span>
-              </button>
-              {expandedProject === project.id && (
-                <div className="border-t border-gray-200">
-                  <TableHeader />
-                  <div className="max-h-96 overflow-y-auto">
-                    {sortTestcases(project.testcases).map((tc) => (
-                      <TestCaseRow key={tc.id} tc={tc} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            {isCreateDialogOpen && (
+              <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center">
+                <div className="bg-background border border-border w-[500px] rounded-lg shadow-lg">
+                  <div className="p-6">
+                    <h2 className="text-xl font-bold mb-4 text-foreground">New Test Case</h2>
+                    <div className="space-y-4">
+                      <Select 
+                        onValueChange={(value) => setNewUseCase({ ...newUseCase, projectId: value })}
+                        value={newUseCase.projectId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      <Input
+                        placeholder="Test Case Name"
+                        value={newUseCase.name}
+                        onChange={(e) => setNewUseCase({ ...newUseCase, name: e.target.value })}
+                      />
 
-        {isCreateDialogOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg w-96">
-              <h2 className="text-xl font-bold mb-4">New Use Case</h2>
-              <div className="space-y-4">
-                <Select onValueChange={(value) => setNewUseCase({ ...newUseCase, projectId: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="Use Case Name"
-                  value={newUseCase.name}
-                  onChange={(e) => setNewUseCase({ ...newUseCase, name: e.target.value })}
-                />
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreate}>Create</Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+                      <Select 
+                        onValueChange={(value) => setNewUseCase({ ...newUseCase, platform: value })}
+                        value={newUseCase.platform}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Platform" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="web">Web 🌐</SelectItem>
+                          <SelectItem value="android">Android 📱</SelectItem>
+                          <SelectItem value="ios">iOS 📱</SelectItem>
+                          <SelectItem value="desktop">Desktop 💻</SelectItem>
+                          <SelectItem value="api">API 🔌</SelectItem>
+                        </SelectContent>
+                      </Select>
 
-        {selectedUseCase && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg w-[600px]">
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold flex items-center gap-2">
-                    {selectedUseCase.name}
-                    <button
-                      onClick={() => toggleFavorite(selectedUseCase.id)}
-                      className="text-yellow-500 hover:text-yellow-600"
-                    >
-                      {favorites.has(selectedUseCase.id) ? "★" : "☆"}
-                    </button>
-                  </h2>
-                  <p className="text-sm text-gray-500 font-mono">{selectedUseCase.id}</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setSelectedUseCase(null)}>
-                  ✕
-                </Button>
-              </div>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Platform</label>
-                    <div className="mt-1">{selectedUseCase.steps.platform}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Status</label>
-                    <div className="mt-1">{selectedUseCase.status || "N/A"}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Created</label>
-                    <div className="mt-1">{new Date(selectedUseCase.createdAt).toLocaleString()}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Last Modified</label>
-                    <div className="mt-1">
-                      {selectedUseCase.lastModified ? new Date(selectedUseCase.lastModified).toLocaleString() : "N/A"}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Author</label>
-                    <div className="mt-1">{selectedUseCase.author || "N/A"}</div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">Tags</label>
-                    <div className="mt-1 flex gap-1">
-                      {selectedUseCase.tags?.map((tag) => (
-                        <span key={tag} className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                          {tag}
-                        </span>
-                      )) || "N/A"}
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground">Description (Optional)</label>
+                        <textarea 
+                          className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          placeholder="Enter test case description..."
+                          value={newUseCase.description}
+                          onChange={(e) => setNewUseCase({ ...newUseCase, description: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-4 border-t border-border">
+                        <Button variant="outline" onClick={() => {
+                          setIsCreateDialogOpen(false);
+                          setNewUseCase({ projectId: "", name: "", description: "", platform: "web" });
+                        }}>
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handleCreate}
+                          disabled={!newUseCase.projectId || !newUseCase.name}
+                        >
+                          Create
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
-                  <Button variant="outline" onClick={() => setSelectedUseCase(null)}>
-                    Close
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700"
-                    onClick={() => handleDelete(selectedUseCase.id)}
-                  >
-                    Delete
-                  </Button>
-                  <Button
-                    onClick={() =>
-                      router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${selectedUseCase.id}`)
-                    }
-                  >
-                    Edit
-                  </Button>
+              </div>
+            )}
+
+            {selectedUseCase && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                <div className="bg-white p-6 rounded-lg w-[600px]">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex-1">
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        {selectedUseCase.name}
+                        <button
+                          onClick={() => toggleFavorite(selectedUseCase.id)}
+                          className="text-yellow-500 hover:text-yellow-600"
+                        >
+                          {favorites.has(selectedUseCase.id) ? "★" : "☆"}
+                        </button>
+                      </h2>
+                      <p className="text-sm text-gray-500 font-mono">{selectedUseCase.id}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedUseCase(null)}>
+                      ✕
+                    </Button>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Platform</label>
+                        <div className="mt-1">{selectedUseCase.steps.platform}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Status</label>
+                        <div className="mt-1">{selectedUseCase.status || "N/A"}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Created</label>
+                        <div className="mt-1">{new Date(selectedUseCase.createdAt).toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Last Modified</label>
+                        <div className="mt-1">
+                          {selectedUseCase.lastModified ? new Date(selectedUseCase.lastModified).toLocaleString() : "N/A"}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Author</label>
+                        <div className="mt-1">{selectedUseCase.author || "N/A"}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">Tags</label>
+                        <div className="mt-1 flex gap-1">
+                          {selectedUseCase.tags?.map((tag) => (
+                            <span key={tag} className="px-2 py-1 bg-gray-100 rounded-full text-xs">
+                              {tag}
+                            </span>
+                          )) || "N/A"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+                      <Button variant="outline" onClick={() => setSelectedUseCase(null)}>
+                        Close
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(selectedUseCase.id)}
+                      >
+                        Delete
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          router.push(`/${params.locale}/${params.tenant}/development/usecases/edit/${selectedUseCase.id}`)
+                        }
+                      >
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>

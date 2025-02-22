@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Editor from '@monaco-editor/react';
+import { useUser } from '@/lib/contexts/UserContext';
 
 type TestCase = {
   id: string;
@@ -28,7 +28,7 @@ export default function UseCaseEditPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { useCaseId } = useParams();
-  const { data: session } = useSession();
+  const { user } = useUser();
 
   // Fetch use case and project data
   useEffect(() => {
@@ -36,8 +36,9 @@ export default function UseCaseEditPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const tcRes = await fetch(`/api/usecases/${useCaseId}`, {
-          headers: { Authorization: `Bearer ${session?.accessToken}` },
+        const token = localStorage.getItem('token');
+        const tcRes = await fetch(`http://localhost:5001/api/testcases/${useCaseId}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!tcRes.ok) {
           throw new Error('Failed to fetch use case');
@@ -47,8 +48,8 @@ export default function UseCaseEditPage() {
         setScript(data.steps.code || getDefaultScript(data.steps.platform));
         
         // Fetch project name
-        const projRes = await fetch(`/api/projects/${data.projectId}`, {
-          headers: { Authorization: `Bearer ${session?.accessToken}` },
+        const projRes = await fetch(`http://localhost:5001/api/projects/${data.projectId}`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!projRes.ok) {
           throw new Error('Failed to fetch project details');
@@ -60,8 +61,8 @@ export default function UseCaseEditPage() {
         setIsLoading(false);
       }
     };
-    if (session) fetchData();
-  }, [session, useCaseId]);
+    if (user) fetchData();
+  }, [user, useCaseId]);
 
   const getDefaultScript = (platform: string) => {
     switch (platform) {
@@ -81,16 +82,17 @@ export default function UseCaseEditPage() {
   const handleSave = async () => {
     try {
       if (!useCase) return;
+      const token = localStorage.getItem('token');
       const payload = {
         name: useCase.name,
         projectId: useCase.projectId,
         steps: { platform: useCase.steps.platform, code: script },
       };
-      const res = await fetch(`/api/usecases/${useCaseId}`, {
+      const res = await fetch(`http://localhost:5001/api/testcases/${useCaseId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -99,9 +101,9 @@ export default function UseCaseEditPage() {
       }
       
       // Sync with Git
-      const syncRes = await fetch(`/api/usecases/${useCaseId}/sync`, {
+      const syncRes = await fetch(`http://localhost:5001/api/testcases/${useCaseId}/sync`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${session?.accessToken}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!syncRes.ok) {
         throw new Error('Failed to sync with Git');
@@ -116,11 +118,12 @@ export default function UseCaseEditPage() {
   const handleRun = async () => {
     try {
       if (!useCase) return;
-      const res = await fetch("/api/execute", {
+      const token = localStorage.getItem('token');
+      const res = await fetch("http://localhost:5001/api/execute", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ useCaseId, script }),
       });
