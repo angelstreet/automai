@@ -163,7 +163,7 @@ export default function DashboardPage() {
                   <div className="space-y-4">
                     <div className="flex items-start gap-4">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/avatars/01.png" />
+                        <AvatarImage src="/avatars/01.svg" />
                         <AvatarFallback>JD</AvatarFallback>
                       </Avatar>
                       <div className="space-y-1">
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-start gap-4">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/avatars/02.png" />
+                        <AvatarImage src="/avatars/02.svg" />
                         <AvatarFallback>JS</AvatarFallback>
                       </Avatar>
                       <div className="space-y-1">
@@ -185,7 +185,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-start gap-4">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src="/avatars/03.png" />
+                        <AvatarImage src="/avatars/03.svg" />
                         <AvatarFallback>RJ</AvatarFallback>
                       </Avatar>
                       <div className="space-y-1">

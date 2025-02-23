@@ -7,7 +7,7 @@ export function RecentSales() {
     <div className="space-y-8">
       <div className="flex items-center gap-4">
         <Avatar className="h-9 w-9">
-          <AvatarImage src="/avatars/01.png" alt="Avatar" />
+          <AvatarImage src="/avatars/01.svg" alt="Avatar" />
           <AvatarFallback>JD</AvatarFallback>
         </Avatar>
         <div className="flex flex-1 flex-wrap items-center justify-between">
@@ -20,7 +20,7 @@ export function RecentSales() {
       </div>
       <div className="flex items-center gap-4">
         <Avatar className="h-9 w-9">
-          <AvatarImage src="/avatars/02.png" alt="Avatar" />
+          <AvatarImage src="/avatars/02.svg" alt="Avatar" />
           <AvatarFallback>JS</AvatarFallback>
         </Avatar>
         <div className="flex flex-1 flex-wrap items-center justify-between">
@@ -33,7 +33,7 @@ export function RecentSales() {
       </div>
       <div className="flex items-center gap-4">
         <Avatar className="h-9 w-9">
-          <AvatarImage src="/avatars/03.png" alt="Avatar" />
+          <AvatarImage src="/avatars/03.svg" alt="Avatar" />
           <AvatarFallback>RJ</AvatarFallback>
         </Avatar>
         <div className="flex flex-1 flex-wrap items-center justify-between">
@@ -46,7 +46,7 @@ export function RecentSales() {
       </div>
       <div className="flex items-center gap-4">
         <Avatar className="h-9 w-9">
-          <AvatarImage src="/avatars/04.png" alt="Avatar" />
+          <AvatarImage src="/avatars/04.svg" alt="Avatar" />
           <AvatarFallback>MD</AvatarFallback>
         </Avatar>
         <div className="flex flex-1 flex-wrap items-center justify-between">
@@ -59,7 +59,7 @@ export function RecentSales() {
       </div>
       <div className="flex items-center gap-4">
         <Avatar className="h-9 w-9">
-          <AvatarImage src="/avatars/05.png" alt="Avatar" />
+          <AvatarImage src="/avatars/05.svg" alt="Avatar" />
           <AvatarFallback>AW</AvatarFallback>
         </Avatar>
         <div className="flex flex-1 flex-wrap items-center justify-between">
