@@ -3,6 +3,7 @@
 import { ThemeProvider } from '@/components/theme-provider';
 import { SessionProvider } from 'next-auth/react';
 import { SearchProvider } from '@/lib/contexts/SearchContext';
+import { RoleProvider } from '@/context/role-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -14,7 +15,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         disableTransitionOnChange
       >
         <SearchProvider>
-          {children}
+          <RoleProvider>
+            {children}
+          </RoleProvider>
         </SearchProvider>
       </ThemeProvider>
     </SessionProvider>

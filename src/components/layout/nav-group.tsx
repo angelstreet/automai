@@ -16,6 +16,7 @@ import {
   SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useRole } from '@/context/role-context';
 
 interface NavGroupProps {
   title: string;
@@ -28,6 +29,7 @@ interface NavGroupProps {
       title: string;
       href: string;
       icon: any;
+      roles?: string[];
     }[];
   }[];
 }
@@ -35,29 +37,25 @@ interface NavGroupProps {
 export function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
+  const { currentRole } = useRole();
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
-  // Check if a submenu item is active and expand its parent
-  React.useEffect(() => {
-    const newExpandedState = { ...expandedItems };
-    items.forEach((item) => {
-      if (item.items?.some((subItem) => pathname.includes(subItem.href))) {
-        newExpandedState[item.href] = true;
-      }
-    });
-    setExpandedItems(newExpandedState);
-  }, [pathname]);
+  const isActive = (href: string) => {
+    return pathname === `/${params.locale}/${params.tenant}${href}`;
+  };
 
   const toggleSubmenu = (href: string) => {
-    setExpandedItems(prev => ({
+    setExpandedItems((prev) => ({
       ...prev,
-      [href]: !prev[href]
+      [href]: !prev[href],
     }));
   };
 
-  const isActive = (href: string) => {
-    return pathname.includes(href);
-  };
+  // Filter items based on role
+  const filteredItems = items.filter(item => {
+    if (!item.roles) return true;
+    return item.roles.includes(currentRole);
+  });
 
   return (
     <SidebarGroup>
@@ -67,11 +65,22 @@ export function NavGroup({ title, items }: NavGroupProps) {
       <SidebarGroupContent className="py-0.5">
         <ScrollArea className="h-full">
           <SidebarMenu>
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               const hasSubmenu = item.items && item.items.length > 0;
               const isExpanded = expandedItems[item.href];
+
+              // Filter submenu items based on role
+              const filteredSubItems = item.items?.filter(subItem => {
+                if (!subItem.roles) return true;
+                return subItem.roles.includes(currentRole);
+              });
+
+              // Skip rendering if no accessible submenu items
+              if (hasSubmenu && (!filteredSubItems || filteredSubItems.length === 0)) {
+                return null;
+              }
 
               return (
                 <SidebarMenuItem key={item.href}>
@@ -105,12 +114,12 @@ export function NavGroup({ title, items }: NavGroupProps) {
                     </SidebarMenuButton>
                   )}
 
-                  {hasSubmenu && (
+                  {hasSubmenu && filteredSubItems && (
                     <SidebarMenuSub className={cn(
                       "transition-all duration-200 ease-in-out",
                       !isExpanded && "hidden"
                     )}>
-                      {item.items?.map((subItem) => {
+                      {filteredSubItems.map((subItem) => {
                         const SubIcon = subItem.icon;
                         const isSubActive = isActive(subItem.href);
 

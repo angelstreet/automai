@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { RoleSwitcher, type Role } from '@/components/ui/role-switcher';
+import { RoleSwitcher } from '@/components/ui/role-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { UserProfile } from '@/components/ui/user-profile';
 import { Separator } from '@/components/ui/separator';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Search } from '@/components/ui/search';
+import { useRole } from '@/context/role-context';
 
 interface WorkspaceHeaderProps {
   className?: string;
@@ -16,7 +17,7 @@ interface WorkspaceHeaderProps {
 }
 
 export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
-  const [currentRole, setCurrentRole] = React.useState<Role>('viewer');
+  const { currentRole, setCurrentRole } = useRole();
   const params = useParams();
   const locale = params.locale as string;
 

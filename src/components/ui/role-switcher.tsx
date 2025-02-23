@@ -7,8 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-export type Role = 'admin' | 'developer' | 'tester' | 'viewer';
+import { type Role } from "@/context/role-context";
 
 const roles: { value: Role; label: string }[] = [
   { value: 'admin', label: 'Admin' },
