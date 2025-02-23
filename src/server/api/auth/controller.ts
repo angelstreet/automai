@@ -1,21 +1,46 @@
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const express = require('express');
-const crypto = require('crypto');
-const passport = require('passport');
+import { PrismaClient, User as PrismaUser, Tenant } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import express from 'express';
+import crypto from 'crypto';
+import passport from 'passport';
+import { User } from 'next-auth';
 
 const prisma = new PrismaClient();
 
 // Helper function to generate random token
 const generateToken = () => crypto.randomBytes(32).toString('hex');
 
-// Helper function to generate JWT token
-const generateJWT = (user: any) => {
+// Define AuthUser type for authenticated requests
+interface AuthUser {
+  id: string;
+  email: string;
+  role?: string;
+  tenantId?: string | null;
+  tenantName?: string | null;
+  plan?: string;
+  tenant?: Tenant;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthUser;
+    }
+  }
+}
+
+// Update the generateJWT function
+const generateJWT = (user: AuthUser) => {
   // Determine plan based on tenant
-  let plan = 'TRIAL';
-  if (user.tenant) {
+  let plan = user.plan || 'TRIAL';
+  if (user.tenant?.name) {
     plan = user.tenant.name === 'pro' ? 'PRO' : 'ENTERPRISE';
+  }
+
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET is not defined');
   }
 
   return jwt.sign(
@@ -23,10 +48,11 @@ const generateJWT = (user: any) => {
       userId: user.id,
       email: user.email,
       tenantId: user.tenantId,
-      role: user.role,
-      plan, // Include plan in token
+      tenantName: user.tenantName,
+      role: user.role || 'USER',
+      plan,
     },
-    process.env.JWT_SECRET,
+    jwtSecret,
     { expiresIn: '24h' }
   );
 };
@@ -78,7 +104,9 @@ const login = async (req: express.Request, res: express.Response) => {
 
     // Determine user's plan based on tenant status and name
     let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+    let tenantName = null;
     if (user.tenant) {
+      tenantName = user.tenant.name;
       if (user.tenant.name === 'pro') {
         plan = 'PRO';
       } else {
@@ -89,13 +117,14 @@ const login = async (req: express.Request, res: express.Response) => {
     // Generate JWT token
     const token = jwt.sign(
       {
-        userId: user.id,
-        email: user.email,
-        tenantId: user.tenantId,
-        role: user.role,
-        plan, // Include plan in token
+        userId: (user as any).id,
+        email: (user as any).email,
+        tenantId: (user as any).tenantId,
+        tenantName,
+        role: (user as any).role,
+        plan,
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET!,
       { expiresIn: '24h' }
     );
 
@@ -104,6 +133,7 @@ const login = async (req: express.Request, res: express.Response) => {
     res.json({
       user: {
         ...userWithoutPassword,
+        tenantName,
         plan,
       },
       token,
@@ -173,16 +203,27 @@ const register = async (req: express.Request, res: express.Response) => {
     });
     console.log('User created successfully:', { id: user.id, email: user.email });
 
+    // Determine user's plan based on tenant status and name
+    let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+    if (user.tenant) {
+      if (user.tenant.name === 'pro') {
+        plan = 'PRO';
+      } else {
+        plan = 'ENTERPRISE';
+      }
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       {
-        userId: user.id,
-        email: user.email,
-        tenantId: user.tenantId,
-        role: user.role,
+        userId: (user as any).id,
+        email: (user as any).email,
+        tenantId: (user as any).tenantId,
+        tenantName: user.tenant ? user.tenant.name : null,
+        role: (user as any).role,
         plan, // Include plan in token
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET!,
       { expiresIn: '24h' }
     );
 
@@ -207,16 +248,14 @@ const register = async (req: express.Request, res: express.Response) => {
  */
 const getProfile = async (req: express.Request, res: express.Response) => {
   try {
-    const userId = req.user?.id; // Will be set by auth middleware
+    const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        tenant: true,
-      },
+      include: { tenant: true }
     });
 
     if (!user) {
@@ -224,24 +263,20 @@ const getProfile = async (req: express.Request, res: express.Response) => {
     }
 
     // Determine user's plan based on tenant status and name
-    let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
-    if (user.tenant) {
-      if (user.tenant.name === 'pro') {
-        plan = 'PRO';
-      } else {
-        plan = 'ENTERPRISE';
-      }
+    let plan = 'TRIAL';
+    if (user.tenant?.name) {
+      plan = user.tenant.name === 'pro' ? 'PRO' : 'ENTERPRISE';
     }
 
     // Return user info (exclude password)
     const { password: _, ...userWithoutPassword } = user;
-    res.json({
+    return res.json({
       ...userWithoutPassword,
       plan,
     });
   } catch (error) {
     console.error('Error in getProfile:', error);
-    res.status(500).json({ error: 'Failed to get profile' });
+    return res.status(500).json({ error: 'Failed to get profile' });
   }
 };
 
@@ -250,7 +285,7 @@ const getProfile = async (req: express.Request, res: express.Response) => {
  */
 const updateProfile = async (req: express.Request, res: express.Response) => {
   try {
-    const userId = req.user?.id; // Will be set by auth middleware
+    const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
@@ -272,7 +307,9 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
 
     // Determine user's plan based on tenant status and name
     let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+    let tenantName = null;
     if (user.tenant) {
+      tenantName = user.tenant.name;
       if (user.tenant.name === 'pro') {
         plan = 'PRO';
       } else {
@@ -285,6 +322,7 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
     res.json({
       ...userWithoutPassword,
       plan,
+      tenantName,
     });
   } catch (error) {
     console.error('Error in updateProfile:', error);
@@ -467,7 +505,7 @@ const verifyEmail = async (req: express.Request, res: express.Response) => {
 
 // Helper function to handle OAuth success
 const handleOAuthSuccess = async (req: express.Request, res: express.Response) => {
-  const user = req.user;
+  const user = req.user as AuthUser;
   if (!user) {
     return res.redirect(`http://localhost:3000/en/login?error=Authentication failed`);
   }
@@ -484,7 +522,9 @@ const handleOAuthSuccess = async (req: express.Request, res: express.Response) =
 
   // Determine plan based on tenant status and name
   let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+  let tenantName = null;
   if (userData.tenant) {
+    tenantName = userData.tenant.name;
     if (userData.tenant.name === 'pro') {
       plan = 'PRO';
     } else {
@@ -497,6 +537,7 @@ const handleOAuthSuccess = async (req: express.Request, res: express.Response) =
       userId: userData.id,
       email: userData.email,
       tenantId: userData.tenantId,
+      tenantName,
       role: userData.role,
       plan, // Include plan in the token
     },
@@ -584,7 +625,7 @@ const deleteUser = async (req: express.Request, res: express.Response) => {
       include: {
         projects: {
           include: {
-            testcases: {
+            usecases: {
               include: {
                 executions: true
               }
@@ -600,18 +641,18 @@ const deleteUser = async (req: express.Request, res: express.Response) => {
 
     // Delete in order of dependencies
     for (const project of user.projects) {
-      for (const testcase of project.testcases) {
+      for (const usecase of project.usecases) {
         // Delete executions
         await prisma.execution.deleteMany({
-          where: { testcaseId: testcase.id }
+          where: { usecaseId: usecase.id }
         });
       }
-      // Delete testcases
-      await prisma.testCase.deleteMany({
+      // Delete usecases
+      await prisma.useCase.deleteMany({
         where: { projectId: project.id }
       });
     }
-    
+
     // Delete projects
     await prisma.project.deleteMany({
       where: { ownerId: user.id }
@@ -622,10 +663,10 @@ const deleteUser = async (req: express.Request, res: express.Response) => {
       where: { email }
     });
 
-    res.json({ message: 'User deleted successfully' });
+    return res.status(200).json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Error in deleteUser:', error);
-    res.status(500).json({ error: 'Failed to delete user' });
+    console.error('Error deleting user:', error);
+    return res.status(500).json({ error: 'Failed to delete user' });
   }
 };
 
@@ -668,7 +709,9 @@ const exchangeGoogleToken = async (req: express.Request, res: express.Response) 
 
     // Determine plan based on tenant status and name
     let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+    let tenantName = null;
     if (user.tenant) {
+      tenantName = user.tenant.name;
       if (user.tenant.name === 'pro') {
         plan = 'PRO';
       } else {
@@ -679,13 +722,14 @@ const exchangeGoogleToken = async (req: express.Request, res: express.Response) 
     // Generate our JWT token
     const jwtToken = jwt.sign(
       {
-        userId: user.id,
-        email: user.email,
-        tenantId: user.tenantId,
-        role: user.role,
+        userId: (user as any).id,
+        email: (user as any).email,
+        tenantId: (user as any).tenantId,
+        tenantName,
+        role: (user as any).role,
         plan,
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET!,
       { expiresIn: '24h' }
     );
 
@@ -694,6 +738,7 @@ const exchangeGoogleToken = async (req: express.Request, res: express.Response) 
     res.json({
       user: {
         ...userWithoutPassword,
+        tenantName,
         plan,
       },
       token: jwtToken,
@@ -704,7 +749,7 @@ const exchangeGoogleToken = async (req: express.Request, res: express.Response) 
   }
 };
 
-module.exports = {
+export {
   login,
   register,
   getProfile,

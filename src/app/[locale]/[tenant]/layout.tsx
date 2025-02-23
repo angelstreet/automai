@@ -7,52 +7,32 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { useUser } from '@/lib/contexts/UserContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { useParams } from 'next/navigation';
 import Cookies from 'js-cookie';
 
 export default function WorkspaceLayout({
   children,
-  params
+  params,
 }: {
   children: React.ReactNode;
   params: Promise<{ tenant: string; locale: string }>;
 }) {
   const { user, isLoading } = useUser();
   const router = useRouter();
-  const paramsFromNext = useParams();
-  const locale = paramsFromNext.locale as string;
-  const tenant = paramsFromNext.tenant as string;
+  
+  // Properly handle params as a Promise
+  const { locale, tenant } = React.use(params);
 
-  React.use(params);
+  // Only show loading state while user data is being fetched
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        // Not authenticated, redirect to login
-        router.push(`/${locale}/login`);
-        return;
-      }
-
-      // Determine the correct tenant
-      const correctTenant = user.tenantName || (user.plan?.toLowerCase() === 'trial' ? 'trial' : 'pro');
-      
-      // Only redirect if we're not already on the correct path and not in a redirect loop
-      if (tenant !== correctTenant && !sessionStorage.getItem('isRedirecting')) {
-        sessionStorage.setItem('isRedirecting', 'true');
-        router.push(`/${locale}/${correctTenant}/dashboard`);
-        return;
-      }
-      
-      // Clear the redirect flag once we're on the correct path
-      if (tenant === correctTenant) {
-        sessionStorage.removeItem('isRedirecting');
-      }
-    }
-  }, [user, isLoading, router, locale, tenant]);
-
-  // Show nothing while checking auth
-  if (isLoading || !user) {
+  // If no user, let RouteGuard handle the redirect
+  if (!user) {
     return null;
   }
 

@@ -61,6 +61,7 @@ export const authConfig: AuthOptions = {
             name: data.user.name,
             role: data.user.role,
             tenantId: data.user.tenantId,
+            tenantName: data.user.tenantName,
             plan: data.user.plan,
             accessToken: data.token
           };
@@ -74,10 +75,14 @@ export const authConfig: AuthOptions = {
   pages: {
     signIn: "/login",
     error: "/error",
+    signOut: "/login",
   },
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
+    maxAge: 24 * 60 * 60, // 24 hours
+  },
+  jwt: {
     maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
@@ -91,7 +96,8 @@ export const authConfig: AuthOptions = {
           });
 
           // Exchange Google token for our backend token
-          const response = await fetch('http://localhost:5001/api/auth/google/token', {
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+          const response = await fetch(`${backendUrl}/api/auth/google/token`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -103,30 +109,42 @@ export const authConfig: AuthOptions = {
             }),
           });
 
-          const responseText = await response.text();
-          console.log('Token exchange response:', {
-            status: response.status,
-            ok: response.ok,
-            body: responseText
-          });
-
           if (!response.ok) {
-            throw new Error(`Failed to exchange token: ${responseText}`);
+            console.error('Failed to authenticate with backend:', response.statusText);
+            return false;
           }
 
-          const data = JSON.parse(responseText);
-          user.accessToken = data.token;
-          user.id = data.user.id;
-          user.role = data.user.role;
-          user.tenantId = data.user.tenantId;
-          user.plan = data.user.plan;
-          user.image = profile?.picture || profile?.image;
+          const data = await response.json();
+          
+          // Ensure we have the correct tenant information
+          if (!data.user.tenantName && data.user.tenant?.name) {
+            data.user.tenantName = data.user.tenant.name;
+          }
+
+          // Update user object with all necessary data
+          Object.assign(user, {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.name,
+            role: data.user.role,
+            tenantId: data.user.tenantId,
+            tenantName: data.user.tenantName || data.user.tenant?.name,
+            plan: data.user.plan,
+            accessToken: data.token,
+            image: profile?.image ?? null
+          });
+
+          console.log('Updated user data:', {
+            id: user.id,
+            email: user.email,
+            tenantId: user.tenantId,
+            tenantName: user.tenantName,
+            plan: user.plan
+          });
+
           return true;
         } catch (error) {
-          console.error('Detailed error in Google sign in:', {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined
-          });
+          console.error('Error in Google sign in:', error);
           return false;
         }
       }
@@ -134,33 +152,55 @@ export const authConfig: AuthOptions = {
     },
     async jwt({ token, user, account }) {
       if (user) {
-        // Initial sign in
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.picture = (user.image || account?.picture) as string | null;
-        token.role = user.role;
-        token.tenantId = user.tenantId;
-        token.tenantName = user.tenantName;
-        token.plan = user.plan;
-        token.accessToken = user.accessToken || account?.access_token;
+        // Update token with user data
+        token = {
+          ...token,
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          tenantId: user.tenantId,
+          tenantName: user.tenantName,
+          plan: user.plan,
+          accessToken: user.accessToken || account?.access_token,
+        };
       }
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
-        session.user.image = token.picture as string;
-        session.accessToken = token.accessToken as string;
-        // Add custom fields
-        (session.user as any).role = token.role;
-        (session.user as any).tenantId = token.tenantId;
-        (session.user as any).tenantName = token.tenantName;
-        (session.user as any).plan = token.plan;
-      }
+      // Update session with token data
+      session.user = {
+        ...session.user,
+        id: token.id as string,
+        email: token.email as string,
+        name: token.name as string,
+        role: token.role as string,
+        tenantId: token.tenantId as string,
+        tenantName: token.tenantName as string,
+        plan: token.plan as string,
+      };
+      // Set access token at session level
+      session.accessToken = token.accessToken as string;
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.includes('/error') || url.includes('/login')) {
+        const localeMatch = url.match(/\/([a-z]{2})\//);
+        const locale = localeMatch ? localeMatch[1] : 'en';
+        
+        const errorMatch = url.match(/error=([^&]*)/);
+        const error = errorMatch ? `?error=${errorMatch[1]}` : '';
+        
+        return `${baseUrl}/${locale}/login${error}`;
+      }
+      
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      return baseUrl;
     }
   },
   debug: process.env.NODE_ENV === 'development',

@@ -26,7 +26,8 @@ export default function LoginPage() {
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       // User is already logged in, redirect to appropriate dashboard
-      const tenant = session.user.tenantId || (session.user.plan === 'TRIAL' ? 'trial' : 'pro');
+      // Get tenant from session, fallback to trial if no tenant
+      const tenant = session.user.tenantName || 'trial';
       router.push(`/${locale}/${tenant}/dashboard`);
     }
   }, [session, status, router, locale]);

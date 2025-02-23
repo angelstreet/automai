@@ -12,6 +12,7 @@ declare module "next-auth" {
       tenantId?: string | null
       tenantName?: string | null
       plan?: string
+      accessToken?: string
     }
   }
 
