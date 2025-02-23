@@ -16,6 +16,9 @@ import {
   Gauge,
   Users,
   Plug,
+  MessageSquare,
+  CheckSquare,
+  HelpCircle,
 } from 'lucide-react';
 
 export type SidebarData = {
@@ -65,6 +68,18 @@ export const sidebarData: SidebarData = {
           title: 'Dashboard',
           href: '/dashboard',
           icon: LayoutDashboard,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'Tasks',
+          href: '/tasks',
+          icon: CheckSquare,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'Chats',
+          href: '/chats',
+          icon: MessageSquare,
           roles: ['admin', 'developer', 'tester', 'viewer'],
         },
       ],
@@ -131,7 +146,7 @@ export const sidebarData: SidebarData = {
       ],
     },
     {
-      title: 'Settings',
+      title: 'Other',
       items: [
         {
           title: 'Settings',
@@ -143,6 +158,12 @@ export const sidebarData: SidebarData = {
             { title: 'Configuration', href: '/settings/configuration', icon: Plug },
             { title: 'Integration', href: '/settings/integration', icon: Plug },
           ],
+        },
+        {
+          title: 'Help Center',
+          href: '/help',
+          icon: HelpCircle,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
         },
       ],
     },
