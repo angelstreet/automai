@@ -54,5 +54,20 @@
     "totalExecutions": "Total des exécutions",
     "recentActivity": "Activité récente",
     "quickActions": "Actions rapides"
+  },
+  "Profile": {
+    "title": "Profil",
+    "personalInfo": "Informations personnelles",
+    "description": "Gérer vos informations de profil",
+    "accountSettings": "Paramètres du compte",
+    "manageSettings": "Gérer les paramètres",
+    "upgradePlan": "Mettre à niveau le forfait",
+    "workspaceInfo": "Informations de l'espace de travail",
+    "manageTeam": "Gérer l'équipe"
+  },
+  "Settings": {
+    "title": "Paramètres",
+    "generalSettings": "Paramètres généraux",
+    "description": "Gérer les paramètres de votre compte"
   }
 } 

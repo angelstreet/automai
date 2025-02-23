@@ -13,7 +13,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import * as Avatar from '@radix-ui/react-avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 interface UserProfileProps {
   tenant?: string
@@ -35,20 +35,26 @@ export function UserProfile({ tenant }: UserProfileProps) {
     }
   }
 
+  // Get user's initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar.Root className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-            <Avatar.Image
-              src={user?.image || ''}
-              alt={user?.name || ''}
-              className="h-full w-full rounded-full object-cover"
+          <Avatar className="h-8 w-8">
+            <AvatarImage
+              src={user?.image || '/avatars/01.svg'}
+              alt={user?.name || 'User'}
             />
-            <Avatar.Fallback className="flex h-full w-full items-center justify-center rounded-full">
-              <User className="h-4 w-4 text-foreground/60" />
-            </Avatar.Fallback>
-          </Avatar.Root>
+            <AvatarFallback>{user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}</AvatarFallback>
+          </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

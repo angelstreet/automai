@@ -7,6 +7,8 @@ import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSession } from 'next-auth/react';
+import { ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function ProfileContent() {
   const { user, isLoading, refreshUser } = useUser();
@@ -17,6 +19,7 @@ export function ProfileContent() {
   const tenant = params.tenant as string | undefined;
   const [name, setName] = useState(user?.name || '');
   const [isUpdating, setIsUpdating] = useState(false);
+  const router = useRouter();
 
   const handleUpdateName = async () => {
     if (!session?.accessToken) return;
@@ -68,12 +71,17 @@ export function ProfileContent() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">{t('title')}</h1>
-        {tenant && (
-          <div className="text-sm text-muted-foreground">
-            Workspace: {tenant}
-          </div>
-        )}
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.back()}
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
+        </div>
       </div>
 
       <div className="grid gap-6">

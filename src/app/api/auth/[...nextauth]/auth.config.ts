@@ -120,6 +120,7 @@ export const authConfig: AuthOptions = {
           user.role = data.user.role;
           user.tenantId = data.user.tenantId;
           user.plan = data.user.plan;
+          user.image = profile?.picture || profile?.image;
           return true;
         } catch (error) {
           console.error('Detailed error in Google sign in:', {
@@ -137,6 +138,7 @@ export const authConfig: AuthOptions = {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
+        token.picture = (user.image || account?.picture) as string | null;
         token.role = user.role;
         token.tenantId = user.tenantId;
         token.plan = user.plan;
@@ -149,6 +151,7 @@ export const authConfig: AuthOptions = {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
+        session.user.image = token.picture as string;
         session.accessToken = token.accessToken as string;
         // Add custom fields
         (session.user as any).role = token.role;
