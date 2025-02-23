@@ -70,22 +70,10 @@ export const sidebarData: SidebarData = {
           icon: LayoutDashboard,
           roles: ['admin', 'developer', 'tester', 'viewer'],
         },
-        {
-          title: 'Tasks',
-          href: '/tasks',
-          icon: CheckSquare,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
-        },
-        {
-          title: 'Chats',
-          href: '/chats',
-          icon: MessageSquare,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
-        },
       ],
     },
     {
-      title: 'Development',
+      title: 'Main',
       items: [
         {
           title: 'Development',
@@ -98,11 +86,6 @@ export const sidebarData: SidebarData = {
             { title: 'Campaigns', href: '/development/campaigns', icon: Flag },
           ],
         },
-      ],
-    },
-    {
-      title: 'Execution',
-      items: [
         {
           title: 'Execution',
           href: '/execution',
@@ -113,11 +96,6 @@ export const sidebarData: SidebarData = {
             { title: 'Deployment', href: '/execution/deployment', icon: Table },
           ],
         },
-      ],
-    },
-    {
-      title: 'Devices',
-      items: [
         {
           title: 'Devices',
           href: '/devices',
@@ -128,11 +106,6 @@ export const sidebarData: SidebarData = {
             { title: 'Mobile', href: '/devices/mobile', icon: Smartphone },
           ],
         },
-      ],
-    },
-    {
-      title: 'Reports',
-      items: [
         {
           title: 'Reports',
           href: '/reports',
@@ -142,6 +115,23 @@ export const sidebarData: SidebarData = {
             { title: 'Results', href: '/reports/results', icon: LineChart },
             { title: 'Performance', href: '/reports/metrics', icon: Gauge },
           ],
+        },
+      ],
+    },
+    {
+      title: 'Features',
+      items: [
+        {
+          title: 'Tasks',
+          href: '/tasks',
+          icon: CheckSquare,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+        {
+          title: 'Chats',
+          href: '/chats',
+          icon: MessageSquare,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
         },
       ],
     },

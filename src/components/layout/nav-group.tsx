@@ -35,38 +35,39 @@ interface NavGroupProps {
 export function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
-  const hasActiveItem = React.useMemo(() => {
-    return items.some((item) => {
-      const isActive = pathname.includes(item.href);
-      const hasActiveSubItem = item.items?.some((subItem) => pathname.includes(subItem.href));
-      return isActive || hasActiveSubItem;
-    });
-  }, [items, pathname]);
-
+  // Check if a submenu item is active and expand its parent
   React.useEffect(() => {
-    if (hasActiveItem) {
-      setIsExpanded(true);
-    }
-  }, [hasActiveItem]);
+    const newExpandedState = { ...expandedItems };
+    items.forEach((item) => {
+      if (item.items?.some((subItem) => pathname.includes(subItem.href))) {
+        newExpandedState[item.href] = true;
+      }
+    });
+    setExpandedItems(newExpandedState);
+  }, [pathname]);
+
+  const toggleSubmenu = (href: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [href]: !prev[href]
+    }));
+  };
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel 
-        className="text-gray-500 font-medium cursor-pointer flex items-center justify-between"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
+      <SidebarGroupLabel className="text-gray-500 font-medium px-2 py-0.5">
         {title}
-        <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded ? "transform rotate-180" : "")} />
       </SidebarGroupLabel>
-      <SidebarGroupContent className={cn("transition-all duration-200 ease-in-out", !isExpanded && "hidden")}>
+      <SidebarGroupContent className="py-0.5">
         <ScrollArea className="h-full">
           <SidebarMenu>
             {items.map((item) => {
               const Icon = item.icon;
               const isActive = pathname.includes(item.href);
               const hasSubmenu = item.items && item.items.length > 0;
+              const isExpanded = expandedItems[item.href];
 
               return (
                 <SidebarMenuItem key={item.href}>
@@ -74,10 +75,16 @@ export function NavGroup({ title, items }: NavGroupProps) {
                     <SidebarMenuButton
                       isActive={isActive}
                       tooltip={item.title}
+                      onClick={() => toggleSubmenu(item.href)}
                     >
                       <Icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                      <ChevronDown className="ml-auto h-4 w-4" />
+                      <ChevronDown 
+                        className={cn(
+                          "ml-auto h-4 w-4 transition-transform duration-200",
+                          isExpanded && "transform rotate-180"
+                        )} 
+                      />
                     </SidebarMenuButton>
                   ) : (
                     <SidebarMenuButton
@@ -93,7 +100,10 @@ export function NavGroup({ title, items }: NavGroupProps) {
                   )}
 
                   {hasSubmenu && (
-                    <SidebarMenuSub>
+                    <SidebarMenuSub className={cn(
+                      "transition-all duration-200 ease-in-out",
+                      !isExpanded && "hidden"
+                    )}>
                       {item.items?.map((subItem) => {
                         const SubIcon = subItem.icon;
                         const isSubActive = pathname.includes(subItem.href);
