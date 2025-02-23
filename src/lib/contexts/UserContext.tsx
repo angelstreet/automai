@@ -10,6 +10,7 @@ type User = {
   name: string | null;
   role: string;
   tenantId: string | null;
+  tenantName: string | null;
   plan: string;
 };
 

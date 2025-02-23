@@ -34,12 +34,19 @@ export default function WorkspaceLayout({
         return;
       }
 
-      // Check if user has access to this tenant
-      const userTenant = user.tenantId ? user.tenantId : user.plan.toLowerCase();
-      if (tenant !== userTenant && tenant !== 'trial' && tenant !== 'pro') {
-        // User doesn't have access to this tenant, redirect to their correct tenant
-        const correctTenant = user.tenantId || (user.plan === 'TRIAL' ? 'trial' : 'pro');
+      // Determine the correct tenant
+      const correctTenant = user.tenantName || (user.plan?.toLowerCase() === 'trial' ? 'trial' : 'pro');
+      
+      // Only redirect if we're not already on the correct path and not in a redirect loop
+      if (tenant !== correctTenant && !sessionStorage.getItem('isRedirecting')) {
+        sessionStorage.setItem('isRedirecting', 'true');
         router.push(`/${locale}/${correctTenant}/dashboard`);
+        return;
+      }
+      
+      // Clear the redirect flag once we're on the correct path
+      if (tenant === correctTenant) {
+        sessionStorage.removeItem('isRedirecting');
       }
     }
   }, [user, isLoading, router, locale, tenant]);

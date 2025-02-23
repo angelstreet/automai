@@ -141,6 +141,7 @@ export const authConfig: AuthOptions = {
         token.picture = (user.image || account?.picture) as string | null;
         token.role = user.role;
         token.tenantId = user.tenantId;
+        token.tenantName = user.tenantName;
         token.plan = user.plan;
         token.accessToken = user.accessToken || account?.access_token;
       }
@@ -156,6 +157,7 @@ export const authConfig: AuthOptions = {
         // Add custom fields
         (session.user as any).role = token.role;
         (session.user as any).tenantId = token.tenantId;
+        (session.user as any).tenantName = token.tenantName;
         (session.user as any).plan = token.plan;
       }
       return session;

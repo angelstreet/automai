@@ -10,7 +10,8 @@ declare module "next-auth" {
       image?: string | null
       role?: string
       tenantId?: string | null
-      plan?: 'TRIAL' | 'PRO' | 'ENTERPRISE'
+      tenantName?: string | null
+      plan?: string
     }
   }
 
@@ -20,7 +21,8 @@ declare module "next-auth" {
     name?: string | null
     role?: string
     tenantId?: string | null
-    plan?: 'TRIAL' | 'PRO' | 'ENTERPRISE'
+    tenantName?: string | null
+    plan?: string
     accessToken?: string
   }
 } 
