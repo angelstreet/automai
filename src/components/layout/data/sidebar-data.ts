@@ -19,6 +19,8 @@ import {
   MessageSquare,
   CheckSquare,
   HelpCircle,
+  Building2,
+  Factory,
 } from 'lucide-react';
 
 export type SidebarData = {
@@ -58,6 +60,16 @@ export const sidebarData: SidebarData = {
       name: 'Automai',
       logo: Code2,
       plan: 'Trial',
+    },
+    {
+      name: 'Acme Corp',
+      logo: Building2,
+      plan: 'Pro',
+    },
+    {
+      name: 'Monsters Inc',
+      logo: Factory,
+      plan: 'Enterprise',
     }
   ],
   navGroups: [

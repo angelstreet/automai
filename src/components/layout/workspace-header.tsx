@@ -12,12 +12,13 @@ import { Search } from '@/components/ui/search';
 interface WorkspaceHeaderProps {
   className?: string;
   fixed?: boolean;
+  tenant?: string;
 }
 
-export function WorkspaceHeader({ className = '', fixed = false }: WorkspaceHeaderProps) {
+export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
   const [currentRole, setCurrentRole] = React.useState<Role>('viewer');
   const params = useParams();
-  const tenant = params.tenant as string;
+  const locale = params.locale as string;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

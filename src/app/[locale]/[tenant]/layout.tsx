@@ -45,12 +45,7 @@ export default function WorkspaceLayout({
   }, [user, isLoading, router, locale, tenant]);
 
   // Show nothing while checking auth
-  if (isLoading) {
-    return null;
-  }
-
-  // Show nothing while redirecting
-  if (!user) {
+  if (isLoading || !user) {
     return null;
   }
 

@@ -1,67 +1,14 @@
-import { Link } from '@tanstack/react-router'
-import { IconMenu } from '@tabler/icons-react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+'use client';
 
-interface TopNavProps extends React.HTMLAttributes<HTMLElement> {
-  links: {
-    title: string
-    href: string
-    isActive: boolean
-    disabled?: boolean
-  }[]
-}
+import * as React from 'react';
+import { TeamSwitcher } from '@/components/layout/team-switcher';
+import { sidebarData } from './data/sidebar-data';
 
-export function TopNav({ className, links, ...props }: TopNavProps) {
+export function TopNav() {
   return (
-    <>
-      <div className='md:hidden'>
-        <DropdownMenu modal={false}>
-          <DropdownMenuTrigger asChild>
-            <Button size='icon' variant='outline'>
-              <IconMenu />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side='bottom' align='start'>
-            {links.map(({ title, href, isActive, disabled }) => (
-              <DropdownMenuItem key={`${title}-${href}`} asChild>
-                <Link
-                  to={href}
-                  className={!isActive ? 'text-muted-foreground' : ''}
-                  disabled={disabled}
-                >
-                  {title}
-                </Link>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <nav
-        className={cn(
-          'hidden items-center space-x-4 md:flex lg:space-x-6',
-          className
-        )}
-        {...props}
-      >
-        {links.map(({ title, href, isActive, disabled }) => (
-          <Link
-            key={`${title}-${href}`}
-            to={href}
-            disabled={disabled}
-            className={`text-sm font-medium transition-colors hover:text-primary ${isActive ? '' : 'text-muted-foreground'}`}
-          >
-            {title}
-          </Link>
-        ))}
-      </nav>
-    </>
-  )
+    <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <TeamSwitcher teams={sidebarData.teams} />
+      <div className="flex flex-1" />
+    </div>
+  );
 }

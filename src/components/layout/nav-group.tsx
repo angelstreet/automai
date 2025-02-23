@@ -55,6 +55,10 @@ export function NavGroup({ title, items }: NavGroupProps) {
     }));
   };
 
+  const isActive = (href: string) => {
+    return pathname.includes(href);
+  };
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel className="text-gray-500 font-medium px-2 py-0.5">
@@ -65,7 +69,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
           <SidebarMenu>
             {items.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname.includes(item.href);
+              const active = isActive(item.href);
               const hasSubmenu = item.items && item.items.length > 0;
               const isExpanded = expandedItems[item.href];
 
@@ -73,9 +77,10 @@ export function NavGroup({ title, items }: NavGroupProps) {
                 <SidebarMenuItem key={item.href}>
                   {hasSubmenu ? (
                     <SidebarMenuButton
-                      isActive={isActive}
+                      isActive={active}
                       tooltip={item.title}
                       onClick={() => toggleSubmenu(item.href)}
+                      className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
                       <Icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -89,8 +94,9 @@ export function NavGroup({ title, items }: NavGroupProps) {
                   ) : (
                     <SidebarMenuButton
                       asChild
-                      isActive={isActive}
+                      isActive={active}
                       tooltip={item.title}
+                      className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
                       <Link href={`/${params.locale}/${params.tenant}${item.href}`}>
                         <Icon className="h-4 w-4" />
@@ -106,13 +112,14 @@ export function NavGroup({ title, items }: NavGroupProps) {
                     )}>
                       {item.items?.map((subItem) => {
                         const SubIcon = subItem.icon;
-                        const isSubActive = pathname.includes(subItem.href);
+                        const isSubActive = isActive(subItem.href);
 
                         return (
                           <SidebarMenuSubButton
                             key={subItem.href}
                             asChild
                             isActive={isSubActive}
+                            className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                           >
                             <Link href={`/${params.locale}/${params.tenant}${subItem.href}`}>
                               <SubIcon className="h-4 w-4" />
