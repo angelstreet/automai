@@ -2,53 +2,45 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 
 export default function AuthRedirectPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { locale } = useParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
-
-  // Read the token once
-  const token = searchParams.get('token');
+  const { data: session } = useSession();
 
   useEffect(() => {
     // Prevent multiple redirects
     if (isRedirecting) return;
 
-    // If there's no token, redirect to login
-    if (!token) {
-      router.replace(`/${locale}/login?error=No authentication token`);
-      return;
-    }
-
     const handleRedirect = async () => {
       setIsRedirecting(true);
       try {
-        // Sign in with the token
-        const result = await signIn('credentials', {
-          token,
-          redirect: false,
-        });
-
-        if (result?.error) {
-          throw new Error(result.error);
+        // If we have a session, redirect to the appropriate dashboard
+        if (session?.user) {
+          const tenant = session.user.tenantId || 'trial';
+          console.log('Session data:', {
+            userId: session.user.id,
+            email: session.user.email,
+            tenant,
+            accessToken: session.accessToken ? 'present' : 'missing'
+          });
+          router.replace(`/${locale}/${tenant}/dashboard`);
+        } else {
+          // No session means authentication failed
+          console.error('No session available');
+          router.replace(`/${locale}/login?error=Authentication failed - no session`);
         }
-
-        // Clean up URL
-        window.history.replaceState({}, '', window.location.pathname);
-
-        // Redirect to the dashboard
-        router.replace(`/${locale}/trial/dashboard`);
       } catch (error) {
         console.error('Error during redirect:', error);
-        router.replace(`/${locale}/login?error=Failed to authenticate`);
+        router.replace(`/${locale}/login?error=${encodeURIComponent('Failed to authenticate: ' + error)}`);
       }
     };
 
     handleRedirect();
-  }, [token, locale, router, isRedirecting]);
+  }, [locale, router, isRedirecting, session]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

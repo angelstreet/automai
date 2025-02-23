@@ -51,42 +51,41 @@ API endpoints:
    ```
 
 ### Prisma Commands
-```bash
-# Navigate to server directory
-cd src/server
+All Prisma commands are available as npm scripts. Run them from the project root:
 
+```bash
 # Generate Prisma client after schema changes
-npx prisma generate
+npm run prisma:generate
 
 # Create and apply migrations
-npx prisma migrate dev
+npm run prisma:migrate
 
 # Apply migrations in production
-npx prisma migrate deploy
-
-# Seed the database with initial data
-npx prisma db seed
+npm run prisma:migrate:prod
 
 # Open Prisma Studio (GUI database browser)
-npx prisma studio
+npm run prisma:studio
+
+# Seed the database with initial data
+npm run prisma:seed
 ```
 
 ### Common Database Tasks
 ```bash
 # Reset database (drops all data and recreates tables)
-npx prisma migrate reset
+DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma migrate reset --schema=src/server/prisma/schema.prisma
 
 # View current database schema
-npx prisma format
+DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma format --schema=src/server/prisma/schema.prisma
 
 # Pull changes from database to schema
-npx prisma db pull
+DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma db pull --schema=src/server/prisma/schema.prisma
 
 # Push schema changes to database
-npx prisma db push
+DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma db push --schema=src/server/prisma/schema.prisma
 ```
 
-Note: Always ensure you're in the `src/server` directory when running Prisma commands, as the schema is located at `prisma/schema.prisma`.
+Note: All Prisma commands require the DATABASE_URL environment variable. The npm scripts include this automatically. If running npx commands directly, make sure to provide both the DATABASE_URL and the correct schema path as shown above.
 
 ## Running Tests
 

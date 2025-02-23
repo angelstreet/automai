@@ -14,6 +14,7 @@ const {
   githubCallback,
   deleteUser,
   updateProfile,
+  exchangeGoogleToken,
 } = require('./controller');
 const { authenticateToken } = require('../../middleware/auth');
 
@@ -30,6 +31,7 @@ router.post('/verify-email', verifyEmail);
 // OAuth routes
 router.get('/google', googleAuth);
 router.get('/google/callback', googleCallback);
+router.post('/google/token', exchangeGoogleToken);
 router.get('/github', githubAuth);
 router.get('/github/callback', githubCallback);
 

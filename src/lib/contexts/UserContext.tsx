@@ -37,10 +37,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const fetchUser = async () => {
     try {
       if (!session?.accessToken) {
+        console.log('No access token available');
         setUser(null);
         return;
       }
 
+      console.log('Fetching user profile with token:', session.accessToken ? 'present' : 'missing');
       const response = await fetch('http://localhost:5001/api/auth/profile', {
         headers: {
           'Authorization': `Bearer ${session.accessToken}`
@@ -48,13 +50,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Profile fetch failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData.error
+        });
+        throw new Error(errorData.error || `Failed to fetch user profile: ${response.status}`);
       }
 
       const userData = await response.json();
+      console.log('User profile fetched:', {
+        id: userData.id,
+        email: userData.email,
+        plan: userData.plan,
+        tenantId: userData.tenantId
+      });
       setUser(userData);
       setError(null);
     } catch (err) {
+      console.error('Error in fetchUser:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setUser(null);
     } finally {

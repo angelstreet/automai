@@ -24,6 +24,12 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         pathname.includes('/auth-redirect') ||
         pathname === `/${locale}`;
 
+      // If session is in error state (e.g. 403), redirect to login
+      if (status === 'unauthenticated' && !isPublicRoute) {
+        router.replace(`/${locale}/login?error=Session expired. Please login again.`);
+        return;
+      }
+
       if (isPublicRoute) {
         // If user is logged in and trying to access auth pages, redirect to dashboard
         if (session && (pathname.includes('/login') || pathname.includes('/signup'))) {

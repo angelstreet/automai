@@ -6,6 +6,19 @@ import jwt from 'jsonwebtoken';
 
 export const authConfig: AuthOptions = {
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "select_account"
+        }
+      }
+    }),
+    GithubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -42,7 +55,6 @@ export const authConfig: AuthOptions = {
             throw new Error('Invalid response from authentication server');
           }
 
-          // Return the user object with the required fields for NextAuth
           return {
             id: data.user.id,
             email: data.user.email,
@@ -58,14 +70,6 @@ export const authConfig: AuthOptions = {
         }
       }
     }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    GithubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    }),
   ],
   pages: {
     signIn: "/login",
@@ -77,6 +81,56 @@ export const authConfig: AuthOptions = {
     maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'google') {
+        try {
+          console.log('Google sign in attempt:', {
+            hasAccessToken: !!account.access_token,
+            email: profile?.email,
+            name: profile?.name
+          });
+
+          // Exchange Google token for our backend token
+          const response = await fetch('http://localhost:5001/api/auth/google/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              token: account.access_token,
+              email: profile?.email,
+              name: profile?.name,
+            }),
+          });
+
+          const responseText = await response.text();
+          console.log('Token exchange response:', {
+            status: response.status,
+            ok: response.ok,
+            body: responseText
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to exchange token: ${responseText}`);
+          }
+
+          const data = JSON.parse(responseText);
+          user.accessToken = data.token;
+          user.id = data.user.id;
+          user.role = data.user.role;
+          user.tenantId = data.user.tenantId;
+          user.plan = data.user.plan;
+          return true;
+        } catch (error) {
+          console.error('Detailed error in Google sign in:', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+          });
+          return false;
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, account }) {
       if (user) {
         // Initial sign in

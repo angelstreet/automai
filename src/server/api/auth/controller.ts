@@ -12,12 +12,19 @@ const generateToken = () => crypto.randomBytes(32).toString('hex');
 
 // Helper function to generate JWT token
 const generateJWT = (user: any) => {
+  // Determine plan based on tenant
+  let plan = 'TRIAL';
+  if (user.tenant) {
+    plan = user.tenant.name === 'pro' ? 'PRO' : 'ENTERPRISE';
+  }
+
   return jwt.sign(
     {
       userId: user.id,
       email: user.email,
       tenantId: user.tenantId,
       role: user.role,
+      plan, // Include plan in token
     },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }
@@ -69,10 +76,14 @@ const login = async (req: express.Request, res: express.Response) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Determine user's plan based on tenant status
+    // Determine user's plan based on tenant status and name
     let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
     if (user.tenant) {
-      plan = 'ENTERPRISE';
+      if (user.tenant.name === 'pro') {
+        plan = 'PRO';
+      } else {
+        plan = 'ENTERPRISE';
+      }
     }
 
     // Generate JWT token
@@ -82,6 +93,7 @@ const login = async (req: express.Request, res: express.Response) => {
         email: user.email,
         tenantId: user.tenantId,
         role: user.role,
+        plan, // Include plan in token
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -168,6 +180,7 @@ const register = async (req: express.Request, res: express.Response) => {
         email: user.email,
         tenantId: user.tenantId,
         role: user.role,
+        plan, // Include plan in token
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -210,14 +223,14 @@ const getProfile = async (req: express.Request, res: express.Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Determine user's plan based on tenant status
+    // Determine user's plan based on tenant status and name
     let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
     if (user.tenant) {
-      plan = 'ENTERPRISE';
-    } else {
-      // TODO: Implement proper plan management
-      // For now, default to TRIAL for demonstration
-      plan = 'TRIAL';
+      if (user.tenant.name === 'pro') {
+        plan = 'PRO';
+      } else {
+        plan = 'ENTERPRISE';
+      }
     }
 
     // Return user info (exclude password)
@@ -257,10 +270,14 @@ const updateProfile = async (req: express.Request, res: express.Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Determine user's plan based on tenant status
+    // Determine user's plan based on tenant status and name
     let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
     if (user.tenant) {
-      plan = 'ENTERPRISE';
+      if (user.tenant.name === 'pro') {
+        plan = 'PRO';
+      } else {
+        plan = 'ENTERPRISE';
+      }
     }
 
     // Return user info (exclude password)
@@ -449,24 +466,52 @@ const verifyEmail = async (req: express.Request, res: express.Response) => {
 };
 
 // Helper function to handle OAuth success
-const handleOAuthSuccess = (req: express.Request, res: express.Response) => {
+const handleOAuthSuccess = async (req: express.Request, res: express.Response) => {
   const user = req.user;
   if (!user) {
     return res.redirect(`http://localhost:3000/en/login?error=Authentication failed`);
   }
 
+  // Fetch fresh user data with tenant info
+  const userData = await prisma.user.findUnique({
+    where: { id: user.id },
+    include: { tenant: true },
+  });
+
+  if (!userData) {
+    return res.redirect(`http://localhost:3000/en/login?error=User not found`);
+  }
+
+  // Determine plan based on tenant status and name
+  let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+  if (userData.tenant) {
+    if (userData.tenant.name === 'pro') {
+      plan = 'PRO';
+    } else {
+      plan = 'ENTERPRISE';
+    }
+  }
+
   const token = jwt.sign(
     {
-      userId: user.id,
-      email: user.email,
-      tenantId: user.tenantId,
-      role: user.role,
+      userId: userData.id,
+      email: userData.email,
+      tenantId: userData.tenantId,
+      role: userData.role,
+      plan, // Include plan in the token
     },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }
   );
+
+  console.log('OAuth user data:', { 
+    id: userData.id, 
+    email: userData.email, 
+    tenantId: userData.tenantId,
+    plan,
+  });
   
-  // Redirect to the frontend auth-redirect page using absolute URL
+  // Redirect to the frontend auth-redirect page
   res.redirect(`http://localhost:3000/en/auth-redirect?token=${token}`);
 };
 
@@ -584,6 +629,81 @@ const deleteUser = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Exchange Google token for our JWT token
+ */
+const exchangeGoogleToken = async (req: express.Request, res: express.Response) => {
+  try {
+    const { token, email, name } = req.body;
+
+    if (!token || !email) {
+      return res.status(400).json({ error: 'Token and email are required' });
+    }
+
+    // Find or create user
+    let user = await prisma.user.findFirst({
+      where: {
+        email,
+        provider: 'google',
+      },
+      include: {
+        tenant: true,
+      },
+    });
+
+    if (!user) {
+      // Create new user
+      user = await prisma.user.create({
+        data: {
+          email,
+          name,
+          provider: 'google',
+          emailVerified: true, // Google emails are verified
+        },
+        include: {
+          tenant: true,
+        },
+      });
+    }
+
+    // Determine plan based on tenant status and name
+    let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+    if (user.tenant) {
+      if (user.tenant.name === 'pro') {
+        plan = 'PRO';
+      } else {
+        plan = 'ENTERPRISE';
+      }
+    }
+
+    // Generate our JWT token
+    const jwtToken = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        tenantId: user.tenantId,
+        role: user.role,
+        plan,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Return user info and token
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({
+      user: {
+        ...userWithoutPassword,
+        plan,
+      },
+      token: jwtToken,
+    });
+  } catch (error) {
+    console.error('Error in exchangeGoogleToken:', error);
+    res.status(500).json({ error: 'Failed to exchange token' });
+  }
+};
+
 module.exports = {
   login,
   register,
@@ -598,4 +718,5 @@ module.exports = {
   githubAuth,
   githubCallback,
   deleteUser,
+  exchangeGoogleToken,
 }; 
