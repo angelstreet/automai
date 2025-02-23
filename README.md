@@ -113,3 +113,8 @@ For detailed project documentation, architecture, and advanced configuration, pl
 ---
 
 Happy Testing!
+
+Template author: Joachim N. Doye
+Based on shadcn-admin repository
+Crafted with 🤍 by @satnaing
+https://github.com/satnaing/shadcn-admin

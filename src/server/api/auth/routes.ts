@@ -13,6 +13,7 @@ const {
   githubAuth,
   githubCallback,
   deleteUser,
+  updateProfile,
 } = require('./controller');
 const { authenticateToken } = require('../../middleware/auth');
 
@@ -22,6 +23,7 @@ router.post('/register', register);
 router.post('/reset-password/request', requestPasswordReset);
 router.post('/reset-password', resetPassword);
 router.get('/profile', authenticateToken, getProfile);
+router.patch('/profile', authenticateToken, updateProfile);
 router.post('/verify-email/send', authenticateToken, sendVerificationEmail);
 router.post('/verify-email', verifyEmail);
 

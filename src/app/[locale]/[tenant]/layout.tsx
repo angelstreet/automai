@@ -1,13 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { Sidebar } from '@/components/layout/sidebar';
+import { AppSidebar } from '@/components/layout/app-sidebar';
 import { WorkspaceHeader } from '@/components/layout/workspace-header';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { useUser } from '@/lib/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 export default function WorkspaceLayout({
   children,
@@ -21,7 +23,6 @@ export default function WorkspaceLayout({
   const paramsFromNext = useParams();
   const locale = paramsFromNext.locale as string;
   const tenant = paramsFromNext.tenant as string;
-  const [sidebarExpanded, setSidebarExpanded] = React.useState(true);
 
   React.use(params);
 
@@ -56,14 +57,13 @@ export default function WorkspaceLayout({
   return (
     <TooltipProvider>
       <div className="relative flex min-h-screen w-full">
-        <Sidebar
-          expanded={sidebarExpanded}
-          onToggle={() => setSidebarExpanded(!sidebarExpanded)}
-        />
-        <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
-          <WorkspaceHeader tenant={tenant} />
-          <main className="flex-1 p-6 w-full max-w-full">{children}</main>
-        </div>
+        <SidebarProvider defaultOpen={Cookies.get('sidebar:state') !== 'false'}>
+          <AppSidebar />
+          <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
+            <WorkspaceHeader tenant={tenant} />
+            <main className="flex-1 p-6 w-full max-w-full">{children}</main>
+          </div>
+        </SidebarProvider>
       </div>
     </TooltipProvider>
   );

@@ -1,0 +1,150 @@
+import {
+  LayoutDashboard,
+  Code2,
+  Rocket,
+  Monitor,
+  BarChart3,
+  Settings,
+  Globe,
+  Smartphone,
+  FileCode,
+  TestTube,
+  Flag,
+  Calendar,
+  Table,
+  LineChart,
+  Gauge,
+  Users,
+  Plug,
+} from 'lucide-react';
+
+export type SidebarData = {
+  user: {
+    name: string;
+    email: string;
+    avatar?: string;
+  };
+  teams: {
+    name: string;
+    logo: any;
+    plan: string;
+  }[];
+  navGroups: {
+    title: string;
+    items: {
+      title: string;
+      href: string;
+      icon: any;
+      roles?: string[];
+      items?: {
+        title: string;
+        href: string;
+        icon: any;
+      }[];
+    }[];
+  }[];
+};
+
+export const sidebarData: SidebarData = {
+  user: {
+    name: 'User',
+    email: 'user@example.com',
+  },
+  teams: [
+    {
+      name: 'Automai',
+      logo: Code2,
+      plan: 'Trial',
+    }
+  ],
+  navGroups: [
+    {
+      title: 'Overview',
+      items: [
+        {
+          title: 'Dashboard',
+          href: '/dashboard',
+          icon: LayoutDashboard,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+        },
+      ],
+    },
+    {
+      title: 'Development',
+      items: [
+        {
+          title: 'Development',
+          href: '/development',
+          icon: Code2,
+          roles: ['admin', 'developer'],
+          items: [
+            { title: 'Projects', href: '/development/projects', icon: FileCode },
+            { title: 'Use Cases', href: '/development/usecases', icon: TestTube },
+            { title: 'Campaigns', href: '/development/campaigns', icon: Flag },
+          ],
+        },
+      ],
+    },
+    {
+      title: 'Execution',
+      items: [
+        {
+          title: 'Execution',
+          href: '/execution',
+          icon: Rocket,
+          roles: ['admin', 'developer', 'tester'],
+          items: [
+            { title: 'Schedule', href: '/execution/schedule', icon: Calendar },
+            { title: 'Deployment', href: '/execution/deployment', icon: Table },
+          ],
+        },
+      ],
+    },
+    {
+      title: 'Devices',
+      items: [
+        {
+          title: 'Devices',
+          href: '/devices',
+          icon: Monitor,
+          roles: ['admin', 'developer', 'tester'],
+          items: [
+            { title: 'Web', href: '/devices/web', icon: Globe },
+            { title: 'Mobile', href: '/devices/mobile', icon: Smartphone },
+          ],
+        },
+      ],
+    },
+    {
+      title: 'Reports',
+      items: [
+        {
+          title: 'Reports',
+          href: '/reports',
+          icon: BarChart3,
+          roles: ['admin', 'developer', 'tester', 'viewer'],
+          items: [
+            { title: 'Results', href: '/reports/results', icon: LineChart },
+            { title: 'Performance', href: '/reports/metrics', icon: Gauge },
+          ],
+        },
+      ],
+    },
+    {
+      title: 'Settings',
+      items: [
+        {
+          title: 'Settings',
+          href: '/settings',
+          icon: Settings,
+          roles: ['admin'],
+          items: [
+            { title: 'Team', href: '/settings/team', icon: Users },
+            { title: 'Configuration', href: '/settings/configuration', icon: Plug },
+            { title: 'Integration', href: '/settings/integration', icon: Plug },
+          ],
+        },
+      ],
+    },
+  ],
+}; 

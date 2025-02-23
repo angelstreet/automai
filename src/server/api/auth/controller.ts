@@ -233,6 +233,49 @@ const getProfile = async (req: express.Request, res: express.Response) => {
 };
 
 /**
+ * Update user profile
+ */
+const updateProfile = async (req: express.Request, res: express.Response) => {
+  try {
+    const userId = req.user?.id; // Will be set by auth middleware
+    if (!userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { name },
+      include: { tenant: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Determine user's plan based on tenant status
+    let plan: 'TRIAL' | 'PRO' | 'ENTERPRISE' = 'TRIAL';
+    if (user.tenant) {
+      plan = 'ENTERPRISE';
+    }
+
+    // Return user info (exclude password)
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({
+      ...userWithoutPassword,
+      plan,
+    });
+  } catch (error) {
+    console.error('Error in updateProfile:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
+  }
+};
+
+/**
  * Request password reset
  */
 const requestPasswordReset = async (req: express.Request, res: express.Response) => {
@@ -545,6 +588,7 @@ module.exports = {
   login,
   register,
   getProfile,
+  updateProfile,
   requestPasswordReset,
   resetPassword,
   sendVerificationEmail,

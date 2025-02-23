@@ -4,75 +4,40 @@ import * as React from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { RoleSwitcher, type Role } from '@/components/ui/role-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { User } from 'lucide-react';
-import { useUser } from '@/lib/contexts/UserContext';
-import { signOut } from 'next-auth/react';
+import { UserProfile } from '@/components/ui/user-profile';
+import { Separator } from '@/components/ui/separator';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Search } from '@/components/ui/search';
 
 interface WorkspaceHeaderProps {
   className?: string;
-  tenant?: string;
+  fixed?: boolean;
 }
 
-export function WorkspaceHeader({ className, tenant }: WorkspaceHeaderProps) {
-  const [currentRole, setCurrentRole] = React.useState<Role>('admin');
-  const { logout, user } = useUser();
-  const router = useRouter();
+export function WorkspaceHeader({ className = '', fixed = false }: WorkspaceHeaderProps) {
+  const [currentRole, setCurrentRole] = React.useState<Role>('viewer');
   const params = useParams();
-  const locale = params.locale as string;
-
-  const handleSignOut = async () => {
-    try {
-      // Call Next-Auth signOut
-      await signOut({ redirect: false });
-      
-      // Call the context logout function
-      logout();
-      
-      // Redirect to login page
-      router.push(`/${locale}/login`);
-    } catch (error) {
-      console.error('Error during sign out:', error);
-      router.push(`/${locale}/login`);
-    }
-  };
+  const tenant = params.tenant as string;
 
   return (
-    <header className={`sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${className}`}>
-      <div className="container flex h-14 items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="font-semibold">{tenant}</span>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 items-center">
+        {/* Left section */}
+        <div className="flex items-center px-4 h-full">
+          <SidebarTrigger />
         </div>
-        <div className="flex items-center gap-4">
+
+        {/* Center section - can be used for tabs or other content */}
+        <div className="flex-1" />
+
+        {/* Right section */}
+        <div className="flex items-center gap-2 px-4 h-full">
           <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+          <Search className="w-[240px]" />
+          <Separator orientation="vertical" className="h-6 opacity-10" />
           <ThemeToggle />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <User className="h-5 w-5" />
-                <span className="sr-only">User menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/profile`)}>
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings`)}>
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Separator orientation="vertical" className="h-6 opacity-10" />
+          <UserProfile tenant={tenant} />
         </div>
       </div>
     </header>

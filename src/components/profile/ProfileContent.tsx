@@ -1,16 +1,47 @@
 'use client';
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useUser } from '@/lib/contexts/UserContext';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useSession } from 'next-auth/react';
 
 export function ProfileContent() {
-  const { user, isLoading } = useUser();
+  const { user, isLoading, refreshUser } = useUser();
+  const { data: session } = useSession();
   const t = useTranslations('Profile');
   const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string | undefined;
+  const [name, setName] = useState(user?.name || '');
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleUpdateName = async () => {
+    if (!session?.accessToken) return;
+    try {
+      setIsUpdating(true);
+      const response = await fetch('http://localhost:5001/api/auth/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      await refreshUser();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -50,6 +81,23 @@ export function ProfileContent() {
         <div className="p-6 bg-card rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">{t('personalInfo')}</h2>
           <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Name</label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                  className="max-w-md"
+                />
+                <Button
+                  onClick={handleUpdateName}
+                  disabled={isUpdating || name === user.name}
+                >
+                  {isUpdating ? 'Updating...' : 'Update'}
+                </Button>
+              </div>
+            </div>
             <div>
               <label className="text-sm font-medium">Email</label>
               <p className="text-muted-foreground">{user.email}</p>
