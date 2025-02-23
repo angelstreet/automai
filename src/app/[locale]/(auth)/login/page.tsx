@@ -4,19 +4,11 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
-import { Github, Chrome } from 'lucide-react';
-import { useUser } from '@/lib/contexts/UserContext';
+import Github from 'lucide-react/icons/github';
+import Chrome from 'lucide-react/icons/chrome';
 import { useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 
