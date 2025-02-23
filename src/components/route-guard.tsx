@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useUser } from '@/lib/contexts/UserContext';
@@ -11,14 +11,23 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const params = useParams();
   const { data: session, status } = useSession();
   const { user, isLoading: isUserLoading } = useUser();
+  const isRedirecting = useRef(false);
   
   // Properly handle params
   const locale = params?.locale as string || 'en';
   const currentTenant = params?.tenant as string;
 
   useEffect(() => {
+    // Reset redirecting flag when pathname changes
+    isRedirecting.current = false;
+  }, [pathname]);
+
+  useEffect(() => {
     // Don't do anything while loading session or user data
     if (status === 'loading' || isUserLoading) return;
+
+    // Prevent multiple redirects
+    if (isRedirecting.current) return;
 
     const handleRouting = async () => {
       // Public routes don't need tenant
@@ -31,13 +40,15 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       // Handle OAuth errors
       const searchParams = new URLSearchParams(window.location.search);
       const error = searchParams.get('error');
-      if (error) {
+      if (error && !isRedirecting.current) {
+        isRedirecting.current = true;
         router.replace(`/${locale}/login?error=${error}`);
         return;
       }
 
       // If session is in error state (e.g. 403), redirect to login
-      if (status === 'unauthenticated' && !isPublicRoute) {
+      if (status === 'unauthenticated' && !isPublicRoute && !isRedirecting.current) {
+        isRedirecting.current = true;
         router.replace(`/${locale}/login?error=Session expired. Please login again.`);
         return;
       }
@@ -45,9 +56,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       // For public routes, only redirect if user is authenticated and trying to access auth pages
       if (isPublicRoute) {
         if (session?.user && user && (pathname.includes('/login') || pathname.includes('/signup'))) {
-          // Ensure we have the complete user data before redirecting
           const tenant = user.tenantName;
-          if (tenant) {
+          if (tenant && !isRedirecting.current) {
+            isRedirecting.current = true;
             router.replace(`/${locale}/${tenant}/dashboard`);
           }
         }
@@ -59,15 +70,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         const expectedTenant = user.tenantName;
         
         // Only redirect if we have a definite tenant mismatch
-        if (expectedTenant && currentTenant !== expectedTenant) {
-          // Use sessionStorage to prevent redirect loops
-          const redirectKey = `redirect_${expectedTenant}`;
-          if (!sessionStorage.getItem(redirectKey)) {
-            sessionStorage.setItem(redirectKey, 'true');
-            router.replace(`/${locale}/${expectedTenant}/dashboard`);
-            // Clear the redirect flag after a short delay
-            setTimeout(() => sessionStorage.removeItem(redirectKey), 1000);
-          }
+        if (expectedTenant && currentTenant !== expectedTenant && !isRedirecting.current) {
+          isRedirecting.current = true;
+          router.replace(`/${locale}/${expectedTenant}/dashboard`);
         }
       }
     };
