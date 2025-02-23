@@ -6,6 +6,8 @@
     "learnMore": "Learn More"
   },
   "Navigation": {
+    "home": "Home",
+    "dashboard": "Dashboard",
     "features": "Features",
     "pricing": "Pricing",
     "docs": "Documentation",
@@ -59,7 +61,15 @@
   "Settings": {
     "title": "Settings",
     "generalSettings": "General Settings",
-    "description": "Manage your account settings"
+    "description": "Manage your account settings",
+    "profileSettings": "Profile Settings",
+    "profileDescription": "Manage your profile information and preferences",
+    "languageSettings": "Language Settings",
+    "languageDescription": "Choose your preferred language",
+    "selectLanguage": "Select Language",
+    "currentLanguage": "Current Language",
+    "english": "English",
+    "french": "French"
   },
   "Tests": {
     "title": "Tests",
@@ -74,7 +84,22 @@
   "Profile": {
     "title": "Profile",
     "personalInfo": "Personal Information",
-    "description": "Manage your profile information"
+    "description": "Manage your profile information",
+    "accountSettings": "Account Settings",
+    "manageSettings": "Manage Settings",
+    "upgradePlan": "Upgrade Plan",
+    "workspaceInfo": "Workspace Information",
+    "manageTeam": "Manage Team",
+    "name": "Name",
+    "email": "Email",
+    "plan": "Plan",
+    "update": "Update",
+    "updating": "Updating...",
+    "sessionExpired": "Session Expired",
+    "loginAgain": "Please log in again to continue",
+    "loginButton": "Log In",
+    "workspaceId": "Workspace ID",
+    "role": "Role"
   },
   "Team": {
     "title": "Team",

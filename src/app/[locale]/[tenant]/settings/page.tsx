@@ -1,4 +1,9 @@
+'use client';
+
 import { useTranslations } from 'next-intl';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LanguageSettings } from '@/components/settings/language-settings';
+import { SettingsHeader } from '@/components/settings/settings-header';
 
 export default function SettingsPage({
   params
@@ -9,13 +14,24 @@ export default function SettingsPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">{t('title')}</h1>
-      <div className="grid gap-6">
-        {/* Settings sections will go here */}
-        <div className="p-6 bg-card rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">{t('generalSettings')}</h2>
-          <p className="text-muted-foreground">{t('description')}</p>
-        </div>
+      <SettingsHeader 
+        title={t('title')}
+        description={t('description')}
+      />
+      <div className="grid gap-6 mt-6">
+        {/* General Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('generalSettings')}</CardTitle>
+            <CardDescription>{t('description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* General settings content will go here */}
+          </CardContent>
+        </Card>
+
+        {/* Language Settings */}
+        <LanguageSettings />
       </div>
     </div>
   );

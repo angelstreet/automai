@@ -63,11 +63,29 @@
     "manageSettings": "Gérer les paramètres",
     "upgradePlan": "Mettre à niveau le forfait",
     "workspaceInfo": "Informations de l'espace de travail",
-    "manageTeam": "Gérer l'équipe"
+    "manageTeam": "Gérer l'équipe",
+    "name": "Nom",
+    "email": "Email",
+    "plan": "Forfait",
+    "update": "Mettre à jour",
+    "updating": "Mise à jour...",
+    "sessionExpired": "Session expirée",
+    "loginAgain": "Veuillez vous reconnecter pour continuer",
+    "loginButton": "Se connecter",
+    "workspaceId": "ID de l'espace de travail",
+    "role": "Rôle"
   },
   "Settings": {
     "title": "Paramètres",
     "generalSettings": "Paramètres généraux",
-    "description": "Gérer les paramètres de votre compte"
+    "description": "Gérer les paramètres de votre compte",
+    "profileSettings": "Paramètres du profil",
+    "profileDescription": "Gérer vos informations de profil et préférences",
+    "languageSettings": "Paramètres de langue",
+    "languageDescription": "Choisissez votre langue préférée",
+    "selectLanguage": "Sélectionner la langue",
+    "currentLanguage": "Langue actuelle",
+    "english": "Anglais",
+    "french": "Français"
   }
 } 
