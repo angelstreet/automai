@@ -2,11 +2,13 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const isDev = process.env.NODE_ENV !== 'production';
 const PORT = process.env.ELECTRON_PORT || 3000;
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const simpleGit = require('simple-git');
+const http = require('http');
 
 let mainWindow;
 let store;
+let nextProcess;
 
 async function initializeStore() {
   try {
@@ -17,6 +19,64 @@ async function initializeStore() {
   } catch (error) {
     console.error('Failed to initialize electron-store:', error);
   }
+}
+
+function isPortInUse(port) {
+  return new Promise((resolve) => {
+    const testServer = http.createServer()
+      .once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      })
+      .once('listening', () => {
+        testServer.close();
+        resolve(false);
+      })
+      .listen(port);
+  });
+}
+
+async function startNextServer() {
+  console.log('Checking if Next.js is already running...');
+  const portInUse = await isPortInUse(PORT);
+  
+  if (portInUse) {
+    console.log(`Port ${PORT} is in use, assuming Next.js is already running`);
+    return Promise.resolve();
+  }
+
+  console.log('Starting Next.js server...');
+  nextProcess = spawn('npm', ['run', 'dev'], {
+    stdio: 'inherit',
+    shell: true,
+  });
+
+  nextProcess.on('error', (error) => {
+    console.error('Failed to start Next.js:', error);
+  });
+
+  // Return a promise that resolves when the server is likely ready
+  return new Promise((resolve) => {
+    // Try to connect to the server
+    function checkServer() {
+      http.get(`http://localhost:${PORT}`, (res) => {
+        if (res.statusCode === 200) {
+          console.log('Next.js server is ready');
+          resolve();
+        } else {
+          setTimeout(checkServer, 1000);
+        }
+      }).on('error', () => {
+        setTimeout(checkServer, 1000);
+      });
+    }
+    
+    // Start checking after a short delay
+    setTimeout(checkServer, 1000);
+  });
 }
 
 async function createWindow() {
@@ -99,16 +159,25 @@ async function createWindow() {
     // Add window state logging
     mainWindow.on('show', () => console.log('Window shown'));
     mainWindow.on('hide', () => console.log('Window hidden'));
-    mainWindow.on('close', () => console.log('Window closing'));
+    mainWindow.on('close', () => {
+      console.log('Window closing');
+      if (nextProcess) {
+        console.log('Shutting down Next.js server...');
+        nextProcess.kill();
+      }
+    });
   } catch (error) {
     console.error('Error in createWindow:', error);
   }
 }
 
 // Log app lifecycle events
-app.on('ready', () => {
+app.on('ready', async () => {
   console.log('App is ready');
-  createWindow();
+  if (isDev) {
+    await startNextServer();
+  }
+  await createWindow();
 });
 
 app.on('window-all-closed', () => {

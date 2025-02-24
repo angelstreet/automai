@@ -1,150 +1,183 @@
-Below is a concise Markdown document outlining your goal (turning a Next.js web app into a desktop app with shared evolution, Python execution, and Git sync) and how to achieve it using Electron. It starts with a short summary, followed by detailed instructions an AI agent could execute.
-markdown
-# Next.js Web-to-Desktop App Conversion
+# Next.js Web-to-Desktop App Integration
 
 ## Summary
-Convert an existing Next.js React web app (with Prisma, Google/GitHub auth, Python execution, and Git sync) into a desktop app using Electron, ensuring a single codebase evolves for both platforms. Electron will run the Next.js app dynamically, with desktop features (Python, Git) handled via IPC, activated only in Electron.
+Integration of Next.js React web app with Electron for desktop functionality, featuring shared server capabilities, Python execution, and Git synchronization. The implementation allows both web and desktop versions to coexist and evolve together, with smart server management that can either use an existing Next.js server or start a new one.
 
-## Detailed Instructions for AI Agent
+## Implementation Details
 
 ### 1. Project Setup
-- **Objective**: Integrate Electron into the existing Next.js project.
-- **Steps**:
-  1. In the project root, install dependencies:
-     ```
-     npm install --save-dev electron electron-builder concurrently
-     npm install next simple-git electron-store
-     ```
-  2. Create `electron/main.js` with:
-     ```javascript
-     const { app, BrowserWindow, ipcMain } = require('electron');
-     const next = require('next');
-     const { exec } = require('child_process');
-     const simpleGit = require('simple-git');
-     const git = simpleGit();
-     const dev = process.env.NODE_ENV !== 'production';
-     const nextApp = next({ dev });
-     const handle = nextApp.getRequestHandler();
+- **Dependencies**:
+  ```bash
+  npm install --save-dev electron electron-builder cross-env
+  npm install electron-store simple-git
+  ```
 
-     let win;
+### 2. Core Implementation
 
-     app.on('ready', async () => {
-       await nextApp.prepare();
-       win = new BrowserWindow({ width: 800, height: 600 });
-       win.loadURL('http://localhost:3000');
-       win.on('closed', () => app.quit());
-     });
+#### Main Process (electron/main.js)
+```javascript
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const isDev = process.env.NODE_ENV !== 'production';
+const PORT = process.env.ELECTRON_PORT || 3000;
+const { exec, spawn } = require('child_process');
+const simpleGit = require('simple-git');
+const http = require('http');
 
-     const server = require('http').createServer((req, res) => handle(req, res));
-     server.listen(3000);
+let mainWindow;
+let store;
+let nextProcess;
 
-     ipcMain.handle('run-python', async (event, script) => {
-       return new Promise((resolve, reject) => {
-         exec(`python ${script}`, (err, stdout) => (err ? reject(err) : resolve(stdout)));
-       });
-     });
+// Server detection and management
+async function isPortInUse(port) {
+  return new Promise((resolve) => {
+    const testServer = http.createServer()
+      .once('error', (err) => {
+        resolve(err.code === 'EADDRINUSE');
+      })
+      .once('listening', () => {
+        testServer.close();
+        resolve(false);
+      })
+      .listen(port);
+  });
+}
 
-     ipcMain.handle('git-sync', async () => {
-       await git.pull();
-       return 'Repo synced';
-     });
-     ```
-  3. Update `package.json` scripts:
-     ```json
-     "scripts": {
-       "dev": "next dev",
-       "build": "next build",
-       "start": "next start",
-       "electron": "electron electron/main.js",
-       "desktop": "npm run build && npm run electron",
-       "pack": "npm run build && electron-builder"
-     }
-     ```
-  4. Add Electron build config to `package.json`:
-     ```json
-     "build": {
-       "extends": null,
-       "files": ["electron/**/*", "out/**/*"],
-       "directories": { "output": "dist" }
-     }
-     ```
+async function startNextServer() {
+  const portInUse = await isPortInUse(PORT);
+  if (portInUse) {
+    console.log(`Port ${PORT} in use, using existing Next.js server`);
+    return Promise.resolve();
+  }
 
-### 2. Platform Detection
-- **Objective**: Enable conditional logic for web vs. desktop.
-- **Steps**:
-  1. Create `lib/isElectron.js`:
-     ```javascript
-     const isElectron = () => typeof window !== 'undefined' && window.process && window.process.type === 'renderer';
-     module.exports = isElectron;
-     ```
-  2. Test it in `pages/index.js`:
-     ```javascript
-     import isElectron from '../lib/isElectron';
-     export default function Home() {
-       return <div>{isElectron() ? 'Desktop' : 'Web'}</div>;
-     }
-     ```
+  nextProcess = spawn('npm', ['run', 'dev'], {
+    stdio: 'inherit',
+    shell: true,
+  });
 
-### 3. Desktop Features Integration
-- **Objective**: Add Python execution and Git sync, accessible only in Electron.
-- **Steps**:
-  1. Create `lib/electronApi.js`:
-     ```javascript
-     const { ipcRenderer } = window.require ? window.require('electron') : { ipcRenderer: null };
+  return new Promise((resolve) => {
+    function checkServer() {
+      http.get(`http://localhost:${PORT}`, (res) => {
+        if (res.statusCode === 200) {
+          resolve();
+        } else {
+          setTimeout(checkServer, 1000);
+        }
+      }).on('error', () => setTimeout(checkServer, 1000));
+    }
+    setTimeout(checkServer, 1000);
+  });
+}
+```
 
-     export const runPython = async (script) => {
-       if (ipcRenderer) return ipcRenderer.invoke('run-python', script);
-       return 'Python not available';
-     };
+### 3. Development Workflow
 
-     export const syncGit = async () => {
-       if (ipcRenderer) return ipcRenderer.invoke('git-sync');
-       return 'Git sync not available';
-     };
-     ```
-  2. Add to a component (e.g., `pages/tools.js`):
-     ```javascript
-     import { runPython, syncGit } from '../lib/electronApi';
+#### Option 1: Shared Server Mode
+```bash
+# Terminal 1: Start Next.js for web development
+npm run dev
 
-     export default function Tools() {
-       const handlePython = async () => console.log(await runPython('script.py'));
-       const handleGit = async () => console.log(await syncGit());
-       return (
-         <div>
-           <button onClick={handlePython}>Run Python</button>
-           <button onClick={handleGit}>Sync Git</button>
-         </div>
-       );
-     }
-     ```
+# Terminal 2: Start Electron (will use existing Next.js server)
+npm run electron-dev
+```
 
-### 4. Backend Compatibility
-- **Objective**: Ensure Prisma and auth work across platforms.
-- **Steps**:
-  1. Modify `prisma/index.js` for local SQLite in Electron:
-     ```javascript
-     const { PrismaClient } = require('@prisma/client');
-     const prisma = new PrismaClient({
-       datasources: {
-         db: { url: process.env.IS_ELECTRON ? 'file:./app.db' : process.env.DATABASE_URL },
-       },
-     });
-     module.exports = prisma;
-     ```
-  2. Set `IS_ELECTRON` in `electron/main.js` before Next.js prep:
-     ```javascript
-     process.env.IS_ELECTRON = 'true';
-     ```
-  3. Keep auth in Next.js API routes (e.g., `/api/auth/[...nextauth]`), using Electron’s BrowserWindow for OAuth redirects if needed.
+#### Option 2: Standalone Mode
+```bash
+# Single command (will start Next.js if needed)
+npm run electron-dev
+```
 
-### 5. Testing & Packaging
-- **Objective**: Verify and distribute the app.
-- **Steps**:
-  1. Test web: `npm run dev`
-  2. Test desktop: `npm run desktop`
-  3. Package: `npm run pack` (outputs to `dist/`)
+### 4. Features
 
-### Notes
-- Web app runs as usual; Electron runs the same Next.js instance.
-- Update Next.js code normally—desktop inherits changes.
-- Ensure Python and Git are installed on target machines or bundle them.
+#### Store Management
+```javascript
+// Initialize electron-store
+async function initializeStore() {
+  const Store = (await import('electron-store')).default;
+  store = new Store();
+}
+
+// IPC handlers for store operations
+ipcMain.handle('store-set', async (event, { key, value }) => {
+  if (!store) return { success: false, message: 'Store not initialized' };
+  try {
+    store.set(key, value);
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('store-get', async (event, { key }) => {
+  if (!store) return { success: false, message: 'Store not initialized' };
+  try {
+    return store.get(key);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+```
+
+#### Python Execution
+```javascript
+ipcMain.handle('run-python', async (event, script) => {
+  return new Promise((resolve, reject) => {
+    exec(`python ${script}`, (error, stdout, stderr) => {
+      if (error) reject(error);
+      resolve(stdout);
+    });
+  });
+});
+```
+
+#### Git Synchronization
+```javascript
+const git = simpleGit();
+ipcMain.handle('git-sync', async () => {
+  try {
+    await git.pull();
+    return { success: true, message: 'Repository synchronized' };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+});
+```
+
+### 5. Building for Distribution
+
+```bash
+# Build the application
+npm run electron-pack
+```
+
+This will:
+1. Build the Next.js application
+2. Package everything with electron-builder
+3. Output to the `dist` directory
+
+### 6. Important Notes
+
+- The application automatically detects if a Next.js server is running on port 3000
+- In development, you can work on both web and desktop versions simultaneously
+- The desktop app will manage the Next.js server lifecycle automatically
+- All IPC operations (Python, Git, Store) are only available in the desktop version
+- OAuth callbacks are handled appropriately in both web and desktop contexts
+- Extensive logging is implemented for debugging purposes
+
+### 7. Requirements
+
+- Node.js and npm
+- Python (for Python script execution)
+- Git (for repository synchronization)
+- Electron dependencies based on the target platform
+
+### 8. Debugging
+
+The application includes comprehensive logging:
+- Server status and port detection
+- Window lifecycle events
+- Content loading states
+- IPC operations
+- OAuth navigation
+
+DevTools are automatically opened in development mode for debugging.

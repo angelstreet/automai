@@ -37,15 +37,33 @@ npm run server:dev
 The API will be available at [http://localhost:5001](http://localhost:5001).
 
 ### Desktop App (Electron)
-Run the application as a desktop app:
-```bash
-# Development mode
-npm run electron-dev
+You can run the desktop app in two ways:
 
-# Build for distribution
+#### Option 1: Using Existing Next.js Server
+1. Start the Next.js server first:
+```bash
+npm run dev
+```
+2. In a new terminal, start Electron:
+```bash
+npm run electron-dev
+```
+This will use the existing Next.js server running on port 3000.
+
+#### Option 2: Standalone Mode
+If Next.js is not running, simply run:
+```bash
+npm run electron-dev
+```
+This will automatically start both Next.js and Electron.
+
+#### Building for Distribution
+```bash
 npm run electron-pack
 ```
 The packaged desktop app will be available in the `dist` directory.
+
+Note: The desktop app automatically detects if Next.js is running on port 3000 and will either use the existing server or start a new one.
 
 For detailed desktop app documentation, see [Desktop Implementation Guide](docs/instructions/desktop.md).
 

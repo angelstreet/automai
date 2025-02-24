@@ -24,7 +24,7 @@
     "prisma:seed": "NODE_ENV=development ts-node src/server/prisma/seed.ts",
     "prisma:seed:test": "NODE_ENV=test ts-node src/server/prisma/seed.ts",
     "delete-user": "cd src/server && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/automai npx ts-node -e \"const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); (async () => { try { await prisma.user.delete({ where: { email: 'joachim_djibril@hotmail.com' } }); console.log('User deleted'); } catch (e) { console.error(e); } finally { await prisma.$disconnect(); } })();\"",
-    "electron-dev": "concurrently \"next dev -p 3001\" \"wait-on http://localhost:3001 && cross-env ELECTRON_PORT=3001 electron electron/main.js\"",
+    "electron-dev": "cross-env ELECTRON_PORT=3000 electron electron/main.js",
     "electron-build": "next build && electron-builder",
     "electron-pack": "npm run build && electron-builder -c.extraMetadata.main=electron/main.js"
   },
