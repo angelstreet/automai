@@ -9,61 +9,103 @@ let mainWindow;
 let store;
 
 async function initializeStore() {
-  const Store = (await import('electron-store')).default;
-  store = new Store();
+  try {
+    console.log('Initializing electron-store...');
+    const Store = (await import('electron-store')).default;
+    store = new Store();
+    console.log('electron-store initialized successfully');
+  } catch (error) {
+    console.error('Failed to initialize electron-store:', error);
+  }
 }
 
 async function createWindow() {
-  // Initialize store before creating window
-  await initializeStore();
-
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-    // Add show: false to prevent white flash
-    show: false
-  });
-
-  // Load the app with the correct port
-  const startURL = isDev
-    ? `http://localhost:${PORT}`
-    : `file://${path.join(__dirname, '../out/index.html')}`;
-
   try {
-    await mainWindow.loadURL(startURL);
-    // Once content is loaded, show the window
-    mainWindow.show();
-  } catch (error) {
-    console.error('Failed to load URL:', error);
-  }
+    console.log('Creating main window...');
+    // Initialize store before creating window
+    await initializeStore();
 
-  // Handle OAuth callbacks
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (url.includes('/api/auth/callback')) {
-      event.preventDefault();
-      mainWindow.loadURL(`http://localhost:${PORT}${new URL(url).pathname}${new URL(url).search}`);
+    mainWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+      // Add show: false to prevent white flash
+      show: false,
+      // Add backgroundColor to prevent black screen
+      backgroundColor: '#FFFFFF'
+    });
+
+    // Load the app with the correct port
+    const startURL = isDev
+      ? `http://localhost:${PORT}`
+      : `file://${path.join(__dirname, '../out/index.html')}`;
+
+    console.log(`Loading URL: ${startURL}`);
+
+    // Listen for window ready-to-show
+    mainWindow.once('ready-to-show', () => {
+      console.log('Window ready to show');
+      mainWindow.show();
+    });
+
+    // Listen for failed load
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error('Failed to load:', { errorCode, errorDescription });
+    });
+
+    // Add debugging for page title changes
+    mainWindow.webContents.on('page-title-updated', (event, title) => {
+      console.log('Page title updated:', title);
+    });
+
+    // Add debugging for DOM ready
+    mainWindow.webContents.on('dom-ready', () => {
+      console.log('DOM is ready');
+    });
+
+    try {
+      await mainWindow.loadURL(startURL);
+      console.log('URL loaded successfully');
+    } catch (error) {
+      console.error('Failed to load URL:', error);
     }
-  });
 
-  // Remove automatic DevTools opening
-  // if (isDev) {
-  //   mainWindow.webContents.openDevTools();
-  // }
+    // Handle OAuth callbacks
+    mainWindow.webContents.on('will-navigate', (event, url) => {
+      console.log('Navigation requested to:', url);
+      if (url.includes('/api/auth/callback')) {
+        event.preventDefault();
+        mainWindow.loadURL(`http://localhost:${PORT}${new URL(url).pathname}${new URL(url).search}`);
+      }
+    });
+
+    // Add window state logging
+    mainWindow.on('show', () => console.log('Window shown'));
+    mainWindow.on('hide', () => console.log('Window hidden'));
+    mainWindow.on('close', () => console.log('Window closing'));
+  } catch (error) {
+    console.error('Error in createWindow:', error);
+  }
 }
 
-app.whenReady().then(createWindow);
+// Log app lifecycle events
+app.on('ready', () => {
+  console.log('App is ready');
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
+  console.log('All windows closed');
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
 app.on('activate', () => {
+  console.log('App activated');
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
@@ -71,9 +113,11 @@ app.on('activate', () => {
 
 // IPC Handlers
 ipcMain.handle('run-python', async (event, script) => {
+  console.log('Running Python script:', script);
   return new Promise((resolve, reject) => {
     exec(`python ${script}`, (error, stdout, stderr) => {
       if (error) {
+        console.error('Python script error:', error);
         reject(error);
       }
       resolve(stdout);
@@ -86,9 +130,11 @@ const git = simpleGit();
 
 ipcMain.handle('git-sync', async () => {
   try {
+    console.log('Starting git sync');
     await git.pull();
     return { success: true, message: 'Repository synchronized successfully' };
   } catch (error) {
+    console.error('Git sync error:', error);
     return { success: false, message: error.message };
   }
 });
@@ -96,11 +142,21 @@ ipcMain.handle('git-sync', async () => {
 // Store operations
 ipcMain.handle('store-set', async (event, { key, value }) => {
   if (!store) return { success: false, message: 'Store not initialized' };
-  store.set(key, value);
-  return { success: true };
+  try {
+    store.set(key, value);
+    return { success: true };
+  } catch (error) {
+    console.error('Store set error:', error);
+    return { success: false, message: error.message };
+  }
 });
 
 ipcMain.handle('store-get', async (event, { key }) => {
   if (!store) return { success: false, message: 'Store not initialized' };
-  return store.get(key);
+  try {
+    return store.get(key);
+  } catch (error) {
+    console.error('Store get error:', error);
+    return { success: false, message: error.message };
+  }
 }); 

@@ -1,195 +1,307 @@
 ---
-description: Backend Best Practices
-globs: src/server/**/*.{ts,js}
+description: backend
+globs: 
+---
+# Backend CursorRules
+
+## **1️⃣ General Guidelines**
+- Keep APIs RESTful with clean, predictable endpoint structures.
+- Use JWT authentication for secured access to all endpoints.
+- Follow Role-Based Access Control (RBAC) to manage permissions.
+- Version APIs using `/api/v1/...` for backward compatibility.
+- Rate-limit requests to prevent abuse.
+- All API responses should follow:
+  ```json
+  {
+    "success": true/false,
+    "message": "Description",
+    "data": {...}
+  }
+  ```
+
 ---
 
-# Backend Best Practices
+## **2️⃣ Authentication Rules**
+- OAuth (Google, GitHub) and email/password supported via NextAuth.js.
+- Passwords must be hashed using bcrypt before storage.
+- JWT expiration should be set to 1 hour; refresh tokens available.
+- Multi-Tenancy Support: Every request must be scoped to a tenant.
+- Session Middleware: Attach authenticated user details to `req.user`.
+- Logout API must revoke tokens from active sessions.
 
-## Core Principles
+---
 
-- Keep APIs RESTful with clean, predictable endpoint structures
-- Use JWT authentication for secured access to all endpoints
-- Follow Role-Based Access Control (RBAC) to manage permissions
-- Version APIs using `/api/v1/...` for backward compatibility
-- Rate-limit requests to prevent abuse
+## **3️⃣ API Design Rules**
+### **Projects & Use Cases**
+- `POST /api/projects` → Create new project
+- `GET /api/projects/:id` → Fetch project details
+- `DELETE /api/projects/:id` → Soft-delete project
+- `POST /api/usecases` → Create a new test case
+- `GET /api/usecases/:id` → Fetch test case details
+- Ensure all API endpoints validate user ownership of resources.
+
+### **Test Execution Rules**
+- `POST /api/execute/local` → Runs the test case locally
+- `POST /api/execute/cloud` → Runs the test case on cloud infrastructure
+- `GET /api/executions` → Fetch test run history
+- Store execution logs in Elasticsearch for debugging.
+- Store test results, videos, and screenshots in Supabase Storage.
+- Rate-limit execution API to prevent excessive automated calls.
+
+---
+
+## **4️⃣ Data Storage Rules**
+- PostgreSQL (Supabase) as the primary database.
+- Use Prisma ORM for structured queries and migrations.
+- Store test execution logs in Elasticsearch for fast querying.
+- Use Supabase Storage / AWS S3 for storing test reports & assets.
+- Implement soft deletes instead of hard deletes where possible.
+- Use database transactions for creating and updating related resources.
+
+---
+
+## **5️⃣ Security & Performance Rules**
+- Implement CORS policy to allow only whitelisted origins.
+- Validate all user inputs to prevent SQL injection & XSS.
+- Use Redis or a caching mechanism for frequently accessed data.
+- Monitor API performance metrics with Prometheus & Grafana.
+- Enforce strict API rate limits (e.g., max 10 requests/sec per user).
+
+---
+
+## **6️⃣ Error Handling & Logging**
+- Use a global error handler to return structured API responses.
+- Store logs in Kibana (Elasticsearch) for debugging & analysis.
+- Return appropriate HTTP status codes:
+  - `200 OK` for successful requests.
+  - `201 Created` for successful resource creation.
+  - `400 Bad Request` for validation errors.
+  - `401 Unauthorized` for authentication failures.
+  - `403 Forbidden` for permission issues.
+  - `500 Internal Server Error` for unexpected failures.
+- Critical errors must trigger alerts to Slack/Email.
+
+---
+
+## **7️⃣ Deployment & CI/CD Rules**
+- Use GitHub Actions for CI/CD pipelines.
+- Deploy to Vercel (Frontend) & Supabase/AWS (Backend).
+- Automate database migrations during deployment.
+- Perform zero-downtime deployments with rolling updates.
+- Enable auto-scaling in production environments.
+
+---
+
+## **8️⃣ Future Enhancements**
+- WebSockets for real-time execution tracking.
+- AI-assisted test script generation & failure analysis.
+- Integration with CI/CD tools (GitHub Actions, Jenkins, CircleCI).
+- Automated test scheduling & parallel execution on cloud VMs.
+
+---
+
+### **Conclusion**
+These rules establish a structured, secure, and scalable backend to support automation script development, execution, and analysis.
+
+---
+
+## **9️⃣ Backend Best Practices**
+
+### **Core Principles**
+
+- Use TypeScript for type safety and better developer experience
 - Implement proper error handling and logging
+- Follow RESTful API design principles
+- Use middleware for cross-cutting concerns
+- Implement proper authentication and authorization
+- Handle environment configuration properly
+- Follow security best practices
 
-## API Response Format
-
-```typescript
-interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data?: T;
-  meta?: {
-    page?: number;
-    limit?: number;
-    total?: number;
-    hasMore?: boolean;
-  };
-}
-```
-
-## API Route Structure
+### **API Route Structure**
 
 ```typescript
 // src/server/api/routes/project.ts
 import { Router } from 'express';
 import { validateRequest } from '../middleware/validate';
-import { isAuthenticated, hasPermission } from '../middleware/auth';
+import { isAuthenticated } from '../middleware/auth';
 import { ProjectSchema } from '../schemas/project';
-import { rateLimit } from '../middleware/rate-limit';
 
 const router = Router();
 
-router.get('/',
-  isAuthenticated,
-  rateLimit({ max: 100, windowMs: 15 * 60 * 1000 }), // 100 requests per 15 minutes
-  async (req, res, next) => {
-    try {
-      const { page = 1, limit = 10 } = req.query;
-      // Implementation with pagination
-    } catch (error) {
-      next(error);
-    }
+router.get('/', isAuthenticated, async (req, res, next) => {
+  try {
+    // Implementation
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 router.post('/',
   isAuthenticated,
-  hasPermission('project:create'),
   validateRequest(ProjectSchema),
   async (req, res, next) => {
     try {
-      // Implementation with tenant scoping
+      // Implementation
     } catch (error) {
       next(error);
     }
   }
 );
+
+export default router;
 ```
 
-## Test Execution Service
+### **Error Handling**
 
 ```typescript
-// src/server/services/test-execution.ts
-import { PrismaClient } from '@prisma/client';
-import { ElasticSearchClient } from '../lib/elasticsearch';
-import { S3Client } from '../lib/s3';
-
-export class TestExecutionService {
+// src/server/utils/errors.ts
+export class AppError extends Error {
   constructor(
-    private prisma: PrismaClient,
-    private elastic: ElasticSearchClient,
-    private s3: S3Client
-  ) {}
-
-  async executeTest(testId: string, options: ExecutionOptions) {
-    // Implementation with proper error handling and logging
-  }
-
-  async storeResults(executionId: string, results: TestResults) {
-    // Store results in PostgreSQL and artifacts in S3
-  }
-
-  async queryLogs(executionId: string) {
-    // Query logs from Elasticsearch
+    public statusCode: number,
+    public message: string,
+    public isOperational = true
+  ) {
+    super(message);
+    Object.setPrototypeOf(this, AppError.prototype);
   }
 }
+
+// src/server/middleware/error.ts
+export const errorHandler = (
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+
+  // Log unexpected errors
+  console.error('Unexpected error:', err);
+  return res.status(500).json({
+    status: 'error',
+    message: 'Internal server error',
+  });
+};
 ```
 
-## WebSocket Handler
+### **Authentication**
 
 ```typescript
-// src/server/websocket/execution-handler.ts
-import { WebSocketServer } from 'ws';
+// src/server/middleware/auth.ts
 import { verifyToken } from '../utils/jwt';
 
-export class ExecutionWebSocketHandler {
-  constructor(private wss: WebSocketServer) {
-    this.wss.on('connection', this.handleConnection.bind(this));
-  }
-
-  private async handleConnection(ws: WebSocket, req: Request) {
-    try {
-      const token = this.extractToken(req);
-      const user = await verifyToken(token);
-      
-      ws.on('message', (data) => this.handleMessage(ws, data, user));
-      ws.on('error', this.handleError);
-    } catch (error) {
-      ws.close(1008, 'Unauthorized');
+export const isAuthenticated = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      throw new AppError(401, 'No token provided');
     }
-  }
 
-  private handleMessage(ws: WebSocket, data: any, user: User) {
-    // Handle real-time test execution updates
+    const decoded = await verifyToken(token);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    next(new AppError(401, 'Invalid token'));
   }
-}
+};
 ```
 
-## Best Practices
+### **Request Validation**
 
-### API Design
-- Use proper HTTP methods and status codes
-- Implement pagination for list endpoints
-- Use query parameters for filtering and sorting
-- Version APIs for backward compatibility
-- Document APIs using OpenAPI/Swagger
-- Implement proper rate limiting
+```typescript
+// src/server/middleware/validate.ts
+import { Schema } from 'zod';
 
-### Multi-tenancy
-- Scope all database queries by tenant
-- Implement row-level security in PostgreSQL
-- Use tenant-specific caching strategies
-- Isolate tenant data in storage services
-- Handle tenant-specific configurations
+export const validateRequest = (schema: Schema) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await schema.parseAsync(req.body);
+      next();
+    } catch (error) {
+      next(new AppError(400, 'Invalid request data'));
+    }
+  };
+};
+```
 
-### Test Execution
-- Implement proper job queuing
-- Handle long-running operations
-- Store execution artifacts securely
-- Implement proper retry mechanisms
-- Monitor execution resources
-- Handle parallel executions
+### **Environment Configuration**
 
-### Data Storage
-- Use transactions for related operations
-- Implement soft deletes
-- Handle large dataset operations
-- Implement proper backup strategies
-- Monitor database performance
-- Use appropriate indexing
+```typescript
+// src/server/config/env/index.ts
+import { z } from 'zod';
+import dotenv from 'dotenv';
 
-### Security
-- Implement proper CORS policies
-- Validate and sanitize all inputs
-- Use prepared statements
-- Monitor for suspicious activities
-- Implement audit logging
-- Handle sensitive data properly
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']),
+  PORT: z.string().transform(Number),
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
+});
 
-### Error Handling
-- Use structured error responses
-- Implement proper logging levels
-- Monitor critical errors
-- Handle edge cases properly
-- Provide meaningful error messages
-- Implement circuit breakers
+dotenv.config({
+  path: `src/server/config/env/.env.${process.env.NODE_ENV}`,
+});
 
-### Performance
-- Use appropriate caching strategies
-- Optimize database queries
-- Handle concurrent requests
-- Monitor API performance
-- Implement proper timeouts
+export const env = envSchema.parse(process.env);
+```
+
+### **Best Practices**
+
+#### **API Design**
+- Use proper HTTP methods (GET, POST, PUT, DELETE)
+- Return appropriate status codes
+- Version your APIs
+- Use query parameters for filtering
+- Implement pagination for lists
+- Use proper error responses
+
+#### **Security**
+- Validate all inputs
+- Sanitize database queries
+- Use HTTPS in production
+- Implement rate limiting
+- Set security headers
+- Handle CORS properly
+- Store secrets securely
+
+#### **Performance**
+- Implement caching where appropriate
 - Use connection pooling
+- Optimize database queries
+- Implement proper indexing
+- Handle concurrent requests
+- Use compression
 
-### Deployment
-- Use proper CI/CD practices
-- Implement blue-green deployments
-- Handle database migrations
-- Monitor service health
-- Implement proper backups
-- Use infrastructure as code
+#### **Testing**
+- Write unit tests for utilities
+- Test API endpoints
+- Mock external services
+- Test error scenarios
+- Use proper test data
+- Implement integration tests
+
+#### **Logging**
+- Use proper logging levels
+- Include request context
+- Log important operations
+- Handle sensitive data
+- Implement audit logging
+- Use proper logging format
+
+#### **Code Organization**
+- Follow modular architecture
+- Separate concerns properly
+- Use dependency injection
+- Implement service layer
+- Keep controllers thin
+- Use proper naming conventions
 
