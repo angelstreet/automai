@@ -1,0 +1,211 @@
+---
+description: Prisma & Database Best Practices
+globs: src/server/prisma/**/*.{ts,prisma}
+---
+
+# Prisma & Database Best Practices
+
+## Core Principles
+
+- Use Prisma schema as the single source of truth
+- Implement proper database migrations
+- Follow naming conventions consistently
+- Use appropriate field types and relations
+- Implement proper indexing strategy
+- Handle database transactions properly
+- Implement proper error handling
+
+## Schema Design
+
+```prisma
+// src/server/prisma/schema.prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(USER)
+  projects  Project[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  testCases   TestCase[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+```
+
+## Database Operations
+
+```typescript
+// src/server/services/project.ts
+import { PrismaClient } from '@prisma/client';
+import { AppError } from '../utils/errors';
+
+const prisma = new PrismaClient();
+
+export async function createProject(data: CreateProjectInput) {
+  try {
+    return await prisma.project.create({
+      data,
+      include: {
+        user: true,
+      },
+    });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      throw new AppError(400, 'Project name already exists');
+    }
+    throw error;
+  }
+}
+
+export async function updateProject(
+  id: string,
+  data: UpdateProjectInput
+) {
+  return await prisma.project.update({
+    where: { id },
+    data,
+    include: {
+      user: true,
+    },
+  });
+}
+```
+
+## Transactions
+
+```typescript
+// src/server/services/test.ts
+export async function createTestWithResults(data: TestData) {
+  return await prisma.$transaction(async (tx) => {
+    const test = await tx.test.create({
+      data: {
+        name: data.name,
+        projectId: data.projectId,
+      },
+    });
+
+    const results = await tx.testResult.createMany({
+      data: data.results.map((result) => ({
+        testId: test.id,
+        ...result,
+      })),
+    });
+
+    return { test, results };
+  });
+}
+```
+
+## Migrations
+
+```typescript
+// src/server/prisma/migrations/20240224000000_init/migration.sql
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
+
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT,
+    "role" "Role" NOT NULL DEFAULT 'USER',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+```
+
+## Best Practices
+
+### Schema Design
+- Use meaningful model names
+- Define appropriate relations
+- Use proper field types
+- Implement proper constraints
+- Add appropriate indexes
+- Use enums for fixed values
+- Document schema changes
+
+### Data Access
+- Use type-safe queries
+- Implement proper filtering
+- Use efficient includes
+- Handle pagination properly
+- Optimize query performance
+- Use appropriate selections
+- Handle nested operations
+
+### Migrations
+- Create atomic migrations
+- Test migrations thoroughly
+- Back up data before migrating
+- Plan rollback strategy
+- Version migrations properly
+- Document breaking changes
+- Handle data transformations
+
+### Security
+- Validate input data
+- Prevent SQL injection
+- Handle sensitive data
+- Implement access control
+- Audit data access
+- Secure connections
+- Monitor operations
+
+### Performance
+- Use appropriate indexes
+- Optimize query patterns
+- Handle N+1 problems
+- Use connection pooling
+- Monitor query times
+- Cache when appropriate
+- Handle large datasets
+
+### Error Handling
+- Handle common errors
+- Implement retry logic
+- Log database errors
+- Provide clear messages
+- Handle timeouts
+- Implement fallbacks
+- Monitor errors
+
+### Testing
+- Use test database
+- Mock database calls
+- Test transactions
+- Verify constraints
+- Test migrations
+- Use proper fixtures
+- Clean up test data 

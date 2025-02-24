@@ -21,7 +21,10 @@
     "prisma:studio": "DATABASE_URL=\"postgresql://joachimndoye@localhost:5432/automai_db\" prisma studio --schema=src/server/prisma/schema.prisma",
     "prisma:seed": "NODE_ENV=development ts-node src/server/prisma/seed.ts",
     "prisma:seed:test": "NODE_ENV=test ts-node src/server/prisma/seed.ts",
-    "delete-user": "cd src/server && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/automai npx ts-node -e \"const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); (async () => { try { await prisma.user.delete({ where: { email: 'joachim_djibril@hotmail.com' } }); console.log('User deleted'); } catch (e) { console.error(e); } finally { await prisma.$disconnect(); } })();\""
+    "delete-user": "cd src/server && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/automai npx ts-node -e \"const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); (async () => { try { await prisma.user.delete({ where: { email: 'joachim_djibril@hotmail.com' } }); console.log('User deleted'); } catch (e) { console.error(e); } finally { await prisma.$disconnect(); } })();\"",
+    "electron-dev": "concurrently \"next dev -p 3001\" \"wait-on http://localhost:3001 && cross-env ELECTRON_PORT=3001 electron electron/main.js\"",
+    "electron-build": "next build && electron-builder",
+    "electron-pack": "npm run build && electron-builder -c.extraMetadata.main=electron/main.js"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -61,6 +64,7 @@
     "cmdk": "^1.0.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "electron-store": "^10.0.1",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "js-cookie": "^3.0.5",
@@ -78,6 +82,7 @@
     "react-dom": "latest",
     "recharts": "^2.15.1",
     "shadcn-ui": "^0.9.4",
+    "simple-git": "^3.27.0",
     "tailwind-merge": "^3.0.1",
     "ts-node": "^10.9.2"
   },
@@ -91,6 +96,10 @@
     "@typescript-eslint/eslint-plugin": "^8.24.1",
     "@typescript-eslint/parser": "^8.24.1",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.3",
@@ -103,9 +112,31 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-jest": "^29.2.5",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "wait-on": "^8.0.2"
   },
   "prisma": {
     "schema": "src/server/prisma/schema.prisma"
+  },
+  "build": {
+    "appId": "com.automai.app",
+    "productName": "AutomAI",
+    "files": [
+      "electron/**/*",
+      "out/**/*",
+      "public/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

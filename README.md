@@ -36,6 +36,19 @@ npm run server:dev
 ```
 The API will be available at [http://localhost:5001](http://localhost:5001).
 
+### Desktop App (Electron)
+Run the application as a desktop app:
+```bash
+# Development mode
+npm run electron-dev
+
+# Build for distribution
+npm run electron-pack
+```
+The packaged desktop app will be available in the `dist` directory.
+
+For detailed desktop app documentation, see [Desktop Implementation Guide](docs/instructions/desktop.md).
+
 API endpoints:
 - Health check: `GET /api/health`
 - Projects: `GET/POST /api/projects`

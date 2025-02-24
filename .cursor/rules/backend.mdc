@@ -1,105 +1,195 @@
 ---
-description: backend
-globs: 
+description: Backend Best Practices
+globs: src/server/**/*.{ts,js}
 ---
-# Backend CursorRules
 
-## **1️⃣ General Guidelines**
-- Keep APIs RESTful with clean, predictable endpoint structures.
-- Use JWT authentication for secured access to all endpoints.
-- Follow Role-Based Access Control (RBAC) to manage permissions.
-- Version APIs using `/api/v1/...` for backward compatibility.
-- Rate-limit requests to prevent abuse.
-- All API responses should follow:
-  ```json
-  {
-    "success": true/false,
-    "message": "Description",
-    "data": {...}
+# Backend Best Practices
+
+## Core Principles
+
+- Keep APIs RESTful with clean, predictable endpoint structures
+- Use JWT authentication for secured access to all endpoints
+- Follow Role-Based Access Control (RBAC) to manage permissions
+- Version APIs using `/api/v1/...` for backward compatibility
+- Rate-limit requests to prevent abuse
+- Implement proper error handling and logging
+
+## API Response Format
+
+```typescript
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data?: T;
+  meta?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    hasMore?: boolean;
+  };
+}
+```
+
+## API Route Structure
+
+```typescript
+// src/server/api/routes/project.ts
+import { Router } from 'express';
+import { validateRequest } from '../middleware/validate';
+import { isAuthenticated, hasPermission } from '../middleware/auth';
+import { ProjectSchema } from '../schemas/project';
+import { rateLimit } from '../middleware/rate-limit';
+
+const router = Router();
+
+router.get('/',
+  isAuthenticated,
+  rateLimit({ max: 100, windowMs: 15 * 60 * 1000 }), // 100 requests per 15 minutes
+  async (req, res, next) => {
+    try {
+      const { page = 1, limit = 10 } = req.query;
+      // Implementation with pagination
+    } catch (error) {
+      next(error);
+    }
   }
-  ```
+);
 
----
+router.post('/',
+  isAuthenticated,
+  hasPermission('project:create'),
+  validateRequest(ProjectSchema),
+  async (req, res, next) => {
+    try {
+      // Implementation with tenant scoping
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+```
 
-## **2️⃣ Authentication Rules**
-- OAuth (Google, GitHub) and email/password supported via NextAuth.js.
-- Passwords must be hashed using bcrypt before storage.
-- JWT expiration should be set to 1 hour; refresh tokens available.
-- Multi-Tenancy Support: Every request must be scoped to a tenant.
-- Session Middleware: Attach authenticated user details to `req.user`.
-- Logout API must revoke tokens from active sessions.
+## Test Execution Service
 
----
+```typescript
+// src/server/services/test-execution.ts
+import { PrismaClient } from '@prisma/client';
+import { ElasticSearchClient } from '../lib/elasticsearch';
+import { S3Client } from '../lib/s3';
 
-## **3️⃣ API Design Rules**
-### **Projects & Use Cases**
-- `POST /api/projects` → Create new project
-- `GET /api/projects/:id` → Fetch project details
-- `DELETE /api/projects/:id` → Soft-delete project
-- `POST /api/usecases` → Create a new test case
-- `GET /api/usecases/:id` → Fetch test case details
-- Ensure all API endpoints validate user ownership of resources.
+export class TestExecutionService {
+  constructor(
+    private prisma: PrismaClient,
+    private elastic: ElasticSearchClient,
+    private s3: S3Client
+  ) {}
 
-### **Test Execution Rules**
-- `POST /api/execute/local` → Runs the test case locally
-- `POST /api/execute/cloud` → Runs the test case on cloud infrastructure
-- `GET /api/executions` → Fetch test run history
-- Store execution logs in Elasticsearch for debugging.
-- Store test results, videos, and screenshots in Supabase Storage.
-- Rate-limit execution API to prevent excessive automated calls.
+  async executeTest(testId: string, options: ExecutionOptions) {
+    // Implementation with proper error handling and logging
+  }
 
----
+  async storeResults(executionId: string, results: TestResults) {
+    // Store results in PostgreSQL and artifacts in S3
+  }
 
-## **4️⃣ Data Storage Rules**
-- PostgreSQL (Supabase) as the primary database.
-- Use Prisma ORM for structured queries and migrations.
-- Store test execution logs in Elasticsearch for fast querying.
-- Use Supabase Storage / AWS S3 for storing test reports & assets.
-- Implement soft deletes instead of hard deletes where possible.
-- Use database transactions for creating and updating related resources.
+  async queryLogs(executionId: string) {
+    // Query logs from Elasticsearch
+  }
+}
+```
 
----
+## WebSocket Handler
 
-## **5️⃣ Security & Performance Rules**
-- Implement CORS policy to allow only whitelisted origins.
-- Validate all user inputs to prevent SQL injection & XSS.
-- Use Redis or a caching mechanism for frequently accessed data.
-- Monitor API performance metrics with Prometheus & Grafana.
-- Enforce strict API rate limits (e.g., max 10 requests/sec per user).
+```typescript
+// src/server/websocket/execution-handler.ts
+import { WebSocketServer } from 'ws';
+import { verifyToken } from '../utils/jwt';
 
----
+export class ExecutionWebSocketHandler {
+  constructor(private wss: WebSocketServer) {
+    this.wss.on('connection', this.handleConnection.bind(this));
+  }
 
-## **6️⃣ Error Handling & Logging**
-- Use a global error handler to return structured API responses.
-- Store logs in Kibana (Elasticsearch) for debugging & analysis.
-- Return appropriate HTTP status codes:
-  - `200 OK` for successful requests.
-  - `201 Created` for successful resource creation.
-  - `400 Bad Request` for validation errors.
-  - `401 Unauthorized` for authentication failures.
-  - `403 Forbidden` for permission issues.
-  - `500 Internal Server Error` for unexpected failures.
-- Critical errors must trigger alerts to Slack/Email.
+  private async handleConnection(ws: WebSocket, req: Request) {
+    try {
+      const token = this.extractToken(req);
+      const user = await verifyToken(token);
+      
+      ws.on('message', (data) => this.handleMessage(ws, data, user));
+      ws.on('error', this.handleError);
+    } catch (error) {
+      ws.close(1008, 'Unauthorized');
+    }
+  }
 
----
+  private handleMessage(ws: WebSocket, data: any, user: User) {
+    // Handle real-time test execution updates
+  }
+}
+```
 
-## **7️⃣ Deployment & CI/CD Rules**
-- Use GitHub Actions for CI/CD pipelines.
-- Deploy to Vercel (Frontend) & Supabase/AWS (Backend).
-- Automate database migrations during deployment.
-- Perform zero-downtime deployments with rolling updates.
-- Enable auto-scaling in production environments.
+## Best Practices
 
----
+### API Design
+- Use proper HTTP methods and status codes
+- Implement pagination for list endpoints
+- Use query parameters for filtering and sorting
+- Version APIs for backward compatibility
+- Document APIs using OpenAPI/Swagger
+- Implement proper rate limiting
 
-## **8️⃣ Future Enhancements**
-- WebSockets for real-time execution tracking.
-- AI-assisted test script generation & failure analysis.
-- Integration with CI/CD tools (GitHub Actions, Jenkins, CircleCI).
-- Automated test scheduling & parallel execution on cloud VMs.
+### Multi-tenancy
+- Scope all database queries by tenant
+- Implement row-level security in PostgreSQL
+- Use tenant-specific caching strategies
+- Isolate tenant data in storage services
+- Handle tenant-specific configurations
 
----
+### Test Execution
+- Implement proper job queuing
+- Handle long-running operations
+- Store execution artifacts securely
+- Implement proper retry mechanisms
+- Monitor execution resources
+- Handle parallel executions
 
-### **Conclusion**
-These rules establish a structured, secure, and scalable backend to support automation script development, execution, and analysis.
+### Data Storage
+- Use transactions for related operations
+- Implement soft deletes
+- Handle large dataset operations
+- Implement proper backup strategies
+- Monitor database performance
+- Use appropriate indexing
+
+### Security
+- Implement proper CORS policies
+- Validate and sanitize all inputs
+- Use prepared statements
+- Monitor for suspicious activities
+- Implement audit logging
+- Handle sensitive data properly
+
+### Error Handling
+- Use structured error responses
+- Implement proper logging levels
+- Monitor critical errors
+- Handle edge cases properly
+- Provide meaningful error messages
+- Implement circuit breakers
+
+### Performance
+- Use appropriate caching strategies
+- Optimize database queries
+- Handle concurrent requests
+- Monitor API performance
+- Implement proper timeouts
+- Use connection pooling
+
+### Deployment
+- Use proper CI/CD practices
+- Implement blue-green deployments
+- Handle database migrations
+- Monitor service health
+- Implement proper backups
+- Use infrastructure as code
 
