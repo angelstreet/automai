@@ -1,7 +1,6 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { locales } from '@/config';
-import { ThemeProvider } from '@/components/theme-provider';
 import { Inter } from 'next/font/google';
 import { getMessages } from '@/i18n';
 import { UserProvider } from '@/lib/contexts/UserContext';
@@ -42,20 +41,13 @@ export default async function LocaleLayout(props: Props) {
     <html lang={validLocale} suppressHydrationWarning>
       <body className={inter.className}>
         <UserProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
+          <NextIntlClientProvider 
+            locale={validLocale} 
+            messages={messages}
+            timeZone="UTC"
           >
-            <NextIntlClientProvider 
-              locale={validLocale} 
-              messages={messages}
-              timeZone="UTC"
-            >
-              <RouteGuard>{children}</RouteGuard>
-            </NextIntlClientProvider>
-          </ThemeProvider>
+            <RouteGuard>{children}</RouteGuard>
+          </NextIntlClientProvider>
         </UserProvider>
       </body>
     </html>

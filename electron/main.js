@@ -31,10 +31,9 @@ async function createWindow() {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
+        devTools: true
       },
-      // Add show: false to prevent white flash
       show: false,
-      // Add backgroundColor to prevent black screen
       backgroundColor: '#FFFFFF'
     });
 
@@ -45,15 +44,30 @@ async function createWindow() {
 
     console.log(`Loading URL: ${startURL}`);
 
+    // Add more detailed loading events
+    mainWindow.webContents.on('did-start-loading', () => {
+      console.log('Content started loading');
+    });
+
+    mainWindow.webContents.on('did-stop-loading', () => {
+      console.log('Content stopped loading');
+    });
+
+    mainWindow.webContents.on('did-finish-load', () => {
+      console.log('Content finished loading');
+    });
+
+    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+      console.error('Failed to load:', { errorCode, errorDescription });
+    });
+
+    // Open DevTools on start for debugging
+    mainWindow.webContents.openDevTools();
+
     // Listen for window ready-to-show
     mainWindow.once('ready-to-show', () => {
       console.log('Window ready to show');
       mainWindow.show();
-    });
-
-    // Listen for failed load
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error('Failed to load:', { errorCode, errorDescription });
     });
 
     // Add debugging for page title changes
