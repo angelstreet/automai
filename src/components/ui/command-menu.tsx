@@ -1,7 +1,7 @@
-import React from 'react'
-import { useRouter } from 'next/navigation'
-import { Search } from 'lucide-react'
-import { useSearch } from '@/lib/contexts/SearchContext'
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { Search } from 'lucide-react';
+import { useSearch } from '@/lib/contexts/SearchContext';
 import {
   CommandDialog,
   CommandEmpty,
@@ -10,7 +10,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@/components/ui/command'
+} from '@/components/ui/command';
 
 const navigation = [
   {
@@ -29,19 +29,19 @@ const navigation = [
       { title: 'Settings', url: '/settings' },
     ],
   },
-]
+];
 
 export function CommandMenu() {
-  const router = useRouter()
-  const { open, setOpen } = useSearch()
+  const router = useRouter();
+  const { open, setOpen } = useSearch();
 
   const runCommand = React.useCallback(
     (command: () => unknown) => {
-      setOpen(false)
-      command()
+      setOpen(false);
+      command();
     },
-    [setOpen]
-  )
+    [setOpen],
+  );
 
   return (
     <CommandDialog modal open={open} onOpenChange={setOpen}>
@@ -55,7 +55,7 @@ export function CommandMenu() {
                 key={item.url}
                 value={item.title}
                 onSelect={() => {
-                  runCommand(() => router.push(item.url))
+                  runCommand(() => router.push(item.url));
                 }}
               >
                 <Search className="mr-2 h-4 w-4" />
@@ -66,5 +66,5 @@ export function CommandMenu() {
         ))}
       </CommandList>
     </CommandDialog>
-  )
-} 
+  );
+}

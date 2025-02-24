@@ -24,9 +24,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const currentLanguage = languages.find(
-    (lang) => pathname.startsWith(`/${lang.code}`)
-  );
+  const currentLanguage = languages.find((lang) => pathname.startsWith(`/${lang.code}`));
 
   const switchLanguage = (langCode: string) => {
     const newPath = pathname.replace(/^\/[^\/]+/, `/${langCode}`);
@@ -43,14 +41,11 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {languages.map((lang) => (
-          <DropdownMenuItem
-            key={lang.code}
-            onClick={() => switchLanguage(lang.code)}
-          >
+          <DropdownMenuItem key={lang.code} onClick={() => switchLanguage(lang.code)}>
             {lang.name}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
-} 
+}

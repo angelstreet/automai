@@ -44,4 +44,4 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
       </div>
     </header>
   );
-} 
+}

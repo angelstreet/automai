@@ -1,10 +1,6 @@
 import { useTranslations } from 'next-intl';
 
-export default function ScriptsPage({
-  params
-}: {
-  params: { tenant: string; locale: string }
-}) {
+export default function ScriptsPage({ params }: { params: { tenant: string; locale: string } }) {
   const t = useTranslations('Scripts');
 
   return (
@@ -19,4 +15,4 @@ export default function ScriptsPage({
       </div>
     </div>
   );
-} 
+}

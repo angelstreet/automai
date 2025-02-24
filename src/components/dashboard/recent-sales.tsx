@@ -72,4 +72,4 @@ export function RecentSales() {
       </div>
     </div>
   );
-} 
+}

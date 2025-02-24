@@ -6,4 +6,4 @@ const router = Router();
 
 router.get('/', authenticateToken, getStats);
 
-module.exports = router; 
+module.exports = router;

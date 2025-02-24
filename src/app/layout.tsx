@@ -10,11 +10,7 @@ export const metadata: Metadata = {
   description: 'Automate your testing workflow with AI',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
@@ -22,4 +18,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-} 
+}

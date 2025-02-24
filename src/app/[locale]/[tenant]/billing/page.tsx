@@ -1,10 +1,6 @@
 import { useTranslations } from 'next-intl';
 
-export default function BillingPage({
-  params
-}: {
-  params: { tenant: string; locale: string }
-}) {
+export default function BillingPage({ params }: { params: { tenant: string; locale: string } }) {
   const t = useTranslations('Billing');
 
   return (
@@ -19,4 +15,4 @@ export default function BillingPage({
       </div>
     </div>
   );
-} 
+}

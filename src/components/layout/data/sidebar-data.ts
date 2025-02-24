@@ -70,7 +70,7 @@ export const sidebarData: SidebarData = {
       name: 'Monsters Inc',
       logo: Factory,
       plan: 'Enterprise',
-    }
+    },
   ],
   navGroups: [
     {
@@ -170,4 +170,4 @@ export const sidebarData: SidebarData = {
       ],
     },
   ],
-}; 
+};

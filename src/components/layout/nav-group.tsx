@@ -52,7 +52,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
   };
 
   // Filter items based on role
-  const filteredItems = items.filter(item => {
+  const filteredItems = items.filter((item) => {
     if (!item.roles) return true;
     return item.roles.includes(currentRole);
   });
@@ -72,7 +72,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
               const isExpanded = expandedItems[item.href];
 
               // Filter submenu items based on role
-              const filteredSubItems = item.items?.filter(subItem => {
+              const filteredSubItems = item.items?.filter((subItem) => {
                 if (!subItem.roles) return true;
                 return subItem.roles.includes(currentRole);
               });
@@ -93,11 +93,11 @@ export function NavGroup({ title, items }: NavGroupProps) {
                     >
                       <Icon className="h-4 w-4" />
                       <span>{item.title}</span>
-                      <ChevronDown 
+                      <ChevronDown
                         className={cn(
-                          "ml-auto h-4 w-4 transition-transform duration-200",
-                          isExpanded && "transform rotate-180"
-                        )} 
+                          'ml-auto h-4 w-4 transition-transform duration-200',
+                          isExpanded && 'transform rotate-180',
+                        )}
                       />
                     </SidebarMenuButton>
                   ) : (
@@ -115,10 +115,12 @@ export function NavGroup({ title, items }: NavGroupProps) {
                   )}
 
                   {hasSubmenu && filteredSubItems && (
-                    <SidebarMenuSub className={cn(
-                      "transition-all duration-200 ease-in-out",
-                      !isExpanded && "hidden"
-                    )}>
+                    <SidebarMenuSub
+                      className={cn(
+                        'transition-all duration-200 ease-in-out',
+                        !isExpanded && 'hidden',
+                      )}
+                    >
                       {filteredSubItems.map((subItem) => {
                         const SubIcon = subItem.icon;
                         const isSubActive = isActive(subItem.href);
@@ -147,4 +149,4 @@ export function NavGroup({ title, items }: NavGroupProps) {
       </SidebarGroupContent>
     </SidebarGroup>
   );
-} 
+}

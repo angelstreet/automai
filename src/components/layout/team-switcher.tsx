@@ -78,15 +78,8 @@ export function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
               )}
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="start"
-            side="right" 
-            sideOffset={12}
-            className="w-[200px]"
-          >
-            <DropdownMenuLabel className="text-xs font-normal">
-              Switch Team
-            </DropdownMenuLabel>
+          <DropdownMenuContent align="start" side="right" sideOffset={12} className="w-[200px]">
+            <DropdownMenuLabel className="text-xs font-normal">Switch Team</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {teams.map((team) => {
               const TeamIcon = team.logo;
@@ -111,4 +104,4 @@ export function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
       </SidebarMenuItem>
     </SidebarMenu>
   );
-} 
+}

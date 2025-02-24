@@ -13,9 +13,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   const [currentRole, setCurrentRole] = useState<Role>('viewer');
 
   return (
-    <RoleContext.Provider value={{ currentRole, setCurrentRole }}>
-      {children}
-    </RoleContext.Provider>
+    <RoleContext.Provider value={{ currentRole, setCurrentRole }}>{children}</RoleContext.Provider>
   );
 }
 
@@ -25,4 +23,4 @@ export function useRole() {
     throw new Error('useRole must be used within a RoleProvider');
   }
   return context;
-} 
+}

@@ -5,8 +5,8 @@ async function deleteUser() {
   try {
     await prisma.user.delete({
       where: {
-        email: 'joachim_djibril@hotmail.com'
-      }
+        email: 'joachim_djibril@hotmail.com',
+      },
     });
     console.log('User deleted successfully');
   } catch (error) {
@@ -16,4 +16,4 @@ async function deleteUser() {
   }
 }
 
-deleteUser(); 
+deleteUser();

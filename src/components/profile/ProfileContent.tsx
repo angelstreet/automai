@@ -29,7 +29,7 @@ export function ProfileContent() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({ name }),
       });
@@ -60,9 +60,7 @@ export function ProfileContent() {
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-4">Session Expired</h2>
           <p className="text-muted-foreground mb-4">Please log in again to continue</p>
-          <Button onClick={() => window.location.href = `/${locale}/login`}>
-            Log In
-          </Button>
+          <Button onClick={() => (window.location.href = `/${locale}/login`)}>Log In</Button>
         </div>
       </div>
     );
@@ -72,12 +70,7 @@ export function ProfileContent() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            className="h-8 w-8"
-          >
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-3xl font-bold">{t('title')}</h1>
@@ -98,10 +91,7 @@ export function ProfileContent() {
                   placeholder="Enter your name"
                   className="max-w-md"
                 />
-                <Button
-                  onClick={handleUpdateName}
-                  disabled={isUpdating || name === user.name}
-                >
+                <Button onClick={handleUpdateName} disabled={isUpdating || name === user.name}>
                   {isUpdating ? 'Updating...' : 'Update'}
                 </Button>
               </div>
@@ -121,11 +111,17 @@ export function ProfileContent() {
         <div className="p-6 bg-card rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">{t('accountSettings')}</h2>
           <div className="space-y-4">
-            <Button variant="outline" onClick={() => window.location.href = `/${locale}/settings`}>
+            <Button
+              variant="outline"
+              onClick={() => (window.location.href = `/${locale}/settings`)}
+            >
               {t('manageSettings')}
             </Button>
             {user.plan !== 'ENTERPRISE' && (
-              <Button variant="outline" onClick={() => window.location.href = `/${locale}/upgrade`}>
+              <Button
+                variant="outline"
+                onClick={() => (window.location.href = `/${locale}/upgrade`)}
+              >
                 {t('upgradePlan')}
               </Button>
             )}
@@ -141,7 +137,10 @@ export function ProfileContent() {
                 <label className="text-sm font-medium">Workspace ID</label>
                 <p className="text-muted-foreground">{tenant}</p>
               </div>
-              <Button variant="outline" onClick={() => window.location.href = `/${locale}/${tenant}/team`}>
+              <Button
+                variant="outline"
+                onClick={() => (window.location.href = `/${locale}/${tenant}/team`)}
+              >
                 {t('manageTeam')}
               </Button>
             </div>
@@ -150,4 +149,4 @@ export function ProfileContent() {
       </div>
     </div>
   );
-} 
+}

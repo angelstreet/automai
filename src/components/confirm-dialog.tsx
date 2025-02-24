@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -7,22 +7,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 interface ConfirmDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  title: React.ReactNode
-  disabled?: boolean
-  desc: React.JSX.Element | string
-  cancelBtnText?: string
-  confirmText?: React.ReactNode
-  destructive?: boolean
-  handleConfirm: () => void
-  isLoading?: boolean
-  className?: string
-  children?: React.ReactNode
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: React.ReactNode;
+  disabled?: boolean;
+  desc: React.JSX.Element | string;
+  cancelBtnText?: string;
+  confirmText?: React.ReactNode;
+  destructive?: boolean;
+  handleConfirm: () => void;
+  isLoading?: boolean;
+  className?: string;
+  children?: React.ReactNode;
 }
 
 export function ConfirmDialog(props: ConfirmDialogProps) {
@@ -38,11 +38,11 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
     disabled = false,
     handleConfirm,
     ...actions
-  } = props
+  } = props;
   return (
     <AlertDialog {...actions}>
       <AlertDialogContent className={cn(className && className)}>
-        <AlertDialogHeader className='text-left'>
+        <AlertDialogHeader className="text-left">
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div>{desc}</div>
@@ -50,9 +50,7 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         </AlertDialogHeader>
         {children}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>
-            {cancelBtnText ?? 'Cancel'}
-          </AlertDialogCancel>
+          <AlertDialogCancel disabled={isLoading}>{cancelBtnText ?? 'Cancel'}</AlertDialogCancel>
           <Button
             variant={destructive ? 'destructive' : 'default'}
             onClick={handleConfirm}
@@ -63,5 +61,5 @@ export function ConfirmDialog(props: ConfirmDialogProps) {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
+  );
 }

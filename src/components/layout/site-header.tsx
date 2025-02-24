@@ -35,10 +35,7 @@ export function SiteHeader({ showAuth = true }: HeaderProps) {
             >
               Pricing
             </Link>
-            <Link
-              href={`/${locale}/docs`}
-              className="transition-colors hover:text-foreground/80"
-            >
+            <Link href={`/${locale}/docs`} className="transition-colors hover:text-foreground/80">
               Documentation
             </Link>
           </nav>
@@ -62,4 +59,4 @@ export function SiteHeader({ showAuth = true }: HeaderProps) {
       </div>
     </header>
   );
-} 
+}

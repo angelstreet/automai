@@ -13,26 +13,26 @@ const getStats = async (req: express.Request, res: express.Response) => {
     // Get counts for the user
     const [projects, testCases, executions] = await Promise.all([
       prisma.project.count({
-        where: { ownerId: userId }
+        where: { ownerId: userId },
       }),
       prisma.testCase.count({
-        where: { 
-          project: { ownerId: userId }
-        }
+        where: {
+          project: { ownerId: userId },
+        },
       }),
       prisma.execution.count({
         where: {
           testcase: {
-            project: { ownerId: userId }
-          }
-        }
-      })
+            project: { ownerId: userId },
+          },
+        },
+      }),
     ]);
 
     res.json({
       projects,
       testCases,
-      campaigns: executions // Using executions count as campaigns for now
+      campaigns: executions, // Using executions count as campaigns for now
     });
   } catch (error) {
     console.error('Error fetching stats:', error);
@@ -42,4 +42,4 @@ const getStats = async (req: express.Request, res: express.Response) => {
 
 module.exports = {
   getStats,
-}; 
+};

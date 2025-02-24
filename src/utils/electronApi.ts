@@ -54,7 +54,7 @@ export const store = {
       return { success: false, message: error.message };
     }
   },
-  
+
   get: async <T>(key: string): Promise<IPCResponse<T>> => {
     const ipcRenderer = getIpcRenderer();
     if (!ipcRenderer) {
@@ -66,5 +66,5 @@ export const store = {
     } catch (error) {
       return { success: false, message: error.message };
     }
-  }
-}; 
+  },
+};

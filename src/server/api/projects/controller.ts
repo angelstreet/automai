@@ -90,9 +90,9 @@ const updateProject = async (req: express.Request, res: express.Response) => {
 
     const project = await prisma.project.update({
       where: { id },
-      data: { 
+      data: {
         name,
-        description 
+        description,
       },
     });
 
@@ -124,4 +124,4 @@ module.exports = {
   getProject,
   updateProject,
   deleteProject,
-}; 
+};

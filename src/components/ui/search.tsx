@@ -1,22 +1,22 @@
-import { Search as SearchIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useSearch } from '@/lib/contexts/SearchContext'
-import { Button } from './button'
+import { Search as SearchIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useSearch } from '@/lib/contexts/SearchContext';
+import { Button } from './button';
 
 interface Props {
-  className?: string
-  placeholder?: string
+  className?: string;
+  placeholder?: string;
 }
 
 export function Search({ className = '', placeholder = 'Search...' }: Props) {
-  const { setOpen } = useSearch()
-  
+  const { setOpen } = useSearch();
+
   return (
     <Button
       variant="outline"
       className={cn(
         'relative h-9 w-full justify-start rounded-md bg-muted/50 text-sm font-normal text-muted-foreground shadow-none hover:bg-muted sm:pr-12 md:w-40 lg:w-64',
-        className
+        className,
       )}
       onClick={() => setOpen(true)}
     >
@@ -26,5 +26,5 @@ export function Search({ className = '', placeholder = 'Search...' }: Props) {
         <span className="text-xs">⌘</span>K
       </kbd>
     </Button>
-  )
-} 
+  );
+}

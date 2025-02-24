@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { 
+const {
   createUseCase,
   getUseCases,
   getUseCase,
@@ -20,4 +20,4 @@ router.delete('/:id', authenticateToken, deleteUseCase);
 router.post('/:id/lock', authenticateToken, lockUseCase);
 router.post('/:id/unlock', authenticateToken, unlockUseCase);
 
-module.exports = router; 
+module.exports = router;

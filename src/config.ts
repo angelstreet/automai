@@ -23,10 +23,10 @@ export const pathnames = {
   '/[tenant]/reports': '/[tenant]/reports',
   '/[tenant]/profile': '/[tenant]/profile',
   '/[tenant]/team': '/[tenant]/team',
-  '/[tenant]/billing': '/[tenant]/billing'
+  '/[tenant]/billing': '/[tenant]/billing',
 } satisfies Pathnames<typeof locales>;
 
 // Use the default: `always`
 export const localePrefix = 'always';
 
-export type AppPathnames = keyof typeof pathnames; 
+export type AppPathnames = keyof typeof pathnames;

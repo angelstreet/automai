@@ -19,13 +19,13 @@ type TestCase = {
 };
 
 export default function UseCaseEditPage() {
-  const [activeTab, setActiveTab] = useState("editor");
+  const [activeTab, setActiveTab] = useState('editor');
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [script, setScript] = useState("");
-  const [previewUrl, setPreviewUrl] = useState("");
+  const [script, setScript] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
   const [useCase, setUseCase] = useState<TestCase | null>(null);
-  const [projectName, setProjectName] = useState("");
+  const [projectName, setProjectName] = useState('');
   const [versions, setVersions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,9 +48,9 @@ export default function UseCaseEditPage() {
         }
 
         const tcRes = await fetch(`http://localhost:5001/api/usecases/${useCaseId}`, {
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.accessToken}` 
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.accessToken}`,
           },
         });
         if (!tcRes.ok) {
@@ -60,7 +60,7 @@ export default function UseCaseEditPage() {
         console.log('Use case data:', data);
         setUseCase(data);
         setScript(data.steps.code || getDefaultScript(data.steps.platform));
-        
+
         // Get project name from URL search params
         const searchParams = new URLSearchParams(window.location.search);
         const projectNameFromUrl = searchParams.get('projectName');
@@ -80,52 +80,52 @@ export default function UseCaseEditPage() {
 
   const getDefaultScript = (platform: string) => {
     switch (platform) {
-      case "web":
+      case 'web':
         return `const { chromium } = require('playwright');\n(async () => {\n  const browser = await chromium.launch();\n  const page = await browser.newPage();\n  await page.goto('https://example.com');\n  await browser.close();\n})();`;
-      case "mobile":
+      case 'mobile':
         return `from appium import webdriver\ndriver = webdriver.Remote('http://localhost:4723/wd/hub', {'platformName': 'Android'})\ndriver.quit()`;
-      case "desktop":
+      case 'desktop':
         return `from pywinauto import Application\napp = Application().start('notepad.exe')\napp.kill()`;
-      case "vision":
+      case 'vision':
         return `# Vision AI placeholder\nprint("Omniparser integration TBD")`;
       default:
-        return "";
+        return '';
     }
   };
 
   const handleSave = async () => {
     try {
       if (!useCase || !session?.accessToken) return;
-      
+
       const payload = {
         name: useCase.name,
         projectId: useCase.projectId || useCase.project_id,
         steps: { platform: useCase.steps.platform, code: script },
       };
       const res = await fetch(`http://localhost:5001/api/usecases/${useCaseId}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
         throw new Error('Failed to save use case');
       }
-      
+
       // Sync with Git
       const syncRes = await fetch(`http://localhost:5001/api/usecases/${useCaseId}/sync`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}` 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
         },
       });
       if (!syncRes.ok) {
         throw new Error('Failed to sync with Git');
       }
-      
+
       setVersions([...versions, `Commit at ${new Date().toISOString()}`]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save use case');
@@ -135,22 +135,22 @@ export default function UseCaseEditPage() {
   const handleRun = async () => {
     try {
       if (!useCase || !session?.accessToken) return;
-      
-      const res = await fetch("http://localhost:5001/api/execute", {
-        method: "POST",
+
+      const res = await fetch('http://localhost:5001/api/execute', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({ useCaseId, script }),
       });
       if (!res.ok) {
         throw new Error('Failed to execute use case');
       }
-      if (useCase.steps.platform === "web") {
+      if (useCase.steps.platform === 'web') {
         const data = await res.json();
         setPreviewUrl(data.previewUrl);
-        setActiveTab("preview");
+        setActiveTab('preview');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute use case');
@@ -162,9 +162,7 @@ export default function UseCaseEditPage() {
       <div className="flex-1 p-4">
         <div className="max-w-full mx-auto">
           {error && (
-            <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg">
-              {error}
-            </div>
+            <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg">{error}</div>
           )}
 
           {isLoading ? (
@@ -185,20 +183,29 @@ export default function UseCaseEditPage() {
                     ←
                   </Button>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-bold text-foreground dark:text-foreground">{projectName} / {useCase?.name || "New Use Case"}</h1>
+                    <h1 className="text-xl font-bold text-foreground dark:text-foreground">
+                      {projectName} / {useCase?.name || 'New Use Case'}
+                    </h1>
                     <span className="text-sm px-2 py-1 bg-muted dark:bg-muted/80 rounded text-muted-foreground dark:text-muted-foreground">
-                      {useCase?.steps.platform === "web" ? "Web 🌐" :
-                       useCase?.steps.platform === "android" ? "Android 📱" :
-                       useCase?.steps.platform === "ios" ? "iOS 📱" :
-                       useCase?.steps.platform === "desktop" ? "Desktop 💻" :
-                       useCase?.steps.platform === "python" ? "Python 🐍" :
-                       useCase?.steps.platform === "api" ? "API 🔌" : "Unknown"}
+                      {useCase?.steps.platform === 'web'
+                        ? 'Web 🌐'
+                        : useCase?.steps.platform === 'android'
+                          ? 'Android 📱'
+                          : useCase?.steps.platform === 'ios'
+                            ? 'iOS 📱'
+                            : useCase?.steps.platform === 'desktop'
+                              ? 'Desktop 💻'
+                              : useCase?.steps.platform === 'python'
+                                ? 'Python 🐍'
+                                : useCase?.steps.platform === 'api'
+                                  ? 'API 🔌'
+                                  : 'Unknown'}
                     </span>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => {
                       if (script !== useCase?.steps.code) {
@@ -242,22 +249,22 @@ export default function UseCaseEditPage() {
                       <Card className="h-full border-border dark:border-border/80 bg-background dark:bg-[#1E1E1E]">
                         <Editor
                           height="70vh"
-                          language={useCase?.steps.platform === "web" ? "javascript" : "python"}
+                          language={useCase?.steps.platform === 'web' ? 'javascript' : 'python'}
                           value={script}
-                          onChange={(value) => setScript(value || "")}
+                          onChange={(value) => setScript(value || '')}
                           theme="vs-dark"
-                          options={{ 
+                          options={{
                             minimap: { enabled: false },
                             fontSize: 14,
                             lineHeight: 21,
                             padding: { top: 16, bottom: 16 },
                             scrollBeyondLastLine: false,
-                            renderLineHighlight: "all",
+                            renderLineHighlight: 'all',
                             contextmenu: true,
                             scrollbar: {
                               verticalScrollbarSize: 8,
-                              horizontalScrollbarSize: 8
-                            }
+                              horizontalScrollbarSize: 8,
+                            },
                           }}
                         />
                       </Card>
@@ -279,8 +286,14 @@ export default function UseCaseEditPage() {
                     <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[100]">
                       <div className="bg-background dark:bg-background border border-border w-[500px] max-h-[80vh] rounded-lg shadow-lg relative z-[101] flex flex-col">
                         <div className="flex justify-between items-center p-6 border-b border-border">
-                          <h3 className="text-xl font-bold text-foreground dark:text-foreground">Version History</h3>
-                          <Button variant="ghost" size="sm" onClick={() => setIsVersionsOpen(false)}>
+                          <h3 className="text-xl font-bold text-foreground dark:text-foreground">
+                            Version History
+                          </h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsVersionsOpen(false)}
+                          >
                             ✕
                           </Button>
                         </div>
@@ -288,12 +301,14 @@ export default function UseCaseEditPage() {
                           {versions.length ? (
                             <div className="space-y-4">
                               {versions.map((version, index) => (
-                                <div 
+                                <div
                                   key={index}
                                   className="flex items-center justify-between p-3 rounded-md border border-border bg-muted/10 dark:bg-muted/5"
                                 >
                                   <div className="flex-1">
-                                    <p className="text-sm text-foreground dark:text-foreground/90">{version}</p>
+                                    <p className="text-sm text-foreground dark:text-foreground/90">
+                                      {version}
+                                    </p>
                                   </div>
                                   <Button
                                     variant="ghost"
@@ -311,8 +326,12 @@ export default function UseCaseEditPage() {
                             </div>
                           ) : (
                             <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center">
-                              <p className="text-muted-foreground dark:text-muted-foreground">No versions available</p>
-                              <p className="text-sm mt-1 text-muted-foreground dark:text-muted-foreground">Save changes to create a new version</p>
+                              <p className="text-muted-foreground dark:text-muted-foreground">
+                                No versions available
+                              </p>
+                              <p className="text-sm mt-1 text-muted-foreground dark:text-muted-foreground">
+                                Save changes to create a new version
+                              </p>
                             </div>
                           )}
                         </div>
@@ -331,16 +350,14 @@ export default function UseCaseEditPage() {
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[100]">
           <div className="bg-background dark:bg-background border border-border w-[400px] rounded-lg shadow-lg relative z-[101]">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-foreground dark:text-foreground mb-2">Unsaved Changes</h3>
+              <h3 className="text-lg font-semibold text-foreground dark:text-foreground mb-2">
+                Unsaved Changes
+              </h3>
               <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-6">
                 You have unsaved changes. Are you sure you want to leave?
               </p>
               <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsCancelModalOpen(false)}
-                >
+                <Button variant="outline" size="sm" onClick={() => setIsCancelModalOpen(false)}>
                   Stay
                 </Button>
                 <Button
@@ -360,4 +377,4 @@ export default function UseCaseEditPage() {
       )}
     </div>
   );
-} 
+}

@@ -3,7 +3,7 @@ import React from 'react';
 
 export default function MarketingLayout({
   children,
-  params
+  params,
 }: {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -16,4 +16,4 @@ export default function MarketingLayout({
       <main className="flex-1">{children}</main>
     </div>
   );
-} 
+}

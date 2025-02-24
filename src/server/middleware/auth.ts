@@ -4,7 +4,11 @@ const express = require('express');
 /**
  * Middleware to authenticate JWT token
  */
-const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const authenticateToken = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) => {
   try {
     // Check Authorization header first
     const authHeader = req.headers['authorization'];
@@ -78,4 +82,4 @@ module.exports = {
   authenticateToken,
   requireTenant,
   requireAdmin,
-}; 
+};

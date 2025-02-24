@@ -9,13 +9,11 @@ interface SettingsLayoutProps {
 export default function SettingsLayout({ children }: SettingsLayoutProps) {
   return (
     <div className="container mx-auto py-6 space-y-8">
-      <SettingsHeader 
-        title="Settings" 
+      <SettingsHeader
+        title="Settings"
         description="Manage your account settings and preferences."
       />
-      <div className="space-y-6">
-        {children}
-      </div>
+      <div className="space-y-6">{children}</div>
     </div>
   );
-} 
+}

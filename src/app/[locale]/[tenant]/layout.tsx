@@ -18,7 +18,7 @@ export default function WorkspaceLayout({
 }) {
   const { user, isLoading } = useUser();
   const router = useRouter();
-  
+
   // Properly handle params as a Promise
   const { locale, tenant } = React.use(params);
 
@@ -49,4 +49,4 @@ export default function WorkspaceLayout({
       </div>
     </TooltipProvider>
   );
-} 
+}

@@ -22,30 +22,26 @@ async function validateLocale(locale: string) {
 export default async function LocaleLayout(props: Props) {
   const { children, params } = props;
   const resolvedParams = await params;
-  
+
   if (!resolvedParams.locale) {
     notFound();
     return null;
   }
 
   const validLocale = await validateLocale(resolvedParams.locale);
-  
+
   if (!validLocale) {
     notFound();
     return null;
   }
 
   const messages = await getMessages(validLocale);
-  
+
   return (
     <html lang={validLocale} suppressHydrationWarning>
       <body className={inter.className}>
         <UserProvider>
-          <NextIntlClientProvider 
-            locale={validLocale} 
-            messages={messages}
-            timeZone="UTC"
-          >
+          <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
             <RouteGuard>{children}</RouteGuard>
           </NextIntlClientProvider>
         </UserProvider>

@@ -1,7 +1,7 @@
-import { AuthOptions } from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
-import GithubProvider from "next-auth/providers/github";
-import CredentialsProvider from "next-auth/providers/credentials";
+import { AuthOptions } from 'next-auth';
+import GoogleProvider from 'next-auth/providers/google';
+import GithubProvider from 'next-auth/providers/github';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import jwt from 'jsonwebtoken';
 
 export const authConfig: AuthOptions = {
@@ -11,9 +11,9 @@ export const authConfig: AuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "select_account"
-        }
-      }
+          prompt: 'select_account',
+        },
+      },
     }),
     GithubProvider({
       clientId: process.env.GITHUB_CLIENT_ID!,
@@ -22,8 +22,8 @@ export const authConfig: AuthOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -33,13 +33,13 @@ export const authConfig: AuthOptions = {
         try {
           const res = await fetch('http://localhost:5001/api/auth/login', {
             method: 'POST',
-            headers: { 
+            headers: {
               'Content-Type': 'application/json',
-              'Accept': 'application/json'
+              Accept: 'application/json',
             },
             body: JSON.stringify({
               email: credentials.email,
-              password: credentials.password
+              password: credentials.password,
             }),
           });
 
@@ -63,19 +63,19 @@ export const authConfig: AuthOptions = {
             tenantId: data.user.tenantId,
             tenantName: data.user.tenantName,
             plan: data.user.plan,
-            accessToken: data.token
+            accessToken: data.token,
           };
         } catch (error: any) {
           console.error('Auth error:', error);
           throw error;
         }
-      }
+      },
     }),
   ],
   pages: {
-    signIn: "/login",
-    error: "/error",
-    signOut: "/login",
+    signIn: '/login',
+    error: '/error',
+    signOut: '/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
   session: {
@@ -92,7 +92,7 @@ export const authConfig: AuthOptions = {
           console.log('Google sign in attempt:', {
             hasAccessToken: !!account.access_token,
             email: profile?.email,
-            name: profile?.name
+            name: profile?.name,
           });
 
           // Exchange Google token for our backend token
@@ -115,7 +115,7 @@ export const authConfig: AuthOptions = {
           }
 
           const data = await response.json();
-          
+
           // Ensure we have the correct tenant information
           if (!data.user.tenantName && data.user.tenant?.name) {
             data.user.tenantName = data.user.tenant.name;
@@ -131,7 +131,7 @@ export const authConfig: AuthOptions = {
             tenantName: data.user.tenantName || data.user.tenant?.name,
             plan: data.user.plan,
             accessToken: data.token,
-            image: profile?.image ?? null
+            image: profile?.image ?? null,
           });
 
           console.log('Updated user data:', {
@@ -139,7 +139,7 @@ export const authConfig: AuthOptions = {
             email: user.email,
             tenantId: user.tenantId,
             tenantName: user.tenantName,
-            plan: user.plan
+            plan: user.plan,
           });
 
           return true;
@@ -187,21 +187,21 @@ export const authConfig: AuthOptions = {
       if (url.includes('/error') || url.includes('/login')) {
         const localeMatch = url.match(/\/([a-z]{2})\//);
         const locale = localeMatch ? localeMatch[1] : 'en';
-        
+
         const errorMatch = url.match(/error=([^&]*)/);
         const error = errorMatch ? `?error=${errorMatch[1]}` : '';
-        
+
         return `${baseUrl}/${locale}/login${error}`;
       }
-      
-      if (url.startsWith("/")) {
+
+      if (url.startsWith('/')) {
         return `${baseUrl}${url}`;
       }
       if (new URL(url).origin === baseUrl) {
         return url;
       }
       return baseUrl;
-    }
+    },
   },
   debug: process.env.NODE_ENV === 'development',
-}; 
+};

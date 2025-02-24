@@ -21,7 +21,7 @@ type UserContextType = {
   isFeatureEnabled: (feature: string) => boolean;
   canCreateMore: (
     feature: 'maxProjects' | 'maxUseCases' | 'maxCampaigns',
-    currentCount: number
+    currentCount: number,
   ) => boolean;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -46,8 +46,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       console.log('Fetching user profile with token:', session.accessToken ? 'present' : 'missing');
       const response = await fetch('http://localhost:5001/api/auth/profile', {
         headers: {
-          'Authorization': `Bearer ${session.accessToken}`
-        }
+          Authorization: `Bearer ${session.accessToken}`,
+        },
       });
 
       if (!response.ok) {
@@ -55,7 +55,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         console.error('Profile fetch failed:', {
           status: response.status,
           statusText: response.statusText,
-          error: errorData.error
+          error: errorData.error,
         });
         throw new Error(errorData.error || `Failed to fetch user profile: ${response.status}`);
       }
@@ -65,7 +65,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         id: userData.id,
         email: userData.email,
         plan: userData.plan,
-        tenantId: userData.tenantId
+        tenantId: userData.tenantId,
       });
       setUser(userData);
       setError(null);
@@ -94,7 +94,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const checkCanCreateMore = (
     feature: 'maxProjects' | 'maxUseCases' | 'maxCampaigns',
-    currentCount: number
+    currentCount: number,
   ): boolean => {
     if (!user) return false;
     return canCreateMore(user.plan, feature, currentCount);
@@ -111,14 +111,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     isFeatureEnabled: checkFeature,
     canCreateMore: checkCanCreateMore,
     logout,
-    refreshUser: fetchUser
+    refreshUser: fetchUser,
   };
 
-  return (
-    <UserContext.Provider value={value}>
-      {children}
-    </UserContext.Provider>
-  );
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 
 export function useUser() {
@@ -127,4 +123,4 @@ export function useUser() {
     throw new Error('useUser must be used within a UserProvider');
   }
   return context;
-} 
+}

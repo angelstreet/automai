@@ -28,7 +28,7 @@ const loadEnvConfig = () => {
     'GITHUB_CALLBACK_URL',
   ];
 
-  const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+  const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName]);
 
   if (missingEnvVars.length > 0) {
     console.error('Missing required environment variables:', missingEnvVars.join(', '));
@@ -64,4 +64,4 @@ const loadEnvConfig = () => {
   };
 };
 
-module.exports = loadEnvConfig; 
+module.exports = loadEnvConfig;

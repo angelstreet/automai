@@ -87,8 +87,8 @@ passport.use(
         console.error('Error in Google strategy:', error);
         return done(error);
       }
-    }
-  )
+    },
+  ),
 );
 
 // GitHub Strategy
@@ -103,7 +103,7 @@ passport.use(
     async (accessToken: string, refreshToken: string, profile: any, done: any) => {
       try {
         console.log('GitHub profile:', JSON.stringify(profile, null, 2));
-        
+
         // Check if user exists
         let user = await prisma.user.findFirst({
           where: {
@@ -150,7 +150,7 @@ passport.use(
             },
             include: { tenant: true },
           });
-          
+
           console.log('Created new user:', user.email);
         } else {
           // Update existing user
@@ -162,7 +162,7 @@ passport.use(
             },
             include: { tenant: true },
           });
-          
+
           console.log('Updated existing user:', user.email);
         }
 
@@ -171,8 +171,8 @@ passport.use(
         console.error('Error in GitHub strategy:', error);
         return done(error);
       }
-    }
-  )
+    },
+  ),
 );
 
-module.exports = passport; 
+module.exports = passport;

@@ -20,4 +20,4 @@ function loadEnvConfig() {
   return result.parsed;
 }
 
-module.exports = { loadEnvConfig }; 
+module.exports = { loadEnvConfig };

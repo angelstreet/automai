@@ -12,12 +12,12 @@ async function deleteUser(email: string) {
           include: {
             testcases: {
               include: {
-                executions: true
-              }
-            }
-          }
-        }
-      }
+                executions: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -30,23 +30,23 @@ async function deleteUser(email: string) {
       for (const testcase of project.testcases) {
         // Delete executions
         await prisma.execution.deleteMany({
-          where: { testcaseId: testcase.id }
+          where: { testcaseId: testcase.id },
         });
       }
       // Delete testcases
       await prisma.testCase.deleteMany({
-        where: { projectId: project.id }
+        where: { projectId: project.id },
       });
     }
-    
+
     // Delete projects
     await prisma.project.deleteMany({
-      where: { ownerId: user.id }
+      where: { ownerId: user.id },
     });
 
     // Finally delete the user
     await prisma.user.delete({
-      where: { email }
+      where: { email },
     });
 
     console.log('User and related data deleted successfully');
@@ -58,4 +58,4 @@ async function deleteUser(email: string) {
 }
 
 // Delete the specific user
-deleteUser('joachim_djibril@hotmail.com'); 
+deleteUser('joachim_djibril@hotmail.com');

@@ -43,4 +43,4 @@ console.log('Setting up stats routes...');
 router.use('/stats', statsRoutes);
 console.log('Stats routes set up successfully');
 
-module.exports = router; 
+module.exports = router;

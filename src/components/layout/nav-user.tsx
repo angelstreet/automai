@@ -3,11 +3,7 @@
 import { User } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from '@/components/ui/sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,20 +48,14 @@ export function NavUser({ user }: NavUserProps) {
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background">
                 {user.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="h-7 w-7 rounded-full"
-                  />
+                  <img src={user.avatar} alt={user.name} className="h-7 w-7 rounded-full" />
                 ) : (
                   <User className="h-4 w-4" />
                 )}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="font-semibold">{user.name}</span>
-                <span className="text-xs text-muted-foreground truncate">
-                  {user.email}
-                </span>
+                <span className="text-xs text-muted-foreground truncate">{user.email}</span>
               </div>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
@@ -79,12 +69,10 @@ export function NavUser({ user }: NavUserProps) {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>
-              Sign out
-            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
   );
-} 
+}

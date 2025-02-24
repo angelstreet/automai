@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     // Forward the request to the backend server
     const response = await fetch('http://localhost:5001/api/auth/register', {
       method: 'POST',
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     if (!response.ok) {
       return NextResponse.json(
         { error: data.error || 'Failed to register' },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -32,9 +32,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error('Registration error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

@@ -10,12 +10,12 @@ const findNextNumber = async (prefix: string) => {
   const useCases = await prisma.useCase.findMany({
     where: {
       shortId: {
-        startsWith: `${prefix}-`
-      }
+        startsWith: `${prefix}-`,
+      },
     },
     orderBy: {
-      shortId: 'desc'
-    }
+      shortId: 'desc',
+    },
   });
 
   if (useCases.length === 0) {
@@ -48,7 +48,9 @@ const createUseCase = async (req: express.Request, res: express.Response) => {
     const { name, projectId, steps, shortIdPrefix } = req.body;
 
     if (!name || !projectId || !steps || !shortIdPrefix) {
-      return res.status(400).json({ error: 'Name, projectId, steps, and shortIdPrefix are required' });
+      return res
+        .status(400)
+        .json({ error: 'Name, projectId, steps, and shortIdPrefix are required' });
     }
 
     // Generate the short ID
@@ -109,10 +111,7 @@ const getUseCase = async (req: express.Request, res: express.Response) => {
 
     const useCase = await prisma.useCase.findFirst({
       where: {
-        OR: [
-          { id },
-          { shortId: id }
-        ]
+        OR: [{ id }, { shortId: id }],
       },
       include: {
         project: true,
@@ -249,4 +248,4 @@ module.exports = {
   deleteUseCase,
   lockUseCase,
   unlockUseCase,
-}; 
+};

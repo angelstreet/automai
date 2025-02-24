@@ -53,7 +53,7 @@ const generateJWT = (user: AuthUser) => {
       plan,
     },
     jwtSecret,
-    { expiresIn: '24h' }
+    { expiresIn: '24h' },
   );
 };
 
@@ -96,7 +96,7 @@ const login = async (req: express.Request, res: express.Response) => {
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
     console.log('Password valid:', isValidPassword);
-    
+
     if (!isValidPassword) {
       console.log('Invalid password');
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -125,7 +125,7 @@ const login = async (req: express.Request, res: express.Response) => {
         plan,
       },
       process.env.JWT_SECRET!,
-      { expiresIn: '24h' }
+      { expiresIn: '24h' },
     );
 
     // Return user info and token (exclude password)
@@ -149,10 +149,10 @@ const login = async (req: express.Request, res: express.Response) => {
  */
 const register = async (req: express.Request, res: express.Response) => {
   try {
-    console.log('Registration request received:', { 
+    console.log('Registration request received:', {
       email: req.body.email,
       hasPassword: !!req.body.password,
-      tenantName: req.body.tenantName 
+      tenantName: req.body.tenantName,
     });
 
     const { email, password, name, tenantName } = req.body;
@@ -224,7 +224,7 @@ const register = async (req: express.Request, res: express.Response) => {
         plan, // Include plan in token
       },
       process.env.JWT_SECRET!,
-      { expiresIn: '24h' }
+      { expiresIn: '24h' },
     );
 
     // Return user info and token (exclude password)
@@ -255,7 +255,7 @@ const getProfile = async (req: express.Request, res: express.Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { tenant: true }
+      include: { tenant: true },
     });
 
     if (!user) {
@@ -344,7 +344,9 @@ const requestPasswordReset = async (req: express.Request, res: express.Response)
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       // Don't reveal if user exists
-      return res.status(200).json({ message: 'If an account exists, a password reset link has been sent' });
+      return res
+        .status(200)
+        .json({ message: 'If an account exists, a password reset link has been sent' });
     }
 
     // Generate reset token
@@ -362,7 +364,7 @@ const requestPasswordReset = async (req: express.Request, res: express.Response)
 
     // TODO: Send email with reset link
     // For now, just return the token in response (for testing)
-    res.json({ 
+    res.json({
       message: 'Password reset link sent',
       resetToken, // Remove this in production
     });
@@ -451,7 +453,7 @@ const sendVerificationEmail = async (req: express.Request, res: express.Response
 
     // TODO: Send verification email
     // For now, return token in response (for testing)
-    res.json({ 
+    res.json({
       message: 'Verification email sent',
       verificationToken, // Remove this in production
     });
@@ -542,16 +544,16 @@ const handleOAuthSuccess = async (req: express.Request, res: express.Response) =
       plan, // Include plan in the token
     },
     process.env.JWT_SECRET,
-    { expiresIn: '24h' }
+    { expiresIn: '24h' },
   );
 
-  console.log('OAuth user data:', { 
-    id: userData.id, 
-    email: userData.email, 
+  console.log('OAuth user data:', {
+    id: userData.id,
+    email: userData.email,
     tenantId: userData.tenantId,
     plan,
   });
-  
+
   // Redirect to the frontend auth-redirect page
   res.redirect(`http://localhost:3000/en/auth-redirect?token=${token}`);
 };
@@ -565,12 +567,16 @@ const handleOAuthFailure = (req: express.Request, res: express.Response) => {
 /**
  * Google OAuth routes
  */
-const googleAuth = passport.authenticate('google', { 
+const googleAuth = passport.authenticate('google', {
   scope: ['profile', 'email'],
-  session: false
+  session: false,
 });
 
-const googleCallback = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const googleCallback = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) => {
   passport.authenticate('google', { session: false }, (err: any, user: any, info: any) => {
     if (err) {
       console.error('Google OAuth Error:', err);
@@ -588,12 +594,16 @@ const googleCallback = (req: express.Request, res: express.Response, next: expre
 /**
  * GitHub OAuth routes
  */
-const githubAuth = passport.authenticate('github', { 
+const githubAuth = passport.authenticate('github', {
   scope: ['user:email'],
-  session: false
+  session: false,
 });
 
-const githubCallback = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const githubCallback = (
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) => {
   passport.authenticate('github', { session: false }, (err: any, user: any, info: any) => {
     if (err) {
       console.error('GitHub OAuth Error:', err);
@@ -627,12 +637,12 @@ const deleteUser = async (req: express.Request, res: express.Response) => {
           include: {
             usecases: {
               include: {
-                executions: true
-              }
-            }
-          }
-        }
-      }
+                executions: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -644,23 +654,23 @@ const deleteUser = async (req: express.Request, res: express.Response) => {
       for (const usecase of project.usecases) {
         // Delete executions
         await prisma.execution.deleteMany({
-          where: { usecaseId: usecase.id }
+          where: { usecaseId: usecase.id },
         });
       }
       // Delete usecases
       await prisma.useCase.deleteMany({
-        where: { projectId: project.id }
+        where: { projectId: project.id },
       });
     }
 
     // Delete projects
     await prisma.project.deleteMany({
-      where: { ownerId: user.id }
+      where: { ownerId: user.id },
     });
 
     // Finally delete the user
     await prisma.user.delete({
-      where: { email }
+      where: { email },
     });
 
     return res.status(200).json({ message: 'User deleted successfully' });
@@ -730,7 +740,7 @@ const exchangeGoogleToken = async (req: express.Request, res: express.Response) 
         plan,
       },
       process.env.JWT_SECRET!,
-      { expiresIn: '24h' }
+      { expiresIn: '24h' },
     );
 
     // Return user info and token
@@ -764,4 +774,4 @@ export {
   githubCallback,
   deleteUser,
   exchangeGoogleToken,
-}; 
+};

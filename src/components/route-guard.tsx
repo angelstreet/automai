@@ -12,9 +12,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const { user, isLoading: isUserLoading } = useUser();
   const isRedirecting = useRef(false);
-  
+
   // Properly handle params
-  const locale = params?.locale as string || 'en';
+  const locale = (params?.locale as string) || 'en';
   const currentTenant = params?.tenant as string;
 
   useEffect(() => {
@@ -31,8 +31,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
     const handleRouting = async () => {
       // Public routes don't need tenant
-      const isPublicRoute = pathname.includes('/login') || 
-        pathname.includes('/signup') || 
+      const isPublicRoute =
+        pathname.includes('/login') ||
+        pathname.includes('/signup') ||
         pathname.includes('/auth-redirect') ||
         pathname.includes('/error') ||
         pathname === `/${locale}`;
@@ -55,7 +56,11 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
       // For public routes, only redirect if user is authenticated and trying to access auth pages
       if (isPublicRoute) {
-        if (session?.user && user && (pathname.includes('/login') || pathname.includes('/signup'))) {
+        if (
+          session?.user &&
+          user &&
+          (pathname.includes('/login') || pathname.includes('/signup'))
+        ) {
           const tenant = user.tenantName;
           if (tenant && !isRedirecting.current) {
             isRedirecting.current = true;
@@ -68,7 +73,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       // For protected routes, ensure we have complete user data
       if (session?.user && user) {
         const expectedTenant = user.tenantName;
-        
+
         // Only redirect if we have a definite tenant mismatch
         if (expectedTenant && currentTenant !== expectedTenant && !isRedirecting.current) {
           isRedirecting.current = true;
@@ -90,4 +95,4 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
-} 
+}

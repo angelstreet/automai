@@ -9,11 +9,11 @@ export default function ProfileSettingsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      <SettingsHeader 
-        title="Profile Settings" 
+      <SettingsHeader
+        title="Profile Settings"
         description="Manage your profile information and preferences."
       />
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Personal Information</CardTitle>
@@ -31,11 +31,13 @@ export default function ProfileSettingsPage() {
             </div>
             <div>
               <label className="text-sm font-medium">Role</label>
-              <p className="text-sm text-muted-foreground capitalize">{(session?.user as any)?.role?.toLowerCase() || 'User'}</p>
+              <p className="text-sm text-muted-foreground capitalize">
+                {(session?.user as any)?.role?.toLowerCase() || 'User'}
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
     </div>
   );
-} 
+}

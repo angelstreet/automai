@@ -5,7 +5,8 @@ import { Bot, Code, Gauge, GitPullRequest, Shield, Zap } from 'lucide-react';
 const features = [
   {
     name: 'AI-Powered Testing',
-    description: 'Leverage artificial intelligence to automatically generate and maintain test cases.',
+    description:
+      'Leverage artificial intelligence to automatically generate and maintain test cases.',
     icon: Bot,
   },
   {
@@ -40,15 +41,13 @@ export function Features() {
     <div className="py-16 sm:py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl lg:text-center">
-          <h2 className="text-base font-semibold leading-7 text-primary">
-            Powerful Features
-          </h2>
+          <h2 className="text-base font-semibold leading-7 text-primary">Powerful Features</h2>
           <p className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
             Everything you need to automate testing
           </p>
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
-            Our platform provides comprehensive tools for automating your testing workflow,
-            from test case generation to execution and reporting.
+            Our platform provides comprehensive tools for automating your testing workflow, from
+            test case generation to execution and reporting.
           </p>
         </div>
         <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
@@ -69,4 +68,4 @@ export function Features() {
       </div>
     </div>
   );
-} 
+}

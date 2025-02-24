@@ -1,13 +1,13 @@
-import * as React from "react";
-import { cn } from "@/lib/utils";
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { type Role } from "@/context/role-context";
+} from '@/components/ui/select';
+import { type Role } from '@/context/role-context';
 
 const roles: { value: Role; label: string }[] = [
   { value: 'admin', label: 'Admin' },
@@ -32,10 +32,8 @@ export function RoleSwitcher({ currentRole, onRoleChange, className }: RoleSwitc
 
   return (
     <Select value={currentRole} onValueChange={handleValueChange}>
-      <SelectTrigger className={cn("w-[200px]", className)}>
-        <SelectValue>
-          {roles.find((role) => role.value === currentRole)?.label}
-        </SelectValue>
+      <SelectTrigger className={cn('w-[200px]', className)}>
+        <SelectValue>{roles.find((role) => role.value === currentRole)?.label}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {roles.map((role) => (
@@ -46,4 +44,4 @@ export function RoleSwitcher({ currentRole, onRoleChange, className }: RoleSwitc
       </SelectContent>
     </Select>
   );
-} 
+}

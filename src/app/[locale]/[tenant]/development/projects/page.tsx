@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   ColumnDef,
   flexRender,
@@ -10,7 +10,7 @@ import {
   useReactTable,
   getSortedRowModel,
   Row,
-} from "@tanstack/react-table";
+} from '@tanstack/react-table';
 import {
   Table,
   TableBody,
@@ -18,8 +18,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -27,13 +27,13 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { PlanType, canCreateMore, getUpgradeMessage } from "@/lib/features";
-import { useUser } from "@/lib/contexts/UserContext";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { PlanType, canCreateMore, getUpgradeMessage } from '@/lib/features';
+import { useUser } from '@/lib/contexts/UserContext';
 
 // Type matching Prisma Project model
 type Project = {
@@ -52,7 +52,7 @@ type Project = {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", description: "" });
+  const [newProject, setNewProject] = useState({ name: '', description: '' });
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -71,10 +71,10 @@ export default function ProjectsPage() {
           throw new Error('Not authenticated');
         }
 
-        const res = await fetch("/api/projects", {
-          headers: { 
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session.accessToken}`
+        const res = await fetch('/api/projects', {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.accessToken}`,
           },
         });
         if (res.ok) {
@@ -84,11 +84,11 @@ export default function ProjectsPage() {
           throw new Error('Failed to fetch projects');
         }
       } catch (error) {
-        console.error("Error fetching projects:", error);
+        console.error('Error fetching projects:', error);
         toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to fetch projects",
-          variant: "destructive",
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to fetch projects',
+          variant: 'destructive',
         });
       } finally {
         setIsLoading(false);
@@ -100,38 +100,31 @@ export default function ProjectsPage() {
   // Define table columns
   const columns: ColumnDef<Project>[] = [
     {
-      accessorKey: "name",
-      header: "Name",
-      cell: ({ row }: { row: Row<Project> }) => row.getValue("name"),
-      enableSorting: true,
-    },
-    { 
-      accessorKey: "description", 
-      header: "Description",
-      cell: ({ row }: { row: Row<Project> }) => row.original.description || "-"
-    },
-    {
-      accessorKey: "createdAt",
-      header: "Created At",
-      cell: ({ row }: { row: Row<Project> }) => new Date(row.getValue("createdAt")).toLocaleDateString(),
+      accessorKey: 'name',
+      header: 'Name',
+      cell: ({ row }: { row: Row<Project> }) => row.getValue('name'),
       enableSorting: true,
     },
     {
-      id: "actions",
+      accessorKey: 'description',
+      header: 'Description',
+      cell: ({ row }: { row: Row<Project> }) => row.original.description || '-',
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Created At',
+      cell: ({ row }: { row: Row<Project> }) =>
+        new Date(row.getValue('createdAt')).toLocaleDateString(),
+      enableSorting: true,
+    },
+    {
+      id: 'actions',
       cell: ({ row }: { row: Row<Project> }) => (
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setEditingProject(row.original)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setEditingProject(row.original)}>
             Edit
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => handleDelete(row.original.id)}
-          >
+          <Button variant="destructive" size="sm" onClick={() => handleDelete(row.original.id)}>
             Delete
           </Button>
         </div>
@@ -150,48 +143,48 @@ export default function ProjectsPage() {
   const handleCreate = async () => {
     if (!session?.accessToken || !user?.id || !newProject.name.trim()) {
       toast({
-        title: "Error",
-        description: "Please make sure you are logged in and have entered a project name.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Please make sure you are logged in and have entered a project name.',
+        variant: 'destructive',
       });
       return;
     }
-    
+
     setIsCreating(true);
 
     // Check for duplicate project name
     const trimmedName = newProject.name.trim();
     const isDuplicate = projects.some(
-      (project) => project.name.toLowerCase() === trimmedName.toLowerCase()
+      (project) => project.name.toLowerCase() === trimmedName.toLowerCase(),
     );
-    
+
     if (isDuplicate) {
       toast({
-        title: "Error",
-        description: "A project with this name already exists. Please choose a different name.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'A project with this name already exists. Please choose a different name.',
+        variant: 'destructive',
       });
       setIsCreating(false);
       return;
     }
 
     // Check trial limitations
-    if (!checkCanCreateMore("maxProjects", projects.length)) {
+    if (!checkCanCreateMore('maxProjects', projects.length)) {
       toast({
-        title: "Trial Limit Reached",
-        description: getUpgradeMessage(user?.plan as PlanType, "maxProjects"),
-        variant: "destructive",
+        title: 'Trial Limit Reached',
+        description: getUpgradeMessage(user?.plan as PlanType, 'maxProjects'),
+        variant: 'destructive',
       });
       setIsCreating(false);
       return;
     }
 
     try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
+      const res = await fetch('/api/projects', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({
           name: newProject.name.trim(),
@@ -199,26 +192,27 @@ export default function ProjectsPage() {
           ownerId: user.id,
         }),
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
       }
-      
+
       const createdProject = await res.json();
       setProjects([...projects, createdProject]);
       setIsDialogOpen(false);
-      setNewProject({ name: "", description: "" });
+      setNewProject({ name: '', description: '' });
       toast({
-        title: "Success",
-        description: "Project created successfully",
+        title: 'Success',
+        description: 'Project created successfully',
       });
     } catch (error) {
-      console.error("Error creating project:", error);
+      console.error('Error creating project:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create project. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Failed to create project. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsCreating(false);
@@ -229,10 +223,10 @@ export default function ProjectsPage() {
     if (!editingProject || !session?.accessToken) return;
     try {
       const res = await fetch(`/api/projects/${editingProject.id}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({
           name: editingProject.name,
@@ -241,62 +235,61 @@ export default function ProjectsPage() {
       });
       if (res.ok) {
         const updatedProject = await res.json();
-        setProjects(
-          projects.map((p) => (p.id === updatedProject.id ? updatedProject : p))
-        );
+        setProjects(projects.map((p) => (p.id === updatedProject.id ? updatedProject : p)));
         setEditingProject(null);
         toast({
-          title: "Success",
-          description: "Project updated successfully",
+          title: 'Success',
+          description: 'Project updated successfully',
         });
       } else {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to update project');
       }
     } catch (error) {
-      console.error("Error updating project:", error);
+      console.error('Error updating project:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update project",
-        variant: "destructive",
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update project',
+        variant: 'destructive',
       });
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!session?.accessToken) return;
-    if (!confirm("Are you sure you want to delete this project?")) return;
+    if (!confirm('Are you sure you want to delete this project?')) return;
 
     try {
       const res = await fetch(`/api/projects/${id}`, {
-        method: "DELETE",
+        method: 'DELETE',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.accessToken}`
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
         },
       });
       if (res.ok) {
         setProjects(projects.filter((p) => p.id !== id));
         toast({
-          title: "Success",
-          description: "Project deleted successfully",
+          title: 'Success',
+          description: 'Project deleted successfully',
         });
       } else {
         const errorData = await res.json();
         throw new Error(errorData.error || 'Failed to delete project');
       }
     } catch (error) {
-      console.error("Error deleting project:", error);
+      console.error('Error deleting project:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete project",
-        variant: "destructive",
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete project',
+        variant: 'destructive',
       });
     }
   };
 
   // Trial limitation warning and check
-  const hasReachedTrialLimit = user?.plan === "TRIAL" && !checkCanCreateMore("maxProjects", projects.length);
+  const hasReachedTrialLimit =
+    user?.plan === 'TRIAL' && !checkCanCreateMore('maxProjects', projects.length);
   const showTrialWarning = hasReachedTrialLimit;
 
   return (
@@ -305,9 +298,7 @@ export default function ProjectsPage() {
         <h1 className="text-2xl font-bold">Projects</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button disabled={hasReachedTrialLimit}>
-              New
-            </Button>
+            <Button disabled={hasReachedTrialLimit}>New</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -330,12 +321,12 @@ export default function ProjectsPage() {
               />
             </div>
             <DialogFooter>
-              <Button 
+              <Button
                 onClick={handleCreate}
                 type="button"
                 disabled={!newProject.name.trim() || isCreating || hasReachedTrialLimit}
               >
-                {isCreating ? "Creating..." : "Save"}
+                {isCreating ? 'Creating...' : 'Save'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -355,10 +346,7 @@ export default function ProjectsPage() {
 
       {/* Edit Dialog */}
       {editingProject && (
-        <Dialog
-          open={!!editingProject}
-          onOpenChange={() => setEditingProject(null)}
-        >
+        <Dialog open={!!editingProject} onOpenChange={() => setEditingProject(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Project</DialogTitle>
@@ -373,7 +361,7 @@ export default function ProjectsPage() {
               />
               <Textarea
                 placeholder="Description (optional)"
-                value={editingProject.description || ""}
+                value={editingProject.description || ''}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                   setEditingProject({
                     ...editingProject,
@@ -398,15 +386,12 @@ export default function ProjectsPage() {
                   <TableHead
                     key={header.id}
                     onClick={header.column.getToggleSortingHandler()}
-                    className={`select-none ${header.column.getCanSort() ? "cursor-pointer" : ""}`}
+                    className={`select-none ${header.column.getCanSort() ? 'cursor-pointer' : ''}`}
                   >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
+                    {flexRender(header.column.columnDef.header, header.getContext())}
                     {{
-                      asc: " ↑",
-                      desc: " ↓",
+                      asc: ' ↑',
+                      desc: ' ↓',
                     }[header.column.getIsSorted() as string] ?? null}
                   </TableHead>
                 ))}
@@ -428,16 +413,10 @@ export default function ProjectsPage() {
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow 
-                  key={row.id} 
-                  className="select-none hover:bg-muted"
-                >
+                <TableRow key={row.id} className="select-none hover:bg-muted">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -448,4 +427,4 @@ export default function ProjectsPage() {
       </div>
     </div>
   );
-} 
+}

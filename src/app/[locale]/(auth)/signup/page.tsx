@@ -31,7 +31,7 @@ export default function SignUpPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     // Validation
     if (!formData.email || !formData.password || !formData.confirmPassword) {
       setError(t('allFieldsRequired'));
@@ -111,12 +111,8 @@ export default function SignUpPage() {
 
       <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t('signupTitle')}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('signupDescription')}
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('signupTitle')}</h1>
+          <p className="text-sm text-muted-foreground">{t('signupDescription')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -130,9 +126,7 @@ export default function SignUpPage() {
                 autoComplete="email"
                 autoCorrect="off"
                 value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
                 className="h-11"
               />
@@ -144,9 +138,7 @@ export default function SignUpPage() {
                 type="password"
                 autoComplete="new-password"
                 value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
                 className="h-11"
               />
@@ -158,9 +150,7 @@ export default function SignUpPage() {
                 type="password"
                 autoComplete="new-password"
                 value={formData.confirmPassword}
-                onChange={(e) =>
-                  setFormData({ ...formData, confirmPassword: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                 required
                 className="h-11"
               />
@@ -187,15 +177,11 @@ export default function SignUpPage() {
             )}
           </div>
 
-          <Button
-            type="submit"
-            className="w-full h-11 text-base"
-            disabled={loading}
-          >
+          <Button type="submit" className="w-full h-11 text-base" disabled={loading}>
             {loading ? t('signingUp') : t('signupButton')}
           </Button>
         </form>
       </div>
     </div>
   );
-} 
+}

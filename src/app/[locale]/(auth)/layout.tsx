@@ -4,7 +4,7 @@ import * as React from 'react';
 
 export default function AuthLayout({
   children,
-  params
+  params,
 }: {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -16,4 +16,4 @@ export default function AuthLayout({
       <main className="flex-1">{children}</main>
     </div>
   );
-} 
+}

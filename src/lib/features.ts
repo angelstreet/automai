@@ -16,7 +16,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatures> = {
     maxCampaigns: 1,
     environments: ['web'],
     teamManagement: false,
-    multiTenant: false
+    multiTenant: false,
   },
   PRO: {
     maxProjects: Infinity,
@@ -24,7 +24,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatures> = {
     maxCampaigns: Infinity,
     environments: ['web', 'mobile', 'desktop', 'vision'],
     teamManagement: false,
-    multiTenant: false
+    multiTenant: false,
   },
   ENTERPRISE: {
     maxProjects: Infinity,
@@ -32,8 +32,8 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatures> = {
     maxCampaigns: Infinity,
     environments: ['web', 'mobile', 'desktop', 'vision'],
     teamManagement: true,
-    multiTenant: true
-  }
+    multiTenant: true,
+  },
 };
 
 export function getPlanFeatures(plan: PlanType): PlanFeatures {
@@ -49,7 +49,11 @@ export function isFeatureEnabled(plan: PlanType, feature: keyof PlanFeatures): b
   return false;
 }
 
-export function canCreateMore(plan: PlanType, feature: 'maxProjects' | 'maxUseCases' | 'maxCampaigns', currentCount: number): boolean {
+export function canCreateMore(
+  plan: PlanType,
+  feature: 'maxProjects' | 'maxUseCases' | 'maxCampaigns',
+  currentCount: number,
+): boolean {
   const limit = PLAN_FEATURES[plan][feature];
   return currentCount < limit;
 }
@@ -62,7 +66,7 @@ export function getUpgradeMessage(plan: PlanType, feature: keyof PlanFeatures): 
       maxCampaigns: 'Upgrade to Pro for unlimited campaigns',
       environments: 'Upgrade to Pro for access to all environments',
       teamManagement: 'Upgrade to Enterprise for team management',
-      multiTenant: 'Upgrade to Enterprise for multi-tenant support'
+      multiTenant: 'Upgrade to Enterprise for multi-tenant support',
     },
     PRO: {
       teamManagement: 'Upgrade to Enterprise for team management',
@@ -70,7 +74,7 @@ export function getUpgradeMessage(plan: PlanType, feature: keyof PlanFeatures): 
       maxProjects: '',
       maxUseCases: '',
       maxCampaigns: '',
-      environments: ''
+      environments: '',
     },
     ENTERPRISE: {
       maxProjects: '',
@@ -78,9 +82,9 @@ export function getUpgradeMessage(plan: PlanType, feature: keyof PlanFeatures): 
       maxCampaigns: '',
       environments: '',
       teamManagement: '',
-      multiTenant: ''
-    }
+      multiTenant: '',
+    },
   };
-  
+
   return messages[plan][feature] || '';
-} 
+}

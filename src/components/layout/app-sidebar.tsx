@@ -19,7 +19,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   if (!session?.user) return null;
 
   return (
-    <Sidebar collapsible='icon' variant='floating' {...props}>
+    <Sidebar collapsible="icon" variant="floating" {...props}>
       <SidebarHeader>
         <TeamSwitcher teams={sidebarData.teams} />
       </SidebarHeader>
@@ -29,15 +29,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser 
+        <NavUser
           user={{
             name: session.user.name || 'User',
             email: session.user.email || '',
             avatar: session.user.image || undefined,
-          }} 
+          }}
         />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
-} 
+}

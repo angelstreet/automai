@@ -6,13 +6,13 @@ export default createIntlMiddleware({
   locales,
   defaultLocale,
   pathnames,
-  localePrefix: 'always'
+  localePrefix: 'always',
 });
 
 export const config = {
   matcher: [
     // Match all routes
     '/',
-    '/(fr|en)/:path*'
-  ]
+    '/(fr|en)/:path*',
+  ],
 };

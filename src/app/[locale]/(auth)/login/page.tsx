@@ -96,12 +96,8 @@ export default function LoginPage() {
 
       <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t('loginTitle')}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('loginDescription')}
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t('loginTitle')}</h1>
+          <p className="text-sm text-muted-foreground">{t('loginDescription')}</p>
         </div>
 
         <div className="grid gap-6">
@@ -140,11 +136,7 @@ export default function LoginPage() {
               )}
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full h-11 text-base"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
               {isSubmitting ? t('loggingIn') : t('loginButton')}
             </Button>
           </form>
@@ -161,19 +153,11 @@ export default function LoginPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button
-              variant="outline"
-              onClick={() => handleOAuthLogin('google')}
-              className="h-11"
-            >
+            <Button variant="outline" onClick={() => handleOAuthLogin('google')} className="h-11">
               <Chrome className="mr-2 h-5 w-5" />
               Google
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleOAuthLogin('github')}
-              className="h-11"
-            >
+            <Button variant="outline" onClick={() => handleOAuthLogin('github')} className="h-11">
               <Github className="mr-2 h-5 w-5" />
               GitHub
             </Button>
@@ -182,7 +166,7 @@ export default function LoginPage() {
 
         <div className="text-sm text-muted-foreground text-center">
           {t('noAccount')}{' '}
-          <Link 
+          <Link
             href={`/${locale}/signup`}
             className="text-primary underline-offset-4 hover:underline font-medium"
           >
@@ -191,7 +175,7 @@ export default function LoginPage() {
         </div>
 
         <div className="text-sm text-muted-foreground text-center">
-          <Link 
+          <Link
             href={`/${locale}/forgot-password`}
             className="text-primary underline-offset-4 hover:underline font-medium"
           >
@@ -201,4 +185,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-} 
+}

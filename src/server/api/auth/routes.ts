@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  login, 
-  register, 
+const {
+  login,
+  register,
   getProfile,
   requestPasswordReset,
   resetPassword,
@@ -38,4 +38,4 @@ router.get('/github/callback', githubCallback);
 // User management
 router.delete('/users/:email', deleteUser);
 
-module.exports = router; 
+module.exports = router;

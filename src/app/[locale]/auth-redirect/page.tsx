@@ -26,7 +26,7 @@ export default function AuthRedirectPage() {
             userId: session.user.id,
             email: session.user.email,
             tenant,
-            accessToken: session.accessToken ? 'present' : 'missing'
+            accessToken: session.accessToken ? 'present' : 'missing',
           });
           router.replace(`/${locale}/${tenant}/dashboard`);
         } else {
@@ -36,7 +36,9 @@ export default function AuthRedirectPage() {
         }
       } catch (error) {
         console.error('Error during redirect:', error);
-        router.replace(`/${locale}/login?error=${encodeURIComponent('Failed to authenticate: ' + error)}`);
+        router.replace(
+          `/${locale}/login?error=${encodeURIComponent('Failed to authenticate: ' + error)}`,
+        );
       }
     };
 
@@ -66,4 +68,4 @@ export default function AuthRedirectPage() {
       </div>
     </div>
   );
-} 
+}
