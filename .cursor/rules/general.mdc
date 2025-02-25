@@ -11,7 +11,15 @@ alwaysApply: true
 ## General Debugging
 1. Be concise - no need to summarize what has been implemented
 2. Always verify terminal logs after implementing changes
+   - For heavy tasks (multiple file changes or complex UI components), always check logs
+   - For minor changes, check logs only if there's a specific concern
+   - Use `cat` or similar commands to read existing logs; don't restart running services
+   - If you need to check server logs, first verify if the server is already running
 3. When checking browser logs, always refresh the page first to avoid seeing stale errors - limit browser log checks to 3 times maximum
+4. If a server restart is necessary:
+   - First check if the port is in use: `lsof -i :3000`
+   - If in use, kill the process: `kill -9 <PID>`
+   - Only then start the server with `npm run dev`
 
 ## i18n Handling
 1. When adding translations, always verify both French (fr) and English (en) files

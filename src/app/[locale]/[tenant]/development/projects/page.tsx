@@ -293,47 +293,44 @@ export default function ProjectsPage() {
   const showTrialWarning = hasReachedTrialLimit;
 
   return (
-    <div className="flex-1 space-y-4">
-      {/* Title section with buttons */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-        <div className="flex gap-2">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button disabled={hasReachedTrialLimit}>New</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Project</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <Input
-                  placeholder="Name"
-                  value={newProject.name}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setNewProject({ ...newProject, name: e.target.value })
-                  }
-                />
-                <Textarea
-                  placeholder="Description (optional)"
-                  value={newProject.description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setNewProject({ ...newProject, description: e.target.value })
-                  }
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  onClick={handleCreate}
-                  type="button"
-                  disabled={!newProject.name.trim() || isCreating || hasReachedTrialLimit}
-                >
-                  {isCreating ? 'Creating...' : 'Save'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Projects</h1>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button disabled={hasReachedTrialLimit}>New</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Project</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <Input
+                placeholder="Name"
+                value={newProject.name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setNewProject({ ...newProject, name: e.target.value })
+                }
+              />
+              <Textarea
+                placeholder="Description (optional)"
+                value={newProject.description}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                  setNewProject({ ...newProject, description: e.target.value })
+                }
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={handleCreate}
+                type="button"
+                disabled={!newProject.name.trim() || isCreating || hasReachedTrialLimit}
+              >
+                {isCreating ? 'Creating...' : 'Save'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {showTrialWarning && (
@@ -349,7 +346,7 @@ export default function ProjectsPage() {
 
       {/* Edit Dialog */}
       {editingProject && (
-        <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
+        <Dialog open={!!editingProject} onOpenChange={() => setEditingProject(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Project</DialogTitle>
@@ -380,61 +377,53 @@ export default function ProjectsPage() {
         </Dialog>
       )}
 
-      {/* Content */}
       <div className="rounded-md border">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-60">
-            <p className="text-sm text-muted-foreground">Loading projects...</p>
-          </div>
-        ) : projects.length === 0 ? (
-          <div className="flex items-center justify-center h-60">
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground mb-4">No projects found</p>
-              <Button onClick={() => setIsDialogOpen(true)}>Create your first project</Button>
-            </div>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  headerGroup.headers.map((header) => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  ))
+        <Table>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className={`select-none ${header.column.getCanSort() ? 'cursor-pointer' : ''}`}
+                  >
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                    {{
+                      asc: ' ↑',
+                      desc: ' ↓',
+                    }[header.column.getIsSorted() as string] ?? null}
+                  </TableHead>
                 ))}
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-24 text-center">
-                    No results.
-                  </TableCell>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="text-center py-8">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="text-center py-8">
+                  No projects found. Create your first project!
+                </TableCell>
+              </TableRow>
+            ) : (
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id} className="select-none hover:bg-muted">
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        )}
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

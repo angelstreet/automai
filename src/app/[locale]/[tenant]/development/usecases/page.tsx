@@ -585,353 +585,351 @@ export default function UseCasesPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
           </div>
         ) : (
-          <div className="flex-1 space-y-4">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-semibold tracking-tight">Use Cases</h1>
-              <div className="flex gap-2">
-                {isSelectionMode ? (
-                  <>
-                    {selectedUseCases.size > 0 && (
-                      <Button variant="destructive" size="sm">
-                        Delete ({selectedUseCases.size})
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setIsSelectionMode(false);
-                        setSelectedUseCases(new Set());
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)}>
-                      Select
-                    </Button>
-                    <Button onClick={() => setIsCreateDialogOpen(true)}>New</Button>
-                  </>
-                )}
+          <div className="flex justify-between items-center mb-4 gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1 max-w-2xl">
+                <Input
+                  placeholder="Search by ID, name, platform, tags..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
               </div>
             </div>
-
-            <div className="flex items-center gap-4">
-              <Input
-                placeholder="Search use cases..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-sm"
-              />
+            <div className="flex gap-2">
+              {isSelectionMode && projects.some((p) => p.usecases.length > 0) ? (
+                <>
+                  {selectedUseCases.size > 0 && (
+                    <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
+                      Delete ({selectedUseCases.size})
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsSelectionMode(false);
+                      setSelectedUseCases(new Set());
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                projects.some((p) => p.usecases.length > 0) && (
+                  <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)}>
+                    Select
+                  </Button>
+                )
+              )}
+              <Button onClick={() => setIsCreateDialogOpen(true)}>New</Button>
             </div>
+          </div>
+        )}
 
-            {!isLoading && !error && (
-              <>
-                {getFavoriteUseCases().length > 0 && (
-                  <div className="mb-6 bg-background dark:bg-background rounded-lg shadow border border-border">
-                    <div className="px-4 py-2 bg-muted dark:bg-muted/80 border-b border-border">
-                      <h3 className="font-semibold text-foreground dark:text-foreground">
-                        ★ Favorite Use Cases
-                      </h3>
-                    </div>
-                    <TableHeader />
-                    <div className="max-h-40 overflow-y-auto">
-                      {sortUsecases(getFavoriteUseCases()).map((uc) => (
-                        <UseCaseRow key={uc.id} uc={uc} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  {projects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="bg-background dark:bg-background rounded-lg shadow border border-border"
-                    >
-                      <button
-                        onClick={() =>
-                          setExpandedProject(expandedProject === project.id ? null : project.id)
-                        }
-                        className="w-full flex justify-between items-center px-4 py-2 text-left hover:bg-muted/50 dark:hover:bg-muted/20"
-                      >
-                        <div>
-                          <span className="text-lg font-semibold text-foreground">{project.name}</span>
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            {project.usecases.length === 0
-                              ? 'No test cases yet'
-                              : `${project.usecases.length} test case${project.usecases.length === 1 ? '' : 's'}`}
-                          </span>
-                        </div>
-                        <span
-                          className="transform transition-transform duration-200 text-muted-foreground"
-                          style={{
-                            transform:
-                              expandedProject === project.id ? 'rotate(180deg)' : 'rotate(0deg)',
-                          }}
-                        >
-                          ▼
-                        </span>
-                      </button>
-                      {expandedProject === project.id && (
-                        <div className="border-t border-border">
-                          <TableHeader />
-                          <div className="max-h-96 overflow-y-auto">
-                            {project.usecases.length === 0 ? (
-                              <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                                <p className="mb-2">No test cases found in this project</p>
-                                <Button
-                                  variant="outline"
-                                  onClick={() => {
-                                    setNewUseCase({
-                                      projectId: project.id,
-                                      name: '',
-                                      description: '',
-                                      platform: 'web',
-                                    });
-                                    setIsCreateDialogOpen(true);
-                                  }}
-                                >
-                                  Create your first test case
-                                </Button>
-                              </div>
-                            ) : (
-                              sortUsecases(project.usecases).map((uc) => (
-                                <UseCaseRow key={uc.id} uc={uc} />
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+        {!isLoading && !error && (
+          <>
+            {getFavoriteUseCases().length > 0 && (
+              <div className="mb-6 bg-background dark:bg-background rounded-lg shadow border border-border">
+                <div className="px-4 py-2 bg-muted dark:bg-muted/80 border-b border-border">
+                  <h3 className="font-semibold text-foreground dark:text-foreground">
+                    ★ Favorite Use Cases
+                  </h3>
+                </div>
+                <TableHeader />
+                <div className="max-h-40 overflow-y-auto">
+                  {sortUsecases(getFavoriteUseCases()).map((uc) => (
+                    <UseCaseRow key={uc.id} uc={uc} />
                   ))}
                 </div>
+              </div>
+            )}
 
-                {isCreateDialogOpen && (
-                  <div className="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-[49]">
-                    <div className="bg-background dark:bg-background/95 border border-border dark:border-border/80 w-[500px] rounded-lg shadow-lg dark:shadow-2xl relative z-[50] select-none">
-                      <div className="p-6">
-                        <h2 className="text-xl font-bold mb-4 text-foreground dark:text-foreground/90">
-                          New Use Case
-                        </h2>
-                        <div className="space-y-4">
-                          <Select
-                            onValueChange={(value) =>
-                              setNewUseCase({ ...newUseCase, projectId: value })
-                            }
-                            value={newUseCase.projectId}
-                          >
-                            <SelectTrigger className="w-full dark:bg-background/90 dark:border-border/80">
-                              <SelectValue placeholder="Select Project" />
-                            </SelectTrigger>
-                            <SelectContent position="popper" className="z-[51] dark:bg-background/95">
-                              {projects.map((p) => (
-                                <SelectItem key={p.id} value={p.id} className="dark:text-foreground/90">
-                                  {p.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-
-                          <Input
-                            placeholder="Use Case Name"
-                            value={newUseCase.name}
-                            onChange={(e) => setNewUseCase({ ...newUseCase, name: e.target.value })}
-                            className="bg-background dark:bg-background/90"
-                          />
-
-                          <Select
-                            onValueChange={(value) => setNewUseCase({ ...newUseCase, platform: value })}
-                            value={newUseCase.platform}
-                            defaultOpen={false}
-                          >
-                            <SelectTrigger className="w-full dark:bg-background/90 dark:border-border/80">
-                              <SelectValue placeholder="Select Platform" />
-                            </SelectTrigger>
-                            <SelectContent className="dark:bg-background/95">
-                              <SelectItem value="web" className="dark:text-foreground/90">
-                                Web 🌐
-                              </SelectItem>
-                              <SelectItem value="android" className="dark:text-foreground/90">
-                                Android 📱
-                              </SelectItem>
-                              <SelectItem value="ios" className="dark:text-foreground/90">
-                                iOS 📱
-                              </SelectItem>
-                              <SelectItem value="desktop" className="dark:text-foreground/90">
-                                Desktop 💻
-                              </SelectItem>
-                              <SelectItem value="api" className="dark:text-foreground/90">
-                                API 🔌
-                              </SelectItem>
-                              <SelectItem value="python" className="dark:text-foreground/90">
-                                Python 🐍
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-muted-foreground dark:text-muted-foreground/90">
-                              Description (Optional)
-                            </label>
-                            <textarea
-                              className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background dark:bg-background/90 text-foreground dark:text-foreground/90 focus:outline-none focus:ring-2 focus:ring-ring dark:border-border/80"
-                              placeholder="Enter use case description..."
-                              value={newUseCase.description}
-                              onChange={(e) =>
-                                setNewUseCase({ ...newUseCase, description: e.target.value })
-                              }
-                            />
-                          </div>
-
-                          <div className="flex justify-end gap-2 pt-4 border-t border-border dark:border-border/80">
+            <div className="space-y-4">
+              {projects.map((project) => (
+                <div
+                  key={project.id}
+                  className="bg-background dark:bg-background rounded-lg shadow border border-border"
+                >
+                  <button
+                    onClick={() =>
+                      setExpandedProject(expandedProject === project.id ? null : project.id)
+                    }
+                    className="w-full flex justify-between items-center px-4 py-2 text-left hover:bg-muted/50 dark:hover:bg-muted/20"
+                  >
+                    <div>
+                      <span className="text-lg font-semibold text-foreground">{project.name}</span>
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        {project.usecases.length === 0
+                          ? 'No test cases yet'
+                          : `${project.usecases.length} test case${project.usecases.length === 1 ? '' : 's'}`}
+                      </span>
+                    </div>
+                    <span
+                      className="transform transition-transform duration-200 text-muted-foreground"
+                      style={{
+                        transform:
+                          expandedProject === project.id ? 'rotate(180deg)' : 'rotate(0deg)',
+                      }}
+                    >
+                      ▼
+                    </span>
+                  </button>
+                  {expandedProject === project.id && (
+                    <div className="border-t border-border">
+                      <TableHeader />
+                      <div className="max-h-96 overflow-y-auto">
+                        {project.usecases.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                            <p className="mb-2">No test cases found in this project</p>
                             <Button
                               variant="outline"
                               onClick={() => {
-                                setIsCreateDialogOpen(false);
                                 setNewUseCase({
-                                  projectId: '',
+                                  projectId: project.id,
                                   name: '',
                                   description: '',
                                   platform: 'web',
                                 });
+                                setIsCreateDialogOpen(true);
                               }}
                             >
-                              Cancel
-                            </Button>
-                            <Button
-                              onClick={handleCreate}
-                              disabled={!newUseCase.projectId || !newUseCase.name}
-                            >
-                              Create
+                              Create your first test case
                             </Button>
                           </div>
-                        </div>
+                        ) : (
+                          sortUsecases(project.usecases).map((uc) => (
+                            <UseCaseRow key={uc.id} uc={uc} />
+                          ))
+                        )}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              ))}
+            </div>
 
-                {selectedUseCase && (
-                  <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[100]">
-                    <div className="bg-background dark:bg-background border border-border w-[600px] rounded-lg shadow-lg relative z-[101]">
-                      <div className="p-6">
-                        <div className="flex justify-between items-start mb-6">
-                          <div className="flex-1">
-                            <h2 className="text-xl font-bold flex items-center gap-2 text-foreground dark:text-foreground">
-                              {selectedUseCase.name}
-                              <button
-                                onClick={() => toggleFavorite(selectedUseCase.id)}
-                                className="text-yellow-500 hover:text-yellow-600"
-                              >
-                                {favorites.has(selectedUseCase.id) ? '★' : '☆'}
-                              </button>
-                            </h2>
-                            <p className="text-sm text-muted-foreground font-mono">
-                              {selectedUseCase.shortId}
-                            </p>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedUseCase(null)}>
-                            ✕
-                          </Button>
-                        </div>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-muted-foreground">
-                                Platform
-                              </label>
-                              <div className="mt-1 text-foreground">
-                                {selectedUseCase.steps.platform}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-muted-foreground">
-                                Status
-                              </label>
-                              <div className="mt-1 text-foreground">
-                                {selectedUseCase.status || 'N/A'}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-muted-foreground">
-                                Created
-                              </label>
-                              <div className="mt-1 text-foreground">
-                                {new Date(selectedUseCase.createdAt).toLocaleString()}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-muted-foreground">
-                                Last Modified
-                              </label>
-                              <div className="mt-1 text-foreground">
-                                {selectedUseCase.lastModified
-                                  ? new Date(selectedUseCase.lastModified).toLocaleString()
-                                  : 'N/A'}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-muted-foreground">
-                                Author
-                              </label>
-                              <div className="mt-1 text-foreground">
-                                {selectedUseCase.author || 'N/A'}
-                              </div>
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-muted-foreground">
-                                Tags
-                              </label>
-                              <div className="mt-1 text-foreground flex gap-1">
-                                {selectedUseCase.tags?.map((tag) => (
-                                  <span key={tag} className="px-2 py-1 bg-muted rounded-full text-xs">
-                                    {tag}
-                                  </span>
-                                )) || 'N/A'}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
-                            <Button
-                              variant="outline"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(selectedUseCase.id)}
-                            >
-                              Delete
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                handleDuplicate(selectedUseCase);
-                                setSelectedUseCase(null);
-                              }}
-                            >
-                              Duplicate
-                            </Button>
-                            <Button
-                              onClick={() => {
-                                const project = projects.find((p) =>
-                                  p.usecases.some((uc) => uc.id === selectedUseCase.id),
-                                );
-                                router.push(
-                                  `/${params.locale}/${params.tenant}/development/usecases/edit/${selectedUseCase.shortId}?projectName=${encodeURIComponent(project?.name || '')}`,
-                                );
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          </div>
-                        </div>
+            {isCreateDialogOpen && (
+              <div className="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-[49]">
+                <div className="bg-background dark:bg-background/95 border border-border dark:border-border/80 w-[500px] rounded-lg shadow-lg dark:shadow-2xl relative z-[50] select-none">
+                  <div className="p-6">
+                    <h2 className="text-xl font-bold mb-4 text-foreground dark:text-foreground/90">
+                      New Use Case
+                    </h2>
+                    <div className="space-y-4">
+                      <Select
+                        onValueChange={(value) =>
+                          setNewUseCase({ ...newUseCase, projectId: value })
+                        }
+                        value={newUseCase.projectId}
+                      >
+                        <SelectTrigger className="w-full dark:bg-background/90 dark:border-border/80">
+                          <SelectValue placeholder="Select Project" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" className="z-[51] dark:bg-background/95">
+                          {projects.map((p) => (
+                            <SelectItem key={p.id} value={p.id} className="dark:text-foreground/90">
+                              {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Input
+                        placeholder="Use Case Name"
+                        value={newUseCase.name}
+                        onChange={(e) => setNewUseCase({ ...newUseCase, name: e.target.value })}
+                        className="bg-background dark:bg-background/90"
+                      />
+
+                      <Select
+                        onValueChange={(value) => setNewUseCase({ ...newUseCase, platform: value })}
+                        value={newUseCase.platform}
+                        defaultOpen={false}
+                      >
+                        <SelectTrigger className="w-full dark:bg-background/90 dark:border-border/80">
+                          <SelectValue placeholder="Select Platform" />
+                        </SelectTrigger>
+                        <SelectContent className="dark:bg-background/95">
+                          <SelectItem value="web" className="dark:text-foreground/90">
+                            Web 🌐
+                          </SelectItem>
+                          <SelectItem value="android" className="dark:text-foreground/90">
+                            Android 📱
+                          </SelectItem>
+                          <SelectItem value="ios" className="dark:text-foreground/90">
+                            iOS 📱
+                          </SelectItem>
+                          <SelectItem value="desktop" className="dark:text-foreground/90">
+                            Desktop 💻
+                          </SelectItem>
+                          <SelectItem value="api" className="dark:text-foreground/90">
+                            API 🔌
+                          </SelectItem>
+                          <SelectItem value="python" className="dark:text-foreground/90">
+                            Python 🐍
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      <div className="space-y-2">
+                        <label className="text-sm text-muted-foreground dark:text-muted-foreground/90">
+                          Description (Optional)
+                        </label>
+                        <textarea
+                          className="w-full min-h-[100px] px-3 py-2 text-sm rounded-md border border-input bg-background dark:bg-background/90 text-foreground dark:text-foreground/90 focus:outline-none focus:ring-2 focus:ring-ring dark:border-border/80"
+                          placeholder="Enter use case description..."
+                          value={newUseCase.description}
+                          onChange={(e) =>
+                            setNewUseCase({ ...newUseCase, description: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-4 border-t border-border dark:border-border/80">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsCreateDialogOpen(false);
+                            setNewUseCase({
+                              projectId: '',
+                              name: '',
+                              description: '',
+                              platform: 'web',
+                            });
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={handleCreate}
+                          disabled={!newUseCase.projectId || !newUseCase.name}
+                        >
+                          Create
+                        </Button>
                       </div>
                     </div>
                   </div>
-                )}
-              </>
+                </div>
+              </div>
             )}
-          </div>
+
+            {selectedUseCase && (
+              <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-[100]">
+                <div className="bg-background dark:bg-background border border-border w-[600px] rounded-lg shadow-lg relative z-[101]">
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex-1">
+                        <h2 className="text-xl font-bold flex items-center gap-2 text-foreground dark:text-foreground">
+                          {selectedUseCase.name}
+                          <button
+                            onClick={() => toggleFavorite(selectedUseCase.id)}
+                            className="text-yellow-500 hover:text-yellow-600"
+                          >
+                            {favorites.has(selectedUseCase.id) ? '★' : '☆'}
+                          </button>
+                        </h2>
+                        <p className="text-sm text-muted-foreground font-mono">
+                          {selectedUseCase.shortId}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedUseCase(null)}>
+                        ✕
+                      </Button>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">
+                            Platform
+                          </label>
+                          <div className="mt-1 text-foreground">
+                            {selectedUseCase.steps.platform}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">
+                            Status
+                          </label>
+                          <div className="mt-1 text-foreground">
+                            {selectedUseCase.status || 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">
+                            Created
+                          </label>
+                          <div className="mt-1 text-foreground">
+                            {new Date(selectedUseCase.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">
+                            Last Modified
+                          </label>
+                          <div className="mt-1 text-foreground">
+                            {selectedUseCase.lastModified
+                              ? new Date(selectedUseCase.lastModified).toLocaleString()
+                              : 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">
+                            Author
+                          </label>
+                          <div className="mt-1 text-foreground">
+                            {selectedUseCase.author || 'N/A'}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-muted-foreground">
+                            Tags
+                          </label>
+                          <div className="mt-1 text-foreground flex gap-1">
+                            {selectedUseCase.tags?.map((tag) => (
+                              <span key={tag} className="px-2 py-1 bg-muted rounded-full text-xs">
+                                {tag}
+                              </span>
+                            )) || 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
+                        <Button
+                          variant="outline"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(selectedUseCase.id)}
+                        >
+                          Delete
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            handleDuplicate(selectedUseCase);
+                            setSelectedUseCase(null);
+                          }}
+                        >
+                          Duplicate
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            const project = projects.find((p) =>
+                              p.usecases.some((uc) => uc.id === selectedUseCase.id),
+                            );
+                            router.push(
+                              `/${params.locale}/${params.tenant}/development/usecases/edit/${selectedUseCase.shortId}?projectName=${encodeURIComponent(project?.name || '')}`,
+                            );
+                          }}
+                        >
+                          Edit
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
