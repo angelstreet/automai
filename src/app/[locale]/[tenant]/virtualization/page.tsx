@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -31,7 +32,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import {
   Pagination,
@@ -43,18 +45,33 @@ import {
 } from "@/components/ui/pagination";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
 import {
   AlertCircle,
   CheckCircle2,
   HardDrive,
-  Terminal,
+  Terminal as TerminalIcon,
   BarChart3,
   Search,
   FilterX,
   RefreshCcw,
   ChevronDown,
   Settings,
-  Server
+  Server,
+  Maximize2,
+  Minimize2,
+  X,
+  Play,
+  Square,
+  RotateCcw,
+  Monitor,
+  Copy,
+  Grid2X2,
+  Grid3X3,
+  Layers,
+  Plus,
+  Clipboard,
+  Download
 } from 'lucide-react';
 import {
   Tooltip,
@@ -246,6 +263,116 @@ const MOCK_DEVICES = [
     containers: { total: 11, running: 11 }
   }
 ];
+
+// XTerminal component for terminal integration
+const XTerminal = ({ id, vm, connectionType, isActive, height = '100%' }) => {
+  const colors = {
+    portainer: 'from-blue-500/10 to-blue-500/5',
+    docker: 'from-green-500/10 to-green-500/5',
+    ssh: 'from-gray-500/10 to-gray-500/5',
+    unknown: 'from-gray-500/10 to-gray-500/5'
+  };
+
+  const badges = {
+    portainer: <Badge className="bg-blue-500">P</Badge>,
+    docker: <Badge className="bg-green-500">D</Badge>,
+    ssh: <Badge className="bg-gray-500">S</Badge>,
+    unknown: <Badge className="bg-gray-500">?</Badge>
+  };
+
+  const terminalRef = useRef(null);
+  const [command, setCommand] = useState('');
+  const [history, setHistory] = useState([
+    { text: `Connected to ${vm} via ${connectionType}`, type: 'system' },
+    { text: 'Terminal ready', type: 'system' }
+  ]);
+
+  const executeCommand = () => {
+    if (!command.trim()) return;
+    
+    // Add command to history
+    setHistory(prev => [...prev, { text: `$ ${command}`, type: 'command' }]);
+    
+    // Mock response based on command type
+    if (command.startsWith('ls')) {
+      setHistory(prev => [...prev, { 
+        text: 'app.js  node_modules  package.json  public  README.md  src  tsconfig.json', 
+        type: 'output' 
+      }]);
+    } else if (command.startsWith('docker')) {
+      setHistory(prev => [...prev, { 
+        text: connectionType === 'docker' || connectionType === 'portainer' 
+          ? 'CONTAINER ID   IMAGE          COMMAND      STATUS          PORTS     NAMES\nabc123456789   nginx:latest   "/docker-en…"   Up 2 hours   80/tcp    web-server' 
+          : 'Error: Docker command not available in SSH mode',
+        type: connectionType === 'docker' || connectionType === 'portainer' ? 'output' : 'error'
+      }]);
+    } else if (command === 'clear') {
+      setHistory([
+        { text: `Connected to ${vm} via ${connectionType}`, type: 'system' },
+        { text: 'Terminal cleared', type: 'system' }
+      ]);
+    } else {
+      setHistory(prev => [...prev, { 
+        text: `Command not found: ${command}`, 
+        type: 'error' 
+      }]);
+    }
+    
+    setCommand('');
+  };
+
+  return (
+    <div className={`h-full flex flex-col overflow-hidden rounded-md border bg-gradient-to-b ${colors[connectionType] || colors.unknown} border-${connectionType === 'portainer' ? 'blue' : connectionType === 'docker' ? 'green' : 'gray'}-500/20`} style={{ height }}>
+      <div className="flex items-center justify-between px-3 py-1 border-b border-muted">
+        <div className="flex items-center gap-2">
+          {badges[connectionType] || badges.unknown}
+          <span className="text-xs font-medium">{vm}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm">
+            <Minimize2 className="h-3 w-3" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm">
+            <Maximize2 className="h-3 w-3" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-red-500/10 hover:text-red-500">
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+      
+      <ScrollArea className="flex-1 px-3 py-2 bg-black/50">
+        <div className="font-mono text-xs">
+          {history.map((entry, i) => (
+            <div key={i} className={
+              entry.type === 'system' ? 'text-blue-400' : 
+              entry.type === 'command' ? 'text-green-400' : 
+              entry.type === 'error' ? 'text-red-400' : 
+              'text-gray-300'
+            }>
+              {entry.text}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+      
+      <div className="px-3 py-2 border-t border-muted flex items-center">
+        <span className="text-xs text-green-500 mr-1">$</span>
+        <input
+          ref={terminalRef}
+          type="text"
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') executeCommand();
+          }}
+          className="flex-1 bg-transparent border-none outline-none text-xs font-mono"
+          autoFocus={isActive}
+        />
+      </div>
+    </div>
+  );
+};
 
 export default function VirtualizationPage() {
   const t = useTranslations('Common');
@@ -543,7 +670,7 @@ export default function VirtualizationPage() {
             <span>Settings</span>
           </TabsTrigger>
           <TabsTrigger value="terminals" className="flex items-center gap-1">
-            <Terminal className="h-4 w-4" />
+            <TerminalIcon className="h-4 w-4" />
             <span>Terminal</span>
           </TabsTrigger>
           <TabsTrigger value="logs" className="flex items-center gap-1">
@@ -777,7 +904,7 @@ export default function VirtualizationPage() {
                                       handleActionClick(device.id, 'terminals');
                                     }}
                                   >
-                                    <Terminal className="h-3 w-3" />
+                                    <TerminalIcon className="h-3 w-3" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -932,9 +1059,9 @@ export default function VirtualizationPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="settings">
+        <TabsContent value="settings" className="flex-1 overflow-auto">
           {selectedItems.size > 0 && selectedItems.size <= 4 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 pt-3">
               {selectedDevicesData.map(device => (
                 <Card key={device.id} className="overflow-hidden">
                   <CardHeader className="py-3">
@@ -990,7 +1117,7 @@ export default function VirtualizationPage() {
               ))}
             </div>
           ) : selectedDeviceId ? (
-            <Card>
+            <Card className="mt-3">
               <CardHeader className="py-3">
                 <CardTitle className="text-base">VM Settings</CardTitle>
                 <CardDescription className="text-xs">Configure your virtual machine settings</CardDescription>
@@ -1041,7 +1168,7 @@ export default function VirtualizationPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
+            <Card className="mt-3">
               <CardHeader className="py-3">
                 <CardTitle className="text-base">VM Settings</CardTitle>
                 <CardDescription className="text-xs">Select a VM to configure its settings</CardDescription>
@@ -1061,75 +1188,162 @@ export default function VirtualizationPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="terminals">
-          {selectedItems.size > 0 && selectedItems.size <= 4 ? (
-            <div className="grid grid-cols-2 gap-4">
-              {selectedDevicesData.map(device => (
-                <Card key={device.id} className="overflow-hidden">
-                  <CardHeader className="py-2 px-3 bg-muted/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {getConnectionTypeIcon(device.connectionType || 'unknown')}
-                        <span className="text-sm font-medium">{device.name}</span>
-                      </div>
-                      {getStatusBadge(device.status || 'unknown')}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0 h-60 bg-black text-green-500 font-mono text-xs">
-                    <div className="p-3 h-full overflow-auto">
-                      <div>$ ssh user@{device.name}</div>
-                      <div>Connected to {device.name}</div>
-                      <div>Last login: {new Date().toLocaleString()}</div>
-                      <div className="mt-2">user@{device.name}:~$ _</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : selectedDeviceId ? (
-            <Card>
-              <CardHeader className="py-2 px-3 bg-muted/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {devices.find(d => d.id === selectedDeviceId) && getConnectionTypeIcon(devices.find(d => d.id === selectedDeviceId)?.connectionType || 'unknown')}
-                    <span className="text-sm font-medium">{devices.find(d => d.id === selectedDeviceId)?.name}</span>
-                  </div>
-                  {devices.find(d => d.id === selectedDeviceId) && getStatusBadge(devices.find(d => d.id === selectedDeviceId)?.status || 'unknown')}
-                </div>
-              </CardHeader>
-              <CardContent className="p-0 h-[400px] bg-black text-green-500 font-mono text-xs">
-                <div className="p-3 h-full overflow-auto">
-                  <div>$ ssh user@{devices.find(d => d.id === selectedDeviceId)?.name}</div>
-                  <div>Connected to {devices.find(d => d.id === selectedDeviceId)?.name}</div>
-                  <div>Last login: {new Date().toLocaleString()}</div>
-                  <div className="mt-2">user@{devices.find(d => d.id === selectedDeviceId)?.name}:~$ _</div>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader className="py-3">
-                <CardTitle className="text-base">Terminal Access</CardTitle>
-                <CardDescription className="text-xs">Connect to your devices via secure terminal</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center h-60">
-                  <div className="text-center">
-                    <Terminal className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-sm text-muted-foreground">Select a device from the Overview tab to access its terminal</p>
-                    <Button variant="outline" className="mt-4" onClick={() => setActiveTab('overview')}>
-                      Go to Overview
+        <TabsContent value="terminals" className="flex-1 overflow-auto">
+          {/* New Terminal Tab Implementation */}
+          <div className="space-y-4 h-full flex flex-col pt-3">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8">
+                      <TerminalIcon className="mr-2 h-4 w-4" /> 
+                      <span>New Terminal</span>
+                      <ChevronDown className="ml-2 h-4 w-4" />
                     </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => {
+                      // Handle new connection
+                    }}>
+                      <Plus className="mr-2 h-4 w-4" /> New Connection
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {devices.map(device => (
+                      <DropdownMenuItem key={device.id} onClick={() => setSelectedDeviceId(device.id)}>
+                        {getConnectionTypeIcon(device.connectionType)}
+                        <span className="ml-2">{device.name}</span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8">
+                      <Grid2X2 className="mr-2 h-4 w-4" />
+                      <span>Layout</span>
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem>
+                      <Monitor className="mr-2 h-4 w-4" /> Single Terminal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Grid2X2 className="mr-2 h-4 w-4" /> Two Horizontal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Grid2X2 className="mr-2 h-4 w-4" /> Two Vertical
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Grid3X3 className="mr-2 h-4 w-4" /> Four Grid
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Layers className="mr-2 h-4 w-4" /> Stacked
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Button variant="outline" size="sm" className="h-8">
+                  <Play className="mr-2 h-4 w-4" /> Run Command
+                </Button>
+                <Button variant="outline" size="sm" className="h-8">
+                  <Clipboard className="mr-2 h-4 w-4" /> Copy Output
+                </Button>
+                <Button variant="outline" size="sm" className="h-8">
+                  <Download className="mr-2 h-4 w-4" /> Save Session
+                </Button>
+              </div>
+            </div>
+            
+            <Card className="flex-1 flex flex-col overflow-hidden">
+              <CardHeader className="py-3 px-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center">
+                    <TerminalIcon className="mr-2 h-4 w-4" /> Active Terminals
+                  </CardTitle>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 h-4 text-[10px]">P</Badge>
+                      <span>Portainer</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 h-4 text-[10px]">D</Badge>
+                      <span>Docker</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Badge variant="outline" className="bg-gray-500/10 text-gray-500 border-gray-500/20 h-4 text-[10px]">S</Badge>
+                      <span>SSH</span>
+                    </div>
                   </div>
                 </div>
+              </CardHeader>
+              
+              <CardContent className="p-4 pb-4 flex-1">
+                {selectedDeviceId ? (
+                  <div className="h-full">
+                    <XTerminal 
+                      id={selectedDeviceId}
+                      vm={devices.find(d => d.id === selectedDeviceId)?.name || ''}
+                      connectionType={devices.find(d => d.id === selectedDeviceId)?.connectionType || 'unknown'}
+                      isActive={true}
+                      height="100%"
+                    />
+                  </div>
+                ) : selectedItems.size > 0 && selectedItems.size <= 4 ? (
+                  <div className="grid grid-cols-2 gap-4 h-full">
+                    {selectedDevicesData.map(device => (
+                      <div key={device.id} className="h-full">
+                        <XTerminal 
+                          id={device.id}
+                          vm={device.name}
+                          connectionType={device.connectionType}
+                          isActive={false}
+                          height="100%"
+                        />
+                      </div>
+                    ))}
+                    
+                    {/* If we have fewer terminals than the grid allows, show placeholders */}
+                    {Array.from({ length: Math.max(0, selectedItems.size < 4 ? 4 - selectedItems.size : 0) }).map((_, index) => (
+                      <div key={`placeholder-${index}`} className="border border-dashed rounded-md flex items-center justify-center">
+                        <Button 
+                          variant="ghost" 
+                          className="flex flex-col gap-2 text-muted-foreground" 
+                          onClick={() => {
+                            // Handle new terminal
+                          }}
+                        >
+                          <Plus className="h-8 w-8" />
+                          <span className="text-xs">Add Terminal</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-60">
+                    <div className="text-center">
+                      <TerminalIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-sm text-muted-foreground">Select a device from the Overview tab to access its terminal</p>
+                      <Button variant="outline" className="mt-4" onClick={() => setActiveTab('overview')}>
+                        Go to Overview
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          )}
+            
+            {/* Connection Dialog would be added here in a real implementation */}
+          </div>
         </TabsContent>
 
-        <TabsContent value="logs">
+        <TabsContent value="logs" className="flex-1 overflow-auto">
           {selectedItems.size > 0 && selectedItems.size <= 4 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 pt-3">
               {selectedDevicesData.map(device => (
                 <Card key={device.id} className="overflow-hidden">
                   <CardHeader className="py-2 px-3">
@@ -1158,7 +1372,7 @@ export default function VirtualizationPage() {
               ))}
             </div>
           ) : selectedDeviceId ? (
-            <Card>
+            <Card className="mt-3">
               <CardHeader className="py-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1205,7 +1419,7 @@ export default function VirtualizationPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
+            <Card className="mt-3">
               <CardHeader className="py-3">
                 <CardTitle className="text-base">System Logs</CardTitle>
                 <CardDescription className="text-xs">View and analyze system and container logs</CardDescription>
@@ -1225,9 +1439,9 @@ export default function VirtualizationPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="analytics">
+        <TabsContent value="analytics" className="flex-1 overflow-auto">
           {selectedItems.size > 0 && selectedItems.size <= 4 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 pt-3">
               {selectedDevicesData.map(device => (
                 <Card key={device.id} className="overflow-hidden">
                   <CardHeader className="py-2 px-3">
@@ -1306,7 +1520,7 @@ export default function VirtualizationPage() {
               ))}
             </div>
           ) : selectedDeviceId ? (
-            <Card>
+            <Card className="mt-3">
               <CardHeader className="py-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1422,7 +1636,7 @@ export default function VirtualizationPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
+            <Card className="mt-3">
               <CardHeader className="py-3">
                 <CardTitle className="text-base">Performance Analytics</CardTitle>
                 <CardDescription className="text-xs">View resource usage and performance metrics</CardDescription>
