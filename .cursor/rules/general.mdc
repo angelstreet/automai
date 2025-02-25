@@ -10,11 +10,23 @@ alwaysApply: true
 
 ## General Debugging
 1. Be concise - no need to summarize what has been implemented
+   - **NEVER provide a summary of changes after completing a task**
+   - Do not list what you've done or explain the changes you've made
+   - Simply confirm the task is complete with a brief acknowledgment
+   - Avoid phrases like "Here's what I did" or "I've successfully..."
 2. Always verify terminal logs after implementing changes
    - For heavy tasks (multiple file changes or complex UI components), always check logs
    - For minor changes, check logs only if there's a specific concern
    - Use `cat` or similar commands to read existing logs; don't restart running services
    - If you need to check server logs, first verify if the server is already running
+   - **MANDATORY**: Always check terminal logs for the following critical errors:
+     - Module resolution errors (e.g., "Module not found: Can't resolve...")
+     - HTTP error codes (e.g., 500, 404, 403)
+     - Runtime errors that cause full page reloads (e.g., "Fast Refresh had to perform a full reload")
+     - Compilation errors (e.g., "Failed to compile")
+     - Syntax errors in code
+   - **NEVER** consider a task complete until you've verified the logs are free of these errors
+   - If errors are found, fix them before proceeding or explicitly acknowledge them
 3. When checking browser logs, always refresh the page first to avoid seeing stale errors - limit browser log checks to 3 times maximum
 4. If a server restart is necessary:
    - First check if the port is in use: `lsof -i :3000`
@@ -24,6 +36,7 @@ alwaysApply: true
    - Look for "Ready" or similar messages in the terminal output
    - Typically wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
    - After server is ready, wait at least 5 seconds before using browser tools like screenshots or console logs
+   - **MANDATORY**: After server restart, check terminal logs for errors before considering the task complete
 
 ## Next.js Specific Rules
 1. For most UI changes, component modifications, and styling updates, Next.js Fast Refresh will automatically apply changes without requiring a server restart
@@ -58,4 +71,7 @@ alwaysApply: true
 5. **IMPORTANT**: Always wait for the server to be fully ready before checking if changes worked
    - Look for "Ready" or similar messages in the terminal output
    - Typically wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
+   - **MANDATORY**: Check terminal logs for errors after compilation completes
+   - Look specifically for module resolution errors, HTTP error codes, and runtime errors
+   - If any errors are found, address them immediately before proceeding
 6. If the server starts on a different port (e.g., 3001), stop it and repeat steps 2-4 to ensure it runs on port 3000 
