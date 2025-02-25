@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { STATUS_VARIANTS } from '@/constants/virtualization';
 import { Box, Settings, ScrollText, Terminal, BarChart2, Cloud, Server } from 'lucide-react';
 import { getConnectionTypeIcon } from '@/lib/utils';
+import { useParams } from 'next/navigation';
 
 interface DeviceTableProps {
   devices: Device[];
@@ -14,6 +15,8 @@ interface DeviceTableProps {
 }
 
 export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionMode }: DeviceTableProps) {
+  const params = useParams();
+  
   const renderConnectionIcon = (type: string) => {
     switch (type) {
       case 'portainer':
@@ -35,7 +38,7 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
           <div className="flex-1">Name</div>
           <div className="w-24 text-center">Containers</div>
           <div className="w-24 text-center">Status</div>
-          <div className="w-24" />
+          <div className="w-24 text-center">Actions</div>
         </div>
         
         {devices.map(device => (
@@ -44,16 +47,13 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
             className={`
               flex items-center px-2 py-1 border-b last:border-b-0
               ${selectedItems.has(device.id) ? 'bg-muted/50' : ''}
-              hover:bg-muted/50 cursor-pointer transition-colors
             `}
-            onClick={() => onItemSelect(device.id)}
           >
             {isSelectionMode && (
               <div className="w-6">
                 <Checkbox
                   checked={selectedItems.has(device.id)}
                   onCheckedChange={() => onItemSelect(device.id)}
-                  onClick={(e) => e.stopPropagation()}
                 />
               </div>
             )}
@@ -87,9 +87,8 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/[locale]/[tenant]/virtualization/settings?devices=${device.id}`;
+                onClick={() => {
+                  window.location.href = `/${params.locale}/${params.tenant}/virtualization/settings?devices=${device.id}`;
                 }}
               >
                 <Settings className="h-3.5 w-3.5" />
@@ -98,9 +97,8 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/[locale]/[tenant]/virtualization/logs?devices=${device.id}`;
+                onClick={() => {
+                  window.location.href = `/${params.locale}/${params.tenant}/virtualization/logs?devices=${device.id}`;
                 }}
               >
                 <ScrollText className="h-3.5 w-3.5" />
@@ -109,9 +107,8 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/[locale]/[tenant]/virtualization/terminals?devices=${device.id}`;
+                onClick={() => {
+                  window.location.href = `/${params.locale}/${params.tenant}/virtualization/terminals?devices=${device.name}`;
                 }}
               >
                 <Terminal className="h-3.5 w-3.5" />
@@ -120,9 +117,8 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/[locale]/[tenant]/virtualization/analytics?devices=${device.id}`;
+                onClick={() => {
+                  window.location.href = `/${params.locale}/${params.tenant}/virtualization/analytics?devices=${device.id}`;
                 }}
               >
                 <BarChart2 className="h-3.5 w-3.5" />
