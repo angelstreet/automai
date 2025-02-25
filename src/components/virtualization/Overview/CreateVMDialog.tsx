@@ -20,39 +20,45 @@ interface CreateVMDialogProps {
 
 export function CreateVMDialog({ open, onOpenChange }: CreateVMDialogProps) {
   const [isCreating, setIsCreating] = useState(false);
-  const [newVMConfig, setNewVMConfig] = useState({
+  const [connectionType, setConnectionType] = useState('ssh');
+  const [newClientConfig, setNewClientConfig] = useState({
     name: '',
     description: '',
-    type: 'vm',
-    image: '',
-    cpu: '1',
-    memory: '1024',
+    type: 'ssh',
+    ip: '',
+    user: '',
+    password: '',
   });
 
   const handleCreate = async () => {
     setIsCreating(true);
     try {
       // This would be replaced with actual API call
-      console.log('Creating new VM configuration:', newVMConfig);
+      console.log('Creating new client connection:', newClientConfig);
       
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Reset form and close dialog
-      setNewVMConfig({
+      setNewClientConfig({
         name: '',
         description: '',
-        type: 'vm',
-        image: '',
-        cpu: '1',
-        memory: '1024',
+        type: 'ssh',
+        ip: '',
+        user: '',
+        password: '',
       });
       onOpenChange(false);
     } catch (error) {
-      console.error('Error creating VM configuration:', error);
+      console.error('Error creating client connection:', error);
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleTypeChange = (value: string) => {
+    setConnectionType(value);
+    setNewClientConfig({ ...newClientConfig, type: value });
   };
 
   return (
@@ -62,77 +68,78 @@ export function CreateVMDialog({ open, onOpenChange }: CreateVMDialogProps) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create VM Configuration</DialogTitle>
+          <DialogTitle>Connect to client</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
             <Input
               id="name"
-              placeholder="Configuration name"
-              value={newVMConfig.name}
-              onChange={(e) => setNewVMConfig({ ...newVMConfig, name: e.target.value })}
+              placeholder="Client name"
+              value={newClientConfig.name}
+              onChange={(e) => setNewClientConfig({ ...newClientConfig, name: e.target.value })}
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="type">Type</Label>
+            <Label htmlFor="type">Connection Type</Label>
             <Select 
-              value={newVMConfig.type} 
-              onValueChange={(value) => setNewVMConfig({ ...newVMConfig, type: value })}
+              value={newClientConfig.type} 
+              onValueChange={handleTypeChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="vm">Virtual Machine</SelectItem>
-                <SelectItem value="docker">Docker Container</SelectItem>
+                <SelectItem value="ssh">SSH</SelectItem>
+                <SelectItem value="docker">Docker</SelectItem>
                 <SelectItem value="portainer">Portainer</SelectItem>
               </SelectContent>
             </Select>
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="image">Image/OS</Label>
+            <Label htmlFor="ip">IP Address</Label>
             <Input
-              id="image"
-              placeholder="Image or OS name"
-              value={newVMConfig.image}
-              onChange={(e) => setNewVMConfig({ ...newVMConfig, image: e.target.value })}
+              id="ip"
+              placeholder="IP Address"
+              value={newClientConfig.ip}
+              onChange={(e) => setNewClientConfig({ ...newClientConfig, ip: e.target.value })}
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cpu">CPU Cores</Label>
-              <Input
-                id="cpu"
-                type="number"
-                min="1"
-                value={newVMConfig.cpu}
-                onChange={(e) => setNewVMConfig({ ...newVMConfig, cpu: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="memory">Memory (MB)</Label>
-              <Input
-                id="memory"
-                type="number"
-                min="512"
-                step="512"
-                value={newVMConfig.memory}
-                onChange={(e) => setNewVMConfig({ ...newVMConfig, memory: e.target.value })}
-              />
-            </div>
-          </div>
+          {connectionType === 'ssh' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="user">Username</Label>
+                <Input
+                  id="user"
+                  placeholder="Username"
+                  value={newClientConfig.user}
+                  onChange={(e) => setNewClientConfig({ ...newClientConfig, user: e.target.value })}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Password"
+                  value={newClientConfig.password}
+                  onChange={(e) => setNewClientConfig({ ...newClientConfig, password: e.target.value })}
+                />
+              </div>
+            </>
+          )}
           
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               placeholder="Description (optional)"
-              value={newVMConfig.description}
-              onChange={(e) => setNewVMConfig({ ...newVMConfig, description: e.target.value })}
+              value={newClientConfig.description}
+              onChange={(e) => setNewClientConfig({ ...newClientConfig, description: e.target.value })}
             />
           </div>
         </div>
@@ -140,9 +147,11 @@ export function CreateVMDialog({ open, onOpenChange }: CreateVMDialogProps) {
           <Button
             onClick={handleCreate}
             type="button"
-            disabled={!newVMConfig.name.trim() || !newVMConfig.image.trim() || isCreating}
+            disabled={!newClientConfig.name.trim() || !newClientConfig.ip.trim() || 
+              (connectionType === 'ssh' && (!newClientConfig.user.trim() || !newClientConfig.password.trim())) ||
+              isCreating}
           >
-            {isCreating ? 'Creating...' : 'Save'}
+            {isCreating ? 'Connecting...' : 'Connect'}
           </Button>
         </DialogFooter>
       </DialogContent>
