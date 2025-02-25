@@ -2,5 +2,27 @@
   "Index": {
     "title": "Welcome",
     "description": "This is the English version"
+  },
+  "Common": {
+    "new": "New",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "select": "Select",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "actions": "Actions",
+    "name": "Name",
+    "description": "Description",
+    "type": "Type",
+    "status": "Status",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "devices": "Devices",
+    "virtualization": "Virtualization"
   }
 } 

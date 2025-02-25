@@ -20,6 +20,10 @@ alwaysApply: true
    - First check if the port is in use: `lsof -i :3000`
    - If in use, kill the process: `kill -9 <PID>`
    - Only then start the server with `npm run dev`
+   - **IMPORTANT**: Always wait for the server to be fully ready before checking browser status
+   - Look for "Ready" or similar messages in the terminal output
+   - Typically wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
+   - After server is ready, wait at least 5 seconds before using browser tools like screenshots or console logs
 
 ## i18n Handling
 1. When adding translations, always verify both French (fr) and English (en) files
@@ -40,4 +44,7 @@ alwaysApply: true
 2. Before restarting, check if port 3000 is in use: `lsof -i :3000`
 3. If port 3000 is in use, kill the process: `kill -9 <PID>`
 4. Use `npm run dev` to restart the server on port 3000
-5. If the server starts on a different port (e.g., 3001), stop it and repeat steps 2-4 to ensure it runs on port 3000 
+5. **IMPORTANT**: Always wait for the server to be fully ready before checking if changes worked
+   - Look for "Ready" or similar messages in the terminal output
+   - Typically wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
+6. If the server starts on a different port (e.g., 3001), stop it and repeat steps 2-4 to ensure it runs on port 3000 
