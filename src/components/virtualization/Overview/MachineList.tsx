@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Laptop, Server, Database, AlertTriangle, CheckCircle, XCircle, Clock, Grid, List, MoreHorizontal } from 'lucide-react';
+import { Laptop, Server, Database, AlertTriangle, CheckCircle, XCircle, Clock, Grid, List, MoreHorizontal, Terminal, BarChart2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
@@ -217,6 +217,40 @@ export function MachineList({
               >
                 Cancel
               </Button>
+              {selectedMachines.size === 1 && (
+                <>
+                  {Array.from(selectedMachines)[0] && paginatedMachines.find(m => m.id === Array.from(selectedMachines)[0])?.type === 'ssh' && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const machineId = Array.from(selectedMachines)[0];
+                        const machine = paginatedMachines.find(m => m.id === machineId);
+                        if (machine) {
+                          router.push(`/${tenant}/terminals/${machine.name}`);
+                        }
+                      }}
+                    >
+                      <Terminal className="h-4 w-4 mr-2" />
+                      Terminal
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const machineId = Array.from(selectedMachines)[0];
+                      const machine = paginatedMachines.find(m => m.id === machineId);
+                      if (machine) {
+                        router.push(`/${tenant}/analytics/machines/${machine.id}`);
+                      }
+                    }}
+                  >
+                    <BarChart2 className="h-4 w-4 mr-2" />
+                    Analytics
+                  </Button>
+                </>
+              )}
               <Button 
                 variant="destructive" 
                 size="sm" 
