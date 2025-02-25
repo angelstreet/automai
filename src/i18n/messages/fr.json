@@ -1,7 +1,9 @@
 {
   "Index": {
-    "title": "Bienvenue",
-    "description": "Ceci est la version française"
+    "title": "Automatisez votre infrastructure avec l'IA",
+    "description": "Automai est une plateforme d'automatisation d'infrastructure propulsée par l'IA qui vous aide à gérer votre infrastructure facilement. Déployez, surveillez et mettez à l'échelle vos applications en toute confiance.",
+    "getStarted": "Commencer",
+    "learnMore": "En savoir plus"
   },
   "Common": {
     "new": "Nouveau",

@@ -1,7 +1,9 @@
 {
   "Index": {
-    "title": "Welcome",
-    "description": "This is the English version"
+    "title": "Automate your infrastructure with AI",
+    "description": "Automai is an AI-powered infrastructure automation platform that helps you manage your infrastructure with ease. Deploy, monitor, and scale your applications with confidence.",
+    "getStarted": "Get Started",
+    "learnMore": "Learn More"
   },
   "Common": {
     "new": "New",
