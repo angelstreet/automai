@@ -1,0 +1,106 @@
+/**
+ * Logger utility for backend interactions
+ * Provides consistent logging format and levels
+ */
+
+import { prisma } from './prisma';
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface LogOptions {
+  userId?: string;
+  tenantId?: string;
+  ip?: string;
+  action?: string;
+  connectionId?: string;
+  data?: Record<string, any>;
+  saveToDb?: boolean; // Flag to determine if log should be saved to database
+}
+
+// Environment-based logging (more verbose in development)
+const isDev = process.env.NODE_ENV === 'development';
+
+// Helper to determine if we should log based on environment and level
+function shouldLog(level: LogLevel): boolean {
+  // In production, only log info and above
+  if (process.env.NODE_ENV === 'production') {
+    return level !== 'debug';
+  }
+  // In development, log everything
+  return true;
+}
+
+/**
+ * Log a message with metadata
+ */
+export async function log(level: LogLevel, message: string, options: LogOptions = {}): Promise<void> {
+  if (!shouldLog(level)) return;
+
+  const timestamp = new Date().toISOString();
+  const { userId, tenantId, ip, action, connectionId, data, saveToDb = false } = options;
+  
+  const logEntry = {
+    timestamp,
+    level,
+    message,
+    userId,
+    tenantId,
+    ip,
+    action,
+    connectionId,
+    data
+  };
+  
+  // In production, we might want to send logs to a service like Datadog, Sentry, etc.
+  // For now, we'll just console log with appropriate level
+  switch (level) {
+    case 'debug':
+      if (isDev) console.debug(JSON.stringify(logEntry));
+      break;
+    case 'info':
+      console.info(JSON.stringify(logEntry));
+      break;
+    case 'warn':
+      console.warn(JSON.stringify(logEntry));
+      break;
+    case 'error':
+      console.error(JSON.stringify(logEntry));
+      break;
+  }
+  
+  // Save to database if requested and not in test environment
+  if (saveToDb && process.env.NODE_ENV !== 'test') {
+    try {
+      // Check if ConnectionLog model exists in the schema
+      if (prisma.connectionLog) {
+        await prisma.connectionLog.create({
+          data: {
+            level,
+            message,
+            action,
+            userId,
+            tenantId,
+            connectionId,
+            ip,
+            metadata: data ? JSON.stringify(data) : null,
+          }
+        });
+      } else {
+        console.warn('ConnectionLog model not found in schema, skipping database logging');
+      }
+    } catch (error) {
+      // Don't let database errors affect the application
+      console.error('Failed to save log to database:', error);
+    }
+  }
+}
+
+/**
+ * Convenience methods for different log levels
+ */
+export const logger = {
+  debug: (message: string, options?: LogOptions) => log('debug', message, options),
+  info: (message: string, options?: LogOptions) => log('info', message, options),
+  warn: (message: string, options?: LogOptions) => log('warn', message, options),
+  error: (message: string, options?: LogOptions) => log('error', message, options),
+}; 

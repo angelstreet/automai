@@ -262,6 +262,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           testStatus={testStatus}
           testError={testError}
           isValidating={isTesting || isCreating}
+          onSave={handleCreate}
         />
         
         <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">

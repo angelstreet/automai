@@ -4,8 +4,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export interface FormData {
   name: string;
@@ -20,22 +21,27 @@ export interface FormData {
 interface ConnectionFormProps {
   formData: FormData;
   onChange: (formData: FormData) => void;
-  testStatus: 'idle' | 'success' | 'error';
-  testError: string | null;
-  isValidating?: boolean;
   onSave?: () => void;
 }
 
 export function ConnectionForm({ 
   formData, 
   onChange, 
-  testStatus, 
-  testError,
   onSave
 }: ConnectionFormProps) {
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer'
   );
+
+  // State variables for testing status
+  const [testing, setTesting] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testSuccess, setTestSuccess] = useState(false);
+
+  // State for fingerprint verification
+  const [fingerprint, setFingerprint] = useState<string | null>(null);
+  const [fingerprintVerified, setFingerprintVerified] = useState(false);
+  const [requireVerification, setRequireVerification] = useState(false);
 
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
@@ -48,6 +54,94 @@ export function ConnectionForm({
 
   const handleInputChange = (field: string, value: string) => {
     onChange({ ...formData, [field]: value });
+  };
+
+  // Update the testConnection function to handle fingerprint verification
+  const testConnection = async () => {
+    setTesting(true);
+    setTestError(null);
+    setTestSuccess(false);
+    setFingerprint(null);
+    setRequireVerification(false);
+    setFingerprintVerified(false);
+    
+    try {
+      const response = await fetch('/api/virtualization/machines/test-connection', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: formData.type,
+          ip: formData.ip,
+          port: formData.port,
+          user: formData.user,
+          password: formData.password,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.status === 428) {
+        // Fingerprint verification required
+        setRequireVerification(true);
+        setFingerprint(data.fingerprint);
+        setTestError(data.message);
+      } else if (data.success) {
+        setTestSuccess(true);
+        // If the response includes fingerprint information
+        if (data.fingerprint) {
+          setFingerprint(data.fingerprint);
+          setFingerprintVerified(data.fingerprintVerified || false);
+        }
+      } else {
+        setTestError(data.message);
+      }
+    } catch (error) {
+      setTestError('Failed to test connection');
+      console.error('Error testing connection:', error);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  // Add a function to verify fingerprint
+  const verifyFingerprint = async () => {
+    setTesting(true);
+    setTestError(null);
+    
+    try {
+      const response = await fetch('/api/virtualization/machines/verify-fingerprint', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: formData.type,
+          ip: formData.ip,
+          port: formData.port,
+          user: formData.user,
+          password: formData.password,
+          fingerprint: fingerprint,
+          accept: true
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setTestSuccess(true);
+        setFingerprintVerified(true);
+        setRequireVerification(false);
+      } else {
+        setTestError(data.message);
+      }
+    } catch (error) {
+      setTestError('Failed to verify fingerprint');
+      console.error('Error verifying fingerprint:', error);
+    } finally {
+      setTesting(false);
+    }
   };
 
   return (
@@ -134,27 +228,89 @@ export function ConnectionForm({
         />
       </div>
       
-      {testStatus === 'success' && (
-        <Alert className="bg-green-50 text-green-800 border-green-100">
-          <AlertTitle>Connection successful</AlertTitle>
-          <AlertDescription className="flex justify-between items-center">
-            Successfully connected to the remote machine.
-            <Button 
-              onClick={onSave}
-              className="bg-green-600 text-white hover:bg-green-700"
-            >
-              Save
-            </Button>
+      <div className="flex justify-end space-x-2 mt-4">
+        <Button 
+          variant="outline" 
+          onClick={testConnection}
+          disabled={testing}
+        >
+          {testing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Testing...
+            </>
+          ) : (
+            <>Test Connection</>
+          )}
+        </Button>
+        
+        {testSuccess && onSave && (
+          <Button onClick={onSave}>
+            Save Connection
+          </Button>
+        )}
+      </div>
+      
+      {requireVerification && fingerprint && (
+        <Alert className="mt-4">
+          <AlertTitle className="flex items-center">
+            <ShieldAlert className="h-4 w-4 mr-2" />
+            Host Key Verification Failed
+          </AlertTitle>
+          <AlertDescription className="mt-2">
+            <p className="mb-2">The authenticity of host '{formData.ip}' can't be established.</p>
+            <p className="mb-2">Fingerprint: <code className="bg-muted p-1 rounded">{fingerprint}</code></p>
+            <p className="mb-4">Are you sure you want to continue connecting?</p>
+            <div className="flex space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={verifyFingerprint}
+                disabled={testing}
+              >
+                {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                Yes, trust this host
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setRequireVerification(false)}
+              >
+                <X className="h-4 w-4 mr-2" />
+                No, cancel
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}
-
-      {testStatus === 'error' && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Connection failed</AlertTitle>
+      
+      {testError && !requireVerification && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertTitle className="flex items-center">
+            <AlertCircle className="h-4 w-4 mr-2" />
+            Connection Failed
+          </AlertTitle>
           <AlertDescription>
-            {testError || "Couldn't connect to the remote machine."}
+            {testError}
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {testSuccess && (
+        <Alert className="mt-4">
+          <AlertTitle className="flex items-center">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Connection Successful
+          </AlertTitle>
+          <AlertDescription>
+            <p>Successfully connected to the remote machine</p>
+            {fingerprint && (
+              <p className="mt-2">
+                <span className="font-medium">Host fingerprint:</span>{' '}
+                <code className="bg-muted p-1 rounded">{fingerprint}</code>{' '}
+                {fingerprintVerified && <Badge variant="outline" className="ml-2">Verified</Badge>}
+              </p>
+            )}
           </AlertDescription>
         </Alert>
       )}

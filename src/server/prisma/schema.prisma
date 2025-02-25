@@ -1,1 +1,111 @@
- 
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Models for virtualization
+model Connection {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String   // ssh, docker, portainer
+  ip          String
+  port        Int?
+  user        String?
+  password    String?  @db.Text
+  status      String   @default("pending") // connected, failed, pending
+  errorMessage String?
+  lastConnected DateTime?
+  
+  // Relation fields
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Add relation to logs
+  logs        ConnectionLog[]
+  
+  @@index([userId])
+  @@index([tenantId])
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("USER") // USER, ADMIN
+  tenantId      String?
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  connections   Connection[]
+  connectionLogs ConnectionLog[]
+  
+  @@index([tenantId])
+}
+
+// Tenant model
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  domain      String?  @unique
+  plan        String   @default("free") // free, pro, enterprise
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  users       User[]
+  connections Connection[]
+  connectionLogs ConnectionLog[]
+}
+
+// ConnectionLog model for logging connection activities
+model ConnectionLog {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  level       String   // debug, info, warn, error
+  message     String
+  action      String?
+  
+  // Related entities
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  connectionId String?
+  connection  Connection? @relation(fields: [connectionId], references: [id])
+  
+  // Additional data
+  ip          String?
+  metadata    Json?    // Additional structured data
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([tenantId])
+  @@index([connectionId])
+  @@index([action])
+  @@index([level])
+  @@index([timestamp])
+} 
