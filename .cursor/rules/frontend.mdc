@@ -1,7 +1,6 @@
 ---
 description: Frontend Best Practices
-globs: src/**/*.+(ts|tsx)
-alwaysApply: false
+globs: src/**/*.{ts,tsx}
 ---
 # Frontend Best Practices
 
