@@ -1,6 +1,6 @@
 ---
-description: backendwas 
-globs: 
+description: Backend Best Practices
+globs: src/server/**/*.{ts,js}
 ---
 # Backend CursorRules
 

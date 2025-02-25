@@ -1,0 +1,35 @@
+---
+description: Rules for handling internationalization and debugging in the application
+globs: ["**/*"]
+alwaysApply: true
+---
+# Cursor Rules for Debugging and i18n
+
+## Important
+- Always place cursor rules in the `.cursor/rules` directory with appropriate names (e.g., `i18n.mdc`, `debugging.mdc`)
+
+## General Debugging
+1. Be concise - no need to summarize what has been implemented
+2. Always verify terminal logs after implementing changes
+3. When checking browser logs, always refresh the page first to avoid seeing stale errors - limit browser log checks to 3 times maximum
+
+## i18n Handling
+1. When adding translations, always verify both French (fr) and English (en) files
+2. Check both sets of translation files when there are i18n issues:
+   - `/src/messages/{locale}.json` - Main translation files
+   - `/src/i18n/messages/{locale}.json` - Secondary translation files
+3. Ensure the `getMessages` function in `src/i18n/index.ts` is loading from the correct location
+4. Remember that changes to translation files may require a server restart
+
+## Next.js App Router
+1. For pages using translations, check that the namespace exists in all locale files
+2. The app uses Next.js App Router with the `[locale]` parameter in the URL
+3. The middleware in `src/middleware.ts` handles locale routing
+
+## After Making Changes
+1. Only restart the development server when necessary (Next.js has fast refresh for most changes)
+   - Restart is typically needed for: configuration files, middleware changes, or when fast refresh fails
+2. Before restarting, check if port 3000 is in use: `lsof -i :3000`
+3. If port 3000 is in use, kill the process: `kill -9 <PID>`
+4. Use `npm run dev` to restart the server on port 3000
+5. If the server starts on a different port (e.g., 3001), stop it and repeat steps 2-4 to ensure it runs on port 3000 

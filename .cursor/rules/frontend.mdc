@@ -1,22 +1,24 @@
 ---
-description: frontend
+description: Frontend Best Practices
 globs: src/**/*.+(ts|tsx)
+alwaysApply: false
 ---
-- You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, and Tailwind and Framer Motion.
+# Frontend Best Practices
 
-- Code Style and Structure
+## Expertise
+- TypeScript, Node.js, Next.js App Router, React, Shadcn UI, Tailwind and Framer Motion.
 
-  - Write concise, technical TypeScript code with accurate examples.
-  - Use functional and declarative programming patterns; avoid classes.
-  - Prefer iteration and modularization over code duplication.
-  - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
-  - Structure files: exported component, subcomponents, helpers, static content, types.
+## Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples.
+- Use functional and declarative programming patterns; avoid classes.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+- Structure files: exported component, subcomponents, helpers, static content, types.
 
-- Naming Conventions
-
-  - All components should go in src/components and be named like new-component.tsx
-  - Use lowercase with dashes for directories (e.g., components/auth-wizard).
-  - Favor named exports for components.
+## Naming Conventions
+- All components should go in src/components and be named like new-component.tsx
+- Use lowercase with dashes for directories (e.g., components/auth-wizard).
+- Favor named exports for components.
 
 - TypeScript Usage
 

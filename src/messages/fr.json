@@ -16,6 +16,28 @@
     "signIn": "Se connecter",
     "signUp": "S'inscrire"
   },
+  "Common": {
+    "new": "Nouveau",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "select": "Sélectionner",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "sort": "Trier",
+    "actions": "Actions",
+    "name": "Nom",
+    "description": "Description",
+    "type": "Type",
+    "status": "Statut",
+    "createdAt": "Créé le",
+    "updatedAt": "Mis à jour le",
+    "loading": "Chargement...",
+    "noData": "Aucune donnée disponible",
+    "devices": "Appareils",
+    "virtualization": "Virtualisation"
+  },
   "Auth": {
     "loginTitle": "Se connecter",
     "loginDescription": "Entrez votre email et mot de passe pour vous connecter",
@@ -87,5 +109,30 @@
     "currentLanguage": "Langue actuelle",
     "english": "Anglais",
     "french": "Français"
+  },
+  "Scripts": {
+    "title": "Scripts",
+    "scriptsList": "Vos Scripts",
+    "description": "Gérer vos scripts d'automatisation"
+  },
+  "Tests": {
+    "title": "Tests",
+    "testsList": "Vos Tests",
+    "description": "Voir et gérer vos tests"
+  },
+  "Reports": {
+    "title": "Rapports",
+    "reportsList": "Rapports de test",
+    "description": "Consultez vos rapports de test et analyses"
+  },
+  "Team": {
+    "title": "Équipe",
+    "teamMembers": "Membres de l'équipe",
+    "description": "Gérer les membres de votre équipe"
+  },
+  "Billing": {
+    "title": "Facturation",
+    "billingInfo": "Informations de facturation",
+    "description": "Gérer votre facturation et abonnement"
   }
 } 

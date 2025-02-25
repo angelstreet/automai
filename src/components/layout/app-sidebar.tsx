@@ -12,11 +12,25 @@ import { NavUser } from '@/components/layout/nav-user';
 import { TeamSwitcher } from '@/components/layout/team-switcher';
 import { sidebarData } from './data/sidebar-data';
 import { useSession } from 'next-auth/react';
+import { useRole } from '@/context/role-context';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
+  const { currentRole } = useRole();
 
   if (!session?.user) return null;
+
+  // Filter out empty sections based on user role
+  const filteredNavGroups = sidebarData.navGroups.filter(group => {
+    // Filter items in each group based on user role
+    const accessibleItems = group.items.filter(item => {
+      if (!item.roles) return true;
+      return item.roles.includes(currentRole);
+    });
+    
+    // Only include groups that have at least one accessible item
+    return accessibleItems.length > 0;
+  });
 
   return (
     <Sidebar collapsible="icon" variant="floating" {...props}>
@@ -24,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <TeamSwitcher teams={sidebarData.teams} />
       </SidebarHeader>
       <SidebarContent>
-        {sidebarData.navGroups.map((props) => (
+        {filteredNavGroups.map((props) => (
           <NavGroup key={props.title} {...props} />
         ))}
       </SidebarContent>

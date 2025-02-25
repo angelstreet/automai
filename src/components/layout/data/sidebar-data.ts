@@ -21,6 +21,9 @@ import {
   HelpCircle,
   Building2,
   Factory,
+  Server,
+  Box,
+  Layers,
 } from 'lucide-react';
 
 export type SidebarData = {
@@ -109,16 +112,6 @@ export const sidebarData: SidebarData = {
           ],
         },
         {
-          title: 'Devices',
-          href: '/devices',
-          icon: Monitor,
-          roles: ['admin', 'developer', 'tester'],
-          items: [
-            { title: 'Web', href: '/devices/web', icon: Globe },
-            { title: 'Mobile', href: '/devices/mobile', icon: Smartphone },
-          ],
-        },
-        {
           title: 'Reports',
           href: '/reports',
           icon: BarChart3,
@@ -127,6 +120,23 @@ export const sidebarData: SidebarData = {
             { title: 'Results', href: '/reports/results', icon: LineChart },
             { title: 'Performance', href: '/reports/metrics', icon: Gauge },
           ],
+        },
+      ],
+    },
+    {
+      title: 'Environment',
+      items: [
+        {
+          title: 'Devices',
+          href: '/devices',
+          icon: Monitor,
+          roles: ['admin', 'developer', 'tester'],
+        },
+        {
+          title: 'Virtualization',
+          href: '/virtualization',
+          icon: Server,
+          roles: ['admin', 'developer', 'tester'],
         },
       ],
     },

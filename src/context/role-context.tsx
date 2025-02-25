@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { useUser } from '@/lib/contexts/UserContext';
 
 export type Role = 'admin' | 'developer' | 'tester' | 'viewer';
 
@@ -11,6 +12,18 @@ const RoleContext = createContext<RoleContextType | undefined>(undefined);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [currentRole, setCurrentRole] = useState<Role>('viewer');
+  const { user, isLoading } = useUser();
+
+  // Update role when user data is loaded
+  useEffect(() => {
+    if (user && user.role) {
+      // Convert role to lowercase and ensure it's a valid Role type
+      const userRole = user.role.toLowerCase() as Role;
+      if (userRole === 'admin' || userRole === 'developer' || userRole === 'tester' || userRole === 'viewer') {
+        setCurrentRole(userRole);
+      }
+    }
+  }, [user]);
 
   return (
     <RoleContext.Provider value={{ currentRole, setCurrentRole }}>{children}</RoleContext.Provider>

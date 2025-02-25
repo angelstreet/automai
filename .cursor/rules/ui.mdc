@@ -1,6 +1,6 @@
 ---
 description: UI Best Practices
-globs: /**/*.{ts,tsx}
+globs: src/**/*.{ts,tsx}
 ---
 
 # UI Best Practices

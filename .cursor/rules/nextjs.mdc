@@ -1,5 +1,5 @@
 ---
-description: Best Practices for Next.js with App Routerc
+description: Best Practices for Next.js with App Router
 globs: src/**/*.{ts,tsx}
 ---
 

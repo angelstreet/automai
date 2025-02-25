@@ -195,7 +195,7 @@ const register = async (req: express.Request, res: express.Response) => {
         password: hashedPassword,
         name,
         tenantId: tenant?.id,
-        role: tenant ? 'ADMIN' : 'USER', // Make user admin if they created a tenant
+        role: 'ADMIN', // Always set new users to ADMIN on first connection
       },
       include: {
         tenant: true,
