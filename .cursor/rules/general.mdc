@@ -28,7 +28,8 @@ alwaysApply: true
    - **NEVER** consider a task complete until you've verified the logs are free of these errors
    - If errors are found, fix them before proceeding or explicitly acknowledge them
 3. When checking browser logs, always refresh the page first to avoid seeing stale errors - limit browser log checks to 3 times maximum
-4. If a server restart is necessary:
+4. **Linter errors**: Only try to fix linter errors once, not 3 times. Fixing linter errors is not mandatory and will consume fast requests. If the fix doesn't work on the first attempt, acknowledge the linter errors and move on.
+5. If a server restart is necessary:
    - First check if the port is in use: `lsof -i :3000`
    - If in use, kill the process: `kill -9 <PID>`
    - Only then start the server with `npm run dev`
