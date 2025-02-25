@@ -8,11 +8,15 @@ interface StatusSummaryProps {
     error: number;
     total: number;
   };
-  onStatusFilter: (status: string | null) => void;
-  selectedFilters: Set<string>;
+  onStatusFilter?: (status: string | null) => void;
+  selectedFilters?: Set<string>;
 }
 
-export function StatusSummary({ vmStatusSummary, onStatusFilter, selectedFilters }: StatusSummaryProps) {
+export function StatusSummary({ 
+  vmStatusSummary, 
+  onStatusFilter = () => {}, 
+  selectedFilters = new Set<string>() 
+}: StatusSummaryProps) {
   return (
     <div className="flex items-center gap-4">
       <div className="flex items-center">

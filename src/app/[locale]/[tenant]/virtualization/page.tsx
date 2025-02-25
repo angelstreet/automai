@@ -1,110 +1,113 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Plus, RefreshCcw, Settings, Download, LayoutGrid, Table2, ScrollText, Terminal, BarChart2 } from 'lucide-react';
+import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settings } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { DeviceList } from '@/components/virtualization/Overview/DeviceList';
-import { generateTestDevices } from '@/constants/virtualization';
-import { Device } from '@/types/virtualization';
-import { CreateVMDialog } from '@/components/virtualization/Overview/CreateVMDialog';
+import { MachineList } from '@/components/virtualization/Overview/MachineList';
+import { Machine } from '@/types/virtualization';
+import { ConnectMachineDialog } from '@/components/virtualization/Overview/ConnectMachineDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function VirtualizationPage() {
   const t = useTranslations('Common');
   const params = useParams();
+  const router = useRouter();
   const tenant = params.tenant as string;
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFilters, setSelectedFilters] = useState<Set<string>>(new Set());
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [machineToDelete, setMachineToDelete] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [machines, setMachines] = useState<Machine[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [devices] = useState(generateTestDevices(50));
 
-  // Calculate VM status summary
-  const vmStatusSummary = {
-    running: devices.filter(d => d.status === 'running').length,
-    warning: devices.filter(d => d.status === 'warning').length,
-    error: devices.filter(d => d.status === 'error').length,
-    total: devices.length
-  };
-
-  // Calculate alert summary
-  const alertSummary = {
-    memory: devices.filter(d => d.alerts.some(alert => alert.type === 'memory')).length,
-    cpu: devices.filter(d => d.alerts.some(alert => alert.type === 'cpu')).length,
-    error: devices.filter(d => d.alerts.some(alert => alert.type === 'error')).length,
-    total: devices.filter(d => d.alerts.length > 0).length
-  };
-
-  const handleSelectItem = (id: string) => {
-    if (isSelectionMode) {
-      setSelectedItems(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(id)) {
-          newSet.delete(id);
-        } else {
-          if (newSet.size < 4) {
-            newSet.add(id);
-          } else {
-            toast({
-              title: "Selection limit reached",
-              description: "You can select a maximum of 4 items",
-              variant: "destructive",
-            });
-          }
-        }
-        return newSet;
+  // Fetch machines from API
+  const fetchMachines = async () => {
+    try {
+      const response = await fetch('/api/virtualization/machines');
+      if (!response.ok) {
+        throw new Error('Failed to fetch machines');
+      }
+      const data = await response.json();
+      setMachines(data.data);
+    } catch (error) {
+      console.error('Error fetching machines:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load machines',
       });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  const handleStatusFilter = (status: string | null) => {
-    if (status === null) {
-      setSelectedFilters(new Set());
-    } else {
-      setSelectedFilters(prev => {
-        const newFilters = new Set(prev);
-        if (newFilters.has(status)) {
-          newFilters.delete(status);
-        } else {
-          newFilters.add(status);
-        }
-        return newFilters;
-      });
-    }
+  // Initial fetch
+  useEffect(() => {
+    fetchMachines();
+  }, []);
+
+  // Handle refresh
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchMachines();
   };
 
-  // Filter devices by search term and status
-  const filteredDevices = devices.filter(device => {
-    const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.alerts.some(alert => alert.message.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = selectedFilters.size === 0 || selectedFilters.has(device.status);
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Handle connection success
+  const handleConnectionSuccess = (newMachine: Machine) => {
+    setMachines(prev => [...prev, newMachine]);
+  };
 
-  // Calculate total pages
-  const totalPages = Math.ceil(filteredDevices.length / itemsPerPage);
-  
-  // Calculate current page items
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = filteredDevices.slice(startIndex, endIndex);
+  // Handle delete machine
+  const handleDeleteMachine = (id: string) => {
+    setMachineToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Confirm delete machine
+  const confirmDeleteMachine = async () => {
+    if (!machineToDelete) return;
+    
+    try {
+      const response = await fetch(`/api/virtualization/machines/${machineToDelete}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete machine');
+      }
+      
+      setMachines(prev => prev.filter(machine => machine.id !== machineToDelete));
+      toast({
+        title: 'Success',
+        description: 'Machine deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting machine:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to delete machine',
+      });
+    } finally {
+      setMachineToDelete(null);
+      setIsDeleteDialogOpen(false);
+    }
+  };
 
   return (
     <div className="flex-1 space-y-2 pt-2 h-[calc(100vh-90px)] max-h-[calc(100vh-90px)] flex flex-col overflow-hidden">
       {/* Title section with buttons */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Remote Machines</h1>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -123,213 +126,83 @@ export default function VirtualizationPage() {
           </TooltipProvider>
         </div>
         <div className="flex gap-2">
-          {isSelectionMode ? (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsSelectionMode(false);
-                  setSelectedItems(new Set());
-                }}
-              >
-                Cancel
-              </Button>
-              {selectedItems.size > 0 && (
-                <TooltipProvider>
-                  <div className="flex gap-2">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                          onClick={() => {
-                            const deviceIds = Array.from(selectedItems).join(',');
-                            window.location.href = `/${params.locale}/${params.tenant}/virtualization/settings?devices=${deviceIds}`;
-                          }}
-                        >
-                          <Settings className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Settings</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                          onClick={() => {
-                            const deviceIds = Array.from(selectedItems).join(',');
-                            window.location.href = `/${params.locale}/${params.tenant}/virtualization/logs?devices=${deviceIds}`;
-                          }}
-                        >
-                          <ScrollText className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                        <p>Logs</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                          onClick={() => {
-                            const deviceIds = Array.from(selectedItems).join(',');
-                            const selectedDeviceNames = Array.from(selectedItems)
-                              .map(id => devices.find(d => d.id === id)?.name || id)
-                              .join(',');
-                            window.location.href = `/${params.locale}/${params.tenant}/virtualization/terminals?devices=${selectedDeviceNames}`;
-                          }}
-                        >
-                          <Terminal className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                        <p>Terminals</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="outline" 
-                                    size="icon" 
-                          onClick={() => {
-                            const deviceIds = Array.from(selectedItems).join(',');
-                            window.location.href = `/${params.locale}/${params.tenant}/virtualization/analytics?devices=${deviceIds}`;
-                          }}
-                        >
-                          <BarChart2 className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Analytics</p>
-                                </TooltipContent>
-                              </Tooltip>
-                          </div>
-                </TooltipProvider>
-              )}
-            </>
-          ) : (
-            <Button variant="outline" size="sm" onClick={() => setIsSelectionMode(true)}>
-              Select
-                        </Button>
-          )}
-          <CreateVMDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
-                    </div>
-                    </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsDialogOpen(true)}
+          >
+            Connect
+          </Button>
+          
+          <ConnectMachineDialog 
+            open={isDialogOpen} 
+            onOpenChange={setIsDialogOpen} 
+            onSuccess={handleConnectionSuccess}
+          />
+        </div>
+      </div>
       
       <div className="space-y-2 flex-1 flex flex-col overflow-hidden">
         <div className="flex items-center justify-between py-1">
-              <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7">
-                    <RefreshCcw className="h-4 w-4" />
-                    </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-7"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                  >
+                    <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Refresh</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-              </div>
-            </div>
+          </div>
+        </div>
             
         <div className="flex-1 overflow-hidden">
-          <DeviceList
-            devices={currentItems}
-            selectedItems={selectedItems}
-            onItemSelect={handleSelectItem}
-            viewMode={viewMode}
-            isSelectionMode={isSelectionMode}
-            onStatusFilter={handleStatusFilter}
-            selectedFilters={selectedFilters}
-            className="h-full overflow-auto"
-                    />
-                  </div>
-        
-        {/* Pagination controls */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t pt-2">
-            <div className="flex items-center gap-2">
-              <div className="text-sm whitespace-nowrap">
-                <span className="font-medium">{startIndex + 1}-{Math.min(endIndex, filteredDevices.length)}</span>
-                <span className="text-muted-foreground"> of {filteredDevices.length}</span>
+          {isLoading ? (
+            <div className="p-4 space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-40 w-full" />
+                ))}
               </div>
-              <div className="flex items-center gap-1">
-                <select 
-                  className="h-7 rounded-md border border-input bg-background px-2 text-xs"
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1); // Reset to first page when changing items per page
-                  }}
-                >
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                  <option value="50">50</option>
-                </select>
-                <span className="text-xs text-muted-foreground">per page</span>
-                      </div>
-                  </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="h-7 px-2"
-              >
-                Previous
-                      </Button>
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className="h-7 w-7 p-0"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-                {totalPages > 5 && <span className="px-1">...</span>}
-                {totalPages > 5 && (
-                  <Button
-                    variant={currentPage === totalPages ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(totalPages)}
-                    className="h-7 w-7 p-0"
-                  >
-                    {totalPages}
-                    </Button>
-                )}
-                      </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="h-7 px-2"
-              >
-                Next
-                    </Button>
-                  </div>
-                </div>
-        )}
+            </div>
+          ) : (
+            <MachineList
+              machines={machines}
+              isLoading={isLoading}
+              onRefresh={handleRefresh}
+              onDelete={handleDeleteMachine}
+              className="h-full"
+            />
+          )}
+        </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Machine</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this machine? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMachineToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteMachine}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 

@@ -1,4 +1,4 @@
-import { Device } from '@/types/virtualization';
+import { Device, Machine } from '@/types/virtualization';
 
 export const MOCK_DEVICES: Device[] = [
   {
@@ -50,6 +50,45 @@ export const MOCK_DEVICES: Device[] = [
     connectionType: 'docker',
     alerts: [],
     containers: { total: 4, running: 4 }
+  }
+];
+
+// Mock data for machines
+export const mockMachines: Machine[] = [
+  {
+    id: '1',
+    name: 'Development Server',
+    description: 'Main development server for testing',
+    type: 'ssh',
+    ip: '192.168.1.100',
+    port: 22,
+    status: 'connected',
+    lastConnected: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: '2',
+    name: 'Docker Host',
+    description: 'Docker container host',
+    type: 'docker',
+    ip: '192.168.1.101',
+    port: 2375,
+    status: 'pending',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: '3',
+    name: 'Portainer Instance',
+    description: 'Portainer container management',
+    type: 'portainer',
+    ip: '192.168.1.102',
+    port: 9000,
+    status: 'failed',
+    errorMessage: 'Connection refused',
+    createdAt: new Date(),
+    updatedAt: new Date(),
   }
 ];
 

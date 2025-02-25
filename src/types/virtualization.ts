@@ -26,4 +26,26 @@ export interface VMConfig {
   image: string;
   cpu: number;
   memory: number;
+}
+
+export interface Machine {
+  id: string;
+  name: string;
+  description?: string;
+  
+  // Connection details
+  type: 'ssh' | 'docker' | 'portainer';
+  ip: string;
+  port?: number;
+  
+  // SSH specific fields
+  user?: string;
+  
+  // Status fields
+  status: 'connected' | 'failed' | 'pending';
+  lastConnected?: Date;
+  errorMessage?: string;
+  
+  createdAt: Date;
+  updatedAt: Date;
 } 

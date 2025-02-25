@@ -17,6 +17,10 @@ console.log('Loading stats routes...');
 const statsRoutes = require('./stats/routes');
 console.log('Stats routes loaded successfully');
 
+console.log('Loading virtualization routes...');
+const machinesRoutes = require('./virtualization/machines').default;
+console.log('Virtualization routes loaded successfully');
+
 // Health check endpoint
 router.get('/health', (req, res) => {
   console.log('Health check endpoint called');
@@ -42,5 +46,10 @@ console.log('Test case routes set up successfully');
 console.log('Setting up stats routes...');
 router.use('/stats', statsRoutes);
 console.log('Stats routes set up successfully');
+
+// Virtualization routes
+console.log('Setting up virtualization routes...');
+router.use('/virtualization/machines', machinesRoutes);
+console.log('Virtualization routes set up successfully');
 
 module.exports = router;
