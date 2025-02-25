@@ -79,9 +79,22 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from '@/components/ui/use-toast';
 
 // Mock data for demonstration
-const MOCK_DEVICES = [
+type ConnectionType = 'portainer' | 'docker' | 'ssh' | 'unknown';
+
+type Device = {
+  id: string;
+  name: string;
+  status: string;
+  statusLabel: string;
+  connectionType: ConnectionType;
+  alerts: string[];
+  containers: { total: number; running: number };
+};
+
+const MOCK_DEVICES: Device[] = [
   {
     id: '1',
     name: 'vm-tenant1-prod',
@@ -265,7 +278,19 @@ const MOCK_DEVICES = [
 ];
 
 // XTerminal component for terminal integration
-const XTerminal = ({ id, vm, connectionType, isActive, height = '100%' }) => {
+const XTerminal = ({ 
+  id, 
+  vm, 
+  connectionType, 
+  isActive, 
+  height = '100%' 
+}: { 
+  id: string; 
+  vm: string; 
+  connectionType: ConnectionType; 
+  isActive: boolean; 
+  height?: string; 
+}) => {
   const colors = {
     portainer: 'from-blue-500/10 to-blue-500/5',
     docker: 'from-green-500/10 to-green-500/5',
@@ -378,6 +403,7 @@ export default function VirtualizationPage() {
   const t = useTranslations('Common');
   const params = useParams();
   const tenant = params.tenant as string;
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
@@ -480,7 +506,17 @@ export default function VirtualizationPage() {
         if (newSet.has(id)) {
           newSet.delete(id);
         } else {
-          newSet.add(id);
+          // Only add if we haven't reached the maximum of 4 items
+          if (newSet.size < 4) {
+            newSet.add(id);
+          } else {
+            // Show warning toast when trying to select more than 4 items
+            toast({
+              title: "Selection limit reached",
+              description: "You can select a maximum of 4 items",
+              variant: "destructive",
+            });
+          }
         }
         return newSet;
       });
@@ -526,7 +562,7 @@ export default function VirtualizationPage() {
   // Get selected devices data
   const selectedDevicesData = Array.from(selectedItems)
     .map(id => devices.find(device => device.id === id))
-    .filter((device): device is typeof MOCK_DEVICES[0] => device !== undefined);
+    .filter((device): device is Device => device !== undefined);
 
   return (
     <div className="flex-1 space-y-3 pt-3 h-[calc(100vh-80px)] flex flex-col">
@@ -536,11 +572,6 @@ export default function VirtualizationPage() {
         <div className="flex gap-2">
           {isSelectionMode ? (
             <>
-              {selectedItems.size > 0 && (
-                <Button variant="destructive" size="sm">
-                  Delete ({selectedItems.size})
-                </Button>
-              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -1288,7 +1319,7 @@ export default function VirtualizationPage() {
                     <XTerminal 
                       id={selectedDeviceId}
                       vm={devices.find(d => d.id === selectedDeviceId)?.name || ''}
-                      connectionType={devices.find(d => d.id === selectedDeviceId)?.connectionType || 'unknown'}
+                      connectionType={(devices.find(d => d.id === selectedDeviceId)?.connectionType || 'unknown')}
                       isActive={true}
                       height="100%"
                     />
@@ -1596,7 +1627,7 @@ export default function VirtualizationPage() {
                           <span className="text-green-500">2.5 MB/s</span>
                         </div>
                         <div className="w-full bg-muted rounded-full h-2">
-                          <div className="h-2 rounded-full bg-green-500" style={{ width: '35%' }}></div>
+                          <div className="h-2 rounded-full bg-green-500" style={{ width: '55%' }}></div>
                         </div>
                       </div>
                     </div>
