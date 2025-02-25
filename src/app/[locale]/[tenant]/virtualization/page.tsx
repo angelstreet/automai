@@ -91,7 +91,7 @@ export default function VirtualizationPage() {
       });
     } catch (error) {
       console.error('Error deleting machine:', error);
-      toast({
+            toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to delete machine',
@@ -106,33 +106,35 @@ export default function VirtualizationPage() {
     <div className="flex-1 space-y-2 pt-2 h-[calc(100vh-90px)] max-h-[calc(100vh-90px)] flex flex-col overflow-hidden">
       {/* Title section with buttons */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">Remote Machines</h1>
           <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
-                >
-                  {viewMode === 'grid' ? <Table2 className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Toggle view mode</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                    size="sm" 
+                    className="h-7"
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                  >
+                    <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                  <p>Refresh</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+                                  <Button 
+                                    variant="outline" 
             size="sm" 
             onClick={() => setIsDialogOpen(true)}
           >
             Connect
-          </Button>
+                                  </Button>
           
           <ConnectMachineDialog 
             open={isDialogOpen} 
@@ -143,29 +145,6 @@ export default function VirtualizationPage() {
       </div>
       
       <div className="space-y-2 flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between py-1">
-          <div className="flex items-center space-x-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-7"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                  >
-                    <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Refresh</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        </div>
-            
         <div className="flex-1 overflow-hidden">
           {isLoading ? (
             <div className="p-4 space-y-4">
@@ -173,9 +152,9 @@ export default function VirtualizationPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(6)].map((_, i) => (
                   <Skeleton key={i} className="h-40 w-full" />
-                ))}
-              </div>
+              ))}
             </div>
+                    </div>
           ) : (
             <MachineList
               machines={machines}
@@ -185,8 +164,8 @@ export default function VirtualizationPage() {
               className="h-full"
             />
           )}
-        </div>
-      </div>
+          </div>
+                      </div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
