@@ -172,11 +172,11 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
       }
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Connect to client</DialogTitle>
           <DialogDescription>
-            Connect to a remote machine or container host
+            Connect the remote machine or container
           </DialogDescription>
         </DialogHeader>
         

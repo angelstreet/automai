@@ -48,87 +48,85 @@ export function ConnectionForm({
 
   return (
     <div className="space-y-3 py-2">
-      <div className="space-y-1">
-        <Label htmlFor="name">Name</Label>
+      <div className="grid grid-cols-12 items-center gap-3">
+        <Label htmlFor="name" className="text-right col-span-2">Name</Label>
         <Input
           id="name"
           placeholder="Client name"
           value={formData.name}
           onChange={(e) => handleInputChange('name', e.target.value)}
+          className="col-span-10"
         />
       </div>
       
-      <div className="space-y-1">
-        <Label htmlFor="type">Connection Type</Label>
-        <Select 
-          value={formData.type} 
-          onValueChange={handleTypeChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ssh">SSH</SelectItem>
-            <SelectItem value="docker">Docker</SelectItem>
-            <SelectItem value="portainer">Portainer</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-12 items-center gap-3">
+        <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">Connection Type</Label>
+        <div className="col-span-10">
+          <Select 
+            value={formData.type} 
+            onValueChange={handleTypeChange}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ssh">SSH</SelectItem>
+              <SelectItem value="docker">Docker</SelectItem>
+              <SelectItem value="portainer">Portainer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
-      <div className="grid grid-cols-3 gap-3">
-        <div className="col-span-2 space-y-1">
-          <Label htmlFor="ip">IP Address</Label>
-          <Input
-            id="ip"
-            placeholder="IP Address"
-            value={formData.ip}
-            onChange={(e) => handleInputChange('ip', e.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="port">Port</Label>
-          <Input
-            id="port"
-            placeholder="Port"
-            value={formData.port}
-            onChange={(e) => handleInputChange('port', e.target.value)}
-          />
-        </div>
+      <div className="grid grid-cols-12 items-center gap-3">
+        <Label htmlFor="ip" className="text-right col-span-2 whitespace-nowrap">IP Address</Label>
+        <Input
+          id="ip"
+          placeholder="IP Address"
+          value={formData.ip}
+          onChange={(e) => handleInputChange('ip', e.target.value)}
+          className="col-span-7"
+        />
+        <Label htmlFor="port" className="text-right whitespace-nowrap col-span-1">Port</Label>
+        <Input
+          id="port"
+          placeholder="Port"
+          value={formData.port}
+          onChange={(e) => handleInputChange('port', e.target.value)}
+          className="col-span-2"
+        />
       </div>
       
       {connectionType === 'ssh' && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label htmlFor="user">Username</Label>
-            <Input
-              id="user"
-              placeholder="Username"
-              value={formData.user}
-              onChange={(e) => handleInputChange('user', e.target.value)}
-            />
-          </div>
-          
-          <div className="space-y-1">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
-            />
-          </div>
+        <div className="grid grid-cols-12 items-center gap-3">
+          <Label htmlFor="user" className="text-right col-span-2 whitespace-nowrap">Username</Label>
+          <Input
+            id="user"
+            placeholder="Username"
+            value={formData.user}
+            onChange={(e) => handleInputChange('user', e.target.value)}
+            className="col-span-4"
+          />
+          <Label htmlFor="password" className="text-right whitespace-nowrap col-span-2">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="Password"
+            value={formData.password}
+            onChange={(e) => handleInputChange('password', e.target.value)}
+            className="col-span-4"
+          />
         </div>
       )}
       
-      <div className="space-y-1">
-        <Label htmlFor="description">Description</Label>
+      <div className="grid grid-cols-12 items-center gap-3">
+        <Label htmlFor="description" className="text-right col-span-2">Description</Label>
         <Textarea
           id="description"
           placeholder="Description (optional)"
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
-          className="h-16"
+          className="col-span-10 h-16"
         />
       </div>
       
