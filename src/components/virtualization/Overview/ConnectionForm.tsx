@@ -21,6 +21,7 @@ interface ConnectionFormProps {
   onChange: (formData: FormData) => void;
   testStatus: 'idle' | 'success' | 'error';
   testError: string | null;
+  isValidating?: boolean;
 }
 
 export function ConnectionForm({ 
@@ -60,7 +61,7 @@ export function ConnectionForm({
       </div>
       
       <div className="grid grid-cols-12 items-center gap-3">
-        <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">Connection Type</Label>
+        <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">Connection</Label>
         <div className="col-span-10">
           <Select 
             value={formData.type} 

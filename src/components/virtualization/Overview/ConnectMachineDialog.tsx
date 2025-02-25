@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,8 +11,6 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { Machine } from '@/types/virtualization';
 import { Loader2 } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
 import { ConnectionForm, FormData } from './ConnectionForm';
 
 interface ConnectMachineDialogProps {
@@ -37,7 +35,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
     password: '',
   });
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
       name: '',
       description: '',
@@ -49,19 +47,67 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
     });
     setTestStatus('idle');
     setTestError(null);
+  }, []);
+
+  const validateFormData = (): boolean => {
+    if (!formData.name.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: 'Please provide a name for the connection',
+      });
+      return false;
+    }
+
+    if (!formData.ip.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: 'Please provide an IP address',
+      });
+      return false;
+    }
+
+    const port = parseInt(formData.port);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: 'Port must be a number between 1 and 65535',
+      });
+      return false;
+    }
+
+    if (formData.type === 'ssh' && (!formData.user.trim() || !formData.password.trim())) {
+      toast({
+        variant: 'destructive',
+        title: 'Validation Error',
+        description: 'Username and password are required for SSH connections',
+      });
+      return false;
+    }
+
+    return true;
   };
 
   const handleCreate = async () => {
+    if (!validateFormData()) return;
+
     setIsCreating(true);
     try {
-      // First test the connection
-      await testConnection();
-
-      if (testStatus === 'error') {
-        throw new Error('Connection test failed');
+      if (testStatus !== 'success') {
+        const testSucceeded = await testConnection();
+        if (!testSucceeded) {
+          const userConfirms = window.confirm(
+            'Connection test failed. Do you still want to create this connection?'
+          );
+          if (!userConfirms) {
+            setIsCreating(false);
+            return;
+          }
+        }
       }
 
-      // Create the connection
       const response = await fetch('/api/virtualization/machines', {
         method: 'POST',
         headers: {
@@ -78,11 +124,12 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
         }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to create connection');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create connection');
       }
+
+      const data = await response.json();
 
       toast({
         title: 'Connection created',
@@ -107,7 +154,33 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
     }
   };
 
-  const testConnection = async () => {
+  const getDetailedErrorMessage = (errorData: any): string => {
+    if (!errorData) return 'Unknown error occurred';
+    
+    if (errorData.message) {
+      const message = errorData.message;
+      
+      if (message.includes('timeout')) {
+        return `Connection timed out. Please check if the IP address and port are correct and that any firewalls allow the connection.`;
+      }
+      
+      if (message.includes('refused')) {
+        return `Connection refused. Please check if the service is running on the target machine and the port is correct.`;
+      }
+      
+      if (message.includes('authentication') || message.includes('password')) {
+        return `Authentication failed. Please check your username and password.`;
+      }
+      
+      return message;
+    }
+    
+    return 'Failed to connect to the remote machine. Please check your connection details.';
+  };
+
+  const testConnection = async (): Promise<boolean> => {
+    if (!validateFormData()) return false;
+
     setIsTesting(true);
     setTestStatus('idle');
     setTestError(null);
@@ -131,7 +204,8 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
 
       if (!response.ok) {
         setTestStatus('error');
-        setTestError(data.message || 'Connection test failed');
+        const errorMessage = getDetailedErrorMessage(data);
+        setTestError(errorMessage || 'Connection test failed');
         return false;
       }
 
@@ -155,7 +229,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
     }
   };
 
-  const isFormValid = () => {
+  const isFormValid = (): boolean => {
     if (!formData.name.trim() || !formData.ip.trim()) return false;
     
     if (formData.type === 'ssh' && (!formData.user.trim() || !formData.password.trim())) {
@@ -176,7 +250,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
         <DialogHeader>
           <DialogTitle>Connect to client</DialogTitle>
           <DialogDescription>
-            Connect the remote machine or container
+            Connect to a remote machine or container for management
           </DialogDescription>
         </DialogHeader>
         
@@ -185,14 +259,15 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           onChange={handleFormChange}
           testStatus={testStatus}
           testError={testError}
+          isValidating={isTesting || isCreating}
         />
         
-        <DialogFooter className="flex flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">
           <Button
             onClick={testConnection}
             type="button"
             variant="outline"
-            disabled={!isFormValid() || isTesting}
+            disabled={!isFormValid() || isTesting || isCreating}
             className="w-full sm:w-auto"
           >
             {isTesting ? (
@@ -200,6 +275,8 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Testing...
               </>
+            ) : testStatus === 'success' ? (
+              'Test Again'
             ) : 'Test Connection'}
           </Button>
           

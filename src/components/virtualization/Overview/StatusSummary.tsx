@@ -28,7 +28,15 @@ export function StatusSummary({
               ? 'bg-green-500/20 text-green-500 border-green-500/40' 
               : 'bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/15'}
           `}
-          onClick={() => onStatusFilter('running')}
+          onClick={() => {
+            if (selectedFilters.has('running')) {
+              const newFilters = new Set(selectedFilters);
+              newFilters.delete('running');
+              onStatusFilter(newFilters.size ? Array.from(newFilters)[0] : null);
+            } else {
+              onStatusFilter('running');
+            }
+          }}
         >
           <CheckCircle2 className="mr-1 h-4 w-4" /> 
           Running: {vmStatusSummary.running}
@@ -43,7 +51,15 @@ export function StatusSummary({
               ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/40' 
               : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/15'}
           `}
-          onClick={() => onStatusFilter('warning')}
+          onClick={() => {
+            if (selectedFilters.has('warning')) {
+              const newFilters = new Set(selectedFilters);
+              newFilters.delete('warning');
+              onStatusFilter(newFilters.size ? Array.from(newFilters)[0] : null);
+            } else {
+              onStatusFilter('warning');
+            }
+          }}
         >
           <AlertCircle className="mr-1 h-4 w-4" /> 
           Warning: {vmStatusSummary.warning}
@@ -58,7 +74,15 @@ export function StatusSummary({
               ? 'bg-red-500/20 text-red-500 border-red-500/40' 
               : 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/15'}
           `}
-          onClick={() => onStatusFilter('error')}
+          onClick={() => {
+            if (selectedFilters.has('error')) {
+              const newFilters = new Set(selectedFilters);
+              newFilters.delete('error');
+              onStatusFilter(newFilters.size ? Array.from(newFilters)[0] : null);
+            } else {
+              onStatusFilter('error');
+            }
+          }}
         >
           <AlertCircle className="mr-1 h-4 w-4" /> 
           Error: {vmStatusSummary.error}
@@ -67,7 +91,12 @@ export function StatusSummary({
       <div className="flex items-center">
         <Badge 
           variant="outline" 
-          className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-3 py-1 cursor-pointer hover:bg-blue-500/15"
+          className={`
+            px-3 py-1 cursor-pointer transition-colors
+            ${selectedFilters.size === 0 
+              ? 'bg-blue-500/20 text-blue-500 border-blue-500/40' 
+              : 'bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/15'}
+          `}
           onClick={() => onStatusFilter(null)}
         >
           <Server className="mr-1 h-4 w-4" /> 

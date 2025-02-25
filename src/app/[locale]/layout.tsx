@@ -40,8 +40,10 @@ export default async function LocaleLayout(props: Props) {
 
   const messages = await getMessages(validLocale);
 
-  // Get theme from cookie - using a different approach to avoid the warning
-  const theme = cookies().has('theme') ? cookies().get('theme')?.value : 'system';
+  // Get theme from cookie
+  const cookieList = cookies();
+  const themeCookie = cookieList.get('theme');
+  const theme = themeCookie ? themeCookie.value : 'system';
 
   return (
     <html lang={validLocale} suppressHydrationWarning>

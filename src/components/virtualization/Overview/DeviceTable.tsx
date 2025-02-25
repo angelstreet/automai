@@ -33,24 +33,24 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
   return (
     <div className="w-full">
       <div className="flex flex-col">
-        <div className="flex items-center px-2 py-1 bg-muted/50 text-xs font-medium text-muted-foreground">
-          {isSelectionMode && <div className="w-6" />}
+        <div className="flex items-center px-2 py-0.5 bg-muted/50 text-xs font-medium text-muted-foreground">
+          {isSelectionMode && <div className="w-5" />}
           <div className="flex-1">Name</div>
-          <div className="w-24 text-center">Containers</div>
-          <div className="w-24 text-center">Status</div>
-          <div className="w-24 text-center">Actions</div>
+          <div className="w-20 text-center">Containers</div>
+          <div className="w-20 text-center">Status</div>
+          <div className="w-20 text-center">Actions</div>
         </div>
         
         {devices.map(device => (
           <div
             key={device.id}
             className={`
-              flex items-center px-2 py-1 border-b last:border-b-0
+              flex items-center px-2 py-0.5 border-b last:border-b-0
               ${selectedItems.has(device.id) ? 'bg-muted/50' : ''}
             `}
           >
             {isSelectionMode && (
-              <div className="w-6">
+              <div className="w-5">
                 <Checkbox
                   checked={selectedItems.has(device.id)}
                   onCheckedChange={() => onItemSelect(device.id)}
@@ -58,70 +58,70 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
               </div>
             )}
             
-            <div className="flex-1 flex items-center space-x-2 min-w-0">
+            <div className="flex-1 flex items-center space-x-1.5 min-w-0">
               {renderConnectionIcon(device.connectionType)}
-              <span className="text-sm truncate">{device.name}</span>
+              <span className="text-xs truncate">{device.name}</span>
               {device.alerts.length > 0 && (
-                <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                <Badge variant="destructive" className="h-4 px-1 text-[10px]">
                   {device.alerts.length}
                 </Badge>
               )}
             </div>
             
-            <div className="w-24 flex items-center justify-center space-x-1 text-xs text-muted-foreground">
-              <Box className="h-3.5 w-3.5" />
+            <div className="w-20 flex items-center justify-center space-x-1 text-[10px] text-muted-foreground">
+              <Box className="h-3 w-3" />
               <span>{device.containers.running}/{device.containers.total}</span>
             </div>
             
-            <div className="w-24 flex items-center justify-center">
+            <div className="w-20 flex items-center justify-center">
               <Badge 
                 variant="outline"
-                className={`${STATUS_VARIANTS[device.status]} flex items-center h-5 px-1.5 text-xs`}
+                className={`${STATUS_VARIANTS[device.status]} flex items-center h-4 px-1 text-[10px]`}
               >
                 {device.statusLabel}
               </Badge>
             </div>
             
-            <div className="w-24 flex gap-0.5 justify-end">
+            <div className="w-20 flex gap-0.5 justify-end">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-5 w-5"
                 onClick={() => {
                   window.location.href = `/${params.locale}/${params.tenant}/virtualization/settings?devices=${device.id}`;
                 }}
               >
-                <Settings className="h-3.5 w-3.5" />
+                <Settings className="h-3 w-3" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-5 w-5"
                 onClick={() => {
                   window.location.href = `/${params.locale}/${params.tenant}/virtualization/logs?devices=${device.id}`;
                 }}
               >
-                <ScrollText className="h-3.5 w-3.5" />
+                <ScrollText className="h-3 w-3" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-5 w-5"
                 onClick={() => {
                   window.location.href = `/${params.locale}/${params.tenant}/virtualization/terminals?devices=${device.name}`;
                 }}
               >
-                <Terminal className="h-3.5 w-3.5" />
+                <Terminal className="h-3 w-3" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-5 w-5"
                 onClick={() => {
                   window.location.href = `/${params.locale}/${params.tenant}/virtualization/analytics?devices=${device.id}`;
                 }}
               >
-                <BarChart2 className="h-3.5 w-3.5" />
+                <BarChart2 className="h-3 w-3" />
               </Button>
             </div>
           </div>
