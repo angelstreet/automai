@@ -121,6 +121,8 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           port: formData.port ? parseInt(formData.port) : undefined,
           user: formData.user,
           password: formData.password,
+          status: 'running',
+          statusLabel: 'Connected'
         }),
       });
 
@@ -283,15 +285,15 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           <Button
             onClick={handleCreate}
             type="button"
-            disabled={!isFormValid() || isCreating}
+            disabled={!isFormValid() || isCreating || testStatus !== 'success'}
             className="w-full sm:w-auto"
           >
             {isCreating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
+                Saving...
               </>
-            ) : 'Connect'}
+            ) : 'Save'}
           </Button>
         </DialogFooter>
       </DialogContent>

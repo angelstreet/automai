@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export interface FormData {
   name: string;
@@ -22,13 +23,15 @@ interface ConnectionFormProps {
   testStatus: 'idle' | 'success' | 'error';
   testError: string | null;
   isValidating?: boolean;
+  onSave?: () => void;
 }
 
 export function ConnectionForm({ 
   formData, 
   onChange, 
   testStatus, 
-  testError 
+  testError,
+  onSave
 }: ConnectionFormProps) {
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer'
@@ -134,8 +137,14 @@ export function ConnectionForm({
       {testStatus === 'success' && (
         <Alert className="bg-green-50 text-green-800 border-green-100">
           <AlertTitle>Connection successful</AlertTitle>
-          <AlertDescription>
+          <AlertDescription className="flex justify-between items-center">
             Successfully connected to the remote machine.
+            <Button 
+              onClick={onSave}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              Save
+            </Button>
           </AlertDescription>
         </Alert>
       )}
