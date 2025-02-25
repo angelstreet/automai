@@ -5,6 +5,16 @@ alwaysApply: true
 ---
 # Cursor Rules for Debugging and i18n
 
+## Code Organization
+1. File length limits
+   - **MANDATORY**: Keep files under 300 lines of code
+   - If a file exceeds 300 lines, split it into:
+     - Constants -> `src/constants/{feature}.ts`
+     - Types -> `src/types/{feature}.ts`
+     - Components -> `src/components/{feature}/{Component}.tsx`
+   - Break down large components into smaller, focused components
+   - Use composition to maintain functionality while reducing file size
+
 ## Important
 - Always place cursor rules in the `.cursor/rules` directory with appropriate names (e.g., `i18n.mdc`, `debugging.mdc`)
 
@@ -14,7 +24,16 @@ alwaysApply: true
    - Do not list what you've done or explain the changes you've made
    - Simply confirm the task is complete with a brief acknowledgment
    - Avoid phrases like "Here's what I did" or "I've successfully..."
-2. Always verify terminal logs after implementing changes
+
+2. Browser tools usage
+   - **IMPORTANT**: Only use browser tools (screenshots, console logs, etc.) when explicitly requested by the user
+   - Do not automatically take screenshots or check console logs unless specifically asked
+   - When browser tools are requested, use them in this order:
+     1. Console logs/errors if debugging is needed
+     2. Screenshots if visual verification is needed
+     3. Network logs if API/request issues need to be investigated
+
+3. Terminal logs verification
    - For heavy tasks (multiple file changes or complex UI components), always check logs
    - For minor changes, check logs only if there's a specific concern
    - Use `cat` or similar commands to read existing logs; don't restart running services
@@ -27,8 +46,9 @@ alwaysApply: true
      - Syntax errors in code
    - **NEVER** consider a task complete until you've verified the logs are free of these errors
    - If errors are found, fix them before proceeding or explicitly acknowledge them
-3. When checking browser logs, always refresh the page first to avoid seeing stale errors - limit browser log checks to 3 times maximum
+
 4. **Linter errors**: Only try to fix linter errors once, not 3 times. Fixing linter errors is not mandatory and will consume fast requests. If the fix doesn't work on the first attempt, acknowledge the linter errors and move on.
+
 5. If a server restart is necessary:
    - First check if the port is in use: `lsof -i :3000`
    - If in use, kill the process: `kill -9 <PID>`
