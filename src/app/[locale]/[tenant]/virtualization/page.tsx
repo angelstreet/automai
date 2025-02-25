@@ -41,6 +41,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertCircle,
   CheckCircle2,
@@ -54,6 +55,12 @@ import {
   Settings,
   Server
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Mock data for demonstration
 const MOCK_DEVICES = [
@@ -92,6 +99,150 @@ const MOCK_DEVICES = [
     connectionType: 'portainer',
     alerts: ['cpu'],
     containers: { total: 10, running: 6 }
+  },
+  {
+    id: '5',
+    name: 'vm-tenant5-dev',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'docker',
+    alerts: [],
+    containers: { total: 4, running: 4 }
+  },
+  {
+    id: '6',
+    name: 'vm-tenant6-prod',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'portainer',
+    alerts: [],
+    containers: { total: 12, running: 12 }
+  },
+  {
+    id: '7',
+    name: 'vm-tenant7-staging',
+    status: 'warning',
+    statusLabel: 'Warning',
+    connectionType: 'ssh',
+    alerts: ['cpu'],
+    containers: { total: 6, running: 5 }
+  },
+  {
+    id: '8',
+    name: 'vm-tenant8-test',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'docker',
+    alerts: [],
+    containers: { total: 3, running: 3 }
+  },
+  {
+    id: '9',
+    name: 'vm-tenant9-dev',
+    status: 'error',
+    statusLabel: 'Error',
+    connectionType: 'portainer',
+    alerts: ['memory'],
+    containers: { total: 8, running: 2 }
+  },
+  {
+    id: '10',
+    name: 'vm-tenant10-prod',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'docker',
+    alerts: [],
+    containers: { total: 5, running: 5 }
+  },
+  {
+    id: '11',
+    name: 'vm-tenant11-staging',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'ssh',
+    alerts: [],
+    containers: { total: 7, running: 7 }
+  },
+  {
+    id: '12',
+    name: 'vm-tenant12-dev',
+    status: 'warning',
+    statusLabel: 'Warning',
+    connectionType: 'docker',
+    alerts: ['cpu'],
+    containers: { total: 9, running: 7 }
+  },
+  {
+    id: '13',
+    name: 'vm-tenant13-prod',
+    status: 'error',
+    statusLabel: 'Error',
+    connectionType: 'portainer',
+    alerts: ['memory', 'cpu'],
+    containers: { total: 10, running: 3 }
+  },
+  {
+    id: '14',
+    name: 'vm-tenant14-test',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'docker',
+    alerts: [],
+    containers: { total: 4, running: 4 }
+  },
+  {
+    id: '15',
+    name: 'vm-tenant15-dev',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'ssh',
+    alerts: [],
+    containers: { total: 6, running: 6 }
+  },
+  {
+    id: '16',
+    name: 'vm-tenant16-prod',
+    status: 'warning',
+    statusLabel: 'Warning',
+    connectionType: 'portainer',
+    alerts: ['cpu'],
+    containers: { total: 8, running: 6 }
+  },
+  {
+    id: '17',
+    name: 'vm-tenant17-staging',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'docker',
+    alerts: [],
+    containers: { total: 5, running: 5 }
+  },
+  {
+    id: '18',
+    name: 'vm-tenant18-test',
+    status: 'error',
+    statusLabel: 'Error',
+    connectionType: 'ssh',
+    alerts: ['memory'],
+    containers: { total: 7, running: 2 }
+  },
+  {
+    id: '19',
+    name: 'vm-tenant19-dev',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'portainer',
+    alerts: [],
+    containers: { total: 9, running: 9 }
+  },
+  {
+    id: '20',
+    name: 'vm-tenant20-prod',
+    status: 'running',
+    statusLabel: 'Running',
+    connectionType: 'docker',
+    alerts: [],
+    containers: { total: 11, running: 11 }
   }
 ];
 
@@ -104,7 +255,8 @@ export default function VirtualizationPage() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [devices, setDevices] = useState(MOCK_DEVICES);
   const [searchTerm, setSearchTerm] = useState('');
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('overview');
   const [newVMConfig, setNewVMConfig] = useState({
@@ -116,6 +268,7 @@ export default function VirtualizationPage() {
     memory: '1024',
   });
   const [isCreating, setIsCreating] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Calculate VM status summary
   const vmStatusSummary = {
@@ -129,17 +282,18 @@ export default function VirtualizationPage() {
   const alertSummary = {
     memory: devices.filter(d => d.alerts.includes('memory')).length,
     cpu: devices.filter(d => d.alerts.includes('cpu')).length,
-    error: devices.filter(d => d.status === 'error').length
+    error: devices.filter(d => d.status === 'error').length,
+    total: devices.filter(d => d.alerts.length > 0).length
   };
 
   const getConnectionTypeIcon = (type) => {
     switch (type) {
       case 'portainer':
-        return <Badge variant="secondary" className="bg-blue-500 hover:bg-blue-600">P</Badge>;
+        return <Badge variant="secondary" className="bg-blue-500 hover:bg-blue-600 h-5 w-5 flex items-center justify-center p-0">P</Badge>;
       case 'docker':
-        return <Badge variant="secondary" className="bg-green-500 hover:bg-green-600">D</Badge>;
+        return <Badge variant="secondary" className="bg-green-500 hover:bg-green-600 h-5 w-5 flex items-center justify-center p-0">D</Badge>;
       case 'ssh':
-        return <Badge variant="secondary" className="bg-gray-500 hover:bg-gray-600">S</Badge>;
+        return <Badge variant="secondary" className="bg-gray-500 hover:bg-gray-600 h-5 w-5 flex items-center justify-center p-0">S</Badge>;
       default:
         return null;
     }
@@ -148,15 +302,15 @@ export default function VirtualizationPage() {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'running':
-        return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
+        return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs py-0 h-5">
           <CheckCircle2 className="mr-1 h-3 w-3" /> Running
         </Badge>;
       case 'warning':
-        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs py-0 h-5">
           <AlertCircle className="mr-1 h-3 w-3" /> Warning
         </Badge>;
       case 'error':
-        return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
+        return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs py-0 h-5">
           <AlertCircle className="mr-1 h-3 w-3" /> Error
         </Badge>;
       default:
@@ -204,13 +358,29 @@ export default function VirtualizationPage() {
     }
   };
 
-  const filteredDevices = devices.filter(device => 
-    device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    device.alerts.some(alert => alert.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter devices by search term and status
+  const filteredDevices = devices.filter(device => {
+    const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      device.alerts.some(alert => alert.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesStatus = statusFilter ? device.status === statusFilter : true;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredDevices.length / itemsPerPage);
+  
+  // Calculate current page items
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = filteredDevices.slice(startIndex, endIndex);
+
+  // Force pagination to show for testing
+  const shouldShowPagination = true;
 
   return (
-    <div className="flex-1 space-y-4 pt-5">
+    <div className="flex-1 space-y-3 pt-3 h-[calc(100vh-80px)] flex flex-col">
       {/* Title section with buttons */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Virtualization</h1>
@@ -337,7 +507,7 @@ export default function VirtualizationPage() {
         defaultValue="overview" 
         value={activeTab} 
         onValueChange={setActiveTab}
-        className="w-full"
+        className="w-full flex-1 flex flex-col"
       >
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -345,45 +515,78 @@ export default function VirtualizationPage() {
           <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
+        <TabsContent value="overview" className="space-y-4 flex-1 flex flex-col">
           {/* Status Cards */}
           <Card>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="p-1">
+              <div className="flex justify-between gap-4">
                 {/* VM Status Section */}
-                <div>
-                  <h3 className="text-lg font-medium mb-4">VM Status</h3>
-                  <div className="flex items-center gap-6">
-                    <div>
-                      <span className="text-green-500 text-2xl font-semibold">{vmStatusSummary.running}/{vmStatusSummary.total}</span>
-                      <p className="text-muted-foreground text-sm">Running</p>
+                <div className="w-auto">
+                  <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-center">
+                      <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 text-xs py-0 h-5 mb-1">
+                        <CheckCircle2 className="mr-1 h-3 w-3" /> Running
+                      </Badge>
+                      <span className="text-green-500 text-base font-semibold text-center">{vmStatusSummary.running}</span>
                     </div>
-                    <div>
-                      <span className="text-yellow-500 text-2xl font-semibold">{vmStatusSummary.warning}/{vmStatusSummary.total}</span>
-                      <p className="text-muted-foreground text-sm">Warning</p>
+                    <div className="flex flex-col items-center">
+                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs py-0 h-5 mb-1">
+                        <AlertCircle className="mr-1 h-3 w-3" /> Warning
+                      </Badge>
+                      <span className="text-yellow-500 text-base font-semibold text-center">{vmStatusSummary.warning}</span>
                     </div>
-                    <div>
-                      <span className="text-red-500 text-2xl font-semibold">{vmStatusSummary.error}/{vmStatusSummary.total}</span>
-                      <p className="text-muted-foreground text-sm">Error</p>
+                    <div className="flex flex-col items-center">
+                      <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs py-0 h-5 mb-1">
+                        <AlertCircle className="mr-1 h-3 w-3" /> Error
+                      </Badge>
+                      <span className="text-red-500 text-base font-semibold text-center">{vmStatusSummary.error}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs py-0 h-5 mb-1">
+                        <Server className="mr-1 h-3 w-3" /> Total
+                      </Badge>
+                      <span className="text-blue-500 text-base font-semibold text-center">{vmStatusSummary.total}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Alert Summary Section */}
-                <div className="border-t md:border-t-0 md:border-l border-gray-800 md:pl-4 pt-4 md:pt-0">
-                  <h3 className="text-lg font-medium mb-4">Alert Summary</h3>
-                  <div className="flex items-center gap-6">
+                <div className="w-auto">
+                  <div className="flex items-start gap-4">
                     <div>
-                      <span className="text-red-500 text-2xl font-semibold">{alertSummary.memory}</span>
-                      <p className="text-muted-foreground text-sm">Memory</p>
+                      <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-center">
+                          <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs py-0 h-5 mb-1">
+                            Memory
+                          </Badge>
+                          <span className="text-red-500 text-base font-semibold text-center">{alertSummary.memory}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs py-0 h-5 mb-1">
+                            CPU
+                          </Badge>
+                          <span className="text-yellow-500 text-base font-semibold text-center">{alertSummary.cpu}</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20 text-xs py-0 h-5 mb-1">
+                            Total
+                          </Badge>
+                          <span className="text-blue-500 text-base font-semibold text-center">{alertSummary.total}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-yellow-500 text-2xl font-semibold">{alertSummary.cpu}</span>
-                      <p className="text-muted-foreground text-sm">CPU</p>
-                    </div>
-                    <div>
-                      <span className="text-red-500 text-2xl font-semibold">{alertSummary.error}</span>
-                      <p className="text-muted-foreground text-sm">Error</p>
+                    <div className="flex flex-col items-center ml-2">
+                      <div className="relative">
+                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-full">
+                          <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                        {alertSummary.total > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                            {alertSummary.total}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-1">Notifications</span>
                     </div>
                   </div>
                 </div>
@@ -391,129 +594,233 @@ export default function VirtualizationPage() {
             </CardContent>
           </Card>
 
-          {/* Devices Table */}
-          <Card>
-            <CardHeader className="pb-3">
+          {/* VM/Container Table */}
+          <Card className="flex-1 flex flex-col max-h-[calc(100vh-280px)]">
+            <CardHeader className="pb-1 pt-2">
               <div className="flex justify-between items-center">
-                <CardTitle>Devices</CardTitle>
+                <CardTitle className="text-base">VM / Container</CardTitle>
                 <div className="flex items-center gap-2">
                   <div className="relative w-64">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
                     <Input
                       placeholder="Search in results..."
-                      className="pl-8"
+                      className="pl-7 h-8 text-sm"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
-                  <Button variant="outline" size="sm">
-                    <FilterX className="mr-2 h-4 w-4" />
-                    Filter
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    <RefreshCcw className="mr-2 h-4 w-4" />
+                  <DropdownMenu open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 text-xs">
+                        <FilterX className="mr-1 h-3 w-3" />
+                        {statusFilter ? `Status: ${statusFilter}` : 'Filter'}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setStatusFilter(null)}>
+                        All Statuses
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setStatusFilter('running')}>
+                        Running
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setStatusFilter('warning')}>
+                        Warning
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setStatusFilter('error')}>
+                        Error
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button variant="outline" size="sm" className="h-8 text-xs">
+                    <RefreshCcw className="mr-1 h-3 w-3" />
                     Refresh
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Alerts</TableHead>
-                    <TableHead>Containers</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDevices.map((device) => (
-                    <TableRow 
-                      key={device.id}
-                      className={isSelectionMode && selectedItems.has(device.id) ? 'bg-muted/50' : ''}
-                      onClick={() => handleSelectItem(device.id)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getConnectionTypeIcon(device.connectionType)}
-                          <span>{device.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(device.status)}
-                      </TableCell>
-                      <TableCell>
-                        {device.alerts.length > 0 ? (
-                          <div className="flex gap-1 flex-wrap">
-                            {device.alerts.includes('memory') && (
-                              <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">Memory</Badge>
-                            )}
-                            {device.alerts.includes('cpu') && (
-                              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">CPU</Badge>
-                            )}
-                          </div>
-                        ) : 'None'}
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {device.containers.running}/{device.containers.total} running
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button variant="outline" size="icon" className="h-8 w-8">
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-8 w-8">
-                            <Terminal className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="icon" className="h-8 w-8">
-                            <BarChart3 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+            <CardContent className="p-0 flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-auto min-h-0">
+                <Table className="border-collapse">
+                  <TableHeader className="sticky top-0 bg-background z-10">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="h-8 text-xs">Name</TableHead>
+                      <TableHead className="h-8 text-xs">Status</TableHead>
+                      <TableHead className="h-8 text-xs">Alerts</TableHead>
+                      <TableHead className="h-8 text-xs">Containers</TableHead>
+                      <TableHead className="h-8 text-xs text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {currentItems.map((device) => (
+                      <TableRow 
+                        key={device.id}
+                        className={`h-8 ${isSelectionMode && selectedItems.has(device.id) ? 'bg-muted/50' : ''}`}
+                        onClick={() => handleSelectItem(device.id)}
+                      >
+                        <TableCell className="py-1 text-xs">
+                          <div className="flex items-center gap-1">
+                            {getConnectionTypeIcon(device.connectionType)}
+                            <span>{device.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-1 text-xs">
+                          {getStatusBadge(device.status)}
+                        </TableCell>
+                        <TableCell className="py-1 text-xs">
+                          {device.alerts.length > 0 ? (
+                            <div className="flex gap-1 flex-wrap">
+                              {device.alerts.includes('memory') && (
+                                <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-xs py-0 h-5">Memory</Badge>
+                              )}
+                              {device.alerts.includes('cpu') && (
+                                <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-xs py-0 h-5">CPU</Badge>
+                              )}
+                            </div>
+                          ) : 'None'}
+                        </TableCell>
+                        <TableCell className="py-1 text-xs">
+                          <span>
+                            {device.containers.running}/{device.containers.total} running
+                          </span>
+                        </TableCell>
+                        <TableCell className="py-1 text-xs text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <TooltipProvider delayDuration={100}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="outline" size="icon" className="h-6 w-6">
+                                    <Settings className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Settings</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            
+                            <TooltipProvider delayDuration={100}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="outline" size="icon" className="h-6 w-6">
+                                    <Terminal className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Terminal</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            
+                            <TooltipProvider delayDuration={100}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="outline" size="icon" className="h-6 w-6">
+                                    <BarChart3 className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Analytics</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-              {/* Pagination */}
-              <div className="flex items-center justify-between mt-4">
+              {/* Pagination - only show if more than one page */}
+              <div className={`flex items-center justify-between p-2 border-t ${!shouldShowPagination ? 'hidden' : ''}`}>
                 <div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        {itemsPerPage} per page <ChevronDown className="ml-2 h-4 w-4" />
+                      <Button variant="outline" size="sm" className="h-6 text-[10px]">
+                        <span className="text-[10px]">{itemsPerPage}</span> <ChevronDown className="ml-1 h-2 w-2" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => setItemsPerPage(10)}>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => setItemsPerPage(5)} className="text-[10px] py-1">
+                        5 per page
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setItemsPerPage(10)} className="text-[10px] py-1">
                         10 per page
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setItemsPerPage(25)}>
-                        25 per page
+                      <DropdownMenuItem onClick={() => setItemsPerPage(20)} className="text-[10px] py-1">
+                        20 per page
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setItemsPerPage(50)}>
+                      <DropdownMenuItem onClick={() => setItemsPerPage(50)} className="text-[10px] py-1">
                         50 per page
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious href="#" />
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationLink href="#">1</PaginationLink>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationNext href="#" />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+                <div className="flex-1 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage > 1) setCurrentPage(currentPage - 1);
+                          }}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                      {Array.from({ length: Math.min(totalPages, 3) }).map((_, i) => {
+                        const pageNum = i + 1;
+                        return (
+                          <PaginationItem key={i}>
+                            <PaginationLink 
+                              href="#" 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setCurrentPage(pageNum);
+                              }}
+                              isActive={currentPage === pageNum}
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+                      {totalPages > 3 && (
+                        <PaginationItem>
+                          <PaginationLink href="#" onClick={(e) => e.preventDefault()}>
+                            ...
+                          </PaginationLink>
+                        </PaginationItem>
+                      )}
+                      {totalPages > 3 && (
+                        <PaginationItem>
+                          <PaginationLink 
+                            href="#" 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(totalPages);
+                            }}
+                            isActive={currentPage === totalPages}
+                          >
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )}
+                      <PaginationItem>
+                        <PaginationNext 
+                          href="#" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                          }}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+                <div className="w-[40px]"></div> {/* Empty div for balance */}
               </div>
             </CardContent>
           </Card>
@@ -521,9 +828,9 @@ export default function VirtualizationPage() {
 
         <TabsContent value="terminals">
           <Card>
-            <CardHeader>
-              <CardTitle>Terminal Access</CardTitle>
-              <CardDescription>Connect to your devices via secure terminal</CardDescription>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base">Terminal Access</CardTitle>
+              <CardDescription className="text-xs">Connect to your devices via secure terminal</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center h-60">
@@ -541,9 +848,9 @@ export default function VirtualizationPage() {
 
         <TabsContent value="logs">
           <Card>
-            <CardHeader>
-              <CardTitle>System Logs</CardTitle>
-              <CardDescription>View and analyze system and container logs</CardDescription>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base">System Logs</CardTitle>
+              <CardDescription className="text-xs">View and analyze system and container logs</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center h-60">
