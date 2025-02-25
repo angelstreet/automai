@@ -25,6 +25,17 @@ alwaysApply: true
    - Typically wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
    - After server is ready, wait at least 5 seconds before using browser tools like screenshots or console logs
 
+## Next.js Specific Rules
+1. For most UI changes, component modifications, and styling updates, Next.js Fast Refresh will automatically apply changes without requiring a server restart
+2. Only restart the Next.js development server when:
+   - Modifying Next.js configuration files (next.config.js)
+   - Changing middleware.ts
+   - Modifying environment variables
+   - Making changes to routing configuration or internationalization setup
+   - When Fast Refresh explicitly fails with an error message
+   - When adding new API routes that aren't being detected
+3. For all other changes, rely on Next.js Fast Refresh to compile and update the application
+
 ## i18n Handling
 1. When adding translations, always verify both French (fr) and English (en) files
 2. Check both sets of translation files when there are i18n issues:

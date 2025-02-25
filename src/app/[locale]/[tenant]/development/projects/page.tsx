@@ -293,8 +293,8 @@ export default function ProjectsPage() {
   const showTrialWarning = hasReachedTrialLimit;
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="flex-1 space-y-4 pt-5">
+      <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Projects</h1>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -334,7 +334,7 @@ export default function ProjectsPage() {
       </div>
 
       {showTrialWarning && (
-        <Alert className="mb-4" variant="destructive">
+        <Alert variant="destructive">
           <AlertDescription className="flex items-center justify-between">
             <span>You have reached the limitation - Upgrade to Pro for unlimited projects</span>
             <Button variant="outline" size="sm" onClick={() => router.push('/settings/billing')}>

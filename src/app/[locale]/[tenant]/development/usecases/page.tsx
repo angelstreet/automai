@@ -575,7 +575,7 @@ export default function UseCasesPage() {
 
   return (
     <div className="flex min-h-screen bg-background dark:bg-background">
-      <div className="flex-1 p-6 overflow-hidden">
+      <div className="flex-1 space-y-4 pt-5">
         {error && (
           <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg">{error}</div>
         )}
@@ -585,7 +585,7 @@ export default function UseCasesPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
           </div>
         ) : (
-          <div className="flex justify-between items-center mb-4 gap-4">
+          <div className="flex justify-between items-center gap-4">
             <div className="flex items-center gap-4">
               <div className="flex-1 max-w-2xl">
                 <Input
@@ -630,7 +630,7 @@ export default function UseCasesPage() {
         {!isLoading && !error && (
           <>
             {getFavoriteUseCases().length > 0 && (
-              <div className="mb-6 bg-background dark:bg-background rounded-lg shadow border border-border">
+              <div className="bg-background dark:bg-background rounded-lg shadow border border-border">
                 <div className="px-4 py-2 bg-muted dark:bg-muted/80 border-b border-border">
                   <h3 className="font-semibold text-foreground dark:text-foreground">
                     ★ Favorite Use Cases
