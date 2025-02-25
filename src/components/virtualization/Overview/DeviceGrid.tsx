@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { STATUS_VARIANTS } from '@/constants/virtualization';
 import { Box, Settings, ScrollText, Terminal, BarChart2, Cloud, Server } from 'lucide-react';
 import { getConnectionTypeIcon } from '@/lib/utils';
+import { useParams } from 'next/navigation';
 
 interface DeviceGridProps {
   devices: Device[];
@@ -14,6 +15,8 @@ interface DeviceGridProps {
 }
 
 export function DeviceGrid({ devices, selectedItems, onItemSelect, isSelectionMode }: DeviceGridProps) {
+  const params = useParams();
+  
   const renderConnectionIcon = (type: string) => {
     switch (type) {
       case 'portainer':
@@ -35,15 +38,12 @@ export function DeviceGrid({ devices, selectedItems, onItemSelect, isSelectionMo
           className={`
             flex items-center rounded-lg border p-2
             ${selectedItems.has(device.id) ? 'bg-muted/50 border-primary/50' : ''}
-            hover:bg-muted/50 cursor-pointer transition-colors
           `}
-          onClick={() => onItemSelect(device.id)}
         >
           {isSelectionMode && (
             <Checkbox
               checked={selectedItems.has(device.id)}
               onCheckedChange={() => onItemSelect(device.id)}
-              onClick={(e) => e.stopPropagation()}
               className="mr-2"
             />
           )}
@@ -77,9 +77,8 @@ export function DeviceGrid({ devices, selectedItems, onItemSelect, isSelectionMo
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/[locale]/[tenant]/virtualization/settings?devices=${device.id}`;
+                onClick={() => {
+                  window.location.href = `/${params.locale}/${params.tenant}/virtualization/settings?devices=${device.id}`;
                 }}
               >
                 <Settings className="h-3.5 w-3.5" />
@@ -88,9 +87,8 @@ export function DeviceGrid({ devices, selectedItems, onItemSelect, isSelectionMo
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/[locale]/[tenant]/virtualization/logs?devices=${device.id}`;
+                onClick={() => {
+                  window.location.href = `/${params.locale}/${params.tenant}/virtualization/logs?devices=${device.id}`;
                 }}
               >
                 <ScrollText className="h-3.5 w-3.5" />
@@ -99,9 +97,8 @@ export function DeviceGrid({ devices, selectedItems, onItemSelect, isSelectionMo
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/[locale]/[tenant]/virtualization/terminals?devices=${device.id}`;
+                onClick={() => {
+                  window.location.href = `/${params.locale}/${params.tenant}/virtualization/terminals?devices=${device.name}`;
                 }}
               >
                 <Terminal className="h-3.5 w-3.5" />
@@ -110,9 +107,8 @@ export function DeviceGrid({ devices, selectedItems, onItemSelect, isSelectionMo
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/[locale]/[tenant]/virtualization/analytics?devices=${device.id}`;
+                onClick={() => {
+                  window.location.href = `/${params.locale}/${params.tenant}/virtualization/analytics?devices=${device.id}`;
                 }}
               >
                 <BarChart2 className="h-3.5 w-3.5" />

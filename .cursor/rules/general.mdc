@@ -34,17 +34,19 @@ alwaysApply: true
      3. Network logs if API/request issues need to be investigated
 
 3. Terminal logs verification
-   - For heavy tasks (multiple file changes or complex UI components), always check logs
-   - For minor changes, check logs only if there's a specific concern
+   - **ONLY** check terminal logs in these specific cases:
+     1. When the user explicitly requests to check for errors
+     2. When the user asks to speed up coding
+     3. When you observe obvious compilation or runtime errors in previous outputs
+   - Do NOT check terminal logs for routine tasks or minor changes
    - Use `cat` or similar commands to read existing logs; don't restart running services
    - If you need to check server logs, first verify if the server is already running
-   - **MANDATORY**: Always check terminal logs for the following critical errors:
+   - When checking logs, look for these critical errors:
      - Module resolution errors (e.g., "Module not found: Can't resolve...")
      - HTTP error codes (e.g., 500, 404, 403)
      - Runtime errors that cause full page reloads (e.g., "Fast Refresh had to perform a full reload")
      - Compilation errors (e.g., "Failed to compile")
      - Syntax errors in code
-   - **NEVER** consider a task complete until you've verified the logs are free of these errors
    - If errors are found, fix them before proceeding or explicitly acknowledge them
 
 4. **Linter errors**: Only try to fix linter errors once, not 3 times. Fixing linter errors is not mandatory and will consume fast requests. If the fix doesn't work on the first attempt, acknowledge the linter errors and move on.
@@ -61,11 +63,12 @@ alwaysApply: true
 
 ## Next.js Specific Rules
 1. For most UI changes, component modifications, and styling updates, Next.js Fast Refresh will automatically apply changes without requiring a server restart
-2. Only restart the Next.js development server when:
-   - Modifying Next.js configuration files (next.config.js)
-   - Changing middleware.ts
-   - Modifying environment variables
-   - Making changes to routing configuration or internationalization setup
+2. **NEVER restart the Next.js development server except in these specific cases:**
+   - When there are explicit errors that require a restart
+   - When modifying Next.js configuration files (next.config.js)
+   - When changing middleware.ts
+   - When modifying environment variables
+   - When making changes to routing configuration or internationalization setup
    - When Fast Refresh explicitly fails with an error message
    - When adding new API routes that aren't being detected
 3. For all other changes, rely on Next.js Fast Refresh to compile and update the application
@@ -89,10 +92,11 @@ alwaysApply: true
 2. Before restarting, check if port 3000 is in use: `lsof -i :3000`
 3. If port 3000 is in use, kill the process: `kill -9 <PID>`
 4. Use `npm run dev` to restart the server on port 3000
-5. **IMPORTANT**: Always wait for the server to be fully ready before checking if changes worked
+5. **IMPORTANT**: Only check terminal logs for errors when:
+   - The user explicitly requests it
+   - The user asks to speed up coding
+   - You observe obvious compilation or runtime errors in previous outputs
    - Look for "Ready" or similar messages in the terminal output
-   - Typically wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
-   - **MANDATORY**: Check terminal logs for errors after compilation completes
-   - Look specifically for module resolution errors, HTTP error codes, and runtime errors
+   - If checking logs, wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
    - If any errors are found, address them immediately before proceeding
 6. If the server starts on a different port (e.g., 3001), stop it and repeat steps 2-4 to ensure it runs on port 3000 

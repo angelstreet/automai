@@ -137,13 +137,6 @@ export const sidebarData: SidebarData = {
           href: '/virtualization',
           icon: Server,
           roles: ['admin', 'developer', 'tester'],
-          items: [
-            { title: 'Overview', href: '/virtualization', icon: Layers },
-            { title: 'Settings', href: '/virtualization/settings', icon: Settings },
-            { title: 'Terminals', href: '/virtualization/terminals', icon: Box },
-            { title: 'Logs', href: '/virtualization/logs', icon: FileCode },
-            { title: 'Analytics', href: '/virtualization/analytics', icon: BarChart3 },
-          ],
         },
       ],
     },

@@ -2,6 +2,7 @@ import { Device } from '@/types/virtualization';
 import { StatusSummary } from './StatusSummary';
 import { DeviceGrid } from './DeviceGrid';
 import { DeviceTable } from './DeviceTable';
+import { cn } from '@/lib/utils';
 
 interface DeviceListProps {
   devices: Device[];
@@ -11,6 +12,7 @@ interface DeviceListProps {
   onItemSelect: (id: string) => void;
   onStatusFilter: (status: string | null) => void;
   selectedFilters: Set<string>;
+  className?: string;
 }
 
 export function DeviceList({
@@ -21,6 +23,7 @@ export function DeviceList({
   onItemSelect,
   onStatusFilter,
   selectedFilters,
+  className,
 }: DeviceListProps) {
   const vmStatusSummary = {
     running: devices.filter(d => d.status === 'running').length,
@@ -30,9 +33,8 @@ export function DeviceList({
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="p-4 border rounded-md">
-        <h2 className="text-lg font-bold mb-4">DeviceList Status Summary</h2>
+    <div className={cn("flex flex-col gap-2", className)}>
+      <div className="p-2">
         <StatusSummary 
           vmStatusSummary={vmStatusSummary} 
           onStatusFilter={onStatusFilter} 
@@ -40,21 +42,23 @@ export function DeviceList({
         />
       </div>
       
-      {viewMode === 'grid' ? (
-        <DeviceGrid
-          devices={devices}
-          selectedItems={selectedItems}
-          onItemSelect={onItemSelect}
-          isSelectionMode={isSelectionMode}
-        />
-      ) : (
-        <DeviceTable
-          devices={devices}
-          selectedItems={selectedItems}
-          onItemSelect={onItemSelect}
-          isSelectionMode={isSelectionMode}
-        />
-      )}
+      <div className="flex-1 overflow-auto">
+        {viewMode === 'grid' ? (
+          <DeviceGrid
+            devices={devices}
+            selectedItems={selectedItems}
+            onItemSelect={onItemSelect}
+            isSelectionMode={isSelectionMode}
+          />
+        ) : (
+          <DeviceTable
+            devices={devices}
+            selectedItems={selectedItems}
+            onItemSelect={onItemSelect}
+            isSelectionMode={isSelectionMode}
+          />
+        )}
+      </div>
     </div>
   );
 } 

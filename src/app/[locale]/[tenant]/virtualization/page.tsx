@@ -10,6 +10,7 @@ import { DeviceList } from '@/components/virtualization/Overview/DeviceList';
 import { generateTestDevices } from '@/constants/virtualization';
 import { Device } from '@/types/virtualization';
 import { CreateVMDialog } from '@/components/virtualization/Overview/CreateVMDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function VirtualizationPage() {
   const t = useTranslations('Common');
@@ -24,7 +25,7 @@ export default function VirtualizationPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [devices] = useState(generateTestDevices(25));
+  const [devices] = useState(generateTestDevices(50));
 
   // Calculate VM status summary
   const vmStatusSummary = {
@@ -102,15 +103,26 @@ export default function VirtualizationPage() {
     <div className="flex-1 space-y-2 pt-2 h-[calc(100vh-90px)] max-h-[calc(100vh-90px)] flex flex-col overflow-hidden">
       {/* Title section with buttons */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
+                >
+                  {viewMode === 'grid' ? <Table2 className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Toggle view mode</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
-          >
-            {viewMode === 'grid' ? <Table2 className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-          </Button>
           {isSelectionMode ? (
             <>
               <Button
@@ -124,48 +136,81 @@ export default function VirtualizationPage() {
                 Cancel
               </Button>
               {selectedItems.size > 0 && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const deviceIds = Array.from(selectedItems).join(',');
-                      window.location.href = `/[locale]/[tenant]/virtualization/settings?devices=${deviceIds}`;
-                    }}
-                  >
-                    <Settings className="mr-2 h-4 w-4" /> Settings
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const deviceIds = Array.from(selectedItems).join(',');
-                      window.location.href = `/[locale]/[tenant]/virtualization/logs?devices=${deviceIds}`;
-                    }}
-                  >
-                    <ScrollText className="mr-2 h-4 w-4" /> Logs
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const deviceIds = Array.from(selectedItems).join(',');
-                      window.location.href = `/[locale]/[tenant]/virtualization/terminals?devices=${deviceIds}`;
-                    }}
-                  >
-                    <Terminal className="mr-2 h-4 w-4" /> Terminals
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const deviceIds = Array.from(selectedItems).join(',');
-                      window.location.href = `/[locale]/[tenant]/virtualization/analytics?devices=${deviceIds}`;
-                    }}
-                  >
-                    <BarChart2 className="mr-2 h-4 w-4" /> Analytics
-                  </Button>
-                </>
+                <TooltipProvider>
+                  <div className="flex gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            const deviceIds = Array.from(selectedItems).join(',');
+                            window.location.href = `/${params.locale}/${params.tenant}/virtualization/settings?devices=${deviceIds}`;
+                          }}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Settings</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            const deviceIds = Array.from(selectedItems).join(',');
+                            window.location.href = `/${params.locale}/${params.tenant}/virtualization/logs?devices=${deviceIds}`;
+                          }}
+                        >
+                          <ScrollText className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Logs</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            const deviceIds = Array.from(selectedItems).join(',');
+                            window.location.href = `/${params.locale}/${params.tenant}/virtualization/terminals?devices=${deviceIds}`;
+                          }}
+                        >
+                          <Terminal className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Terminals</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => {
+                            const deviceIds = Array.from(selectedItems).join(',');
+                            window.location.href = `/${params.locale}/${params.tenant}/virtualization/analytics?devices=${deviceIds}`;
+                          }}
+                        >
+                          <BarChart2 className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Analytics</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               )}
             </>
           ) : (
@@ -177,35 +222,123 @@ export default function VirtualizationPage() {
         </div>
       </div>
       
-      <div className="space-y-2 flex-1 flex flex-col">
-        <div className="flex items-center justify-between">
+      <div className="space-y-2 flex-1 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between py-1">
           <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" className="h-7">
-              <Plus className="mr-2 h-4 w-4" /> Add Device
-            </Button>
-            <Button variant="outline" size="sm" className="h-7">
-              <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
-            </Button>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" className="h-7">
-              <Settings className="mr-2 h-4 w-4" /> Settings
-            </Button>
-            <Button variant="outline" size="sm" className="h-7">
-              <Download className="mr-2 h-4 w-4" /> Export
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add Device</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7">
+                    <RefreshCcw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Refresh</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
         
-        <DeviceList
-          devices={currentItems}
-          selectedItems={selectedItems}
-          onItemSelect={handleSelectItem}
-          viewMode={viewMode}
-          isSelectionMode={isSelectionMode}
-          onStatusFilter={handleStatusFilter}
-          selectedFilters={selectedFilters}
-        />
+        <div className="flex-1 overflow-hidden">
+          <DeviceList
+            devices={currentItems}
+            selectedItems={selectedItems}
+            onItemSelect={handleSelectItem}
+            viewMode={viewMode}
+            isSelectionMode={isSelectionMode}
+            onStatusFilter={handleStatusFilter}
+            selectedFilters={selectedFilters}
+            className="h-full overflow-auto"
+          />
+        </div>
+        
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t pt-2">
+            <div className="flex items-center gap-2">
+              <div className="text-sm whitespace-nowrap">
+                <span className="font-medium">{startIndex + 1}-{Math.min(endIndex, filteredDevices.length)}</span>
+                <span className="text-muted-foreground"> of {filteredDevices.length}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <select 
+                  className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1); // Reset to first page when changing items per page
+                  }}
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                </select>
+                <span className="text-xs text-muted-foreground">per page</span>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="h-7 px-2"
+              >
+                Previous
+              </Button>
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className="h-7 w-7 p-0"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                {totalPages > 5 && <span className="px-1">...</span>}
+                {totalPages > 5 && (
+                  <Button
+                    variant={currentPage === totalPages ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(totalPages)}
+                    className="h-7 w-7 p-0"
+                  >
+                    {totalPages}
+                  </Button>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="h-7 px-2"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
