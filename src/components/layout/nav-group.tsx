@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuSub,
   SidebarMenuSubButton,
-} from '@/components/ui/sidebar';
+} from '@/components/sidebar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRole } from '@/context/role-context';
 

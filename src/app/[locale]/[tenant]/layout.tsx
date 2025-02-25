@@ -4,7 +4,7 @@ import * as React from 'react';
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { WorkspaceHeader } from '@/components/layout/workspace-header';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/sidebar';
 import { useUser } from '@/lib/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';

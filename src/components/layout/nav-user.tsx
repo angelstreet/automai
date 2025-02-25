@@ -3,7 +3,7 @@
 import { User } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,

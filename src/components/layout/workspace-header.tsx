@@ -6,7 +6,7 @@ import { RoleSwitcher } from '@/components/ui/role-switcher';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { UserProfile } from '@/components/ui/user-profile';
 import { Separator } from '@/components/ui/separator';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarTrigger } from '@/components/sidebar';
 import { Search } from '@/components/ui/search';
 import { useRole } from '@/context/role-context';
 import { Button } from '@/components/ui/button';

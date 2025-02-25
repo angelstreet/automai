@@ -5,6 +5,28 @@
     "getStarted": "Get Started",
     "learnMore": "Learn More"
   },
+  "Auth": {
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Remember Me",
+    "dontHaveAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "orContinueWith": "Or continue with",
+    "createAccount": "Create Account",
+    "verifyEmail": "Verify Email",
+    "resetPassword": "Reset Password",
+    "error": {
+      "invalidCredentials": "Invalid email or password",
+      "emailRequired": "Email is required",
+      "passwordRequired": "Password is required",
+      "emailInvalid": "Please enter a valid email",
+      "passwordTooShort": "Password must be at least 8 characters"
+    }
+  },
   "Common": {
     "new": "New",
     "save": "Save",

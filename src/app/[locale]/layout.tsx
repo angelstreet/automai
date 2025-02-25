@@ -5,6 +5,9 @@ import { Inter } from 'next/font/google';
 import { getMessages } from '@/i18n';
 import { UserProvider } from '@/lib/contexts/UserContext';
 import { RouteGuard } from '@/components/route-guard';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from '@/components/ui/toaster';
+import { cookies } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -37,12 +40,18 @@ export default async function LocaleLayout(props: Props) {
 
   const messages = await getMessages(validLocale);
 
+  // Get theme from cookie - using a different approach to avoid the warning
+  const theme = cookies().has('theme') ? cookies().get('theme')?.value : 'system';
+
   return (
     <html lang={validLocale} suppressHydrationWarning>
       <body className={inter.className}>
         <UserProvider>
           <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
-            <RouteGuard>{children}</RouteGuard>
+            <ThemeProvider defaultTheme={theme} storageKey="theme">
+              <RouteGuard>{children}</RouteGuard>
+              <Toaster />
+            </ThemeProvider>
           </NextIntlClientProvider>
         </UserProvider>
       </body>
