@@ -41,7 +41,7 @@ export default async function LocaleLayout(props: Props) {
   const messages = await getMessages(validLocale);
 
   // Get theme from cookie
-  const cookieList = cookies();
+  const cookieList = await cookies();
   const themeCookie = cookieList.get('theme');
   const theme = themeCookie ? themeCookie.value : 'system';
 

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     const body = await request.json();
-    const { type, ip, port, user, password, fingerprint, accept } = body;
+    const { type, ip, port, username, password, fingerprint, accept } = body;
 
     logger.info(`Verifying ${type} fingerprint`, { 
       userId: session.user.id, 

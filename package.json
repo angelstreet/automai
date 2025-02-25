@@ -124,7 +124,8 @@
     "wait-on": "^8.0.2"
   },
   "prisma": {
-    "schema": "src/server/prisma/schema.prisma"
+    "schema": "src/server/prisma/schema.prisma",
+    "seed": "ts-node src/server/prisma/seed.ts"
   },
   "build": {
     "appId": "com.automai.app",

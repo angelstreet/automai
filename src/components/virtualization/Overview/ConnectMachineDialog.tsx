@@ -31,7 +31,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
     type: 'ssh',
     ip: '',
     port: '22',
-    user: '',
+    username: '',
     password: '',
   });
 
@@ -42,7 +42,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
       type: 'ssh',
       ip: '',
       port: '22',
-      user: '',
+      username: '',
       password: '',
     });
     setTestStatus('idle');
@@ -78,7 +78,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
       return false;
     }
 
-    if (formData.type === 'ssh' && (!formData.user.trim() || !formData.password.trim())) {
+    if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
       toast({
         variant: 'destructive',
         title: 'Validation Error',
@@ -119,7 +119,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           type: formData.type,
           ip: formData.ip,
           port: formData.port ? parseInt(formData.port) : undefined,
-          user: formData.user,
+          username: formData.username,
           password: formData.password,
           status: 'running',
           statusLabel: 'Connected'
@@ -197,7 +197,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           type: formData.type,
           ip: formData.ip,
           port: formData.port ? parseInt(formData.port) : undefined,
-          user: formData.user,
+          user: formData.username,
           password: formData.password,
         }),
       });
@@ -234,7 +234,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
   const isFormValid = (): boolean => {
     if (!formData.name.trim() || !formData.ip.trim()) return false;
     
-    if (formData.type === 'ssh' && (!formData.user.trim() || !formData.password.trim())) {
+    if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
       return false;
     }
     
@@ -259,9 +259,6 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
         <ConnectionForm 
           formData={formData} 
           onChange={handleFormChange}
-          testStatus={testStatus}
-          testError={testError}
-          isValidating={isTesting || isCreating}
           onSave={handleCreate}
         />
         

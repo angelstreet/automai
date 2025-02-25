@@ -73,17 +73,42 @@ export async function log(level: LogLevel, message: string, options: LogOptions 
     try {
       // Check if ConnectionLog model exists in the schema
       if (prisma.connectionLog) {
-        await prisma.connectionLog.create({
-          data: {
-            level,
-            message,
-            action,
-            userId,
-            tenantId,
-            connectionId,
-            ip,
-            metadata: data ? JSON.stringify(data) : null,
+        // Create log data object
+        const logData: any = {
+          level,
+          message,
+          action,
+          ip,
+          metadata: data ? JSON.stringify(data) : null,
+        };
+        
+        // Only include foreign keys if they exist
+        if (userId) {
+          // Check if user exists
+          const userExists = await prisma.user.findUnique({ where: { id: userId } });
+          if (userExists) {
+            logData.userId = userId;
           }
+        }
+        
+        if (tenantId) {
+          // Check if tenant exists
+          const tenantExists = await prisma.tenant.findUnique({ where: { id: tenantId } });
+          if (tenantExists) {
+            logData.tenantId = tenantId;
+          }
+        }
+        
+        if (connectionId) {
+          // Check if connection exists
+          const connectionExists = await prisma.connection.findUnique({ where: { id: connectionId } });
+          if (connectionExists) {
+            logData.connectionId = connectionId;
+          }
+        }
+        
+        await prisma.connectionLog.create({
+          data: logData
         });
       } else {
         console.warn('ConnectionLog model not found in schema, skipping database logging');

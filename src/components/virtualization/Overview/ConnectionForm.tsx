@@ -14,7 +14,7 @@ export interface FormData {
   type: string;
   ip: string;
   port: string;
-  user: string;
+  username: string;
   password: string;
 }
 
@@ -75,7 +75,7 @@ export function ConnectionForm({
           type: formData.type,
           ip: formData.ip,
           port: formData.port,
-          user: formData.user,
+          username: formData.username,
           password: formData.password,
         }),
       });
@@ -120,7 +120,7 @@ export function ConnectionForm({
           type: formData.type,
           ip: formData.ip,
           port: formData.port,
-          user: formData.user,
+          username: formData.username,
           password: formData.password,
           fingerprint: fingerprint,
           accept: true
@@ -197,12 +197,12 @@ export function ConnectionForm({
       
       {connectionType === 'ssh' && (
         <div className="grid grid-cols-12 items-center gap-3">
-          <Label htmlFor="user" className="text-right col-span-2 whitespace-nowrap">Username</Label>
+          <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">Username</Label>
           <Input
-            id="user"
+            id="username"
             placeholder="Username"
-            value={formData.user}
-            onChange={(e) => handleInputChange('user', e.target.value)}
+            value={formData.username}
+            onChange={(e) => handleInputChange('username', e.target.value)}
             className="col-span-4"
           />
           <Label htmlFor="password" className="text-right whitespace-nowrap col-span-2">Password</Label>

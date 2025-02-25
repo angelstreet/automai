@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     const body = await request.json();
-    const { type, ip, port, user, password } = body;
+    const { type, ip, port, username, password } = body;
 
     logger.info(`Initiated ${type} connection test`, { 
       userId: session?.user?.id, 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
     // Implement more realistic connection testing
     if (type === 'ssh') {
-      if (!user || !password) {
+      if (!username || !password) {
         return NextResponse.json({
           success: false,
           message: 'Username and password are required for SSH connections',
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       
       // Check if credentials are valid
       const matchedCredential = validCredentials.find(cred => 
-        cred.ip === ip && cred.user === user && cred.password === password
+        cred.ip === ip && cred.user === username && cred.password === password
       );
       
       if (!matchedCredential) {
@@ -181,14 +181,14 @@ export async function POST(request: Request) {
       }
       
       // If credentials provided, validate them
-      if (user && password) {
+      if (username && password) {
         const validPortainerCreds = [
           { user: 'admin', password: 'portainer' },
           { user: 'admin', password: 'admin123' }
         ];
         
         const isValid = validPortainerCreds.some(cred => 
-          cred.user === user && cred.password === password
+          cred.user === username && cred.password === password
         );
         
         if (!isValid) {

@@ -30,12 +30,20 @@ export default function VirtualizationPage() {
   // Fetch machines from API
   const fetchMachines = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch('/api/virtualization/machines');
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch machines');
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load machines',
+        });
+        return;
       }
+      
       const data = await response.json();
-      setMachines(data.data);
+      setMachines(data.data || []);
     } catch (error) {
       console.error('Error fetching machines:', error);
       toast({

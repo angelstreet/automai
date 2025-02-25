@@ -6,7 +6,11 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
 // GET /api/virtualization/machines
-export async function GET() {
+export async function GET(request: Request) {
+  let sessionUser = null;
+  let sessionUserId = null;
+  let sessionTenantId = null;
+  
   try {
     const session = await getServerSession(authOptions);
     
@@ -23,12 +27,16 @@ export async function GET() {
       }, { status: 401 });
     }
     
+    sessionUser = session.user;
+    sessionUserId = session.user.id;
+    sessionTenantId = session.user.tenantId;
+    
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
     logger.info('Fetching machines', { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
+      userId: userId, 
+      tenantId: tenantId,
       action: 'MACHINES_GET',
       saveToDb: true
     });
@@ -47,8 +55,8 @@ export async function GET() {
     });
     
     logger.debug(`Successfully fetched ${connections.length} connections`, { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
+      userId: userId, 
+      tenantId: tenantId,
       action: 'MACHINES_GET_SUCCESS',
       data: { count: connections.length },
       saveToDb: true
@@ -62,7 +70,7 @@ export async function GET() {
       type: conn.type as 'ssh' | 'docker' | 'portainer',
       ip: conn.ip,
       port: conn.port || undefined,
-      user: conn.user || undefined,
+      user: conn.username || undefined,
       status: conn.status as 'connected' | 'failed' | 'pending',
       lastConnected: conn.lastConnected || undefined,
       errorMessage: conn.errorMessage || undefined,
@@ -75,11 +83,11 @@ export async function GET() {
       data: machines,
     });
   } catch (error) {
-    logger.error(`Error fetching machines: ${error.message}`, { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
+    logger.error(`Error fetching machines: ${error instanceof Error ? error.message : String(error)}`, { 
+      userId: sessionUserId, 
+      tenantId: sessionTenantId,
       action: 'MACHINES_GET_ERROR',
-      data: { error: error.message },
+      data: { error: error instanceof Error ? error.message : String(error) },
       saveToDb: true
     });
     
@@ -92,6 +100,11 @@ export async function GET() {
 
 // POST /api/virtualization/machines
 export async function POST(request: Request) {
+  let sessionUser = null;
+  let sessionUserId = null;
+  let sessionTenantId = null;
+  let requestBody = null;
+  
   try {
     const session = await getServerSession(authOptions);
     
@@ -108,15 +121,20 @@ export async function POST(request: Request) {
       }, { status: 401 });
     }
     
+    sessionUser = session.user;
+    sessionUserId = session.user.id;
+    sessionTenantId = session.user.tenantId;
+    
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
     const body = await request.json();
-    const { name, description, type, ip, port, user, password, status, statusLabel } = body;
+    requestBody = body;
+    const { name, description, type, ip, port, username, password, status, statusLabel } = body;
     
     logger.info('Creating new machine connection', { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
+      userId: userId, 
+      tenantId: tenantId,
       action: 'MACHINE_CREATE',
       data: { name, type, ip, port },
       saveToDb: true
@@ -124,8 +142,8 @@ export async function POST(request: Request) {
     
     if (!name || !type || !ip) {
       logger.warn('Missing required fields for machine creation', { 
-        userId: session?.user?.id, 
-        tenantId: session?.user?.tenantId,
+        userId: userId, 
+        tenantId: tenantId,
         action: 'MACHINE_CREATE_MISSING_FIELDS',
         data: { name, type, ip },
         saveToDb: true
@@ -145,7 +163,7 @@ export async function POST(request: Request) {
         type,
         ip,
         port: port ? Number(port) : undefined,
-        user,
+        username,
         password,
         status: status || 'pending',
         userId,
@@ -154,8 +172,8 @@ export async function POST(request: Request) {
     });
     
     logger.info('Successfully created machine connection', { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
+      userId: userId, 
+      tenantId: tenantId,
       action: 'MACHINE_CREATE_SUCCESS',
       connectionId: connection.id,
       data: { id: connection.id, name, type, ip, port },
@@ -170,7 +188,7 @@ export async function POST(request: Request) {
       type: connection.type as 'ssh' | 'docker' | 'portainer',
       ip: connection.ip,
       port: connection.port || undefined,
-      user: connection.user || undefined,
+      user: connection.username || undefined,
       status: connection.status as 'connected' | 'failed' | 'pending',
       lastConnected: connection.lastConnected || undefined,
       errorMessage: connection.errorMessage || undefined,
@@ -183,11 +201,19 @@ export async function POST(request: Request) {
       data: machine,
     }, { status: 201 });
   } catch (error) {
-    logger.error(`Error creating machine connection: ${error.message}`, { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
+    logger.error(`Error creating machine connection: ${error instanceof Error ? error.message : String(error)}`, { 
+      userId: sessionUserId, 
+      tenantId: sessionTenantId,
       action: 'MACHINE_CREATE_ERROR',
-      data: { name, type, ip, port, error: error.message },
+      data: { 
+        error: error instanceof Error ? error.message : String(error),
+        ...(requestBody ? {
+          name: requestBody.name,
+          type: requestBody.type,
+          ip: requestBody.ip,
+          port: requestBody.port
+        } : {})
+      },
       saveToDb: true
     });
     
