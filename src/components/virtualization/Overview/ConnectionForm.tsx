@@ -47,8 +47,8 @@ export function ConnectionForm({
   };
 
   return (
-    <div className="space-y-4 py-4">
-      <div className="space-y-2">
+    <div className="space-y-3 py-2">
+      <div className="space-y-1">
         <Label htmlFor="name">Name</Label>
         <Input
           id="name"
@@ -58,7 +58,7 @@ export function ConnectionForm({
         />
       </div>
       
-      <div className="space-y-2">
+      <div className="space-y-1">
         <Label htmlFor="type">Connection Type</Label>
         <Select 
           value={formData.type} 
@@ -75,8 +75,8 @@ export function ConnectionForm({
         </Select>
       </div>
       
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 space-y-2">
+      <div className="grid grid-cols-3 gap-3">
+        <div className="col-span-2 space-y-1">
           <Label htmlFor="ip">IP Address</Label>
           <Input
             id="ip"
@@ -85,7 +85,7 @@ export function ConnectionForm({
             onChange={(e) => handleInputChange('ip', e.target.value)}
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="port">Port</Label>
           <Input
             id="port"
@@ -97,8 +97,8 @@ export function ConnectionForm({
       </div>
       
       {connectionType === 'ssh' && (
-        <>
-          <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
             <Label htmlFor="user">Username</Label>
             <Input
               id="user"
@@ -108,7 +108,7 @@ export function ConnectionForm({
             />
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
@@ -118,16 +118,17 @@ export function ConnectionForm({
               onChange={(e) => handleInputChange('password', e.target.value)}
             />
           </div>
-        </>
+        </div>
       )}
       
-      <div className="space-y-2">
+      <div className="space-y-1">
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
           placeholder="Description (optional)"
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
+          className="h-16"
         />
       </div>
       

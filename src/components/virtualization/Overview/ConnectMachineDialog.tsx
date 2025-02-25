@@ -172,7 +172,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
       }
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Connect to client</DialogTitle>
           <DialogDescription>

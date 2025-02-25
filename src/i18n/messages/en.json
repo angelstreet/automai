@@ -24,5 +24,11 @@
     "noData": "No data available",
     "devices": "Devices",
     "virtualization": "Virtualization"
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "overview": "Overview",
+    "description": "Welcome to your dashboard",
+    "welcome": "Welcome back!"
   }
 } 

@@ -24,5 +24,11 @@
     "noData": "Aucune donnée disponible",
     "devices": "Appareils",
     "virtualization": "Virtualisation"
+  },
+  "Dashboard": {
+    "title": "Tableau de bord",
+    "overview": "Vue d'ensemble",
+    "description": "Bienvenue sur votre tableau de bord",
+    "welcome": "Bon retour !"
   }
 } 
