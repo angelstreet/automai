@@ -1,5 +1,26 @@
 # Automai SaaS
 
+## 🚀 Quick Start Commands
+```bash
+# Start Next.js frontend
+npm run dev
+
+# Start Electron app (will also start Next.js if not running)
+npm run electron-dev
+
+# Start backend server
+npm run server:dev
+
+# Start browser tools server for logs/debugging
+npx @agentdeskai/browser-tools-server
+
+# Run tests
+npm test  # or: npx jest tests/e2e.test.ts --runInBand
+
+# Open Prisma database GUI
+npm run prisma:studio
+```
+
 Automai is a multi-tenant SaaS platform designed for end-to-end test automation across web, desktop, and mobile environments.
 
 ## Installation
@@ -144,7 +165,7 @@ For detailed project documentation, architecture, and advanced configuration, pl
 
 Happy Testing!
 
-Template author: Joachim N. Doye
+Template author: Joachim N'Doye
 Based on shadcn-admin repository
 Crafted with 🤍 by @satnaing
 https://github.com/satnaing/shadcn-admin
