@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Laptop, Server, Database, AlertTriangle, CheckCircle, XCircle, Clock, Grid, List, MoreHorizontal, Terminal, BarChart2 } from 'lucide-react';
+import { Laptop, Server, Database, AlertTriangle, CheckCircle, XCircle, Clock, Grid, List, MoreHorizontal, Terminal, BarChart2, LayoutGrid } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
@@ -52,6 +52,7 @@ export function MachineList({
   const router = useRouter();
   const params = useParams();
   const tenant = params.tenant;
+  const locale = params.locale;
   
   // State for view mode (grid or table)
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -227,7 +228,9 @@ export function MachineList({
                         const machineId = Array.from(selectedMachines)[0];
                         const machine = paginatedMachines.find(m => m.id === machineId);
                         if (machine) {
-                          router.push(`/${tenant}/terminals/${machine.name}`);
+                          // Store in session storage for persistence
+                          sessionStorage.setItem('selectedMachines', JSON.stringify([machineId]));
+                          router.push(`/${locale}/${tenant}/terminals/${machine.name}`);
                         }
                       }}
                     >
@@ -242,7 +245,7 @@ export function MachineList({
                       const machineId = Array.from(selectedMachines)[0];
                       const machine = paginatedMachines.find(m => m.id === machineId);
                       if (machine) {
-                        router.push(`/${tenant}/analytics/machines/${machine.id}`);
+                        router.push(`/${locale}/${tenant}/analytics/machines/${machine.id}`);
                       }
                     }}
                   >
@@ -250,6 +253,28 @@ export function MachineList({
                     Analytics
                   </Button>
                 </>
+              )}
+              {selectedMachines.size > 1 && selectedMachines.size <= 4 && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    const machineIds = Array.from(selectedMachines);
+                    const sshMachines = machineIds
+                      .map(id => paginatedMachines.find(m => m.id === id))
+                      .filter(m => m?.type === 'ssh');
+                    
+                    if (sshMachines.length > 0) {
+                      // Store in session storage for persistence
+                      sessionStorage.setItem('selectedMachines', JSON.stringify(machineIds));
+                      // Use the first machine name in the URL, but will load all selected machines
+                      router.push(`/${locale}/${tenant}/terminals/${sshMachines[0]?.name}?count=${sshMachines.length}`);
+                    }
+                  }}
+                >
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  Multiple Terminals ({selectedMachines.size})
+                </Button>
               )}
               <Button 
                 variant="destructive" 
@@ -345,7 +370,11 @@ export function MachineList({
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => router.push(`/${tenant}/terminals/${machine.name}`)}
+                        onClick={() => {
+                          // Store in session storage for persistence
+                          sessionStorage.setItem('selectedMachines', JSON.stringify([machine.id]));
+                          router.push(`/${locale}/${tenant}/terminals/${machine.name}`);
+                        }}
                         disabled={machine.status !== 'connected'}
                       >
                         Open Terminal
@@ -432,7 +461,11 @@ export function MachineList({
                       <DropdownMenuContent align="end">
                         {machine.type === 'ssh' && (
                           <DropdownMenuItem 
-                            onClick={() => router.push(`/${tenant}/terminals/${machine.name}`)}
+                            onClick={() => {
+                              // Store in session storage for persistence
+                              sessionStorage.setItem('selectedMachines', JSON.stringify([machine.id]));
+                              router.push(`/${locale}/${tenant}/terminals/${machine.name}`);
+                            }}
                             disabled={machine.status !== 'connected'}
                           >
                             Open Terminal

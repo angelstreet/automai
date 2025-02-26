@@ -9,6 +9,10 @@ import { useUser } from '@/lib/contexts/UserContext';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 
+// Cache session check timestamp to reduce API calls
+const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+let lastSessionCheck = 0;
+
 export default function WorkspaceLayout({
   children,
   params,
@@ -16,11 +20,20 @@ export default function WorkspaceLayout({
   children: React.ReactNode;
   params: Promise<{ tenant: string; locale: string }>;
 }) {
-  const { user, isLoading } = useUser();
+  const { user, isLoading, checkSession } = useUser();
   const router = useRouter();
 
   // Properly handle params as a Promise
   const { locale, tenant } = React.use(params);
+
+  // Check session only at intervals to reduce API calls
+  React.useEffect(() => {
+    const now = Date.now();
+    if (now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
+      checkSession();
+      lastSessionCheck = now;
+    }
+  }, [checkSession]);
 
   // Only show loading state while user data is being fetched
   if (isLoading) {

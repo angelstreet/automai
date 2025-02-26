@@ -20,6 +20,10 @@ export interface LogOptions {
 // Environment-based logging (more verbose in development)
 const isDev = process.env.NODE_ENV === 'development';
 
+// Debounce mechanism to prevent duplicate logs
+const recentLogs = new Map<string, number>();
+const DEBOUNCE_INTERVAL = 2000; // 2 seconds
+
 // Helper to determine if we should log based on environment and level
 function shouldLog(level: LogLevel): boolean {
   // In production, only log info and above
@@ -28,6 +32,12 @@ function shouldLog(level: LogLevel): boolean {
   }
   // In development, log everything
   return true;
+}
+
+// Generate a unique key for a log entry to prevent duplicates
+function getLogKey(level: LogLevel, message: string, options: LogOptions): string {
+  const { userId, connectionId, action } = options;
+  return `${level}:${message}:${userId || ''}:${connectionId || ''}:${action || ''}`;
 }
 
 /**
@@ -71,6 +81,30 @@ export async function log(level: LogLevel, message: string, options: LogOptions 
   // Save to database if requested and not in test environment
   if (saveToDb && process.env.NODE_ENV !== 'test') {
     try {
+      // Check for duplicate logs within debounce interval
+      const logKey = getLogKey(level, message, options);
+      const now = Date.now();
+      const lastLogTime = recentLogs.get(logKey);
+      
+      if (lastLogTime && now - lastLogTime < DEBOUNCE_INTERVAL) {
+        // Skip duplicate log within debounce interval
+        return;
+      }
+      
+      // Update the last log time
+      recentLogs.set(logKey, now);
+      
+      // Clean up old entries from the map to prevent memory leaks
+      if (recentLogs.size > 1000) {
+        const keysToDelete = [];
+        for (const [key, time] of recentLogs.entries()) {
+          if (now - time > DEBOUNCE_INTERVAL) {
+            keysToDelete.push(key);
+          }
+        }
+        keysToDelete.forEach(key => recentLogs.delete(key));
+      }
+      
       // Check if ConnectionLog model exists in the schema
       if (prisma.connectionLog) {
         // Create log data object

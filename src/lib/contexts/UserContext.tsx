@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
 import { useSession } from 'next-auth/react';
 
@@ -25,7 +25,12 @@ type UserContextType = {
   ) => boolean;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  checkSession: () => void;
 };
+
+// Cache for session data
+const SESSION_CACHE_KEY = 'user_session_cache';
+const SESSION_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
@@ -34,9 +39,30 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetch, setLastFetch] = useState<number>(0);
 
   const fetchUser = async () => {
     try {
+      // Check if we have a cached user and it's still valid
+      const now = Date.now();
+      const cachedData = typeof window !== 'undefined' ? localStorage.getItem(SESSION_CACHE_KEY) : null;
+      
+      if (cachedData) {
+        try {
+          const { user: cachedUser, timestamp } = JSON.parse(cachedData);
+          if (now - timestamp < SESSION_CACHE_EXPIRY) {
+            setUser(cachedUser);
+            setError(null);
+            setIsLoading(false);
+            setLastFetch(timestamp);
+            return;
+          }
+        } catch (e) {
+          // Invalid cache, continue with fetch
+          console.warn('Invalid session cache, fetching fresh data');
+        }
+      }
+
       if (!session?.accessToken) {
         console.log('No access token available');
         setUser(null);
@@ -67,8 +93,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         plan: userData.plan,
         tenantId: userData.tenantId,
       });
+      
+      // Cache the user data
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({
+          user: userData,
+          timestamp: now
+        }));
+      }
+      
       setUser(userData);
       setError(null);
+      setLastFetch(now);
     } catch (err) {
       console.error('Error in fetchUser:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -77,6 +113,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   };
+
+  // Check session only when needed
+  const checkSession = useCallback(() => {
+    const now = Date.now();
+    if (now - lastFetch > SESSION_CACHE_EXPIRY) {
+      fetchUser();
+    }
+  }, [lastFetch]);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -101,6 +145,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(SESSION_CACHE_KEY);
+    }
     setUser(null);
   };
 
@@ -112,6 +159,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     canCreateMore: checkCanCreateMore,
     logout,
     refreshUser: fetchUser,
+    checkSession,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

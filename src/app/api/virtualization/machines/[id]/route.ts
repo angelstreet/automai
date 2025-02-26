@@ -102,6 +102,7 @@ export async function PATCH(
       }, { status: 401 });
     }
     
+    // Properly handle params
     const id = params.id;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
