@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settings } from 'lucide-react';
+import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settings, Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { HostOverview } from '@/components/virtualization/Overview/HostOverview';
 import { Machine } from '@/types/virtualization';
@@ -183,6 +183,7 @@ export default function VirtualizationPage() {
           </TooltipProvider>
           
           <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
             {t('add_machine')}
           </Button>
         </div>
@@ -204,6 +205,7 @@ export default function VirtualizationPage() {
                 {t('add_machine_description')}
               </p>
               <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
                 {t('add_machine')}
               </Button>
             </div>
@@ -236,6 +238,13 @@ export default function VirtualizationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Connect Host Dialog */}
+      <ConnectHostDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={handleConnectionSuccess}
+      />
     </div>
   );
 } 

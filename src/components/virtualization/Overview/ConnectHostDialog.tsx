@@ -117,8 +117,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
           port: formData.port ? parseInt(formData.port) : undefined,
           username: formData.username,
           password: formData.password,
-          status: 'connected',
-          lastConnected: new Date().toISOString()
+          status: testStatus === 'success' ? 'connected' : 'pending',
+          lastConnected: testStatus === 'success' ? new Date().toISOString() : null
         }),
       });
 
@@ -132,6 +132,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       toast({
         title: 'Connection created',
         description: `Successfully connected to ${formData.name}`,
+        duration: 5000,
       });
 
       resetForm();
@@ -146,6 +147,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         variant: 'destructive',
         title: 'Connection failed',
         description: error instanceof Error ? error.message : 'Failed to create connection',
+        duration: 5000,
       });
     } finally {
       setIsCreating(false);
@@ -252,20 +254,42 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       }
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Connect to client</DialogTitle>
+          <DialogTitle>Connect to Host</DialogTitle>
           <DialogDescription>
-            Connect to a remote machine or container for management
+            Enter the connection details for your host.
           </DialogDescription>
         </DialogHeader>
-        
-        <ConnectionForm 
-          formData={formData} 
+
+        <ConnectionForm
+          formData={formData}
           onChange={handleFormChange}
-          onSave={handleCreate}
           onTestSuccess={() => setTestStatus('success')}
         />
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isCreating}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreate}
+            disabled={!isFormValid() || isCreating || testStatus !== 'success'}
+          >
+            {isCreating ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              'Connect'
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

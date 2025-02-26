@@ -5,7 +5,9 @@ import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Grid, List } from 'lucide-react';
+import { Grid, List, Plus, RefreshCw } from 'lucide-react';
+import { ConnectHostDialog } from './ConnectHostDialog';
+import { useToast } from '@/components/ui/use-toast';
 
 interface HostOverviewProps {
   machines: Machine[];
@@ -24,6 +26,7 @@ export function HostOverview({
   onTestConnection,
   className,
 }: HostOverviewProps) {
+  const { toast } = useToast();
   // State for view mode (grid or table)
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   
@@ -34,6 +37,9 @@ export function HostOverview({
   // State for status filtering
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
+  // State for connecting host dialog
+  const [showConnectDialog, setShowConnectDialog] = useState(false);
+  
   // Filter machines by status if filter is active
   const filteredMachines = statusFilter 
     ? machines.filter(m => {
@@ -43,7 +49,7 @@ export function HostOverview({
         return true;
       })
     : machines;
-
+  
   const statusSummary = {
     connected: machines.filter(m => m.status === 'connected').length,
     failed: machines.filter(m => m.status === 'failed').length,
@@ -86,6 +92,29 @@ export function HostOverview({
     }
   };
 
+  // Handle bulk refresh
+  const handleBulkRefresh = async () => {
+    if (onTestConnection) {
+      let successCount = 0;
+      for (const machine of filteredMachines) {
+        try {
+          await onTestConnection(machine);
+          successCount++;
+        } catch (error) {
+          console.error('Error refreshing connection:', error);
+        }
+      }
+      
+      if (successCount > 0) {
+        toast({
+          title: 'Connections refreshed',
+          description: `Successfully refreshed ${successCount} host${successCount > 1 ? 's' : ''}`,
+          duration: 5000,
+        });
+      }
+    }
+  };
+
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       <div className="flex justify-between items-center p-2">
@@ -122,11 +151,21 @@ export function HostOverview({
           ) : (
             <>
               <Button 
-                variant="outline" 
+                variant="default" 
                 size="sm" 
-                onClick={() => setSelectMode(true)}
+                onClick={() => setShowConnectDialog(true)}
               >
-                Select
+                <Plus className="h-4 w-4 mr-2" />
+                Add Host
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkRefresh}
+                disabled={isLoading || filteredMachines.length === 0}
+              >
+                <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+                Refresh All
               </Button>
               <Button 
                 variant={viewMode === 'grid' ? 'default' : 'outline'} 
@@ -189,6 +228,12 @@ export function HostOverview({
           )}
         </>
       )}
+      
+      <ConnectHostDialog 
+        open={showConnectDialog}
+        onOpenChange={setShowConnectDialog}
+        onSuccess={onRefresh}
+      />
     </div>
   );
 } 
