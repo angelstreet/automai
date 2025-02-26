@@ -177,15 +177,6 @@ export default function VirtualizationPage() {
           
           <TooltipProvider>
             <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
-                >
-                  {viewMode === 'grid' ? <Table2 className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
               <TooltipContent>
                 <p>{viewMode === 'grid' ? t('table_view') : t('grid_view')}</p>
               </TooltipContent>

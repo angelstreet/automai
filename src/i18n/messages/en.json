@@ -71,7 +71,7 @@
     "refresh": "Refresh",
     "table_view": "Table View",
     "add_machine": "Add Host",
-    "note": "Press refresh All to check all your hosts health"
+    "note": "Add and manage your hosts, access terminals, monitor logs, and deploy containers all in one place"
   },
   "Virtualization": {
     "machines": "Hosts",
