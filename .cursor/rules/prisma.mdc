@@ -9,10 +9,10 @@ globs: src/server/prisma/**/*.{ts,prisma}
 
 - **IMPORTANT**: All Prisma-related files are in `src/server/prisma` directory
 - The Prisma schema file is at `src/server/prisma/schema.prisma`
-- SQLite database file is at `src/server/prisma/dev.db`
+- PostgreSQL database connection is configured in environment files
 - Migrations are stored in `src/server/prisma/migrations`
 - Environment variables for database connection are in `src/server/config/env/.env.*` files
-- The DATABASE_URL in environment files should use relative path: `file:../prisma/dev.db`
+- The DATABASE_URL in environment files should use PostgreSQL format: `postgresql://user@localhost:5432/dbname`
 - **NEVER** create Prisma configurations outside the `src/server/prisma` directory
 
 ## OAuth & Authentication Rules
@@ -31,10 +31,10 @@ globs: src/server/prisma/**/*.{ts,prisma}
 ## Migration Rules
 
 **IMPORTANT**: For migrations ONLY:
-1. Always use full path: `DATABASE_URL="file:/Users/joachimndoye/Documents/automai/src/server/prisma/dev.db"`
-2. After migration, verify no duplicate DBs were created using `find . -name "dev.db"`
-3. Return to relative path in code/config files
-4. Never commit the full path to version control
+1. Always use full PostgreSQL URL: `DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db"`
+2. After migration, verify schema changes using `\d` in psql
+3. Return to environment-based URL in code/config files
+4. Never commit sensitive database credentials to version control
 
 ## Core Principles
 
@@ -154,26 +154,34 @@ export async function createTestWithResults(data: TestData) {
 }
 ```
 
-## Migrations
+## PostgreSQL-Specific Features
 
-```typescript
-// src/server/prisma/migrations/20240224000000_init/migration.sql
--- CreateEnum
-CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
+### JSON Fields
+```prisma
+model Log {
+  id        String   @id @default(uuid())
+  metadata  Json?    // PostgreSQL JSONB type
+  createdAt DateTime @default(now())
+}
+```
 
--- CreateTable
-CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "name" TEXT,
-    "role" "Role" NOT NULL DEFAULT 'USER',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-);
+### Full Text Search
+```prisma
+model Document {
+  id      String @id @default(uuid())
+  content String
+  
+  @@index([content], type: Gin) // PostgreSQL GIN index for text search
+}
+```
 
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+### Enums
+```prisma
+enum Status {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
 ```
 
 ## Best Practices
