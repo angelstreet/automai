@@ -39,10 +39,10 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger>
-              <div className={`${baseClasses} bg-yellow-500`} />
+              <div className={`${baseClasses} bg-gray-400`} />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Pending</p>
+              <p>Unknown</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -94,7 +94,7 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <div className={`${baseClasses} bg-yellow-500`} />
+                <div className={`${baseClasses} bg-orange-500`} />
               </TooltipTrigger>
               <TooltipContent>
                 <p>Unknown Status</p>

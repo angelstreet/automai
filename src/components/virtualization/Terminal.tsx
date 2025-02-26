@@ -47,7 +47,9 @@ export function Terminal({ connection }: TerminalProps) {
 
     // Open terminal in container
     term.open(terminalRef.current);
-    fitAddon.fit();
+    setTimeout(() => {
+      fitAddon.fit();
+    }, 100);
 
     // Store terminal instance
     xtermRef.current = term;

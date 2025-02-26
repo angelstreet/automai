@@ -24,8 +24,10 @@ export async function GET(
       }, { status: 401 });
     }
     
-    // Properly handle params - use context.params instead of params directly
-    const { name } = context.params;
+    // Properly handle params - ensure context.params is awaited
+    const params = await Promise.resolve(context.params);
+    const { name } = params;
+    
     if (!name) {
       return NextResponse.json({
         success: false,
