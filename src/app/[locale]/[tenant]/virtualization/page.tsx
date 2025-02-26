@@ -87,7 +87,7 @@ export default function VirtualizationPage() {
       // Show toast notification
       toast({
         title: testData.success ? 'Success' : 'Error',
-        description: testData.success ? 'Machine connected successfully' : testData.message,
+        description: testData.success ? 'Host connected successfully' : testData.message,
         variant: testData.success ? 'default' : 'destructive'
       });
     } catch (error) {
@@ -139,7 +139,7 @@ export default function VirtualizationPage() {
       setMachines(prev => prev.filter(machine => machine.id !== machineToDelete));
       toast({
         title: 'Success',
-        description: 'Machine deleted successfully',
+        description: 'Host deleted successfully',
       });
     } catch (error) {
       console.error('Error deleting machine:', error);

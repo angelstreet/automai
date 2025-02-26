@@ -58,6 +58,10 @@ export function ConnectionForm({
   };
 
   const handleInputChange = (field: string, value: string) => {
+    if (field === 'name') {
+      // Only allow lowercase letters, numbers, and hyphens
+      value = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    }
     onChange({ ...formData, [field]: value });
   };
 
@@ -186,13 +190,16 @@ export function ConnectionForm({
       <form onKeyDown={handleKeyDown} onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-12 items-center gap-3">
           <Label htmlFor="name" className="text-right col-span-2">Name</Label>
-          <Input
-            id="name"
-            placeholder="Client name"
-            value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
-            className="col-span-10"
-          />
+          <div className="col-span-10 space-y-1">
+            <Input
+              id="name"
+              placeholder="Host name (lowercase letters, numbers, and hyphens only)"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, and hyphens are allowed</p>
+          </div>
         </div>
         
         <div className="grid grid-cols-12 items-center gap-3 mt-3">

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Terminal, AlertCircle, MoreHorizontal, BarChart2, RefreshCw, XCircle } from 'lucide-react';
+import { Terminal, AlertCircle, MoreHorizontal, BarChart2, RefreshCw, XCircle, ScrollText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Machine } from '@/types/virtualization';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -31,7 +31,7 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
   const [showError, setShowError] = useState(false);
 
   const getStatusDot = (status: string) => {
-    const baseClasses = "h-2 w-2 rounded-full";
+    const baseClasses = "h-3 w-3 rounded-full";
     switch (status) {
       case 'connected':
         return (
@@ -89,7 +89,7 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
   };
 
   const handleTerminalClick = () => {
-    router.push(`/terminals/${machine.name}`);
+    router.push(`/terminals/${machine.name.toLowerCase()}`);
   };
 
   return (
@@ -114,14 +114,18 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
           <div className="flex items-center space-x-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-[160px]">
                 <DropdownMenuItem onClick={() => router.push(`/metrics/${machine.name}`)}>
                   <BarChart2 className="mr-2 h-4 w-4" />
                   <span>Metrics</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => router.push(`/logs/${machine.name}`)}>
+                  <ScrollText className="mr-2 h-4 w-4" />
+                  <span>Logs</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onTestConnection?.(machine)}>
                   <RefreshCw className="mr-2 h-4 w-4" />
