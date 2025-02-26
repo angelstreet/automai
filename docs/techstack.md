@@ -8,6 +8,7 @@
 - **Routing**: Next.js App Router
 - **Internationalization**: Next-translate / i18next
 - **Component Library**: Shadcn, Lucide-react (icons)
+- **Terminal UI**: xterm.js for browser-based terminal emulation
 - **Testing**: Jest, React Testing Library
 - **Package Manager**: npm / pnpm
 - **Desktop Integration**:
@@ -30,7 +31,9 @@
 - **SSH & Terminal**: 
   - ssh2 library for SSH connections
   - xterm.js for browser-based terminal
-  - WebSockets for real-time communication
+  - ws library for WebSocket connections
+  - Singleton WebSocketServer pattern
+  - Connection health monitoring (ping/pong)
   - Terminal session logging and monitoring
 - **Authentication**: 
   - NextAuth.js (JWT, OAuth via Supabase)
@@ -90,6 +93,10 @@
   - Supabase (PostgreSQL)
   - Prisma ORM for DB Access
   - Local storage for desktop
+- **WebSocket Support:**
+  - Ensure deployment environment supports WebSockets
+  - Proper handling of connection upgrades
+  - Fallback mechanisms for environments with WebSocket limitations
 - **Infrastructure as Code:** Terraform / Pulumi
 
 ## 5. Test Execution & Reporting
@@ -100,6 +107,7 @@
 - **Remote Access:**
   - SSH terminal for direct machine access
   - WebSocket-based real-time terminal
+  - xterm.js for terminal emulation in browser
   - Command execution and session logging
   - Terminal resize support for responsive UI
 - **Cloud Execution:** 
@@ -120,6 +128,7 @@
   - `GET /api/virtualization/machines/[id]/terminal`: WebSocket for SSH terminal
   - `POST /api/virtualization/machines/connect`: Establish machine connection
   - `POST /api/virtualization/machines/test-connection`: Test SSH connectivity
+  - `POST /api/virtualization/machines/verify-fingerprint`: Verify SSH host fingerprint
 - **Desktop IPC Endpoints**:
   - `store-get/set`: Local data persistence
   - `run-python`: Python script execution
@@ -138,6 +147,7 @@
   - Chrome DevTools for web
   - Electron DevTools for desktop
   - React DevTools integration
+  - WebSocket inspection tools
 - **Hot Reload**: 
   - Next.js hot module replacement
   - Electron development server
@@ -146,6 +156,25 @@
   - Desktop OS support
   - Shared codebase management
 
+## 8. WebSocket & Terminal Implementation
+- **WebSocket Server**: 
+  - Singleton pattern for efficient connection management
+  - Connection health monitoring with ping/pong
+  - Path-based upgrade handling
+  - Error handling and logging
+- **Terminal Emulation**:
+  - xterm.js for browser-based terminal UI
+  - WebSocket for real-time data streaming
+  - Support for ANSI escape sequences and colors
+  - Terminal resizing and responsive layout
+  - Copy/paste support and keyboard shortcuts
+- **SSH Integration**:
+  - ssh2 library for secure connections
+  - Fingerprint verification and management
+  - Authentication with username/password
+  - Support for terminal commands and output
+  - Session management and timeout handling
+
 ---
-This tech stack supports both web and desktop platforms, with shared core functionality and platform-specific optimizations. 🚀
+This tech stack supports both web and desktop platforms, with shared core functionality and platform-specific optimizations. The WebSocket and terminal implementation provides a secure, responsive, and feature-rich remote access experience. 🚀
 

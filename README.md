@@ -3,8 +3,11 @@
 ## 🚀 Quick Start Commands
 ```bash
  pkill -f "node"
+ 
+ curl -v http://localhost:3000/api/virtualization/machines/test-id/terminal
+ 
 # Start Next.js frontend
-npm run dev
+rm -rf .next && npm run dev
 
 # Start Electron app (will also start Next.js if not running)
 npm run electron-dev

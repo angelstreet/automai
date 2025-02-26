@@ -25,6 +25,11 @@ const nextConfig = {
     
     return config;
   },
+  
+  // Configure server options for WebSocket support
+  experimental: {
+    serverComponentsExternalPackages: ['ws', 'ssh2'],
+  },
 };
 
 module.exports = withNextIntl(nextConfig); 

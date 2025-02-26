@@ -7,6 +7,16 @@ import { serverCache } from '@/lib/cache';
 import { setupWebSocket, setupAuthTimeout } from './utils/websocket';
 import { handleSshConnection, handleMockTerminal } from './utils/terminal-handlers';
 
+// Export runtime configuration for Edge compatibility
+export const runtime = 'nodejs';
+
+// Export config to disable body parsing for WebSocket
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 export async function GET(
   request: NextRequest,
   context: { params: { id: string } }
@@ -74,7 +84,11 @@ export async function GET(
     
     return response;
   } catch (error) {
-    logger.error(`Error in terminal WebSocket: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`Error in terminal WebSocket: ${error instanceof Error ? error.message : String(error)}`, {
+      action: 'TERMINAL_WS_ERROR',
+      data: { error: error instanceof Error ? error.message : String(error) },
+      saveToDb: true
+    });
     return new Response('Internal Server Error', { status: 500 });
   }
 } 

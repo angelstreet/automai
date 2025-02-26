@@ -5,6 +5,7 @@ The backend handles **multi-tenant test execution**, including **authentication,
 - **Local & Cloud Execution**: Playwright for local runs, cloud execution planned.
 - **Storage & Logs**: Supabase Storage (screenshots/videos/reports) & Elasticsearch/Kibana (logs).
 - **API for Test Execution & Reporting.**
+- **Real-time Terminal Access**: WebSocket-based SSH terminal for remote machine access.
 
 ## 2. Tech Stack
 - **Framework:** Node.js (Express) or FastAPI (Python)
@@ -14,6 +15,8 @@ The backend handles **multi-tenant test execution**, including **authentication,
 - **Logging:** Kibana & Elasticsearch (Execution Logs)
 - **Execution Framework:** Playwright for test automation
 - **Version Control:** Git for tracking test case changes
+- **WebSockets:** ws library for real-time terminal access
+- **SSH:** ssh2 library for secure shell connections
 
 ## 3. API Structure
 ### 3.1 Project Management
@@ -39,9 +42,12 @@ The backend handles **multi-tenant test execution**, including **authentication,
 ### 3.4 SSH Terminal Access
 - **Connect to SSH Terminal** → `GET /api/virtualization/machines/[id]/terminal`
   - **WebSocket endpoint for real-time SSH terminal access.**
+  - **Uses singleton WebSocketServer pattern for efficient connection handling.**
   - **Supports authentication, command execution, and terminal resizing.**
+  - **Implements ping/pong for connection health monitoring.**
   - **Logs terminal sessions and commands to Elasticsearch.**
   - **Handles connection errors and provides user feedback.**
+  - **Supports both SSH and mock terminal implementations.**
 
 ### 3.5 Execution Reporting & Logs
 - **Get Execution Logs** → `GET /api/executions?testcase_id=...`
@@ -112,27 +118,55 @@ async function uploadReportToSupabase(filePath, executionId) {
 }
 ```
 
-## 6. SSH Implementation
+## 6. WebSocket & SSH Implementation
 ```javascript
-const { Client } = require('ssh2');
+// WebSocket Server Singleton
+import { WebSocketServer, WebSocket } from 'ws';
 
-async function createSSHTerminal(connection, socket) {
+// Global WebSocketServer instance
+let wss: WebSocketServer | null = null;
+
+export function getWebSocketServer(): WebSocketServer {
+  if (!wss) {
+    wss = new WebSocketServer({ noServer: true });
+    
+    // Set up ping interval to detect dead connections
+    const pingInterval = setInterval(() => {
+      wss.clients.forEach((ws) => {
+        if (ws.isAlive === false) return ws.terminate();
+        ws.isAlive = false;
+        ws.ping();
+      });
+    }, 30000);
+  }
+  return wss;
+}
+
+// SSH Connection Handler
+async function handleSshConnection(clientSocket, connection) {
   const sshClient = new Client();
   
   sshClient.on('ready', () => {
     sshClient.shell((err, stream) => {
       if (err) {
-        socket.send(JSON.stringify({ error: err.message }));
+        clientSocket.send(JSON.stringify({ error: err.message }));
         return;
       }
       
       // Pipe data between SSH stream and WebSocket
-      stream.on('data', (data) => socket.send(data));
-      socket.on('message', (message) => stream.write(message));
+      stream.on('data', (data) => clientSocket.send(data));
+      clientSocket.on('message', (message) => stream.write(message));
       
       // Handle terminal resize
-      socket.on('resize', ({ rows, cols }) => {
-        stream.setWindow(rows, cols, 0, 0);
+      clientSocket.on('message', (message) => {
+        try {
+          const data = JSON.parse(message.toString());
+          if (data.type === 'resize') {
+            stream.setWindow(data.rows, data.cols, 0, 0);
+          }
+        } catch (e) {
+          // Not a resize message, treat as terminal input
+        }
       });
     });
   });
@@ -152,7 +186,8 @@ async function createSSHTerminal(connection, socket) {
 - **Backend:** Supabase (Preferred) or AWS Lambda / Firebase Functions.
 - **Database:** Supabase (PostgreSQL) / Prisma ORM.
 - **Infrastructure as Code:** Terraform / Pulumi.
+- **WebSocket Support:** Ensure deployment environment supports WebSocket connections.
 
 ---
-This backend update ensures **structured test execution, reporting, and integration with Supabase Storage, Kibana, and Git.** 🚀
+This backend update ensures **structured test execution, reporting, and integration with Supabase Storage, Kibana, and Git.** The WebSocket implementation provides real-time terminal access with proper connection management and error handling. 🚀
 

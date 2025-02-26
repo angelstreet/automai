@@ -1,14 +1,7 @@
 import { Client } from 'ssh2';
 import { logger } from '@/lib/logger';
 import { Connection } from '@prisma/client';
-
-export interface WebSocketConnection {
-  socket: any;
-  send: (data: any) => void;
-  on: (event: string, callback: (data: any) => void) => void;
-  once: (event: string, callback: (data: any) => void) => void;
-  close: () => void;
-}
+import { WebSocketConnection } from '@/lib/websocket-server';
 
 export function handleSshConnection(
   clientSocket: WebSocketConnection,
