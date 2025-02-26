@@ -148,24 +148,46 @@ export function HostOverview({
       </div>
       
       {viewMode === 'grid' ? (
-        <HostGrid
-          machines={filteredMachines}
-          selectedMachines={selectedMachines}
-          selectMode={selectMode}
-          onSelect={handleSelect}
-          onDelete={onDelete}
-          onTestConnection={onTestConnection}
-        />
+        <>
+          {filteredMachines.length > 0 ? (
+            <HostGrid
+              machines={filteredMachines}
+              selectedMachines={selectedMachines}
+              selectMode={selectMode}
+              onSelect={handleSelect}
+              onDelete={onDelete}
+              onTestConnection={onTestConnection}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-muted-foreground mb-4">No machines match the current filter</p>
+              <Button variant="outline" onClick={() => setStatusFilter(null)}>
+                Clear Filter
+              </Button>
+            </div>
+          )}
+        </>
       ) : (
-        <HostTable
-          machines={filteredMachines}
-          selectedMachines={selectedMachines}
-          selectMode={selectMode}
-          onSelect={handleSelect}
-          onSelectAll={handleSelectAll}
-          onDelete={onDelete}
-          onTestConnection={onTestConnection}
-        />
+        <>
+          {filteredMachines.length > 0 ? (
+            <HostTable
+              machines={filteredMachines}
+              selectedMachines={selectedMachines}
+              selectMode={selectMode}
+              onSelect={handleSelect}
+              onSelectAll={handleSelectAll}
+              onDelete={onDelete}
+              onTestConnection={onTestConnection}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="text-muted-foreground mb-4">No machines match the current filter</p>
+              <Button variant="outline" onClick={() => setStatusFilter(null)}>
+                Clear Filter
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

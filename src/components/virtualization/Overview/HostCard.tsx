@@ -7,7 +7,12 @@ import { Terminal, AlertCircle, MoreHorizontal, BarChart2, RefreshCw, XCircle } 
 import { useRouter } from 'next/navigation';
 import { Machine } from '@/types/virtualization';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,16 +30,61 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
   const router = useRouter();
   const [showError, setShowError] = useState(false);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusDot = (status: string) => {
+    const baseClasses = "h-2 w-2 rounded-full";
     switch (status) {
       case 'connected':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Connected</Badge>;
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-green-500`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Connected</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       case 'failed':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Error</Badge>;
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-red-500`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Error</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-yellow-500`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Pending</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-gray-500`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Unknown</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
     }
   };
 
@@ -47,10 +97,16 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
       <Card className="relative">
         <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
           <div className="flex flex-col space-y-1.5">
-            <CardTitle className="text-base font-semibold truncate max-w-[200px]">
-              {machine.name}
-            </CardTitle>
-            {getStatusBadge(machine.status)}
+            <div className="flex items-center">
+              <div className="w-[200px] flex items-center">
+                <CardTitle className="text-base font-semibold truncate flex-1">
+                  {machine.name}
+                </CardTitle>
+                <div className="ml-2">
+                  {getStatusDot(machine.status)}
+                </div>
+              </div>
+            </div>
             <CardDescription className="text-xs">
               {machine.ip}{machine.port ? `:${machine.port}` : ''}
             </CardDescription>
