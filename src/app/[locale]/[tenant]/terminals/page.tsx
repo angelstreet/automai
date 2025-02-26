@@ -20,10 +20,10 @@ export default function TerminalsPage() {
         if (!Array.isArray(machineIds) || machineIds.length === 0) {
           toast({
             title: "No machines selected",
-            description: "Please select a machine from the virtualization page.",
+            description: "Please select a machine from the hosts page.",
             variant: "destructive",
           });
-          router.push('./virtualization');
+          router.push('./hosts');
           return;
         }
         
@@ -45,7 +45,7 @@ export default function TerminalsPage() {
               description: "Failed to load terminal. Please try again.",
               variant: "destructive",
             });
-            router.push('./virtualization');
+            router.push('./hosts');
           });
       } catch (error) {
         toast({
@@ -53,16 +53,16 @@ export default function TerminalsPage() {
           description: "Invalid machine data. Please try again.",
           variant: "destructive",
         });
-        router.push('./virtualization');
+        router.push('./hosts');
       }
     } else {
-      // No machines selected, redirect to virtualization page
+      // No machines selected, redirect to hosts page
       toast({
         title: "No machines selected",
-        description: "Please select a machine from the virtualization page.",
+        description: "Please select a machine from the hosts page.",
         variant: "destructive",
       });
-      router.push('./virtualization');
+      router.push('./hosts');
     }
   }, []);
 

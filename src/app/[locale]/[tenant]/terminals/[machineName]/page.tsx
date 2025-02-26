@@ -27,6 +27,15 @@ export default function TerminalPage() {
   // Get machine name from URL params
   const machineName = params.machineName as string;
   
+  // Log the machine name for debugging
+  useEffect(() => {
+    logger.info(`Terminal page loaded with machine name: ${machineName}`, {
+      action: 'TERMINAL_PAGE_LOADED',
+      data: { machineName },
+      saveToDb: true
+    });
+  }, [machineName]);
+  
   // Get count from URL if present (for multiple terminals)
   const count = typeof window !== 'undefined' 
     ? new URLSearchParams(window.location.search).get('count') 
@@ -38,6 +47,12 @@ export default function TerminalPage() {
     // Function to fetch machine details by name
     const fetchMachineByName = async (name: string) => {
       try {
+        logger.info(`Fetching machine by name: ${name}`, {
+          action: 'TERMINAL_FETCH_ATTEMPT',
+          data: { machineName: name },
+          saveToDb: true
+        });
+        
         const response = await fetch(`/api/virtualization/machines/byName/${name}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch machine details for ${name}`);

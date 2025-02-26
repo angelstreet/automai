@@ -39,7 +39,10 @@ export async function GET(
     // Get the connection by name
     const connection = await prisma.connection.findFirst({
       where: {
-        name,
+        name: {
+          equals: name,
+          mode: 'insensitive'
+        },
         OR: [
           { userId },
           { tenantId: tenantId || undefined }

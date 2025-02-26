@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Server } from 'lucide-react';
 
-export default function VirtualizationPage() {
+export default function HostsPage() {
   const t = useTranslations('Common');
   const params = useParams();
   const router = useRouter();
@@ -40,7 +40,12 @@ export default function VirtualizationPage() {
       }
       
       const data = await response.json();
-      setMachines(data.data || []);
+      // Ensure all machines have a status, defaulting to 'pending' if not set
+      const machinesWithStatus = (data.data || []).map((machine: Machine) => ({
+        ...machine,
+        status: machine.status || 'pending'
+      }));
+      setMachines(machinesWithStatus);
     } catch (error) {
       console.error('Error fetching machines:', error);
       toast({

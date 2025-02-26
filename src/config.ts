@@ -24,7 +24,7 @@ export const pathnames = {
   '/[tenant]/profile': '/[tenant]/profile',
   '/[tenant]/team': '/[tenant]/team',
   '/[tenant]/billing': '/[tenant]/billing',
-  '/[tenant]/virtualization': '/[tenant]/virtualization',
+  '/[tenant]/hosts': '/[tenant]/hosts',
 } satisfies Pathnames<typeof locales>;
 
 // Use the default: `always`

@@ -134,7 +134,7 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Hosts',
-          href: '/virtualization',
+          href: '/hosts',
           icon: Server,
           roles: ['admin', 'developer', 'tester'],
         },

@@ -32,6 +32,23 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
 
   const getStatusDot = (status: string) => {
     const baseClasses = "h-4 w-4 rounded-full";
+    
+    // If status is undefined, null, or empty string, treat as pending
+    if (!status) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <div className={`${baseClasses} bg-yellow-500`} />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Pending</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
     switch (status) {
       case 'connected':
         return (
@@ -77,10 +94,10 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <div className={`${baseClasses} bg-gray-500`} />
+                <div className={`${baseClasses} bg-yellow-500`} />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Unknown</p>
+                <p>Unknown Status</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -89,7 +106,15 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
   };
 
   const handleTerminalClick = () => {
-    router.push(`/terminals/${machine.name.toLowerCase()}`);
+    // Get the current URL path segments to extract locale and tenant
+    const pathSegments = window.location.pathname.split('/');
+    const locale = pathSegments[1] || 'en';
+    const tenant = pathSegments[2] || 'default';
+    
+    // Build the correct path with locale and tenant
+    const terminalPath = `/${locale}/${tenant}/terminals/${machine.name.toLowerCase()}`;
+    console.log(`Redirecting to terminal: ${terminalPath}`);
+    router.push(terminalPath);
   };
 
   return (
