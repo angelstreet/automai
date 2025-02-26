@@ -195,7 +195,7 @@ const register = async (req: express.Request, res: express.Response) => {
         password: hashedPassword,
         name,
         tenantId: tenant?.id,
-        role: 'ADMIN', // Always set new users to ADMIN on first connection
+        role: 'ADMIN', // Always set new users to ADMIN
       },
       include: {
         tenant: true,
@@ -710,6 +710,7 @@ const exchangeGoogleToken = async (req: express.Request, res: express.Response) 
           name,
           provider: 'google',
           emailVerified: new Date(), // Set emailVerified to current date
+          role: 'ADMIN', // Set role to ADMIN for new users
         },
         include: {
           tenant: true,
