@@ -8,7 +8,7 @@ import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settin
 import { useToast } from '@/components/ui/use-toast';
 import { HostOverview } from '@/components/virtualization/Overview/HostOverview';
 import { Machine } from '@/types/virtualization';
-import { ConnectMachineDialog } from '@/components/virtualization/Overview/ConnectMachineDialog';
+import { ConnectHostDialog } from '@/components/virtualization/Overview/ConnectHostDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -62,7 +62,7 @@ export default function VirtualizationPage() {
       if (machineIndex === -1) return;
       
       const updatedMachines = [...machines];
-      updatedMachines[machineIndex] = { ...machines[machineIndex], status: 'testing' };
+      updatedMachines[machineIndex] = { ...machines[machineIndex], status: 'pending' };
       setMachines(updatedMachines);
       
       // Test connection
@@ -74,7 +74,6 @@ export default function VirtualizationPage() {
           ip: machine.ip,
           port: machine.port,
           username: machine.user,
-          password: machine.password,
           machineId: machine.id,
         }),
       });
