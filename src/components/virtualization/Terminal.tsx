@@ -47,9 +47,17 @@ export function Terminal({ connection }: TerminalProps) {
 
     // Open terminal in container
     term.open(terminalRef.current);
+    
+    // Delay fitting to ensure DOM is ready
     setTimeout(() => {
-      fitAddon.fit();
-    }, 100);
+      try {
+        if (terminalRef.current && term.element) {
+          fitAddon.fit();
+        }
+      } catch (error) {
+        console.error('Error fitting terminal:', error);
+      }
+    }, 300);
 
     // Store terminal instance
     xtermRef.current = term;
@@ -93,12 +101,20 @@ export function Terminal({ connection }: TerminalProps) {
 
     // Handle window resize
     const handleResize = () => {
-      fitAddon.fit();
-      ws.send(JSON.stringify({
-        type: 'resize',
-        cols: term.cols,
-        rows: term.rows
-      }));
+      try {
+        if (fitAddon && term && term.element) {
+          fitAddon.fit();
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+              type: 'resize',
+              cols: term.cols,
+              rows: term.rows
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error during resize:', error);
+      }
     };
 
     window.addEventListener('resize', handleResize);
@@ -106,13 +122,15 @@ export function Terminal({ connection }: TerminalProps) {
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
-      ws.close();
+      if (ws && ws.readyState !== WebSocket.CLOSED) {
+        ws.close();
+      }
       term.dispose();
     };
   }, [connection]);
 
   return (
-    <div className="w-full h-full p-4">
+    <div className="w-full h-full">
       <div 
         ref={terminalRef} 
         className="w-full h-full rounded-lg overflow-hidden border border-border"

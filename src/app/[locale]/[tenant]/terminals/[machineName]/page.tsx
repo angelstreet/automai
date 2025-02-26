@@ -217,7 +217,7 @@ export default function TerminalPage() {
   }
 
   return (
-    <div className="h-screen bg-background p-4">
+    <div className="h-screen bg-background p-4 flex flex-col">
       <div className="flex items-center mb-4">
         <button
           onClick={() => router.back()}
@@ -229,17 +229,19 @@ export default function TerminalPage() {
         </button>
         <h1 className="text-xl font-semibold">Terminals</h1>
       </div>
-      <div className={`grid gap-4 h-[calc(100%-3rem)] ${
+      <div className={`grid gap-4 flex-1 ${
         connections.length === 1 ? 'grid-cols-1' : 
         connections.length === 2 ? 'grid-cols-2' :
         connections.length === 3 ? 'grid-cols-3' : 'grid-cols-2 grid-rows-2'
       }`}>
         {connections.map((connection) => (
-          <div key={connection.id} className="border border-border rounded-lg overflow-hidden">
+          <div key={connection.id} className="border border-border rounded-lg overflow-hidden flex flex-col">
             <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">
               {connection.name} ({connection.ip})
             </div>
-            <Terminal connection={connection} />
+            <div className="flex-1">
+              <Terminal connection={connection} />
+            </div>
           </div>
         ))}
       </div>

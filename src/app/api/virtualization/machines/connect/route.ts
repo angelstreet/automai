@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
+import { serverCache } from '@/lib/cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,6 +72,10 @@ export async function POST(request: NextRequest) {
         errorMessage: null
       }
     });
+    
+    // Invalidate cache for machines data
+    const cacheKey = `machines_${userId}_${tenantId || 'personal'}`;
+    await serverCache.del(cacheKey);
     
     logger.info('Successfully connected to machine', { 
       userId: userId, 
