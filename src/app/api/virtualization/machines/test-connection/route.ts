@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { Client } from 'ssh2';
 
 // POST /api/virtualization/machines/test-connection
 export async function POST(request: Request) {
@@ -63,55 +64,94 @@ export async function POST(request: Request) {
           message: 'Username and password are required for SSH connections',
         }, { status: 400 });
       }
-      
-      // For SSH connections, we'll simulate a successful connection
-      // In a real implementation, we would use a proper SSH library
-      // But for now, we'll just return success to avoid native module issues
-      
-      logger.info(`Attempting SSH connection to ${ip}:${port || 22}`, { 
-        userId: session?.user?.id, 
-        tenantId: session?.user?.tenantId,
-        action: 'SSH_CONNECTION_ATTEMPT',
-        data: { ip, port, username },
-        saveToDb: true
-      });
 
-      // Simulate connection phases
-      logger.debug('SSH: Starting TCP handshake', { 
-        userId: session?.user?.id,
-        action: 'SSH_TCP_HANDSHAKE',
-        data: { ip, port }
-      });
+      return new Promise((resolve) => {
+        const conn = new Client();
+        let fingerprint: string | null = null;
 
-      logger.debug('SSH: Exchanging protocol version', { 
-        userId: session?.user?.id,
-        action: 'SSH_PROTOCOL_EXCHANGE',
-        data: { ip, port }
-      });
+        conn.on('handshake', (details) => {
+          fingerprint = details.hash;
+          logger.debug('SSH: Handshake complete', { 
+            userId: session?.user?.id,
+            action: 'SSH_HANDSHAKE_COMPLETE',
+            data: { ip, port, fingerprint }
+          });
+        });
 
-      logger.debug('SSH: Starting key exchange', { 
-        userId: session?.user?.id,
-        action: 'SSH_KEY_EXCHANGE',
-        data: { ip, port }
-      });
+        conn.on('ready', () => {
+          logger.info(`Successfully connected to ${ip} via SSH`, { 
+            userId: session?.user?.id, 
+            tenantId: session?.user?.tenantId,
+            action: 'TEST_CONNECTION_SUCCESS',
+            data: { type, ip, port, fingerprint },
+            saveToDb: true
+          });
+          
+          conn.end();
+          resolve(NextResponse.json({
+            success: true,
+            message: 'Connection successful',
+            fingerprint
+          }));
+        });
 
-      logger.debug('SSH: Authenticating user', { 
-        userId: session?.user?.id,
-        action: 'SSH_AUTH_ATTEMPT',
-        data: { ip, port, username }
-      });
-      
-      logger.info(`Successfully connected to ${ip} via SSH (simulated)`, { 
-        userId: session?.user?.id, 
-        tenantId: session?.user?.tenantId,
-        action: 'TEST_CONNECTION_SUCCESS',
-        data: { type, ip, port },
-        saveToDb: true
-      });
-      
-      return NextResponse.json({
-        success: true,
-        message: 'Connection successful'
+        conn.on('error', (err) => {
+          logger.error(`SSH connection error: ${err.message}`, { 
+            userId: session?.user?.id, 
+            tenantId: session?.user?.tenantId,
+            action: 'TEST_CONNECTION_ERROR',
+            data: { type, ip, port, error: err.message },
+            saveToDb: true
+          });
+          
+          resolve(NextResponse.json({
+            success: false,
+            message: err.message
+          }, { status: 400 }));
+        });
+
+        logger.info(`Attempting SSH connection to ${ip}:${port || 22}`, { 
+          userId: session?.user?.id, 
+          tenantId: session?.user?.tenantId,
+          action: 'SSH_CONNECTION_ATTEMPT',
+          data: { ip, port, username },
+          saveToDb: true
+        });
+
+        conn.connect({
+          host: ip,
+          port: port ? Number(port) : 22,
+          username,
+          password,
+          readyTimeout: 5000,
+          algorithms: {
+            kex: [
+              'ecdh-sha2-nistp256',
+              'ecdh-sha2-nistp384',
+              'ecdh-sha2-nistp521',
+              'diffie-hellman-group-exchange-sha256',
+              'diffie-hellman-group14-sha1'
+            ],
+            cipher: [
+              'aes128-ctr',
+              'aes192-ctr',
+              'aes256-ctr',
+              'aes128-gcm',
+              'aes256-gcm'
+            ],
+            serverHostKey: [
+              'ssh-rsa',
+              'ecdsa-sha2-nistp256',
+              'ecdsa-sha2-nistp384',
+              'ecdsa-sha2-nistp521'
+            ],
+            hmac: [
+              'hmac-sha2-256',
+              'hmac-sha2-512',
+              'hmac-sha1'
+            ]
+          }
+        });
       });
     } else if (type === 'docker') {
       // Docker connection validation
