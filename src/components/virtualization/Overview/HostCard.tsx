@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Terminal, AlertCircle, MoreHorizontal } from 'lucide-react';
+import { Terminal, AlertCircle, MoreHorizontal, BarChart2, RefreshCw, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Machine } from '@/types/virtualization';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -45,53 +45,58 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
   return (
     <>
       <Card className="relative">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-lg">{machine.name}</CardTitle>
-              {getStatusBadge(machine.status)}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button 
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleTerminalClick}
-                disabled={machine.status !== 'connected'}
-              >
-                <Terminal className="h-4 w-4" />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onTestConnection?.(machine)}>
-                    Refresh
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push(`/metrics/${machine.name}`)}>
-                    Metrics
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push(`/logs/${machine.name}`)}>
-                    Logs
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onDelete?.(machine.id)} className="text-destructive">
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+        <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
+          <div className="flex flex-col space-y-1.5">
+            <CardTitle className="text-base font-semibold truncate max-w-[200px]">
+              {machine.name}
+            </CardTitle>
+            {getStatusBadge(machine.status)}
+            <CardDescription className="text-xs">
+              {machine.ip}{machine.port ? `:${machine.port}` : ''}
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => router.push(`/metrics/${machine.name}`)}>
+                  <BarChart2 className="mr-2 h-4 w-4" />
+                  <span>Metrics</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onTestConnection?.(machine)}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <span>Refresh</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDelete?.(machine.id)} className="text-destructive">
+                  <XCircle className="mr-2 h-4 w-4" />
+                  <span>Delete</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground">
-            <p>{machine.ip}{machine.port ? `:${machine.port}` : ''}</p>
-            {machine.description && <p className="text-xs mt-1">{machine.description}</p>}
-            {machine.lastConnected && (
-              <p className="text-xs mt-1">Last connected: {new Date(machine.lastConnected).toLocaleString()}</p>
-            )}
+        <CardContent className="p-4 pt-2">
+          <div className="flex flex-col space-y-2">
+            <div className="text-sm text-muted-foreground">
+              {machine.description && <p>{machine.description}</p>}
+              {machine.lastConnected && (
+                <p className="text-xs mt-1">Last connected: {new Date(machine.lastConnected).toLocaleString()}</p>
+              )}
+            </div>
+            <Button 
+              variant="default"
+              size="sm"
+              className="w-full mt-2"
+              onClick={handleTerminalClick}
+              disabled={machine.status !== 'connected'}
+            >
+              <Terminal className="h-4 w-4 mr-2" />
+              Terminal
+            </Button>
           </div>
         </CardContent>
       </Card>
