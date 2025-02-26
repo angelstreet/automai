@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { serverCache } from '@/lib/cache';
+import { Client } from 'ssh2';
 
 export async function GET(
   request: NextRequest,
@@ -60,7 +61,7 @@ export async function GET(
       return new Response('Expected WebSocket connection', { status: 400 });
     }
     
-    // Create a mock WebSocket server
+    // Create a WebSocket connection
     const { socket: clientSocket, response } = await new Promise<any>((resolve) => {
       const { socket, response } = Reflect.get(
         Object.getPrototypeOf(request),
@@ -76,39 +77,198 @@ export async function GET(
       data: { machineId: id, ip: connection.ip },
       saveToDb: true
     });
-    
-    // Handle WebSocket messages
-    clientSocket.on('message', (message: Buffer) => {
-      try {
-        const data = JSON.parse(message.toString());
+
+    // Check if this is an SSH connection
+    if (connection.type === 'ssh') {
+      // Create SSH client
+      const sshClient = new Client();
+      
+      // Handle SSH client events
+      sshClient.on('ready', () => {
+        logger.info('SSH connection established', {
+          action: 'SSH_CONNECTED',
+          data: { machineId: id, ip: connection.ip },
+          saveToDb: true
+        });
         
-        // Handle resize event
-        if (data.type === 'resize') {
-          logger.info('Terminal resize', {
-            action: 'TERMINAL_RESIZE',
-            data: { machineId: id, cols: data.cols, rows: data.rows },
-            saveToDb: false
+        // Create an SSH shell session
+        sshClient.shell((err, stream) => {
+          if (err) {
+            logger.error(`SSH shell error: ${err.message}`, {
+              action: 'SSH_SHELL_ERROR',
+              data: { machineId: id, error: err.message },
+              saveToDb: true
+            });
+            clientSocket.send(JSON.stringify({ error: err.message }));
+            return;
+          }
+          
+          // Pipe data from SSH to WebSocket
+          stream.on('data', (data) => {
+            clientSocket.send(data);
           });
-        }
-        
-        // Echo back the message (simulating terminal output)
-        clientSocket.send(`Received: ${message.toString()}\r\n`);
-      } catch (error) {
-        // For non-JSON messages, just echo them back
-        clientSocket.send(`${message.toString()}\r\n`);
-      }
-    });
-    
-    // Handle WebSocket close
-    clientSocket.on('close', () => {
-      logger.info('Terminal WebSocket connection closed', {
-        action: 'TERMINAL_WS_CLOSED',
-        data: { machineId: id },
+          
+          // Handle WebSocket messages
+          clientSocket.on('message', (message) => {
+            try {
+              const data = JSON.parse(message.toString());
+              
+              // Handle resize event
+              if (data.type === 'resize') {
+                logger.info('Terminal resize', {
+                  action: 'TERMINAL_RESIZE',
+                  data: { machineId: id, cols: data.cols, rows: data.rows },
+                  saveToDb: false
+                });
+                stream.setWindow(data.rows, data.cols, 0, 0);
+              } else if (data.type === 'auth') {
+                // Authentication already handled during connection
+                logger.info('Terminal authentication received after connection', {
+                  action: 'TERMINAL_AUTH_AFTER_CONNECT',
+                  data: { machineId: id },
+                  saveToDb: false
+                });
+              }
+            } catch (error) {
+              // For non-JSON messages, send as terminal input
+              stream.write(message.toString());
+            }
+          });
+          
+          // Handle SSH stream close
+          stream.on('close', () => {
+            logger.info('SSH stream closed', {
+              action: 'SSH_STREAM_CLOSED',
+              data: { machineId: id },
+              saveToDb: true
+            });
+            sshClient.end();
+          });
+          
+          // Handle SSH stream errors
+          stream.on('error', (err) => {
+            logger.error(`SSH stream error: ${err.message}`, {
+              action: 'SSH_STREAM_ERROR',
+              data: { machineId: id, error: err.message },
+              saveToDb: true
+            });
+          });
+        });
+      });
+      
+      sshClient.on('error', (err) => {
+        logger.error(`SSH connection error: ${err.message}`, {
+          action: 'SSH_CONNECTION_ERROR',
+          data: { machineId: id, error: err.message },
+          saveToDb: true
+        });
+        clientSocket.send(JSON.stringify({ error: `Connection error: ${err.message}` }));
+        sshClient.end();
+      });
+      
+      // Handle WebSocket close
+      clientSocket.on('close', () => {
+        logger.info('Terminal WebSocket connection closed', {
+          action: 'TERMINAL_WS_CLOSED',
+          data: { machineId: id },
+          saveToDb: true
+        });
+        sshClient.end();
+      });
+      
+      // Connect to the SSH server
+      sshClient.connect({
+        host: connection.ip,
+        port: connection.port || 22,
+        username: connection.username,
+        password: connection.password,
+        // You could also use key-based authentication if needed
+        // privateKey: require('fs').readFileSync('/path/to/key')
+      });
+      
+      return response;
+    } else {
+      // For non-SSH connections, use the mock implementation
+      logger.info('Using mock terminal for non-SSH connection', {
+        action: 'MOCK_TERMINAL',
+        data: { machineId: id, connectionType: connection.type },
         saveToDb: true
       });
-    });
-    
-    return response;
+      
+      // Handle WebSocket messages
+      clientSocket.on('message', (message: Buffer) => {
+        try {
+          const data = JSON.parse(message.toString());
+          
+          // Handle resize event
+          if (data.type === 'resize') {
+            logger.info('Terminal resize', {
+              action: 'TERMINAL_RESIZE',
+              data: { machineId: id, cols: data.cols, rows: data.rows },
+              saveToDb: false
+            });
+          }
+          
+          // Handle authentication
+          if (data.type === 'auth') {
+            logger.info('Terminal authentication', {
+              action: 'TERMINAL_AUTH',
+              data: { 
+                machineId: id, 
+                connectionType: data.connectionType 
+              },
+              saveToDb: true
+            });
+            
+            // Send initial terminal output with current directory
+            clientSocket.send(`Last login: ${new Date().toLocaleString()}\r\n`);
+            clientSocket.send(`Welcome to ${connection.name} (${connection.ip})\r\n\r\n`);
+            clientSocket.send(`user@${connection.name}:~$ pwd\r\n/home/user\r\n`);
+            clientSocket.send(`user@${connection.name}:~$ `);
+            return;
+          }
+          
+          // Echo back the message (simulating terminal output)
+          if (message.toString().trim()) {
+            const command = message.toString().trim();
+            
+            // Simulate command execution
+            if (command === 'pwd') {
+              clientSocket.send(`/home/user\r\n`);
+            } else if (command === 'ls') {
+              clientSocket.send(`Documents  Downloads  Pictures  Videos\r\n`);
+            } else if (command.startsWith('cd ')) {
+              // Just acknowledge cd commands
+              clientSocket.send(``);
+            } else {
+              clientSocket.send(`${command}: command not found\r\n`);
+            }
+            
+            // Show prompt after command execution
+            clientSocket.send(`user@${connection.name}:~$ `);
+          }
+        } catch (error) {
+          // For non-JSON messages, try to handle as terminal input
+          const input = message.toString();
+          if (input.trim()) {
+            // Echo the input and show a new prompt
+            clientSocket.send(`${input}\r\n`);
+            clientSocket.send(`user@${connection.name}:~$ `);
+          }
+        }
+      });
+      
+      // Handle WebSocket close
+      clientSocket.on('close', () => {
+        logger.info('Terminal WebSocket connection closed', {
+          action: 'TERMINAL_WS_CLOSED',
+          data: { machineId: id },
+          saveToDb: true
+        });
+      });
+      
+      return response;
+    }
   } catch (error) {
     logger.error(`Error in terminal WebSocket: ${error instanceof Error ? error.message : String(error)}`);
     return new Response('Internal Server Error', { status: 500 });

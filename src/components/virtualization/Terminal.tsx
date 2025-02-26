@@ -43,6 +43,8 @@ export function Terminal({ connection }: TerminalProps) {
         background: '#1a1b1e',
         foreground: '#ffffff',
       },
+      cols: 80,  // Set default initial columns
+      rows: 24,  // Set default initial rows
     });
 
     // Add addons
@@ -63,23 +65,26 @@ export function Terminal({ connection }: TerminalProps) {
         if (terminalRef.current && term.element) {
           fitAddon.fit();
           
-          // Log initial terminal dimensions
-          const initialDimensions = { cols: term.cols, rows: term.rows };
-          console.log('Initial terminal dimensions:', initialDimensions);
-          
-          logger.info('Terminal initialized with dimensions', {
-            action: 'TERMINAL_INIT_DIMENSIONS',
-            data: { 
-              connectionId: connection.id,
-              dimensions: initialDimensions
-            },
-            saveToDb: true
-          });
+          // Add additional delay before reading dimensions to ensure proper initialization
+          setTimeout(() => {
+            // Log initial terminal dimensions
+            const initialDimensions = { cols: term.cols, rows: term.rows };
+            console.log('Initial terminal dimensions:', initialDimensions);
+            
+            logger.info('Terminal initialized with dimensions', {
+              action: 'TERMINAL_INIT_DIMENSIONS',
+              data: { 
+                connectionId: connection?.id || 'unknown',
+                dimensions: initialDimensions
+              },
+              saveToDb: true
+            });
+          }, 100);
         }
       } catch (error) {
         console.error('Error fitting terminal:', error);
       }
-    }, 300);
+    }, 500);
 
     // Store terminal instance
     xtermRef.current = term;
@@ -91,56 +96,92 @@ export function Terminal({ connection }: TerminalProps) {
     // Log the WebSocket URL and connection details for debugging
     console.log('Terminal connection details:', {
       wsUrl,
-      connectionId: connection.id,
-      name: connection.name,
-      ip: connection.ip,
-      type: connection.type
+      connectionId: connection?.id || 'unknown',
+      name: connection?.name || 'unknown',
+      ip: connection?.ip || 'unknown',
+      type: connection?.type || 'unknown'
     });
     
     logger.info('Initializing terminal WebSocket connection', {
       action: 'TERMINAL_WS_INIT',
       data: { 
-        connectionId: connection.id,
+        connectionId: connection?.id || 'unknown',
         wsUrl,
         connectionDetails: {
-          name: connection.name,
-          ip: connection.ip,
-          type: connection.type
+          name: connection?.name || 'unknown',
+          ip: connection?.ip || 'unknown',
+          type: connection?.type || 'unknown'
         }
       },
       saveToDb: true
     });
     
+    // Create WebSocket connection
     const ws = new WebSocket(wsUrl);
+
+    // Set initial terminal text before connection is established
+    term.write(`\x1B[1;3;33mConnecting to ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})...\x1B[0m\r\n`);
 
     ws.onopen = () => {
       logger.info('Terminal WebSocket connected', {
         action: 'TERMINAL_WS_CONNECTED',
-        data: { connectionId: connection.id },
+        data: { connectionId: connection?.id || 'unknown' },
         saveToDb: true
       });
 
-      // Attach WebSocket to terminal
+      // Send authentication credentials if available
+      if (connection.type === 'ssh') {
+        ws.send(JSON.stringify({
+          type: 'auth',
+          connectionId: connection.id,
+          connectionType: connection.type
+        }));
+      }
+
+      // Attach WebSocket to terminal - this will handle the SSH connection
       const attachAddon = new AttachAddon(ws);
       term.loadAddon(attachAddon);
 
-      // Set initial terminal text
-      term.write(`\x1B[1;3;32mConnected to ${connection.name} (${connection.ip})\x1B[0m\r\n`);
+      // Set connected message
+      term.write(`\x1B[1;3;32mConnected to ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})\x1B[0m\r\n`);
     };
 
     ws.onerror = (error) => {
       logger.error('Terminal WebSocket error', {
         action: 'TERMINAL_WS_ERROR',
-        data: { connectionId: connection.id, error: error.toString() },
+        data: { connectionId: connection?.id || 'unknown', error: error.toString() },
         saveToDb: true
       });
       term.write('\r\n\x1B[1;3;31mConnection error. Please try again.\x1B[0m\r\n');
     };
 
+    // Handle JSON messages from the server (like error messages)
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Handle error messages
+        if (data.error) {
+          logger.error('Terminal received error from server', {
+            action: 'TERMINAL_SERVER_ERROR',
+            data: { 
+              connectionId: connection?.id || 'unknown',
+              error: data.error
+            },
+            saveToDb: true
+          });
+          
+          term.write(`\r\n\x1B[1;3;31mError: ${data.error}\x1B[0m\r\n`);
+        }
+      } catch (e) {
+        // Not JSON data, will be handled by the AttachAddon
+      }
+    };
+
     ws.onclose = () => {
       logger.info('Terminal WebSocket closed', {
         action: 'TERMINAL_WS_CLOSED',
-        data: { connectionId: connection.id },
+        data: { connectionId: connection?.id || 'unknown' },
         saveToDb: true
       });
       term.write('\r\n\x1B[1;3;33mConnection closed.\x1B[0m\r\n');
@@ -151,27 +192,31 @@ export function Terminal({ connection }: TerminalProps) {
       try {
         if (fitAddon && term && term.element) {
           fitAddon.fit();
-          const dimensions = { cols: term.cols, rows: term.rows };
           
-          // Log terminal dimensions for debugging
-          console.log('Terminal dimensions after resize:', dimensions);
-          
-          logger.info('Terminal resized', {
-            action: 'TERMINAL_RESIZE',
-            data: { 
-              connectionId: connection.id,
-              dimensions
-            },
-            saveToDb: false
-          });
-          
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({
-              type: 'resize',
-              cols: term.cols,
-              rows: term.rows
-            }));
-          }
+          // Add small delay to ensure dimensions are updated after fit
+          setTimeout(() => {
+            const dimensions = { cols: term.cols, rows: term.rows };
+            
+            // Log terminal dimensions for debugging
+            console.log('Terminal dimensions after resize:', dimensions);
+            
+            logger.info('Terminal resized', {
+              action: 'TERMINAL_RESIZE',
+              data: { 
+                connectionId: connection?.id || 'unknown',
+                dimensions: dimensions || { cols: 0, rows: 0 }
+              },
+              saveToDb: false
+            });
+            
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'resize',
+                cols: term.cols,
+                rows: term.rows
+              }));
+            }
+          }, 50);
         }
       } catch (error) {
         console.error('Error during resize:', error);
@@ -194,7 +239,7 @@ export function Terminal({ connection }: TerminalProps) {
     <div className="w-full h-full">
       <div 
         ref={terminalRef} 
-        className="w-full h-full rounded-lg overflow-hidden border border-border"
+        className="w-full h-[calc(100%-20px)] rounded-lg overflow-hidden border border-border"
       />
     </div>
   );

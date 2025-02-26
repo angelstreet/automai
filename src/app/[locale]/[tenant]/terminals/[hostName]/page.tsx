@@ -75,46 +75,6 @@ export default function TerminalPage() {
     }
   };
 
-  // Function to establish SSH connection
-  const connectToMachine = async (machine: MachineConnection) => {
-    try {
-      const sshResponse = await fetch('/api/virtualization/machines/connect', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          machineId: machine.id,
-          type: machine.type,
-          ip: machine.ip,
-          port: machine.port,
-          username: machine.user,
-          password: machine.password,
-        }),
-      });
-
-      if (!sshResponse.ok) {
-        throw new Error(`Failed to establish SSH connection to ${machine.name}`);
-      }
-
-      logger.info(`SSH connection established to ${machine.name}`, {
-        action: 'TERMINAL_CONNECTED',
-        data: { machineId: machine.id, ip: machine.ip },
-        saveToDb: true
-      });
-      
-      return machine;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : `Failed to connect to ${machine.name}`;
-      logger.error(message, {
-        action: 'TERMINAL_CONNECT_ERROR',
-        data: { machineId: machine.id, error: message },
-        saveToDb: true
-      });
-      throw error;
-    }
-  };
-
   // Initialize terminals
   const initializeTerminals = async () => {
     // Reset the initialization flag when manually called (e.g., from retry button)
@@ -135,7 +95,6 @@ export default function TerminalPage() {
       // For single terminal case
       if (terminalCount === 1) {
         const machine = await fetchMachineByName(hostName);
-        await connectToMachine(machine);
         setConnections([machine]);
         return;
       }
@@ -162,11 +121,6 @@ export default function TerminalPage() {
       );
       
       const machines = await Promise.all(machinePromises);
-      
-      // Connect to all machines in parallel
-      const connectionPromises = machines.map(machine => connectToMachine(machine));
-      await Promise.all(connectionPromises);
-      
       setConnections(machines);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';
@@ -187,16 +141,10 @@ export default function TerminalPage() {
 
     // Cleanup on unmount
     return () => {
-      connections.forEach(connection => {
-        fetch('/api/virtualization/machines/disconnect', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            machineId: connection.id,
-          }),
-        }).catch(console.error);
+      logger.info('Terminal page unmounted', {
+        action: 'TERMINAL_PAGE_UNMOUNTED',
+        data: { hostName },
+        saveToDb: true
       });
     };
   }, [hostName, terminalCount]);

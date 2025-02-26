@@ -31,8 +31,13 @@ Once a script is developed, users should be able to execute it either locally (o
 
 ### **Key Features**
 - **Execution Modes**:
-  - **Local Execution** → Runs on the user’s local machine using Playwright, Appium, or Pywinauto.
+  - **Local Execution** → Runs on the user's local machine using Playwright, Appium, or Pywinauto.
   - **Cloud Execution** → Deploys tests to cloud VMs for distributed execution.
+- **SSH Terminal Access**:
+  - **Direct SSH Connection** → Connect to remote machines via secure SSH terminal.
+  - **Command Execution** → Run commands directly on target machines.
+  - **Terminal Resizing** → Dynamically resize terminal to fit the viewport.
+  - **Session Logging** → Track all terminal sessions and commands.
 - **Test Deployment Table** → Tracks all executions, status (Running, Success, Failed), and timestamps.
 - **Parallel Execution** → Supports multi-instance execution for scaling tests.
 - **Headless & Interactive Modes** → Users can choose between headless testing or live UI interaction.

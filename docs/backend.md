@@ -36,13 +36,20 @@ The backend handles **multi-tenant test execution**, including **authentication,
 - **Run Test in Cloud (Planned)** → `POST /api/cloud-execute`
   - **Deploys execution to a managed VM (Future).**
 
-### 3.4 Execution Reporting & Logs
+### 3.4 SSH Terminal Access
+- **Connect to SSH Terminal** → `GET /api/virtualization/machines/[id]/terminal`
+  - **WebSocket endpoint for real-time SSH terminal access.**
+  - **Supports authentication, command execution, and terminal resizing.**
+  - **Logs terminal sessions and commands to Elasticsearch.**
+  - **Handles connection errors and provides user feedback.**
+
+### 3.5 Execution Reporting & Logs
 - **Get Execution Logs** → `GET /api/executions?testcase_id=...`
   - **Returns execution logs from PostgreSQL & Kibana.**
   - **Provides `report.html` link from Supabase Storage.**
 - **Fetch Kibana Report** → `GET /api/reports?execution_id=...`
 
-### 3.5 Git Versioning
+### 3.6 Git Versioning
 - **Sync Test Case to Git** → Saves test case JSON in repo.
 - **Auto-commit changes & push** → Git commit & push after edits.
 
@@ -105,7 +112,42 @@ async function uploadReportToSupabase(filePath, executionId) {
 }
 ```
 
-## 6. Deployment Strategy
+## 6. SSH Implementation
+```javascript
+const { Client } = require('ssh2');
+
+async function createSSHTerminal(connection, socket) {
+  const sshClient = new Client();
+  
+  sshClient.on('ready', () => {
+    sshClient.shell((err, stream) => {
+      if (err) {
+        socket.send(JSON.stringify({ error: err.message }));
+        return;
+      }
+      
+      // Pipe data between SSH stream and WebSocket
+      stream.on('data', (data) => socket.send(data));
+      socket.on('message', (message) => stream.write(message));
+      
+      // Handle terminal resize
+      socket.on('resize', ({ rows, cols }) => {
+        stream.setWindow(rows, cols, 0, 0);
+      });
+    });
+  });
+  
+  // Connect to SSH server
+  sshClient.connect({
+    host: connection.ip,
+    port: connection.port || 22,
+    username: connection.username,
+    password: connection.password
+  });
+}
+```
+
+## 7. Deployment Strategy
 - **Frontend:** Hosted on Vercel.
 - **Backend:** Supabase (Preferred) or AWS Lambda / Firebase Functions.
 - **Database:** Supabase (PostgreSQL) / Prisma ORM.

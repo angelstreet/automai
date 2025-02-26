@@ -27,6 +27,11 @@
   - PostgreSQL (Supabase)
   - Prisma ORM for API Access
   - electron-store for desktop local storage
+- **SSH & Terminal**: 
+  - ssh2 library for SSH connections
+  - xterm.js for browser-based terminal
+  - WebSockets for real-time communication
+  - Terminal session logging and monitoring
 - **Authentication**: 
   - NextAuth.js (JWT, OAuth via Supabase)
   - Multi-Tenant Support
@@ -92,6 +97,11 @@
   - Playwright runs on local browser
   - Desktop-integrated test runner
   - Headless or interactive mode
+- **Remote Access:**
+  - SSH terminal for direct machine access
+  - WebSocket-based real-time terminal
+  - Command execution and session logging
+  - Terminal resize support for responsive UI
 - **Cloud Execution:** 
   - Planned execution on managed VMs
   - Parallel test execution support
@@ -106,6 +116,10 @@
 ## 6. API Documentation
 - **Documentation Tools**: Swagger / Postman Collections
 - **API Standards**: OpenAPI 3.0 / GraphQL Schema
+- **Terminal & SSH Endpoints**:
+  - `GET /api/virtualization/machines/[id]/terminal`: WebSocket for SSH terminal
+  - `POST /api/virtualization/machines/connect`: Establish machine connection
+  - `POST /api/virtualization/machines/test-connection`: Test SSH connectivity
 - **Desktop IPC Endpoints**:
   - `store-get/set`: Local data persistence
   - `run-python`: Python script execution
