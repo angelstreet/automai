@@ -32,11 +32,11 @@ export default function TerminalsPage() {
           .then(res => res.json())
           .then(data => {
             if (data.success && data.data) {
-              const machineName = data.data.name;
+              const hostName = data.data.name;
               const count = machineIds.length > 1 ? `?count=${machineIds.length}` : '';
-              router.push(`./terminals/${machineName}${count}`);
+              router.push(`./terminals/${hostName}${count}`);
             } else {
-              throw new Error('Failed to fetch machine details');
+              throw new Error('Failed to fetch host details');
             }
           })
           .catch(error => {

@@ -53,6 +53,19 @@ export function Terminal({ connection }: TerminalProps) {
       try {
         if (terminalRef.current && term.element) {
           fitAddon.fit();
+          
+          // Log initial terminal dimensions
+          const initialDimensions = { cols: term.cols, rows: term.rows };
+          console.log('Initial terminal dimensions:', initialDimensions);
+          
+          logger.info('Terminal initialized with dimensions', {
+            action: 'TERMINAL_INIT_DIMENSIONS',
+            data: { 
+              connectionId: connection.id,
+              dimensions: initialDimensions
+            },
+            saveToDb: true
+          });
         }
       } catch (error) {
         console.error('Error fitting terminal:', error);
@@ -64,7 +77,32 @@ export function Terminal({ connection }: TerminalProps) {
 
     // Connect to WebSocket for SSH session
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/api/virtualization/machines/${connection.id}/terminal`);
+    const wsUrl = `${protocol}//${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
+    
+    // Log the WebSocket URL and connection details for debugging
+    console.log('Terminal connection details:', {
+      wsUrl,
+      connectionId: connection.id,
+      name: connection.name,
+      ip: connection.ip,
+      type: connection.type
+    });
+    
+    logger.info('Initializing terminal WebSocket connection', {
+      action: 'TERMINAL_WS_INIT',
+      data: { 
+        connectionId: connection.id,
+        wsUrl,
+        connectionDetails: {
+          name: connection.name,
+          ip: connection.ip,
+          type: connection.type
+        }
+      },
+      saveToDb: true
+    });
+    
+    const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
       logger.info('Terminal WebSocket connected', {
@@ -104,6 +142,20 @@ export function Terminal({ connection }: TerminalProps) {
       try {
         if (fitAddon && term && term.element) {
           fitAddon.fit();
+          const dimensions = { cols: term.cols, rows: term.rows };
+          
+          // Log terminal dimensions for debugging
+          console.log('Terminal dimensions after resize:', dimensions);
+          
+          logger.info('Terminal resized', {
+            action: 'TERMINAL_RESIZE',
+            data: { 
+              connectionId: connection.id,
+              dimensions
+            },
+            saveToDb: false
+          });
+          
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
               type: 'resize',

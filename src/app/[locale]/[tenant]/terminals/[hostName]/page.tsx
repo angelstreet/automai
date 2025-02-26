@@ -24,17 +24,17 @@ export default function TerminalPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Get machine name from URL params
-  const machineName = params.machineName as string;
+  // Get host name from URL params
+  const hostName = params.hostName as string;
   
-  // Log the machine name for debugging
+  // Log the host name for debugging
   useEffect(() => {
-    logger.info(`Terminal page loaded with machine name: ${machineName}`, {
+    logger.info(`Terminal page loaded with host name: ${hostName}`, {
       action: 'TERMINAL_PAGE_LOADED',
-      data: { machineName },
+      data: { hostName },
       saveToDb: true
     });
-  }, [machineName]);
+  }, [hostName]);
   
   // Get count from URL if present (for multiple terminals)
   const count = typeof window !== 'undefined' 
@@ -48,26 +48,26 @@ export default function TerminalPage() {
     try {
       logger.info(`Fetching machine by name: ${name}`, {
         action: 'TERMINAL_FETCH_ATTEMPT',
-        data: { machineName: name },
+        data: { hostName: name },
         saveToDb: true
       });
       
       const response = await fetch(`/api/virtualization/machines/byName/${name}`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch machine details for ${name}`);
+        throw new Error(`Failed to fetch host details for ${name}`);
       }
       
       const data = await response.json();
       if (!data.success || !data.data) {
-        throw new Error(`Invalid machine data for ${name}`);
+        throw new Error(`Invalid host data for ${name}`);
       }
       
       return data.data;
     } catch (error) {
-      const message = error instanceof Error ? error.message : `Failed to fetch machine ${name}`;
+      const message = error instanceof Error ? error.message : `Failed to fetch host ${name}`;
       logger.error(message, {
         action: 'TERMINAL_FETCH_ERROR',
-        data: { machineName: name, error: message },
+        data: { hostName: name, error: message },
         saveToDb: true
       });
       throw error;
@@ -120,7 +120,7 @@ export default function TerminalPage() {
     try {
       // For single terminal case
       if (terminalCount === 1) {
-        const machine = await fetchMachineByName(machineName);
+        const machine = await fetchMachineByName(hostName);
         await connectToMachine(machine);
         setConnections([machine]);
         return;
@@ -129,12 +129,12 @@ export default function TerminalPage() {
       // For multiple terminals case (from session storage)
       const sessionData = sessionStorage.getItem('selectedMachines');
       if (!sessionData) {
-        throw new Error('No machines selected for multiple terminals view');
+        throw new Error('No hosts selected for multiple terminals view');
       }
       
       const machineIds = JSON.parse(sessionData);
       if (!Array.isArray(machineIds) || machineIds.length === 0) {
-        throw new Error('Invalid machine selection data');
+        throw new Error('Invalid host selection data');
       }
       
       // Limit to max 4 terminals
@@ -157,10 +157,6 @@ export default function TerminalPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';
       setError(message);
-      toast({
-        variant: 'destructive',
-        description: `Connection Error: ${message}`,
-      });
       
       logger.error(`Terminal initialization failed: ${message}`, {
         action: 'TERMINAL_INIT_ERROR',
@@ -189,12 +185,12 @@ export default function TerminalPage() {
         }).catch(console.error);
       });
     };
-  }, [machineName, terminalCount]);
+  }, [hostName, terminalCount]);
 
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <div className="text-center p-8 bg-card border border-border rounded-lg shadow-lg max-w-md">
+        <div className="text-center p-8 bg-card border border-border rounded-lg shadow-lg max-w-md -mt-32">
           <h2 className="text-2xl font-bold text-red-500 mb-4">Connection Error</h2>
           <p className="text-foreground mb-6">{error}</p>
           <div className="flex justify-center space-x-4">
