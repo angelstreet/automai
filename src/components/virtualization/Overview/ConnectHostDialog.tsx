@@ -117,8 +117,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
           port: formData.port ? parseInt(formData.port) : undefined,
           username: formData.username,
           password: formData.password,
-          status: testStatus === 'success' ? 'connected' : 'pending',
-          lastConnected: testStatus === 'success' ? new Date().toISOString() : null
+          status: 'connected',
+          lastConnected: new Date().toISOString()
         }),
       });
 

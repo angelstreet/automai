@@ -31,7 +31,7 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
   const [showError, setShowError] = useState(false);
 
   const getStatusDot = (status: string) => {
-    const baseClasses = "h-3 w-3 rounded-full";
+    const baseClasses = "h-4 w-4 rounded-full";
     switch (status) {
       case 'connected':
         return (
@@ -99,12 +99,12 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
           <div className="flex flex-col space-y-1.5">
             <div className="flex items-center">
               <div className="w-[200px] flex items-center">
+                <div className="mr-2">
+                  {getStatusDot(machine.status)}
+                </div>
                 <CardTitle className="text-base font-semibold truncate flex-1">
                   {machine.name}
                 </CardTitle>
-                <div className="ml-2">
-                  {getStatusDot(machine.status)}
-                </div>
               </div>
             </div>
             <CardDescription className="text-xs">
