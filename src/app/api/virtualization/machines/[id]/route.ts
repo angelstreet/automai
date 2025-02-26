@@ -7,7 +7,7 @@ import { logger } from '@/lib/logger';
 // GET /api/virtualization/machines/[id]
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,8 +25,8 @@ export async function GET(
       }, { status: 401 });
     }
     
-    // Properly handle params - ensure params is awaited
-    const id = params?.id;
+    // Properly handle params - use context.params instead of params directly
+    const { id } = context.params;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
@@ -101,7 +101,7 @@ export async function GET(
 // DELETE /api/virtualization/machines/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -119,8 +119,8 @@ export async function DELETE(
       }, { status: 401 });
     }
     
-    // Properly handle params - ensure params is awaited
-    const id = params?.id;
+    // Properly handle params - use context.params instead of params directly
+    const { id } = context.params;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
@@ -179,7 +179,7 @@ export async function DELETE(
 // PATCH /api/virtualization/machines/[id]
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -197,8 +197,8 @@ export async function PATCH(
       }, { status: 401 });
     }
     
-    // Properly handle params - ensure params is awaited
-    const id = params?.id;
+    // Properly handle params - use context.params instead of params directly
+    const { id } = context.params;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     const body = await request.json();

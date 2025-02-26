@@ -34,8 +34,8 @@ const entityCache = {
   
   // Initialize cache clearing
   init() {
-    if (this.clearInterval === null) {
-      // Clear cache every 5 minutes
+    if (this.clearInterval === null && typeof window === 'undefined') {
+      // Clear cache every 5 minutes - only on server
       this.clearInterval = setInterval(() => {
         this.users.clear();
         this.tenants.clear();
@@ -53,8 +53,10 @@ const entityCache = {
   }
 };
 
-// Initialize entity cache
-entityCache.init();
+// Initialize entity cache only on server
+if (typeof window === 'undefined') {
+  entityCache.init();
+}
 
 // Helper to determine if we should log based on environment and level
 function shouldLog(level: LogLevel): boolean {
@@ -70,6 +72,9 @@ function getLogKey(level: LogLevel, message: string, options: LogOptions): strin
 
 // Check if an entity exists, using cache to reduce database queries
 async function entityExists(type: 'user' | 'tenant' | 'connection', id: string): Promise<boolean> {
+  // Skip checks in browser environment
+  if (typeof window !== 'undefined') return true;
+  
   const cacheMap = type === 'user' ? entityCache.users : 
                   type === 'tenant' ? entityCache.tenants : 
                   entityCache.connections;
@@ -124,8 +129,8 @@ export async function log(level: LogLevel, message: string, options: LogOptions 
   // Use info level for all console logs
   console.info(JSON.stringify(logEntry));
   
-  // Save to database if requested and not in test environment
-  if (saveToDb && process.env.NODE_ENV !== 'test') {
+  // Save to database if requested and not in test environment and not in browser
+  if (saveToDb && process.env.NODE_ENV !== 'test' && typeof window === 'undefined') {
     try {
       // Check for duplicate logs within debounce interval
       const logKey = getLogKey(level, message, options);
@@ -151,8 +156,8 @@ export async function log(level: LogLevel, message: string, options: LogOptions 
         keysToDelete.forEach(key => recentLogs.delete(key));
       }
       
-      // Check if ConnectionLog model exists in the schema
-      if (prisma.connectionLog) {
+      // Safely check if ConnectionLog model exists in the schema
+      try {
         // Create log data object
         const logData: any = {
           level,
@@ -178,8 +183,8 @@ export async function log(level: LogLevel, message: string, options: LogOptions 
         await prisma.connectionLog.create({
           data: logData
         });
-      } else {
-        console.warn('ConnectionLog model not found in schema, skipping database logging');
+      } catch (error) {
+        console.warn('Failed to save log to database:', error);
       }
     } catch (error) {
       // Don't let database errors affect the application
