@@ -103,8 +103,7 @@ export function Terminal({ connection }: TerminalProps) {
     term.write(`\x1B[1;3;33mInitializing terminal for ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})...\x1B[0m\r\n`);
 
     // Create WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const socketUrl = `${protocol}//${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
+    const socketUrl = `ws://${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
     console.log(`[WebSocket] Connecting to: ${socketUrl}`, { 
       connectionId: connection.id,
       connectionType: connection.type,
