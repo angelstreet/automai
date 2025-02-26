@@ -8,7 +8,7 @@ import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settin
 import { useToast } from '@/components/ui/use-toast';
 import { HostOverview } from '@/components/virtualization/Overview/HostOverview';
 import { Machine } from '@/types/virtualization';
-import { ConnectHostDialog } from '@/components/virtualization/Overview/ConnectHostDialog';
+import { ConnectMachineDialog } from '@/components/virtualization/Overview/ConnectMachineDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,7 +28,6 @@ export default function VirtualizationPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [isConnectDialogOpen, setIsConnectDialogOpen] = useState(false);
 
   // Fetch machines from API
   const fetchMachines = async () => {
@@ -156,11 +155,6 @@ export default function VirtualizationPage() {
     }
   };
 
-  // Handle connect machine
-  const handleConnectMachine = (machine: Machine) => {
-    setMachines(prev => [...prev, machine]);
-  };
-
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -216,20 +210,13 @@ export default function VirtualizationPage() {
             </div>
           ) : (
             <>
-              <TooltipProvider>
-                <div className="flex flex-col gap-4">
-                  <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-bold">Hosts</h1>
-                    <Button onClick={() => setIsConnectDialogOpen(true)}>Connect</Button>
-                  </div>
-                  
-                  <HostOverview
-                    machines={machines}
-                    onDelete={handleDeleteMachine}
-                    onTestConnection={testMachineConnection}
-                  />
-                </div>
-              </TooltipProvider>
+              <HostOverview
+                machines={machines}
+                onDelete={handleDeleteMachine}
+                onRefresh={fetchMachines}
+                onTestConnection={testMachineConnection}
+                className="mt-4"
+              />
             </>
           )}
         </>
@@ -250,12 +237,6 @@ export default function VirtualizationPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <ConnectHostDialog
-        open={isConnectDialogOpen}
-        onOpenChange={setIsConnectDialogOpen}
-        onSuccess={handleConnectMachine}
-      />
     </div>
   );
 } 
