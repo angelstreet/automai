@@ -2,6 +2,7 @@
 
 ## 🚀 Quick Start Commands
 ```bash
+ pkill -f "node"
 # Start Next.js frontend
 npm run dev
 

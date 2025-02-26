@@ -1,9 +1,9 @@
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const GitHubStrategy = require('passport-github2').Strategy;
-const { PrismaClient } = require('@prisma/client');
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GitHubStrategy } from 'passport-github2';
+import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prismaClient = new PrismaClient();
 
 // Serialize user for the session
 passport.serializeUser((user: any, done: any) => {
@@ -13,7 +13,7 @@ passport.serializeUser((user: any, done: any) => {
 // Deserialize user from the session
 passport.deserializeUser(async (id: string, done: any) => {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prismaClient.user.findUnique({
       where: { id },
       include: { tenant: true },
     });
@@ -27,25 +27,25 @@ passport.deserializeUser(async (id: string, done: any) => {
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL,
+      clientID: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || '',
       scope: ['profile', 'email'],
     },
     async (accessToken: string, refreshToken: string, profile: any, done: any) => {
       try {
         // Check if user exists
-        let user = await prisma.user.findFirst({
+        let user = await prismaClient.user.findFirst({
           where: {
-            provider: 'google',
-            providerId: profile.id,
+            email: profile.emails[0].value,
+            provider: 'google'
           },
           include: { tenant: true },
         });
 
         if (!user) {
           // Check if email is already registered
-          user = await prisma.user.findUnique({
+          user = await prismaClient.user.findUnique({
             where: { email: profile.emails[0].value },
             include: { tenant: true },
           });
@@ -58,25 +58,22 @@ passport.use(
           }
 
           // Create new user
-          user = await prisma.user.create({
+          user = await prismaClient.user.create({
             data: {
               email: profile.emails[0].value,
               name: profile.displayName,
               provider: 'google',
-              providerId: profile.id,
-              providerAccessToken: accessToken,
-              providerRefreshToken: refreshToken,
-              emailVerified: true, // Google emails are verified
+              emailVerified: new Date(),
             },
             include: { tenant: true },
           });
         } else {
           // Update existing user
-          user = await prisma.user.update({
+          user = await prismaClient.user.update({
             where: { id: user.id },
             data: {
-              providerAccessToken: accessToken,
-              providerRefreshToken: refreshToken,
+              name: profile.displayName,
+              emailVerified: new Date(),
             },
             include: { tenant: true },
           });
@@ -95,9 +92,9 @@ passport.use(
 passport.use(
   new GitHubStrategy(
     {
-      clientID: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: process.env.GITHUB_CALLBACK_URL,
+      clientID: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+      callbackURL: process.env.GITHUB_CALLBACK_URL || '',
       scope: ['user:email'],
     },
     async (accessToken: string, refreshToken: string, profile: any, done: any) => {
@@ -105,10 +102,10 @@ passport.use(
         console.log('GitHub profile:', JSON.stringify(profile, null, 2));
 
         // Check if user exists
-        let user = await prisma.user.findFirst({
+        let user = await prismaClient.user.findFirst({
           where: {
-            provider: 'github',
-            providerId: profile.id.toString(),
+            email: profile.emails?.[0]?.value,
+            provider: 'github'
           },
           include: { tenant: true },
         });
@@ -124,7 +121,7 @@ passport.use(
           console.log('Found primary email:', primaryEmail);
 
           // Check if email is already registered
-          user = await prisma.user.findUnique({
+          user = await prismaClient.user.findUnique({
             where: { email: primaryEmail },
             include: { tenant: true },
           });
@@ -138,15 +135,12 @@ passport.use(
           }
 
           // Create new user
-          user = await prisma.user.create({
+          user = await prismaClient.user.create({
             data: {
               email: primaryEmail,
               name: profile.displayName || profile.username,
               provider: 'github',
-              providerId: profile.id.toString(),
-              providerAccessToken: accessToken,
-              providerRefreshToken: refreshToken,
-              emailVerified: true, // GitHub emails are verified
+              emailVerified: new Date(),
             },
             include: { tenant: true },
           });
@@ -154,11 +148,11 @@ passport.use(
           console.log('Created new user:', user.email);
         } else {
           // Update existing user
-          user = await prisma.user.update({
+          user = await prismaClient.user.update({
             where: { id: user.id },
             data: {
-              providerAccessToken: accessToken,
-              providerRefreshToken: refreshToken,
+              name: profile.displayName || profile.username,
+              emailVerified: new Date(),
             },
             include: { tenant: true },
           });
@@ -175,4 +169,4 @@ passport.use(
   ),
 );
 
-module.exports = passport;
+export default passport;

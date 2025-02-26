@@ -709,7 +709,7 @@ const exchangeGoogleToken = async (req: express.Request, res: express.Response) 
           email,
           name,
           provider: 'google',
-          emailVerified: true, // Google emails are verified
+          emailVerified: new Date(), // Set emailVerified to current date
         },
         include: {
           tenant: true,
