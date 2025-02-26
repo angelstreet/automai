@@ -151,21 +151,12 @@ export function HostOverview({
           ) : (
             <>
               <Button 
-                variant="default" 
+                variant="outline" 
                 size="sm" 
-                onClick={() => setShowConnectDialog(true)}
+                onClick={() => setSelectMode(true)}
+                disabled={filteredMachines.length < 2}
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Host
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBulkRefresh}
-                disabled={isLoading || filteredMachines.length === 0}
-              >
-                <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-                Refresh All
+                Select
               </Button>
               <Button 
                 variant={viewMode === 'grid' ? 'default' : 'outline'} 

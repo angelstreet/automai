@@ -108,7 +108,29 @@ export default function VirtualizationPage() {
   // Refresh machines
   const refreshMachines = async () => {
     setIsRefreshing(true);
-    await fetchMachines();
+    
+    if (machines.length > 0) {
+      let successCount = 0;
+      for (const machine of machines) {
+        try {
+          await testMachineConnection(machine);
+          successCount++;
+        } catch (error) {
+          console.error('Error refreshing connection:', error);
+        }
+      }
+      
+      if (successCount > 0) {
+        toast({
+          title: 'Connections refreshed',
+          description: `Successfully refreshed ${successCount} host${successCount > 1 ? 's' : ''}`,
+          duration: 5000,
+        });
+      }
+    } else {
+      await fetchMachines();
+    }
+    
     setIsRefreshing(false);
   };
 
