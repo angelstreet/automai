@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { Terminal } from '@/components/virtualization/Terminal';
 import { useToast } from '@/components/ui/use-toast';
 import { logger } from '@/lib/logger';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface MachineConnection {
   id: string;
@@ -55,11 +57,24 @@ export default function TerminalPage() {
       
       const response = await fetch(`/api/virtualization/machines/byName/${name}`);
       if (!response.ok) {
-        throw new Error(`Failed to fetch host details for ${name}`);
+        const errorText = await response.text();
+        toast({
+          variant: 'destructive',
+          title: 'Failed to fetch host details',
+          description: `Error: ${errorText || response.statusText}`,
+          duration: 5000,
+        });
+        throw new Error(`Failed to fetch host details for ${name}: ${errorText}`);
       }
       
       const data = await response.json();
       if (!data.success || !data.data) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid host data',
+          description: `Could not retrieve valid data for ${name}`,
+          duration: 5000,
+        });
         throw new Error(`Invalid host data for ${name}`);
       }
       
@@ -71,6 +86,14 @@ export default function TerminalPage() {
         data: { hostName: name, error: message },
         saveToDb: true
       });
+      
+      toast({
+        variant: 'destructive',
+        title: 'Connection Error',
+        description: message,
+        duration: 5000,
+      });
+      
       throw error;
     }
   };
@@ -153,8 +176,11 @@ export default function TerminalPage() {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center p-8 bg-card border border-border rounded-lg shadow-lg max-w-md -mt-32">
-          <h2 className="text-2xl font-bold text-red-500 mb-4">Connection Error</h2>
-          <p className="text-foreground mb-6">{error}</p>
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Connection Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
           <div className="flex justify-center space-x-4">
             <button
               className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"

@@ -8,6 +8,7 @@ import { SearchAddon } from 'xterm-addon-search';
 import { AttachAddon } from 'xterm-addon-attach';
 import 'xterm/css/xterm.css';
 import { logger } from '@/lib/logger';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Connection {
   id: string;
@@ -29,6 +30,7 @@ export function Terminal({ connection }: TerminalProps) {
   const connectionAttemptedRef = useRef<boolean>(false);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -179,6 +181,14 @@ export function Terminal({ connection }: TerminalProps) {
         saveToDb: true
       });
       
+      // Show toast notification for WebSocket error
+      toast({
+        variant: 'destructive',
+        title: 'WebSocket Connection Error',
+        description: `Failed to establish WebSocket connection: ${errorMessage || 'Unknown error'}`,
+        duration: 5000,
+      });
+      
       term.write(`\r\n\x1B[1;3;31mWebSocket connection error: ${errorMessage}\x1B[0m\r\n`);
       term.write(`\r\n\x1B[1;3;31mPlease check your network connection and try again.\x1B[0m\r\n`);
     };
@@ -199,13 +209,47 @@ export function Terminal({ connection }: TerminalProps) {
             action: 'SSH_SERVER_ERROR',
             data: { 
               connectionId: connection.id,
-              error: data.error
+              error: data.error,
+              errorType: data.errorType || 'UNKNOWN_ERROR'
             },
             saveToDb: true
           });
           
-          term.write(`\r\n\x1B[1;3;31mSSH Error: ${data.error}\x1B[0m\r\n`);
-          term.write(`\r\n\x1B[1;3;31mPlease check your credentials and try again.\x1B[0m\r\n`);
+          // Customize toast based on error type
+          let toastTitle = 'SSH Connection Error';
+          let toastDescription = data.error || 'Failed to establish SSH connection';
+          
+          if (data.errorType === 'SSH_AUTH_ERROR') {
+            toastTitle = 'Authentication Failed';
+            toastDescription = 'Invalid username or password. Please check your credentials.';
+          } else if (data.errorType === 'SSH_NETWORK_ERROR') {
+            toastTitle = 'Network Error';
+            toastDescription = `Could not connect to ${data.details?.host}:${data.details?.port}. Server may be unreachable.`;
+          } else if (data.errorType === 'SSH_SHELL_ERROR') {
+            toastTitle = 'Shell Error';
+            toastDescription = 'Failed to open shell session on the remote server.';
+          }
+          
+          // Show toast notification for SSH error
+          toast({
+            variant: 'destructive',
+            title: toastTitle,
+            description: toastDescription,
+            duration: 5000,
+          });
+          
+          // Display error in terminal with appropriate message
+          term.write(`\r\n\x1B[1;3;31mError: ${data.error}\x1B[0m\r\n`);
+          
+          if (data.errorType === 'SSH_AUTH_ERROR') {
+            term.write(`\r\n\x1B[1;3;31mAuthentication failed. Please check your username and password.\x1B[0m\r\n`);
+          } else if (data.errorType === 'SSH_NETWORK_ERROR') {
+            term.write(`\r\n\x1B[1;3;31mCould not connect to ${data.details?.host}:${data.details?.port}. Server may be unreachable.\x1B[0m\r\n`);
+          } else if (data.errorType === 'SSH_SHELL_ERROR') {
+            term.write(`\r\n\x1B[1;3;31mFailed to open shell session on the remote server.\x1B[0m\r\n`);
+          } else {
+            term.write(`\r\n\x1B[1;3;31mPlease check your connection settings and try again.\x1B[0m\r\n`);
+          }
         }
       } catch (e) {
         // Not JSON data, will be handled by the AttachAddon
@@ -271,7 +315,7 @@ export function Terminal({ connection }: TerminalProps) {
       }
       term.dispose();
     };
-  }, [connection]);
+  }, [connection, toast]);
 
   return (
     <div className="w-full h-full">

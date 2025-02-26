@@ -188,7 +188,14 @@ export async function GET(
             },
             saveToDb: true
           });
-          clientSocket.send(JSON.stringify({ error: `SSH setup error: ${errorMessage}` }));
+          clientSocket.send(JSON.stringify({ 
+            error: `SSH setup error: ${errorMessage}`,
+            errorType: 'SSH_SETUP_ERROR',
+            details: {
+              host: connection.ip,
+              port: connection.port || 22
+            }
+          }));
         }
       });
       
@@ -203,12 +210,20 @@ export async function GET(
         // Create an SSH shell session
         sshClient.shell((err, stream) => {
           if (err) {
-            logger.error(`SSH shell error: ${err.message}`, {
+            const errorMessage = `SSH shell error: ${err.message}`;
+            logger.error(errorMessage, {
               action: 'SSH_SHELL_ERROR',
               data: { machineId: id, error: err.message },
               saveToDb: true
             });
-            clientSocket.send(JSON.stringify({ error: err.message }));
+            clientSocket.send(JSON.stringify({ 
+              error: errorMessage,
+              errorType: 'SSH_SHELL_ERROR',
+              details: {
+                host: connection.ip,
+                port: connection.port || 22
+              }
+            }));
             return;
           }
           
@@ -266,12 +281,29 @@ export async function GET(
       });
       
       sshClient.on('error', (err) => {
-        logger.error(`SSH connection error: ${err.message}`, {
+        const errorMessage = `SSH connection error: ${err.message}`;
+        logger.error(errorMessage, {
           action: 'SSH_CONNECTION_ERROR',
           data: { machineId: id, error: err.message },
           saveToDb: true
         });
-        clientSocket.send(JSON.stringify({ error: `Connection error: ${err.message}` }));
+        
+        // Determine error type for better client-side handling
+        let errorType = 'SSH_CONNECTION_ERROR';
+        if (err.message.includes('Authentication failed')) {
+          errorType = 'SSH_AUTH_ERROR';
+        } else if (err.message.includes('connect ETIMEDOUT') || err.message.includes('connect ECONNREFUSED')) {
+          errorType = 'SSH_NETWORK_ERROR';
+        }
+        
+        clientSocket.send(JSON.stringify({ 
+          error: errorMessage,
+          errorType: errorType,
+          details: {
+            host: connection.ip,
+            port: connection.port || 22
+          }
+        }));
         sshClient.end();
       });
       
