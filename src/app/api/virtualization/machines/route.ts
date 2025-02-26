@@ -70,6 +70,7 @@ async function testConnection(connection: any, userId: string, tenantId?: string
 // GET /api/virtualization/machines
 export async function GET(request: Request) {
   try {
+    // Single request for user info
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -77,7 +78,7 @@ export async function GET(request: Request) {
     
     const { id: userId, tenantId } = session.user;
     
-    // Get all connections in one query
+    // Single request for all connections
     const connections = await prisma.connection.findMany({
       where: {
         OR: [
@@ -88,12 +89,14 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Test connections in parallel and collect updates
-    const updates = await Promise.all(
+    // Test connections in parallel without additional DB queries
+    const connectionResults = await Promise.all(
       connections.map(async (conn) => {
         const { success, error } = await testConnection(conn, userId, tenantId);
+        
+        // Return the connection with updated status
         return {
-          id: conn.id,
+          ...conn,
           status: success ? 'connected' : 'failed',
           lastConnected: success ? new Date() : conn.lastConnected,
           errorMessage: success ? null : error
@@ -101,22 +104,24 @@ export async function GET(request: Request) {
       })
     );
 
-    // Batch update all connections in one query
-    await prisma.$transaction(
-      updates.map(update => 
-        prisma.connection.update({
-          where: { id: update.id },
-          data: {
-            status: update.status,
-            lastConnected: update.lastConnected,
-            errorMessage: update.errorMessage
-          }
-        })
-      )
-    );
+    // Single batch update for all connections
+    if (connectionResults.length > 0) {
+      await prisma.$transaction(
+        connectionResults.map(conn => 
+          prisma.connection.update({
+            where: { id: conn.id },
+            data: {
+              status: conn.status,
+              lastConnected: conn.lastConnected,
+              errorMessage: conn.errorMessage
+            }
+          })
+        )
+      );
+    }
 
-    // Map to response format
-    const machines: Machine[] = connections.map((conn, i) => ({
+    // Map to response format without additional queries
+    const machines: Machine[] = connectionResults.map(conn => ({
       id: conn.id,
       name: conn.name,
       description: conn.description || undefined,
@@ -124,15 +129,16 @@ export async function GET(request: Request) {
       ip: conn.ip,
       port: conn.port ? Number(conn.port) : undefined,
       user: conn.username || undefined,
-      status: updates[i].status as 'connected' | 'failed' | 'pending',
-      lastConnected: updates[i].lastConnected || undefined,
-      errorMessage: updates[i].errorMessage || undefined,
+      status: conn.status as 'connected' | 'failed' | 'pending',
+      lastConnected: conn.lastConnected || undefined,
+      errorMessage: conn.errorMessage || undefined,
       createdAt: conn.createdAt,
       updatedAt: conn.updatedAt
     }));
 
     return NextResponse.json({ success: true, data: machines });
   } catch (error) {
+    logger.error(`Error fetching connections: ${error instanceof Error ? error.message : String(error)}`);
     return NextResponse.json({
       success: false,
       message: 'Failed to fetch connections',

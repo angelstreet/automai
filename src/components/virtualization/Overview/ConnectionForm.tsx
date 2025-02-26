@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -39,6 +39,8 @@ export function ConnectionForm({
   const [testing, setTesting] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
   const [testSuccess, setTestSuccess] = useState(false);
+  const lastRequestTime = useRef<number>(0);
+  const REQUEST_THROTTLE_MS = 500; // minimum time between requests
 
   // State for fingerprint verification
   const [fingerprint, setFingerprint] = useState<string | null>(null);
@@ -68,6 +70,13 @@ export function ConnectionForm({
 
   // Update the testConnection function to handle fingerprint verification
   const testConnection = async () => {
+    // Throttle requests
+    const now = Date.now();
+    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
+      return;
+    }
+    lastRequestTime.current = now;
+    
     setTesting(true);
     setTestError(null);
     setTestSuccess(false);
@@ -133,6 +142,13 @@ export function ConnectionForm({
 
   // Add a function to verify fingerprint
   const verifyFingerprint = async () => {
+    // Throttle requests
+    const now = Date.now();
+    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
+      return;
+    }
+    lastRequestTime.current = now;
+    
     setTesting(true);
     setTestError(null);
     

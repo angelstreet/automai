@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,6 +25,8 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState<string | null>(null);
+  const lastRequestTime = useRef<number>(0);
+  const REQUEST_THROTTLE_MS = 500; // minimum time between requests
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -92,6 +94,13 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
 
   const handleCreate = async () => {
     if (!validateFormData()) return;
+    
+    // Throttle requests
+    const now = Date.now();
+    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
+      return;
+    }
+    lastRequestTime.current = now;
 
     setIsCreating(true);
     try {
@@ -169,6 +178,13 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
 
   const testConnection = async (): Promise<boolean> => {
     if (!validateFormData()) return false;
+    
+    // Throttle requests
+    const now = Date.now();
+    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
+      return false;
+    }
+    lastRequestTime.current = now;
 
     setIsTesting(true);
     setTestStatus('idle');
@@ -184,7 +200,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           type: formData.type,
           ip: formData.ip,
           port: formData.port ? parseInt(formData.port) : undefined,
-          user: formData.username,
+          username: formData.username,
           password: formData.password,
         }),
       });

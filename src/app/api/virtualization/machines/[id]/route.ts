@@ -25,7 +25,7 @@ export async function DELETE(
       }, { status: 401 });
     }
     
-    const id = params.id;
+    const id = await params.id;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
@@ -102,7 +102,7 @@ export async function PATCH(
       }, { status: 401 });
     }
     
-    const id = params.id;
+    const id = await params.id;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     const body = await request.json();
