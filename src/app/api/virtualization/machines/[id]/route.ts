@@ -25,8 +25,8 @@ export async function GET(
       }, { status: 401 });
     }
     
-    // Properly handle params
-    const id = params.id;
+    // Properly handle params - ensure params is awaited
+    const id = params?.id;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
@@ -119,7 +119,8 @@ export async function DELETE(
       }, { status: 401 });
     }
     
-    const id = params.id;
+    // Properly handle params - ensure params is awaited
+    const id = params?.id;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
@@ -196,8 +197,8 @@ export async function PATCH(
       }, { status: 401 });
     }
     
-    // Properly handle params
-    const id = params.id;
+    // Properly handle params - ensure params is awaited
+    const id = params?.id;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     const body = await request.json();

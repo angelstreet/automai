@@ -24,6 +24,38 @@ const isDev = process.env.NODE_ENV === 'development';
 const recentLogs = new Map<string, number>();
 const DEBOUNCE_INTERVAL = 2000; // 2 seconds
 
+// Cache for entity existence checks to reduce database queries
+const entityCache = {
+  users: new Map<string, boolean>(),
+  tenants: new Map<string, boolean>(),
+  connections: new Map<string, boolean>(),
+  // Clear cache periodically to prevent stale data
+  clearInterval: null as NodeJS.Timeout | null,
+  
+  // Initialize cache clearing
+  init() {
+    if (this.clearInterval === null) {
+      // Clear cache every 5 minutes
+      this.clearInterval = setInterval(() => {
+        this.users.clear();
+        this.tenants.clear();
+        this.connections.clear();
+      }, 5 * 60 * 1000);
+      
+      // Ensure the interval is cleared when the process exits
+      process.on('beforeExit', () => {
+        if (this.clearInterval) {
+          clearInterval(this.clearInterval);
+          this.clearInterval = null;
+        }
+      });
+    }
+  }
+};
+
+// Initialize entity cache
+entityCache.init();
+
 // Helper to determine if we should log based on environment and level
 function shouldLog(level: LogLevel): boolean {
   // Always log info and above
@@ -34,6 +66,38 @@ function shouldLog(level: LogLevel): boolean {
 function getLogKey(level: LogLevel, message: string, options: LogOptions): string {
   const { userId, connectionId, action } = options;
   return `${level}:${message}:${userId || ''}:${connectionId || ''}:${action || ''}`;
+}
+
+// Check if an entity exists, using cache to reduce database queries
+async function entityExists(type: 'user' | 'tenant' | 'connection', id: string): Promise<boolean> {
+  const cacheMap = type === 'user' ? entityCache.users : 
+                  type === 'tenant' ? entityCache.tenants : 
+                  entityCache.connections;
+  
+  // Check cache first
+  if (cacheMap.has(id)) {
+    return cacheMap.get(id) as boolean;
+  }
+  
+  try {
+    let exists = false;
+    
+    // Check database
+    if (type === 'user') {
+      exists = !!(await prisma.user.findUnique({ where: { id }, select: { id: true } }));
+    } else if (type === 'tenant') {
+      exists = !!(await prisma.tenant.findUnique({ where: { id }, select: { id: true } }));
+    } else if (type === 'connection') {
+      exists = !!(await prisma.connection.findUnique({ where: { id }, select: { id: true } }));
+    }
+    
+    // Cache result
+    cacheMap.set(id, exists);
+    return exists;
+  } catch (error) {
+    // In case of error, assume entity exists to avoid data loss
+    return true;
+  }
 }
 
 /**
@@ -98,29 +162,17 @@ export async function log(level: LogLevel, message: string, options: LogOptions 
           metadata: data ? JSON.stringify(data) : null,
         };
         
-        // Only include foreign keys if they exist
-        if (userId) {
-          // Check if user exists
-          const userExists = await prisma.user.findUnique({ where: { id: userId } });
-          if (userExists) {
-            logData.userId = userId;
-          }
+        // Only include foreign keys if they exist - use cached checks
+        if (userId && await entityExists('user', userId)) {
+          logData.userId = userId;
         }
         
-        if (tenantId) {
-          // Check if tenant exists
-          const tenantExists = await prisma.tenant.findUnique({ where: { id: tenantId } });
-          if (tenantExists) {
-            logData.tenantId = tenantId;
-          }
+        if (tenantId && await entityExists('tenant', tenantId)) {
+          logData.tenantId = tenantId;
         }
         
-        if (connectionId) {
-          // Check if connection exists
-          const connectionExists = await prisma.connection.findUnique({ where: { id: connectionId } });
-          if (connectionExists) {
-            logData.connectionId = connectionId;
-          }
+        if (connectionId && await entityExists('connection', connectionId)) {
+          logData.connectionId = connectionId;
         }
         
         await prisma.connectionLog.create({
