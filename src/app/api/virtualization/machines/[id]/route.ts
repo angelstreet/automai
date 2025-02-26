@@ -4,6 +4,19 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
+// Error handler to reduce code duplication
+function handleError(error: unknown, session?: any, action = 'MACHINE_ERROR') {
+  logger.error(`Error: ${error instanceof Error ? error.message : String(error)}`, { 
+    userId: session?.user?.id, 
+    tenantId: session?.user?.tenantId,
+    action
+  });
+  return NextResponse.json({
+    success: false,
+    message: 'Internal server error',
+  }, { status: 500 });
+}
+
 // GET /api/virtualization/machines/[id]
 export async function GET(
   request: Request,
@@ -16,8 +29,7 @@ export async function GET(
       logger.warn('Unauthorized access attempt to get machine', { 
         userId: session?.user?.id, 
         ip: request.headers.get('x-forwarded-for') || 'unknown',
-        action: 'MACHINE_GET_UNAUTHORIZED',
-        saveToDb: true 
+        action: 'MACHINE_GET_UNAUTHORIZED'
       });
       return NextResponse.json({
         success: false,
@@ -26,7 +38,8 @@ export async function GET(
     }
     
     // Properly handle params - use context.params instead of params directly
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
@@ -46,8 +59,7 @@ export async function GET(
         userId: userId, 
         tenantId: tenantId,
         action: 'MACHINE_GET_NOT_FOUND',
-        data: { id },
-        saveToDb: true
+        data: { id }
       });
       return NextResponse.json({
         success: false,
@@ -75,8 +87,7 @@ export async function GET(
       userId: userId, 
       tenantId: tenantId,
       action: 'MACHINE_GET_SUCCESS',
-      data: { id },
-      saveToDb: true
+      data: { id }
     });
     
     return NextResponse.json({
@@ -84,17 +95,7 @@ export async function GET(
       data: machine,
     });
   } catch (error) {
-    logger.error(`Error getting machine: ${error instanceof Error ? error.message : String(error)}`, { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
-      action: 'MACHINE_GET_ERROR',
-      data: { error: error instanceof Error ? error.message : String(error) },
-      saveToDb: true
-    });
-    return NextResponse.json({
-      success: false,
-      message: 'Internal server error',
-    }, { status: 500 });
+    return handleError(error, session, 'MACHINE_GET_ERROR');
   }
 }
 
@@ -110,8 +111,7 @@ export async function DELETE(
       logger.warn('Unauthorized access attempt to delete machine', { 
         userId: session?.user?.id, 
         ip: request.headers.get('x-forwarded-for') || 'unknown',
-        action: 'MACHINE_DELETE_UNAUTHORIZED',
-        saveToDb: true 
+        action: 'MACHINE_DELETE_UNAUTHORIZED'
       });
       return NextResponse.json({
         success: false,
@@ -120,7 +120,8 @@ export async function DELETE(
     }
     
     // Properly handle params - use context.params instead of params directly
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     
@@ -140,8 +141,7 @@ export async function DELETE(
         userId: userId, 
         tenantId: tenantId,
         action: 'MACHINE_DELETE_NOT_FOUND',
-        data: { id },
-        saveToDb: true
+        data: { id }
       });
       return NextResponse.json({
         success: false,
@@ -153,8 +153,7 @@ export async function DELETE(
       userId: userId, 
       tenantId: tenantId,
       action: 'MACHINE_DELETE_SUCCESS',
-      data: { id },
-      saveToDb: true
+      data: { id }
     });
     
     return NextResponse.json({
@@ -162,17 +161,7 @@ export async function DELETE(
       message: 'Machine deleted successfully',
     });
   } catch (error) {
-    logger.error(`Error deleting machine: ${error instanceof Error ? error.message : String(error)}`, { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
-      action: 'MACHINE_DELETE_ERROR',
-      data: { error: error instanceof Error ? error.message : String(error) },
-      saveToDb: true
-    });
-    return NextResponse.json({
-      success: false,
-      message: 'Internal server error',
-    }, { status: 500 });
+    return handleError(error, session, 'MACHINE_DELETE_ERROR');
   }
 }
 
@@ -188,8 +177,7 @@ export async function PATCH(
       logger.warn('Unauthorized access attempt to update machine', { 
         userId: session?.user?.id, 
         ip: request.headers.get('x-forwarded-for') || 'unknown',
-        action: 'MACHINE_UPDATE_UNAUTHORIZED',
-        saveToDb: true 
+        action: 'MACHINE_UPDATE_UNAUTHORIZED'
       });
       return NextResponse.json({
         success: false,
@@ -198,7 +186,8 @@ export async function PATCH(
     }
     
     // Properly handle params - use context.params instead of params directly
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     const body = await request.json();
@@ -224,8 +213,7 @@ export async function PATCH(
         userId: userId, 
         tenantId: tenantId,
         action: 'MACHINE_UPDATE_NOT_FOUND',
-        data: { id },
-        saveToDb: true
+        data: { id }
       });
       return NextResponse.json({
         success: false,
@@ -253,8 +241,7 @@ export async function PATCH(
       userId: userId, 
       tenantId: tenantId,
       action: 'MACHINE_UPDATE_SUCCESS',
-      data: { id },
-      saveToDb: true
+      data: { id }
     });
     
     return NextResponse.json({
@@ -262,16 +249,6 @@ export async function PATCH(
       data: machine,
     });
   } catch (error) {
-    logger.error(`Error updating machine: ${error instanceof Error ? error.message : String(error)}`, { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
-      action: 'MACHINE_UPDATE_ERROR',
-      data: { error: error instanceof Error ? error.message : String(error) },
-      saveToDb: true
-    });
-    return NextResponse.json({
-      success: false,
-      message: 'Internal server error',
-    }, { status: 500 });
+    return handleError(error, session, 'MACHINE_UPDATE_ERROR');
   }
 } 

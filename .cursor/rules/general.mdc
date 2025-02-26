@@ -86,12 +86,14 @@ alwaysApply: true
 3. For all other changes, rely on Next.js Fast Refresh to compile and update the application
 
 ## i18n Handling
-1. When adding translations, always verify both French (fr) and English (en) files
-2. Check both sets of translation files when there are i18n issues:
-   - `/src/messages/{locale}.json` - Main translation files
-   - `/src/i18n/messages/{locale}.json` - Secondary translation files
+1. Translation files MUST be located ONLY in `/src/i18n/messages/{locale}.json`
+2. When adding translations:
+   - Always verify both French (fr) and English (en) files
+   - Ensure keys are consistent across both files
+   - Keep translations organized by feature/page sections
 3. Ensure the `getMessages` function in `src/i18n/index.ts` is loading from the correct location
 4. Remember that changes to translation files may require a server restart
+5. NEVER create translation files outside of `/src/i18n/messages/`
 
 ## Next.js App Router
 1. For pages using translations, check that the namespace exists in all locale files

@@ -202,6 +202,7 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           port: formData.port ? parseInt(formData.port) : undefined,
           username: formData.username,
           password: formData.password,
+          machineId: formData.id,
         }),
       });
 

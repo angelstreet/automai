@@ -5,10 +5,11 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Laptop, Server, Database, AlertTriangle, CheckCircle, XCircle, Clock, Grid, List, MoreHorizontal, Terminal, BarChart2, LayoutGrid } from 'lucide-react';
+import { Laptop, Server, Database, AlertTriangle, CheckCircle, XCircle, Clock, Grid, List, MoreHorizontal, Terminal, BarChart2, LayoutGrid, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRouter } from 'next/navigation';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   Table,
   TableBody,
@@ -39,6 +40,7 @@ interface MachineListProps {
   isLoading?: boolean;
   onRefresh?: () => void;
   onDelete?: (id: string) => void;
+  onTestConnection?: (machine: Machine) => void;
   className?: string;
 }
 
@@ -47,12 +49,15 @@ export function MachineList({
   isLoading = false,
   onRefresh,
   onDelete,
+  onTestConnection,
   className,
 }: MachineListProps) {
   const router = useRouter();
   const params = useParams();
   const tenant = params.tenant;
   const locale = params.locale;
+  const t = useTranslations('Virtualization');
+  const commonT = useTranslations('Common');
   
   // State for view mode (grid or table)
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -124,19 +129,19 @@ export function MachineList({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'connected':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Connected</Badge>;
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{t('connected')}</Badge>;
       case 'failed':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Failed</Badge>;
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">{t('failed')}</Badge>;
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">{t('pending')}</Badge>;
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return <Badge variant="outline">{t('unknown')}</Badge>;
     }
   };
 
   // Format date for last connected
   const formatDate = (date: Date | undefined) => {
-    if (!date) return 'Never';
+    if (!date) return t('never');
     return new Date(date).toLocaleString();
   };
 
@@ -193,6 +198,173 @@ export function MachineList({
       </div>
     );
   }
+
+  // In the grid view, add a test connection button
+  const renderGridView = () => {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {filteredMachines.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((machine) => (
+          <Card key={machine.id} className={cn("overflow-hidden", {
+            "border-primary": selectedMachines.has(machine.id),
+            "opacity-70": selectMode && !selectedMachines.has(machine.id)
+          })}>
+            <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
+              <div className="flex flex-col space-y-1.5">
+                <CardTitle className="text-base font-semibold truncate max-w-[200px]">
+                  {machine.name}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {machine.ip}{machine.port ? `:${machine.port}` : ''}
+                </CardDescription>
+              </div>
+              <div className="flex items-center space-x-2">
+                {selectMode && (
+                  <Checkbox
+                    checked={selectedMachines.has(machine.id)}
+                    onCheckedChange={() => toggleMachineSelection(machine.id)}
+                    aria-label="Select machine"
+                  />
+                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Open menu</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => router.push(`/${params.locale}/${params.tenant}/virtualization/terminal/${machine.id}`)}>
+                      <Terminal className="mr-2 h-4 w-4" />
+                      <span>Terminal</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => router.push(`/${params.locale}/${params.tenant}/virtualization/metrics/${machine.id}`)}>
+                      <BarChart2 className="mr-2 h-4 w-4" />
+                      <span>Metrics</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onTestConnection?.(machine)}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <span>{t('testConnection')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onDelete?.(machine.id)} className="text-destructive">
+                      <XCircle className="mr-2 h-4 w-4" />
+                      <span>Delete</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-2">
+              <div className="flex flex-col space-y-2">
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <div className="mr-2">{getMachineTypeIcon(machine.type)}</div>
+                  <span className="capitalize">{machine.type}</span>
+                </div>
+                {machine.user && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <span>User: {machine.user}</span>
+                  </div>
+                )}
+                {machine.lastConnected && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <span>Last connected: {formatDate(new Date(machine.lastConnected))}</span>
+                  </div>
+                )}
+                {machine.status === 'failed' && machine.errorMessage && (
+                  <div className="flex items-center text-xs text-destructive mt-2">
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    <span className="truncate">{machine.errorMessage}</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  // In the table view, add a test connection button
+  const renderTableView = () => {
+    return (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {selectMode && (
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedMachines.size === paginatedMachines.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
+              )}
+              <TableHead>Name</TableHead>
+              <TableHead>IP Address</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Connected</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredMachines.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((machine) => (
+              <TableRow key={machine.id} className={cn({
+                "bg-muted/50": selectedMachines.has(machine.id),
+              })}>
+                {selectMode && (
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedMachines.has(machine.id)}
+                      onCheckedChange={() => toggleMachineSelection(machine.id)}
+                      aria-label="Select row"
+                    />
+                  </TableCell>
+                )}
+                <TableCell className="font-medium">{machine.name}</TableCell>
+                <TableCell>{machine.ip}{machine.port ? `:${machine.port}` : ''}</TableCell>
+                <TableCell>{getStatusBadge(machine.status)}</TableCell>
+                <TableCell>{machine.lastConnected ? formatDate(new Date(machine.lastConnected)) : '-'}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/terminals/${machine.name}`)}
+                      disabled={machine.status !== 'connected'}
+                    >
+                      <Terminal className="h-4 w-4 mr-2" />
+                      Terminal
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onTestConnection?.(machine)}>
+                          Refresh
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/metrics/${machine.name}`)}>
+                          Metrics
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/logs/${machine.name}`)}>
+                          Logs
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onDelete?.(machine.id)} className="text-destructive">
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -313,181 +485,7 @@ export function MachineList({
         </div>
       </div>
       
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
-          {paginatedMachines.map((machine) => (
-            <Card key={machine.id} className="hover:shadow-md transition-shadow duration-200">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  {selectMode && (
-                    <Checkbox 
-                      checked={selectedMachines.has(machine.id)} 
-                      onCheckedChange={() => toggleMachineSelection(machine.id)}
-                      className="mr-2"
-                    />
-                  )}
-                  <div className="flex items-center gap-2">
-                    {getMachineTypeIcon(machine.type)}
-                    <CardTitle className="text-lg">{machine.name}</CardTitle>
-                  </div>
-                  {getStatusBadge(machine.status)}
-                </div>
-                <CardDescription className="flex items-center gap-1">
-                  {machine.ip}{machine.port ? `:${machine.port}` : ''}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {machine.description && (
-                    <p className="text-sm text-gray-500">{machine.description}</p>
-                  )}
-                  
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-1">
-                      {getStatusIcon(machine.status)}
-                      <span>{machine.status === 'connected' ? 'Connected' : 
-                             machine.status === 'failed' ? 'Connection failed' : 'Connecting...'}</span>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {machine.status === 'connected' && `Last connected: ${formatDate(machine.lastConnected)}`}
-                      {machine.status === 'failed' && machine.errorMessage && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="cursor-help underline">Error details</span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="max-w-xs">{machine.errorMessage}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-end gap-2 mt-4">
-                    {machine.type === 'ssh' && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          // Store in session storage for persistence
-                          sessionStorage.setItem('selectedMachines', JSON.stringify([machine.id]));
-                          router.push(`/${locale}/${tenant}/terminals/${machine.name}`);
-                        }}
-                        disabled={machine.status !== 'connected'}
-                      >
-                        Open Terminal
-                      </Button>
-                    )}
-                    
-                    {onDelete && !selectMode && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => onDelete(machine.id)}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="p-2">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {selectMode && (
-                  <TableHead className="w-10">
-                    <Checkbox 
-                      checked={selectedMachines.size === paginatedMachines.length && paginatedMachines.length > 0} 
-                      onCheckedChange={toggleSelectAll}
-                    />
-                  </TableHead>
-                )}
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>IP Address</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Connected</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedMachines.map((machine) => (
-                <TableRow key={machine.id}>
-                  {selectMode && (
-                    <TableCell>
-                      <Checkbox 
-                        checked={selectedMachines.has(machine.id)} 
-                        onCheckedChange={() => toggleMachineSelection(machine.id)}
-                      />
-                    </TableCell>
-                  )}
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {getMachineTypeIcon(machine.type)}
-                      {machine.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {machine.type.charAt(0).toUpperCase() + machine.type.slice(1)}
-                  </TableCell>
-                  <TableCell>
-                    {machine.ip}{machine.port ? `:${machine.port}` : ''}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      {getStatusIcon(machine.status)}
-                      <span>{machine.status === 'connected' ? 'Connected' : 
-                             machine.status === 'failed' ? 'Failed' : 'Pending'}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {formatDate(machine.lastConnected)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {machine.type === 'ssh' && (
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              // Store in session storage for persistence
-                              sessionStorage.setItem('selectedMachines', JSON.stringify([machine.id]));
-                              router.push(`/${locale}/${tenant}/terminals/${machine.name}`);
-                            }}
-                            disabled={machine.status !== 'connected'}
-                          >
-                            Open Terminal
-                          </DropdownMenuItem>
-                        )}
-                        {onDelete && (
-                          <DropdownMenuItem 
-                            className="text-red-500"
-                            onClick={() => onDelete(machine.id)}
-                          >
-                            Remove
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+      {viewMode === 'grid' ? renderGridView() : renderTableView()}
       
       {totalPages > 1 && (
         <Pagination className="py-4">

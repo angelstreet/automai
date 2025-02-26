@@ -12,6 +12,8 @@ import { ConnectMachineDialog } from '@/components/virtualization/Overview/Conne
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { Server } from 'lucide-react';
 
 export default function VirtualizationPage() {
   const t = useTranslations('Common');
@@ -38,108 +40,7 @@ export default function VirtualizationPage() {
       }
       
       const data = await response.json();
-      const machines = data.data || [];
-
-      // Test each connection and update status
-      const updatedMachines = await Promise.all(machines.map(async (machine) => {
-        try {
-          // Test connection
-          const testResponse = await fetch('/api/virtualization/machines/test-connection', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: machine.type,
-              ip: machine.ip,
-              port: machine.port,
-              username: machine.user,
-              password: machine.password,
-            }),
-          });
-
-          const testData = await testResponse.json();
-
-          // Handle SSH fingerprint verification
-          if (testResponse.status === 428 && testData.fingerprint) {
-            // Verify fingerprint
-            const verifyResponse = await fetch('/api/virtualization/machines/verify-fingerprint', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: machine.type,
-                ip: machine.ip,
-                port: machine.port,
-                username: machine.user,
-                password: machine.password,
-                fingerprint: testData.fingerprint,
-                accept: true
-              }),
-            });
-
-            const verifyData = await verifyResponse.json();
-
-            // Close connection after verification
-            await fetch('/api/virtualization/machines/close-connection', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: machine.type,
-                ip: machine.ip,
-                port: machine.port,
-              }),
-            });
-
-            // Update machine status based on verification result
-            const updateResponse = await fetch(`/api/virtualization/machines/${machine.id}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                status: verifyData.success ? 'connected' : 'failed',
-                lastConnected: verifyData.success ? new Date().toISOString() : machine.lastConnected,
-                errorMessage: verifyData.success ? null : verifyData.message
-              }),
-            });
-
-            if (updateResponse.ok) {
-              const updatedData = await updateResponse.json();
-              return updatedData.data;
-            }
-            return machine;
-          }
-
-          // Close connection after test
-          await fetch('/api/virtualization/machines/close-connection', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: machine.type,
-              ip: machine.ip,
-              port: machine.port,
-            }),
-          });
-
-          // Update machine status
-          const updateResponse = await fetch(`/api/virtualization/machines/${machine.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              status: testData.success ? 'connected' : 'failed',
-              lastConnected: testData.success ? new Date().toISOString() : machine.lastConnected,
-              errorMessage: testData.success ? null : testData.message
-            }),
-          });
-
-          if (updateResponse.ok) {
-            const updatedData = await updateResponse.json();
-            return updatedData.data;
-          }
-          return machine;
-        } catch (error) {
-          console.error(`Error testing connection for ${machine.name}:`, error);
-          return machine;
-        }
-      }));
-
-      setMachines(updatedMachines);
+      setMachines(data.data || []);
     } catch (error) {
       console.error('Error fetching machines:', error);
       toast({
@@ -153,15 +54,63 @@ export default function VirtualizationPage() {
     }
   };
 
-  // Initial fetch
+  // Test a single machine connection
+  const testMachineConnection = async (machine: Machine) => {
+    try {
+      // Update the specific machine to testing status
+      const machineIndex = machines.findIndex(m => m.id === machine.id);
+      if (machineIndex === -1) return;
+      
+      const updatedMachines = [...machines];
+      updatedMachines[machineIndex] = { ...machines[machineIndex], status: 'testing' };
+      setMachines(updatedMachines);
+      
+      // Test connection
+      const testResponse = await fetch('/api/virtualization/machines/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: machine.type,
+          ip: machine.ip,
+          port: machine.port,
+          username: machine.user,
+          password: machine.password,
+          machineId: machine.id,
+        }),
+      });
+
+      const testData = await testResponse.json();
+      
+      // No need to manually update status as the API now handles it
+      // Just refresh the machines list
+      fetchMachines();
+      
+      // Show toast notification
+      toast({
+        title: testData.success ? 'Success' : 'Error',
+        description: testData.success ? 'Machine connected successfully' : testData.message,
+        variant: testData.success ? 'default' : 'destructive'
+      });
+    } catch (error) {
+      console.error(`Error testing connection for ${machine.name}:`, error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: `Failed to test connection: ${error instanceof Error ? error.message : 'Unknown error'}`
+      });
+    }
+  };
+
+  // Fetch machines on component mount
   useEffect(() => {
     fetchMachines();
   }, []);
 
-  // Handle refresh
-  const handleRefresh = () => {
+  // Refresh machines
+  const refreshMachines = async () => {
     setIsRefreshing(true);
-    fetchMachines();
+    await fetchMachines();
+    setIsRefreshing(false);
   };
 
   // Handle connection success
@@ -207,69 +156,86 @@ export default function VirtualizationPage() {
   };
 
   return (
-    <div className="flex-1 space-y-2 pt-2 h-[calc(100vh-90px)] max-h-[calc(100vh-90px)] flex flex-col overflow-hidden">
-      {/* Title section with buttons */}
-      <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Remote Machines</h1>
-          <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button 
-                                    variant="outline" 
-                    size="sm" 
-                    className="h-7"
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                  >
-                    <RefreshCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                  <p>Refresh</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">{t('virtualization')}</h1>
+          <p className="text-muted-foreground">
+            {t('manage_virtual_machines')}
+          </p>
         </div>
-        <div className="flex gap-2">
-                                  <Button 
-                                    variant="outline" 
-            size="sm" 
-            onClick={() => setIsDialogOpen(true)}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshMachines}
+            disabled={isRefreshing}
           >
-            Connect
-                                  </Button>
+            <RefreshCcw className={cn("h-4 w-4 mr-2", { "animate-spin": isRefreshing })} />
+            {t('refresh')}
+          </Button>
           
-          <ConnectMachineDialog 
-            open={isDialogOpen} 
-            onOpenChange={setIsDialogOpen} 
-            onSuccess={handleConnectionSuccess}
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
+                >
+                  {viewMode === 'grid' ? <Table2 className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{viewMode === 'grid' ? t('table_view') : t('grid_view')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <Button onClick={() => setIsDialogOpen(true)}>
+            {t('add_machine')}
+          </Button>
         </div>
       </div>
       
-      <div className="space-y-2 flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-hidden">
-          {isLoading ? (
-            <div className="p-4 space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[...Array(6)].map((_, i) => (
-                  <Skeleton key={i} className="h-40 w-full" />
-              ))}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[200px] w-full" />
+          ))}
+        </div>
+      ) : (
+        <>
+          {machines.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Server className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">{t('no_machines')}</h3>
+              <p className="text-muted-foreground mb-4">
+                {t('add_machine_description')}
+              </p>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                {t('add_machine')}
+              </Button>
             </div>
-                    </div>
           ) : (
-            <MachineList
-              machines={machines}
-              isLoading={isLoading}
-              onRefresh={handleRefresh}
-              onDelete={handleDeleteMachine}
-              className="h-full"
-            />
+            <>
+              <div className="bg-muted/50 p-4 rounded-lg mb-4">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Note:</strong> Connections are no longer tested automatically on page load to improve performance. 
+                  Use the refresh button or test individual connections using the test button for each machine.
+                </p>
+              </div>
+              <MachineList
+                machines={machines}
+                onDelete={handleDeleteMachine}
+                onRefresh={fetchMachines}
+                onTestConnection={testMachineConnection}
+                className="mt-4"
+              />
+            </>
           )}
-          </div>
-                      </div>
+        </>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

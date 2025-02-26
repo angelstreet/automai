@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { Client } from 'ssh2';
+import { serverCache } from '@/lib/cache';
 
 async function testConnection(connection: any, userId: string, tenantId?: string): Promise<{success: boolean, error?: string}> {
   if (connection.type === 'ssh') {
@@ -70,73 +71,92 @@ async function testConnection(connection: any, userId: string, tenantId?: string
 // GET /api/virtualization/machines
 export async function GET(request: Request) {
   try {
-    // Single request for user info
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    
+    if (!session || !session.user) {
+      logger.warn('Unauthorized access attempt to get machines', { 
+        userId: session?.user?.id, 
+        ip: request.headers.get('x-forwarded-for') || 'unknown',
+        action: 'MACHINES_GET_UNAUTHORIZED'
+      });
+      return NextResponse.json({
+        success: false,
+        message: 'Unauthorized',
+      }, { status: 401 });
     }
     
-    const { id: userId, tenantId } = session.user;
+    const userId = session.user.id;
+    const tenantId = session.user.tenantId;
     
-    // Single request for all connections
-    const connections = await prisma.connection.findMany({
-      where: {
-        OR: [
-          { userId },
-          { tenantId: tenantId || undefined }
-        ]
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    // Test connections in parallel without additional DB queries
-    const connectionResults = await Promise.all(
-      connections.map(async (conn) => {
-        const { success, error } = await testConnection(conn, userId, tenantId);
+    // Use cache for machines data with 5 minute TTL
+    const cacheKey = `machines_${userId}_${tenantId || 'personal'}`;
+    
+    const machinesData = await serverCache.getOrSet(
+      cacheKey,
+      async () => {
+        // Get connections
+        const connections = await prisma.connection.findMany({
+          where: {
+            OR: [
+              { userId },
+              { tenantId: tenantId || undefined }
+            ]
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          // Only select fields we need
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            type: true,
+            ip: true,
+            port: true,
+            username: true,
+            status: true,
+            lastConnected: true,
+            errorMessage: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        });
         
-        // Return the connection with updated status
-        return {
-          ...conn,
-          status: success ? 'connected' : 'failed',
-          lastConnected: success ? new Date() : conn.lastConnected,
-          errorMessage: success ? null : error
-        };
-      })
+        // Map to expected format
+        return connections.map(connection => ({
+          id: connection.id,
+          name: connection.name,
+          description: connection.description || undefined,
+          type: connection.type,
+          ip: connection.ip,
+          port: connection.port || undefined,
+          user: connection.username || undefined,
+          status: connection.status,
+          lastConnected: connection.lastConnected || undefined,
+          errorMessage: connection.errorMessage || undefined,
+          createdAt: connection.createdAt,
+          updatedAt: connection.updatedAt
+        }));
+      },
+      5 * 60 * 1000 // 5 minute TTL
     );
-
-    // Single batch update for all connections
-    if (connectionResults.length > 0) {
-      await prisma.$transaction(
-        connectionResults.map(conn => 
-          prisma.connection.update({
-            where: { id: conn.id },
-            data: {
-              status: conn.status,
-              lastConnected: conn.lastConnected,
-              errorMessage: conn.errorMessage
-            }
-          })
-        )
-      );
-    }
-
-    // Map to response format without additional queries
-    const machines: Machine[] = connectionResults.map(conn => ({
-      id: conn.id,
-      name: conn.name,
-      description: conn.description || undefined,
-      type: conn.type as 'ssh' | 'docker' | 'portainer',
-      ip: conn.ip,
-      port: conn.port ? Number(conn.port) : undefined,
-      user: conn.username || undefined,
-      status: conn.status as 'connected' | 'failed' | 'pending',
-      lastConnected: conn.lastConnected || undefined,
-      errorMessage: conn.errorMessage || undefined,
-      createdAt: conn.createdAt,
-      updatedAt: conn.updatedAt
-    }));
-
-    return NextResponse.json({ success: true, data: machines });
+    
+    // Add cache headers
+    const response = NextResponse.json({
+      success: true,
+      data: machinesData
+    });
+    
+    // Add cache control headers
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+    
+    logger.info('Successfully retrieved machines', { 
+      userId: userId, 
+      tenantId: tenantId,
+      action: 'MACHINES_GET_SUCCESS'
+    });
+    
+    return response;
   } catch (error) {
     logger.error(`Error fetching connections: ${error instanceof Error ? error.message : String(error)}`);
     return NextResponse.json({
