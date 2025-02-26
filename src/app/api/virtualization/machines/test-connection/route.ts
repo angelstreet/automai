@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 import { Client } from 'ssh2';
+import { prisma } from '@/lib/prisma';
 
 // POST /api/virtualization/machines/test-connection
 export async function POST(request: Request) {
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
     const body = await request.json();
-    const { type, ip, port, username, password } = body;
+    let { type, ip, port, username, password } = body;
 
     logger.info(`Initiated ${type} connection test`, { 
       userId: session?.user?.id, 
@@ -51,6 +52,31 @@ export async function POST(request: Request) {
 
     // Implement connection testing
     if (type === 'ssh') {
+      // If username is provided but password is missing, try to retrieve from database
+      if (username && !password) {
+        const existingConnection = await prisma.connection.findFirst({
+          where: {
+            type,
+            ip,
+            port: port ? Number(port) : undefined,
+            username,
+            OR: [
+              { userId },
+              { tenantId: tenantId || undefined }
+            ]
+          }
+        });
+
+        if (existingConnection?.password) {
+          password = existingConnection.password;
+          logger.info('Retrieved password from database for connection test', { 
+            userId: session?.user?.id, 
+            action: 'TEST_CONNECTION_PASSWORD_RETRIEVED',
+            data: { type, ip, port }
+          });
+        }
+      }
+      
       if (!username || !password) {
         logger.warn('Missing credentials for SSH connection test', { 
           userId: session?.user?.id, 
