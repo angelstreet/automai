@@ -53,13 +53,13 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
             </div>
             <div className="flex items-center space-x-2">
               <Button 
-                variant="outline"
-                size="sm"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
                 onClick={handleTerminalClick}
                 disabled={machine.status !== 'connected'}
               >
-                <Terminal className="h-4 w-4 mr-2" />
-                Terminal
+                <Terminal className="h-4 w-4" />
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

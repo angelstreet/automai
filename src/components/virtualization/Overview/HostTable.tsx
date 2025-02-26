@@ -69,6 +69,7 @@ export function HostTable({
             <TableHead>IP Address</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Last Connected</TableHead>
+            <TableHead>Terminal</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -90,17 +91,19 @@ export function HostTable({
               <TableCell>{machine.ip}{machine.port ? `:${machine.port}` : ''}</TableCell>
               <TableCell>{getStatusBadge(machine.status)}</TableCell>
               <TableCell>{formatDate(machine.lastConnected ? new Date(machine.lastConnected) : undefined)}</TableCell>
+              <TableCell>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => router.push(`/terminals/${machine.name}`)}
+                  disabled={machine.status !== 'connected'}
+                >
+                  <Terminal className="h-4 w-4" />
+                </Button>
+              </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push(`/terminals/${machine.name}`)}
-                    disabled={machine.status !== 'connected'}
-                  >
-                    <Terminal className="h-4 w-4 mr-2" />
-                    Terminal
-                  </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
