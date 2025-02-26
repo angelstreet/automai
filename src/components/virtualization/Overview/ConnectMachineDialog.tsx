@@ -95,19 +95,6 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
 
     setIsCreating(true);
     try {
-      if (testStatus !== 'success') {
-        const testSucceeded = await testConnection();
-        if (!testSucceeded) {
-          const userConfirms = window.confirm(
-            'Connection test failed. Do you still want to create this connection?'
-          );
-          if (!userConfirms) {
-            setIsCreating(false);
-            return;
-          }
-        }
-      }
-
       const response = await fetch('/api/virtualization/machines', {
         method: 'POST',
         headers: {
@@ -121,8 +108,8 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           port: formData.port ? parseInt(formData.port) : undefined,
           username: formData.username,
           password: formData.password,
-          status: 'running',
-          statusLabel: 'Connected'
+          status: 'connected',
+          lastConnected: new Date().toISOString()
         }),
       });
 
@@ -262,9 +249,6 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           onSave={handleCreate}
           onTestSuccess={() => setTestStatus('success')}
         />
-        
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">  
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
