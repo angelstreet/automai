@@ -32,34 +32,36 @@ model Connection {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  name           String?
-  email          String?         @unique
-  emailVerified  DateTime?
-  image          String?
-  role           String          @default("USER")
-  tenantId       String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  connections    Connection[]
-  connectionLogs ConnectionLog[]
-  tenant         Tenant?         @relation(fields: [tenantId], references: [id])
+  id               String            @id @default(cuid())
+  name             String?
+  email            String?           @unique
+  emailVerified    DateTime?
+  image            String?
+  role             String            @default("USER")
+  tenantId         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  provider         String?
+  connections      Connection[]
+  connectionLogs   ConnectionLog[]
   hostFingerprints HostFingerprint[]
+  tenant           Tenant?           @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
+  @@index([email, provider])
 }
 
 model Tenant {
-  id             String          @id @default(cuid())
-  name           String
-  domain         String?         @unique
-  plan           String          @default("free")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  connections    Connection[]
-  connectionLogs ConnectionLog[]
-  users          User[]
+  id               String            @id @default(cuid())
+  name             String
+  domain           String?           @unique
+  plan             String            @default("free")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  connections      Connection[]
+  connectionLogs   ConnectionLog[]
   hostFingerprints HostFingerprint[]
+  users            User[]
 }
 
 model ConnectionLog {
@@ -87,17 +89,17 @@ model ConnectionLog {
 }
 
 model HostFingerprint {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   host        String
-  port        Int       @default(22)
+  port        Int      @default(22)
   fingerprint String
-  verified    Boolean   @default(false)
+  verified    Boolean  @default(false)
   userId      String
   tenantId    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  user        User      @relation(fields: [userId], references: [id])
-  tenant      Tenant?   @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
 
   @@unique([host, userId])
   @@index([userId])

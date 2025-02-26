@@ -5,6 +5,18 @@ alwaysApply: true
 ---
 # Cursor Rules for Debugging and i18n
 
+## Project Structure
+1. Server-side code organization
+   - **IMPORTANT**: All server-related code is located in `src/server` directory
+   - Backend API routes are in `src/server/api`
+   - Database models and migrations are in `src/server/prisma`
+   - Environment files are in `src/server/config/env`
+     - `.env.development` - Development environment variables
+     - `.env.production` - Production environment variables
+     - `.env.test` - Test environment variables
+   - When working with Prisma, always use the schema at `src/server/prisma/schema.prisma`
+   - Database file is located at `src/server/prisma/dev.db` for SQLite
+
 ## Code Organization
 1. File length limits
    - **MANDATORY**: Keep files under 300 lines of code

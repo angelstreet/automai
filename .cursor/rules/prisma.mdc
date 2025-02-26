@@ -5,6 +5,16 @@ globs: src/server/prisma/**/*.{ts,prisma}
 
 # Prisma & Database Best Practices
 
+## Project Structure
+
+- **IMPORTANT**: All Prisma-related files are in `src/server/prisma` directory
+- The Prisma schema file is at `src/server/prisma/schema.prisma`
+- SQLite database file is at `src/server/prisma/dev.db`
+- Migrations are stored in `src/server/prisma/migrations`
+- Environment variables for database connection are in `src/server/config/env/.env.*` files
+- The DATABASE_URL in environment files should point to `src/server/prisma/dev.db`
+- **NEVER** create Prisma configurations outside the `src/server/prisma` directory
+
 ## Core Principles
 
 - Use Prisma schema as the single source of truth

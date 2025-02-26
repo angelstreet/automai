@@ -9,3 +9,4 @@ docs/.DS_Store
 .DS_Store
 src/server/config/env/.env.*
 shadcn-admin/
+src/server/prisma/dev.db-journal
