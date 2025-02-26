@@ -110,6 +110,7 @@ export function DeviceTable({ devices, selectedItems, onItemSelect, isSelectionM
                 onClick={() => {
                   window.location.href = `/${params.locale}/${params.tenant}/virtualization/terminals?devices=${device.name}`;
                 }}
+                disabled={device.status !== 'connected'}
               >
                 <Terminal className="h-3 w-3" />
               </Button>

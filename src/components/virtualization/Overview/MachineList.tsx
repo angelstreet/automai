@@ -346,6 +346,7 @@ export function MachineList({
                         variant="outline" 
                         size="sm"
                         onClick={() => router.push(`/${tenant}/terminals/${machine.name}`)}
+                        disabled={machine.status !== 'connected'}
                       >
                         Open Terminal
                       </Button>
@@ -430,7 +431,10 @@ export function MachineList({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {machine.type === 'ssh' && (
-                          <DropdownMenuItem onClick={() => router.push(`/${tenant}/terminals/${machine.name}`)}>
+                          <DropdownMenuItem 
+                            onClick={() => router.push(`/${tenant}/terminals/${machine.name}`)}
+                            disabled={machine.status !== 'connected'}
+                          >
                             Open Terminal
                           </DropdownMenuItem>
                         )}

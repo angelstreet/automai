@@ -100,6 +100,7 @@ export function DeviceGrid({ devices, selectedItems, onItemSelect, isSelectionMo
                 onClick={() => {
                   window.location.href = `/${params.locale}/${params.tenant}/virtualization/terminals?devices=${device.name}`;
                 }}
+                disabled={device.status !== 'connected'}
               >
                 <Terminal className="h-3.5 w-3.5" />
               </Button>

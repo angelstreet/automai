@@ -7,92 +7,77 @@ import { logger } from '@/lib/logger';
 import { Client } from 'ssh2';
 
 async function testConnection(connection: any, userId: string, tenantId?: string): Promise<{success: boolean, error?: string}> {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/virtualization/machines/test-connection`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: connection.type,
-        ip: connection.ip,
-        port: connection.port,
+  if (connection.type === 'ssh') {
+    return new Promise((resolve) => {
+      const conn = new Client();
+      let timeout: NodeJS.Timeout;
+
+      conn.on('ready', () => {
+        clearTimeout(timeout);
+        conn.end();
+        resolve({ success: true });
+      });
+
+      conn.on('error', (err) => {
+        clearTimeout(timeout);
+        conn.end();
+        resolve({ success: false, error: err.message });
+      });
+
+      timeout = setTimeout(() => {
+        conn.end();
+        resolve({ success: false, error: 'Connection timed out' });
+      }, 5000);
+
+      conn.connect({
+        host: connection.ip,
+        port: connection.port || 22,
         username: connection.username,
         password: connection.password,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      logger.info(`Successfully tested connection to ${connection.ip}`, { 
-        userId,
-        tenantId,
-        action: 'CONNECTION_TEST_SUCCESS',
-        data: { id: connection.id, type: connection.type, ip: connection.ip },
-        saveToDb: true
+        readyTimeout: 5000,
+        tryKeyboard: false,
+        keepaliveInterval: 0,
+        reconnect: false,
+        debug: false,
+        algorithms: {
+          kex: ['curve25519-sha256@libssh.org']
+        }
       });
-      return { success: true };
-    } else {
-      logger.error(`Connection test failed: ${data.message}`, { 
-        userId,
-        tenantId,
-        action: 'CONNECTION_TEST_ERROR',
-        data: { id: connection.id, type: connection.type, ip: connection.ip, error: data.message },
-        saveToDb: true
-      });
-      return { success: false, error: data.message };
-    }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(`Connection test failed: ${errorMessage}`, { 
-      userId,
-      tenantId,
-      action: 'CONNECTION_TEST_ERROR',
-      data: { id: connection.id, type: connection.type, ip: connection.ip, error: errorMessage },
-      saveToDb: true
     });
-    return { success: false, error: errorMessage };
   }
+  
+  if (connection.type === 'docker') {
+    try {
+      const response = await fetch(`http://${connection.ip}:${connection.port || 2375}/version`);
+      return { success: response.ok };
+    } catch (error) {
+      return { success: false, error: 'Failed to connect to Docker daemon' };
+    }
+  }
+  
+  if (connection.type === 'portainer') {
+    try {
+      const response = await fetch(`http://${connection.ip}:${connection.port || 9000}/api/status`);
+      return { success: response.ok };
+    } catch (error) {
+      return { success: false, error: 'Failed to connect to Portainer' };
+    }
+  }
+  
+  return { success: false, error: 'Invalid connection type' };
 }
 
 // GET /api/virtualization/machines
 export async function GET(request: Request) {
-  let sessionUser = null;
-  let sessionUserId = null;
-  let sessionTenantId = null;
-  
   try {
     const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user) {
-      logger.warn('Unauthorized access attempt to machines endpoint', { 
-        userId: session?.user?.id, 
-        ip: request.headers.get('x-forwarded-for') || 'unknown',
-        action: 'MACHINES_GET_UNAUTHORIZED',
-        saveToDb: true 
-      });
-      return NextResponse.json({
-        success: false,
-        message: 'Unauthorized',
-      }, { status: 401 });
+    if (!session?.user) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
     
-    sessionUser = session.user;
-    sessionUserId = session.user.id;
-    sessionTenantId = session.user.tenantId;
+    const { id: userId, tenantId } = session.user;
     
-    const userId = session.user.id;
-    const tenantId = session.user.tenantId;
-    
-    logger.info('Fetching machines', { 
-      userId: userId, 
-      tenantId: tenantId,
-      action: 'MACHINES_GET',
-      saveToDb: true
-    });
-    
-    // Get connections for this user or tenant
+    // Get all connections in one query
     const connections = await prisma.connection.findMany({
       where: {
         OR: [
@@ -100,67 +85,54 @@ export async function GET(request: Request) {
           { tenantId: tenantId || undefined }
         ]
       },
-      orderBy: {
-        createdAt: 'desc'
-      }
+      orderBy: { createdAt: 'desc' }
     });
 
-    // Test each connection and update status
-    const updatedConnections = await Promise.all(
+    // Test connections in parallel and collect updates
+    const updates = await Promise.all(
       connections.map(async (conn) => {
         const { success, error } = await testConnection(conn, userId, tenantId);
-        
-        // Update connection status in database
-        const updated = await prisma.connection.update({
-          where: { id: conn.id },
-          data: {
-            status: success ? 'connected' : 'failed',
-            lastConnected: success ? new Date() : conn.lastConnected,
-            errorMessage: success ? null : error
-          }
-        });
-        
-        return updated;
+        return {
+          id: conn.id,
+          status: success ? 'connected' : 'failed',
+          lastConnected: success ? new Date() : conn.lastConnected,
+          errorMessage: success ? null : error
+        };
       })
     );
-    
-    logger.debug(`Successfully fetched and tested ${connections.length} connections`, { 
-      userId: userId, 
-      tenantId: tenantId,
-      action: 'MACHINES_GET_SUCCESS',
-      data: { count: connections.length },
-      saveToDb: true
-    });
-    
-    // Map to expected format
-    const machines: Machine[] = updatedConnections.map(conn => ({
+
+    // Batch update all connections in one query
+    await prisma.$transaction(
+      updates.map(update => 
+        prisma.connection.update({
+          where: { id: update.id },
+          data: {
+            status: update.status,
+            lastConnected: update.lastConnected,
+            errorMessage: update.errorMessage
+          }
+        })
+      )
+    );
+
+    // Map to response format
+    const machines: Machine[] = connections.map((conn, i) => ({
       id: conn.id,
       name: conn.name,
       description: conn.description || undefined,
       type: conn.type as 'ssh' | 'docker' | 'portainer',
       ip: conn.ip,
-      port: conn.port || undefined,
+      port: conn.port ? Number(conn.port) : undefined,
       user: conn.username || undefined,
-      status: conn.status as 'connected' | 'failed' | 'pending',
-      lastConnected: conn.lastConnected || undefined,
-      errorMessage: conn.errorMessage || undefined,
+      status: updates[i].status as 'connected' | 'failed' | 'pending',
+      lastConnected: updates[i].lastConnected || undefined,
+      errorMessage: updates[i].errorMessage || undefined,
       createdAt: conn.createdAt,
       updatedAt: conn.updatedAt
     }));
-    
-    return NextResponse.json({
-      success: true,
-      data: machines,
-    });
+
+    return NextResponse.json({ success: true, data: machines });
   } catch (error) {
-    logger.error(`Error fetching machines: ${error instanceof Error ? error.message : String(error)}`, { 
-      userId: sessionUserId, 
-      tenantId: sessionTenantId,
-      action: 'MACHINES_GET_ERROR',
-      data: { error: error instanceof Error ? error.message : String(error) },
-      saveToDb: true
-    });
-    
     return NextResponse.json({
       success: false,
       message: 'Failed to fetch connections',
