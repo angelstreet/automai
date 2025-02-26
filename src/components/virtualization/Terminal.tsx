@@ -9,19 +9,26 @@ import { AttachAddon } from 'xterm-addon-attach';
 import 'xterm/css/xterm.css';
 import { logger } from '@/lib/logger';
 
+interface Connection {
+  id: string;
+  name: string;
+  ip: string;
+  type: string;
+  port: number;
+  user: string;
+  password: string;
+}
+
 interface TerminalProps {
-  connection: {
-    id: string;
-    name: string;
-    ip: string;
-    type: string;
-  };
+  connection: Connection;
 }
 
 export function Terminal({ connection }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const connectionAttemptedRef = useRef<boolean>(false);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -88,102 +95,133 @@ export function Terminal({ connection }: TerminalProps) {
 
     // Store terminal instance
     xtermRef.current = term;
+    fitAddonRef.current = fitAddon;
 
-    // Connect to WebSocket for SSH session
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
-    
-    // Log the WebSocket URL and connection details for debugging
-    console.log('Terminal connection details:', {
-      wsUrl,
-      connectionId: connection?.id || 'unknown',
-      name: connection?.name || 'unknown',
-      ip: connection?.ip || 'unknown',
-      type: connection?.type || 'unknown'
+    // Set initial terminal text before connection is established
+    term.write(`\x1B[1;3;33mInitializing terminal for ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})...\x1B[0m\r\n`);
+
+    // Create WebSocket connection
+    const socketUrl = `ws://${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
+    console.log(`[WebSocket] Connecting to: ${socketUrl}`, { 
+      connectionId: connection.id,
+      connectionType: connection.type,
+      username: connection.user
     });
     
-    logger.info('Initializing terminal WebSocket connection', {
-      action: 'TERMINAL_WS_INIT',
+    // Log connection attempt
+    logger.info('Attempting WebSocket connection', {
+      action: 'TERMINAL_WS_ATTEMPT',
       data: { 
-        connectionId: connection?.id || 'unknown',
-        wsUrl,
-        connectionDetails: {
-          name: connection?.name || 'unknown',
-          ip: connection?.ip || 'unknown',
-          type: connection?.type || 'unknown'
-        }
+        connectionId: connection.id,
+        connectionType: connection.type
       },
       saveToDb: true
     });
     
-    // Create WebSocket connection
-    const ws = new WebSocket(wsUrl);
+    const socket = new WebSocket(socketUrl);
+    socketRef.current = socket;
 
-    // Set initial terminal text before connection is established
-    term.write(`\x1B[1;3;33mConnecting to ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})...\x1B[0m\r\n`);
-
-    ws.onopen = () => {
-      logger.info('Terminal WebSocket connected', {
+    socket.onopen = () => {
+      console.log('[WebSocket] Connection established successfully');
+      
+      // Log successful connection
+      logger.info('WebSocket connection established', {
         action: 'TERMINAL_WS_CONNECTED',
-        data: { connectionId: connection?.id || 'unknown' },
+        data: { connectionId: connection.id },
         saveToDb: true
       });
-
-      // Send authentication credentials if available
-      if (connection.type === 'ssh') {
-        ws.send(JSON.stringify({
-          type: 'auth',
+      
+      term.write(`\x1B[1;3;33mWebSocket connected, authenticating...\x1B[0m\r\n`);
+      
+      // Send authentication message
+      const authMessage = {
+        type: 'auth',
+        connectionType: connection.type,
+        username: connection.user,
+        password: connection.password
+      };
+      
+      console.log('[WebSocket] Sending authentication', { 
+        type: 'auth',
+        connectionType: connection.type,
+        username: connection.user,
+        hasPassword: !!connection.password
+      });
+      
+      // Log authentication attempt
+      logger.info('Sending authentication to server', {
+        action: 'TERMINAL_AUTH_ATTEMPT',
+        data: { 
           connectionId: connection.id,
-          connectionType: connection.type
-        }));
-      }
+          connectionType: connection.type,
+          username: connection.user
+        },
+        saveToDb: true
+      });
+      
+      socket.send(JSON.stringify(authMessage));
 
       // Attach WebSocket to terminal - this will handle the SSH connection
-      const attachAddon = new AttachAddon(ws);
+      const attachAddon = new AttachAddon(socket);
       term.loadAddon(attachAddon);
-
-      // Set connected message
-      term.write(`\x1B[1;3;32mConnected to ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})\x1B[0m\r\n`);
     };
 
-    ws.onerror = (error) => {
+    socket.onerror = (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[WebSocket] Error:', errorMessage);
+      
       logger.error('Terminal WebSocket error', {
         action: 'TERMINAL_WS_ERROR',
-        data: { connectionId: connection?.id || 'unknown', error: error.toString() },
+        data: { 
+          connectionId: connection.id, 
+          error: errorMessage
+        },
         saveToDb: true
       });
-      term.write('\r\n\x1B[1;3;31mConnection error. Please try again.\x1B[0m\r\n');
+      
+      term.write(`\r\n\x1B[1;3;31mWebSocket connection error: ${errorMessage}\x1B[0m\r\n`);
+      term.write(`\r\n\x1B[1;3;31mPlease check your network connection and try again.\x1B[0m\r\n`);
     };
 
     // Handle JSON messages from the server (like error messages)
-    ws.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
+        // Try to parse as JSON first
         const data = JSON.parse(event.data);
+        
+        console.log('[WebSocket] Received message:', data);
         
         // Handle error messages
         if (data.error) {
-          logger.error('Terminal received error from server', {
-            action: 'TERMINAL_SERVER_ERROR',
+          console.error('[SSH] Error:', data.error);
+          
+          logger.error('SSH connection error from server', {
+            action: 'SSH_SERVER_ERROR',
             data: { 
-              connectionId: connection?.id || 'unknown',
+              connectionId: connection.id,
               error: data.error
             },
             saveToDb: true
           });
           
-          term.write(`\r\n\x1B[1;3;31mError: ${data.error}\x1B[0m\r\n`);
+          term.write(`\r\n\x1B[1;3;31mSSH Error: ${data.error}\x1B[0m\r\n`);
+          term.write(`\r\n\x1B[1;3;31mPlease check your credentials and try again.\x1B[0m\r\n`);
         }
       } catch (e) {
         // Not JSON data, will be handled by the AttachAddon
+        // This is normal for terminal output
       }
     };
 
-    ws.onclose = () => {
+    socket.onclose = () => {
+      console.log('[WebSocket] Connection closed');
+      
       logger.info('Terminal WebSocket closed', {
         action: 'TERMINAL_WS_CLOSED',
-        data: { connectionId: connection?.id || 'unknown' },
+        data: { connectionId: connection.id },
         saveToDb: true
       });
+      
       term.write('\r\n\x1B[1;3;33mConnection closed.\x1B[0m\r\n');
     };
 
@@ -198,19 +236,19 @@ export function Terminal({ connection }: TerminalProps) {
             const dimensions = { cols: term.cols, rows: term.rows };
             
             // Log terminal dimensions for debugging
-            console.log('Terminal dimensions after resize:', dimensions);
+            console.log('[Terminal] Dimensions after resize:', dimensions);
             
             logger.info('Terminal resized', {
               action: 'TERMINAL_RESIZE',
               data: { 
-                connectionId: connection?.id || 'unknown',
+                connectionId: connection.id,
                 dimensions: dimensions || { cols: 0, rows: 0 }
               },
               saveToDb: false
             });
             
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({
                 type: 'resize',
                 cols: term.cols,
                 rows: term.rows
@@ -219,7 +257,7 @@ export function Terminal({ connection }: TerminalProps) {
           }, 50);
         }
       } catch (error) {
-        console.error('Error during resize:', error);
+        console.error('[Terminal] Error during resize:', error);
       }
     };
 
@@ -228,8 +266,8 @@ export function Terminal({ connection }: TerminalProps) {
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
-      if (ws && ws.readyState !== WebSocket.CLOSED) {
-        ws.close();
+      if (socket && socket.readyState !== WebSocket.CLOSED) {
+        socket.close();
       }
       term.dispose();
     };

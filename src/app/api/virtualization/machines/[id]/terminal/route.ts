@@ -78,10 +78,119 @@ export async function GET(
       saveToDb: true
     });
 
+    // Set up authentication handler
+    let isAuthenticated = false;
+    let authTimeout: NodeJS.Timeout | null = null;
+    
+    // Set authentication timeout
+    authTimeout = setTimeout(() => {
+      if (!isAuthenticated) {
+        logger.error('Authentication timeout', {
+          action: 'TERMINAL_AUTH_TIMEOUT',
+          data: { machineId: id },
+          saveToDb: true
+        });
+        clientSocket.send(JSON.stringify({ error: 'Authentication timeout. Please try again.' }));
+        clientSocket.close();
+      }
+    }, 10000); // 10 seconds timeout
+
+    // Handle authentication message
+    const handleAuthMessage = (message: any) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        if (data.type === 'auth') {
+          logger.info('Received authentication message', {
+            action: 'TERMINAL_AUTH_RECEIVED',
+            data: { 
+              machineId: id, 
+              connectionType: data.connectionType,
+              username: data.username || connection.username
+            },
+            saveToDb: true
+          });
+          
+          // Clear the timeout
+          if (authTimeout) {
+            clearTimeout(authTimeout);
+            authTimeout = null;
+          }
+          
+          isAuthenticated = true;
+          
+          // Use credentials from the message if provided, otherwise use the ones from the database
+          const credentials = {
+            username: data.username || connection.username,
+            password: data.password || connection.password
+          };
+          
+          // Store the credentials for later use
+          connection.username = credentials.username;
+          connection.password = credentials.password;
+          
+          return true;
+        }
+        return false;
+      } catch (error) {
+        return false;
+      }
+    };
+
     // Check if this is an SSH connection
     if (connection.type === 'ssh') {
       // Create SSH client
       const sshClient = new Client();
+      
+      // Set up message handler for initial authentication
+      clientSocket.once('message', (message) => {
+        const isAuth = handleAuthMessage(message);
+        
+        if (!isAuth) {
+          logger.error('First message was not authentication', {
+            action: 'TERMINAL_AUTH_MISSING',
+            data: { machineId: id },
+            saveToDb: true
+          });
+          clientSocket.send(JSON.stringify({ error: 'Authentication required' }));
+          return;
+        }
+        
+        // Now connect to SSH with the authenticated credentials
+        try {
+          logger.info('Attempting SSH connection after authentication', {
+            action: 'SSH_CONNECTION_ATTEMPT',
+            data: { 
+              machineId: id, 
+              host: connection.ip, 
+              port: connection.port || 22,
+              username: connection.username,
+              hasPassword: !!connection.password
+            },
+            saveToDb: true
+          });
+          
+          sshClient.connect({
+            host: connection.ip,
+            port: connection.port || 22,
+            username: connection.username,
+            password: connection.password,
+            readyTimeout: 10000, // 10 seconds timeout
+            keepaliveInterval: 10000, // Send keepalive every 10 seconds
+          });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          logger.error(`SSH connection setup error: ${errorMessage}`, {
+            action: 'SSH_SETUP_ERROR',
+            data: { 
+              machineId: id, 
+              error: errorMessage 
+            },
+            saveToDb: true
+          });
+          clientSocket.send(JSON.stringify({ error: `SSH setup error: ${errorMessage}` }));
+        }
+      });
       
       // Handle SSH client events
       sshClient.on('ready', () => {
@@ -174,16 +283,6 @@ export async function GET(
           saveToDb: true
         });
         sshClient.end();
-      });
-      
-      // Connect to the SSH server
-      sshClient.connect({
-        host: connection.ip,
-        port: connection.port || 22,
-        username: connection.username,
-        password: connection.password,
-        // You could also use key-based authentication if needed
-        // privateKey: require('fs').readFileSync('/path/to/key')
       });
       
       return response;
