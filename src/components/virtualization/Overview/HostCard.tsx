@@ -15,13 +15,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-interface MachineCardProps {
+interface HostCardProps {
   machine: Machine;
   onDelete?: (id: string) => void;
   onTestConnection?: (machine: Machine) => void;
 }
 
-export function MachineCard({ machine, onDelete, onTestConnection }: MachineCardProps) {
+export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
   const [showError, setShowError] = useState(false);
 

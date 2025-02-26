@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settings } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { MachineList } from '@/components/virtualization/Overview/MachineList';
+import { HostOverview } from '@/components/virtualization/Overview/HostOverview';
 import { Machine } from '@/types/virtualization';
 import { ConnectMachineDialog } from '@/components/virtualization/Overview/ConnectMachineDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -216,7 +216,7 @@ export default function VirtualizationPage() {
                   Use the refresh button or test individual connections using the test button for each machine.
                 </p>
               </div>
-              <MachineList
+              <HostOverview
                 machines={machines}
                 onDelete={handleDeleteMachine}
                 onRefresh={fetchMachines}

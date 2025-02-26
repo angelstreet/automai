@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/pagination";
 import { Checkbox } from "@/components/ui/checkbox";
 
-interface MachineListProps {
+interface HostOverviewProps {
   machines: Machine[];
   isLoading?: boolean;
   onRefresh?: () => void;
@@ -44,14 +44,14 @@ interface MachineListProps {
   className?: string;
 }
 
-export function MachineList({
+export function HostOverview({
   machines,
   isLoading = false,
   onRefresh,
   onDelete,
   onTestConnection,
   className,
-}: MachineListProps) {
+}: HostOverviewProps) {
   const router = useRouter();
   const params = useParams();
   const tenant = params.tenant;
