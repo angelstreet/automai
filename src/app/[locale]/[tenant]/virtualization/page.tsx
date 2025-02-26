@@ -34,12 +34,7 @@ export default function VirtualizationPage() {
       const response = await fetch('/api/virtualization/machines');
       
       if (!response.ok) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load machines',
-        });
-        return;
+        throw new Error('Failed to fetch machines');
       }
       
       const data = await response.json();
@@ -56,12 +51,60 @@ export default function VirtualizationPage() {
               type: machine.type,
               ip: machine.ip,
               port: machine.port,
-              username: machine.username,
+              username: machine.user,
               password: machine.password,
             }),
           });
 
           const testData = await testResponse.json();
+
+          // Handle SSH fingerprint verification
+          if (testResponse.status === 428 && testData.fingerprint) {
+            // Verify fingerprint
+            const verifyResponse = await fetch('/api/virtualization/machines/verify-fingerprint', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: machine.type,
+                ip: machine.ip,
+                port: machine.port,
+                username: machine.user,
+                password: machine.password,
+                fingerprint: testData.fingerprint,
+                accept: true
+              }),
+            });
+
+            const verifyData = await verifyResponse.json();
+
+            // Close connection after verification
+            await fetch('/api/virtualization/machines/close-connection', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: machine.type,
+                ip: machine.ip,
+                port: machine.port,
+              }),
+            });
+
+            // Update machine status based on verification result
+            const updateResponse = await fetch(`/api/virtualization/machines/${machine.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                status: verifyData.success ? 'connected' : 'failed',
+                lastConnected: verifyData.success ? new Date().toISOString() : machine.lastConnected,
+                errorMessage: verifyData.success ? null : verifyData.message
+              }),
+            });
+
+            if (updateResponse.ok) {
+              const updatedData = await updateResponse.json();
+              return updatedData.data;
+            }
+            return machine;
+          }
 
           // Close connection after test
           await fetch('/api/virtualization/machines/close-connection', {

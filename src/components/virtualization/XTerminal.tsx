@@ -3,15 +3,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Minimize2, Maximize2, X } from 'lucide-react';
-import { ConnectionType } from '@/types/virtualization';
+import { Machine } from '@/types/virtualization';
 import { CONNECTION_COLORS } from '@/constants/virtualization';
 
 interface XTerminalProps {
-  id: string;
-  vm: string;
-  connectionType: ConnectionType;
-  isActive: boolean;
-  height?: string;
+  device: Machine;
+  isMaximized: boolean;
+  onMaximize: () => void;
+  onRestore: () => void;
 }
 
 const badges = {
@@ -22,46 +21,64 @@ const badges = {
 } as const;
 
 export function XTerminal({ 
-  id, 
-  vm, 
-  connectionType, 
-  isActive, 
-  height = '100%' 
+  device,
+  isMaximized,
+  onMaximize,
+  onRestore
 }: XTerminalProps) {
   const terminalRef = useRef(null);
   const [command, setCommand] = useState('');
   const [history, setHistory] = useState([
-    { text: `Connected to ${vm} via ${connectionType}`, type: 'system' },
+    { text: `Connected to ${device.name} via ${device.type}`, type: 'system' },
     { text: 'Terminal ready', type: 'system' }
   ]);
 
-  const executeCommand = () => {
+  const executeCommand = async () => {
     if (!command.trim()) return;
     
     // Add command to history
     setHistory(prev => [...prev, { text: `$ ${command}`, type: 'command' }]);
     
-    // Mock response based on command type
-    if (command.startsWith('ls')) {
+    try {
+      // Send command to API
+      const response = await fetch('/api/virtualization/machines/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: device.id,
+          command
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to execute command');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        if (command === 'clear') {
+          setHistory([
+            { text: `Connected to ${device.name} via ${device.type}`, type: 'system' },
+            { text: 'Terminal cleared', type: 'system' }
+          ]);
+        } else {
+          setHistory(prev => [...prev, { 
+            text: data.output, 
+            type: 'output' 
+          }]);
+        }
+      } else {
+        setHistory(prev => [...prev, { 
+          text: data.message || 'Command failed', 
+          type: 'error' 
+        }]);
+      }
+    } catch (error) {
       setHistory(prev => [...prev, { 
-        text: 'app.js  node_modules  package.json  public  README.md  src  tsconfig.json', 
-        type: 'output' 
-      }]);
-    } else if (command.startsWith('docker')) {
-      setHistory(prev => [...prev, { 
-        text: connectionType === 'docker' || connectionType === 'portainer' 
-          ? 'CONTAINER ID   IMAGE          COMMAND      STATUS          PORTS     NAMES\nabc123456789   nginx:latest   "/docker-en…"   Up 2 hours   80/tcp    web-server' 
-          : 'Error: Docker command not available in SSH mode',
-        type: connectionType === 'docker' || connectionType === 'portainer' ? 'output' : 'error'
-      }]);
-    } else if (command === 'clear') {
-      setHistory([
-        { text: `Connected to ${vm} via ${connectionType}`, type: 'system' },
-        { text: 'Terminal cleared', type: 'system' }
-      ]);
-    } else {
-      setHistory(prev => [...prev, { 
-        text: `Command not found: ${command}`, 
+        text: error instanceof Error ? error.message : 'Failed to execute command', 
         type: 'error' 
       }]);
     }
@@ -71,24 +88,23 @@ export function XTerminal({
 
   return (
     <div 
-      className={`h-full flex flex-col overflow-hidden rounded-md border bg-gradient-to-b ${CONNECTION_COLORS[connectionType]} border-${connectionType === 'portainer' ? 'blue' : connectionType === 'docker' ? 'green' : 'gray'}-500/20`} 
-      style={{ height }}
+      className={`h-full flex flex-col overflow-hidden rounded-md border bg-gradient-to-b ${CONNECTION_COLORS[device.type]} border-${device.type === 'portainer' ? 'blue' : device.type === 'docker' ? 'green' : 'gray'}-500/20`}
     >
       <div className="flex items-center justify-between px-3 py-1 border-b border-muted">
         <div className="flex items-center gap-2">
-          {badges[connectionType] || badges.unknown}
-          <span className="text-xs font-medium">{vm}</span>
+          {badges[device.type] || badges.unknown}
+          <span className="text-xs font-medium">{device.name}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm">
-            <Minimize2 className="h-3 w-3" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm">
-            <Maximize2 className="h-3 w-3" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm hover:bg-red-500/10 hover:text-red-500">
-            <X className="h-3 w-3" />
-          </Button>
+          {isMaximized ? (
+            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm" onClick={onRestore}>
+              <Minimize2 className="h-3 w-3" />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-sm" onClick={onMaximize}>
+              <Maximize2 className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
       
@@ -118,7 +134,7 @@ export function XTerminal({
             if (e.key === 'Enter') executeCommand();
           }}
           className="flex-1 bg-transparent border-none outline-none text-xs font-mono"
-          autoFocus={isActive}
+          placeholder="Type a command..."
         />
       </div>
     </div>

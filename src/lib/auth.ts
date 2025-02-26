@@ -1,6 +1,8 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
+import { compare } from "bcrypt";
+import { logger } from "./logger";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -18,22 +20,64 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          logger.warn('Missing credentials', { 
+            action: 'AUTH_MISSING_CREDENTIALS',
+            saveToDb: true 
+          });
           return null;
         }
         
         try {
-          // In a real implementation, you would validate credentials against your database
-          // For now, we'll return a mock user
+          // Find user by email
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+            include: {
+              tenant: true
+            }
+          });
+          
+          if (!user) {
+            logger.warn('User not found', { 
+              action: 'AUTH_USER_NOT_FOUND',
+              data: { email: credentials.email },
+              saveToDb: true 
+            });
+            return null;
+          }
+          
+          // Verify password
+          const isValid = await compare(credentials.password, user.password);
+          
+          if (!isValid) {
+            logger.warn('Invalid password', { 
+              action: 'AUTH_INVALID_PASSWORD',
+              data: { email: credentials.email },
+              saveToDb: true 
+            });
+            return null;
+          }
+          
+          logger.info('User authenticated successfully', { 
+            userId: user.id,
+            tenantId: user.tenantId,
+            action: 'AUTH_SUCCESS',
+            saveToDb: true 
+          });
+          
           return {
-            id: "user-1",
-            email: credentials.email,
-            name: "User",
-            role: "ADMIN",
-            tenantId: "tenant-1",
-            tenantName: "Default Tenant"
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            tenantId: user.tenantId,
+            tenantName: user.tenant?.name || 'Unknown Tenant'
           };
         } catch (error) {
-          console.error("Auth error:", error);
+          logger.error(`Auth error: ${error instanceof Error ? error.message : String(error)}`, { 
+            action: 'AUTH_ERROR',
+            data: { error: error instanceof Error ? error.message : String(error) },
+            saveToDb: true 
+          });
           return null;
         }
       }

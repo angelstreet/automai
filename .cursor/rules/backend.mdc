@@ -1,6 +1,7 @@
 ---
 description: Backend Best Practices
 globs: src/server/**/*.{ts,js}
+alwaysApply: false
 ---
 # Backend CursorRules
 

@@ -3,16 +3,16 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 
-// POST /api/virtualization/machines/verify-fingerprint
+// POST /api/virtualization/machines/close-connection
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     
     if (!session || !session.user) {
-      logger.warn('Unauthorized access attempt to verify fingerprint endpoint', { 
+      logger.warn('Unauthorized access attempt to close connection endpoint', { 
         userId: session?.user?.id, 
         ip: request.headers.get('x-forwarded-for') || 'unknown',
-        action: 'VERIFY_FINGERPRINT_UNAUTHORIZED',
+        action: 'CLOSE_CONNECTION_UNAUTHORIZED',
         saveToDb: true 
       });
       return NextResponse.json({
@@ -22,34 +22,27 @@ export async function POST(request: Request) {
     }
     
     const body = await request.json();
-    const { fingerprint, accept } = body;
+    const { type, ip, port } = body;
 
-    logger.info(`Verifying SSH fingerprint`, { 
+    logger.info(`Closing ${type} connection to ${ip}:${port}`, { 
       userId: session?.user?.id, 
       tenantId: session?.user?.tenantId,
-      action: 'VERIFY_FINGERPRINT_INITIATED',
-      data: { fingerprint, accept },
+      action: 'CLOSE_CONNECTION_INITIATED',
+      data: { type, ip, port },
       saveToDb: true
     });
 
-    // In a real implementation, we would store the fingerprint in the database
-    // For now, we'll just return success if accept is true
-    if (accept) {
-      return NextResponse.json({
-        success: true,
-        message: 'Fingerprint verified successfully',
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        message: 'Fingerprint rejected',
-      }, { status: 400 });
-    }
+    // In a real implementation, we would close the actual connection
+    // For now, we'll just return success
+    return NextResponse.json({
+      success: true,
+      message: 'Connection closed successfully',
+    });
   } catch (error) {
-    logger.error(`Error verifying fingerprint: ${error.message}`, { 
+    logger.error(`Error closing connection: ${error.message}`, { 
       userId: session?.user?.id, 
       tenantId: session?.user?.tenantId,
-      action: 'VERIFY_FINGERPRINT_ERROR',
+      action: 'CLOSE_CONNECTION_ERROR',
       data: { error: error.message },
       saveToDb: true
     });
