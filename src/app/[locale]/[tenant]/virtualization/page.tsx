@@ -43,7 +43,60 @@ export default function VirtualizationPage() {
       }
       
       const data = await response.json();
-      setMachines(data.data || []);
+      const machines = data.data || [];
+
+      // Test each connection and update status
+      const updatedMachines = await Promise.all(machines.map(async (machine) => {
+        try {
+          // Test connection
+          const testResponse = await fetch('/api/virtualization/machines/test-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: machine.type,
+              ip: machine.ip,
+              port: machine.port,
+              username: machine.username,
+              password: machine.password,
+            }),
+          });
+
+          const testData = await testResponse.json();
+
+          // Close connection after test
+          await fetch('/api/virtualization/machines/close-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: machine.type,
+              ip: machine.ip,
+              port: machine.port,
+            }),
+          });
+
+          // Update machine status
+          const updateResponse = await fetch(`/api/virtualization/machines/${machine.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: testData.success ? 'connected' : 'failed',
+              lastConnected: testData.success ? new Date().toISOString() : machine.lastConnected,
+              errorMessage: testData.success ? null : testData.message
+            }),
+          });
+
+          if (updateResponse.ok) {
+            const updatedData = await updateResponse.json();
+            return updatedData.data;
+          }
+          return machine;
+        } catch (error) {
+          console.error(`Error testing connection for ${machine.name}:`, error);
+          return machine;
+        }
+      }));
+
+      setMachines(updatedMachines);
     } catch (error) {
       console.error('Error fetching machines:', error);
       toast({

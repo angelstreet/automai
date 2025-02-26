@@ -1,161 +1,153 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MOCK_DEVICES } from '@/constants/virtualization';
-import { Search, Download, RefreshCcw } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Machine } from '@/types/virtualization';
+import { useToast } from '@/components/ui/use-toast';
 
-const MOCK_LOGS = [
-  { id: '1', deviceId: MOCK_DEVICES[0].id, timestamp: '2024-03-20T10:00:00Z', level: 'info', message: 'Container started successfully' },
-  { id: '2', deviceId: MOCK_DEVICES[0].id, timestamp: '2024-03-20T10:01:00Z', level: 'warning', message: 'High memory usage detected' },
-  { id: '3', deviceId: MOCK_DEVICES[1].id, timestamp: '2024-03-20T10:02:00Z', level: 'error', message: 'Failed to connect to network' },
-  // Add more mock logs as needed
-];
+interface Log {
+  id: string;
+  deviceId: string;
+  timestamp: string;
+  level: 'info' | 'warning' | 'error';
+  message: string;
+}
 
-const LOG_LEVELS = {
-  info: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  warning: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-  error: 'bg-red-500/10 text-red-500 border-red-500/20',
-};
-
-export default function VirtualizationLogsPage() {
+export default function LogsPage() {
   const t = useTranslations('Common');
-  const params = useParams();
-  const tenant = params.tenant as string;
+  const { toast } = useToast();
+  const [machines, setMachines] = useState<Machine[]>([]);
+  const [logs, setLogs] = useState<Log[]>([]);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDevice, setSelectedDevice] = useState<string>('all');
-  const [selectedLevel, setSelectedLevel] = useState<string>('all');
-  const [logs] = useState(MOCK_LOGS);
+  // Fetch machines from API
+  const fetchMachines = async () => {
+    try {
+      const response = await fetch('/api/virtualization/machines');
+      
+      if (!response.ok) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load machines',
+        });
+        return;
+      }
+      
+      const data = await response.json();
+      const machines = data.data || [];
+      setMachines(machines);
 
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDevice = selectedDevice === 'all' || log.deviceId === selectedDevice;
-    const matchesLevel = selectedLevel === 'all' || log.level === selectedLevel;
-    return matchesSearch && matchesDevice && matchesLevel;
-  });
+      // Set first machine as selected if none selected
+      if (machines.length > 0 && !selectedDevice) {
+        setSelectedDevice(machines[0].id);
+      }
 
-  const handleExport = () => {
-    const exportData = filteredLogs.map(log => ({
-      timestamp: log.timestamp,
-      device: MOCK_DEVICES.find(d => d.id === log.deviceId)?.name || 'Unknown',
-      level: log.level,
-      message: log.message,
-    }));
-    
-    const csvContent = [
-      ['Timestamp', 'Device', 'Level', 'Message'].join(','),
-      ...exportData.map(row => Object.values(row).join(','))
-    ].join('\n');
+      // Fetch logs for all machines
+      const mockLogs: Log[] = [
+        { id: '1', deviceId: machines[0]?.id, timestamp: '2024-03-20T10:00:00Z', level: 'info', message: 'Container started successfully' },
+        { id: '2', deviceId: machines[0]?.id, timestamp: '2024-03-20T10:01:00Z', level: 'warning', message: 'High memory usage detected' },
+        { id: '3', deviceId: machines[1]?.id, timestamp: '2024-03-20T10:02:00Z', level: 'error', message: 'Failed to connect to network' }
+      ].filter(log => log.deviceId); // Only keep logs for existing machines
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `virtualization-logs-${new Date().toISOString()}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+      setLogs(mockLogs);
+    } catch (error) {
+      console.error('Error fetching machines:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to load machines',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  useEffect(() => {
+    fetchMachines();
+  }, []);
+
+  const filteredLogs = selectedDevice
+    ? logs.filter(log => log.deviceId === selectedDevice)
+    : logs;
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div className="flex-1 space-y-4 p-4">
+    <div className="flex-1 space-y-2 pt-2 h-[calc(100vh-90px)] max-h-[calc(100vh-90px)] flex flex-col overflow-hidden">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">System Logs</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" /> Export
-          </Button>
-          <Button variant="outline">
-            <RefreshCcw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">Logs</h1>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Log Viewer</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 mb-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search logs..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
-            </div>
-            <Select value={selectedDevice} onValueChange={setSelectedDevice}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select device" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Devices</SelectItem>
-                {MOCK_DEVICES.map(device => (
-                  <SelectItem key={device.id} value={device.id}>
-                    {device.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Select level" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Levels</SelectItem>
-                <SelectItem value="info">Info</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
-              </SelectContent>
-            </Select>
+      
+      <div className="flex gap-4 h-full">
+        {/* Sidebar */}
+        <Card className="w-64 p-4">
+          <h2 className="font-semibold mb-4">Devices</h2>
+          <div className="space-y-2">
+            <Button
+              variant={selectedDevice === null ? 'secondary' : 'ghost'}
+              className="w-full justify-start"
+              onClick={() => setSelectedDevice(null)}
+            >
+              All Devices
+            </Button>
+            {machines.map(machine => (
+              <Button
+                key={machine.id}
+                variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}
+                className="w-full justify-start"
+                onClick={() => setSelectedDevice(machine.id)}
+              >
+                {machine.name}
+              </Button>
+            ))}
           </div>
-
-          <ScrollArea className="h-[calc(100vh-300px)] w-full rounded-md border">
-            <div className="space-y-2 p-4">
+        </Card>
+        
+        {/* Main content */}
+        <Card className="flex-1 p-4">
+          <ScrollArea className="h-[calc(100vh-200px)]">
+            <div className="space-y-4">
               {filteredLogs.map(log => {
-                const device = MOCK_DEVICES.find(d => d.id === log.deviceId);
+                const device = machines.find(m => m.id === log.deviceId);
+                
                 return (
-                  <div
-                    key={log.id}
-                    className="flex items-start space-x-4 rounded-lg border p-3"
-                  >
-                    <div className="flex-1 space-y-1">
+                  <div key={log.id} className="flex items-start gap-4 p-2 rounded border">
+                    <Badge
+                      variant={
+                        log.level === 'error' ? 'destructive' :
+                        log.level === 'warning' ? 'warning' :
+                        'secondary'
+                      }
+                    >
+                      {log.level}
+                    </Badge>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">
                           {new Date(log.timestamp).toLocaleString()}
                         </span>
-                        <Badge variant="outline" className="font-medium">
+                        <span className="text-sm font-medium">
                           {device?.name || 'Unknown Device'}
-                        </Badge>
-                        <Badge
-                          variant="outline"
-                          className={LOG_LEVELS[log.level as keyof typeof LOG_LEVELS]}
-                        >
-                          {log.level}
-                        </Badge>
+                        </span>
                       </div>
-                      <p className="text-sm">{log.message}</p>
+                      <p className="mt-1">{log.message}</p>
                     </div>
                   </div>
                 );
               })}
             </div>
           </ScrollArea>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 } 

@@ -104,6 +104,18 @@ export function ConnectionForm({
           setFingerprint(data.fingerprint);
           setFingerprintVerified(data.fingerprintVerified || false);
         }
+        // Close the connection after successful test
+        await fetch('/api/virtualization/machines/close-connection', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: formData.type,
+            ip: formData.ip,
+            port: formData.port,
+          }),
+        });
         // Notify parent component of successful test
         if (onTestSuccess) {
           onTestSuccess();
@@ -147,6 +159,24 @@ export function ConnectionForm({
         setTestSuccess(true);
         setFingerprintVerified(true);
         setRequireVerification(false);
+        
+        // Close the connection after successful verification
+        await fetch('/api/virtualization/machines/close-connection', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            type: formData.type,
+            ip: formData.ip,
+            port: formData.port,
+          }),
+        });
+
+        // Notify parent component of successful test
+        if (onTestSuccess) {
+          onTestSuccess();
+        }
       } else {
         setTestError(data.message);
       }
