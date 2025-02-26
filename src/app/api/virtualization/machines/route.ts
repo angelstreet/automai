@@ -6,104 +6,53 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 import { Client } from 'ssh2';
 
-async function testConnection(connection: any, userId: string, tenantId?: string): Promise<boolean> {
+async function testConnection(connection: any, userId: string, tenantId?: string): Promise<{success: boolean, error?: string}> {
   try {
-    if (connection.type === 'ssh') {
-      return new Promise((resolve) => {
-        const conn = new Client();
-        let timeout: NodeJS.Timeout;
-        
-        conn.on('ready', () => {
-          logger.info(`Successfully tested connection to ${connection.ip}`, { 
-            userId,
-            tenantId,
-            action: 'CONNECTION_TEST_SUCCESS',
-            data: { id: connection.id, type: connection.type, ip: connection.ip },
-            saveToDb: true
-          });
-          clearTimeout(timeout);
-          conn.end();
-          resolve(true);
-        });
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/virtualization/machines/test-connection`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        type: connection.type,
+        ip: connection.ip,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+      }),
+    });
 
-        conn.on('error', (err) => {
-          logger.error(`Connection test failed: ${err.message}`, { 
-            userId,
-            tenantId,
-            action: 'CONNECTION_TEST_ERROR',
-            data: { id: connection.id, type: connection.type, ip: connection.ip, error: err.message },
-            saveToDb: true
-          });
-          clearTimeout(timeout);
-          conn.end();
-          resolve(false);
-        });
+    const data = await response.json();
 
-        conn.on('close', () => {
-          clearTimeout(timeout);
-          resolve(false);
-        });
-
-        // Set timeout to ensure connection is closed
-        timeout = setTimeout(() => {
-          logger.warn(`Connection test timeout for ${connection.ip}`, {
-            userId,
-            tenantId,
-            action: 'CONNECTION_TEST_TIMEOUT',
-            data: { id: connection.id, type: connection.type, ip: connection.ip },
-            saveToDb: true
-          });
-          conn.end();
-          resolve(false);
-        }, 5000);
-
-        conn.connect({
-          host: connection.ip,
-          port: connection.port || 22,
-          username: connection.username,
-          password: connection.password,
-          readyTimeout: 5000
-        });
+    if (data.success) {
+      logger.info(`Successfully tested connection to ${connection.ip}`, { 
+        userId,
+        tenantId,
+        action: 'CONNECTION_TEST_SUCCESS',
+        data: { id: connection.id, type: connection.type, ip: connection.ip },
+        saveToDb: true
       });
-    } else if (connection.type === 'docker') {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      try {
-        const response = await fetch(`http://${connection.ip}:${connection.port || 2375}/version`, {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        return response.ok;
-      } catch (error) {
-        clearTimeout(timeoutId);
-        return false;
-      }
-    } else if (connection.type === 'portainer') {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      try {
-        const response = await fetch(`http://${connection.ip}:${connection.port || 9000}/api/status`, {
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        return response.ok;
-      } catch (error) {
-        clearTimeout(timeoutId);
-        return false;
-      }
+      return { success: true };
+    } else {
+      logger.error(`Connection test failed: ${data.message}`, { 
+        userId,
+        tenantId,
+        action: 'CONNECTION_TEST_ERROR',
+        data: { id: connection.id, type: connection.type, ip: connection.ip, error: data.message },
+        saveToDb: true
+      });
+      return { success: false, error: data.message };
     }
-    return false;
   } catch (error) {
-    logger.error(`Connection test failed: ${error instanceof Error ? error.message : String(error)}`, { 
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Connection test failed: ${errorMessage}`, { 
       userId,
       tenantId,
       action: 'CONNECTION_TEST_ERROR',
-      data: { id: connection.id, type: connection.type, ip: connection.ip },
+      data: { id: connection.id, type: connection.type, ip: connection.ip, error: errorMessage },
       saveToDb: true
     });
-    return false;
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -159,15 +108,15 @@ export async function GET(request: Request) {
     // Test each connection and update status
     const updatedConnections = await Promise.all(
       connections.map(async (conn) => {
-        const isConnected = await testConnection(conn, userId, tenantId);
+        const { success, error } = await testConnection(conn, userId, tenantId);
         
         // Update connection status in database
         const updated = await prisma.connection.update({
           where: { id: conn.id },
           data: {
-            status: isConnected ? 'connected' : 'failed',
-            lastConnected: isConnected ? new Date() : conn.lastConnected,
-            errorMessage: isConnected ? null : 'Connection failed'
+            status: success ? 'connected' : 'failed',
+            lastConnected: success ? new Date() : conn.lastConnected,
+            errorMessage: success ? null : error
           }
         });
         
