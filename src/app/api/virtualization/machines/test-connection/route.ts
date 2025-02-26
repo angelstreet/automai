@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
 // We would import an actual SSH client library in production
-// import { Client } from 'ssh2';
+import { Client } from 'ssh2';
 
 // POST /api/virtualization/machines/test-connection
 export async function POST(request: Request) {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Implement more realistic connection testing
+    // Implement real connection testing
     if (type === 'ssh') {
       if (!username || !password) {
         return NextResponse.json({
@@ -59,144 +59,286 @@ export async function POST(request: Request) {
         }, { status: 400 });
       }
       
-      // More realistic SSH connection testing
-      // In a real implementation, we would use an SSH library
-      
-      // For demo purposes, let's validate some common test credentials
-      // This simulates actual credential validation
-      interface SSHCredential {
-        ip: string;
-        user: string;
-        password: string;
-        fingerprint: string;
-        requireVerification?: boolean;
-      }
-
-      const validCredentials: SSHCredential[] = [
-        { ip: '192.168.1.100', user: 'admin', password: 'admin123', fingerprint: 'aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99' },
-        { ip: '192.168.1.101', user: 'root', password: 'password', fingerprint: 'ff:ee:dd:cc:bb:aa:99:88:77:66:55:44:33:22:11:00' },
-        { ip: '10.0.0.1', user: 'user', password: 'pass123', fingerprint: '11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00' },
-        // Add more test cases
-        { ip: '10.0.0.2', user: 'admin', password: 'secure123', fingerprint: '22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11' },
-        { ip: '10.0.0.3', user: 'root', password: 'toor', fingerprint: '33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22' },
-        { ip: '192.168.0.1', user: 'admin', password: 'admin', fingerprint: '44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33' },
-        // Special case for testing fingerprint validation
-        { ip: '192.168.0.2', user: 'admin', password: 'admin', fingerprint: 'UNKNOWN_FINGERPRINT', requireVerification: true }
-      ];
-      
-      // Check if credentials are valid
-      const matchedCredential = validCredentials.find(cred => 
-        cred.ip === ip && cred.user === username && cred.password === password
-      );
-      
-      if (!matchedCredential) {
-        return NextResponse.json({
-          success: false,
-          message: 'Authentication failed. Invalid username or password.',
-        }, { status: 400 });
-      }
-      
-      // Simulate fingerprint validation
-      // In a real implementation, we would verify the server's fingerprint
-      // and prompt the user to accept it if it's unknown
-      logger.info(`SSH fingerprint for ${ip}: ${matchedCredential.fingerprint}`, {
-        userId: session.user.id,
-        tenantId: session.user.tenantId,
-        action: 'SSH_FINGERPRINT_CHECK',
-        data: { ip, fingerprint: matchedCredential.fingerprint },
-        saveToDb: true
-      });
-      
-      // Check if this connection requires fingerprint verification
-      if (matchedCredential.requireVerification) {
-        return NextResponse.json({
-          success: false,
-          message: 'Host key verification failed. Unknown fingerprint.',
-          fingerprint: matchedCredential.fingerprint,
-          requireVerification: true
-        }, { status: 428 }); // 428 Precondition Required
-      }
-      
-      // Special cases for testing
-      if (ip === '127.0.0.1') {
-        return NextResponse.json({
-          success: false,
-          message: 'Connection refused. The server is not accepting connections on port ' + (port || 22),
-        }, { status: 400 });
-      }
-      
-      if (ip === '192.168.1.254') {
-        return NextResponse.json({
-          success: false,
-          message: 'Connection timed out. Please check the IP address and port.',
-        }, { status: 400 });
-      }
-      
-      // Return success with fingerprint information
-      return NextResponse.json({
-        success: true,
-        message: 'Connection successful',
-        fingerprint: matchedCredential.fingerprint,
-        fingerprintVerified: true
+      // Use the actual SSH library for connection testing
+      return new Promise((resolve) => {
+        let fingerprint: string | null = null;
+        let fingerprintVerified = false;
+        let requireVerification = false;
+        
+        const conn = new Client();
+        
+        // Set a timeout for the connection attempt
+        const timeout = setTimeout(() => {
+          conn.end();
+          logger.warn(`SSH connection to ${ip} timed out`, { 
+            userId: session?.user?.id, 
+            tenantId: session?.user?.tenantId,
+            action: 'TEST_CONNECTION_TIMEOUT',
+            data: { type, ip, port },
+            saveToDb: true
+          });
+          resolve(NextResponse.json({
+            success: false,
+            message: 'Connection timed out. Please check the IP address and port.',
+          }, { status: 400 }));
+        }, 10000); // 10 second timeout
+        
+        conn.on('ready', () => {
+          clearTimeout(timeout);
+          logger.info(`Successfully connected to ${ip} via SSH`, { 
+            userId: session?.user?.id, 
+            tenantId: session?.user?.tenantId,
+            action: 'TEST_CONNECTION_SUCCESS',
+            data: { type, ip, port },
+            saveToDb: true
+          });
+          
+          // Execute a simple command to verify the connection
+          conn.exec('echo "Connection successful"', (err, stream) => {
+            if (err) {
+              conn.end();
+              logger.error(`Error executing command on SSH connection: ${err.message}`, { 
+                userId: session?.user?.id, 
+                tenantId: session?.user?.tenantId,
+                action: 'TEST_CONNECTION_COMMAND_ERROR',
+                data: { type, ip, port, error: err.message },
+                saveToDb: true
+              });
+              resolve(NextResponse.json({
+                success: false,
+                message: `Error executing command: ${err.message}`,
+              }, { status: 400 }));
+              return;
+            }
+            
+            let output = '';
+            stream.on('data', (data) => {
+              output += data.toString();
+            });
+            
+            stream.on('close', () => {
+              conn.end();
+              resolve(NextResponse.json({
+                success: true,
+                message: 'Connection successful',
+                fingerprint,
+                fingerprintVerified
+              }));
+            });
+          });
+        });
+        
+        conn.on('error', (err) => {
+          clearTimeout(timeout);
+          logger.error(`SSH connection error: ${err.message}`, { 
+            userId: session?.user?.id, 
+            tenantId: session?.user?.tenantId,
+            action: 'TEST_CONNECTION_ERROR',
+            data: { type, ip, port, error: err.message },
+            saveToDb: true
+          });
+          
+          resolve(NextResponse.json({
+            success: false,
+            message: `Connection failed: ${err.message}`,
+          }, { status: 400 }));
+        });
+        
+        conn.on('keyboard-interactive', (name, instructions, lang, prompts, finish) => {
+          // Handle keyboard-interactive authentication if needed
+          finish([password]);
+        });
+        
+        conn.on('fingerprint', (fingerp) => {
+          fingerprint = fingerp;
+          logger.info(`SSH fingerprint for ${ip}: ${fingerprint}`, {
+            userId: session.user.id,
+            tenantId: session.user.tenantId,
+            action: 'SSH_FINGERPRINT_CHECK',
+            data: { ip, fingerprint },
+            saveToDb: true
+          });
+          
+          // In a real implementation, we would check if this fingerprint is known
+          // For now, we'll just accept it
+          fingerprintVerified = true;
+        });
+        
+        // Connect to the SSH server
+        conn.connect({
+          host: ip,
+          port: port ? parseInt(port) : 22,
+          username,
+          password,
+          tryKeyboard: true,
+          // For production, you might want to add more options:
+          // readyTimeout: 5000,
+          // keepaliveInterval: 2000,
+          // algorithms: {
+          //   kex: ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1'],
+          //   cipher: ['aes128-ctr', 'aes192-ctr', 'aes256-ctr']
+          // }
+        });
       });
     } else if (type === 'docker') {
       // Docker connection validation
       const dockerPort = port || 2375;
       
-      // Validate Docker connection
-      if (ip === '127.0.0.1' && dockerPort !== 2375) {
+      try {
+        // Use fetch to test the Docker API connection
+        const response = await fetch(`http://${ip}:${dockerPort}/version`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // Set a timeout for the request
+          signal: AbortSignal.timeout(5000),
+        });
+        
+        if (!response.ok) {
+          logger.warn(`Docker API connection failed: ${response.statusText}`, { 
+            userId: session?.user?.id, 
+            tenantId: session?.user?.tenantId,
+            action: 'TEST_CONNECTION_DOCKER_FAILED',
+            data: { type, ip, port, status: response.status },
+            saveToDb: true
+          });
+          
+          return NextResponse.json({
+            success: false,
+            message: `Docker API not available: ${response.statusText}`,
+          }, { status: 400 });
+        }
+        
+        const data = await response.json();
+        
+        logger.info(`Successfully connected to Docker API at ${ip}:${dockerPort}`, { 
+          userId: session?.user?.id, 
+          tenantId: session?.user?.tenantId,
+          action: 'TEST_CONNECTION_SUCCESS',
+          data: { type, ip, port, version: data.Version },
+          saveToDb: true
+        });
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Connection successful',
+          version: data.Version
+        });
+      } catch (error) {
+        logger.error(`Docker API connection error: ${error.message}`, { 
+          userId: session?.user?.id, 
+          tenantId: session?.user?.tenantId,
+          action: 'TEST_CONNECTION_ERROR',
+          data: { type, ip, port, error: error.message },
+          saveToDb: true
+        });
+        
         return NextResponse.json({
           success: false,
-          message: 'Connection refused. Docker API not available on port ' + dockerPort,
-        }, { status: 400 });
-      }
-      
-      // For demo, only allow specific IPs for Docker
-      const validDockerIPs = ['192.168.1.100', '192.168.1.101', '10.0.0.1'];
-      if (!validDockerIPs.includes(ip)) {
-        return NextResponse.json({
-          success: false,
-          message: 'Docker API not available at this address',
+          message: `Docker API not available: ${error.message}`,
         }, { status: 400 });
       }
     } else if (type === 'portainer') {
       // Portainer connection validation
       const portainerPort = port || 9000;
       
-      // Validate Portainer connection
-      if (portainerPort !== 9000) {
-        return NextResponse.json({
-          success: false,
-          message: 'Portainer API not available on port ' + portainerPort,
-        }, { status: 400 });
-      }
-      
-      // For demo, only allow specific IPs for Portainer
-      const validPortainerIPs = ['192.168.1.102', '192.168.1.103', '10.0.0.2'];
-      if (!validPortainerIPs.includes(ip)) {
-        return NextResponse.json({
-          success: false,
-          message: 'Portainer API not available at this address',
-        }, { status: 400 });
-      }
-      
-      // If credentials provided, validate them
-      if (username && password) {
-        const validPortainerCreds = [
-          { user: 'admin', password: 'portainer' },
-          { user: 'admin', password: 'admin123' }
-        ];
+      try {
+        // First, try to authenticate with Portainer if credentials are provided
+        let authToken = null;
         
-        const isValid = validPortainerCreds.some(cred => 
-          cred.user === username && cred.password === password
-        );
+        if (username && password) {
+          const authResponse = await fetch(`http://${ip}:${portainerPort}/api/auth`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              username,
+              password
+            }),
+            // Set a timeout for the request
+            signal: AbortSignal.timeout(5000),
+          });
+          
+          if (!authResponse.ok) {
+            logger.warn(`Portainer authentication failed: ${authResponse.statusText}`, { 
+              userId: session?.user?.id, 
+              tenantId: session?.user?.tenantId,
+              action: 'TEST_CONNECTION_PORTAINER_AUTH_FAILED',
+              data: { type, ip, port, status: authResponse.status },
+              saveToDb: true
+            });
+            
+            return NextResponse.json({
+              success: false,
+              message: `Invalid Portainer credentials: ${authResponse.statusText}`,
+            }, { status: 400 });
+          }
+          
+          const authData = await authResponse.json();
+          authToken = authData.jwt;
+        }
         
-        if (!isValid) {
+        // Now check if we can access the Portainer API
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        
+        if (authToken) {
+          headers['Authorization'] = `Bearer ${authToken}`;
+        }
+        
+        const response = await fetch(`http://${ip}:${portainerPort}/api/status`, {
+          method: 'GET',
+          headers,
+          // Set a timeout for the request
+          signal: AbortSignal.timeout(5000),
+        });
+        
+        if (!response.ok) {
+          logger.warn(`Portainer API connection failed: ${response.statusText}`, { 
+            userId: session?.user?.id, 
+            tenantId: session?.user?.tenantId,
+            action: 'TEST_CONNECTION_PORTAINER_FAILED',
+            data: { type, ip, port, status: response.status },
+            saveToDb: true
+          });
+          
           return NextResponse.json({
             success: false,
-            message: 'Invalid Portainer credentials',
+            message: `Portainer API not available: ${response.statusText}`,
           }, { status: 400 });
         }
+        
+        const data = await response.json();
+        
+        logger.info(`Successfully connected to Portainer API at ${ip}:${portainerPort}`, { 
+          userId: session?.user?.id, 
+          tenantId: session?.user?.tenantId,
+          action: 'TEST_CONNECTION_SUCCESS',
+          data: { type, ip, port, version: data.Version },
+          saveToDb: true
+        });
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Connection successful',
+          version: data.Version
+        });
+      } catch (error) {
+        logger.error(`Portainer API connection error: ${error.message}`, { 
+          userId: session?.user?.id, 
+          tenantId: session?.user?.tenantId,
+          action: 'TEST_CONNECTION_ERROR',
+          data: { type, ip, port, error: error.message },
+          saveToDb: true
+        });
+        
+        return NextResponse.json({
+          success: false,
+          message: `Portainer API not available: ${error.message}`,
+        }, { status: 400 });
       }
     } else {
       logger.error(`Unsupported connection type: ${type}`, { 
@@ -211,26 +353,12 @@ export async function POST(request: Request) {
         message: 'Unsupported connection type',
       }, { status: 400 });
     }
-
-    // If we get here, the connection was successful
-    logger.info(`Successfully tested ${type} connection`, { 
-      userId: session?.user?.id, 
-      tenantId: session?.user?.tenantId,
-      action: 'TEST_CONNECTION_SUCCESS',
-      data: { type, ip, port },
-      saveToDb: true
-    });
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Connection successful',
-    });
   } catch (error) {
-    logger.error(`Error testing ${type} connection: ${error.message}`, { 
+    logger.error(`Error testing connection: ${error.message}`, { 
       userId: session?.user?.id, 
       tenantId: session?.user?.tenantId,
       action: 'TEST_CONNECTION_ERROR',
-      data: { type, ip, port, error: error.message },
+      data: { error: error.message },
       saveToDb: true
     });
     

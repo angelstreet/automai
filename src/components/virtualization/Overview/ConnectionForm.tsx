@@ -22,12 +22,14 @@ interface ConnectionFormProps {
   formData: FormData;
   onChange: (formData: FormData) => void;
   onSave?: () => void;
+  onTestSuccess?: () => void;
 }
 
 export function ConnectionForm({ 
   formData, 
   onChange, 
-  onSave
+  onSave,
+  onTestSuccess
 }: ConnectionFormProps) {
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer'
@@ -54,6 +56,14 @@ export function ConnectionForm({
 
   const handleInputChange = (field: string, value: string) => {
     onChange({ ...formData, [field]: value });
+  };
+
+  // Handle keydown event to trigger test connection on Enter
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !testing) {
+      e.preventDefault();
+      testConnection();
+    }
   };
 
   // Update the testConnection function to handle fingerprint verification
@@ -93,6 +103,10 @@ export function ConnectionForm({
         if (data.fingerprint) {
           setFingerprint(data.fingerprint);
           setFingerprintVerified(data.fingerprintVerified || false);
+        }
+        // Notify parent component of successful test
+        if (onTestSuccess) {
+          onTestSuccess();
         }
       } else {
         setTestError(data.message);
@@ -146,110 +160,117 @@ export function ConnectionForm({
 
   return (
     <div className="space-y-3 py-2">
-      <div className="grid grid-cols-12 items-center gap-3">
-        <Label htmlFor="name" className="text-right col-span-2">Name</Label>
-        <Input
-          id="name"
-          placeholder="Client name"
-          value={formData.name}
-          onChange={(e) => handleInputChange('name', e.target.value)}
-          className="col-span-10"
-        />
-      </div>
-      
-      <div className="grid grid-cols-12 items-center gap-3">
-        <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">Connection</Label>
-        <div className="col-span-10">
-          <Select 
-            value={formData.type} 
-            onValueChange={handleTypeChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ssh">SSH</SelectItem>
-              <SelectItem value="docker">Docker</SelectItem>
-              <SelectItem value="portainer">Portainer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-12 items-center gap-3">
-        <Label htmlFor="ip" className="text-right col-span-2 whitespace-nowrap">IP Address</Label>
-        <Input
-          id="ip"
-          placeholder="IP Address"
-          value={formData.ip}
-          onChange={(e) => handleInputChange('ip', e.target.value)}
-          className="col-span-7"
-        />
-        <Label htmlFor="port" className="text-right whitespace-nowrap col-span-1">Port</Label>
-        <Input
-          id="port"
-          placeholder="Port"
-          value={formData.port}
-          onChange={(e) => handleInputChange('port', e.target.value)}
-          className="col-span-2"
-        />
-      </div>
-      
-      {connectionType === 'ssh' && (
+      <form onKeyDown={handleKeyDown} onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-12 items-center gap-3">
-          <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">Username</Label>
+          <Label htmlFor="name" className="text-right col-span-2">Name</Label>
           <Input
-            id="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={(e) => handleInputChange('username', e.target.value)}
-            className="col-span-4"
-          />
-          <Label htmlFor="password" className="text-right whitespace-nowrap col-span-2">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={(e) => handleInputChange('password', e.target.value)}
-            className="col-span-4"
+            id="name"
+            placeholder="Client name"
+            value={formData.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            className="col-span-10"
           />
         </div>
-      )}
-      
-      <div className="grid grid-cols-12 items-center gap-3">
-        <Label htmlFor="description" className="text-right col-span-2">Description</Label>
-        <Textarea
-          id="description"
-          placeholder="Description (optional)"
-          value={formData.description}
-          onChange={(e) => handleInputChange('description', e.target.value)}
-          className="col-span-10 h-16"
-        />
-      </div>
-      
-      <div className="flex justify-end space-x-2 mt-4">
-        <Button 
-          variant="outline" 
-          onClick={testConnection}
-          disabled={testing}
-        >
-          {testing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Testing...
-            </>
-          ) : (
-            <>Test Connection</>
-          )}
-        </Button>
         
-        {testSuccess && onSave && (
-          <Button onClick={onSave}>
-            Save Connection
-          </Button>
+        <div className="grid grid-cols-12 items-center gap-3 mt-3">
+          <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">Connection</Label>
+          <div className="col-span-10">
+            <Select 
+              value={formData.type} 
+              onValueChange={handleTypeChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ssh">SSH</SelectItem>
+                <SelectItem value="docker">Docker</SelectItem>
+                <SelectItem value="portainer">Portainer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-12 items-center gap-3 mt-3">
+          <Label htmlFor="ip" className="text-right col-span-2 whitespace-nowrap">IP Address</Label>
+          <Input
+            id="ip"
+            placeholder="IP Address"
+            value={formData.ip}
+            onChange={(e) => handleInputChange('ip', e.target.value)}
+            className="col-span-7"
+          />
+          <Label htmlFor="port" className="text-right whitespace-nowrap col-span-1">Port</Label>
+          <Input
+            id="port"
+            placeholder="Port"
+            value={formData.port}
+            onChange={(e) => handleInputChange('port', e.target.value)}
+            className="col-span-2"
+          />
+        </div>
+        
+        {connectionType === 'ssh' && (
+          <div className="grid grid-cols-12 items-center gap-3 mt-3">
+            <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">Username</Label>
+            <Input
+              id="username"
+              placeholder="Username"
+              value={formData.username}
+              onChange={(e) => handleInputChange('username', e.target.value)}
+              className="col-span-4"
+            />
+            <Label htmlFor="password" className="text-right whitespace-nowrap col-span-2">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              className="col-span-4"
+            />
+          </div>
         )}
-      </div>
+        
+        <div className="grid grid-cols-12 items-center gap-3 mt-3">
+          <Label htmlFor="description" className="text-right col-span-2">Description</Label>
+          <Textarea
+            id="description"
+            placeholder="Description (optional)"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            className="col-span-10 h-16"
+          />
+        </div>
+        
+        <div className="flex justify-end space-x-2 mt-4">
+          <Button 
+            variant="outline" 
+            onClick={testConnection}
+            disabled={testing}
+            type="button"
+          >
+            {testing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Testing...
+              </>
+            ) : (
+              <>Test Connection</>
+            )}
+          </Button>
+          
+          {onSave && (
+            <Button 
+              onClick={onSave}
+              disabled={!testSuccess}
+              type="button"
+            >
+              Save
+            </Button>
+          )}
+        </div>
+      </form>
       
       {requireVerification && fingerprint && (
         <Alert className="mt-4">
@@ -297,9 +318,9 @@ export function ConnectionForm({
       )}
       
       {testSuccess && (
-        <Alert className="mt-4">
+        <Alert className="mt-4" variant="success">
           <AlertTitle className="flex items-center">
-            <CheckCircle className="h-4 w-4 mr-2" />
+            <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
             Connection Successful
           </AlertTitle>
           <AlertDescription>

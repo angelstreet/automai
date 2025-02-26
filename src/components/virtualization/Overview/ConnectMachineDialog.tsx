@@ -260,39 +260,10 @@ export function ConnectMachineDialog({ open, onOpenChange, onSuccess }: ConnectM
           formData={formData} 
           onChange={handleFormChange}
           onSave={handleCreate}
+          onTestSuccess={() => setTestStatus('success')}
         />
         
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">
-          <Button
-            onClick={testConnection}
-            type="button"
-            variant="outline"
-            disabled={!isFormValid() || isTesting || isCreating}
-            className="w-full sm:w-auto"
-          >
-            {isTesting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Testing...
-              </>
-            ) : testStatus === 'success' ? (
-              'Test Again'
-            ) : 'Test Connection'}
-          </Button>
-          
-          <Button
-            onClick={handleCreate}
-            type="button"
-            disabled={!isFormValid() || isCreating || testStatus !== 'success'}
-            className="w-full sm:w-auto"
-          >
-            {isCreating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : 'Save'}
-          </Button>
+        <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-6">  
         </DialogFooter>
       </DialogContent>
     </Dialog>

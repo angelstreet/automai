@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { logger } from '@/lib/logger';
+import { prisma } from '@/lib/prisma';
 
 // POST /api/virtualization/machines/verify-fingerprint
 export async function POST(request: Request) {
@@ -56,18 +57,67 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // In a real implementation, we would store the verified fingerprint
-    // For demo purposes, we'll just accept any fingerprint that the user approves
-    
-    // Special case for testing
-    if (fingerprint === 'UNKNOWN_FINGERPRINT') {
-      logger.info(`User accepted unknown fingerprint for ${ip}`, { 
+    // Store the verified fingerprint in the database
+    try {
+      // Check if we already have a stored fingerprint for this host
+      const existingFingerprint = await prisma.hostFingerprint.findFirst({
+        where: {
+          host: ip,
+          userId: userId
+        }
+      });
+      
+      if (existingFingerprint) {
+        // Update the existing fingerprint
+        await prisma.hostFingerprint.update({
+          where: { id: existingFingerprint.id },
+          data: {
+            fingerprint: fingerprint,
+            verified: true,
+            updatedAt: new Date()
+          }
+        });
+        
+        logger.info(`Updated fingerprint for ${ip}`, { 
+          userId: session.user.id, 
+          tenantId: session.user.tenantId,
+          action: 'FINGERPRINT_VERIFY_UPDATED',
+          data: { ip, fingerprint },
+          saveToDb: true
+        });
+      } else {
+        // Create a new fingerprint record
+        await prisma.hostFingerprint.create({
+          data: {
+            host: ip,
+            port: port ? parseInt(port) : 22,
+            fingerprint: fingerprint,
+            verified: true,
+            userId: userId,
+            tenantId: tenantId || undefined
+          }
+        });
+        
+        logger.info(`Stored new fingerprint for ${ip}`, { 
+          userId: session.user.id, 
+          tenantId: session.user.tenantId,
+          action: 'FINGERPRINT_VERIFY_STORED',
+          data: { ip, fingerprint },
+          saveToDb: true
+        });
+      }
+    } catch (dbError) {
+      // If there's an error storing the fingerprint, log it but continue
+      // This might happen if the HostFingerprint model doesn't exist yet
+      logger.error(`Error storing fingerprint: ${dbError.message}`, { 
         userId: session.user.id, 
         tenantId: session.user.tenantId,
-        action: 'FINGERPRINT_VERIFY_ACCEPTED_UNKNOWN',
-        data: { ip, fingerprint },
+        action: 'FINGERPRINT_VERIFY_DB_ERROR',
+        data: { ip, fingerprint, error: dbError.message },
         saveToDb: true
       });
+      
+      // Continue with the verification process even if storage fails
     }
     
     logger.info(`Fingerprint verified for ${ip}`, { 

@@ -44,6 +44,7 @@ model User {
   connections    Connection[]
   connectionLogs ConnectionLog[]
   tenant         Tenant?         @relation(fields: [tenantId], references: [id])
+  hostFingerprints HostFingerprint[]
 
   @@index([tenantId])
 }
@@ -58,6 +59,7 @@ model Tenant {
   connections    Connection[]
   connectionLogs ConnectionLog[]
   users          User[]
+  hostFingerprints HostFingerprint[]
 }
 
 model ConnectionLog {
@@ -82,4 +84,23 @@ model ConnectionLog {
   @@index([action])
   @@index([level])
   @@index([timestamp])
+}
+
+model HostFingerprint {
+  id          String    @id @default(cuid())
+  host        String
+  port        Int       @default(22)
+  fingerprint String
+  verified    Boolean   @default(false)
+  userId      String
+  tenantId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id])
+
+  @@unique([host, userId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([host])
 }
