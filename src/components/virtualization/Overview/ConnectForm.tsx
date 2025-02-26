@@ -94,7 +94,7 @@ export function ConnectForm({
         body: JSON.stringify({
           type: formData.type,
           ip: formData.ip,
-          port: formData.port,
+          port: formData.port ? parseInt(formData.port) : undefined,
           username: formData.username,
           password: formData.password,
           machineId: formData.id,
@@ -151,7 +151,7 @@ export function ConnectForm({
         body: JSON.stringify({
           type: formData.type,
           ip: formData.ip,
-          port: formData.port,
+          port: formData.port ? parseInt(formData.port) : undefined,
           username: formData.username,
           password: formData.password,
           fingerprint: fingerprint,
