@@ -8,6 +8,23 @@ loadEnvConfig();
 const nextConfig = {
   reactStrictMode: true,
   // Add any other Next.js config options here
+  
+  // Ignore optional dependencies that cause warnings
+  webpack: (config, { isServer }) => {
+    // Ignore optional modules that cause warnings
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      'cpu-features': false,
+    };
+    
+    // Ignore specific module not found warnings
+    config.ignoreWarnings = [
+      { module: /node_modules\/ssh2\/lib\/protocol\/constants\.js/ },
+      { module: /node_modules\/ssh2\/lib\/protocol\/crypto\.js/ }
+    ];
+    
+    return config;
+  },
 };
 
 module.exports = withNextIntl(nextConfig); 

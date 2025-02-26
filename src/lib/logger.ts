@@ -26,12 +26,8 @@ const DEBOUNCE_INTERVAL = 2000; // 2 seconds
 
 // Helper to determine if we should log based on environment and level
 function shouldLog(level: LogLevel): boolean {
-  // In production, only log info and above
-  if (process.env.NODE_ENV === 'production') {
-    return level !== 'debug';
-  }
-  // In development, log everything
-  return true;
+  // Always log info and above
+  return level !== 'debug';
 }
 
 // Generate a unique key for a log entry to prevent duplicates
@@ -61,22 +57,8 @@ export async function log(level: LogLevel, message: string, options: LogOptions 
     data
   };
   
-  // In production, we might want to send logs to a service like Datadog, Sentry, etc.
-  // For now, we'll just console log with appropriate level
-  switch (level) {
-    case 'debug':
-      if (isDev) console.debug(JSON.stringify(logEntry));
-      break;
-    case 'info':
-      console.info(JSON.stringify(logEntry));
-      break;
-    case 'warn':
-      console.warn(JSON.stringify(logEntry));
-      break;
-    case 'error':
-      console.error(JSON.stringify(logEntry));
-      break;
-  }
+  // Use info level for all console logs
+  console.info(JSON.stringify(logEntry));
   
   // Save to database if requested and not in test environment
   if (saveToDb && process.env.NODE_ENV !== 'test') {
