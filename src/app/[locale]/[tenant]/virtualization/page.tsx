@@ -80,22 +80,44 @@ export default function VirtualizationPage() {
 
       const testData = await testResponse.json();
       
-      // No need to manually update status as the API now handles it
-      // Just refresh the machines list
-      fetchMachines();
+      // Check if the response was actually successful
+      const isSuccess = testResponse.ok && testData.success === true;
+      
+      // Update machine status immediately in the UI
+      const finalMachines = [...machines];
+      const finalIndex = finalMachines.findIndex(m => m.id === machine.id);
+      if (finalIndex !== -1) {
+        finalMachines[finalIndex] = { 
+          ...finalMachines[finalIndex], 
+          status: isSuccess ? 'connected' : 'failed',
+          lastConnected: isSuccess ? new Date() : finalMachines[finalIndex].lastConnected
+        };
+        setMachines(finalMachines);
+      }
       
       // Show toast notification
       toast({
-        title: testData.success ? 'Success' : 'Error',
-        description: testData.success ? 'Host connected successfully' : testData.message,
-        variant: testData.success ? 'default' : 'destructive'
+        title: isSuccess ? 'Success' : 'Error',
+        description: isSuccess ? 'Host connected successfully' : (testData.message || 'Connection failed'),
+        variant: isSuccess ? 'default' : 'destructive',
+        duration: 5000,
       });
     } catch (error) {
       console.error(`Error testing connection for ${machine.name}:`, error);
+      
+      // Update machine status to failed in case of exception
+      const errorMachines = [...machines];
+      const errorIndex = errorMachines.findIndex(m => m.id === machine.id);
+      if (errorIndex !== -1) {
+        errorMachines[errorIndex] = { ...errorMachines[errorIndex], status: 'failed' };
+        setMachines(errorMachines);
+      }
+      
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: `Failed to test connection: ${error instanceof Error ? error.message : 'Unknown error'}`
+        description: `Failed to test connection: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        duration: 5000,
       });
     }
   };
@@ -111,19 +133,79 @@ export default function VirtualizationPage() {
     
     if (machines.length > 0) {
       let successCount = 0;
+      let failureCount = 0;
+      
+      // Create a copy of machines to update
+      const updatedMachines = [...machines];
+      
       for (const machine of machines) {
         try {
-          await testMachineConnection(machine);
-          successCount++;
+          // Update status to pending in UI
+          const machineIndex = updatedMachines.findIndex(m => m.id === machine.id);
+          if (machineIndex !== -1) {
+            updatedMachines[machineIndex] = { ...updatedMachines[machineIndex], status: 'pending' };
+            setMachines([...updatedMachines]);
+          }
+          
+          // Test connection
+          const testResponse = await fetch('/api/virtualization/machines/test-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: machine.type,
+              ip: machine.ip,
+              port: machine.port,
+              username: machine.user,
+              machineId: machine.id,
+            }),
+          });
+
+          const testData = await testResponse.json();
+          const isSuccess = testResponse.ok && testData.success === true;
+          
+          // Update machine status in our local copy
+          const finalIndex = updatedMachines.findIndex(m => m.id === machine.id);
+          if (finalIndex !== -1) {
+            updatedMachines[finalIndex] = { 
+              ...updatedMachines[finalIndex], 
+              status: isSuccess ? 'connected' : 'failed',
+              lastConnected: isSuccess ? new Date() : updatedMachines[finalIndex].lastConnected
+            };
+            setMachines([...updatedMachines]);
+          }
+          
+          if (isSuccess) {
+            successCount++;
+          } else {
+            failureCount++;
+          }
         } catch (error) {
           console.error('Error refreshing connection:', error);
+          
+          // Update machine status to failed in our local copy
+          const errorIndex = updatedMachines.findIndex(m => m.id === machine.id);
+          if (errorIndex !== -1) {
+            updatedMachines[errorIndex] = { ...updatedMachines[errorIndex], status: 'failed' };
+            setMachines([...updatedMachines]);
+          }
+          
+          failureCount++;
         }
       }
       
-      if (successCount > 0) {
+      // Show toast with results
+      if (successCount > 0 || failureCount > 0) {
+        let message = '';
+        if (successCount > 0) {
+          message += `${successCount} host${successCount > 1 ? 's' : ''} connected successfully. `;
+        }
+        if (failureCount > 0) {
+          message += `${failureCount} host${failureCount > 1 ? 's' : ''} failed to connect.`;
+        }
+        
         toast({
           title: 'Connections refreshed',
-          description: `Successfully refreshed ${successCount} host${successCount > 1 ? 's' : ''}`,
+          description: message.trim(),
           duration: 5000,
         });
       }
