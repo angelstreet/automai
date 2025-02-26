@@ -6,8 +6,11 @@ import { logger } from '@/lib/logger';
 import { serverCache } from '@/lib/cache';
 
 export async function POST(request: NextRequest) {
+  // Declare session outside try/catch so it's available in both blocks
+  let session;
+  
   try {
-    const session = await getServerSession(authOptions);
+    session = await getServerSession(authOptions);
     
     if (!session || !session.user) {
       logger.warn('Unauthorized access attempt to connect to machine', { 
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
     
     // Invalidate cache for machines data
     const cacheKey = `machines_${userId}_${tenantId || 'personal'}`;
-    await serverCache.del(cacheKey);
+    await serverCache.delete(cacheKey);
     
     logger.info('Successfully connected to machine', { 
       userId: userId, 

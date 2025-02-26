@@ -53,7 +53,7 @@ export async function GET(
     
     // Invalidate cache for machines data
     const cacheKey = `machines_${userId}_${tenantId || 'personal'}`;
-    await serverCache.del(cacheKey);
+    await serverCache.delete(cacheKey);
     
     // This is a WebSocket endpoint
     if (!request.headers.get('upgrade')?.includes('websocket')) {

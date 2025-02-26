@@ -21,9 +21,18 @@ interface TerminalProps {
 export function Terminal({ connection }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
+  const connectionAttemptedRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!terminalRef.current) return;
+    
+    // Prevent duplicate connection attempts
+    if (connectionAttemptedRef.current) {
+      console.log('Preventing duplicate terminal connection attempt');
+      return;
+    }
+    
+    connectionAttemptedRef.current = true;
 
     // Initialize xterm.js
     const term = new XTerm({

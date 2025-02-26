@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Terminal } from '@/components/virtualization/Terminal';
 import { useToast } from '@/components/ui/use-toast';
@@ -23,6 +23,7 @@ export default function TerminalPage() {
   const [connections, setConnections] = useState<MachineConnection[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializationAttemptedRef = useRef<boolean>(false);
 
   // Get host name from URL params
   const hostName = params.hostName as string;
@@ -116,7 +117,20 @@ export default function TerminalPage() {
 
   // Initialize terminals
   const initializeTerminals = async () => {
+    // Reset the initialization flag when manually called (e.g., from retry button)
+    if (error) {
+      initializationAttemptedRef.current = false;
+    }
+    
+    // Prevent duplicate initialization
+    if (initializationAttemptedRef.current) {
+      console.log('Preventing duplicate terminal initialization');
+      return;
+    }
+    
+    initializationAttemptedRef.current = true;
     setLoading(true);
+    
     try {
       // For single terminal case
       if (terminalCount === 1) {
