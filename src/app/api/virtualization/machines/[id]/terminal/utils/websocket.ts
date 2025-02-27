@@ -37,7 +37,8 @@ export async function setupWebSocket(
       const path = `/api/virtualization/machines/${machineId}/terminal`;
       console.log('[WebSocket] Attempting upgrade on path:', path);
       
-      // Handle the upgrade
+      // In the custom server setup, the WebSocket upgrade might already be handled
+      // This is a fallback for when using the API route directly
       handleUpgrade(req, socket, head, path, (clientSocket) => {
         console.log('[WebSocket] Upgrade successful, socket connected');
         

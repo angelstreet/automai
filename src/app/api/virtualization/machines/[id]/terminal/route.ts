@@ -42,7 +42,8 @@ export async function GET(
       headers: Object.fromEntries(request.headers.entries())
     });
 
-    // Initialize WebSocket server with the HTTP server
+    // With our custom server, the WebSocket server is already initialized
+    // This code is kept for backward compatibility but won't do anything in the custom server setup
     const server = (request as any).socket?.server;
     if (server && !server._webSocketInitialized) {
       console.log('[WebSocket Route] Initializing WebSocket server');

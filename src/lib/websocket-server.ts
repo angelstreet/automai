@@ -56,7 +56,8 @@ export function initializeWebSocketServer(server: Server) {
     });
   }
 
-  // Handle upgrade requests
+  // Handle upgrade requests - this is now handled by the custom server
+  // We'll keep this code for backward compatibility but it won't be used
   server.on('upgrade', (request: IncomingMessage, socket: any, head: Buffer) => {
     console.log('[WebSocketServer] Received upgrade request:', request.url);
     
@@ -84,6 +85,14 @@ export function initializeWebSocketServer(server: Server) {
 // Export the getWebSocketServer function for compatibility
 export function getWebSocketServer(): WebSocketServer {
   if (!wss) {
+    // In the custom server setup, we might not have initialized the WebSocket server
+    // through this module, so we'll check if it's available globally
+    const globalWss = (global as any).wss;
+    if (globalWss) {
+      wss = globalWss as WebSocketServer;
+      return wss;
+    }
+    
     throw new Error('WebSocket server not initialized. Call initializeWebSocketServer first.');
   }
   return wss;
@@ -97,15 +106,25 @@ export function handleUpgrade(
   path: string,
   onConnection: (ws: WebSocketConnection, req: IncomingMessage) => void
 ): void {
+  // Try to get the WebSocket server from global if not initialized here
   if (!wss) {
-    console.log('[WebSocketServer] No WebSocket server available');
-    socket.destroy();
-    return;
+    const globalWss = (global as any).wss;
+    if (globalWss) {
+      wss = globalWss as WebSocketServer;
+    } else {
+      console.log('[WebSocketServer] No WebSocket server available');
+      socket.destroy();
+      return;
+    }
   }
 
   console.log('[WebSocketServer] Handling upgrade for path:', path);
   
-  wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
+  // At this point, wss should be non-null, but TypeScript doesn't know that
+  // We'll use a local variable that's guaranteed to be non-null
+  const websocketServer = wss as WebSocketServer;
+  
+  websocketServer.handleUpgrade(req, socket, head, (ws: WebSocket) => {
     const wsConnection = ws as WebSocketConnection;
     wsConnection.isAlive = true;
     
@@ -113,7 +132,7 @@ export function handleUpgrade(
       wsConnection.isAlive = true;
     });
 
-    wss?.emit('connection', wsConnection, req);
+    websocketServer.emit('connection', wsConnection, req);
     onConnection(wsConnection, req);
   });
 } 
