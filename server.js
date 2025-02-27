@@ -54,6 +54,26 @@ app.prepare().then(() => {
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
     console.log('[WebSocketServer] Client connected');
+    
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message);
+        if (data.type === 'auth') {
+          console.log('[WebSocketServer] Received auth request:', {
+            connectionType: data.connectionType,
+            username: data.username
+          });
+          // Handle SSH connection here based on auth data
+          // You'll need to implement SSH connection logic
+        } else if (data.type === 'resize') {
+          // Handle terminal resize
+          console.log('[WebSocketServer] Resize request:', data);
+        }
+      } catch (error) {
+        console.error('[WebSocketServer] Error processing message:', error);
+        ws.send(JSON.stringify({ error: 'Invalid message format' }));
+      }
+    });
   });
   
   // Handle upgrade requests
@@ -67,14 +87,7 @@ app.prepare().then(() => {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
-    } 
-    // Handle Next.js HMR WebSocket connections in development mode
-    else if (dev && pathname.startsWith('/_next/webpack-hmr')) {
-      console.log('[WebSocketServer] Forwarding Next.js HMR WebSocket');
-      // Let Next.js handle its own HMR WebSockets
-      handle(request, socket, head);
-    }
-    else {
+    } else {
       console.log('[WebSocketServer] Invalid WebSocket path:', pathname);
       socket.destroy();
     }
