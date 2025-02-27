@@ -7,16 +7,27 @@ export async function setupWebSocket(
   request: NextRequest,
   machineId: string
 ): Promise<{ clientSocket: WebSocketConnection; response: Response }> {
+  console.log('[WebSocket] Setup started for machine:', machineId);
+  console.log('[WebSocket] Headers:', JSON.stringify(Object.fromEntries(request.headers.entries())));
+
   // This is a WebSocket endpoint
   if (!request.headers.get('upgrade')?.includes('websocket')) {
+    console.log('[WebSocket] No upgrade header found');
     throw new Error('Expected WebSocket connection');
   }
   
-  // Access the raw request object
-  const req = request as unknown as { raw: IncomingMessage };
+  // Get the raw request and socket
+  const req = request as any;
+  console.log('[WebSocket] Raw request properties:', Object.keys(req));
   
-  if (!req.raw) {
-    throw new Error('Cannot access raw request for WebSocket upgrade');
+  const socket = req.socket;
+  console.log('[WebSocket] Socket available:', !!socket);
+  
+  const head = Buffer.from('');
+  
+  if (!socket) {
+    console.log('[WebSocket] Socket not found in request');
+    throw new Error('Cannot access socket for WebSocket upgrade');
   }
   
   // Return a promise that resolves when the WebSocket connection is established
@@ -24,13 +35,12 @@ export async function setupWebSocket(
     try {
       // Set up the upgrade handler for this specific path
       const path = `/api/virtualization/machines/${machineId}/terminal`;
-      
-      // Get the socket and head from the request
-      const socket = (request as any).socket;
-      const head = Buffer.from('');
+      console.log('[WebSocket] Attempting upgrade on path:', path);
       
       // Handle the upgrade
-      handleUpgrade(req.raw, socket, head, path, (clientSocket) => {
+      handleUpgrade(req, socket, head, path, (clientSocket) => {
+        console.log('[WebSocket] Upgrade successful, socket connected');
+        
         // Log the connection
         logger.info('Terminal WebSocket connection established', {
           action: 'TERMINAL_WS_CONNECTED',
@@ -45,6 +55,7 @@ export async function setupWebSocket(
         });
       });
     } catch (error) {
+      console.log('[WebSocket] Setup error:', error);
       logger.error(`WebSocket setup error: ${error instanceof Error ? error.message : String(error)}`, {
         action: 'WEBSOCKET_SETUP_ERROR',
         data: { machineId },

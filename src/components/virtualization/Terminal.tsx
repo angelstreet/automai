@@ -196,6 +196,11 @@ export function Terminal({ connection }: TerminalProps) {
     // Handle JSON messages from the server (like error messages)
     socket.onmessage = (event) => {
       try {
+        // Check if data is empty or whitespace before parsing
+        if (!event.data || typeof event.data !== 'string' || !event.data.trim()) {
+          return; // Skip empty messages
+        }
+        
         // Try to parse as JSON first
         const data = JSON.parse(event.data);
         
