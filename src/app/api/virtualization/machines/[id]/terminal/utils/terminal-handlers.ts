@@ -8,7 +8,30 @@ export function handleSshConnection(
   connection: Connection,
   machineId: string
 ) {
-  // Create SSH client
+  // Clear any existing auth timeout
+  const authTimeout = (clientSocket as any).authTimeout;
+  if (authTimeout) {
+    clearTimeout(authTimeout);
+    delete (clientSocket as any).authTimeout;
+  }
+  
+  logger.info('Establishing SSH connection', {
+    action: 'SSH_CONNECTION_ATTEMPT',
+    data: { 
+      machineId,
+      host: connection.ip,
+      port: connection.port || 22,
+      username: connection.username
+    },
+    saveToDb: true
+  });
+  
+  console.log('[SSH] Establishing connection to:', {
+    host: connection.ip,
+    port: connection.port || 22,
+    username: connection.username
+  });
+  
   const sshClient = new Client();
   
   // Set up message handler for initial authentication
@@ -70,11 +93,13 @@ export function handleSshConnection(
   
   // Handle SSH client events
   sshClient.on('ready', () => {
-    logger.info('SSH connection established', {
-      action: 'SSH_CONNECTED',
-      data: { machineId, ip: connection.ip },
-      saveToDb: true
-    });
+    console.log('[SSH] Connection ready');
+    
+    // Send connection status to client
+    clientSocket.send(JSON.stringify({
+      status: 'connected',
+      message: 'SSH connection established successfully'
+    }));
     
     // Create an SSH shell session
     sshClient.shell((err, stream) => {

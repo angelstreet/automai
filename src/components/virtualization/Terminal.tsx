@@ -15,7 +15,7 @@ interface Connection {
   ip: string;
   type: string;
   port: number;
-  user: string;
+  username: string;
   password: string;
 }
 
@@ -103,7 +103,7 @@ export function Terminal({ connection }: TerminalProps) {
     console.log(`[WebSocket] Connecting to: ${socketUrl}`, { 
       connectionId: connection.id,
       connectionType: connection.type,
-      username: connection.user,
+      username: connection.username,
       password: connection.password
     });
     
@@ -124,14 +124,14 @@ export function Terminal({ connection }: TerminalProps) {
       const authMessage = {
         type: 'auth',
         connectionType: connection.type,
-        username: connection.user,
+        username: connection.username,
         password: connection.password
       };
       
       console.log('[WebSocket] Sending authentication', { 
         type: 'auth',
         connectionType: connection.type,
-        username: connection.user,
+        username: connection.username,
         hasPassword: !!connection.password
       });
       
@@ -139,7 +139,7 @@ export function Terminal({ connection }: TerminalProps) {
       console.log('Sending authentication to server', {
         connectionId: connection.id,
         connectionType: connection.type,
-        username: connection.user
+        username: connection.username
       });
       
       socket.send(JSON.stringify(authMessage));
@@ -150,7 +150,14 @@ export function Terminal({ connection }: TerminalProps) {
     };
 
     socket.onerror = (error) => {
-      const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+      // Handle WebSocket error event properly
+      let errorMessage;
+      try {
+        errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+      } catch (e) {
+        errorMessage = 'Unknown WebSocket error';
+      }
+      
       console.error('[WebSocket] Terminal error:', {
         message: errorMessage,
         connectionId: connection.id
@@ -180,6 +187,13 @@ export function Terminal({ connection }: TerminalProps) {
         const data = JSON.parse(event.data);
         
         console.log('[WebSocket] Received message:', data);
+        
+        // Handle connection status messages
+        if (data.status === 'connected') {
+          console.log('[SSH] Connection established successfully');
+          term.write(`\r\n\x1B[1;3;32mSSH connection established successfully.\x1B[0m\r\n`);
+          return;
+        }
         
         // Handle error messages
         if (data.error) {
