@@ -47,6 +47,19 @@ const nextConfig = {
   
   // External packages that should not be bundled
   serverExternalPackages: ['ws', 'ssh2'],
+  
+  // Ensure WebSocket connections are handled properly
+  async headers() {
+    return [
+      {
+        source: '/api/terminals/:id',
+        headers: [
+          { key: 'Connection', value: 'keep-alive' },
+          { key: 'Cache-Control', value: 'no-store' },
+        ],
+      },
+    ];
+  },
 };
 
 // Set NEXTAUTH_SECRET if not present
