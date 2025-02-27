@@ -99,12 +99,21 @@ export function Terminal({ connection }: TerminalProps) {
 
     // Create WebSocket connection with proper protocol
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    
+    // Check if connection ID is valid before attempting to connect
+    if (!connection.id) {
+      console.error('[WebSocket] Invalid connection ID:', connection);
+      term.write(`\r\n\x1B[1;3;31mError: Invalid connection ID\x1B[0m\r\n`);
+      term.write(`\r\n\x1B[1;3;31mPlease check your connection settings and try again.\x1B[0m\r\n`);
+      return;
+    }
+    
     const socketUrl = `${protocol}//${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
     console.log(`[WebSocket] Connecting to: ${socketUrl}`, { 
       connectionId: connection.id,
       connectionType: connection.type,
       username: connection.username,
-      password: connection.password
+      password: connection.password ? '********' : undefined
     });
     
     const socket = new WebSocket(socketUrl);
