@@ -94,7 +94,7 @@ alwaysApply: true
 
 5. Tool usage:
    - Do not use browser tools (screenshots, console logs, network logs) unless explicitly requested
-   - Do not run tests or execute commands without specific user permission
+   - Do not run tests on browser or execute commands without specific user permission
    - When using tools is necessary, explain why before using them
    - If browser tools are requested but fail to work:
      1. Check if the browser tools server is running

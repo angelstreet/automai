@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Terminal } from '@/components/virtualization/Terminal';
+import { Terminal } from '@/components/hosts/Terminal';
 import { useToast } from '@/components/ui/use-toast';
 import { logger } from '@/lib/logger';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
