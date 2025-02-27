@@ -17,7 +17,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 
-export default function VirtualizationSettingsPage() {
+export default function HostsSettingsPage() {
   const t = useTranslations('Common');
   const params = useParams();
   const tenant = params.tenant as string;
@@ -38,12 +38,11 @@ export default function VirtualizationSettingsPage() {
 
   const handleSave = async () => {
     try {
-      // This would be replaced with actual API call
       console.log('Saving settings:', settings);
 
       toast({
         title: 'Settings saved',
-        description: 'Your virtualization settings have been updated successfully.',
+        description: 'Your host settings have been updated successfully.',
       });
     } catch (error) {
       toast({
@@ -57,15 +56,15 @@ export default function VirtualizationSettingsPage() {
   return (
     <div className="flex-1 space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Virtualization Settings</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Host Settings</h1>
         <Button onClick={handleSave}>Save Changes</Button>
       </div>
 
       <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Default VM Configuration</CardTitle>
-            <CardDescription>Set default values for new virtual machines</CardDescription>
+            <CardTitle>Default Host Configuration</CardTitle>
+            <CardDescription>Set default values for new hosts</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

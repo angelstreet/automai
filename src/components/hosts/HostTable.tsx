@@ -41,7 +41,7 @@ export function HostTable({
   onTestConnection,
 }: HostTableProps) {
   const router = useRouter();
-  const t = useTranslations('Virtualization');
+  const t = useTranslations('Hosts');
 
   // Get status badge based on host.status
   const getStatusBadge = (status: string) => {

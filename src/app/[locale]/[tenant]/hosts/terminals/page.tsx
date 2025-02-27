@@ -23,7 +23,7 @@ export default function TerminalsPage() {
     // Fetch machine details and establish SSH connection
     const initializeTerminal = async () => {
       try {
-        const response = await fetch(`/api/virtualization/machines/${machineId}`);
+        const response = await fetch(`/api/hosts/${machineId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch machine details');
         }
@@ -36,7 +36,7 @@ export default function TerminalsPage() {
         setConnection(data.data);
 
         // Initialize SSH connection
-        const sshResponse = await fetch('/api/virtualization/machines/connect', {
+        const sshResponse = await fetch('/api/hosts/connect', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export default function TerminalsPage() {
     // Cleanup on unmount
     return () => {
       if (connection) {
-        fetch('/api/virtualization/machines/disconnect', {
+        fetch('/api/hosts/disconnect', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
