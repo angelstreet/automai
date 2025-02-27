@@ -2,6 +2,7 @@ const { createServer } = require('http');
 const { WebSocketServer } = require('ws');
 const { Client } = require('ssh2');
 const { PrismaClient } = require('@prisma/client');
+const { parse } = require('url');
 
 const prisma = new PrismaClient();
 const wsPort = 3001;
@@ -22,9 +23,9 @@ function initializeWebSocketServer() {
     const { pathname } = new URL(request.url, `http://${request.headers.host}`);
     console.log('[WebSocketServer] Received upgrade request:', pathname);
     
-    const hostIdMatch = pathname.match(/\/terminals\/([^\/]+)/);
-    const hostId = hostIdMatch ? hostIdMatch[1] : 'unknown';
-    console.log('[WebSocketServer] Processing upgrade for host ID:', hostId);
+    const connectionIdMatch = pathname.match(/\/terminals\/([^\/]+)/);
+    const connectionId = connectionIdMatch ? connectionIdMatch[1] : 'unknown';
+    console.log('[WebSocketServer] Processing upgrade for connection ID:', connectionId);
     
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws, request);
@@ -85,25 +86,25 @@ function getWebSocketServer() {
       ws.on('pong', () => { ws.isAlive = true; });
       console.log('[WebSocketServer] Client connected');
       
-      // Extract host ID from URL with new path format
+      // Extract connection ID from URL with new path format
       const { pathname } = parse(request.url);
-      const hostIdMatch = pathname.match(/\/terminals\/([^\/]+)/);
-      const hostId = hostIdMatch ? hostIdMatch[1] : null;
+      const connectionIdMatch = pathname.match(/\/terminals\/([^\/]+)/);
+      const connectionId = connectionIdMatch ? connectionIdMatch[1] : null;
       
-      if (!hostId) {
-        console.error('[WebSocketServer] No host ID found in URL:', pathname);
+      if (!connectionId) {
+        console.error('[WebSocketServer] No connection ID found in URL:', pathname);
         ws.send(JSON.stringify({ 
-          error: 'Invalid host ID',
-          errorType: 'INVALID_HOST_ID'
+          error: 'Invalid connection ID',
+          errorType: 'INVALID_CONNECTION_ID'
         }));
         return;
       }
       
-      console.log('[WebSocketServer] Host ID:', hostId);
+      console.log('[WebSocketServer] Connection ID:', connectionId);
       
       // Set up authentication timeout (5 seconds)
       const authTimeout = setTimeout(() => {
-        console.log('[WebSocketServer] Authentication timeout for host:', hostId);
+        console.log('[WebSocketServer] Authentication timeout for connection:', connectionId);
         ws.send(JSON.stringify({ 
           error: 'Authentication timeout',
           errorType: 'AUTH_TIMEOUT'
@@ -129,19 +130,19 @@ function getWebSocketServer() {
             
             // Fetch connection details from database
             try {
-              console.log('[WebSocketServer] Looking up connection in database:', hostId);
+              console.log('[WebSocketServer] Looking up connection in database:', connectionId);
               
               const connection = await prisma.connection.findUnique({
-                where: { id: hostId }
+                where: { id: connectionId }
               });
               
               if (!connection) {
-                console.error('[WebSocketServer] Connection not found:', hostId);
+                console.error('[WebSocketServer] Connection not found:', connectionId);
                 
                 // Create a mock connection for testing when connection not found
                 console.log('[WebSocketServer] Creating mock connection for testing');
                 const mockConnection = {
-                  id: hostId,
+                  id: connectionId,
                   name: 'Mock Connection',
                   type: 'mock',
                   ip: 'localhost',
@@ -150,7 +151,7 @@ function getWebSocketServer() {
                 };
                 
                 console.log('[WebSocketServer] Handling mock terminal connection');
-                handleMockTerminal(ws, mockConnection, hostId);
+                handleMockTerminal(ws, mockConnection, connectionId);
                 return;
               }
               
@@ -166,10 +167,10 @@ function getWebSocketServer() {
               // Handle connection based on type
               if (connection.type === 'ssh') {
                 console.log('[WebSocketServer] Handling SSH connection');
-                handleSshConnection(ws, connection, hostId);
+                handleSshConnection(ws, connection, connectionId);
               } else {
                 console.log('[WebSocketServer] Handling mock terminal connection');
-                handleMockTerminal(ws, connection, hostId);
+                handleMockTerminal(ws, connection, connectionId);
               }
             } catch (dbError) {
               console.error('[WebSocketServer] Database error:', dbError);
@@ -205,7 +206,7 @@ function getWebSocketServer() {
 }
 
 // Implement SSH connection handler directly
-function handleSshConnection(clientSocket, connection, machineId) {
+function handleSshConnection(clientSocket, connection, connectionId) {
   console.log('[SSH] Establishing connection to:', {
     host: connection.ip,
     port: connection.port || 22,
@@ -314,7 +315,7 @@ function handleSshConnection(clientSocket, connection, machineId) {
 }
 
 // Implement mock terminal handler
-function handleMockTerminal(clientSocket, connection, machineId) {
+function handleMockTerminal(clientSocket, connection, connectionId) {
   console.log('[Mock] Setting up mock terminal for:', connection.name);
   
   // Clear any existing auth timeout

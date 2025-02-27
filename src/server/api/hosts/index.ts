@@ -26,8 +26,8 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction): void 
 const router = Router();
 const prisma = new PrismaClient();
 
-// In-memory storage for machines
-const mockMachines = [
+// In-memory storage for hosts
+const mockHosts = [
   {
     id: '1',
     name: 'Development Server',
@@ -108,7 +108,7 @@ router.post('/test-connection', isAuthenticated, (req: Request, res: Response): 
   }
 });
 
-// Create a new machine connection
+// Create a new host connection
 router.post('/', isAuthenticated, (req: Request, res: Response): void => {
   try {
     const { name, description, type, ip, port, user, password } = req.body;
@@ -129,9 +129,9 @@ router.post('/', isAuthenticated, (req: Request, res: Response): void => {
       return;
     }
 
-    // Create mock machine record
-    const newMachine = {
-      id: `machine-${Date.now()}`,
+    // Create mock host record
+    const newHost = {
+      id: `host-${Date.now()}`,
       name,
       description,
       type,
@@ -143,15 +143,15 @@ router.post('/', isAuthenticated, (req: Request, res: Response): void => {
       updatedAt: new Date(),
     };
 
-    // Add to mock machines
-    mockMachines.push(newMachine as any);
+    // Add to mock hosts
+    mockHosts.push(newHost as any);
 
     res.status(201).json({
       success: true,
-      data: newMachine,
+      data: newHost,
     });
   } catch (error) {
-    console.error('Error creating machine:', error);
+    console.error('Error creating host:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -159,15 +159,15 @@ router.post('/', isAuthenticated, (req: Request, res: Response): void => {
   }
 });
 
-// Get all machines
+// Get all hosts
 router.get('/', isAuthenticated, (req: Request, res: Response): void => {
   try {
     res.json({
       success: true,
-      data: mockMachines,
+      data: mockHosts,
     });
   } catch (error) {
-    console.error('Error fetching machines:', error);
+    console.error('Error fetching hosts:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -175,28 +175,28 @@ router.get('/', isAuthenticated, (req: Request, res: Response): void => {
   }
 });
 
-// Get a single machine
+// Get a single host
 router.get('/:id', isAuthenticated, (req: Request, res: Response): void => {
   try {
     const id = req.params.id;
 
-    // Find machine in mock data
-    const machine = mockMachines.find((m) => m.id === id);
+    // Find host in mock data
+    const host = mockHosts.find((h) => h.id === id);
 
-    if (!machine) {
+    if (!host) {
       res.status(404).json({
         success: false,
-        message: 'Machine not found',
+        message: 'Host not found',
       });
       return;
     }
 
     res.json({
       success: true,
-      data: machine,
+      data: host,
     });
   } catch (error) {
-    console.error('Error fetching machine:', error);
+    console.error('Error fetching host:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -204,31 +204,31 @@ router.get('/:id', isAuthenticated, (req: Request, res: Response): void => {
   }
 });
 
-// Delete a machine
+// Delete a host
 router.delete('/:id', isAuthenticated, (req: Request, res: Response): void => {
   try {
     const id = req.params.id;
 
-    // Find machine index
-    const machineIndex = mockMachines.findIndex((m) => m.id === id);
+    // Find host index
+    const hostIndex = mockHosts.findIndex((h) => h.id === id);
 
-    if (machineIndex === -1) {
+    if (hostIndex === -1) {
       res.status(404).json({
         success: false,
-        message: 'Machine not found',
+        message: 'Host not found',
       });
       return;
     }
 
-    // Remove from mock machines
-    mockMachines.splice(machineIndex, 1);
+    // Remove from mock hosts
+    mockHosts.splice(hostIndex, 1);
 
     res.json({
       success: true,
-      message: 'Machine deleted successfully',
+      message: 'Host deleted successfully',
     });
   } catch (error) {
-    console.error('Error deleting machine:', error);
+    console.error('Error deleting host:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

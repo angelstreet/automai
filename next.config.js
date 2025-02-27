@@ -47,19 +47,6 @@ const nextConfig = {
   
   // External packages that should not be bundled
   serverExternalPackages: ['ws', 'ssh2'],
-  
-  // Configure custom server settings
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/api/virtualization/machines/:id/terminal',
-          destination: '/api/virtualization/machines/:id/terminal',
-          has: [{ type: 'header', key: 'upgrade', value: 'websocket' }],
-        },
-      ],
-    };
-  },
 };
 
 // Set NEXTAUTH_SECRET if not present

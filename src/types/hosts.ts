@@ -49,6 +49,3 @@ export interface Host {
   createdAt: Date;
   updatedAt: Date;
 }
-
-// For backward compatibility during transition
-export type Machine = Host;

@@ -148,8 +148,8 @@ export default function LogsPage() {
                 <SelectContent>
                   <SelectItem value="">All Actions</SelectItem>
                   <SelectItem value="TEST_CONNECTION">Test Connection</SelectItem>
-                  <SelectItem value="MACHINES_GET">Get Machines</SelectItem>
-                  <SelectItem value="MACHINE_CREATE">Create Machine</SelectItem>
+                  <SelectItem value="HOSTS_GET">Get Hosts</SelectItem>
+                  <SelectItem value="HOST_CREATE">Create Host</SelectItem>
                 </SelectContent>
               </Select>
             </div>
