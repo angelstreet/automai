@@ -5,44 +5,39 @@ import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function AnalyticsPage() {
   const t = useTranslations('Common');
   const { toast } = useToast();
-  const [machines, setMachines] = useState<Machine[]>([]);
+  const [hosts, setHosts] = useState<Host[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch machines from API
-  const fetchMachines = async () => {
+  // Fetch hosts from API
+  const fetchHosts = async () => {
     try {
-      const response = await fetch('/api/virtualization/machines');
+      setIsLoading(true);
+      const response = await fetch('/api/hosts');
       
       if (!response.ok) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load machines',
-        });
-        return;
+        throw new Error('Failed to fetch hosts');
       }
       
       const data = await response.json();
-      const machines = data.data || [];
-      setMachines(machines);
+      setHosts(data.data || []);
 
-      // Set first machine as selected if none selected
-      if (machines.length > 0 && !selectedDevice) {
-        setSelectedDevice(machines[0].id);
+      // Set first host as selected if none selected
+      if (hosts.length > 0 && !selectedDevice) {
+        setSelectedDevice(hosts[0].id);
       }
     } catch (error) {
-      console.error('Error fetching machines:', error);
+      console.error('Error fetching hosts:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to load machines',
+        description: 'Failed to load hosts',
       });
     } finally {
       setIsLoading(false);
@@ -50,7 +45,7 @@ export default function AnalyticsPage() {
   };
 
   useEffect(() => {
-    fetchMachines();
+    fetchHosts();
   }, []);
 
   if (isLoading) {
@@ -68,14 +63,14 @@ export default function AnalyticsPage() {
         <Card className="w-64 p-4">
           <h2 className="font-semibold mb-4">Devices</h2>
           <div className="space-y-2">
-            {machines.map(machine => (
+            {hosts.map(host => (
               <Button
-                key={machine.id}
-                variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}
+                key={host.id}
+                variant={selectedDevice === host.id ? 'secondary' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setSelectedDevice(machine.id)}
+                onClick={() => setSelectedDevice(host.id)}
               >
-                {machine.name}
+                {host.name}
               </Button>
             ))}
           </div>

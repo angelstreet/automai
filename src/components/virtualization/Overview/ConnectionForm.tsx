@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { z } from 'zod';
 
 export interface FormData {
   name: string;
@@ -90,7 +91,7 @@ export function ConnectionForm({
     setFingerprintVerified(false);
     
     try {
-      const response = await fetch('/api/virtualization/machines/test-connection', {
+      const response = await fetch('/api/hosts/test-connection', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +102,7 @@ export function ConnectionForm({
           port: formData.port ? parseInt(formData.port) : undefined,
           username: formData.username,
           password: formData.password,
-          machineId: formData.id,
+          hostId: formData.id,
         }),
       });
       
@@ -147,19 +148,15 @@ export function ConnectionForm({
     setTestError(null);
     
     try {
-      const response = await fetch('/api/virtualization/machines/verify-fingerprint', {
+      const response = await fetch('/api/hosts/verify-fingerprint', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          type: formData.type,
-          ip: formData.ip,
+          fingerprint,
+          host: formData.ip,
           port: formData.port ? parseInt(formData.port) : undefined,
-          username: formData.username,
-          password: formData.password,
-          fingerprint: fingerprint,
-          accept: true
         }),
       });
       
@@ -354,7 +351,7 @@ export function ConnectionForm({
             Connection Successful
           </AlertTitle>
           <AlertDescription>
-            <p>Successfully connected to the remote machine</p>
+            <p>Successfully connected to the remote host</p>
             {fingerprint && (
               <p className="mt-2">
                 <span className="font-medium">Host fingerprint:</span>{' '}

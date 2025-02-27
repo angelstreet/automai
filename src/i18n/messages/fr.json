@@ -56,11 +56,14 @@
     "loading": "Chargement...",
     "noData": "Aucune donnée disponible",
     "devices": "Appareils",
-    "virtualization": "Virtualisation",
-    "manage_virtual_machines": "Gérer les machines virtuelles",
+    "virtualization": "Hôtes",
+    "manage_virtual_machines": "Gérez vos hôtes et conteneurs",
     "refresh": "Actualiser",
     "table_view": "Vue tableau",
-    "virtualization": "Virtualisation"
+    "add_machine": "Ajouter un hôte",
+    "no_machines": "Aucun hôte trouvé. Ajoutez un nouvel hôte pour commencer.",
+    "add_machine_description": "Connectez-vous à vos serveurs, conteneurs et instances cloud.",
+    "note": "Ajoutez et gérez vos hôtes, accédez aux terminaux, surveillez les journaux et déployez des conteneurs, le tout en un seul endroit"
   },
   "Virtualization": {
     "machines": "Machines",

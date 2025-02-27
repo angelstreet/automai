@@ -46,55 +46,39 @@ export default function TerminalPage() {
   
   const terminalCount = count ? parseInt(count, 10) : 1;
 
-  // Function to fetch machine details by name
+  // Fetch host by name
   const fetchMachineByName = async (name: string) => {
     try {
-      logger.info(`Fetching machine by name: ${name}`, {
-        action: 'TERMINAL_FETCH_ATTEMPT',
-        data: { hostName: name },
-        saveToDb: true
-      });
-      
-      const response = await fetch(`/api/virtualization/machines/byName/${name}`);
+      const response = await fetch(`/api/hosts/byName/${name}`);
       if (!response.ok) {
-        const errorText = await response.text();
-        toast({
-          variant: 'destructive',
-          title: 'Failed to fetch host details',
-          description: `Error: ${errorText || response.statusText}`,
-          duration: 5000,
-        });
-        throw new Error(`Failed to fetch host details for ${name}: ${errorText}`);
+        throw new Error('Failed to fetch host');
       }
-      
       const data = await response.json();
       if (!data.success || !data.data) {
-        toast({
-          variant: 'destructive',
-          title: 'Invalid host data',
-          description: `Could not retrieve valid data for ${name}`,
-          duration: 5000,
-        });
-        throw new Error(`Invalid host data for ${name}`);
+        throw new Error('Invalid host data');
       }
-      
       return data.data;
     } catch (error) {
-      const message = error instanceof Error ? error.message : `Failed to fetch host ${name}`;
-      logger.error(message, {
-        action: 'TERMINAL_FETCH_ERROR',
-        data: { hostName: name, error: message },
-        saveToDb: true
-      });
-      
-      toast({
-        variant: 'destructive',
-        title: 'Connection Error',
-        description: message,
-        duration: 5000,
-      });
-      
-      throw error;
+      console.error('Error fetching host:', error);
+      return null;
+    }
+  };
+
+  // Fetch host details
+  const fetchMachineDetails = async (id: string) => {
+    try {
+      const response = await fetch(`/api/hosts/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch host details');
+      }
+      const data = await response.json();
+      if (!data.success || !data.data) {
+        throw new Error('Invalid host data');
+      }
+      return data.data;
+    } catch (error) {
+      console.error('Error fetching machine details:', error);
+      return null;
     }
   };
 
@@ -117,8 +101,8 @@ export default function TerminalPage() {
     try {
       // For single terminal case
       if (terminalCount === 1) {
-        const machine = await fetchMachineByName(hostName);
-        setConnections([machine]);
+        const host = await fetchMachineByName(hostName);
+        setConnections([host]);
         return;
       }
       
@@ -128,23 +112,21 @@ export default function TerminalPage() {
         throw new Error('No hosts selected for multiple terminals view');
       }
       
-      const machineIds = JSON.parse(sessionData);
-      if (!Array.isArray(machineIds) || machineIds.length === 0) {
+      const hostIds = JSON.parse(sessionData);
+      if (!Array.isArray(hostIds) || hostIds.length === 0) {
         throw new Error('Invalid host selection data');
       }
       
       // Limit to max 4 terminals
-      const limitedIds = machineIds.slice(0, 4);
+      const limitedIds = hostIds.slice(0, 4);
       
-      // Fetch all machines in parallel
-      const machinePromises = limitedIds.map(id => 
-        fetch(`/api/virtualization/machines/${id}`)
-          .then(res => res.json())
-          .then(data => data.data)
+      // Fetch all hosts in parallel
+      const hostPromises = limitedIds.map(id => 
+        fetchMachineDetails(id)
       );
       
-      const machines = await Promise.all(machinePromises);
-      setConnections(machines);
+      const hosts = await Promise.all(machinePromises);
+      setConnections(hosts);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';
       setError(message);

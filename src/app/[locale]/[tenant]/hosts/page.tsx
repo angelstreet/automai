@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settings, Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { HostOverview } from '@/components/virtualization/Overview/HostOverview';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { ConnectHostDialog } from '@/components/virtualization/Overview/ConnectHostDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -23,35 +23,35 @@ export default function HostsPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [machineToDelete, setMachineToDelete] = useState<string | null>(null);
+  const [hostToDelete, setHostToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [machines, setMachines] = useState<Machine[]>([]);
+  const [hosts, setHosts] = useState<Host[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
-  // Fetch machines from API
+  // Fetch hosts from API
   const fetchMachines = async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/hosts');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch machines');
+        throw new Error('Failed to fetch hosts');
       }
       
       const data = await response.json();
-      // Ensure all machines have a status, defaulting to 'pending' if not set
-      const machinesWithStatus = (data.data || []).map((machine: Machine) => ({
+      // Ensure all hosts have a status, defaulting to 'pending' if not set
+      const hostsWithStatus = (data.data || []).map((host: Host) => ({
         ...machine,
         status: machine.status || 'pending'
       }));
-      setMachines(machinesWithStatus);
+      setHosts(machinesWithStatus);
     } catch (error) {
-      console.error('Error fetching machines:', error);
+      console.error('Error fetching hosts:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to load machines',
+        description: 'Failed to load hosts',
       });
     } finally {
       setIsLoading(false);
@@ -60,26 +60,26 @@ export default function HostsPage() {
   };
 
   // Test a single machine connection
-  const testMachineConnection = async (machine: Machine) => {
+  const testHostConnection = async (host: Host) => {
     try {
       // Update the specific machine to testing status
-      const machineIndex = machines.findIndex(m => m.id === machine.id);
+      const hostIndex = hosts.findIndex(m => m.id === host.id);
       if (machineIndex === -1) return;
       
-      const updatedMachines = [...machines];
-      updatedMachines[machineIndex] = { ...machines[machineIndex], status: 'pending' };
-      setMachines(updatedMachines);
+      const updatedHosts = [...machines];
+      updatedHosts[hostIndex] = { ...hosts[machineIndex], status: 'pending' };
+      setHosts(updatedMachines);
       
       // Test connection
       const testResponse = await fetch('/api/hosts/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: machine.type,
-          ip: machine.ip,
-          port: machine.port,
-          username: machine.user,
-          machineId: machine.id,
+          type: host.type,
+          ip: host.ip,
+          port: host.port,
+          username: host.user,
+          hostId: host.id,
         }),
       });
 
@@ -97,16 +97,16 @@ export default function HostsPage() {
       
       const finalStatus = isSuccess ? 'connected' : (isNetworkError ? 'pending' : 'failed');
       
-      // Update machine status immediately in the UI
-      const finalMachines = [...machines];
-      const finalIndex = finalMachines.findIndex(m => m.id === machine.id);
+      // Update host status immediately in the UI
+      const finalHosts = [...machines];
+      const finalIndex = finalHosts.findIndex(m => m.id === host.id);
       if (finalIndex !== -1) {
         finalMachines[finalIndex] = { 
           ...finalMachines[finalIndex], 
           status: finalStatus,
           lastConnected: isSuccess ? new Date() : finalMachines[finalIndex].lastConnected
         };
-        setMachines(finalMachines);
+        setHosts(finalMachines);
       }
       
       // Show toast notification
@@ -119,14 +119,14 @@ export default function HostsPage() {
         duration: 5000,
       });
     } catch (error) {
-      console.error(`Error testing connection for ${machine.name}:`, error);
+      console.error(`Error testing connection for ${host.name}:`, error);
       
-      // Update machine status to pending in case of network exception
-      const errorMachines = [...machines];
-      const errorIndex = errorMachines.findIndex(m => m.id === machine.id);
+      // Update host status to pending in case of network exception
+      const errorHosts = [...machines];
+      const errorIndex = errorHosts.findIndex(m => m.id === host.id);
       if (errorIndex !== -1) {
         errorMachines[errorIndex] = { ...errorMachines[errorIndex], status: 'pending' };
-        setMachines(errorMachines);
+        setHosts(errorMachines);
       }
       
       toast({
@@ -138,30 +138,30 @@ export default function HostsPage() {
     }
   };
 
-  // Fetch machines on component mount
+  // Fetch hosts on component mount
   useEffect(() => {
     fetchMachines();
   }, []);
 
-  // Refresh machines
+  // Refresh hosts
   const refreshMachines = async () => {
     setIsRefreshing(true);
     
-    if (machines.length > 0) {
+    if (hosts.length > 0) {
       let successCount = 0;
       let failureCount = 0;
       let pendingCount = 0;
       
-      // Create a copy of machines to update
-      const updatedMachines = [...machines];
+      // Create a copy of hosts to update
+      const updatedHosts = [...machines];
       
-      for (const machine of machines) {
+      for (const machine of hosts) {
         try {
           // Update status to pending in UI
-          const machineIndex = updatedMachines.findIndex(m => m.id === machine.id);
+          const hostIndex = updatedMachines.findIndex(m => m.id === host.id);
           if (machineIndex !== -1) {
-            updatedMachines[machineIndex] = { ...updatedMachines[machineIndex], status: 'pending' };
-            setMachines([...updatedMachines]);
+            updatedHosts[hostIndex] = { ...updatedHosts[hostIndex], status: 'pending' };
+            setHosts([...updatedMachines]);
           }
           
           // Test connection
@@ -169,11 +169,11 @@ export default function HostsPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              type: machine.type,
-              ip: machine.ip,
-              port: machine.port,
-              username: machine.user,
-              machineId: machine.id,
+              type: host.type,
+              ip: host.ip,
+              port: host.port,
+              username: host.user,
+              hostId: host.id,
             }),
           });
 
@@ -189,15 +189,15 @@ export default function HostsPage() {
           
           const finalStatus = isSuccess ? 'connected' : (isNetworkError ? 'pending' : 'failed');
           
-          // Update machine status in our local copy
-          const finalIndex = updatedMachines.findIndex(m => m.id === machine.id);
+          // Update host status in our local copy
+          const finalIndex = updatedMachines.findIndex(m => m.id === host.id);
           if (finalIndex !== -1) {
             updatedMachines[finalIndex] = { 
               ...updatedMachines[finalIndex], 
               status: finalStatus,
               lastConnected: isSuccess ? new Date() : updatedMachines[finalIndex].lastConnected
             };
-            setMachines([...updatedMachines]);
+            setHosts([...updatedMachines]);
           }
           
           if (isSuccess) {
@@ -210,11 +210,11 @@ export default function HostsPage() {
         } catch (error) {
           console.error('Error refreshing connection:', error);
           
-          // Update machine status to pending in our local copy
-          const errorIndex = updatedMachines.findIndex(m => m.id === machine.id);
+          // Update host status to pending in our local copy
+          const errorIndex = updatedMachines.findIndex(m => m.id === host.id);
           if (errorIndex !== -1) {
             updatedMachines[errorIndex] = { ...updatedMachines[errorIndex], status: 'pending' };
-            setMachines([...updatedMachines]);
+            setHosts([...updatedMachines]);
           }
           
           pendingCount++;
@@ -248,43 +248,43 @@ export default function HostsPage() {
   };
 
   // Handle connection success
-  const handleConnectionSuccess = (newMachine: Machine) => {
-    setMachines(prev => [...prev, newMachine]);
+  const handleConnectionSuccess = (newMachine: Host) => {
+    setHosts(prev => [...prev, newMachine]);
   };
 
-  // Handle delete machine
+  // Handle delete host
   const handleDeleteMachine = (id: string) => {
-    setMachineToDelete(id);
+    setHostToDelete(id);
     setIsDeleteDialogOpen(true);
   };
 
-  // Confirm delete machine
+  // Confirm delete host
   const confirmDeleteMachine = async () => {
-    if (!machineToDelete) return;
+    if (!hostToDelete) return;
     
     try {
-      const response = await fetch(`/api/hosts/${machineToDelete}`, {
+      const response = await fetch(`/api/hosts/${hostToDelete}`, {
         method: 'DELETE',
       });
       
       if (!response.ok) {
-        throw new Error('Failed to delete machine');
+        throw new Error('Failed to delete host');
       }
       
-      setMachines(prev => prev.filter(machine => machine.id !== machineToDelete));
+      setHosts(prev => prev.filter(host => host.id !== hostToDelete));
       toast({
         title: 'Success',
         description: 'Host deleted successfully',
       });
     } catch (error) {
-      console.error('Error deleting machine:', error);
+      console.error('Error deleting host:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to delete machine',
+        description: 'Failed to delete host',
       });
     } finally {
-      setMachineToDelete(null);
+      setHostToDelete(null);
       setIsDeleteDialogOpen(false);
     }
   };
@@ -332,7 +332,7 @@ export default function HostsPage() {
         </div>
       ) : (
         <>
-          {machines.length === 0 ? (
+          {hosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Server className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">{t('no_machines')}</h3>
@@ -350,7 +350,7 @@ export default function HostsPage() {
                 machines={machines}
                 onDelete={handleDeleteMachine}
                 onRefresh={fetchMachines}
-                onTestConnection={testMachineConnection}
+                onTestConnection={testHostConnection}
                 className="mt-4"
               />
             </>
@@ -368,7 +368,7 @@ export default function HostsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setMachineToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setHostToDelete(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteMachine}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

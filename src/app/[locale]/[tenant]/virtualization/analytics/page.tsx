@@ -5,18 +5,18 @@ import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function AnalyticsPage() {
   const t = useTranslations('Common');
   const { toast } = useToast();
-  const [machines, setMachines] = useState<Machine[]>([]);
+  const [hosts, setHosts] = useState<Host[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch machines from API
-  const fetchMachines = async () => {
+  const fetchHosts = async () => {
     try {
       const response = await fetch('/api/virtualization/machines');
       
@@ -24,25 +24,25 @@ export default function AnalyticsPage() {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Failed to load machines',
+          description: 'Failed to load hosts',
         });
         return;
       }
       
       const data = await response.json();
-      const machines = data.data || [];
-      setMachines(machines);
+      const hosts = data.data || [];
+      setHosts(machines);
 
       // Set first machine as selected if none selected
-      if (machines.length > 0 && !selectedDevice) {
-        setSelectedDevice(machines[0].id);
+      if (hosts.length > 0 && !selectedDevice) {
+        setSelectedDevice(hosts[0].id);
       }
     } catch (error) {
       console.error('Error fetching machines:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to load machines',
+        description: 'Failed to load hosts',
       });
     } finally {
       setIsLoading(false);
@@ -50,7 +50,7 @@ export default function AnalyticsPage() {
   };
 
   useEffect(() => {
-    fetchMachines();
+    fetchHosts();
   }, []);
 
   if (isLoading) {
@@ -68,7 +68,7 @@ export default function AnalyticsPage() {
         <Card className="w-64 p-4">
           <h2 className="font-semibold mb-4">Devices</h2>
           <div className="space-y-2">
-            {machines.map(machine => (
+            {hosts.map(machine => (
               <Button
                 key={machine.id}
                 variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}

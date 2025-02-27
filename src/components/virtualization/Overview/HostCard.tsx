@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Terminal, AlertCircle, MoreHorizontal, BarChart2, RefreshCw, XCircle, ScrollText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Tooltip,
@@ -21,12 +21,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface HostCardProps {
-  machine: Machine;
+  host: Host;
   onDelete?: (id: string) => void;
-  onTestConnection?: (machine: Machine) => void;
+  onTestConnection?: (host: Host) => void;
 }
 
-export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps) {
+export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
   const [showError, setShowError] = useState(false);
 
@@ -112,7 +112,7 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
     const tenant = pathSegments[2] || 'default';
     
     // Build the correct path with locale and tenant
-    const terminalPath = `/${locale}/${tenant}/terminals/${machine.name.toLowerCase()}`;
+    const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
     console.log(`Redirecting to terminal: ${terminalPath}`);
     router.push(terminalPath);
   };
@@ -125,15 +125,15 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
             <div className="flex items-center">
               <div className="w-[200px] flex items-center">
                 <div className="mr-2">
-                  {getStatusDot(machine.status)}
+                  {getStatusDot(host.status)}
                 </div>
                 <CardTitle className="text-base font-semibold truncate flex-1">
-                  {machine.name}
+                  {host.name}
                 </CardTitle>
               </div>
             </div>
             <CardDescription className="text-xs">
-              {machine.ip}{machine.port ? `:${machine.port}` : ''}
+              {host.ip}{host.port ? `:${host.port}` : ''}
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
@@ -144,19 +144,19 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[160px]">
-                <DropdownMenuItem onClick={() => router.push(`/metrics/${machine.name}`)}>
+                <DropdownMenuItem onClick={() => router.push(`/metrics/${host.name}`)}>
                   <BarChart2 className="mr-2 h-4 w-4" />
                   <span>Metrics</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => router.push(`/logs/${machine.name}`)}>
+                <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)}>
                   <ScrollText className="mr-2 h-4 w-4" />
                   <span>Logs</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onTestConnection?.(machine)}>
+                <DropdownMenuItem onClick={() => onTestConnection?.(host)}>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   <span>Refresh</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete?.(machine.id)} className="text-destructive">
+                <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
                   <XCircle className="mr-2 h-4 w-4" />
                   <span>Delete</span>
                 </DropdownMenuItem>
@@ -167,9 +167,9 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
         <CardContent className="p-4 pt-2">
           <div className="flex flex-col space-y-2">
             <div className="text-sm text-muted-foreground">
-              {machine.description && <p>{machine.description}</p>}
-              {machine.lastConnected && (
-                <p className="text-xs mt-1">Last connected: {new Date(machine.lastConnected).toLocaleString()}</p>
+              {host.description && <p>{host.description}</p>}
+              {host.lastConnected && (
+                <p className="text-xs mt-1">Last connected: {new Date(host.lastConnected).toLocaleString()}</p>
               )}
             </div>
             <Button 
@@ -177,7 +177,7 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
               size="sm"
               className="w-full mt-2"
               onClick={handleTerminalClick}
-              disabled={machine.status !== 'connected'}
+              disabled={host.status !== 'connected'}
             >
               <Terminal className="h-4 w-4 mr-2" />
               Terminal
@@ -198,12 +198,12 @@ export function HostCard({ machine, onDelete, onTestConnection }: HostCardProps)
             <div className="text-sm">
               <p className="font-medium mb-2">Error Details:</p>
               <pre className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-xs">
-                {machine.errorMessage || 'No error details available'}
+                {host.errorMessage || 'No error details available'}
               </pre>
             </div>
             <div className="text-sm text-muted-foreground">
-              <p>Last successful connection: {machine.lastConnected ? 
-                new Date(machine.lastConnected).toLocaleString() : 
+              <p>Last successful connection: {host.lastConnected ? 
+                new Date(host.lastConnected).toLocaleString() : 
                 'Never'
               }</p>
             </div>

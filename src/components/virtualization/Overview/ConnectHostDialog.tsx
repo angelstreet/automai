@@ -9,14 +9,14 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { Loader2 } from 'lucide-react';
 import { ConnectionForm, FormData } from './ConnectionForm';
 
 interface ConnectHostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: (machine: Machine) => void;
+  onSuccess?: (host: Host) => void;
 }
 
 export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHostDialogProps) {
@@ -104,7 +104,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
     setIsCreating(true);
     try {
-      const response = await fetch('/api/virtualization/machines', {
+      const response = await fetch('/api/hosts', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       }
       
       if (message.includes('refused')) {
-        return `Connection refused. Please check if the service is running on the target machine and the port is correct.`;
+        return `Connection refused. Please check if the service is running on the target host and the port is correct.`;
       }
       
       if (message.includes('authentication') || message.includes('password')) {
@@ -175,7 +175,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       return message;
     }
     
-    return 'Failed to connect to the remote machine. Please check your connection details.';
+    return 'Failed to connect to the remote host. Please check your connection details.';
   };
 
   const testConnection = async (): Promise<boolean> => {
@@ -193,7 +193,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     setTestError(null);
     
     try {
-      const response = await fetch('/api/virtualization/machines/test-connection', {
+      const response = await fetch('/api/hosts/test-connection', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -204,7 +204,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
           port: formData.port ? parseInt(formData.port) : undefined,
           username: formData.username,
           password: formData.password,
-          machineId: formData.id,
+          hostId: formData.id,
         }),
       });
 

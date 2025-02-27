@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settings, Plus } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { HostOverview } from '@/components/virtualization/Overview/HostOverview';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { ConnectHostDialog } from '@/components/virtualization/Overview/ConnectHostDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -23,30 +23,30 @@ export default function VirtualizationPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [machineToDelete, setMachineToDelete] = useState<string | null>(null);
+  const [hostToDelete, setMachineToDelete] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [machines, setMachines] = useState<Machine[]>([]);
+  const [hosts, setHosts] = useState<Host[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Fetch machines from API
-  const fetchMachines = async () => {
+  const fetchHosts = async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/virtualization/machines');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch machines');
+        throw new Error('Failed to fetch hosts');
       }
       
       const data = await response.json();
-      setMachines(data.data || []);
+      setHosts(data.data || []);
     } catch (error) {
       console.error('Error fetching machines:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to load machines',
+        description: 'Failed to load hosts',
       });
     } finally {
       setIsLoading(false);
@@ -55,15 +55,15 @@ export default function VirtualizationPage() {
   };
 
   // Test a single machine connection
-  const testMachineConnection = async (machine: Machine) => {
+  const testMachineConnection = async (machine: Host) => {
     try {
       // Update the specific machine to testing status
-      const machineIndex = machines.findIndex(m => m.id === machine.id);
+      const machineIndex = hosts.findIndex(m => m.id === machine.id);
       if (machineIndex === -1) return;
       
       const updatedMachines = [...machines];
-      updatedMachines[machineIndex] = { ...machines[machineIndex], status: 'pending' };
-      setMachines(updatedMachines);
+      updatedMachines[machineIndex] = { ...hosts[machineIndex], status: 'pending' };
+      setHosts(updatedMachines);
       
       // Test connection
       const testResponse = await fetch('/api/virtualization/machines/test-connection', {
@@ -101,7 +101,7 @@ export default function VirtualizationPage() {
           status: finalStatus,
           lastConnected: isSuccess ? new Date() : finalMachines[finalIndex].lastConnected
         };
-        setMachines(finalMachines);
+        setHosts(finalMachines);
       }
       
       // Show toast notification
@@ -121,7 +121,7 @@ export default function VirtualizationPage() {
       const errorIndex = errorMachines.findIndex(m => m.id === machine.id);
       if (errorIndex !== -1) {
         errorMachines[errorIndex] = { ...errorMachines[errorIndex], status: 'pending' };
-        setMachines(errorMachines);
+        setHosts(errorMachines);
       }
       
       toast({
@@ -135,14 +135,14 @@ export default function VirtualizationPage() {
 
   // Fetch machines on component mount
   useEffect(() => {
-    fetchMachines();
+    fetchHosts();
   }, []);
 
   // Refresh machines
   const refreshMachines = async () => {
     setIsRefreshing(true);
     
-    if (machines.length > 0) {
+    if (hosts.length > 0) {
       let successCount = 0;
       let failureCount = 0;
       let pendingCount = 0;
@@ -156,7 +156,7 @@ export default function VirtualizationPage() {
           const machineIndex = updatedMachines.findIndex(m => m.id === machine.id);
           if (machineIndex !== -1) {
             updatedMachines[machineIndex] = { ...updatedMachines[machineIndex], status: 'pending' };
-            setMachines([...updatedMachines]);
+            setHosts([...updatedMachines]);
           }
           
           // Test connection
@@ -192,7 +192,7 @@ export default function VirtualizationPage() {
               status: finalStatus,
               lastConnected: isSuccess ? new Date() : updatedMachines[finalIndex].lastConnected
             };
-            setMachines([...updatedMachines]);
+            setHosts([...updatedMachines]);
           }
           
           if (isSuccess) {
@@ -209,7 +209,7 @@ export default function VirtualizationPage() {
           const errorIndex = updatedMachines.findIndex(m => m.id === machine.id);
           if (errorIndex !== -1) {
             updatedMachines[errorIndex] = { ...updatedMachines[errorIndex], status: 'pending' };
-            setMachines([...updatedMachines]);
+            setHosts([...updatedMachines]);
           }
           
           pendingCount++;
@@ -236,15 +236,15 @@ export default function VirtualizationPage() {
         });
       }
     } else {
-      await fetchMachines();
+      await fetchHosts();
     }
     
     setIsRefreshing(false);
   };
 
   // Handle connection success
-  const handleConnectionSuccess = (newMachine: Machine) => {
-    setMachines(prev => [...prev, newMachine]);
+  const handleConnectionSuccess = (newHost: Machine) => {
+    setHosts(prev => [...prev, newHost]);
   };
 
   // Handle delete machine
@@ -255,10 +255,10 @@ export default function VirtualizationPage() {
 
   // Confirm delete machine
   const confirmDeleteMachine = async () => {
-    if (!machineToDelete) return;
+    if (!hostToDelete) return;
     
     try {
-      const response = await fetch(`/api/virtualization/machines/${machineToDelete}`, {
+      const response = await fetch(`/api/virtualization/machines/${hostToDelete}`, {
         method: 'DELETE',
       });
       
@@ -266,7 +266,7 @@ export default function VirtualizationPage() {
         throw new Error('Failed to delete machine');
       }
       
-      setMachines(prev => prev.filter(machine => machine.id !== machineToDelete));
+      setHosts(prev => prev.filter(machine => machine.id !== hostToDelete));
       toast({
         title: 'Success',
         description: 'Host deleted successfully',
@@ -327,7 +327,7 @@ export default function VirtualizationPage() {
         </div>
       ) : (
         <>
-          {machines.length === 0 ? (
+          {hosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Server className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">{t('no_machines')}</h3>
@@ -344,7 +344,7 @@ export default function VirtualizationPage() {
               <HostOverview
                 machines={machines}
                 onDelete={handleDeleteMachine}
-                onRefresh={fetchMachines}
+                onRefresh={fetchHosts}
                 onTestConnection={testMachineConnection}
                 className="mt-4"
               />

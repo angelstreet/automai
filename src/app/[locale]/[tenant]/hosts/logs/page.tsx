@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { useToast } from '@/components/ui/use-toast';
 
 interface Log {
@@ -21,39 +21,34 @@ interface Log {
 export default function LogsPage() {
   const t = useTranslations('Common');
   const { toast } = useToast();
-  const [machines, setMachines] = useState<Machine[]>([]);
+  const [hosts, setHosts] = useState<Host[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch machines from API
-  const fetchMachines = async () => {
+  // Fetch hosts from API
+  const fetchHosts = async () => {
     try {
-      const response = await fetch('/api/virtualization/machines');
+      setIsLoading(true);
+      const response = await fetch('/api/hosts');
       
       if (!response.ok) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to load machines',
-        });
-        return;
+        throw new Error('Failed to fetch hosts');
       }
       
       const data = await response.json();
-      const machines = data.data || [];
-      setMachines(machines);
+      setHosts(data.data || []);
 
-      // Set first machine as selected if none selected
-      if (machines.length > 0 && !selectedDevice) {
-        setSelectedDevice(machines[0].id);
+      // Set first host as selected if none selected
+      if (hosts.length > 0 && !selectedDevice) {
+        setSelectedDevice(hosts[0].id);
       }
 
       // Fetch logs for all machines
       const mockLogs: Log[] = [
-        { id: '1', deviceId: machines[0]?.id, timestamp: '2024-03-20T10:00:00Z', level: 'info', message: 'Container started successfully' },
-        { id: '2', deviceId: machines[0]?.id, timestamp: '2024-03-20T10:01:00Z', level: 'warning', message: 'High memory usage detected' },
-        { id: '3', deviceId: machines[1]?.id, timestamp: '2024-03-20T10:02:00Z', level: 'error', message: 'Failed to connect to network' }
+        { id: '1', deviceId: hosts[0]?.id, timestamp: '2024-03-20T10:00:00Z', level: 'info', message: 'Container started successfully' },
+        { id: '2', deviceId: hosts[0]?.id, timestamp: '2024-03-20T10:01:00Z', level: 'warning', message: 'High memory usage detected' },
+        { id: '3', deviceId: hosts[1]?.id, timestamp: '2024-03-20T10:02:00Z', level: 'error', message: 'Failed to connect to network' }
       ].filter(log => log.deviceId); // Only keep logs for existing machines
 
       setLogs(mockLogs);
@@ -62,7 +57,7 @@ export default function LogsPage() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to load machines',
+        description: 'Failed to load hosts',
       });
     } finally {
       setIsLoading(false);
@@ -70,7 +65,7 @@ export default function LogsPage() {
   };
 
   useEffect(() => {
-    fetchMachines();
+    fetchHosts();
   }, []);
 
   const filteredLogs = selectedDevice
@@ -99,7 +94,7 @@ export default function LogsPage() {
             >
               All Devices
             </Button>
-            {machines.map(machine => (
+            {hosts.map(machine => (
               <Button
                 key={machine.id}
                 variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}

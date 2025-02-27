@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { useToast } from '@/components/ui/use-toast';
 
 interface Log {
@@ -21,7 +21,7 @@ interface Log {
 export default function LogsPage() {
   const t = useTranslations('Common');
   const { toast } = useToast();
-  const [machines, setMachines] = useState<Machine[]>([]);
+  const [machines, setMachines] = useState<Host[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -101,12 +101,12 @@ export default function LogsPage() {
             </Button>
             {machines.map(machine => (
               <Button
-                key={machine.id}
-                variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}
+                key={host.id}
+                variant={selectedDevice === host.id ? 'secondary' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setSelectedDevice(machine.id)}
+                onClick={() => setSelectedDevice(host.id)}
               >
-                {machine.name}
+                {host.name}
               </Button>
             ))}
           </div>

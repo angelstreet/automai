@@ -1,4 +1,4 @@
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,18 +10,18 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 interface HostTableProps {
-  machines: Machine[];
-  selectedMachines: Set<string>;
+  hosts: Host[];
+  selectedHosts: Set<string>;
   selectMode: boolean;
   onSelect: (id: string) => void;
   onSelectAll: () => void;
   onDelete?: (id: string) => void;
-  onTestConnection?: (machine: Machine) => void;
+  onTestConnection?: (host: Host) => void;
 }
 
 export function HostTable({
-  machines,
-  selectedMachines,
+  hosts,
+  selectedHosts,
   selectMode,
   onSelect,
   onSelectAll,
@@ -31,7 +31,7 @@ export function HostTable({
   const router = useRouter();
   const t = useTranslations('Virtualization');
 
-  // Get status badge based on machine status
+  // Get status badge based on host.status
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'connected':
@@ -59,7 +59,7 @@ export function HostTable({
             {selectMode && (
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedMachines.size === machines.length}
+                  checked={selectedHosts.size === hosts.length}
                   onCheckedChange={onSelectAll}
                   aria-label="Select all"
                 />
@@ -74,30 +74,30 @@ export function HostTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {machines.map((machine) => (
-            <TableRow key={machine.id} className={cn({
-              "bg-muted/50": selectedMachines.has(machine.id),
+          {hosts.map((host) => (
+            <TableRow key={host.id} className={cn({
+              "bg-muted/50": selectedHosts.has(host.id),
             })}>
               {selectMode && (
                 <TableCell>
                   <Checkbox
-                    checked={selectedMachines.has(machine.id)}
-                    onCheckedChange={() => onSelect(machine.id)}
+                    checked={selectedHosts.has(host.id)}
+                    onCheckedChange={() => onSelect(host.id)}
                     aria-label="Select row"
                   />
                 </TableCell>
               )}
-              <TableCell className="font-medium">{machine.name}</TableCell>
-              <TableCell>{machine.ip}{machine.port ? `:${machine.port}` : ''}</TableCell>
-              <TableCell>{getStatusBadge(machine.status)}</TableCell>
-              <TableCell>{formatDate(machine.lastConnected ? new Date(machine.lastConnected) : undefined)}</TableCell>
+              <TableCell className="font-medium">{host.name}</TableCell>
+              <TableCell>{host.ip}{host.port ? `:${host.port}` : ''}</TableCell>
+              <TableCell>{getStatusBadge(host.status)}</TableCell>
+              <TableCell>{formatDate(host.lastConnected ? new Date(host.lastConnected) : undefined)}</TableCell>
               <TableCell>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => router.push(`/terminals/${machine.name}`)}
-                  disabled={machine.status !== 'connected'}
+                  onClick={() => router.push(`/terminals/${host.name}`)}
+                  disabled={host.status !== 'connected'}
                 >
                   <Terminal className="h-4 w-4" />
                 </Button>
@@ -111,16 +111,16 @@ export function HostTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onTestConnection?.(machine)}>
+                      <DropdownMenuItem onClick={() => onTestConnection?.(host)}>
                         Refresh
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push(`/metrics/${machine.name}`)}>
+                      <DropdownMenuItem onClick={() => router.push(`/metrics/${host.name}`)}>
                         Metrics
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push(`/logs/${machine.name}`)}>
+                      <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)}>
                         Logs
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onDelete?.(machine.id)} className="text-destructive">
+                      <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>

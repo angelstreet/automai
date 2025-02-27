@@ -1,4 +1,4 @@
-import { Device, Machine } from '@/types/virtualization';
+import { Device, Machine } from '@/types/hosts';
 
 // Keep only real constants (remove mock data)
 export const STATUS_VARIANTS = {

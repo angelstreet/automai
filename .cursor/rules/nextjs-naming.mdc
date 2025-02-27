@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 # Next.js Naming Conventions
 
 ## File and Directory Naming

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Machine } from '@/types/virtualization';
+import { Host } from '@/types/hosts';
 import { StatusSummary } from './StatusSummary';
 import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
@@ -10,16 +10,16 @@ import { ConnectHostDialog } from './ConnectHostDialog';
 import { useToast } from '@/components/ui/use-toast';
 
 interface HostOverviewProps {
-  machines: Machine[];
+  hosts: Host[];
   isLoading?: boolean;
   onRefresh?: () => void;
   onDelete?: (id: string) => void;
-  onTestConnection?: (machine: Machine) => void;
+  onTestConnection?: (host: Host) => void;
   className?: string;
 }
 
 export function HostOverview({
-  machines,
+  hosts,
   isLoading = false,
   onRefresh,
   onDelete,
@@ -31,7 +31,7 @@ export function HostOverview({
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   
   // State for selection
-  const [selectedMachines, setSelectedMachines] = useState<Set<string>>(new Set());
+  const [selectedHosts, setSelectedMachines] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
   
   // State for status filtering
@@ -40,26 +40,26 @@ export function HostOverview({
   // State for connecting host dialog
   const [showConnectDialog, setShowConnectDialog] = useState(false);
   
-  // Filter machines by status if filter is active
-  const filteredMachines = statusFilter 
-    ? machines.filter(m => {
+  // Filter hosts by status if filter is active
+  const filteredHosts = statusFilter 
+    ? hosts.filter(m => {
         if (statusFilter === 'running') return m.status === 'connected';
         if (statusFilter === 'warning') return m.status === 'pending';
         if (statusFilter === 'error') return m.status === 'failed';
         return true;
       })
-    : machines;
+    : hosts;
   
   const statusSummary = {
-    connected: machines.filter(m => m.status === 'connected').length,
-    failed: machines.filter(m => m.status === 'failed').length,
-    pending: machines.filter(m => m.status === 'pending').length,
-    total: machines.length,
+    connected: hosts.filter(m => m.status === 'connected').length,
+    failed: hosts.filter(m => m.status === 'failed').length,
+    pending: hosts.filter(m => m.status === 'pending').length,
+    total: hosts.length,
   };
 
-  // Handle machine selection
+  // Handle host selection
   const handleSelect = (id: string) => {
-    const newSelection = new Set(selectedMachines);
+    const newSelection = new Set(selectedHosts);
     if (newSelection.has(id)) {
       newSelection.delete(id);
     } else {
@@ -70,10 +70,10 @@ export function HostOverview({
 
   // Handle select all
   const handleSelectAll = () => {
-    if (selectedMachines.size === filteredMachines.length) {
+    if (selectedHosts.size === filteredHosts.length) {
       setSelectedMachines(new Set());
     } else {
-      setSelectedMachines(new Set(filteredMachines.map(m => m.id)));
+      setSelectedMachines(new Set(filteredHosts.map(m => m.id)));
     }
   };
 
@@ -85,8 +85,8 @@ export function HostOverview({
 
   // Handle bulk delete
   const handleBulkDelete = () => {
-    if (onDelete && selectedMachines.size > 0) {
-      selectedMachines.forEach(id => onDelete(id));
+    if (onDelete && selectedHosts.size > 0) {
+      selectedHosts.forEach(id => onDelete(id));
       setSelectedMachines(new Set());
       setSelectMode(false);
     }
@@ -96,7 +96,7 @@ export function HostOverview({
   const handleBulkRefresh = async () => {
     if (onTestConnection) {
       let successCount = 0;
-      for (const machine of filteredMachines) {
+      for (const machine of filteredHosts) {
         try {
           await onTestConnection(machine);
           successCount++;
@@ -143,9 +143,9 @@ export function HostOverview({
                 variant="destructive" 
                 size="sm" 
                 onClick={handleBulkDelete}
-                disabled={selectedMachines.size === 0}
+                disabled={selectedHosts.size === 0}
               >
-                Delete ({selectedMachines.size})
+                Delete ({selectedHosts.size})
               </Button>
             </>
           ) : (
@@ -154,7 +154,7 @@ export function HostOverview({
                 variant="outline" 
                 size="sm" 
                 onClick={() => setSelectMode(true)}
-                disabled={filteredMachines.length < 2}
+                disabled={filteredHosts.length < 2}
               >
                 Select
               </Button>
@@ -179,10 +179,10 @@ export function HostOverview({
       
       {viewMode === 'grid' ? (
         <>
-          {filteredMachines.length > 0 ? (
+          {filteredHosts.length > 0 ? (
             <HostGrid
-              machines={filteredMachines}
-              selectedMachines={selectedMachines}
+              hosts={filteredHosts}
+              selectedHosts={selectedHosts}
               selectMode={selectMode}
               onSelect={handleSelect}
               onDelete={onDelete}
@@ -190,7 +190,7 @@ export function HostOverview({
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-muted-foreground mb-4">No machines match the current filter</p>
+              <p className="text-muted-foreground mb-4">No hosts match the current filter</p>
               <Button variant="outline" onClick={() => setStatusFilter(null)}>
                 Clear Filter
               </Button>
@@ -199,10 +199,10 @@ export function HostOverview({
         </>
       ) : (
         <>
-          {filteredMachines.length > 0 ? (
+          {filteredHosts.length > 0 ? (
             <HostTable
-              machines={filteredMachines}
-              selectedMachines={selectedMachines}
+              hosts={filteredHosts}
+              selectedHosts={selectedHosts}
               selectMode={selectMode}
               onSelect={handleSelect}
               onSelectAll={handleSelectAll}
@@ -211,7 +211,7 @@ export function HostOverview({
             />
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-muted-foreground mb-4">No machines match the current filter</p>
+              <p className="text-muted-foreground mb-4">No hosts match the current filter</p>
               <Button variant="outline" onClick={() => setStatusFilter(null)}>
                 Clear Filter
               </Button>

@@ -28,7 +28,7 @@ export interface VMConfig {
   memory: number;
 }
 
-export interface Machine {
+export interface Host {
   id: string;
   name: string;
   description?: string;
@@ -48,4 +48,7 @@ export interface Machine {
   
   createdAt: Date;
   updatedAt: Date;
-} 
+}
+
+// For backward compatibility during transition
+export type Machine = Host; 

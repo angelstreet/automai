@@ -49,6 +49,7 @@ console.log('Stats routes set up successfully');
 
 // Hosts routes
 console.log('Setting up hosts routes...');
+router.use('/hosts', machinesRoutes);
 router.use('/virtualization/machines', machinesRoutes);
 console.log('Hosts routes set up successfully');
 

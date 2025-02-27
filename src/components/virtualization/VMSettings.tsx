@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { VMConfig } from '@/types/virtualization';
+import { VMConfig } from '@/types/hosts';
 
 interface VMSettingsProps {
   config: VMConfig;
@@ -24,7 +24,7 @@ export function VMSettings({ config, onSave }: VMSettingsProps) {
       <CardHeader>
         <CardTitle>VM Configuration</CardTitle>
         <CardDescription>
-          Configure the virtual machine settings.
+          Configure the virtual host settings.
         </CardDescription>
       </CardHeader>
       <CardContent>
