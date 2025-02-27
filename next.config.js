@@ -31,6 +31,8 @@ const nextConfig = {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
     },
+    // Enable WebSocket support
+    webSocketServer: true,
   },
   serverExternalPackages: ['ws', 'ssh2'],
   

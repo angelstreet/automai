@@ -26,7 +26,7 @@ alwaysApply: true
      - Components -> `src/components/{feature}/{Component}.tsx`
    - Break down large components into smaller, focused components
    - Use composition to maintain functionality while reducing file size
-
+2. 
 ## Important
 - Always place cursor rules in the `.cursor/rules` directory with appropriate names (e.g., `i18n.mdc`, `debugging.mdc`)
 
