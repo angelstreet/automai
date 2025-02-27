@@ -3,9 +3,8 @@ Automai is a multi-tenant SaaS platform designed for end-to-end test automation 
 
 ## 🚀 Quick Start Commands
 ```bash
+# Kill running process node
  pkill -f "node"
- 
- curl -v http://localhost:3000/api/virtualization/machines/test-id/terminal
  
 # Start Next.js frontend
 rm -rf .next && npm run dev
@@ -25,7 +24,6 @@ npm test  # or: npx jest tests/e2e.test.ts --runInBand
 # Open Prisma database GUI
 npm run prisma:studio
 ```
-
 
 
 ## Installation
