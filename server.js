@@ -354,6 +354,12 @@ app.prepare().then(async () => {
     // Handle terminal WebSocket connections
     if (pathname.startsWith('/api/virtualization/machines/') && pathname.endsWith('/terminal')) {
       console.log('[WebSocketServer] Handling terminal WebSocket upgrade');
+      
+      // Extract machine ID for logging
+      const machineIdMatch = pathname.match(/\/api\/virtualization\/machines\/([^\/]+)\/terminal/);
+      const machineId = machineIdMatch ? machineIdMatch[1] : 'unknown';
+      console.log('[WebSocketServer] Processing upgrade for machine ID:', machineId);
+      
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });

@@ -108,6 +108,7 @@ export function Terminal({ connection }: TerminalProps) {
       return;
     }
     
+    // Use the custom server WebSocket endpoint directly
     const socketUrl = `${protocol}//${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
     console.log(`[WebSocket] Connecting to: ${socketUrl}`, { 
       connectionId: connection.id,
@@ -272,7 +273,21 @@ export function Terminal({ connection }: TerminalProps) {
         connectionId: connection.id
       });
       
-      term.write('\r\n\x1B[1;3;33mConnection closed.\x1B[0m\r\n');
+      // Show different messages based on close code
+      if (event.code === 1006) {
+        // Abnormal closure
+        term.write('\r\n\x1B[1;3;31mConnection closed abnormally. The server may be unavailable.\x1B[0m\r\n');
+        
+        // Show toast for abnormal closure
+        toast({
+          variant: 'destructive',
+          title: 'Connection Lost',
+          description: 'The WebSocket connection was closed abnormally. The server may be unavailable.',
+          duration: 5000,
+        });
+      } else {
+        term.write('\r\n\x1B[1;3;33mConnection closed.\x1B[0m\r\n');
+      }
     };
 
     // Handle window resize
