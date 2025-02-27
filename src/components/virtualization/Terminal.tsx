@@ -108,8 +108,10 @@ export function Terminal({ connection }: TerminalProps) {
       return;
     }
     
-    // Use the custom server WebSocket endpoint directly
-    const socketUrl = `${protocol}//${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
+    console.log('[WebSocket] Using connection ID:', connection.id);
+    
+    // Use the new path format for WebSocket endpoint
+    const socketUrl = `${protocol}//${window.location.host}/api/hosts/terminals/${connection.id}`;
     console.log(`[WebSocket] Connecting to: ${socketUrl}`, { 
       connectionId: connection.id,
       connectionType: connection.type,
@@ -161,14 +163,7 @@ export function Terminal({ connection }: TerminalProps) {
 
     socket.onerror = (error) => {
       // Handle WebSocket error event properly
-      let errorMessage;
-      try {
-        // WebSocket error event contains an Event object, not an Error
-        // The actual error details are not accessible in the event object due to browser security
-        errorMessage = 'Connection failed';
-      } catch (e) {
-        errorMessage = 'Unknown WebSocket error';
-      }
+      let errorMessage = 'Connection failed';
       
       console.log('[WebSocket] Error event details:', error);
       
