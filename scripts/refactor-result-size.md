@@ -1,30 +1,21 @@
 # Files to Break Down
 
-_Generated on 2/27/2025, 9:46:31 PM_
+_Generated on 2/27/2025, 9:51:16 PM_
 
-## File Size Issues (4)
+## File Size Issues (0)
 
-### /Users/joachimndoye/Documents/automai/src/components/ui/sidebar.tsx (776 lines)
-- **Issue**: File exceeds 300 lines (776 lines)
-- **Fix**: Review the file's purpose and split based on logical concerns. See 'Refactoring Guidelines' for specific patterns.
-
-### /Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectForm.tsx (363 lines)
-- **Issue**: File exceeds 300 lines (363 lines)
-- **Fix**: Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'.
-
-### /Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectionForm.tsx (370 lines)
-- **Issue**: File exceeds 300 lines (370 lines)
-- **Fix**: Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'.
-
-### /Users/joachimndoye/Documents/automai/src/components/virtualization/Terminal.tsx (367 lines)
-- **Issue**: File exceeds 300 lines (367 lines)
-- **Fix**: Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'.
+No file size issues found.
 
 
 ## Refactoring Strategy
 
 1. **Quick Fixes (Naming & Location)**
    - Fix naming convention issues first
+     - Components: PascalCase.tsx
+     - Hooks: useFeature.ts
+     - Utilities: camelCase.ts
+     - Pages: page.tsx in kebab-case folders
+     - Dynamic routes: [kebab-case].tsx
    - Then address location issues
    - Commit after each batch of similar changes
 

@@ -1,6 +1,6 @@
 # Files to Review
 
-_Generated on 2/27/2025, 9:46:31 PM_
+_Generated on 2/27/2025, 9:51:16 PM_
 
 ## Location Convention Issues (0)
 
@@ -11,6 +11,11 @@ No location convention issues found.
 
 1. **Quick Fixes (Naming & Location)**
    - Fix naming convention issues first
+     - Components: PascalCase.tsx
+     - Hooks: useFeature.ts
+     - Utilities: camelCase.ts
+     - Pages: page.tsx in kebab-case folders
+     - Dynamic routes: [kebab-case].tsx
    - Then address location issues
    - Commit after each batch of similar changes
 

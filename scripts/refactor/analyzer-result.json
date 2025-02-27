@@ -1,52 +1,400 @@
 {
-  "timestamp": "2025-02-27T20:46:31.601Z",
-  "checks": "size",
+  "timestamp": "2025-02-27T20:51:15.853Z",
+  "checks": "naming",
   "results": [
     {
-      "filePath": "/Users/joachimndoye/Documents/automai/src/components/ui/sidebar.tsx",
-      "fileType": "shadcnComponent",
-      "lineCount": 776,
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/coming-soon.tsx",
+      "fileType": "component",
+      "lineCount": 17,
       "issues": [
         {
-          "issue": "size",
-          "message": "File exceeds 300 lines (776 lines)",
-          "suggestion": "Review the file's purpose and split based on logical concerns. See 'Refactoring Guidelines' for specific patterns."
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
         }
       ]
     },
     {
-      "filePath": "/Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectForm.tsx",
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/command-menu.tsx",
       "fileType": "component",
-      "lineCount": 363,
+      "lineCount": 92,
       "issues": [
         {
-          "issue": "size",
-          "message": "File exceeds 300 lines (363 lines)",
-          "suggestion": "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'."
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
         }
       ]
     },
     {
-      "filePath": "/Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectionForm.tsx",
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/common/PinInput/context.tsx",
       "fileType": "component",
-      "lineCount": 370,
+      "lineCount": 3,
       "issues": [
         {
-          "issue": "size",
-          "message": "File exceeds 300 lines (370 lines)",
-          "suggestion": "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'."
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
         }
       ]
     },
     {
-      "filePath": "/Users/joachimndoye/Documents/automai/src/components/virtualization/Terminal.tsx",
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/common/PinInput/index.tsx",
       "fileType": "component",
-      "lineCount": 367,
+      "lineCount": 124,
       "issues": [
         {
-          "issue": "size",
-          "message": "File exceeds 300 lines (367 lines)",
-          "suggestion": "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'."
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/common/PinInput/types.ts",
+      "fileType": "component",
+      "lineCount": 95,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/common/PinInput/usePinInput.ts",
+      "fileType": "component",
+      "lineCount": 165,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/common/PinInput/utils.ts",
+      "fileType": "component",
+      "lineCount": 17,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/confirm-dialog.tsx",
+      "fileType": "component",
+      "lineCount": 66,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/dashboard/overview.tsx",
+      "fileType": "component",
+      "lineCount": 73,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/dashboard/recent-sales.tsx",
+      "fileType": "component",
+      "lineCount": 76,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/app-sidebar.tsx",
+      "fileType": "component",
+      "lineCount": 58,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/data/sidebar-data.ts",
+      "fileType": "constant",
+      "lineCount": 184,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Constants files should use camelCase.ts",
+          "suggestion": "Rename to follow Constants files should use camelCase.ts"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/footer.tsx",
+      "fileType": "component",
+      "lineCount": 77,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/header.tsx",
+      "fileType": "component",
+      "lineCount": 44,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/main.tsx",
+      "fileType": "component",
+      "lineCount": 23,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/nav-group.tsx",
+      "fileType": "component",
+      "lineCount": 153,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/nav-user.tsx",
+      "fileType": "component",
+      "lineCount": 79,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/site-header.tsx",
+      "fileType": "component",
+      "lineCount": 63,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/team-switcher.tsx",
+      "fileType": "component",
+      "lineCount": 108,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/top-nav.tsx",
+      "fileType": "component",
+      "lineCount": 15,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/layout/workspace-header.tsx",
+      "fileType": "component",
+      "lineCount": 94,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/long-text.tsx",
+      "fileType": "component",
+      "lineCount": 73,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/password-input.tsx",
+      "fileType": "component",
+      "lineCount": 37,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/profile-dropdown.tsx",
+      "fileType": "component",
+      "lineCount": 86,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/providers.tsx",
+      "fileType": "component",
+      "lineCount": 22,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/route-guard.tsx",
+      "fileType": "component",
+      "lineCount": 99,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/search.tsx",
+      "fileType": "component",
+      "lineCount": 31,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/select-dropdown.tsx",
+      "fileType": "component",
+      "lineCount": 63,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/settings/language-settings.tsx",
+      "fileType": "component",
+      "lineCount": 61,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/settings/settings-header.tsx",
+      "fileType": "component",
+      "lineCount": 25,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/skip-to-main.tsx",
+      "fileType": "component",
+      "lineCount": 13,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/theme-provider.tsx",
+      "fileType": "component",
+      "lineCount": 24,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/theme-switch.tsx",
+      "fileType": "component",
+      "lineCount": 49,
+      "issues": [
+        {
+          "issue": "naming",
+          "message": "Component files should use PascalCase.tsx",
+          "suggestion": "Rename to follow Component files should use PascalCase.tsx"
         }
       ]
     }

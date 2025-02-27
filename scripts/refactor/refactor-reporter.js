@@ -172,6 +172,11 @@ function generateMarkdownReports(results) {
 
 1. **Quick Fixes (Naming & Location)**
    - Fix naming convention issues first
+     - Components: PascalCase.tsx
+     - Hooks: useFeature.ts
+     - Utilities: camelCase.ts
+     - Pages: page.tsx in kebab-case folders
+     - Dynamic routes: [kebab-case].tsx
    - Then address location issues
    - Commit after each batch of similar changes
 
@@ -282,6 +287,11 @@ function printRecommendations(results) {
   console.log(`\n${colors.cyan}=== Refactoring Strategy ===${colors.reset}`);
   console.log(`1. Quick Fixes (Naming & Location)`);
   console.log(`   - Fix naming convention issues first`);
+  console.log(`     - Components: PascalCase.tsx`);
+  console.log(`     - Hooks: useFeature.ts`);
+  console.log(`     - Utilities: camelCase.ts`);
+  console.log(`     - Pages: page.tsx in kebab-case folders`);
+  console.log(`     - Dynamic routes: [kebab-case].tsx`);
   console.log(`   - Then address location issues`);
   console.log(`   - Commit after each batch of similar changes`);
   

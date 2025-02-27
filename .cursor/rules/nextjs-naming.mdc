@@ -1,0 +1,49 @@
+# Next.js Naming Conventions
+
+## File and Directory Naming
+
+### Pages & Folders
+- Use `kebab-case` for page files and folders
+  - ✅ `about-us.tsx`, `blog/[post-id].tsx`
+  - ❌ `aboutUs.tsx`, `blog/[postId].tsx`
+
+### Components
+- Use `PascalCase` for component files
+  - ✅ `Button.tsx`, `NavBar.tsx`, `UserProfile.tsx`
+  - ❌ `button.tsx`, `nav-bar.tsx`, `user_profile.tsx`
+- Child components should follow `ParentNameChildPart` pattern
+  - ✅ `ButtonIcon.tsx`, `NavBarLogo.tsx`
+
+### Utilities
+- Use `camelCase` for utility files
+  - ✅ `formatDate.ts`, `fetchData.ts`
+  - ❌ `FormatDate.ts`, `fetch-data.ts`
+
+### Hooks
+- Use `camelCase` starting with `use`
+  - ✅ `useAuth.ts`, `useWindowSize.ts`
+  - ❌ `UseAuth.ts`, `windowSize.ts`
+
+### Constants
+- Use `camelCase` for constant files
+  - ✅ `routes.ts`, `apiEndpoints.ts`
+  - ❌ `Routes.ts`, `api-endpoints.ts`
+- Within files, use `UPPER_SNAKE_CASE` for constant values
+  - ✅ `export const MAX_ITEMS = 10;`
+- Use `PascalCase` for constant objects and enums
+  - ✅ `export const ApiRoutes = { ... }`
+
+### Types
+- Use `camelCase` for type files
+  - ✅ `user.ts`, `authTypes.ts`
+  - ❌ `User.ts`, `auth-types.ts`
+- Within files, use `PascalCase` for type and interface names
+  - ✅ `interface UserProfile { ... }`
+
+### Dynamic Routes
+- Use `kebab-case` with square brackets
+  - ✅ `[post-id].tsx`, `[user-name]/settings.tsx`
+  - ❌ `[postId].tsx`, `[userName]/settings.tsx`
+
+## General Rule
+Consistency trumps all. Stick to one style per category throughout the project. 

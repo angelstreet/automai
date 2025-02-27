@@ -55,6 +55,9 @@ const NAMING_PATTERNS = {
   constant: /^[a-z][a-zA-Z0-9]*\.ts$/,
   type: /^[a-z][a-zA-Z0-9]*\.ts$/,
   shadcnComponent: /^[a-z][a-zA-Z0-9-]*\.(ts|tsx)$/,
+  page: /^page\.(ts|tsx)$/,
+  dynamicRoute: /^\[([a-z0-9]+-)*[a-z0-9]+\]\.(ts|tsx)$/,
+  pageFolder: /^([a-z0-9]+-)*[a-z0-9]+$/,
 };
 
 const LOCATION_PATTERNS = {
@@ -85,6 +88,17 @@ const LOCATION_PATTERNS = {
   type: [
     /^src\/types\//,
     /^src\/lib\/types\//
+  ],
+  page: [
+    /^src\/app\/\[locale\]\/page\.(ts|tsx)$/,
+    /^src\/app\/\[locale\]\/\[tenant\]\/page\.(ts|tsx)$/,
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/page\.(ts|tsx)$/,
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/[a-z-]+\/page\.(ts|tsx)$/
+  ],
+  dynamicRoute: [
+    /^src\/app\/\[locale\]\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
+    /^src\/app\/\[locale\]\/\[tenant\]\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/\[([a-z0-9]+-)*[a-z0-9]+\]\//
   ]
 };
 
@@ -92,6 +106,7 @@ const LOCATION_PATTERNS = {
 const BREAKDOWN_SUGGESTIONS = {
   component: "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'.",
   page: "Create a _components directory for page-specific components, extract sections into separate components, and move data fetching to actions.ts or api.ts. See 'Refactoring Guidelines: Pages'.",
+  dynamicRoute: "Create a _components directory for route-specific components, extract sections into separate components, and move data fetching to actions.ts or api.ts. See 'Refactoring Guidelines: Pages'.",
   util: "Group related functions by functionality into separate files and create an index.ts to re-export them. See 'Refactoring Guidelines: Utility Functions'.",
   hook: "Split by functionality into separate hooks following use[Feature][Action].ts pattern and organize internals (state, derived state, handlers, effects). See 'Refactoring Guidelines: Hooks'.",
   constant: "Group related constants in separate files by domain and use index.ts to re-export all constants. See 'Refactoring Guidelines: Constants'.",
@@ -138,6 +153,16 @@ function determineFileType(filePath, content) {
   // Check file extension first - if not tsx/jsx/ts, unlikely to be a React component
   if (!['.tsx', '.jsx', '.ts'].includes(ext)) {
     return 'other';
+  }
+  
+  // Check if it's a page file
+  if (fileName === 'page.tsx' || fileName === 'page.ts') {
+    return 'page';
+  }
+  
+  // Check if it's a dynamic route
+  if (fileName.startsWith('[') && fileName.includes(']')) {
+    return 'dynamicRoute';
   }
   
   // Check if it's a component
@@ -204,6 +229,12 @@ function checkNamingConvention(fileName, fileType) {
       message = 'Constants files should use camelCase.ts';
     } else if (fileType === 'type') {
       message = 'Type files should use camelCase.ts';
+    } else if (fileType === 'page') {
+      message = 'Page files should be named page.tsx';
+    } else if (fileType === 'dynamicRoute') {
+      message = 'Dynamic route files should use kebab-case in square brackets, e.g., [post-id].tsx';
+    } else if (fileType === 'pageFolder') {
+      message = 'Page folders should use kebab-case';
     }
     
     return { isValid: false, message, suggestion: `Rename to follow ${message}` };
@@ -250,7 +281,7 @@ function checkLocationConvention(filePath, fileType) {
       suggestion = 'Hooks should be in src/hooks/ or src/lib/hooks/';
       break;
     case 'util':
-      suggestion = 'Utils should be in src/utils/ or src/lib/utils/';
+      suggestion = 'Utilities should be in src/utils/ or src/lib/utils/';
       break;
     case 'constant':
       suggestion = 'Constants should be in src/constants/ or src/lib/constants/';
@@ -258,8 +289,14 @@ function checkLocationConvention(filePath, fileType) {
     case 'type':
       suggestion = 'Types should be in src/types/ or src/lib/types/';
       break;
+    case 'page':
+      suggestion = 'Page files should be in src/app/[locale]/ or src/app/[locale]/[tenant]/ directories following Next.js App Router conventions';
+      break;
+    case 'dynamicRoute':
+      suggestion = 'Dynamic route files should be in src/app/[locale]/ or src/app/[locale]/[tenant]/ directories with kebab-case names in square brackets';
+      break;
     default:
-      suggestion = `${fileType} is in an incorrect location`;
+      suggestion = `Unknown file type: ${fileType}`;
   }
 
   return { valid: false, message: `${fileType} in incorrect location`, suggestion };
