@@ -16,22 +16,26 @@ export interface WebSocketConnection extends WebSocket {
  */
 export function getWebSocketServer(): WebSocketServer {
   if (!wss) {
+    console.log('[WebSocketServer] Initializing new WebSocket server');
     logger.info('Initializing WebSocketServer', {
       action: 'WEBSOCKET_SERVER_INIT',
       saveToDb: true
     });
     
     wss = new WebSocketServer({ noServer: true });
+    console.log('[WebSocketServer] Created with noServer: true');
     
     // Set up ping interval to detect dead connections
     const pingInterval = setInterval(() => {
       if (!wss) {
+        console.log('[WebSocketServer] Server gone, clearing ping interval');
         clearInterval(pingInterval);
         return;
       }
       
       wss.clients.forEach((ws: WebSocketConnection) => {
         if (ws.isAlive === false) {
+          console.log('[WebSocketServer] Terminating dead connection');
           return ws.terminate();
         }
         
@@ -42,6 +46,7 @@ export function getWebSocketServer(): WebSocketServer {
     
     // Handle server close
     wss.on('close', () => {
+      console.log('[WebSocketServer] Server closed');
       clearInterval(pingInterval);
       wss = null;
     });
@@ -65,12 +70,20 @@ export function handleUpgrade(
   path: string,
   onConnection: (ws: WebSocketConnection, req: IncomingMessage) => void
 ): void {
+  console.log('[WebSocketServer] Handling upgrade request for path:', path);
+  console.log('[WebSocketServer] Request URL:', req.url);
+  console.log('[WebSocketServer] Request headers:', req.headers);
+  
   const url = new URL(req.url || '', `http://${req.headers.host}`);
+  console.log('[WebSocketServer] Parsed URL pathname:', url.pathname);
   
   if (url.pathname === path) {
+    console.log('[WebSocketServer] Path matches, getting server instance');
     const server = getWebSocketServer();
     
+    console.log('[WebSocketServer] Upgrading connection');
     server.handleUpgrade(req, socket, head, (ws: WebSocket) => {
+      console.log('[WebSocketServer] Connection upgraded successfully');
       const wsConnection = ws as WebSocketConnection;
       wsConnection.isAlive = true;
       
@@ -79,11 +92,12 @@ export function handleUpgrade(
         wsConnection.isAlive = true;
       });
       
+      console.log('[WebSocketServer] Emitting connection event');
       server.emit('connection', wsConnection, req);
       onConnection(wsConnection, req);
     });
   } else {
-    // Not a WebSocket upgrade for our path
+    console.log('[WebSocketServer] Path mismatch, destroying socket');
     socket.destroy();
   }
 } 
