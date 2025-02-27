@@ -26,14 +26,14 @@ const nextConfig = {
     return config;
   },
   
-  // Configure server options for WebSocket support
+  // Configure server options
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
     },
-    // Enable WebSocket support
-    webSocketServer: true,
   },
+  
+  // External packages that should not be bundled
   serverExternalPackages: ['ws', 'ssh2'],
   
   // Configure custom server settings

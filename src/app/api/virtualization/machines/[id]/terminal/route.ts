@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger';
 import { serverCache } from '@/lib/cache';
 import { setupWebSocket, setupAuthTimeout } from './utils/websocket';
 import { handleSshConnection, handleMockTerminal } from './utils/terminal-handlers';
+import { initializeWebSocketServer } from '@/lib/websocket-server';
 
 // Export runtime configuration for Edge compatibility
 export const runtime = 'nodejs';
@@ -28,6 +29,14 @@ export async function GET(
       method: request.method,
       headers: Object.fromEntries(request.headers.entries())
     });
+
+    // Initialize WebSocket server with the HTTP server
+    const server = (request as any).socket?.server;
+    if (server && !server._webSocketInitialized) {
+      console.log('[WebSocket Route] Initializing WebSocket server');
+      initializeWebSocketServer(server);
+      server._webSocketInitialized = true;
+    }
 
     // Check for WebSocket upgrade request
     if (!request.headers.get('upgrade')?.toLowerCase().includes('websocket')) {
