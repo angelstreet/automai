@@ -1,13 +1,13 @@
 import { NewUseCase, Project } from '@/types/usecase';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/shadcn/button';
+import { Input } from '@/components/shadcn/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/shadcn/select';
 import { PLATFORMS } from '@/constants/platforms';
 
 type CreateUseCaseProps = {

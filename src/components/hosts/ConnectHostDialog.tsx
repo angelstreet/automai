@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
   DialogContent,
@@ -7,8 +7,8 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from '@/components/ui/dialog';
-import { useToast } from '@/components/ui/use-toast';
+} from '@/components/shadcn/dialog';
+import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from '@/types/hosts';
 import { Loader2 } from 'lucide-react';
 import { ConnectionForm, FormData } from './ConnectionForm';

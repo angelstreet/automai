@@ -130,7 +130,7 @@ globs: src/**/*.{ts,tsx}
    import { z } from 'zod';
    
    // Internal modules
-   import { Button } from '@/components/ui/button';
+   import { Button } from '@/components/shadcn/button';
    import { useAuth } from '@/lib/auth';
    
    // Types

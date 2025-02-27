@@ -1,5 +1,5 @@
 import { Host } from '@/types/hosts';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '@/components/shadcn/checkbox';
 import { cn } from '@/lib/utils';
 import { HostCard } from './HostCard';
 

@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Button } from '@/components/shadcn/button';
+import { Card } from '@/components/shadcn/card';
 import { Host } from '@/types/hosts';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/shadcn/use-toast';
 
 export default function AnalyticsPage() {
   const t = useTranslations('Common');

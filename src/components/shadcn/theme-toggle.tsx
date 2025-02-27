@@ -8,8 +8,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
+} from '@/components/shadcn/dropdown-menu';
+import { Button } from '@/components/shadcn/button';
 
 export function ThemeToggle() {
   const { setTheme, theme } = useTheme();

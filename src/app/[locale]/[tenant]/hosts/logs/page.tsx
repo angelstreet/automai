@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/shadcn/button';
+import { Card } from '@/components/shadcn/card';
+import { Badge } from '@/components/shadcn/badge';
+import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Host } from '@/types/hosts';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/shadcn/use-toast';
 
 interface Log {
   id: string;

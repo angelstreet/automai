@@ -2,14 +2,14 @@
 
 import * as React from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { RoleSwitcher } from '@/components/ui/role-switcher';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { UserProfile } from '@/components/ui/user-profile';
-import { Separator } from '@/components/ui/separator';
+import { RoleSwitcher } from '@/components/shadcn/role-switcher';
+import { ThemeToggle } from '@/components/shadcn/theme-toggle';
+import { UserProfile } from '@/components/shadcn/user-profile';
+import { Separator } from '@/components/shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
-import { Search } from '@/components/ui/search';
+import { Search } from '@/components/shadcn/search';
 import { useRole } from '@/context/role-context';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/shadcn/button';
 import { ChevronUp } from 'lucide-react';
 import Cookies from 'js-cookie';
 

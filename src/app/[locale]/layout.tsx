@@ -6,7 +6,7 @@ import { getMessages } from '@/i18n';
 import { UserProvider } from '@/lib/contexts/UserContext';
 import { RouteGuard } from '@/components/route-guard';
 import { ThemeProvider } from '@/components/theme-provider';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster } from '@/components/shadcn/toaster';
 import { cookies } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'] });

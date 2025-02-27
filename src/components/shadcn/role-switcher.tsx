@@ -6,7 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/shadcn/select';
 import { type Role } from '@/context/role-context';
 
 const roles: { value: Role; label: string }[] = [

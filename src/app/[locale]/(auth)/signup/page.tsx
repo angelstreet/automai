@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/shadcn/button';
 import {
   Card,
   CardContent,
@@ -10,9 +10,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+} from '@/components/shadcn/card';
+import { Input } from '@/components/shadcn/input';
+import { Checkbox } from '@/components/shadcn/checkbox';
 import { useTranslations } from 'next-intl';
 import { signIn } from 'next-auth/react';
 

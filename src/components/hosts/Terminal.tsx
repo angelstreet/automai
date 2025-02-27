@@ -7,7 +7,7 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 import { SearchAddon } from 'xterm-addon-search';
 import { AttachAddon } from 'xterm-addon-attach';
 import 'xterm/css/xterm.css';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/shadcn/use-toast';
 
 interface Connection {
   id: string;

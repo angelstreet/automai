@@ -18,8 +18,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
+} from '@/components/shadcn/table';
+import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
   DialogContent,
@@ -27,11 +27,11 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+} from '@/components/shadcn/dialog';
+import { Input } from '@/components/shadcn/input';
+import { Textarea } from '@/components/shadcn/textarea';
+import { useToast } from '@/components/shadcn/use-toast';
+import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { PlanType, canCreateMore, getUpgradeMessage } from '@/lib/features';
 import { useUser } from '@/lib/contexts/UserContext';
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { SettingsHeader } from '@/components/settings/settings-header';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { useSession } from 'next-auth/react';
 
 export default function ProfileSettingsPage() {

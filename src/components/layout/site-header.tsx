@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { LanguageSwitcher } from '@/components/ui/language-switcher';
+import { Button } from '@/components/shadcn/button';
+import { ThemeToggle } from '@/components/shadcn/theme-toggle';
+import { LanguageSwitcher } from '@/components/shadcn/language-switcher';
 import { useLocale } from 'next-intl';
 
 interface HeaderProps {

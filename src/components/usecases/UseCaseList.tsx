@@ -1,5 +1,5 @@
 import { UseCase } from '@/types/usecase';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/shadcn/button';
 
 type UseCaseListProps = {
   usecases: UseCase[];

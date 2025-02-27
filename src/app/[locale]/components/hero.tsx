@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/shadcn/button';
 import { useTranslations } from 'next-intl';
 import { useLocale } from 'next-intl';
 

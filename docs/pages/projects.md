@@ -82,16 +82,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+} from "@/components/shadcn/table";
+import { Button } from "@/components/shadcn/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@/components/shadcn/dialog";
+import { Input } from "@/components/shadcn/input";
 import Sidebar from "@/components/layout/Sidebar";
 
 // Type matching Prisma Project model
