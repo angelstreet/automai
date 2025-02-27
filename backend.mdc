@@ -1,0 +1,32 @@
+## **1️⃣ General Guidelines**
+- Keep APIs RESTful with clean, predictable endpoint structures.
+- Use JWT authentication for secured access to all endpoints.
+- Follow Role-Based Access Control (RBAC) to manage permissions.
+- Version APIs using `/api/v1/...` for backward compatibility.
+- Rate-limit requests to prevent abuse.
+- All API responses should follow:
+  ```json
+  {
+    "success": true/false,
+    "message": "Description",
+    "data": {...}
+  }
+  ```
+
+## **Environment Setup**
+**IMPORTANT**: Development Environment Rules
+1. Always use `.env.development` for development:
+   ```bash
+   # Wrong ❌
+   Using .env directly
+   
+   # Correct ✅
+   cp .env.development .env
+   npm run dev
+   ```
+2. Clean up after development:
+   ```bash
+   rm .env  # Remove temporary .env
+   ```
+3. Never edit `.env` directly - always modify `.env.development`
+4. Keep `.env.development` up to date with all required variables 

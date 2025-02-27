@@ -1,0 +1,18 @@
+## Migration Rules
+
+**IMPORTANT**: For migrations and development:
+1. Use `.env.development` for development environment:
+   ```bash
+   # Development
+   cp .env.development .env
+   npm run dev
+   ```
+2. After migration, remove the `.env` file to prevent confusion:
+   ```bash
+   rm .env  # Clean up after migration
+   ```
+3. Never commit `.env` file to version control
+4. Keep using environment-specific files:
+   - `.env.development` for development
+   - `.env.test` for testing
+   - `.env.production` for production 
