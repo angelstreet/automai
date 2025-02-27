@@ -28,9 +28,22 @@ const nextConfig = {
   
   // Configure server options for WebSocket support
   experimental: {
-    // serverComponentsExternalPackages has been moved to serverExternalPackages
+    serverActions: true,
   },
   serverExternalPackages: ['ws', 'ssh2'],
+  
+  // Configure custom server settings
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/api/virtualization/machines/:id/terminal',
+          destination: '/api/virtualization/machines/:id/terminal',
+          has: [{ type: 'header', key: 'upgrade', value: 'websocket' }],
+        },
+      ],
+    };
+  },
 };
 
 module.exports = withNextIntl(nextConfig); 
