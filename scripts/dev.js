@@ -113,8 +113,29 @@ async function main() {
   // Handle process termination
   process.on('SIGINT', () => {
     console.log(`${colors.red}Shutting down servers...${colors.reset}`);
-    nextProcess.kill();
-    serverProcess.kill();
+    
+    // Force kill processes on ports
+    killProcessOnPort(NEXT_PORT);
+    killProcessOnPort(SERVER_PORT);
+    
+    // Also try to kill the child processes directly
+    if (nextProcess && nextProcess.pid) {
+      try {
+        process.kill(nextProcess.pid, 'SIGKILL');
+      } catch (error) {
+        console.log(`${colors.yellow}Could not kill Next.js process directly${colors.reset}`);
+      }
+    }
+    
+    if (serverProcess && serverProcess.pid) {
+      try {
+        process.kill(serverProcess.pid, 'SIGKILL');
+      } catch (error) {
+        console.log(`${colors.yellow}Could not kill server process directly${colors.reset}`);
+      }
+    }
+    
+    console.log(`${colors.green}All servers shut down${colors.reset}`);
     process.exit(0);
   });
   

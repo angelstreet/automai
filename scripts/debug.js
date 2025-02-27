@@ -160,10 +160,50 @@ async function main() {
   // Handle process termination
   process.on('SIGINT', () => {
     console.log(`${colors.red}Shutting down all servers...${colors.reset}`);
-    nextProcess.kill();
-    serverProcess.kill();
-    browserToolsProcess.kill();
-    prismaStudioProcess.kill();
+    
+    // Force kill processes on ports
+    killProcessOnPort(NEXT_PORT);
+    killProcessOnPort(SERVER_PORT);
+    killProcessOnPort(BROWSER_TOOLS_PORT);
+    killProcessOnPort(PRISMA_STUDIO_PORT);
+    
+    // Also try to kill the child processes directly
+    if (nextProcess && nextProcess.pid) {
+      try {
+        process.kill(nextProcess.pid, 'SIGKILL');
+      } catch (error) {
+        console.log(`${colors.yellow}Could not kill Next.js process directly${colors.reset}`);
+      }
+    }
+    
+    if (serverProcess && serverProcess.pid) {
+      try {
+        process.kill(serverProcess.pid, 'SIGKILL');
+      } catch (error) {
+        console.log(`${colors.yellow}Could not kill server process directly${colors.reset}`);
+      }
+    }
+    
+    if (browserToolsProcess && browserToolsProcess.pid) {
+      try {
+        process.kill(browserToolsProcess.pid, 'SIGKILL');
+      } catch (error) {
+        console.log(`${colors.yellow}Could not kill browser tools process directly${colors.reset}`);
+      }
+    }
+    
+    if (prismaStudioProcess && prismaStudioProcess.pid) {
+      try {
+        process.kill(prismaStudioProcess.pid, 'SIGKILL');
+      } catch (error) {
+        console.log(`${colors.yellow}Could not kill Prisma Studio process directly${colors.reset}`);
+      }
+    }
+    
+    // Also try to kill by name for browser tools which can be tricky
+    killProcessByName("@agentdeskai/browser-tools-server");
+    
+    console.log(`${colors.green}All servers shut down${colors.reset}`);
     process.exit(0);
   });
   
