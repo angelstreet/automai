@@ -67,7 +67,14 @@ app.prepare().then(() => {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
-    } else {
+    } 
+    // Handle Next.js HMR WebSocket connections in development mode
+    else if (dev && pathname.startsWith('/_next/webpack-hmr')) {
+      console.log('[WebSocketServer] Forwarding Next.js HMR WebSocket');
+      // Let Next.js handle its own HMR WebSockets
+      handle(request, socket, head);
+    }
+    else {
       console.log('[WebSocketServer] Invalid WebSocket path:', pathname);
       socket.destroy();
     }

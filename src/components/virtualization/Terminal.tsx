@@ -42,6 +42,12 @@ export function Terminal({ connection }: TerminalProps) {
     
     connectionAttemptedRef.current = true;
 
+    // Check if there's already an active socket connection
+    if (socketRef.current && socketRef.current.readyState !== WebSocket.CLOSED) {
+      console.log('[WebSocket] Already connected, reusing existing connection');
+      return;
+    }
+
     // Initialize xterm.js
     const term = new XTerm({
       cursorBlink: true,
@@ -153,21 +159,28 @@ export function Terminal({ connection }: TerminalProps) {
       // Handle WebSocket error event properly
       let errorMessage;
       try {
-        errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        // The error event doesn't have a message property directly
+        // It's an Event object with no useful string representation
+        errorMessage = "WebSocket connection failed";
+        
+        // Log the error event for debugging
+        console.log('[WebSocket] Error event details:', {
+          type: error.type,
+          target: error.target,
+          eventPhase: error.eventPhase,
+          timeStamp: error.timeStamp
+        });
       } catch (e) {
         errorMessage = 'Unknown WebSocket error';
       }
       
-      console.error('[WebSocket] Terminal error:', {
-        message: errorMessage,
-        connectionId: connection.id
-      });
+      console.error('[WebSocket] Terminal error:', errorMessage);
       
       // Show toast notification for WebSocket error
       toast({
         variant: 'destructive',
         title: 'WebSocket Connection Error',
-        description: `Failed to establish WebSocket connection: ${errorMessage || 'Unknown error'}`,
+        description: `Failed to establish WebSocket connection: ${errorMessage}`,
         duration: 5000,
       });
       
@@ -247,12 +260,26 @@ export function Terminal({ connection }: TerminalProps) {
       }
     };
 
-    socket.onclose = () => {
-      console.log('[WebSocket] Connection closed');
+    socket.onclose = (event) => {
+      console.log('[WebSocket] Connection closed', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean
+      });
       
       console.log('Terminal WebSocket closed', {
         connectionId: connection.id
       });
+      
+      // Only show error toast if the connection was closed abnormally
+      if (!event.wasClean && event.code !== 1000) {
+        toast({
+          variant: 'destructive',
+          title: 'Connection Closed',
+          description: `WebSocket connection closed: ${event.reason || 'Unknown reason'}`,
+          duration: 5000,
+        });
+      }
       
       term.write('\r\n\x1B[1;3;33mConnection closed.\x1B[0m\r\n');
     };
