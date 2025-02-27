@@ -240,25 +240,25 @@ app.prepare().then(async () => {
     ws.on('pong', () => { ws.isAlive = true; });
     console.log('[WebSocketServer] Client connected');
     
-    // Extract machine ID from URL
+    // Extract host ID from URL with new path format
     const { pathname } = parse(request.url);
-    const machineIdMatch = pathname.match(/\/api\/virtualization\/machines\/([^\/]+)\/terminal/);
-    const machineId = machineIdMatch ? machineIdMatch[1] : null;
+    const hostIdMatch = pathname.match(/\/api\/hosts\/terminals\/([^\/]+)/);
+    const hostId = hostIdMatch ? hostIdMatch[1] : null;
     
-    if (!machineId) {
-      console.error('[WebSocketServer] No machine ID found in URL:', pathname);
+    if (!hostId) {
+      console.error('[WebSocketServer] No host ID found in URL:', pathname);
       ws.send(JSON.stringify({ 
-        error: 'Invalid machine ID',
-        errorType: 'INVALID_MACHINE_ID'
+        error: 'Invalid host ID',
+        errorType: 'INVALID_HOST_ID'
       }));
       return;
     }
     
-    console.log('[WebSocketServer] Machine ID:', machineId);
+    console.log('[WebSocketServer] Host ID:', hostId);
     
     // Set up authentication timeout (5 seconds)
     const authTimeout = setTimeout(() => {
-      console.log('[WebSocketServer] Authentication timeout for machine:', machineId);
+      console.log('[WebSocketServer] Authentication timeout for host:', hostId);
       ws.send(JSON.stringify({ 
         error: 'Authentication timeout',
         errorType: 'AUTH_TIMEOUT'
@@ -284,19 +284,19 @@ app.prepare().then(async () => {
           
           // Fetch connection details from database
           try {
-            console.log('[WebSocketServer] Looking up connection in database:', machineId);
+            console.log('[WebSocketServer] Looking up connection in database:', hostId);
             
             const connection = await prisma.connection.findUnique({
-              where: { id: machineId }
+              where: { id: hostId }
             });
             
             if (!connection) {
-              console.error('[WebSocketServer] Connection not found:', machineId);
+              console.error('[WebSocketServer] Connection not found:', hostId);
               
               // Create a mock connection for testing when connection not found
               console.log('[WebSocketServer] Creating mock connection for testing');
               const mockConnection = {
-                id: machineId,
+                id: hostId,
                 name: 'Mock Connection',
                 type: 'mock',
                 ip: 'localhost',
@@ -305,7 +305,7 @@ app.prepare().then(async () => {
               };
               
               console.log('[WebSocketServer] Handling mock terminal connection');
-              handleMockTerminal(ws, mockConnection, machineId);
+              handleMockTerminal(ws, mockConnection, hostId);
               return;
             }
             
@@ -321,10 +321,10 @@ app.prepare().then(async () => {
             // Handle connection based on type
             if (connection.type === 'ssh') {
               console.log('[WebSocketServer] Handling SSH connection');
-              handleSshConnection(ws, connection, machineId);
+              handleSshConnection(ws, connection, hostId);
             } else {
               console.log('[WebSocketServer] Handling mock terminal connection');
-              handleMockTerminal(ws, connection, machineId);
+              handleMockTerminal(ws, connection, hostId);
             }
           } catch (dbError) {
             console.error('[WebSocketServer] Database error:', dbError);
@@ -361,14 +361,14 @@ app.prepare().then(async () => {
     const { pathname } = parse(request.url);
     console.log('[WebSocketServer] Received upgrade request:', pathname);
     
-    // Handle terminal WebSocket connections
-    if (pathname.startsWith('/api/virtualization/machines/') && pathname.endsWith('/terminal')) {
+    // Handle terminal WebSocket connections with new path format
+    if (pathname.startsWith('/api/hosts/terminals/')) {
       console.log('[WebSocketServer] Handling terminal WebSocket upgrade');
       
-      // Extract machine ID for logging
-      const machineIdMatch = pathname.match(/\/api\/virtualization\/machines\/([^\/]+)\/terminal/);
-      const machineId = machineIdMatch ? machineIdMatch[1] : 'unknown';
-      console.log('[WebSocketServer] Processing upgrade for machine ID:', machineId);
+      // Extract host ID for logging
+      const hostIdMatch = pathname.match(/\/api\/hosts\/terminals\/([^\/]+)/);
+      const hostId = hostIdMatch ? hostIdMatch[1] : 'unknown';
+      console.log('[WebSocketServer] Processing upgrade for host ID:', hostId);
       
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
