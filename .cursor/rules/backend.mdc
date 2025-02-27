@@ -11,7 +11,9 @@ alwaysApply: false
 - Follow Role-Based Access Control (RBAC) to manage permissions.
 - Version APIs using `/api/v1/...` for backward compatibility.
 - Rate-limit requests to prevent abuse.
-- **NEVER** use Express.js for any server implementations; use Next.js Route Handlers instead.
+- **NEVER** use Express.js or standalone servers for any server implementations
+- **ALWAYS** use Next.js Route Handlers in `src/app/api/`
+- **NEVER** create a standalone server.js or index.ts file
 - All API responses should follow:
   ```json
   {
@@ -20,6 +22,32 @@ alwaysApply: false
     "data": {...}
   }
   ```
+
+## **🚫 Prohibited Practices**
+- NO standalone server implementations (e.g., Express, Koa, Fastify)
+- NO server.js or index.ts files at project root
+- NO custom server configurations
+- NO direct database access outside of service layer
+- NO mixing of Next.js and standalone server code
+
+## **✅ Required Server Structure**
+```
+src/
+  ├── app/
+  │   └── api/           # All API routes MUST be here
+  │       ├── [endpoint]/
+  │       │   ├── route.ts      # Next.js Route Handler
+  │       │   ├── validation.ts  # Request validation
+  │       │   └── schema.ts      # Data schema
+  │       └── ...
+  └── lib/
+      ├── services/      # Business logic & data access
+      │   ├── hosts.ts
+      │   └── ...
+      └── middleware/    # API middleware
+          ├── auth.ts
+          └── validate.ts
+```
 
 ---
 
@@ -99,6 +127,38 @@ alwaysApply: false
 - AI-assisted test script generation & failure analysis.
 - Integration with CI/CD tools (GitHub Actions, Jenkins, CircleCI).
 - Automated test scheduling & parallel execution on cloud VMs.
+
+---
+
+## **🔄 Migration Guidelines**
+When migrating from standalone servers:
+1. Move all routes to `src/app/api/[endpoint]/route.ts`
+2. Convert middleware to Next.js middleware format
+3. Move business logic to service layer
+4. Update npm scripts to use Next.js dev server
+5. Remove standalone server files
+
+## **📝 NPM Scripts**
+Correct npm scripts setup:
+```json
+{
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  }
+}
+```
+
+Incorrect npm scripts to avoid:
+```json
+{
+  "scripts": {
+    "server:dev": "ts-node-dev src/server/index.ts",  // ❌
+    "server:start": "node dist/server/index.js"       // ❌
+  }
+}
+```
 
 ---
 
