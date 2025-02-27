@@ -33,7 +33,7 @@ export default function HostsPage() {
   const fetchMachines = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/virtualization/machines');
+      const response = await fetch('/api/hosts');
       
       if (!response.ok) {
         throw new Error('Failed to fetch machines');
@@ -71,7 +71,7 @@ export default function HostsPage() {
       setMachines(updatedMachines);
       
       // Test connection
-      const testResponse = await fetch('/api/virtualization/machines/test-connection', {
+      const testResponse = await fetch('/api/hosts/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -165,7 +165,7 @@ export default function HostsPage() {
           }
           
           // Test connection
-          const testResponse = await fetch('/api/virtualization/machines/test-connection', {
+          const testResponse = await fetch('/api/hosts/test-connection', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -263,7 +263,7 @@ export default function HostsPage() {
     if (!machineToDelete) return;
     
     try {
-      const response = await fetch(`/api/virtualization/machines/${machineToDelete}`, {
+      const response = await fetch(`/api/hosts/${machineToDelete}`, {
         method: 'DELETE',
       });
       
@@ -278,7 +278,7 @@ export default function HostsPage() {
       });
     } catch (error) {
       console.error('Error deleting machine:', error);
-            toast({
+      toast({
         variant: 'destructive',
         title: 'Error',
         description: 'Failed to delete machine',

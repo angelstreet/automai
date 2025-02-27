@@ -1,8 +1,7 @@
 const createNextIntlPlugin = require('next-intl/plugin');
-const { loadEnvConfig } = require('./src/lib/env');
 
-// Load environment variables
-loadEnvConfig();
+// No need to manually load env files - Next.js handles this automatically
+// when .env files are in the root directory
 
 const withNextIntl = createNextIntlPlugin();
 
@@ -62,5 +61,10 @@ const nextConfig = {
     };
   },
 };
+
+// Set NEXTAUTH_SECRET if not present
+if (process.env.JWT_SECRET && !process.env.NEXTAUTH_SECRET) {
+  process.env.NEXTAUTH_SECRET = process.env.JWT_SECRET;
+}
 
 module.exports = withNextIntl(nextConfig); 

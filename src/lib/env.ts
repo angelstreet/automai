@@ -1,21 +1,22 @@
-import { config } from 'dotenv';
-import path from 'path';
+import { z } from 'zod';
 
-export function loadEnvConfig() {
-  const env = process.env.NODE_ENV || 'development';
-  const envPath = path.resolve(process.cwd(), 'src/server/config/env', `.env.${env}`);
+// Schema for environment variables
+const envSchema = z.object({
+  // Server
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.string().default('3000'),
+  
+  // Database
+  DATABASE_URL: z.string(),
+  
+  // Auth
+  JWT_SECRET: z.string(),
+  
+  // NextAuth
+  NEXTAUTH_URL: z.string().default('http://localhost:3000'),
+});
 
-  const result = config({ path: envPath });
+// Parse environment variables
+const env = envSchema.parse(process.env);
 
-  if (result.error) {
-    console.error(`Error loading environment configuration for ${env}:`, result.error);
-    throw result.error;
-  }
-
-  // Add NEXTAUTH_SECRET if not present
-  if (!process.env.NEXTAUTH_SECRET) {
-    process.env.NEXTAUTH_SECRET = process.env.JWT_SECRET;
-  }
-
-  return result.parsed;
-}
+export default env;

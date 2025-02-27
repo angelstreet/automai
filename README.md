@@ -1,4 +1,5 @@
 # Automai SaaS
+Automai is a multi-tenant SaaS platform designed for end-to-end test automation across web, desktop, and mobile environments.
 
 ## 🚀 Quick Start Commands
 ```bash
@@ -25,7 +26,6 @@ npm test  # or: npx jest tests/e2e.test.ts --runInBand
 npm run prisma:studio
 ```
 
-Automai is a multi-tenant SaaS platform designed for end-to-end test automation across web, desktop, and mobile environments.
 
 ## Installation
 

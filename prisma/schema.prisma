@@ -1,0 +1,13 @@
+model Host {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  type        String
+  ip          String
+  port        Int?
+  user        String?
+  password    String?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+} 
