@@ -1,8 +1,46 @@
+---
+description: WebSocket & Terminal Implementation Guidelines
+globs: src/lib/websocket-server.ts, websocket.server.js, src/components/virtualization/**/*.tsx
+---
+
 # WebSocket & Terminal Implementation Guidelines
 
-## WebSocket Architecture
+## WebSocket Architecture Overview
+
+The project uses a dual WebSocket implementation:
+
+1. **Standalone WebSocket Server** (`websocket.server.js`)
+   - Located at the root of the project
+   - Runs on port 3001 (separate from Next.js HTTP server)
+   - Handles terminal connections for SSH
+   - Started independently from the Next.js server
+
+2. **WebSocket Utility Module** (`src/lib/websocket-server.ts`)
+   - Provides utility functions for WebSocket connections
+   - Used within the Next.js application
+   - Exports functions like `getWebSocketServer()` and `handleUpgrade()`
+
+## Standalone WebSocket Server (websocket.server.js)
+
+1. **Initialization**
+   - Server is initialized on first terminal connection
+   - Listens on port 3001
+   - Handles WebSocket upgrade requests for terminal paths
+
+2. **Connection Management**
+   - Implements ping/pong for connection health monitoring
+   - Terminates connections that don't respond to pings
+   - Cleans up resources when connections close
+
+3. **SSH Integration**
+   - Uses ssh2 library for SSH connections
+   - Handles host authentication and terminal sessions
+   - Streams data between SSH and WebSocket clients
+
+## WebSocket Utility Module (src/lib/websocket-server.ts)
+
 1. **Singleton Pattern**
-   - **IMPORTANT**: Always use the global WebSocketServer instance from `src/lib/websocket-server.ts`
+   - **IMPORTANT**: Always use the global WebSocketServer instance
    - Never create new WebSocketServer instances in route handlers
    - Use `getWebSocketServer()` to access the singleton instance
    - Handle WebSocket upgrades through the `handleUpgrade()` utility function

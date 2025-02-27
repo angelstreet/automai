@@ -1,116 +1,191 @@
 ---
-description: Rules for handling internationalization and debugging in the application
+description: General rules for the project
 globs: src/**/*.{ts,tsx}
 alwaysApply: true
 ---
-# Cursor Rules for Debugging and i18n
+# General Rules
+
+## Initial Setup - READ FIRST
+
+**IMPORTANT: If this is a new chat, read all cursor rules first to understand the project structure and coding standards.**
+
+1. Read these cursor rules in order:
+   - general.mdc (this file) - Project overview and general guidelines
+   - config.mdc - Environment configuration
+   - prisma.mdc - Database and Prisma setup
+   - nextjs.mdc - Next.js structure and best practices
+   - frontend.mdc - Frontend development guidelines
+   - backend.mdc - Backend development guidelines
+   - ui.mdc - UI component guidelines
+
+2. Development workflow guidelines:
+   - Always ask for permission before creating any new folder or file
+   - Before suggesting removal of any file or folder, examine all related files to ensure nothing important is deleted
+   - When troubleshooting issues, identify all possible causes, rank them by probability, and focus on the most likely one
+   - For any code changes, first provide a detailed plan specifying:
+     - Which files need to be modified
+     - What specific changes are needed in each file
+     - Why these changes will address the issue
+   - Wait for explicit user approval before implementing any code changes
+
+3. Information gathering approach:
+   - First consult all cursor rules to find relevant information
+   - If cursor rules don't contain the needed information, check documents in the docs folder
+   - Only ask the user for information if it cannot be found in existing documentation
+
+4. Communication style:
+   - Keep responses concise and focused on the task
+   - After implementing changes, confirm completion without explaining what was done
+   - Avoid lengthy explanations unless specifically requested
+   - Focus on solutions rather than descriptions of problems
+
+5. Tool usage:
+   - Do not use browser tools (screenshots, console logs, network logs) unless explicitly requested
+   - Do not run tests or execute commands without specific user permission
+   - When using tools is necessary, explain why before using them
+   - If browser tools are requested but fail to work:
+     1. Check if the browser tools server is running
+     2. If not running, start it with: `npx @agentdeskai/browser-tools-server`
+     3. Wait for the server to initialize before trying again
+
+6. Error handling:
+   - If you make a mistake or misunderstand requirements, acknowledge it
+   - Propose specific improvements to this general cursor rule to prevent similar issues in the future
+   - Focus on fixing the immediate issue before suggesting rule improvements
+
+## Project Overview
+
+This is a Next.js application with the following key features:
+- Next.js 13+ App Router with internationalization
+- PostgreSQL database with Prisma ORM
+- Dedicated WebSocket server for terminal connections (port 3001)
+- Next.js built-in HTTP server (port 3000)
+- Authentication with NextAuth.js
+- UI built with Shadcn UI and Tailwind CSS
+- Health check script for code quality monitoring
+- Electron desktop application support
 
 ## Project Structure
-1. Server-side code organization
-   - **IMPORTANT**: All server-related code is located in `src/lib` directory
-   - Backend API routes are in `src/app/api`
-   - Database models and migrations are in `/prisma` directory
-   - Environment files are at the root of the project
-     - `.env.development` - Development environment variables
-     - `.env.production` - Production environment variables
-     - `.env.test` - Test environment variables
-   - When working with Prisma, always use the schema at `/prisma/schema.prisma`
-   - Database file is located at `/prisma/dev.db` for SQLite
+
+```
+automai/
+├── prisma/                   # Prisma schema and migrations at root
+│   ├── schema.prisma         # Database schema with models for User, Host, Connection, etc.
+│   └── migrations/           # Database migrations
+├── .env.*                    # Environment files at root (.env.development, .env.production, .env.test)
+├── scripts/                  # Utility scripts
+│   └── health-check.js       # Script to check file sizes and provide refactoring recommendations
+├── src/
+│   ├── app/                  # Next.js App Router
+│   │   ├── [locale]/         # Internationalized routes
+│   │   │   ├── (auth)/       # Auth route group
+│   │   │   └── [tenant]/     # Tenant-specific routes including hosts page
+│   │   └── api/              # API Route Handlers including hosts API
+│   ├── lib/                  # Shared utilities
+│   │   ├── services/         # Service layer (data access)
+│   │   ├── prisma.ts         # Prisma client singleton
+│   │   └── env.ts            # Environment configuration
+│   ├── components/           # UI components
+│   │   ├── ui/               # Reusable UI components
+│   │   └── virtualization/   # Terminal component for WebSocket connections
+│   ├── i18n/                 # Internationalization
+│   └── middleware.ts         # Next.js middleware
+├── websocket.server.js       # Custom WebSocket server on port 3001 for terminal connections
+├── electron/                 # Electron app configuration
+├── tests/                    # Test files
+├── docs/                     # Project documentation
+└── next.config.js            # Next.js configuration
+```
+
+## Completed Setup
+
+The following has already been set up and should not be recreated:
+- Prisma schema with models for User, Host, Connection, etc.
+- WebSocket server running on port 3001 (separate from Next.js HTTP server on port 3000)
+- SSH2 integration for terminal connections
+- Environment configuration with validation
+- Authentication with NextAuth.js
+- Internationalization with next-intl
 
 ## Code Organization
-1. File length limits
-   - **MANDATORY**: Keep files under 300 lines of code
-   - If a file exceeds 300 lines, split it into multiple files:
-     - For components: Extract subcomponents
-     - For utilities: Group by functionality
-     - For API routes: Split by endpoint or functionality
-   - Break down large components into smaller, focused components
-   - Use composition to maintain functionality while reducing file size
-2. 
-## Important
-- Always place cursor rules in the `.cursor/rules` directory with appropriate names (e.g., `i18n.mdc`, `debugging.mdc`)
 
-## General Debugging
-1. Be concise - no need to summarize what has been implemented
-   - **NEVER provide a summary of changes after completing a task**
-   - Do not list what you've done or explain the changes you've made
-   - Simply confirm the task is complete with a brief acknowledgment
-   - Avoid phrases like "Here's what I did" or "I've successfully..."
+- Files should be under 300 lines
+- If a file exceeds 300 lines, split it into multiple files:
+  - For components: Extract subcomponents
+  - For utilities: Group by functionality
+  - For API routes: Split by endpoint or functionality
 
-2. Browser tools usage
-   - **IMPORTANT**: Only use browser tools (screenshots, console logs, etc.) when explicitly requested by the user
-   - Do not automatically take screenshots or check console logs unless specifically asked
-   - When browser tools are requested, use them in this order:
-     1. Console logs/errors if debugging is needed
-     2. Screenshots if visual verification is needed
-     3. Network logs if API/request issues need to be investigated
+## Health Check Process
 
-3. Terminal logs verification
-   - **ONLY** check terminal logs in these specific cases:
-     1. When the user explicitly requests to check for errors
-     2. When the user asks to speed up coding
-     3. When you observe obvious compilation or runtime errors in previous outputs
-   - Do NOT check terminal logs for routine tasks or minor changes
-   - Use `cat` or similar commands to read existing logs; don't restart running services
-   - If you need to check server logs, first verify if the server is already running
-   - When checking logs, look for these critical errors:
-     - Module resolution errors (e.g., "Module not found: Can't resolve...")
-     - HTTP error codes (e.g., 500, 404, 403)
-     - Runtime errors that cause full page reloads (e.g., "Fast Refresh had to perform a full reload")
-     - Compilation errors (e.g., "Failed to compile")
-     - Syntax errors in code
-   - If errors are found, fix them before proceeding or explicitly acknowledge them
+Before making any refactoring changes:
+1. Run the health check script: `node scripts/health-check.js`
+2. Review the output to identify files exceeding the 300-line limit
+3. Present findings to the user with specific recommendations for each file
+4. Wait for user confirmation before implementing any changes
+5. Follow the best practices in the code-organization.mdc rule when refactoring
 
-4. **Linter errors**: Only try to fix linter errors once, not 3 times. Fixing linter errors is not mandatory and will consume fast requests. If the fix doesn't work on the first attempt, acknowledge the linter errors and move on.
+The health check script will:
+- Scan the codebase for files exceeding 300 lines
+- Provide tailored recommendations for breaking up each file type
+- Display a summary of findings and best practices
+- Exempt certain files like UI components and modules
 
-5. If a server restart is necessary:
-   - First check if the port is in use: `lsof -i :3000`
-   - If in use, kill the process: `kill -9 <PID>`
-   - Only then start the server with `npm run dev`
-   - **IMPORTANT**: Always wait for the server to be fully ready before checking browser status
-   - Look for "Ready" or similar messages in the terminal output
-   - Typically wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
-   - After server is ready, wait at least 5 seconds before using browser tools like screenshots or console logs
-   - **MANDATORY**: After server restart, check terminal logs for errors before considering the task complete
+When asked to refactor or health check:
+- Always run the script first
+- Present the results to the user
+- Propose a plan for addressing the issues
+- Only proceed with changes after explicit user confirmation
 
-## Next.js Specific Rules
-1. For most UI changes, component modifications, and styling updates, Next.js Fast Refresh will automatically apply changes without requiring a server restart
-2. **NEVER restart the Next.js development server except in these specific cases:**
-   - When there are explicit errors that require a restart
-   - When modifying Next.js configuration files (next.config.js)
-   - When changing middleware.ts
-   - When modifying environment variables
-   - When making changes to routing configuration or internationalization setup
-   - When Fast Refresh explicitly fails with an error message
-   - When adding new API routes that aren't being detected
-3. For all other changes, rely on Next.js Fast Refresh to compile and update the application
+## Server Management
+
+- When to restart the Next.js development server:
+  - After adding new environment variables
+  - After modifying middleware.ts
+  - After changing next.config.js
+  - When Fast Refresh fails with an error message
+
+- Server restart procedure:
+  1. Check if port 3000 is in use: `lsof -i :3000`
+  2. If in use, kill the process: `kill -9 <PID>`
+  3. Start the server with `npm run dev`
+  4. Wait for "Ready" message before proceeding
+
+- UI changes should not require server restart (Next.js Fast Refresh will handle these)
 
 ## i18n Handling
-1. Translation files MUST be located ONLY in `src/i18n/messages` directory
-2. When adding translations:
-   - Always verify both French (fr) and English (en) files
-   - Ensure keys are consistent across both files
-   - Keep translations organized by feature/page sections
-3. Ensure the `getMessages` function in `src/i18n/index.ts` is loading from the correct location
-4. Remember that changes to translation files may require a server restart
-5. NEVER create translation files outside of `src/i18n/messages/`
 
-## Next.js App Router
-1. For pages using translations, check that the namespace exists in all locale files
-2. The app uses Next.js App Router with the `[locale]` parameter in the URL
-3. The middleware in `src/middleware.ts` handles locale routing
+- Translation files should be in `src/i18n/messages` directory
+- All languages should have the same keys
+- Use `next-intl` for translations
+- Support language switching via URL parameters
 
-## After Making Changes
-1. Only restart the development server when necessary (Next.js has fast refresh for most changes)
-   - Restart is typically needed for: configuration files, middleware changes, or when fast refresh fails
-2. Before restarting, check if port 3000 is in use: `lsof -i :3000`
-3. If port 3000 is in use, kill the process: `kill -9 <PID>`
-4. Use `npm run dev` to restart the server on port 3000
-5. **IMPORTANT**: Only check terminal logs for errors when:
-   - The user explicitly requests it
-   - The user asks to speed up coding
-   - You observe obvious compilation or runtime errors in previous outputs
-   - Look for "Ready" or similar messages in the terminal output
-   - If checking logs, wait for messages like "✓ Ready in X.Xs" and "✓ Compiled" before proceeding
-   - If any errors are found, address them immediately before proceeding
-6. If the server starts on a different port (e.g., 3001), stop it and repeat steps 2-4 to ensure it runs on port 3000 
+## Debugging Guidelines
+
+- Use proper error handling in API routes
+- Check terminal logs only when server-side errors occur
+- Use browser tools to debug UI issues only when explicitly requested
+- Be concise in task completion confirmations 
+
+## Maintaining Cursor Rules
+
+- Cursor rules should always reflect the current state of the codebase
+- When modifying code structure or architecture, update relevant cursor rules to match
+- If you identify improvements that should be documented in cursor rules:
+  1. Note the improvement in your response
+  2. Suggest specific updates to the relevant cursor rule
+  3. Wait for user confirmation before updating the rule
+
+- When updating cursor rules:
+  1. Be precise and concise
+  2. Include examples where helpful
+  3. Ensure consistency with other rules
+  4. Update the `globs` pattern if file paths have changed
+
+- Periodically verify that cursor rules accurately reflect:
+  - Project structure
+  - Coding standards
+  - Best practices
+  - File organization
+  - Environment configuration
+
+

@@ -15,6 +15,24 @@ globs: prisma/**/*.{ts,prisma}
 - The DATABASE_URL in environment files should use PostgreSQL format: `postgresql://user@localhost:5432/dbname`
 - **NEVER** create Prisma configurations outside the `/prisma` directory
 
+### Prisma Client Implementations
+
+The project has two Prisma client implementations:
+
+1. **Root-level Prisma client** (`/prisma/index.ts`)
+   - Primary client implementation
+   - Used by standalone servers and scripts
+   - Export: `export const prisma` and `export default prisma`
+
+2. **Src-level Prisma client** (`/src/lib/prisma.ts`)
+   - Used within the Next.js application
+   - Creates a singleton instance attached to the global object
+   - Export: `export const prisma`
+
+**IMPORTANT**: Both implementations follow the singleton pattern to prevent connection pool exhaustion. Always import the appropriate client based on the context:
+- For standalone scripts or the WebSocket server: `import { prisma } from '../../prisma'`
+- For Next.js application code: `import { prisma } from '@/lib/prisma'`
+
 ## OAuth & Authentication Rules
 
 **IMPORTANT**: For OAuth fields:
