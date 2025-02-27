@@ -27,14 +27,14 @@ export default function TerminalsPage() {
           return;
         }
 
-        // Fetch host details for the first machine
+        // Fetch host details for the first host
         if (hostIds.length > 0) {
           fetch(`/api/hosts/${hostIds[0]}`)
             .then((response) => response.json())
             .then((data) => {
               if (data.success && data.data) {
                 const hostName = data.data.name;
-                const count = hostIds.length > 1 ? `?count=${machineIds.length}` : '';
+                const count = hostIds.length > 1 ? `?count=${hostIds.length}` : '';
                 router.push(`./terminals/${hostName}${count}`);
               } else {
                 throw new Error('Failed to fetch host details');

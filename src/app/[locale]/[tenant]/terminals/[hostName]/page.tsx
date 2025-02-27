@@ -76,7 +76,7 @@ export default function TerminalPage() {
       }
       return data.data;
     } catch (error) {
-      console.error('Error fetching machine details:', error);
+      console.error('Error fetching host details:', error);
       return null;
     }
   };
@@ -122,7 +122,7 @@ export default function TerminalPage() {
       // Fetch all hosts in parallel
       const hostPromises = limitedIds.map((id) => fetchMachineDetails(id));
 
-      const hosts = await Promise.all(machinePromises);
+      const hosts = await Promise.all(hostPromises);
       setConnections(hosts);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';

@@ -308,8 +308,8 @@ export default function VirtualizationPage() {
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{t('virtualization')}</h1>
-          <p className="text-muted-foreground">{t('manage_virtual_machines')}</p>
+          <h1 className="text-2xl font-bold">{t('hosts')}</h1>
+          <p className="text-muted-foreground">{t('manage_virtual_hosts')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={refreshHosts} disabled={isRefreshing}>
@@ -327,7 +327,7 @@ export default function VirtualizationPage() {
 
           <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            {t('add_machine')}
+            {t('add_host')}
           </Button>
         </div>
       </div>
@@ -343,11 +343,11 @@ export default function VirtualizationPage() {
           {hosts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Server className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">{t('no_machines')}</h3>
-              <p className="text-muted-foreground mb-4">{t('add_machine_description')}</p>
+              <h3 className="text-lg font-medium">{t('no_hosts')}</h3>
+              <p className="text-muted-foreground mb-4">{t('add_host_description')}</p>
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                {t('add_machine')}
+                {t('add_host')}
               </Button>
             </div>
           ) : (
@@ -370,7 +370,7 @@ export default function VirtualizationPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Machine</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this machine? This action cannot be undone.
+              Are you sure you want to delete this host? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

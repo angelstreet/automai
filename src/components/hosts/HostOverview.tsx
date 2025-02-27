@@ -96,9 +96,9 @@ export function HostOverview({
   const handleBulkRefresh = async () => {
     if (onTestConnection) {
       let successCount = 0;
-      for (const machine of filteredHosts) {
+      for (const host of filteredHosts) {
         try {
-          await onTestConnection(machine);
+          await onTestConnection(host);
           successCount++;
         } catch (error) {
           console.error('Error refreshing connection:', error);

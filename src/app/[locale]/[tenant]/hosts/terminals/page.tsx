@@ -14,23 +14,23 @@ export default function TerminalsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const machineId = searchParams.get('machine');
-    if (!machineId) {
-      setError('No machine ID provided');
+    const hostId = searchParams.get('host');
+    if (!hostId) {
+      setError('No host ID provided');
       return;
     }
 
-    // Fetch machine details and establish SSH connection
+    // Fetch host details and establish SSH connection
     const initializeTerminal = async () => {
       try {
-        const response = await fetch(`/api/hosts/${machineId}`);
+        const response = await fetch(`/api/hosts/${hostId}`);
         if (!response.ok) {
-          throw new Error('Failed to fetch machine details');
+          throw new Error('Failed to fetch host details');
         }
 
         const data = await response.json();
         if (!data.success || !data.data) {
-          throw new Error('Invalid machine data');
+          throw new Error('Invalid host data');
         }
 
         setConnection(data.data);
@@ -42,7 +42,7 @@ export default function TerminalsPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            machineId,
+            hostId,
             type: data.data.type,
             ip: data.data.ip,
             port: data.data.port,
@@ -57,7 +57,7 @@ export default function TerminalsPage() {
 
         logger.info('SSH connection established', {
           action: 'TERMINAL_CONNECTED',
-          data: { machineId, ip: data.data.ip },
+          data: { hostId, ip: data.data.ip },
           saveToDb: true,
         });
       } catch (error) {
@@ -71,7 +71,7 @@ export default function TerminalsPage() {
 
         logger.error(`Terminal initialization failed: ${message}`, {
           action: 'TERMINAL_INIT_ERROR',
-          data: { machineId, error: message },
+          data: { hostId, error: message },
           saveToDb: true,
         });
       }
@@ -88,7 +88,7 @@ export default function TerminalsPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            machineId: connection.id,
+            hostId: connection.id,
           }),
         }).catch(console.error);
       }

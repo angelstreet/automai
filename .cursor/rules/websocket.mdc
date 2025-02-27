@@ -1,6 +1,6 @@
 ---
 description: WebSocket & Terminal Implementation Guidelines
-globs: src/lib/websocket-server.ts, websocket.server.js, src/components/virtualization/**/*.tsx
+globs: src/lib/websocket-server.ts, websocket.server.js, src/components/hosts/**/*.tsx
 ---
 
 # WebSocket & Terminal Implementation Guidelines

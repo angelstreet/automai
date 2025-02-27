@@ -21,12 +21,12 @@ interface Log {
 export default function LogsPage() {
   const t = useTranslations('Common');
   const { toast } = useToast();
-  const [machines, setMachines] = useState<Host[]>([]);
+  const [hosts, setMachines] = useState<Host[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch machines from API
+  // Fetch hosts from API
   const fetchMachines = async () => {
     try {
       const response = await fetch('/api/hosts');
@@ -35,7 +35,7 @@ export default function LogsPage() {
         toast({
           variant: 'destructive',
           title: 'Error',
-          description: 'Failed to load machines',
+          description: 'Failed to load hosts',
         });
         return;
       }
@@ -50,16 +50,16 @@ export default function LogsPage() {
         setLogs(logsData.logs || []);
       }
 
-      // Set first machine as selected if none selected
-      if (machines.length > 0 && !selectedDevice) {
-        setSelectedDevice(machines[0].id);
+      // Set first host as selected if none selected
+      if (hosts.length > 0 && !selectedDevice) {
+        setSelectedDevice(hosts[0].id);
       }
     } catch (error) {
-      console.error('Error fetching machines:', error);
+      console.error('Error fetching hosts:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to load machines',
+        description: 'Failed to load hosts',
       });
     } finally {
       setIsLoading(false);
@@ -96,14 +96,14 @@ export default function LogsPage() {
             >
               All Devices
             </Button>
-            {machines.map((machine) => (
+            {hosts.map((host) => (
               <Button
-                key={machine.id}
-                variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}
+                key={host.id}
+                variant={selectedDevice === host.id ? 'secondary' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setSelectedDevice(machine.id)}
+                onClick={() => setSelectedDevice(host.id)}
               >
-                {machine.name}
+                {host.name}
               </Button>
             ))}
           </div>
@@ -114,7 +114,7 @@ export default function LogsPage() {
           <ScrollArea className="h-[calc(100vh-200px)]">
             <div className="space-y-4">
               {filteredLogs.map((log) => {
-                const device = machines.find((m) => m.id === log.deviceId);
+                const device = hosts.find((m) => m.id === log.deviceId);
 
                 return (
                   <div key={log.id} className="flex items-start gap-4 p-2 rounded border">

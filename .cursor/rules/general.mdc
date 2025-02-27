@@ -341,7 +341,7 @@ In YOLO mode, focus testing efforts on critical paths:
 ## <a id="project-glossary"></a>Project Glossary
 
 - **Tenant**: A customer organization with its own isolated data and users
-- **Host**: A server or machine that can be connected to via SSH
+- **Host**: A server or host that can be connected to via SSH
 - **Connection**: An established SSH session to a host
 - **WebSocket Server**: The standalone server running on port 3001 for terminal connections
 - **WebSocket Utility**: The module in src/lib for WebSocket functionality within Next.js

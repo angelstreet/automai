@@ -104,7 +104,7 @@ export default function HostsSettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Network Settings</CardTitle>
-            <CardDescription>Configure network options for virtual machines</CardDescription>
+            <CardDescription>Configure network options for virtual hosts</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

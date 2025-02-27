@@ -71,7 +71,7 @@ const LOCATION_PATTERNS = {
     /^src\/components\/layout\//,
     /^src\/components\/ui\//,
     /^src\/components\/sidebar\//,
-    /^src\/components\/virtualization\//,
+    /^src\/components\/hosts\//,
     /^src\/components\/usecases\//,
     /^src\/components\/profile\//,
     /^src\/components\/settings\//,

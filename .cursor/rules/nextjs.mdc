@@ -33,7 +33,7 @@ automai/
 │   │   └── env.ts            # Environment configuration
 │   ├── components/           # UI components
 │   │   ├── ui/               # Reusable UI components
-│   │   └── virtualization/   # Terminal component
+│   │   └── hosts/   # Terminal component
 │   ├── i18n/                 # Internationalization
 │   └── middleware.ts         # Next.js middleware
 ├── websocket.server.js       # Standalone WebSocket server
