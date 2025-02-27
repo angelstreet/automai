@@ -1,6 +1,22 @@
 ## Migration Rules
 
 **IMPORTANT**: For migrations and development:
+1. Use environment-specific files directly:
+   ```bash
+   # Development
+   npx prisma migrate dev --schema=prisma/schema.prisma
+   
+   # Production
+   npx prisma migrate deploy --schema=prisma/schema.prisma
+   ```
+2. DO NOT create or use `.env` file - Next.js handles environment loading
+3. Keep using environment-specific files:
+   - `.env.development` for development
+   - `.env.test` for testing
+   - `.env.production` for production
+4. Never commit sensitive database credentials to version control
+
+**IMPORTANT**: For migrations and development:
 1. Use `.env.development` for development environment:
    ```bash
    # Development

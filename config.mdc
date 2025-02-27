@@ -1,0 +1,21 @@
+## Environment Files
+
+**IMPORTANT: DO NOT USE `.env`**
+Use environment-specific files instead:
+```shell
+# Development (used by `npm run dev`)
+.env.development
+
+# Production (used by `npm run build/start`)
+.env.production
+
+# Testing (used by `npm run test`)
+.env.test
+```
+
+Next.js automatically loads the correct environment file based on NODE_ENV.
+If you see a `.env` file:
+1. Check if its contents match `.env.development`
+2. Copy any unique values to the appropriate environment file
+3. Delete the `.env` file
+4. Run `npm run dev` to verify everything works 
