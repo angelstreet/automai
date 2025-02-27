@@ -1,25 +1,26 @@
 # Files to Break Down
 
-_Generated on 2/27/2025, 9:51:16 PM_
+_Generated on 2/27/2025, 10:10:27 PM_
 
-## File Size Issues (0)
+## File Size Issues (10)
 
-No file size issues found.
+| File | Lines |
+| ---- | ----- |
+| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/development/projects/page.tsx | 431 |
+| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/development/usecases/edit/[useCaseId]/page.tsx | 381 |
+| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/development/usecases/page.tsx | 322 |
+| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/hosts/page.tsx | 385 |
+| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/virtualization/page.tsx | 380 |
+| /Users/joachimndoye/Documents/automai/src/components/ui/sidebar.tsx | 776 |
+| /Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectForm.tsx | 363 |
+| /Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectionForm.tsx | 370 |
+| /Users/joachimndoye/Documents/automai/src/components/virtualization/Terminal.tsx | 367 |
+| /Users/joachimndoye/Documents/automai/src/server/api/auth/controller.ts | 779 |
 
 
 ## Refactoring Strategy
 
-1. **Quick Fixes (Naming & Location)**
-   - Fix naming convention issues first
-     - Components: PascalCase.tsx
-     - Hooks: useFeature.ts
-     - Utilities: camelCase.ts
-     - Pages: page.tsx in kebab-case folders
-     - Dynamic routes: [kebab-case].tsx
-   - Then address location issues
-   - Commit after each batch of similar changes
-
-2. **Complex Refactoring (File Size)**
+1. **Complex Refactoring (File Size)**
    - Tackle one file at a time
    - Follow the directory structure in component-organization-plan.md
    - Test thoroughly after each refactor

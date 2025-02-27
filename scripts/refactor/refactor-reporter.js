@@ -68,74 +68,102 @@ function generateMarkdownReports(results) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
   
-  // Generate rename-move-report.md
-  let renameMoveContent = `# Files to Rename or Move\n\n`;
-  renameMoveContent += `_Generated on ${new Date().toLocaleString()}_\n\n`;
-  renameMoveContent += `## Naming Convention Issues (${namingIssues.length})\n\n`;
+  // Generate combined naming-location report
+  let namingLocationContent = `# Files to Rename or Move\n\n`;
+  namingLocationContent += `_Generated on ${new Date().toLocaleString()}_\n\n`;
   
+  // Naming issues section
   if (namingIssues.length > 0) {
+    namingLocationContent += `## Naming Convention Issues (${namingIssues.length})\n\n`;
+    namingLocationContent += `| File | Suggested Name |\n`;
+    namingLocationContent += `| ---- | -------------- |\n`;
+    
     namingIssues.forEach(result => {
       const issue = result.issues.find(i => i.issue === 'naming');
-      renameMoveContent += `### ${result.filePath}\n`;
-      renameMoveContent += `- **Issue**: ${issue.message}\n`;
-      renameMoveContent += `- **Fix**: ${issue.suggestion}\n`;
+      const fileName = path.basename(result.filePath);
+      const fileDir = path.dirname(result.filePath);
       
-      // Add cross-reference if the file has multiple issues
-      if (result.issues.length > 1) {
-        const otherIssues = result.issues.filter(i => i.issue !== 'naming').map(i => i.issue);
-        renameMoveContent += `- **Note**: This file also has ${otherIssues.join(', ')} issues. Check other reports.\n`;
+      // Generate specific suggested name based on the current name
+      let suggestedName = fileName;
+      
+      if (fileName.includes('-') && issue.suggestion.includes('PascalCase')) {
+        // Convert kebab-case to PascalCase
+        suggestedName = fileName.split('-')
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join('');
+        
+        // Handle file extension
+        if (suggestedName.includes('.')) {
+          const parts = suggestedName.split('.');
+          const extension = parts.pop();
+          suggestedName = parts.join('.') + '.' + extension;
+        }
+      } else if (issue.suggestion.includes('camelCase')) {
+        // Convert to camelCase
+        const parts = fileName.split('.');
+        const extension = parts.pop();
+        const baseName = parts.join('.');
+        
+        // Convert kebab-case or snake_case to camelCase
+        const camelCaseName = baseName.replace(/[-_]([a-z])/g, (_, letter) => letter.toUpperCase());
+        suggestedName = camelCaseName + '.' + extension;
+      } else if (fileName === 'index.tsx' || fileName === 'context.tsx' || fileName === 'types.ts' || fileName === 'utils.ts') {
+        // Special case for index files in component directories
+        const dirName = path.basename(path.dirname(result.filePath));
+        if (dirName && dirName.charAt(0) === dirName.charAt(0).toUpperCase()) {
+          // If parent directory is already PascalCase, use it as prefix
+          suggestedName = dirName + fileName.charAt(0).toUpperCase() + fileName.slice(1);
+        } else if (dirName) {
+          // Convert directory name to PascalCase and use as prefix
+          const pascalDirName = dirName.split('-')
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join('');
+          suggestedName = pascalDirName + fileName.charAt(0).toUpperCase() + fileName.slice(1);
+        }
       }
       
-      renameMoveContent += `\n`;
+      namingLocationContent += `| ${result.filePath} | ${suggestedName} |\n`;
     });
+    
+    namingLocationContent += `\n`;
   } else {
-    renameMoveContent += `No naming convention issues found.\n\n`;
+    namingLocationContent += `## Naming Convention Issues (0)\n\nNo naming convention issues found.\n\n`;
   }
   
-  // Generate review-report.md
-  let reviewContent = `# Files to Review\n\n`;
-  reviewContent += `_Generated on ${new Date().toLocaleString()}_\n\n`;
-  reviewContent += `## Location Convention Issues (${locationIssues.length})\n\n`;
-  
+  // Location issues section
   if (locationIssues.length > 0) {
+    namingLocationContent += `## Location Convention Issues (${locationIssues.length})\n\n`;
+    namingLocationContent += `| File | Suggested Location |\n`;
+    namingLocationContent += `| ---- | ------------------ |\n`;
+    
     locationIssues.forEach(result => {
       const issue = result.issues.find(i => i.issue === 'location');
-      reviewContent += `### ${result.filePath}\n`;
-      reviewContent += `- **Issue**: ${issue.message}\n`;
-      reviewContent += `- **Fix**: ${issue.suggestion}\n`;
       
-      // Add cross-reference if the file has multiple issues
-      if (result.issues.length > 1) {
-        const otherIssues = result.issues.filter(i => i.issue !== 'location').map(i => i.issue);
-        reviewContent += `- **Note**: This file also has ${otherIssues.join(', ')} issues. Check other reports.\n`;
-      }
+      // Extract suggested location from the message
+      let suggestedLocation = issue.suggestion;
       
-      reviewContent += `\n`;
+      namingLocationContent += `| ${result.filePath} | ${suggestedLocation} |\n`;
     });
+    
+    namingLocationContent += `\n`;
   } else {
-    reviewContent += `No location convention issues found.\n\n`;
+    namingLocationContent += `## Location Convention Issues (0)\n\nNo location convention issues found.\n\n`;
   }
   
-  // Generate breakdown-report.md
+  // Generate breakdown-report.md for size issues
   let breakdownContent = `# Files to Break Down\n\n`;
   breakdownContent += `_Generated on ${new Date().toLocaleString()}_\n\n`;
   breakdownContent += `## File Size Issues (${sizeIssues.length})\n\n`;
   
   if (sizeIssues.length > 0) {
+    breakdownContent += `| File | Lines |\n`;
+    breakdownContent += `| ---- | ----- |\n`;
+    
     sizeIssues.forEach(result => {
-      const issue = result.issues.find(i => i.issue === 'size');
-      breakdownContent += `### ${result.filePath} (${result.lineCount} lines)\n`;
-      breakdownContent += `- **Issue**: ${issue.message}\n`;
-      breakdownContent += `- **Fix**: ${issue.suggestion}\n`;
-      
-      // Add cross-reference if the file has multiple issues
-      if (result.issues.length > 1) {
-        const otherIssues = result.issues.filter(i => i.issue !== 'size').map(i => i.issue);
-        breakdownContent += `- **Note**: This file also has ${otherIssues.join(', ')} issues. Check other reports.\n`;
-      }
-      
-      breakdownContent += `\n`;
+      breakdownContent += `| ${result.filePath} | ${result.lineCount} |\n`;
     });
+    
+    breakdownContent += `\n`;
   } else {
     breakdownContent += `No file size issues found.\n\n`;
   }
@@ -146,20 +174,14 @@ function generateMarkdownReports(results) {
     summaryContent += `_Generated on ${new Date().toLocaleString()}_\n\n`;
     summaryContent += `## Files Requiring Multiple Fixes (${multiIssueFiles.length})\n\n`;
     
+    summaryContent += `| File | Type | Lines | Issues |\n`;
+    summaryContent += `| ---- | ---- | ----- | ------ |\n`;
+    
     multiIssueFiles.forEach(result => {
-      summaryContent += `### ${result.filePath}\n`;
-      summaryContent += `- **File Type**: ${result.fileType}\n`;
-      summaryContent += `- **Line Count**: ${result.lineCount}\n`;
-      summaryContent += `- **Issues Found**: ${result.issues.map(i => i.issue).join(', ')}\n\n`;
-      
-      result.issues.forEach(issue => {
-        summaryContent += `#### ${issue.issue.charAt(0).toUpperCase() + issue.issue.slice(1)} Issue\n`;
-        summaryContent += `- **Issue**: ${issue.message}\n`;
-        summaryContent += `- **Fix**: ${issue.suggestion}\n\n`;
-      });
-      
-      summaryContent += `\n`;
+      summaryContent += `| ${result.filePath} | ${result.fileType} | ${result.lineCount} | ${result.issues.map(i => i.issue).join(', ')} |\n`;
     });
+    
+    summaryContent += `\n`;
     
     // Write the multi-issue summary
     fs.writeFileSync(path.join(outputDir, 'refactor-result-multi-issues.md'), summaryContent);
@@ -167,7 +189,7 @@ function generateMarkdownReports(results) {
   }
   
   // Add refactoring strategy to each report
-  const refactoringStrategy = `
+  const namingLocationStrategy = `
 ## Refactoring Strategy
 
 1. **Quick Fixes (Naming & Location)**
@@ -180,7 +202,19 @@ function generateMarkdownReports(results) {
    - Then address location issues
    - Commit after each batch of similar changes
 
-2. **Complex Refactoring (File Size)**
+## General Rules
+
+1. **Maximum Retries: 3**
+   - Do not retry the same task more than 3 times
+   - If you encounter persistent issues after 3 attempts, seek help
+2. **Commit frequently** to avoid large, complex changes
+3. **Run tests** after each significant change
+`;
+
+  const sizeStrategy = `
+## Refactoring Strategy
+
+1. **Complex Refactoring (File Size)**
    - Tackle one file at a time
    - Follow the directory structure in component-organization-plan.md
    - Test thoroughly after each refactor
@@ -195,18 +229,15 @@ function generateMarkdownReports(results) {
 3. **Run tests** after each significant change
 `;
   
-  renameMoveContent += refactoringStrategy;
-  reviewContent += refactoringStrategy;
-  breakdownContent += refactoringStrategy;
+  namingLocationContent += namingLocationStrategy;
+  breakdownContent += sizeStrategy;
   
   // Write files
-  fs.writeFileSync(path.join(outputDir, 'refactor-result-naming.md'), renameMoveContent);
-  fs.writeFileSync(path.join(outputDir, 'refactor-result-location.md'), reviewContent);
+  fs.writeFileSync(path.join(outputDir, 'refactor-result-naming-location.md'), namingLocationContent);
   fs.writeFileSync(path.join(outputDir, 'refactor-result-size.md'), breakdownContent);
   
   console.log(`\n${colors.green}Markdown reports generated in ${outputDir}:${colors.reset}`);
-  console.log(`- ${outputDir}/refactor-result-naming.md`);
-  console.log(`- ${outputDir}/refactor-result-location.md`);
+  console.log(`- ${outputDir}/refactor-result-naming-location.md`);
   console.log(`- ${outputDir}/refactor-result-size.md`);
 }
 
@@ -227,18 +258,50 @@ function printRecommendations(results) {
     console.log(`${colors.yellow}Naming Convention Issues (${namingIssues.length})${colors.reset}`);
     namingIssues.forEach(result => {
       const issue = result.issues.find(i => i.issue === 'naming');
-      console.log(`  ${colors.red}${result.filePath}${colors.reset}`);
-      console.log(`    ${colors.yellow}Issue:${colors.reset} ${issue.message}`);
-      console.log(`    ${colors.green}Fix:${colors.reset} ${issue.suggestion}`);
+      const fileName = path.basename(result.filePath);
       
-      // Add cross-reference if the file has multiple issues
-      if (result.issues.length > 1) {
-        const otherIssues = result.issues.filter(i => i.issue !== 'naming').map(i => i.issue);
-        console.log(`    ${colors.magenta}Note:${colors.reset} This file also has ${otherIssues.join(', ')} issues`);
+      // Generate specific suggested name based on the current name
+      let suggestedName = fileName;
+      
+      if (fileName.includes('-') && issue.suggestion.includes('PascalCase')) {
+        // Convert kebab-case to PascalCase
+        suggestedName = fileName.split('-')
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+          .join('');
+        
+        // Handle file extension
+        if (suggestedName.includes('.')) {
+          const parts = suggestedName.split('.');
+          const extension = parts.pop();
+          suggestedName = parts.join('.') + '.' + extension;
+        }
+      } else if (issue.suggestion.includes('camelCase')) {
+        // Convert to camelCase
+        const parts = fileName.split('.');
+        const extension = parts.pop();
+        const baseName = parts.join('.');
+        
+        // Convert kebab-case or snake_case to camelCase
+        const camelCaseName = baseName.replace(/[-_]([a-z])/g, (_, letter) => letter.toUpperCase());
+        suggestedName = camelCaseName + '.' + extension;
+      } else if (fileName === 'index.tsx' || fileName === 'context.tsx' || fileName === 'types.ts' || fileName === 'utils.ts') {
+        // Special case for index files in component directories
+        const dirName = path.basename(path.dirname(result.filePath));
+        if (dirName && dirName.charAt(0) === dirName.charAt(0).toUpperCase()) {
+          // If parent directory is already PascalCase, use it as prefix
+          suggestedName = dirName + fileName.charAt(0).toUpperCase() + fileName.slice(1);
+        } else if (dirName) {
+          // Convert directory name to PascalCase and use as prefix
+          const pascalDirName = dirName.split('-')
+            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+            .join('');
+          suggestedName = pascalDirName + fileName.charAt(0).toUpperCase() + fileName.slice(1);
+        }
       }
       
-      console.log('');
+      console.log(`  ${colors.red}${result.filePath}${colors.reset} → Rename: ${fileName} to ${suggestedName}`);
     });
+    console.log('');
   }
   
   // Print location issues
@@ -246,33 +309,18 @@ function printRecommendations(results) {
     console.log(`${colors.yellow}Location Convention Issues (${locationIssues.length})${colors.reset}`);
     locationIssues.forEach(result => {
       const issue = result.issues.find(i => i.issue === 'location');
-      console.log(`  ${colors.red}${result.filePath}${colors.reset}`);
-      console.log(`    ${colors.yellow}Issue:${colors.reset} ${issue.message}`);
-      console.log(`    ${colors.green}Fix:${colors.reset} ${issue.suggestion}`);
-      console.log('');
+      console.log(`  ${colors.red}${result.filePath}${colors.reset} → ${issue.suggestion}`);
     });
+    console.log('');
   }
   
   // Print size issues
   if (sizeIssues.length > 0) {
     console.log(`${colors.yellow}File Size Issues (${sizeIssues.length})${colors.reset}`);
     sizeIssues.forEach(result => {
-      const issue = result.issues.find(i => i.issue === 'size');
       console.log(`  ${colors.red}${result.filePath}${colors.reset} (${result.lineCount} lines)`);
-      console.log(`    ${colors.yellow}Issue:${colors.reset} ${issue.message}`);
-      console.log(`    ${colors.green}Fix:${colors.reset} ${issue.suggestion}`);
-      console.log('');
     });
-  }
-  
-  // Print multi-issue file summary
-  if (multiIssueFiles.length > 0) {
-    console.log(`\n${colors.magenta}Files with Multiple Issues (${multiIssueFiles.length})${colors.reset}`);
-    multiIssueFiles.forEach(result => {
-      console.log(`  ${colors.red}${result.filePath}${colors.reset}`);
-      console.log(`    ${colors.yellow}Issues:${colors.reset} ${result.issues.map(i => i.issue).join(', ')}`);
-      console.log('');
-    });
+    console.log('');
   }
   
   // Print summary

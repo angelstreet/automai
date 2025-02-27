@@ -64,9 +64,19 @@ const LOCATION_PATTERNS = {
   component: [
     /^src\/components\/common\//,
     /^src\/components\/[a-z]+\//,
+    /^src\/components\//,
     /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/_components\//,
     /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/components\//,
-    /^src\/app\/\[locale\]\/components\//
+    /^src\/app\/\[locale\]\/components\//,
+    /^src\/components\/layout\//,
+    /^src\/components\/ui\//,
+    /^src\/components\/sidebar\//,
+    /^src\/components\/virtualization\//,
+    /^src\/components\/usecases\//,
+    /^src\/components\/profile\//,
+    /^src\/components\/settings\//,
+    /^src\/components\/dashboard\//,
+    /^src\/components\/icons\//
   ],
   shadcnComponent: [
     /^src\/components\/ui\//
@@ -79,26 +89,43 @@ const LOCATION_PATTERNS = {
   util: [
     /^src\/utils\//,
     /^src\/lib\/utils\//,
-    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/utils\//
+    /^src\/lib\//,
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/utils\//,
+    /^src\/lib\/services\//,
+    /^src\/lib\/contexts\//
   ],
   constant: [
     /^src\/constants\//,
-    /^src\/lib\/constants\//
+    /^src\/lib\/constants\//,
+    /^src\/config\//
   ],
   type: [
     /^src\/types\//,
-    /^src\/lib\/types\//
+    /^src\/lib\/types\//,
+    /^src\/interfaces\//,
+    /^src\/context\//
   ],
   page: [
+    /^src\/pages\/.*\.(ts|tsx)$/,
     /^src\/app\/\[locale\]\/page\.(ts|tsx)$/,
     /^src\/app\/\[locale\]\/\[tenant\]\/page\.(ts|tsx)$/,
     /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/page\.(ts|tsx)$/,
-    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/[a-z-]+\/page\.(ts|tsx)$/
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/[a-z-]+\/page\.(ts|tsx)$/,
+    /^src\/app\/.*\/page\.(ts|tsx)$/
   ],
   dynamicRoute: [
+    /^src\/pages\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
     /^src\/app\/\[locale\]\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
     /^src\/app\/\[locale\]\/\[tenant\]\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
-    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/\[([a-z0-9]+-)*[a-z0-9]+\]\//
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
+    /^src\/app\/.*\/\[([a-z0-9]+-)*[a-z0-9]+\]\//
+  ],
+  api: [
+    /^src\/app\/api\//,
+    /^src\/server\/api\//
+  ],
+  server: [
+    /^src\/server\//
   ]
 };
 
@@ -140,10 +167,79 @@ function countLines(filePath) {
   }
 }
 
+// Helper functions for file type detection
+function isShadcnComponent(filePath) {
+  return filePath.startsWith('src/components/ui/') || filePath.includes('/components/ui/');
+}
+
+function isApiRoute(filePath, fileName) {
+  return filePath.includes('/api/') && (fileName === 'route.ts' || fileName === 'route.tsx');
+}
+
+function isServerFile(filePath) {
+  return filePath.startsWith('src/server/');
+}
+
+function isPageFile(fileName) {
+  return fileName === 'page.tsx' || fileName === 'page.ts';
+}
+
+function isLayoutFile(fileName) {
+  return fileName === 'layout.tsx' || fileName === 'layout.ts';
+}
+
+function isDynamicRoute(fileName) {
+  return fileName.startsWith('[') && fileName.includes(']');
+}
+
+function isReactComponent(filePath, content) {
+  if (filePath.includes('/components/') || filePath.includes('/_components/')) {
+    return content.includes('import React') || 
+           content.includes('from "react"') || 
+           content.includes("from 'react'") ||
+           (content.includes('<') && content.includes('/>')) ||
+           (content.includes('export') && 
+            (content.includes('function') || content.includes('const') || content.includes('class')) && 
+            content.includes('return') && 
+            (content.includes('<') || content.includes('null')));
+  }
+  return false;
+}
+
+function isHook(fileName, filePath, content) {
+  return (fileName.startsWith('use') || filePath.includes('/hooks/')) && 
+         (content.includes('useState') || content.includes('useEffect') || 
+          content.includes('useRef') || content.includes('useCallback'));
+}
+
+function isContextFile(filePath, fileName) {
+  return filePath.includes('/context/') || filePath.includes('/contexts/') || 
+         fileName.toLowerCase().includes('context') || fileName.toLowerCase().includes('provider');
+}
+
+function isUtilityFile(filePath, content) {
+  return (filePath.includes('/utils/') || filePath.includes('/lib/')) && 
+         content.includes('export') && content.includes('function');
+}
+
+function isConstantsFile(filePath, content) {
+  return filePath.includes('/constants/') || filePath.includes('/config/') || 
+         (content.includes('export const') && 
+          !content.includes('return') && !content.includes('function'));
+}
+
+function isTypesFile(filePath, content) {
+  return filePath.includes('/types/') || filePath.includes('/interfaces/') ||
+         content.includes('interface ') || 
+         content.includes('type ') || 
+         content.includes('enum ') ||
+         content.match(/export (type|interface|enum)/);
+}
+
 // Determine file type based on content and path
 function determineFileType(filePath, content) {
-  // Check if it's a Shadcn UI component
-  if (filePath.startsWith('src/components/ui/') || filePath.includes('/components/ui/')) {
+  // Check for special file types first
+  if (isShadcnComponent(filePath)) {
     return 'shadcnComponent';
   }
   
@@ -155,58 +251,18 @@ function determineFileType(filePath, content) {
     return 'other';
   }
   
-  // Check if it's a page file
-  if (fileName === 'page.tsx' || fileName === 'page.ts') {
-    return 'page';
-  }
-  
-  // Check if it's a dynamic route
-  if (fileName.startsWith('[') && fileName.includes(']')) {
-    return 'dynamicRoute';
-  }
-  
-  // Check if it's a component
-  if (filePath.includes('/components/') || filePath.includes('/_components/')) {
-    // More accurate check for React components
-    if (content.includes('import React') || 
-        content.includes('from "react"') || 
-        content.includes("from 'react'") ||
-        (content.includes('<') && content.includes('/>')) ||
-        (content.includes('export') && 
-         (content.includes('function') || content.includes('const') || content.includes('class')) && 
-         content.includes('return') && 
-         (content.includes('<') || content.includes('null')))) {
-      return 'component';
-    }
-  }
-  
-  // Check if it's a hook
-  if (fileName.startsWith('use') && 
-      (content.includes('useState') || content.includes('useEffect') || 
-       content.includes('useRef') || content.includes('useCallback'))) {
-    return 'hook';
-  }
-  
-  // Check if it's a utility
-  if ((filePath.includes('/utils/') || filePath.includes('/lib/')) && 
-      content.includes('export') && content.includes('function')) {
-    return 'util';
-  }
-  
-  // Check if it's a constants file
-  if (filePath.includes('/constants/') || 
-      (content.includes('export const') && 
-       !content.includes('return') && !content.includes('function'))) {
-    return 'constant';
-  }
-  
-  // Check if it's a types file
-  if (content.includes('interface ') || 
-      content.includes('type ') || 
-      content.includes('enum ') ||
-      content.match(/export (type|interface|enum)/)) {
-    return 'type';
-  }
+  // Check for specific file types
+  if (isApiRoute(filePath, fileName)) return 'api';
+  if (isServerFile(filePath)) return 'server';
+  if (isPageFile(fileName)) return 'page';
+  if (isLayoutFile(fileName)) return 'layout';
+  if (isDynamicRoute(fileName)) return 'dynamicRoute';
+  if (isReactComponent(filePath, content)) return 'component';
+  if (isHook(fileName, filePath, content)) return 'hook';
+  if (isContextFile(filePath, fileName)) return 'type';
+  if (isUtilityFile(filePath, content)) return 'util';
+  if (isConstantsFile(filePath, content)) return 'constant';
+  if (isTypesFile(filePath, content)) return 'type';
   
   // Default to the directory name
   const dirName = path.basename(path.dirname(filePath));

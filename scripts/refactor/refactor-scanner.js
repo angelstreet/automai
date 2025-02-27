@@ -11,7 +11,6 @@
  * 
  * Scope:
  *   --scope=all        : Scan all files in the src directory (default)
- *   --scope=app        : Only scan the app directory
  *   --scope=components : Only scan the components directory
  */
 
@@ -29,7 +28,7 @@ args.forEach(arg => {
 });
 
 // Validate input arguments
-const validScopes = ['all', 'app', 'components'];
+const validScopes = ['all', 'components'];
 if (!validScopes.includes(scope)) {
   console.log(`Warning: Invalid scope '${scope}'. Using default 'all'.`);
   scope = 'all';
@@ -154,9 +153,7 @@ function main() {
     
     // Get all files based on scope
     let targetDir = path.join(projectDir, 'src');
-    if (scope === 'app') {
-      targetDir = path.join(projectDir, 'src', 'app');
-    } else if (scope === 'components') {
+    if (scope === 'components') {
       targetDir = path.join(projectDir, 'src', 'components');
     }
     

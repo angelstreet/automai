@@ -13,7 +13,6 @@
  * 
  * Scope:
  *   --scope=all        : Scan all files in the src directory (default)
- *   --scope=app        : Only scan the app directory
  *   --scope=components : Only scan the components directory
  * 
  * Checks:
@@ -47,7 +46,7 @@ args.forEach(arg => {
 });
 
 // Validate input arguments
-const validScopes = ['all', 'app', 'components'];
+const validScopes = ['all', 'components'];
 const validChecks = ['all', 'naming', 'location', 'size'];
 const validFormats = ['md', 'console', 'both'];
 

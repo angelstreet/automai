@@ -1,140 +1,58 @@
 # Files to Rename or Move
 
-_Generated on 2/27/2025, 9:51:15 PM_
+_Generated on 2/27/2025, 10:03:25 PM_
 
-## Naming Convention Issues (33)
+## Naming Convention Issues (47)
 
-### /Users/joachimndoye/Documents/automai/src/components/coming-soon.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/command-menu.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/common/PinInput/context.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/common/PinInput/index.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/common/PinInput/types.ts
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/common/PinInput/usePinInput.ts
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/common/PinInput/utils.ts
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/confirm-dialog.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/dashboard/overview.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/dashboard/recent-sales.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/app-sidebar.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/data/sidebar-data.ts
-- **Issue**: Constants files should use camelCase.ts
-- **Fix**: Rename to follow Constants files should use camelCase.ts
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/footer.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/header.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/main.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/nav-group.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/nav-user.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/site-header.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/team-switcher.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/top-nav.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/layout/workspace-header.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/long-text.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/password-input.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/profile-dropdown.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/providers.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/route-guard.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/search.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/select-dropdown.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/settings/language-settings.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/settings/settings-header.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/skip-to-main.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/theme-provider.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
-
-### /Users/joachimndoye/Documents/automai/src/components/theme-switch.tsx
-- **Issue**: Component files should use PascalCase.tsx
-- **Fix**: Rename to follow Component files should use PascalCase.tsx
+| File | Current | Suggested |
+| ---- | ------- | --------- |
+| /Users/joachimndoye/Documents/automai/src/app/[locale]/components/features.tsx | features.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/app/[locale]/components/hero.tsx | hero.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/coming-soon.tsx | coming-soon.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/command-menu.tsx | command-menu.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/common/PinInput/context.tsx | context.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/common/PinInput/index.tsx | index.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/common/PinInput/types.ts | types.ts | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/common/PinInput/usePinInput.ts | usePinInput.ts | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/common/PinInput/utils.ts | utils.ts | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/confirm-dialog.tsx | confirm-dialog.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/dashboard/overview.tsx | overview.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/dashboard/recent-sales.tsx | recent-sales.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/app-sidebar.tsx | app-sidebar.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/data/sidebar-data.ts | sidebar-data.ts | Constants files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/components/layout/footer.tsx | footer.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/header.tsx | header.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/main.tsx | main.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/nav-group.tsx | nav-group.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/nav-user.tsx | nav-user.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/site-header.tsx | site-header.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/team-switcher.tsx | team-switcher.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/top-nav.tsx | top-nav.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/layout/workspace-header.tsx | workspace-header.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/long-text.tsx | long-text.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/password-input.tsx | password-input.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/profile-dropdown.tsx | profile-dropdown.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/providers.tsx | providers.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/route-guard.tsx | route-guard.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/search.tsx | search.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/select-dropdown.tsx | select-dropdown.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/settings/language-settings.tsx | language-settings.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/settings/settings-header.tsx | settings-header.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/skip-to-main.tsx | skip-to-main.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/theme-provider.tsx | theme-provider.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/components/theme-switch.tsx | theme-switch.tsx | Component files should use PascalCase.tsx |
+| /Users/joachimndoye/Documents/automai/src/context/font-context.tsx | font-context.tsx | Type files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/context/role-context.tsx | role-context.tsx | Type files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/context/search-context.tsx | search-context.tsx | Type files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/context/theme-context.tsx | theme-context.tsx | Type files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/hooks/use-dialog-state.tsx | use-dialog-state.tsx | Hook files should use camelCase and start with "use" |
+| /Users/joachimndoye/Documents/automai/src/hooks/use-mobile.tsx | use-mobile.tsx | Hook files should use camelCase and start with "use" |
+| /Users/joachimndoye/Documents/automai/src/hooks/use-toast.ts | use-toast.ts | Hook files should use camelCase and start with "use" |
+| /Users/joachimndoye/Documents/automai/src/lib/contexts/RoleContext.tsx | RoleContext.tsx | Type files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/lib/contexts/SearchContext.tsx | SearchContext.tsx | Type files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/lib/contexts/UserContext.tsx | UserContext.tsx | Type files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/lib/websocket-server.ts | websocket-server.ts | Utility files should use camelCase.ts |
+| /Users/joachimndoye/Documents/automai/src/types/next-auth.d.ts | next-auth.d.ts | Type files should use camelCase.ts |
 
 
 ## Refactoring Strategy
