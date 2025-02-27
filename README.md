@@ -134,16 +134,16 @@ npm run prisma:seed
 ### Common Database Tasks
 ```bash
 # Reset database (drops all data and recreates tables)
-DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma migrate reset --schema=src/server/prisma/schema.prisma
+DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma migrate reset --schema=prisma/schema.prisma
 
 # View current database schema
-DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma format --schema=src/server/prisma/schema.prisma
+DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma format --schema=prisma/schema.prisma
 
 # Pull changes from database to schema
-DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma db pull --schema=src/server/prisma/schema.prisma
+DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma db pull --schema=prisma/schema.prisma
 
 # Push schema changes to database
-DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma db push --schema=src/server/prisma/schema.prisma
+DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma db push --schema=prisma/schema.prisma
 ```
 
 Note: All Prisma commands require the DATABASE_URL environment variable. The npm scripts include this automatically. If running npx commands directly, make sure to provide both the DATABASE_URL and the correct schema path as shown above.
