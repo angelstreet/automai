@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
@@ -29,6 +29,7 @@ export function Terminal({ connection }: TerminalProps) {
   const connectionAttemptedRef = useRef<boolean>(false);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const [isConnecting, setIsConnecting] = useState<boolean>(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,6 +42,7 @@ export function Terminal({ connection }: TerminalProps) {
     }
     
     connectionAttemptedRef.current = true;
+    setIsConnecting(true);
 
     // Initialize xterm.js
     const term = new XTerm({
@@ -124,6 +126,7 @@ export function Terminal({ connection }: TerminalProps) {
 
     socket.onopen = () => {
       console.log('[WebSocket] Connection established successfully');
+      setIsConnecting(false);
       
       // Log successful connection
       console.log('WebSocket connection established', {
@@ -164,6 +167,7 @@ export function Terminal({ connection }: TerminalProps) {
     socket.onerror = (error) => {
       // Handle WebSocket error event properly
       let errorMessage = 'Connection failed';
+      setIsConnecting(false);
       
       console.log('[WebSocket] Error event details:', error);
       
@@ -331,6 +335,14 @@ export function Terminal({ connection }: TerminalProps) {
 
   return (
     <div className="w-full h-full">
+      {isConnecting && (
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            <p className="text-sm text-muted-foreground">Initializing terminal connection...</p>
+          </div>
+        </div>
+      )}
       <div 
         ref={terminalRef} 
         className="w-full h-[calc(90%)] rounded-lg overflow-hidden border border-border"

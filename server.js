@@ -6,11 +6,152 @@ const { Client } = require('ssh2');
 
 // Create WebSocket singleton
 let wsServerInstance = null;
+let pingInterval = null;
 
 function getWebSocketServer() {
   if (!wsServerInstance) {
     wsServerInstance = new WebSocketServer({ noServer: true });
     console.log('[WebSocketServer] Singleton instance created');
+    
+    // Set up ping interval for WebSocket connections
+    pingInterval = setInterval(() => {
+      wsServerInstance.clients.forEach((ws) => {
+        if (ws.isAlive === false) {
+          return ws.terminate();
+        }
+        ws.isAlive = false;
+        ws.ping();
+      });
+    }, 30000);
+    
+    wsServerInstance.on('close', () => {
+      if (pingInterval) {
+        clearInterval(pingInterval);
+        pingInterval = null;
+      }
+    });
+    
+    // Set up connection handler
+    wsServerInstance.on('connection', (ws, request) => {
+      ws.isAlive = true;
+      ws.on('pong', () => { ws.isAlive = true; });
+      console.log('[WebSocketServer] Client connected');
+      
+      // Extract host ID from URL with new path format
+      const { pathname } = parse(request.url);
+      const hostIdMatch = pathname.match(/\/api\/hosts\/terminals\/([^\/]+)/);
+      const hostId = hostIdMatch ? hostIdMatch[1] : null;
+      
+      if (!hostId) {
+        console.error('[WebSocketServer] No host ID found in URL:', pathname);
+        ws.send(JSON.stringify({ 
+          error: 'Invalid host ID',
+          errorType: 'INVALID_HOST_ID'
+        }));
+        return;
+      }
+      
+      console.log('[WebSocketServer] Host ID:', hostId);
+      
+      // Set up authentication timeout (5 seconds)
+      const authTimeout = setTimeout(() => {
+        console.log('[WebSocketServer] Authentication timeout for host:', hostId);
+        ws.send(JSON.stringify({ 
+          error: 'Authentication timeout',
+          errorType: 'AUTH_TIMEOUT'
+        }));
+        ws.terminate();
+      }, 5000);
+      
+      // Store the timeout in the socket for later cleanup
+      ws.authTimeout = authTimeout;
+      
+      ws.on('message', async (message) => {
+        try {
+          const data = JSON.parse(message);
+          if (data.type === 'auth') {
+            console.log('[WebSocketServer] Received auth request:', {
+              connectionType: data.connectionType,
+              username: data.username
+            });
+            
+            // Clear authentication timeout
+            clearTimeout(authTimeout);
+            delete ws.authTimeout;
+            
+            // Fetch connection details from database
+            try {
+              console.log('[WebSocketServer] Looking up connection in database:', hostId);
+              
+              const connection = await prisma.connection.findUnique({
+                where: { id: hostId }
+              });
+              
+              if (!connection) {
+                console.error('[WebSocketServer] Connection not found:', hostId);
+                
+                // Create a mock connection for testing when connection not found
+                console.log('[WebSocketServer] Creating mock connection for testing');
+                const mockConnection = {
+                  id: hostId,
+                  name: 'Mock Connection',
+                  type: 'mock',
+                  ip: 'localhost',
+                  username: 'test',
+                  password: 'test'
+                };
+                
+                console.log('[WebSocketServer] Handling mock terminal connection');
+                handleMockTerminal(ws, mockConnection, hostId);
+                return;
+              }
+              
+              console.log('[WebSocketServer] Found connection:', { 
+                id: connection.id, 
+                type: connection.type 
+              });
+              
+              // Update connection with auth data if provided
+              if (data.username) connection.username = data.username;
+              if (data.password) connection.password = data.password;
+              
+              // Handle connection based on type
+              if (connection.type === 'ssh') {
+                console.log('[WebSocketServer] Handling SSH connection');
+                handleSshConnection(ws, connection, hostId);
+              } else {
+                console.log('[WebSocketServer] Handling mock terminal connection');
+                handleMockTerminal(ws, connection, hostId);
+              }
+            } catch (dbError) {
+              console.error('[WebSocketServer] Database error:', dbError);
+              ws.send(JSON.stringify({ 
+                error: 'Database error: ' + dbError.message,
+                errorType: 'DATABASE_ERROR'
+              }));
+            }
+          } else if (data.type === 'resize') {
+            // Handle terminal resize - this will be handled by the SSH connection
+            console.log('[WebSocketServer] Resize request:', data);
+          }
+        } catch (error) {
+          console.error('[WebSocketServer] Error processing message:', error);
+          ws.send(JSON.stringify({ 
+            error: 'Invalid message format: ' + error.message,
+            errorType: 'INVALID_MESSAGE'
+          }));
+        }
+      });
+      
+      ws.on('close', () => {
+        // Clear any pending timeouts
+        if (ws.authTimeout) {
+          clearTimeout(ws.authTimeout);
+          delete ws.authTimeout;
+        }
+        console.log('[WebSocketServer] Client disconnected');
+      });
+    });
   }
   return wsServerInstance;
 }
@@ -224,150 +365,7 @@ app.prepare().then(async () => {
     }
   });
 
-  // Initialize WebSocket server as singleton
-  const wss = getWebSocketServer();
-  // Make it globally available
-  global.wss = wss;
-  
-  console.log('[WebSocketServer] Initializing with HTTP server');
-  
-  // Set up ping interval for WebSocket connections
-  const pingInterval = setInterval(() => {
-    wss.clients.forEach((ws) => {
-      if (ws.isAlive === false) {
-        return ws.terminate();
-      }
-      ws.isAlive = false;
-      ws.ping();
-    });
-  }, 30000);
-  
-  wss.on('close', () => {
-    clearInterval(pingInterval);
-  });
-  
-  wss.on('connection', (ws, request) => {
-    ws.isAlive = true;
-    ws.on('pong', () => { ws.isAlive = true; });
-    console.log('[WebSocketServer] Client connected');
-    
-    // Extract host ID from URL with new path format
-    const { pathname } = parse(request.url);
-    const hostIdMatch = pathname.match(/\/api\/hosts\/terminals\/([^\/]+)/);
-    const hostId = hostIdMatch ? hostIdMatch[1] : null;
-    
-    if (!hostId) {
-      console.error('[WebSocketServer] No host ID found in URL:', pathname);
-      ws.send(JSON.stringify({ 
-        error: 'Invalid host ID',
-        errorType: 'INVALID_HOST_ID'
-      }));
-      return;
-    }
-    
-    console.log('[WebSocketServer] Host ID:', hostId);
-    
-    // Set up authentication timeout (5 seconds)
-    const authTimeout = setTimeout(() => {
-      console.log('[WebSocketServer] Authentication timeout for host:', hostId);
-      ws.send(JSON.stringify({ 
-        error: 'Authentication timeout',
-        errorType: 'AUTH_TIMEOUT'
-      }));
-      ws.terminate();
-    }, 5000);
-    
-    // Store the timeout in the socket for later cleanup
-    ws.authTimeout = authTimeout;
-    
-    ws.on('message', async (message) => {
-      try {
-        const data = JSON.parse(message);
-        if (data.type === 'auth') {
-          console.log('[WebSocketServer] Received auth request:', {
-            connectionType: data.connectionType,
-            username: data.username
-          });
-          
-          // Clear authentication timeout
-          clearTimeout(authTimeout);
-          delete ws.authTimeout;
-          
-          // Fetch connection details from database
-          try {
-            console.log('[WebSocketServer] Looking up connection in database:', hostId);
-            
-            const connection = await prisma.connection.findUnique({
-              where: { id: hostId }
-            });
-            
-            if (!connection) {
-              console.error('[WebSocketServer] Connection not found:', hostId);
-              
-              // Create a mock connection for testing when connection not found
-              console.log('[WebSocketServer] Creating mock connection for testing');
-              const mockConnection = {
-                id: hostId,
-                name: 'Mock Connection',
-                type: 'mock',
-                ip: 'localhost',
-                username: 'test',
-                password: 'test'
-              };
-              
-              console.log('[WebSocketServer] Handling mock terminal connection');
-              handleMockTerminal(ws, mockConnection, hostId);
-              return;
-            }
-            
-            console.log('[WebSocketServer] Found connection:', { 
-              id: connection.id, 
-              type: connection.type 
-            });
-            
-            // Update connection with auth data if provided
-            if (data.username) connection.username = data.username;
-            if (data.password) connection.password = data.password;
-            
-            // Handle connection based on type
-            if (connection.type === 'ssh') {
-              console.log('[WebSocketServer] Handling SSH connection');
-              handleSshConnection(ws, connection, hostId);
-            } else {
-              console.log('[WebSocketServer] Handling mock terminal connection');
-              handleMockTerminal(ws, connection, hostId);
-            }
-          } catch (dbError) {
-            console.error('[WebSocketServer] Database error:', dbError);
-            ws.send(JSON.stringify({ 
-              error: 'Database error: ' + dbError.message,
-              errorType: 'DATABASE_ERROR'
-            }));
-          }
-        } else if (data.type === 'resize') {
-          // Handle terminal resize - this will be handled by the SSH connection
-          console.log('[WebSocketServer] Resize request:', data);
-        }
-      } catch (error) {
-        console.error('[WebSocketServer] Error processing message:', error);
-        ws.send(JSON.stringify({ 
-          error: 'Invalid message format: ' + error.message,
-          errorType: 'INVALID_MESSAGE'
-        }));
-      }
-    });
-    
-    ws.on('close', () => {
-      // Clear any pending timeouts
-      if (ws.authTimeout) {
-        clearTimeout(ws.authTimeout);
-        delete ws.authTimeout;
-      }
-      console.log('[WebSocketServer] Client disconnected');
-    });
-  });
-  
-  // Handle upgrade requests
+  // Handle upgrade requests - initialize WebSocket server on-demand
   server.on('upgrade', (request, socket, head) => {
     const { pathname } = parse(request.url);
     console.log('[WebSocketServer] Received upgrade request:', pathname);
@@ -380,6 +378,11 @@ app.prepare().then(async () => {
       const hostIdMatch = pathname.match(/\/api\/hosts\/terminals\/([^\/]+)/);
       const hostId = hostIdMatch ? hostIdMatch[1] : 'unknown';
       console.log('[WebSocketServer] Processing upgrade for host ID:', hostId);
+      
+      // Initialize WebSocket server on-demand
+      const wss = getWebSocketServer();
+      // Make it globally available
+      global.wss = wss;
       
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
@@ -394,7 +397,7 @@ app.prepare().then(async () => {
   server.listen(port, (err) => {
     if (err) throw err;
     console.log(`> Ready on http://${hostname}:${port}`);
-    console.log(`> WebSocket server initialized and ready`);
+    console.log(`> WebSocket server will be initialized on-demand`);
   });
   
   // Handle graceful shutdown
