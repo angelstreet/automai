@@ -29,8 +29,8 @@ export default function LogsPage() {
   // Fetch machines from API
   const fetchMachines = async () => {
     try {
-      const response = await fetch('/api/virtualization/machines');
-      
+      const response = await fetch('/api/hosts');
+
       if (!response.ok) {
         toast({
           variant: 'destructive',
@@ -39,24 +39,21 @@ export default function LogsPage() {
         });
         return;
       }
-      
+
       const data = await response.json();
-      const machines = data.data || [];
-      setMachines(machines);
+      setMachines(data.hosts || []);
+
+      // Fetch logs from API
+      const logsResponse = await fetch('/api/logs');
+      if (logsResponse.ok) {
+        const logsData = await logsResponse.json();
+        setLogs(logsData.logs || []);
+      }
 
       // Set first machine as selected if none selected
       if (machines.length > 0 && !selectedDevice) {
         setSelectedDevice(machines[0].id);
       }
-
-      // Fetch logs for all machines
-      const mockLogs: Log[] = [
-        { id: '1', deviceId: machines[0]?.id, timestamp: '2024-03-20T10:00:00Z', level: 'info', message: 'Container started successfully' },
-        { id: '2', deviceId: machines[0]?.id, timestamp: '2024-03-20T10:01:00Z', level: 'warning', message: 'High memory usage detected' },
-        { id: '3', deviceId: machines[1]?.id, timestamp: '2024-03-20T10:02:00Z', level: 'error', message: 'Failed to connect to network' }
-      ].filter(log => log.deviceId); // Only keep logs for existing machines
-
-      setLogs(mockLogs);
     } catch (error) {
       console.error('Error fetching machines:', error);
       toast({
@@ -74,7 +71,7 @@ export default function LogsPage() {
   }, []);
 
   const filteredLogs = selectedDevice
-    ? logs.filter(log => log.deviceId === selectedDevice)
+    ? logs.filter((log) => log.deviceId === selectedDevice)
     : logs;
 
   if (isLoading) {
@@ -86,7 +83,7 @@ export default function LogsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Logs</h1>
       </div>
-      
+
       <div className="flex gap-4 h-full">
         {/* Sidebar */}
         <Card className="w-64 p-4">
@@ -99,33 +96,35 @@ export default function LogsPage() {
             >
               All Devices
             </Button>
-            {machines.map(machine => (
+            {machines.map((machine) => (
               <Button
-                key={host.id}
-                variant={selectedDevice === host.id ? 'secondary' : 'ghost'}
+                key={machine.id}
+                variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setSelectedDevice(host.id)}
+                onClick={() => setSelectedDevice(machine.id)}
               >
-                {host.name}
+                {machine.name}
               </Button>
             ))}
           </div>
         </Card>
-        
+
         {/* Main content */}
         <Card className="flex-1 p-4">
           <ScrollArea className="h-[calc(100vh-200px)]">
             <div className="space-y-4">
-              {filteredLogs.map(log => {
-                const device = machines.find(m => m.id === log.deviceId);
-                
+              {filteredLogs.map((log) => {
+                const device = machines.find((m) => m.id === log.deviceId);
+
                 return (
                   <div key={log.id} className="flex items-start gap-4 p-2 rounded border">
                     <Badge
                       variant={
-                        log.level === 'error' ? 'destructive' :
-                        log.level === 'warning' ? 'warning' :
-                        'secondary'
+                        log.level === 'error'
+                          ? 'destructive'
+                          : log.level === 'warning'
+                            ? 'secondary'
+                            : 'outline'
                       }
                     >
                       {log.level}
@@ -150,4 +149,4 @@ export default function LogsPage() {
       </div>
     </div>
   );
-} 
+}

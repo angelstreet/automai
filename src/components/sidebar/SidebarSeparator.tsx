@@ -14,4 +14,4 @@ export const SidebarSeparator = React.forwardRef<
       {...props}
     />
   );
-}); 
+});

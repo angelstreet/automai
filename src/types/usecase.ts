@@ -23,4 +23,4 @@ export type NewUseCase = {
   name: string;
   description: string;
   platform: string;
-}; 
+};

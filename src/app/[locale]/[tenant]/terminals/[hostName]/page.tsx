@@ -29,21 +29,20 @@ export default function TerminalPage() {
 
   // Get host name from URL params
   const hostName = params.hostName as string;
-  
+
   // Log the host name for debugging
   useEffect(() => {
     logger.info(`Terminal page loaded with host name: ${hostName}`, {
       action: 'TERMINAL_PAGE_LOADED',
       data: { hostName },
-      saveToDb: true
+      saveToDb: true,
     });
   }, [hostName]);
-  
+
   // Get count from URL if present (for multiple terminals)
-  const count = typeof window !== 'undefined' 
-    ? new URLSearchParams(window.location.search).get('count') 
-    : null;
-  
+  const count =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('count') : null;
+
   const terminalCount = count ? parseInt(count, 10) : 1;
 
   // Fetch host by name
@@ -88,16 +87,16 @@ export default function TerminalPage() {
     if (error) {
       initializationAttemptedRef.current = false;
     }
-    
+
     // Prevent duplicate initialization
     if (initializationAttemptedRef.current) {
       console.log('Preventing duplicate terminal initialization');
       return;
     }
-    
+
     initializationAttemptedRef.current = true;
     setLoading(true);
-    
+
     try {
       // For single terminal case
       if (terminalCount === 1) {
@@ -105,36 +104,34 @@ export default function TerminalPage() {
         setConnections([host]);
         return;
       }
-      
+
       // For multiple terminals case (from session storage)
       const sessionData = sessionStorage.getItem('selectedMachines');
       if (!sessionData) {
         throw new Error('No hosts selected for multiple terminals view');
       }
-      
+
       const hostIds = JSON.parse(sessionData);
       if (!Array.isArray(hostIds) || hostIds.length === 0) {
         throw new Error('Invalid host selection data');
       }
-      
+
       // Limit to max 4 terminals
       const limitedIds = hostIds.slice(0, 4);
-      
+
       // Fetch all hosts in parallel
-      const hostPromises = limitedIds.map(id => 
-        fetchMachineDetails(id)
-      );
-      
+      const hostPromises = limitedIds.map((id) => fetchMachineDetails(id));
+
       const hosts = await Promise.all(machinePromises);
       setConnections(hosts);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';
       setError(message);
-      
+
       logger.error(`Terminal initialization failed: ${message}`, {
         action: 'TERMINAL_INIT_ERROR',
         data: { error: message },
-        saveToDb: true
+        saveToDb: true,
       });
     } finally {
       setLoading(false);
@@ -149,7 +146,7 @@ export default function TerminalPage() {
       logger.info('Terminal page unmounted', {
         action: 'TERMINAL_PAGE_UNMOUNTED',
         data: { hostName },
-        saveToDb: true
+        saveToDb: true,
       });
     };
   }, [hostName, terminalCount]);
@@ -201,19 +198,38 @@ export default function TerminalPage() {
           onClick={() => router.back()}
           className="flex items-center text-sm font-medium text-muted-foreground hover:text-foreground mr-3"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
         </button>
         <h1 className="text-xl font-semibold">Terminals</h1>
       </div>
-      <div className={`grid gap-4 flex-1 ${
-        connections.length === 1 ? 'grid-cols-1' : 
-        connections.length === 2 ? 'grid-cols-2' :
-        connections.length === 3 ? 'grid-cols-3' : 'grid-cols-2 grid-rows-2'
-      }`}>
+      <div
+        className={`grid gap-4 flex-1 ${
+          connections.length === 1
+            ? 'grid-cols-1'
+            : connections.length === 2
+              ? 'grid-cols-2'
+              : connections.length === 3
+                ? 'grid-cols-3'
+                : 'grid-cols-2 grid-rows-2'
+        }`}
+      >
         {connections.map((connection) => (
-          <div key={connection.id} className="border border-border rounded-lg overflow-hidden flex flex-col">
+          <div
+            key={connection.id}
+            className="border border-border rounded-lg overflow-hidden flex flex-col"
+          >
             <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">
               {connection.name} ({connection.ip})
             </div>
@@ -225,4 +241,4 @@ export default function TerminalPage() {
       </div>
     </div>
   );
-} 
+}

@@ -1,9 +1,21 @@
 import { Host } from '@/types/hosts';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Terminal, BarChart2, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -35,11 +47,23 @@ export function HostTable({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'connected':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{t('connected')}</Badge>;
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            {t('connected')}
+          </Badge>
+        );
       case 'failed':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">{t('failed')}</Badge>;
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            {t('failed')}
+          </Badge>
+        );
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">{t('pending')}</Badge>;
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            {t('pending')}
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{t('unknown')}</Badge>;
     }
@@ -75,9 +99,12 @@ export function HostTable({
         </TableHeader>
         <TableBody>
           {hosts.map((host) => (
-            <TableRow key={host.id} className={cn({
-              "bg-muted/50": selectedHosts.has(host.id),
-            })}>
+            <TableRow
+              key={host.id}
+              className={cn({
+                'bg-muted/50': selectedHosts.has(host.id),
+              })}
+            >
               {selectMode && (
                 <TableCell>
                   <Checkbox
@@ -88,9 +115,14 @@ export function HostTable({
                 </TableCell>
               )}
               <TableCell className="font-medium">{host.name}</TableCell>
-              <TableCell>{host.ip}{host.port ? `:${host.port}` : ''}</TableCell>
+              <TableCell>
+                {host.ip}
+                {host.port ? `:${host.port}` : ''}
+              </TableCell>
               <TableCell>{getStatusBadge(host.status)}</TableCell>
-              <TableCell>{formatDate(host.lastConnected ? new Date(host.lastConnected) : undefined)}</TableCell>
+              <TableCell>
+                {formatDate(host.lastConnected ? new Date(host.lastConnected) : undefined)}
+              </TableCell>
               <TableCell>
                 <Button
                   variant="ghost"
@@ -120,7 +152,10 @@ export function HostTable({
                       <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)}>
                         Logs
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
+                      <DropdownMenuItem
+                        onClick={() => onDelete?.(host.id)}
+                        className="text-destructive"
+                      >
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -133,4 +168,4 @@ export function HostTable({
       </Table>
     </div>
   );
-} 
+}

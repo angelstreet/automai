@@ -43,14 +43,14 @@ passport.use(
           displayName: profile.displayName,
           email: profile.emails?.[0]?.value,
           hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken
+          hasRefreshToken: !!refreshToken,
         });
 
         // Check if user exists
         let user = await prismaClient.user.findFirst({
           where: {
             email: profile.emails[0].value,
-            provider: 'google'
+            provider: 'google',
           },
           include: { tenant: true },
         });
@@ -65,7 +65,10 @@ passport.use(
           });
 
           if (user) {
-            console.log('Email already registered with different provider:', profile.emails[0].value);
+            console.log(
+              'Email already registered with different provider:',
+              profile.emails[0].value,
+            );
             return done(null, false, {
               message: 'Email already registered with different method',
             });
@@ -124,14 +127,14 @@ passport.use(
           username: profile.username,
           displayName: profile.displayName,
           hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken
+          hasRefreshToken: !!refreshToken,
         });
 
         // Check if user exists
         let user = await prismaClient.user.findFirst({
           where: {
             email: profile.emails?.[0]?.value,
-            provider: 'github'
+            provider: 'github',
           },
           include: { tenant: true },
         });

@@ -11,6 +11,7 @@ alwaysApply: false
 - Follow Role-Based Access Control (RBAC) to manage permissions.
 - Version APIs using `/api/v1/...` for backward compatibility.
 - Rate-limit requests to prevent abuse.
+- **NEVER** use Express.js for any server implementations; use Next.js Route Handlers instead.
 - All API responses should follow:
   ```json
   {

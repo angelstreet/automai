@@ -45,8 +45,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       // Check if we have a cached user and it's still valid
       const now = Date.now();
-      const cachedData = typeof window !== 'undefined' ? localStorage.getItem(SESSION_CACHE_KEY) : null;
-      
+      const cachedData =
+        typeof window !== 'undefined' ? localStorage.getItem(SESSION_CACHE_KEY) : null;
+
       if (cachedData) {
         try {
           const { user: cachedUser, timestamp } = JSON.parse(cachedData);
@@ -93,15 +94,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         plan: userData.plan,
         tenantId: userData.tenantId,
       });
-      
+
       // Cache the user data
       if (typeof window !== 'undefined') {
-        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({
-          user: userData,
-          timestamp: now
-        }));
+        localStorage.setItem(
+          SESSION_CACHE_KEY,
+          JSON.stringify({
+            user: userData,
+            timestamp: now,
+          }),
+        );
       }
-      
+
       setUser(userData);
       setError(null);
       setLastFetch(now);

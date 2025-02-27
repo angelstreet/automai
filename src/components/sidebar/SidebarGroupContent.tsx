@@ -10,4 +10,4 @@ export const SidebarGroupContent = React.forwardRef<HTMLDivElement, React.Compon
       {...props}
     />
   ),
-); 
+);

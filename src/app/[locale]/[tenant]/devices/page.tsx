@@ -16,7 +16,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export default function DevicesPage() {
   const t = useTranslations('Common');
@@ -40,10 +46,10 @@ export default function DevicesPage() {
     try {
       // This would be replaced with actual API call
       console.log('Creating new device:', newDevice);
-      
+
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Reset form and close dialog
       setNewDevice({
         name: '',
@@ -108,11 +114,11 @@ export default function DevicesPage() {
                     onChange={(e) => setNewDevice({ ...newDevice, name: e.target.value })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="type">Type</Label>
-                  <Select 
-                    value={newDevice.type} 
+                  <Select
+                    value={newDevice.type}
                     onValueChange={(value) => {
                       const platform = value === 'web' ? 'chrome' : 'android';
                       setNewDevice({ ...newDevice, type: value, platform });
@@ -127,11 +133,11 @@ export default function DevicesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="platform">Platform</Label>
-                  <Select 
-                    value={newDevice.platform} 
+                  <Select
+                    value={newDevice.platform}
                     onValueChange={(value) => setNewDevice({ ...newDevice, platform: value })}
                   >
                     <SelectTrigger>
@@ -154,7 +160,7 @@ export default function DevicesPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="version">Version</Label>
                   <Input
@@ -164,7 +170,7 @@ export default function DevicesPage() {
                     onChange={(e) => setNewDevice({ ...newDevice, version: e.target.value })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="resolution">Resolution</Label>
                   <Input
@@ -174,7 +180,7 @@ export default function DevicesPage() {
                     onChange={(e) => setNewDevice({ ...newDevice, resolution: e.target.value })}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
@@ -207,10 +213,12 @@ export default function DevicesPage() {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-60">
-            <p className="text-sm text-muted-foreground">Device management content will be available soon</p>
+            <p className="text-sm text-muted-foreground">
+              Device management content will be available soon
+            </p>
           </div>
         </CardContent>
       </Card>
     </div>
   );
-} 
+}

@@ -19,7 +19,12 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     if (user && user.role) {
       // Convert role to lowercase and ensure it's a valid Role type
       const userRole = user.role.toLowerCase() as Role;
-      if (userRole === 'admin' || userRole === 'developer' || userRole === 'tester' || userRole === 'viewer') {
+      if (
+        userRole === 'admin' ||
+        userRole === 'developer' ||
+        userRole === 'tester' ||
+        userRole === 'viewer'
+      ) {
         setCurrentRole(userRole);
       }
     }

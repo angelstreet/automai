@@ -1,19 +1,11 @@
-import { NextResponse } from 'next/server';
+import { WebSocketServer } from '@/lib/websocket-server';
 
-export async function POST(request: Request) {
+export async function GET() {
   try {
-    // Import the WebSocket server initialization function
-    const { initializeWebSocketServer } = require('../../../../../websocket_server');
-    
-    // Initialize the WebSocket server
-    initializeWebSocketServer();
-    
-    return NextResponse.json({ status: 'success' });
+    const wss = new WebSocketServer();
+    return new Response('WebSocket server initialized', { status: 200 });
   } catch (error) {
-    console.error('[API] Failed to initialize WebSocket server:', error);
-    return NextResponse.json(
-      { error: 'Failed to initialize WebSocket server' },
-      { status: 500 }
-    );
+    console.error('Failed to initialize WebSocket server:', error);
+    return new Response('Failed to initialize WebSocket server', { status: 500 });
   }
-} 
+}

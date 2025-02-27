@@ -23,9 +23,12 @@ export function HostGrid({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {hosts.map((host) => (
-        <div key={host.id} className={cn({
-          "opacity-70": selectMode && !selectedHosts.has(host.id)
-        })}>
+        <div
+          key={host.id}
+          className={cn({
+            'opacity-70': selectMode && !selectedHosts.has(host.id),
+          })}
+        >
           <div className="relative">
             {selectMode && (
               <div className="absolute right-4 top-4 z-10">
@@ -36,14 +39,10 @@ export function HostGrid({
                 />
               </div>
             )}
-            <HostCard
-              host={host}
-              onDelete={onDelete}
-              onTestConnection={onTestConnection}
-            />
+            <HostCard host={host} onDelete={onDelete} onTestConnection={onTestConnection} />
           </div>
         </div>
       ))}
     </div>
   );
-} 
+}

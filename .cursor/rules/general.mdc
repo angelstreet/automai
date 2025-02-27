@@ -80,6 +80,8 @@ alwaysApply: true
      - What specific changes are needed in each file
      - Why these changes will address the issue
    - Wait for explicit user approval before implementing any code changes
+   - Never use Express.js for any server implementations
+   - When running npm build, fix all warnings and errors before rerunning the build
 
 3. Information gathering approach:
    - First consult all cursor rules to find relevant information

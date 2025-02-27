@@ -2,32 +2,33 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 interface ConnectionLog {
   id: string;
@@ -58,12 +59,14 @@ export default function LogsPage() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/admin/logs?page=${page}&level=${filter.level}&action=${filter.action}&search=${filter.search}`);
-      
+      const response = await fetch(
+        `/api/admin/logs?page=${page}&level=${filter.level}&action=${filter.action}&search=${filter.search}`,
+      );
+
       if (!response.ok) {
         throw new Error('Failed to fetch logs');
       }
-      
+
       const data = await response.json();
       setLogs(data.logs);
       setTotalPages(data.totalPages);
@@ -81,7 +84,7 @@ export default function LogsPage() {
   }, [status, page, filter]);
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilter(prev => ({ ...prev, [key]: value }));
+    setFilter((prev) => ({ ...prev, [key]: value }));
     setPage(1); // Reset to first page when filter changes
   };
 
@@ -113,15 +116,13 @@ export default function LogsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Connection Logs</CardTitle>
-          <CardDescription>
-            View and filter connection activity logs
-          </CardDescription>
+          <CardDescription>View and filter connection activity logs</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
             <div className="w-1/4">
-              <Select 
-                value={filter.level} 
+              <Select
+                value={filter.level}
                 onValueChange={(value) => handleFilterChange('level', value)}
               >
                 <SelectTrigger>
@@ -137,8 +138,8 @@ export default function LogsPage() {
               </Select>
             </div>
             <div className="w-1/4">
-              <Select 
-                value={filter.action} 
+              <Select
+                value={filter.action}
                 onValueChange={(value) => handleFilterChange('action', value)}
               >
                 <SelectTrigger>
@@ -154,8 +155,8 @@ export default function LogsPage() {
             </div>
             <div className="w-1/2">
               <div className="flex gap-2">
-                <Input 
-                  placeholder="Search logs..." 
+                <Input
+                  placeholder="Search logs..."
                   value={filter.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
                 />
@@ -213,17 +214,15 @@ export default function LogsPage() {
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
-                      <PaginationPrevious 
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                      <PaginationPrevious
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={page === 1}
                       />
                     </PaginationItem>
-                    
+
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      const pageNum = page <= 3 
-                        ? i + 1 
-                        : page + i - 2;
-                        
+                      const pageNum = page <= 3 ? i + 1 : page + i - 2;
+
                       if (pageNum <= totalPages) {
                         return (
                           <PaginationItem key={pageNum}>
@@ -238,10 +237,10 @@ export default function LogsPage() {
                       }
                       return null;
                     })}
-                    
+
                     <PaginationItem>
-                      <PaginationNext 
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      <PaginationNext
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={page === totalPages}
                       />
                     </PaginationItem>
@@ -254,4 +253,4 @@ export default function LogsPage() {
       </Card>
     </div>
   );
-} 
+}

@@ -44,20 +44,14 @@ export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
     if (!projectId) {
-      return NextResponse.json(
-        { error: 'Project ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
 
     const useCases = await prisma.useCase.findMany({
@@ -78,10 +72,7 @@ export async function GET(request: Request) {
     return NextResponse.json(useCases);
   } catch (error) {
     console.error('Error fetching use cases:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch use cases' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch use cases' }, { status: 500 });
   }
 }
 
@@ -89,10 +80,7 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { name, projectId, steps, shortIdPrefix } = await request.json();
@@ -100,7 +88,7 @@ export async function POST(request: Request) {
     if (!name || !projectId || !steps || !shortIdPrefix) {
       return NextResponse.json(
         { error: 'Name, projectId, steps, and shortIdPrefix are required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -121,9 +109,6 @@ export async function POST(request: Request) {
     return NextResponse.json(useCase, { status: 201 });
   } catch (error) {
     console.error('Error creating use case:', error);
-    return NextResponse.json(
-      { error: 'Failed to create use case' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create use case' }, { status: 500 });
   }
-} 
+}

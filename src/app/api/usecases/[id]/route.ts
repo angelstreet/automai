@@ -3,17 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const useCase = await prisma.useCase.findFirst({
@@ -32,42 +26,27 @@ export async function GET(
     });
 
     if (!useCase) {
-      return NextResponse.json(
-        { error: 'Use case not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Use case not found' }, { status: 404 });
     }
 
     return NextResponse.json(useCase);
   } catch (error) {
     console.error('Error fetching use case:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch use case' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch use case' }, { status: 500 });
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { name, steps } = await request.json();
 
     if (!name && !steps) {
-      return NextResponse.json(
-        { error: 'Name or steps are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Name or steps are required' }, { status: 400 });
     }
 
     const useCase = await prisma.useCase.update({
@@ -81,24 +60,15 @@ export async function PUT(
     return NextResponse.json(useCase);
   } catch (error) {
     console.error('Error updating use case:', error);
-    return NextResponse.json(
-      { error: 'Failed to update use case' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to update use case' }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await prisma.useCase.delete({
@@ -108,9 +78,6 @@ export async function DELETE(
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Error deleting use case:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete use case' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to delete use case' }, { status: 500 });
   }
-} 
+}

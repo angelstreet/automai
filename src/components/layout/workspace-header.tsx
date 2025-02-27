@@ -27,15 +27,15 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
   const params = useParams();
   const locale = params.locale as string;
   const [headerVisible, setHeaderVisible] = React.useState(
-    Cookies.get(HEADER_COOKIE_NAME) !== 'hidden'
+    Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
   );
 
   const toggleHeader = React.useCallback(() => {
     const newState = !headerVisible;
     setHeaderVisible(newState);
-    Cookies.set(HEADER_COOKIE_NAME, newState ? 'visible' : 'hidden', { 
-      path: '/', 
-      expires: HEADER_COOKIE_MAX_AGE / (60 * 60 * 24) // Convert seconds to days
+    Cookies.set(HEADER_COOKIE_NAME, newState ? 'visible' : 'hidden', {
+      path: '/',
+      expires: HEADER_COOKIE_MAX_AGE / (60 * 60 * 24), // Convert seconds to days
     });
   }, [headerVisible]);
 
@@ -61,10 +61,10 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <UserProfile tenant={tenant} />
               <Separator orientation="vertical" className="h-6 opacity-10" />
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-8 w-8" 
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
                 onClick={toggleHeader}
                 title="Hide Header"
               >
@@ -76,10 +76,10 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
         </header>
       ) : (
         <div className="sticky top-0 z-50 flex justify-end px-4 py-1 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="h-8 w-8" 
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8"
             onClick={toggleHeader}
             title="Show Header"
           >

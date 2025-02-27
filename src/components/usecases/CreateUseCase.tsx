@@ -28,7 +28,7 @@ export function CreateUseCase({
   return (
     <div className="space-y-4 p-4">
       <h2 className="text-lg font-semibold">Create New Use Case</h2>
-      
+
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1">Project</label>
@@ -90,14 +90,11 @@ export function CreateUseCase({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            onClick={onSubmit}
-            disabled={!newUseCase.projectId || !newUseCase.name}
-          >
+          <Button onClick={onSubmit} disabled={!newUseCase.projectId || !newUseCase.name}>
             Create
           </Button>
         </div>
       </div>
     </div>
   );
-} 
+}

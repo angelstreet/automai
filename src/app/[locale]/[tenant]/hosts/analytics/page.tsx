@@ -18,8 +18,8 @@ export default function AnalyticsPage() {
   // Fetch machines from API
   const fetchHosts = async () => {
     try {
-      const response = await fetch('/api/virtualization/machines');
-      
+      const response = await fetch('/api/hosts');
+
       if (!response.ok) {
         toast({
           variant: 'destructive',
@@ -28,10 +28,9 @@ export default function AnalyticsPage() {
         });
         return;
       }
-      
+
       const data = await response.json();
-      const hosts = data.data || [];
-      setHosts(machines);
+      setHosts(data.hosts || []);
 
       // Set first machine as selected if none selected
       if (hosts.length > 0 && !selectedDevice) {
@@ -62,13 +61,13 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
       </div>
-      
+
       <div className="flex gap-4 h-full">
         {/* Sidebar */}
         <Card className="w-64 p-4">
           <h2 className="font-semibold mb-4">Devices</h2>
           <div className="space-y-2">
-            {hosts.map(machine => (
+            {hosts.map((machine) => (
               <Button
                 key={machine.id}
                 variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}
@@ -80,54 +79,16 @@ export default function AnalyticsPage() {
             ))}
           </div>
         </Card>
-        
+
         {/* Main content */}
         <Card className="flex-1 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* CPU Usage */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-2">CPU Usage</h3>
-              <div className="text-2xl font-bold">45%</div>
-              <p className="text-sm text-muted-foreground">Average over last hour</p>
-            </Card>
-            
-            {/* Memory Usage */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-2">Memory Usage</h3>
-              <div className="text-2xl font-bold">2.5 GB</div>
-              <p className="text-sm text-muted-foreground">Of 8 GB total</p>
-            </Card>
-            
-            {/* Disk Usage */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-2">Disk Usage</h3>
-              <div className="text-2xl font-bold">75%</div>
-              <p className="text-sm text-muted-foreground">120 GB of 160 GB used</p>
-            </Card>
-            
-            {/* Network Traffic */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-2">Network Traffic</h3>
-              <div className="text-2xl font-bold">2.3 MB/s</div>
-              <p className="text-sm text-muted-foreground">Current throughput</p>
-            </Card>
-            
-            {/* Active Processes */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-2">Active Processes</h3>
-              <div className="text-2xl font-bold">128</div>
-              <p className="text-sm text-muted-foreground">Running processes</p>
-            </Card>
-            
-            {/* Uptime */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-2">Uptime</h3>
-              <div className="text-2xl font-bold">15d 6h</div>
-              <p className="text-sm text-muted-foreground">Since last reboot</p>
-            </Card>
-          </div>
+          {selectedDevice && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Analytics data will be populated from API */}
+            </div>
+          )}
         </Card>
       </div>
     </div>
   );
-} 
+}

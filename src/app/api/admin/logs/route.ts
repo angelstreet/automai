@@ -8,21 +8,24 @@ export async function GET(request: NextRequest) {
   try {
     // Check authentication and admin status
     const session = await getServerSession(authOptions);
-    
+
     if (!session || !session.user || session.user.role !== 'ADMIN') {
-      logger.warn('Unauthorized access attempt to logs API', { 
-        userId: session?.user?.id, 
+      logger.warn('Unauthorized access attempt to logs API', {
+        userId: session?.user?.id,
         ip: request.headers.get('x-forwarded-for') || 'unknown',
         action: 'LOGS_GET_UNAUTHORIZED',
-        saveToDb: true
+        saveToDb: true,
       });
-      
-      return NextResponse.json({
-        success: false,
-        message: 'Unauthorized'
-      }, { status: 401 });
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Unauthorized',
+        },
+        { status: 401 },
+      );
     }
-    
+
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get('page') || '1');
@@ -30,20 +33,20 @@ export async function GET(request: NextRequest) {
     const level = searchParams.get('level') || undefined;
     const action = searchParams.get('action') || undefined;
     const search = searchParams.get('search') || undefined;
-    
+
     // Build filter
     const filter: any = {};
-    
+
     if (level) {
       filter.level = level;
     }
-    
+
     if (action) {
       filter.action = {
         contains: action,
       };
     }
-    
+
     if (search) {
       filter.OR = [
         { message: { contains: search, mode: 'insensitive' } },
@@ -52,14 +55,14 @@ export async function GET(request: NextRequest) {
         { ip: { contains: search, mode: 'insensitive' } },
       ];
     }
-    
+
     // Get total count for pagination
     const totalLogs = await prisma.connectionLog.count({
       where: filter,
     });
-    
+
     const totalPages = Math.ceil(totalLogs / pageSize);
-    
+
     // Fetch logs with pagination
     const logs = await prisma.connectionLog.findMany({
       where: filter,
@@ -69,14 +72,14 @@ export async function GET(request: NextRequest) {
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
-    
-    logger.info('Admin fetched logs', { 
-      userId: session.user.id, 
+
+    logger.info('Admin fetched logs', {
+      userId: session.user.id,
       action: 'LOGS_GET',
       data: { page, filter },
-      saveToDb: true
+      saveToDb: true,
     });
-    
+
     return NextResponse.json({
       success: true,
       logs,
@@ -89,12 +92,15 @@ export async function GET(request: NextRequest) {
     logger.error(`Error fetching logs: ${error instanceof Error ? error.message : String(error)}`, {
       action: 'LOGS_GET_ERROR',
       data: { error: error instanceof Error ? error.message : String(error) },
-      saveToDb: true
+      saveToDb: true,
     });
-    
-    return NextResponse.json({
-      success: false,
-      message: 'Failed to fetch logs',
-    }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to fetch logs',
+      },
+      { status: 500 },
+    );
   }
-} 
+}

@@ -1,16 +1,17 @@
 // Script to update a user's role to ADMIN
 // Run with: node -r dotenv/config src/server/scripts/update-user-role.js your-email@example.com
 
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+import { prisma } from '../../lib/prisma';
 
 async function updateUserRole() {
   try {
     const email = process.argv[2];
-    
+
     if (!email) {
       console.error('Please provide an email address as an argument');
-      console.error('Example: node -r dotenv/config src/server/scripts/update-user-role.js your-email@example.com');
+      console.error(
+        'Example: node -r dotenv/config src/server/scripts/update-user-role.js your-email@example.com',
+      );
       process.exit(1);
     }
 
@@ -38,4 +39,4 @@ async function updateUserRole() {
   }
 }
 
-updateUserRole(); 
+updateUserRole();

@@ -83,4 +83,4 @@ export const SidebarMenuSubButton = React.forwardRef<
       </Tooltip>
     );
   },
-); 
+);

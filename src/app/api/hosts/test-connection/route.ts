@@ -11,14 +11,11 @@ export async function POST(request: Request) {
 
     // Get host from database to get password
     const hostRecord = await prisma.host.findUnique({
-      where: { id: machineId }
+      where: { id: machineId },
     });
 
     if (!hostRecord) {
-      return NextResponse.json(
-        { success: false, message: 'Host not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, message: 'Host not found' }, { status: 404 });
     }
 
     // Test SSH connection
@@ -31,10 +28,9 @@ export async function POST(request: Request) {
         if (!resolved) {
           conn.end();
           resolved = true;
-          resolve(NextResponse.json(
-            { success: false, message: 'Connection timed out' },
-            { status: 408 }
-          ));
+          resolve(
+            NextResponse.json({ success: false, message: 'Connection timed out' }, { status: 408 }),
+          );
         }
       }, 5000);
 
@@ -51,10 +47,7 @@ export async function POST(request: Request) {
         clearTimeout(timeout);
         if (!resolved) {
           resolved = true;
-          resolve(NextResponse.json(
-            { success: false, message: err.message },
-            { status: 500 }
-          ));
+          resolve(NextResponse.json({ success: false, message: err.message }, { status: 500 }));
         }
       });
 
@@ -63,14 +56,11 @@ export async function POST(request: Request) {
         host: ip,
         port: port || 22,
         username: username,
-        password: hostRecord.password
+        password: hostRecord.password,
       });
     });
   } catch (error) {
     console.error('Error testing connection:', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
-} 
+}

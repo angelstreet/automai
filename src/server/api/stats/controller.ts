@@ -1,7 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
-const express = require('express');
+import { prisma } from '@/lib/prisma';
+import type { Request, Response } from 'express';
 
-const prisma = new PrismaClient();
+const express = require('express');
 
 const getStats = async (req: express.Request, res: express.Response) => {
   try {

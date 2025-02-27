@@ -7,7 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -34,16 +40,16 @@ export default function VirtualizationSettingsPage() {
     try {
       // This would be replaced with actual API call
       console.log('Saving settings:', settings);
-      
+
       toast({
-        title: "Settings saved",
-        description: "Your virtualization settings have been updated successfully.",
+        title: 'Settings saved',
+        description: 'Your virtualization settings have been updated successfully.',
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to save settings. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to save settings. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -104,7 +110,7 @@ export default function VirtualizationSettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="networkType">Network Type</Label>
-              <Select 
+              <Select
                 value={settings.networkType}
                 onValueChange={(value) => setSettings({ ...settings, networkType: value })}
               >
@@ -178,7 +184,9 @@ export default function VirtualizationSettingsPage() {
               <Switch
                 id="monitoringEnabled"
                 checked={settings.monitoringEnabled}
-                onCheckedChange={(checked) => setSettings({ ...settings, monitoringEnabled: checked })}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, monitoringEnabled: checked })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -198,4 +206,4 @@ export default function VirtualizationSettingsPage() {
       </div>
     </div>
   );
-} 
+}

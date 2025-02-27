@@ -12,4 +12,4 @@ export const SidebarGroup = React.forwardRef<HTMLDivElement, React.ComponentProp
       />
     );
   },
-); 
+);

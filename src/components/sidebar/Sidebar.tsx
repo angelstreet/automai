@@ -104,4 +104,4 @@ export const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
       </div>
     );
   },
-); 
+);

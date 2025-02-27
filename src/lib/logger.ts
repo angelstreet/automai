@@ -32,7 +32,7 @@ export function log(level: LogLevel, message: string, options: LogOptions = {}):
 
   const timestamp = new Date().toISOString();
   const { userId, tenantId, ip, action, connectionId, data } = options;
-  
+
   const logEntry = {
     timestamp,
     level,
@@ -42,12 +42,12 @@ export function log(level: LogLevel, message: string, options: LogOptions = {}):
     ip,
     action,
     connectionId,
-    data
+    data,
   };
-  
+
   // Use info level for all console logs
   console.info(JSON.stringify(logEntry));
-  
+
   // Database logging has been removed
 }
 
@@ -59,4 +59,4 @@ export const logger = {
   info: (message: string, options?: LogOptions) => log('info', message, options),
   warn: (message: string, options?: LogOptions) => log('warn', message, options),
   error: (message: string, options?: LogOptions) => log('error', message, options),
-}; 
+};

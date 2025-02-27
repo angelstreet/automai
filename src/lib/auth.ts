@@ -1,87 +1,87 @@
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { prisma } from "./prisma";
-import { compare } from "bcrypt";
-import { logger } from "./logger";
+import { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { prisma } from './prisma';
+import { compare } from 'bcrypt';
+import { logger } from './logger';
 
 export const authOptions: NextAuthOptions = {
   session: {
-    strategy: "jwt",
+    strategy: 'jwt',
   },
   pages: {
-    signIn: "/login",
+    signIn: '/login',
   },
   providers: [
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          logger.warn('Missing credentials', { 
+          logger.warn('Missing credentials', {
             action: 'AUTH_MISSING_CREDENTIALS',
-            saveToDb: true 
+            saveToDb: true,
           });
           return null;
         }
-        
+
         try {
           // Find user by email
           const user = await prisma.user.findUnique({
             where: { email: credentials.email },
             include: {
-              tenant: true
-            }
+              tenant: true,
+            },
           });
-          
+
           if (!user) {
-            logger.warn('User not found', { 
+            logger.warn('User not found', {
               action: 'AUTH_USER_NOT_FOUND',
               data: { email: credentials.email },
-              saveToDb: true 
+              saveToDb: true,
             });
             return null;
           }
-          
+
           // Verify password
           const isValid = await compare(credentials.password, user.password);
-          
+
           if (!isValid) {
-            logger.warn('Invalid password', { 
+            logger.warn('Invalid password', {
               action: 'AUTH_INVALID_PASSWORD',
               data: { email: credentials.email },
-              saveToDb: true 
+              saveToDb: true,
             });
             return null;
           }
-          
-          logger.info('User authenticated successfully', { 
+
+          logger.info('User authenticated successfully', {
             userId: user.id,
             tenantId: user.tenantId,
             action: 'AUTH_SUCCESS',
-            saveToDb: true 
+            saveToDb: true,
           });
-          
+
           return {
             id: user.id,
             email: user.email,
             name: user.name,
             role: user.role,
             tenantId: user.tenantId,
-            tenantName: user.tenant?.name || 'Unknown Tenant'
+            tenantName: user.tenant?.name || 'Unknown Tenant',
           };
         } catch (error) {
-          logger.error(`Auth error: ${error instanceof Error ? error.message : String(error)}`, { 
+          logger.error(`Auth error: ${error instanceof Error ? error.message : String(error)}`, {
             action: 'AUTH_ERROR',
             data: { error: error instanceof Error ? error.message : String(error) },
-            saveToDb: true 
+            saveToDb: true,
           });
           return null;
         }
-      }
-    })
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {
@@ -103,6 +103,6 @@ export const authOptions: NextAuthOptions = {
         session.user.tenantName = token.tenantName as string;
       }
       return session;
-    }
-  }
-}; 
+    },
+  },
+};

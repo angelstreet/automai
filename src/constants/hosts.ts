@@ -12,12 +12,12 @@ export const CONNECTION_COLORS = {
   portainer: 'from-blue-500/10 to-blue-500/5',
   docker: 'from-green-500/10 to-green-500/5',
   ssh: 'from-gray-500/10 to-gray-500/5',
-  unknown: 'from-gray-500/10 to-gray-500/5'
+  unknown: 'from-gray-500/10 to-gray-500/5',
 } as const;
 
 export const CONNECTION_BADGE_COLORS = {
   portainer: 'bg-blue-500',
   docker: 'bg-green-500',
   ssh: 'bg-gray-500',
-  unknown: 'bg-gray-500'
-} as const; 
+  unknown: 'bg-gray-500',
+} as const;

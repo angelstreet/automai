@@ -32,18 +32,12 @@ export function UseCaseList({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-6 gap-4 font-semibold">
-        <button onClick={() => onSort('shortId')}>
-          ID {getSortIcon('shortId')}
-        </button>
-        <button onClick={() => onSort('name')}>
-          Name {getSortIcon('name')}
-        </button>
+        <button onClick={() => onSort('shortId')}>ID {getSortIcon('shortId')}</button>
+        <button onClick={() => onSort('name')}>Name {getSortIcon('name')}</button>
         <button onClick={() => onSort('steps.platform')}>
           Platform {getSortIcon('steps.platform')}
         </button>
-        <button onClick={() => onSort('createdAt')}>
-          Created {getSortIcon('createdAt')}
-        </button>
+        <button onClick={() => onSort('createdAt')}>Created {getSortIcon('createdAt')}</button>
         <button onClick={() => onSort('lastModified')}>
           Modified {getSortIcon('lastModified')}
         </button>
@@ -63,9 +57,7 @@ export function UseCaseList({
           <div>{useCase.steps.platform}</div>
           <div>{new Date(useCase.createdAt).toLocaleDateString()}</div>
           <div>
-            {useCase.lastModified
-              ? new Date(useCase.lastModified).toLocaleDateString()
-              : '-'}
+            {useCase.lastModified ? new Date(useCase.lastModified).toLocaleDateString() : '-'}
           </div>
           <div className="space-x-2">
             <Button
@@ -93,4 +85,4 @@ export function UseCaseList({
       ))}
     </div>
   );
-} 
+}

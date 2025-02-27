@@ -14,4 +14,4 @@ export const getValidChildren = (children: React.ReactNode) =>
 export const getInputFieldCount = (children: React.ReactNode) =>
   React.Children.toArray(children).filter((child) => {
     return React.isValidElement(child) && child.type.name === 'PinInputField';
-  }).length; 
+  }).length;

@@ -5,7 +5,7 @@ import { prisma } from '../prisma';
  */
 export async function getHosts() {
   return prisma.host.findMany({
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: 'desc' },
   });
 }
 
@@ -14,7 +14,7 @@ export async function getHosts() {
  */
 export async function getHostById(id: string) {
   return prisma.host.findUnique({
-    where: { id }
+    where: { id },
   });
 }
 
@@ -39,8 +39,8 @@ export async function createHost(data: {
       port: data.port || (data.type === 'ssh' ? 22 : null),
       user: data.type === 'ssh' ? data.user : null,
       password: data.type === 'ssh' ? data.password : null,
-      status: 'pending'
-    }
+      status: 'pending',
+    },
   });
 }
 
@@ -49,6 +49,6 @@ export async function createHost(data: {
  */
 export async function deleteHost(id: string) {
   return prisma.host.delete({
-    where: { id }
+    where: { id },
   });
-} 
+}

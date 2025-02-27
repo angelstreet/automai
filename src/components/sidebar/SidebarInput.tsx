@@ -17,4 +17,4 @@ export const SidebarInput = React.forwardRef<
       {...props}
     />
   );
-}); 
+});

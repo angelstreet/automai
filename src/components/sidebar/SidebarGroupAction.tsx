@@ -21,4 +21,4 @@ export const SidebarGroupAction = React.forwardRef<
       {...props}
     />
   );
-}); 
+});

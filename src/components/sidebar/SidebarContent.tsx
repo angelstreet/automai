@@ -15,4 +15,4 @@ export const SidebarContent = React.forwardRef<HTMLDivElement, React.ComponentPr
       />
     );
   },
-); 
+);

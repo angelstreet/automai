@@ -18,7 +18,7 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction): void 
     id: 'mock-user-id',
     email: 'mock@example.com',
     tenantId: 'mock-tenant-id',
-    role: 'ADMIN'
+    role: 'ADMIN',
   };
   next();
 };
@@ -27,7 +27,7 @@ const router = Router();
 const prisma = new PrismaClient();
 
 // In-memory storage for machines
-let mockMachines = [
+const mockMachines = [
   {
     id: '1',
     name: 'Development Server',
@@ -50,7 +50,7 @@ let mockMachines = [
     status: 'pending',
     createdAt: new Date(),
     updatedAt: new Date(),
-  }
+  },
 ];
 
 // Test SSH connection
@@ -76,7 +76,7 @@ router.post('/test-connection', isAuthenticated, (req: Request, res: Response): 
 
     // Mock connection test
     // For demo purposes, we'll simulate some failures and successes
-    
+
     // Simulate some connection failures for testing
     if (ip === '127.0.0.1' && user === 'test') {
       res.status(400).json({
@@ -85,7 +85,7 @@ router.post('/test-connection', isAuthenticated, (req: Request, res: Response): 
       });
       return;
     }
-    
+
     if (ip === '192.168.1.254') {
       res.status(400).json({
         success: false,
@@ -112,7 +112,7 @@ router.post('/test-connection', isAuthenticated, (req: Request, res: Response): 
 router.post('/', isAuthenticated, (req: Request, res: Response): void => {
   try {
     const { name, description, type, ip, port, user, password } = req.body;
-    
+
     if (!name || !type || !ip) {
       res.status(400).json({
         success: false,
@@ -142,7 +142,7 @@ router.post('/', isAuthenticated, (req: Request, res: Response): void => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    
+
     // Add to mock machines
     mockMachines.push(newMachine as any);
 
@@ -179,10 +179,10 @@ router.get('/', isAuthenticated, (req: Request, res: Response): void => {
 router.get('/:id', isAuthenticated, (req: Request, res: Response): void => {
   try {
     const id = req.params.id;
-    
+
     // Find machine in mock data
-    const machine = mockMachines.find(m => m.id === id);
-    
+    const machine = mockMachines.find((m) => m.id === id);
+
     if (!machine) {
       res.status(404).json({
         success: false,
@@ -208,10 +208,10 @@ router.get('/:id', isAuthenticated, (req: Request, res: Response): void => {
 router.delete('/:id', isAuthenticated, (req: Request, res: Response): void => {
   try {
     const id = req.params.id;
-    
+
     // Find machine index
-    const machineIndex = mockMachines.findIndex(m => m.id === id);
-    
+    const machineIndex = mockMachines.findIndex((m) => m.id === id);
+
     if (machineIndex === -1) {
       res.status(404).json({
         success: false,
@@ -219,10 +219,10 @@ router.delete('/:id', isAuthenticated, (req: Request, res: Response): void => {
       });
       return;
     }
-    
+
     // Remove from mock machines
     mockMachines.splice(machineIndex, 1);
-    
+
     res.json({
       success: true,
       message: 'Machine deleted successfully',
@@ -236,4 +236,4 @@ router.delete('/:id', isAuthenticated, (req: Request, res: Response): void => {
   }
 });
 
-export default router; 
+export default router;

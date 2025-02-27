@@ -32,23 +32,23 @@ export interface Host {
   id: string;
   name: string;
   description?: string;
-  
+
   // Connection details
   type: 'ssh' | 'docker' | 'portainer';
   ip: string;
   port?: number;
-  
+
   // SSH specific fields
   user?: string;
-  
+
   // Status fields
   status: 'connected' | 'failed' | 'pending';
   lastConnected?: Date;
   errorMessage?: string;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
 
 // For backward compatibility during transition
-export type Machine = Host; 
+export type Machine = Host;

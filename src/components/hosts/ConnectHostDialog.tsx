@@ -94,7 +94,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
   const handleCreate = async () => {
     if (!validateFormData()) return;
-    
+
     // Throttle requests
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
@@ -118,7 +118,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
           username: formData.username,
           password: formData.password,
           status: testStatus === 'success' ? 'connected' : 'pending',
-          lastConnected: testStatus === 'success' ? new Date().toISOString() : undefined
+          lastConnected: testStatus === 'success' ? new Date().toISOString() : undefined,
         }),
       });
 
@@ -137,7 +137,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
       resetForm();
       onOpenChange(false);
-      
+
       if (onSuccess) {
         onSuccess(data.data);
       }
@@ -156,31 +156,31 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
   const getDetailedErrorMessage = (errorData: any): string => {
     if (!errorData) return 'Unknown error occurred';
-    
+
     if (errorData.message) {
       const message = errorData.message;
-      
+
       if (message.includes('timeout')) {
         return `Connection timed out. Please check if the IP address and port are correct and that any firewalls allow the connection.`;
       }
-      
+
       if (message.includes('refused')) {
         return `Connection refused. Please check if the service is running on the target host and the port is correct.`;
       }
-      
+
       if (message.includes('authentication') || message.includes('password')) {
         return `Authentication failed. Please check your username and password.`;
       }
-      
+
       return message;
     }
-    
+
     return 'Failed to connect to the remote host. Please check your connection details.';
   };
 
   const testConnection = async (): Promise<boolean> => {
     if (!validateFormData()) return false;
-    
+
     // Throttle requests
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
@@ -191,7 +191,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     setIsTesting(true);
     setTestStatus('idle');
     setTestError(null);
-    
+
     try {
       const response = await fetch('/api/hosts/test-connection', {
         method: 'POST',
@@ -239,27 +239,28 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
   const isFormValid = (): boolean => {
     if (!formData.name.trim() || !formData.ip.trim()) return false;
-    
+
     if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
       return false;
     }
-    
+
     return true;
   };
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (!newOpen) {
-        resetForm();
-      }
-      onOpenChange(newOpen);
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(newOpen) => {
+        if (!newOpen) {
+          resetForm();
+        }
+        onOpenChange(newOpen);
+      }}
+    >
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Connect to Host</DialogTitle>
-          <DialogDescription>
-            Enter the connection details for your host.
-          </DialogDescription>
+          <DialogDescription>Enter the connection details for your host.</DialogDescription>
         </DialogHeader>
 
         <ConnectionForm
@@ -269,11 +270,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         />
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isCreating}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
             Cancel
           </Button>
           <Button
@@ -293,4 +290,4 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       </DialogContent>
     </Dialog>
   );
-} 
+}

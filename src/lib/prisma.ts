@@ -14,4 +14,4 @@ export const prisma =
   });
 
 // In development, attach the client to the global object
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma; 
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

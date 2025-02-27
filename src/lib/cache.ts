@@ -27,17 +27,17 @@ class ServerCache {
    */
   get<T>(key: string): T | undefined {
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return undefined;
     }
-    
+
     // Check if entry has expired
     if (entry.expiry < Date.now()) {
       this.cache.delete(key);
       return undefined;
     }
-    
+
     return entry.value as T;
   }
 
@@ -88,17 +88,13 @@ class ServerCache {
    * @param ttl Time to live in milliseconds (default: 5 minutes)
    * @returns Cached or computed value
    */
-  async getOrSet<T>(
-    key: string,
-    fn: () => Promise<T>,
-    ttl = this.defaultTTL
-  ): Promise<T> {
+  async getOrSet<T>(key: string, fn: () => Promise<T>, ttl = this.defaultTTL): Promise<T> {
     const cachedValue = this.get<T>(key);
-    
+
     if (cachedValue !== undefined) {
       return cachedValue;
     }
-    
+
     const value = await fn();
     this.set(key, value, ttl);
     return value;
@@ -106,4 +102,4 @@ class ServerCache {
 }
 
 // Export a singleton instance for use across the app
-export const serverCache = new ServerCache(); 
+export const serverCache = new ServerCache();

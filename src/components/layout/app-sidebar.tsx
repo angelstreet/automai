@@ -21,13 +21,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   if (!session?.user) return null;
 
   // Filter out empty sections based on user role
-  const filteredNavGroups = sidebarData.navGroups.filter(group => {
+  const filteredNavGroups = sidebarData.navGroups.filter((group) => {
     // Filter items in each group based on user role
-    const accessibleItems = group.items.filter(item => {
+    const accessibleItems = group.items.filter((item) => {
       if (!item.roles) return true;
       return item.roles.includes(currentRole);
     });
-    
+
     // Only include groups that have at least one accessible item
     return accessibleItems.length > 0;
   });

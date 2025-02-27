@@ -2,7 +2,13 @@ import { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -27,14 +33,9 @@ interface ConnectionFormProps {
   onTestSuccess?: () => void;
 }
 
-export function ConnectionForm({ 
-  formData, 
-  onChange, 
-  onSave,
-  onTestSuccess
-}: ConnectionFormProps) {
+export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: ConnectionFormProps) {
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
-    formData.type as 'ssh' | 'docker' | 'portainer'
+    formData.type as 'ssh' | 'docker' | 'portainer',
   );
 
   // State variables for testing status
@@ -51,10 +52,10 @@ export function ConnectionForm({
 
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
-    onChange({ 
-      ...formData, 
+    onChange({
+      ...formData,
       type: value,
-      port: value === 'ssh' ? '22' : value === 'docker' ? '2375' : '9000'
+      port: value === 'ssh' ? '22' : value === 'docker' ? '2375' : '9000',
     });
   };
 
@@ -82,14 +83,14 @@ export function ConnectionForm({
       return;
     }
     lastRequestTime.current = now;
-    
+
     setTesting(true);
     setTestError(null);
     setTestSuccess(false);
     setFingerprint(null);
     setRequireVerification(false);
     setFingerprintVerified(false);
-    
+
     try {
       const response = await fetch('/api/hosts/test-connection', {
         method: 'POST',
@@ -105,9 +106,9 @@ export function ConnectionForm({
           hostId: formData.id,
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (response.status === 428) {
         // Fingerprint verification required
         setRequireVerification(true);
@@ -143,10 +144,10 @@ export function ConnectionForm({
       return;
     }
     lastRequestTime.current = now;
-    
+
     setTesting(true);
     setTestError(null);
-    
+
     try {
       const response = await fetch('/api/hosts/verify-fingerprint', {
         method: 'POST',
@@ -159,14 +160,14 @@ export function ConnectionForm({
           port: formData.port ? parseInt(formData.port) : undefined,
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setTestSuccess(true);
         setFingerprintVerified(true);
         setRequireVerification(false);
-        
+
         // Notify parent component of successful test
         if (onTestSuccess) {
           onTestSuccess();
@@ -186,7 +187,9 @@ export function ConnectionForm({
     <div className="space-y-3 py-2">
       <form onKeyDown={handleKeyDown} onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-12 items-center gap-3">
-          <Label htmlFor="name" className="text-right col-span-2">Name</Label>
+          <Label htmlFor="name" className="text-right col-span-2">
+            Name
+          </Label>
           <div className="col-span-10 space-y-1">
             <Input
               id="name"
@@ -195,17 +198,18 @@ export function ConnectionForm({
               onChange={(e) => handleInputChange('name', e.target.value)}
               className="w-full"
             />
-            <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, and hyphens are allowed</p>
+            <p className="text-xs text-muted-foreground">
+              Only lowercase letters, numbers, and hyphens are allowed
+            </p>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-12 items-center gap-3 mt-3">
-          <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">Connection</Label>
+          <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">
+            Connection
+          </Label>
           <div className="col-span-10">
-            <Select 
-              value={formData.type} 
-              onValueChange={handleTypeChange}
-            >
+            <Select value={formData.type} onValueChange={handleTypeChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
@@ -217,9 +221,11 @@ export function ConnectionForm({
             </Select>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-12 items-center gap-3 mt-3">
-          <Label htmlFor="ip" className="text-right col-span-2 whitespace-nowrap">IP Address</Label>
+          <Label htmlFor="ip" className="text-right col-span-2 whitespace-nowrap">
+            IP Address
+          </Label>
           <Input
             id="ip"
             placeholder="IP Address"
@@ -227,7 +233,9 @@ export function ConnectionForm({
             onChange={(e) => handleInputChange('ip', e.target.value)}
             className="col-span-7"
           />
-          <Label htmlFor="port" className="text-right whitespace-nowrap col-span-1">Port</Label>
+          <Label htmlFor="port" className="text-right whitespace-nowrap col-span-1">
+            Port
+          </Label>
           <Input
             id="port"
             placeholder="Port"
@@ -236,10 +244,12 @@ export function ConnectionForm({
             className="col-span-2"
           />
         </div>
-        
+
         {connectionType === 'ssh' && (
           <div className="grid grid-cols-12 items-center gap-3 mt-3">
-            <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">Username</Label>
+            <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">
+              Username
+            </Label>
             <Input
               id="username"
               placeholder="Username"
@@ -247,7 +257,9 @@ export function ConnectionForm({
               onChange={(e) => handleInputChange('username', e.target.value)}
               className="col-span-4"
             />
-            <Label htmlFor="password" className="text-right whitespace-nowrap col-span-2">Password</Label>
+            <Label htmlFor="password" className="text-right whitespace-nowrap col-span-2">
+              Password
+            </Label>
             <Input
               id="password"
               type="password"
@@ -258,9 +270,11 @@ export function ConnectionForm({
             />
           </div>
         )}
-        
+
         <div className="grid grid-cols-12 items-center gap-3 mt-3">
-          <Label htmlFor="description" className="text-right col-span-2">Description</Label>
+          <Label htmlFor="description" className="text-right col-span-2">
+            Description
+          </Label>
           <Textarea
             id="description"
             placeholder="Description (optional)"
@@ -269,14 +283,9 @@ export function ConnectionForm({
             className="col-span-10 h-16"
           />
         </div>
-        
+
         <div className="flex justify-end space-x-2 mt-4">
-          <Button 
-            variant="outline" 
-            onClick={testConnection}
-            disabled={testing}
-            type="button"
-          >
+          <Button variant="outline" onClick={testConnection} disabled={testing} type="button">
             {testing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -286,19 +295,15 @@ export function ConnectionForm({
               <>Test Connection</>
             )}
           </Button>
-          
+
           {onSave && (
-            <Button 
-              onClick={onSave}
-              disabled={!testSuccess}
-              type="button"
-            >
+            <Button onClick={onSave} disabled={!testSuccess} type="button">
               Save
             </Button>
           )}
         </div>
       </form>
-      
+
       {requireVerification && fingerprint && (
         <Alert className="mt-4">
           <AlertTitle className="flex items-center">
@@ -307,23 +312,20 @@ export function ConnectionForm({
           </AlertTitle>
           <AlertDescription className="mt-2">
             <p className="mb-2">The authenticity of host '{formData.ip}' can't be established.</p>
-            <p className="mb-2">Fingerprint: <code className="bg-muted p-1 rounded">{fingerprint}</code></p>
+            <p className="mb-2">
+              Fingerprint: <code className="bg-muted p-1 rounded">{fingerprint}</code>
+            </p>
             <p className="mb-4">Are you sure you want to continue connecting?</p>
             <div className="flex space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={verifyFingerprint}
-                disabled={testing}
-              >
-                {testing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+              <Button variant="outline" size="sm" onClick={verifyFingerprint} disabled={testing}>
+                {testing ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Check className="h-4 w-4 mr-2" />
+                )}
                 Yes, trust this host
               </Button>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setRequireVerification(false)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setRequireVerification(false)}>
                 <X className="h-4 w-4 mr-2" />
                 No, cancel
               </Button>
@@ -331,19 +333,17 @@ export function ConnectionForm({
           </AlertDescription>
         </Alert>
       )}
-      
+
       {testError && !requireVerification && (
         <Alert variant="destructive" className="mt-4">
           <AlertTitle className="flex items-center">
             <AlertCircle className="h-4 w-4 mr-2" />
             Connection Failed
           </AlertTitle>
-          <AlertDescription>
-            {testError}
-          </AlertDescription>
+          <AlertDescription>{testError}</AlertDescription>
         </Alert>
       )}
-      
+
       {testSuccess && (
         <Alert className="mt-4" variant="success">
           <AlertTitle className="flex items-center">
@@ -356,7 +356,11 @@ export function ConnectionForm({
               <p className="mt-2">
                 <span className="font-medium">Host fingerprint:</span>{' '}
                 <code className="bg-muted p-1 rounded">{fingerprint}</code>{' '}
-                {fingerprintVerified && <Badge variant="outline" className="ml-2">Verified</Badge>}
+                {fingerprintVerified && (
+                  <Badge variant="outline" className="ml-2">
+                    Verified
+                  </Badge>
+                )}
               </p>
             )}
           </AlertDescription>
@@ -364,4 +368,4 @@ export function ConnectionForm({
       )}
     </div>
   );
-} 
+}

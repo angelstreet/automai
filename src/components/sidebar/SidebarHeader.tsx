@@ -12,4 +12,4 @@ export const SidebarHeader = React.forwardRef<HTMLDivElement, React.ComponentPro
       />
     );
   },
-); 
+);

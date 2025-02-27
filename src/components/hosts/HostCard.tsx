@@ -3,22 +3,25 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Terminal, AlertCircle, MoreHorizontal, BarChart2, RefreshCw, XCircle, ScrollText } from 'lucide-react';
+import {
+  Terminal,
+  AlertCircle,
+  MoreHorizontal,
+  BarChart2,
+  RefreshCw,
+  XCircle,
+  ScrollText,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Host } from '@/types/hosts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 interface HostCardProps {
   host: Host;
@@ -31,8 +34,8 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const [showError, setShowError] = useState(false);
 
   const getStatusDot = (status: string) => {
-    const baseClasses = "h-4 w-4 rounded-full";
-    
+    const baseClasses = 'h-4 w-4 rounded-full';
+
     // If status is undefined, null, or empty string, treat as pending
     if (!status) {
       return (
@@ -48,7 +51,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
         </TooltipProvider>
       );
     }
-    
+
     switch (status) {
       case 'connected':
         return (
@@ -110,7 +113,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
     const pathSegments = window.location.pathname.split('/');
     const locale = pathSegments[1] || 'en';
     const tenant = pathSegments[2] || 'default';
-    
+
     // Build the correct path with locale and tenant
     const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
     console.log(`Redirecting to terminal: ${terminalPath}`);
@@ -124,16 +127,15 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
           <div className="flex flex-col space-y-1.5">
             <div className="flex items-center">
               <div className="w-[200px] flex items-center">
-                <div className="mr-2">
-                  {getStatusDot(host.status)}
-                </div>
+                <div className="mr-2">{getStatusDot(host.status)}</div>
                 <CardTitle className="text-base font-semibold truncate flex-1">
                   {host.name}
                 </CardTitle>
               </div>
             </div>
             <CardDescription className="text-xs">
-              {host.ip}{host.port ? `:${host.port}` : ''}
+              {host.ip}
+              {host.port ? `:${host.port}` : ''}
             </CardDescription>
           </div>
           <div className="flex items-center space-x-2">
@@ -169,10 +171,12 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
             <div className="text-sm text-muted-foreground">
               {host.description && <p>{host.description}</p>}
               {host.lastConnected && (
-                <p className="text-xs mt-1">Last connected: {new Date(host.lastConnected).toLocaleString()}</p>
+                <p className="text-xs mt-1">
+                  Last connected: {new Date(host.lastConnected).toLocaleString()}
+                </p>
               )}
             </div>
-            <Button 
+            <Button
               variant="default"
               size="sm"
               className="w-full mt-2"
@@ -202,14 +206,14 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               </pre>
             </div>
             <div className="text-sm text-muted-foreground">
-              <p>Last successful connection: {host.lastConnected ? 
-                new Date(host.lastConnected).toLocaleString() : 
-                'Never'
-              }</p>
+              <p>
+                Last successful connection:{' '}
+                {host.lastConnected ? new Date(host.lastConnected).toLocaleString() : 'Never'}
+              </p>
             </div>
           </div>
         </DialogContent>
       </Dialog>
     </>
   );
-} 
+}

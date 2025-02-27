@@ -10,4 +10,4 @@ export const SidebarMenuSub = React.forwardRef<HTMLDivElement, React.ComponentPr
       {...props}
     />
   ),
-); 
+);

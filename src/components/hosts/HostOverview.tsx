@@ -29,31 +29,31 @@ export function HostOverview({
   const { toast } = useToast();
   // State for view mode (grid or table)
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  
+
   // State for selection
   const [selectedHosts, setSelectedMachines] = useState<Set<string>>(new Set());
   const [selectMode, setSelectMode] = useState(false);
-  
+
   // State for status filtering
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  
+
   // State for connecting host dialog
   const [showConnectDialog, setShowConnectDialog] = useState(false);
-  
+
   // Filter hosts by status if filter is active
-  const filteredHosts = statusFilter 
-    ? hosts.filter(m => {
+  const filteredHosts = statusFilter
+    ? hosts.filter((m) => {
         if (statusFilter === 'running') return m.status === 'connected';
         if (statusFilter === 'warning') return m.status === 'pending';
         if (statusFilter === 'error') return m.status === 'failed';
         return true;
       })
     : hosts;
-  
+
   const statusSummary = {
-    connected: hosts.filter(m => m.status === 'connected').length,
-    failed: hosts.filter(m => m.status === 'failed').length,
-    pending: hosts.filter(m => m.status === 'pending').length,
+    connected: hosts.filter((m) => m.status === 'connected').length,
+    failed: hosts.filter((m) => m.status === 'failed').length,
+    pending: hosts.filter((m) => m.status === 'pending').length,
     total: hosts.length,
   };
 
@@ -73,7 +73,7 @@ export function HostOverview({
     if (selectedHosts.size === filteredHosts.length) {
       setSelectedMachines(new Set());
     } else {
-      setSelectedMachines(new Set(filteredHosts.map(m => m.id)));
+      setSelectedMachines(new Set(filteredHosts.map((m) => m.id)));
     }
   };
 
@@ -86,7 +86,7 @@ export function HostOverview({
   // Handle bulk delete
   const handleBulkDelete = () => {
     if (onDelete && selectedHosts.size > 0) {
-      selectedHosts.forEach(id => onDelete(id));
+      selectedHosts.forEach((id) => onDelete(id));
       setSelectedMachines(new Set());
       setSelectMode(false);
     }
@@ -104,7 +104,7 @@ export function HostOverview({
           console.error('Error refreshing connection:', error);
         }
       }
-      
+
       if (successCount > 0) {
         toast({
           title: 'Connections refreshed',
@@ -116,9 +116,9 @@ export function HostOverview({
   };
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
+    <div className={cn('flex flex-col gap-4', className)}>
       <div className="flex justify-between items-center p-2">
-        <StatusSummary 
+        <StatusSummary
           vmStatusSummary={{
             running: statusSummary.connected,
             warning: statusSummary.pending,
@@ -128,20 +128,16 @@ export function HostOverview({
           onStatusFilter={(status) => setStatusFilter(status)}
           selectedFilters={statusFilter ? new Set([statusFilter]) : new Set()}
         />
-        
+
         <div className="flex items-center gap-2">
           {selectMode ? (
             <>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCancelSelection}
-              >
+              <Button variant="outline" size="sm" onClick={handleCancelSelection}>
                 Cancel
               </Button>
-              <Button 
-                variant="destructive" 
-                size="sm" 
+              <Button
+                variant="destructive"
+                size="sm"
                 onClick={handleBulkDelete}
                 disabled={selectedHosts.size === 0}
               >
@@ -150,24 +146,24 @@ export function HostOverview({
             </>
           ) : (
             <>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setSelectMode(true)}
                 disabled={filteredHosts.length < 2}
               >
                 Select
               </Button>
-              <Button 
-                variant={viewMode === 'grid' ? 'default' : 'outline'} 
-                size="icon" 
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="icon"
                 onClick={() => setViewMode('grid')}
               >
                 <Grid className="h-4 w-4" />
               </Button>
-              <Button 
-                variant={viewMode === 'table' ? 'default' : 'outline'} 
-                size="icon" 
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'outline'}
+                size="icon"
                 onClick={() => setViewMode('table')}
               >
                 <List className="h-4 w-4" />
@@ -176,7 +172,7 @@ export function HostOverview({
           )}
         </div>
       </div>
-      
+
       {viewMode === 'grid' ? (
         <>
           {filteredHosts.length > 0 ? (
@@ -219,12 +215,12 @@ export function HostOverview({
           )}
         </>
       )}
-      
-      <ConnectHostDialog 
+
+      <ConnectHostDialog
         open={showConnectDialog}
         onOpenChange={setShowConnectDialog}
         onSuccess={onRefresh}
       />
     </div>
   );
-} 
+}

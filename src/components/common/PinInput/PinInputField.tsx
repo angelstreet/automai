@@ -28,4 +28,4 @@ export const PinInputField = <T extends React.ElementType = 'input'>({
       {...rest}
     />
   );
-}; 
+};

@@ -12,4 +12,4 @@ export const SidebarFooter = React.forwardRef<HTMLDivElement, React.ComponentPro
       />
     );
   },
-); 
+);

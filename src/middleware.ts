@@ -16,7 +16,7 @@ export default function middleware(request: NextRequest) {
   if (request.headers.get('upgrade')?.includes('websocket')) {
     return NextResponse.next();
   }
-  
+
   // Apply internationalization middleware for regular requests
   return intlMiddleware(request);
 }

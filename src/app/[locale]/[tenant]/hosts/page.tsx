@@ -4,13 +4,31 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { RefreshCcw, LayoutGrid, Table2, ScrollText, Terminal, BarChart2, Settings, Plus } from 'lucide-react';
+import {
+  RefreshCcw,
+  LayoutGrid,
+  Table2,
+  ScrollText,
+  Terminal,
+  BarChart2,
+  Settings,
+  Plus,
+} from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { HostOverview } from '@/components/hosts/HostOverview';
 import { Host } from '@/types/hosts';
 import { ConnectHostDialog } from '@/components/hosts/ConnectHostDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Server } from 'lucide-react';
@@ -34,11 +52,11 @@ export default function VirtualizationPage() {
     try {
       setIsLoading(true);
       const response = await fetch('/api/hosts');
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch hosts');
       }
-      
+
       const data = await response.json();
       setHosts(data.data || []);
     } catch (error) {
@@ -58,13 +76,13 @@ export default function VirtualizationPage() {
   const testHostConnection = async (host: Host) => {
     try {
       // Update the specific host to testing status
-      const hostIndex = hosts.findIndex(h => h.id === host.id);
+      const hostIndex = hosts.findIndex((h) => h.id === host.id);
       if (hostIndex === -1) return;
-      
+
       const updatedHosts = [...hosts];
       updatedHosts[hostIndex] = { ...hosts[hostIndex], status: 'pending' };
       setHosts(updatedHosts);
-      
+
       // Test connection
       const testResponse = await fetch('/api/hosts/test-connection', {
         method: 'POST',
@@ -79,51 +97,53 @@ export default function VirtualizationPage() {
       });
 
       const testData = await testResponse.json();
-      
+
       // Check if the response was actually successful
       const isSuccess = testResponse.ok && testData.success === true;
-      
+
       // If we get ECONNRESET or similar network errors, set status to 'pending' instead of 'failed'
-      const isNetworkError = testData.message && (
-        testData.message.includes('ECONNRESET') || 
-        testData.message.includes('timeout') || 
-        testData.message.includes('network')
-      );
-      
-      const finalStatus = isSuccess ? 'connected' : (isNetworkError ? 'pending' : 'failed');
-      
+      const isNetworkError =
+        testData.message &&
+        (testData.message.includes('ECONNRESET') ||
+          testData.message.includes('timeout') ||
+          testData.message.includes('network'));
+
+      const finalStatus = isSuccess ? 'connected' : isNetworkError ? 'pending' : 'failed';
+
       // Update host status immediately in the UI
       const finalHosts = [...hosts];
-      const finalIndex = finalHosts.findIndex(h => h.id === host.id);
+      const finalIndex = finalHosts.findIndex((h) => h.id === host.id);
       if (finalIndex !== -1) {
-        finalHosts[finalIndex] = { 
-          ...finalHosts[finalIndex], 
+        finalHosts[finalIndex] = {
+          ...finalHosts[finalIndex],
           status: finalStatus,
-          lastConnected: isSuccess ? new Date() : finalHosts[finalIndex].lastConnected
+          lastConnected: isSuccess ? new Date() : finalHosts[finalIndex].lastConnected,
         };
         setHosts(finalHosts);
       }
-      
+
       // Show toast notification
       toast({
-        title: isSuccess ? 'Success' : (isNetworkError ? 'Warning' : 'Error'),
-        description: isSuccess ? 'Host connected successfully' : 
-                    (isNetworkError ? 'Connection unstable - host may be temporarily unavailable' : 
-                    (testData.message || 'Connection failed')),
-        variant: isSuccess ? 'default' : (isNetworkError ? 'default' : 'destructive'),
+        title: isSuccess ? 'Success' : isNetworkError ? 'Warning' : 'Error',
+        description: isSuccess
+          ? 'Host connected successfully'
+          : isNetworkError
+            ? 'Connection unstable - host may be temporarily unavailable'
+            : testData.message || 'Connection failed',
+        variant: isSuccess ? 'default' : isNetworkError ? 'default' : 'destructive',
         duration: 5000,
       });
     } catch (error) {
       console.error(`Error testing connection for ${host.name}:`, error);
-      
+
       // Update host status to pending in case of network exception
       const errorHosts = [...hosts];
-      const errorIndex = errorHosts.findIndex(h => h.id === host.id);
+      const errorIndex = errorHosts.findIndex((h) => h.id === host.id);
       if (errorIndex !== -1) {
         errorHosts[errorIndex] = { ...errorHosts[errorIndex], status: 'pending' };
         setHosts(errorHosts);
       }
-      
+
       toast({
         variant: 'default',
         title: 'Warning',
@@ -141,24 +161,24 @@ export default function VirtualizationPage() {
   // Refresh hosts
   const refreshHosts = async () => {
     setIsRefreshing(true);
-    
+
     if (hosts.length > 0) {
       let successCount = 0;
       let failureCount = 0;
       let pendingCount = 0;
-      
+
       // Create a copy of hosts to update
       const updatedHosts = [...hosts];
-      
+
       for (const host of hosts) {
         try {
           // Update status to pending in UI
-          const hostIndex = updatedHosts.findIndex(h => h.id === host.id);
+          const hostIndex = updatedHosts.findIndex((h) => h.id === host.id);
           if (hostIndex !== -1) {
             updatedHosts[hostIndex] = { ...updatedHosts[hostIndex], status: 'pending' };
             setHosts([...updatedHosts]);
           }
-          
+
           // Test connection
           const testResponse = await fetch('/api/hosts/test-connection', {
             method: 'POST',
@@ -174,27 +194,27 @@ export default function VirtualizationPage() {
 
           const testData = await testResponse.json();
           const isSuccess = testResponse.ok && testData.success === true;
-          
+
           // Check for network errors
-          const isNetworkError = testData.message && (
-            testData.message.includes('ECONNRESET') || 
-            testData.message.includes('timeout') || 
-            testData.message.includes('network')
-          );
-          
-          const finalStatus = isSuccess ? 'connected' : (isNetworkError ? 'pending' : 'failed');
-          
+          const isNetworkError =
+            testData.message &&
+            (testData.message.includes('ECONNRESET') ||
+              testData.message.includes('timeout') ||
+              testData.message.includes('network'));
+
+          const finalStatus = isSuccess ? 'connected' : isNetworkError ? 'pending' : 'failed';
+
           // Update host status in our local copy
-          const finalIndex = updatedHosts.findIndex(h => h.id === host.id);
+          const finalIndex = updatedHosts.findIndex((h) => h.id === host.id);
           if (finalIndex !== -1) {
-            updatedHosts[finalIndex] = { 
-              ...updatedHosts[finalIndex], 
+            updatedHosts[finalIndex] = {
+              ...updatedHosts[finalIndex],
               status: finalStatus,
-              lastConnected: isSuccess ? new Date() : updatedHosts[finalIndex].lastConnected
+              lastConnected: isSuccess ? new Date() : updatedHosts[finalIndex].lastConnected,
             };
             setHosts([...updatedHosts]);
           }
-          
+
           if (isSuccess) {
             successCount++;
           } else if (isNetworkError) {
@@ -204,18 +224,18 @@ export default function VirtualizationPage() {
           }
         } catch (error) {
           console.error('Error refreshing connection:', error);
-          
+
           // Update host status to pending in our local copy
-          const errorIndex = updatedHosts.findIndex(h => h.id === host.id);
+          const errorIndex = updatedHosts.findIndex((h) => h.id === host.id);
           if (errorIndex !== -1) {
             updatedHosts[errorIndex] = { ...updatedHosts[errorIndex], status: 'pending' };
             setHosts([...updatedHosts]);
           }
-          
+
           pendingCount++;
         }
       }
-      
+
       // Show toast with results
       if (successCount > 0 || failureCount > 0 || pendingCount > 0) {
         let message = '';
@@ -228,7 +248,7 @@ export default function VirtualizationPage() {
         if (pendingCount > 0) {
           message += `${pendingCount} host${pendingCount > 1 ? 's' : ''} temporarily unavailable.`;
         }
-        
+
         toast({
           title: 'Connections refreshed',
           description: message.trim(),
@@ -238,13 +258,13 @@ export default function VirtualizationPage() {
     } else {
       await fetchHosts();
     }
-    
+
     setIsRefreshing(false);
   };
 
   // Handle connection success
   const handleConnectionSuccess = (newHost: Host) => {
-    setHosts(prev => [...prev, newHost]);
+    setHosts((prev) => [...prev, newHost]);
   };
 
   // Handle delete host
@@ -256,17 +276,17 @@ export default function VirtualizationPage() {
   // Confirm delete host
   const confirmDeleteHost = async () => {
     if (!hostToDelete) return;
-    
+
     try {
       const response = await fetch(`/api/hosts/${hostToDelete}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to delete host');
       }
-      
-      setHosts(prev => prev.filter(host => host.id !== hostToDelete));
+
+      setHosts((prev) => prev.filter((host) => host.id !== hostToDelete));
       toast({
         title: 'Success',
         description: 'Host deleted successfully',
@@ -289,21 +309,14 @@ export default function VirtualizationPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">{t('virtualization')}</h1>
-          <p className="text-muted-foreground">
-            {t('manage_virtual_machines')}
-          </p>
+          <p className="text-muted-foreground">{t('manage_virtual_machines')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refreshHosts}
-            disabled={isRefreshing}
-          >
-            <RefreshCcw className={cn("h-4 w-4 mr-2", { "animate-spin": isRefreshing })} />
+          <Button variant="outline" size="sm" onClick={refreshHosts} disabled={isRefreshing}>
+            <RefreshCcw className={cn('h-4 w-4 mr-2', { 'animate-spin': isRefreshing })} />
             {t('refresh')}
           </Button>
-          
+
           <TooltipProvider>
             <Tooltip>
               <TooltipContent>
@@ -311,14 +324,14 @@ export default function VirtualizationPage() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
+
           <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             {t('add_machine')}
           </Button>
         </div>
       </div>
-      
+
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -331,9 +344,7 @@ export default function VirtualizationPage() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Server className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">{t('no_machines')}</h3>
-              <p className="text-muted-foreground mb-4">
-                {t('add_machine_description')}
-              </p>
+              <p className="text-muted-foreground mb-4">{t('add_machine_description')}</p>
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('add_machine')}
@@ -377,4 +388,4 @@ export default function VirtualizationPage() {
       />
     </div>
   );
-} 
+}

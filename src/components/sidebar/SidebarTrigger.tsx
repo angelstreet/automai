@@ -27,4 +27,4 @@ export const SidebarTrigger = React.forwardRef<
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
-}); 
+});

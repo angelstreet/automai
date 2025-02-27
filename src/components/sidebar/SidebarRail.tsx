@@ -30,4 +30,4 @@ export const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentPr
       />
     );
   },
-); 
+);

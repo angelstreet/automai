@@ -58,9 +58,8 @@ export default function TerminalsPage() {
         logger.info('SSH connection established', {
           action: 'TERMINAL_CONNECTED',
           data: { machineId, ip: data.data.ip },
-          saveToDb: true
+          saveToDb: true,
         });
-
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to initialize terminal';
         setError(message);
@@ -69,11 +68,11 @@ export default function TerminalsPage() {
           title: 'Connection Error',
           description: message,
         });
-        
+
         logger.error(`Terminal initialization failed: ${message}`, {
           action: 'TERMINAL_INIT_ERROR',
           data: { machineId, error: message },
-          saveToDb: true
+          saveToDb: true,
         });
       }
     };
@@ -126,4 +125,4 @@ export default function TerminalsPage() {
       <Terminal connection={connection} />
     </div>
   );
-} 
+}

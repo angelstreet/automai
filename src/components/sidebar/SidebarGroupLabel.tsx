@@ -20,4 +20,4 @@ export const SidebarGroupLabel = React.forwardRef<
       {...props}
     />
   );
-}); 
+});

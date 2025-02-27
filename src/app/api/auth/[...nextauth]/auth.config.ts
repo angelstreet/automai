@@ -132,7 +132,7 @@ export const authConfig: AuthOptions = {
             plan: data.user.plan,
             accessToken: data.token,
             image: profile?.image ?? null,
-            emailVerified: new Date() // Set emailVerified to current date for OAuth users
+            emailVerified: new Date(), // Set emailVerified to current date for OAuth users
           });
 
           console.log('Updated user data:', {

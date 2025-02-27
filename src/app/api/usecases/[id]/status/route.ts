@@ -3,17 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const useCase = await prisma.useCase.findUnique({
@@ -29,10 +23,7 @@ export async function GET(
     });
 
     if (!useCase) {
-      return NextResponse.json(
-        { error: 'Use case not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Use case not found' }, { status: 404 });
     }
 
     const latestExecution = useCase.executions?.[0];
@@ -41,9 +32,6 @@ export async function GET(
     return NextResponse.json({ status });
   } catch (error) {
     console.error('Error getting use case status:', error);
-    return NextResponse.json(
-      { error: 'Failed to get use case status' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to get use case status' }, { status: 500 });
   }
-} 
+}

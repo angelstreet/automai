@@ -3,17 +3,11 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const useCase = await prisma.useCase.findUnique({
@@ -32,17 +26,11 @@ export async function POST(
     });
 
     if (!useCase) {
-      return NextResponse.json(
-        { error: 'Use case not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Use case not found' }, { status: 404 });
     }
 
     if (!useCase.executions?.[0]) {
-      return NextResponse.json(
-        { error: 'No running execution found' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'No running execution found' }, { status: 400 });
     }
 
     // Update the execution status
@@ -60,9 +48,6 @@ export async function POST(
     return NextResponse.json(execution);
   } catch (error) {
     console.error('Error stopping use case:', error);
-    return NextResponse.json(
-      { error: 'Failed to stop use case' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to stop use case' }, { status: 500 });
   }
-} 
+}

@@ -184,7 +184,8 @@ export default function UseCasesPage() {
     try {
       if (!newUseCase.projectId || !newUseCase.name) return;
 
-      const platformPrefix = PLATFORM_PREFIXES[newUseCase.platform as keyof typeof PLATFORM_PREFIXES] || 'API';
+      const platformPrefix =
+        PLATFORM_PREFIXES[newUseCase.platform as keyof typeof PLATFORM_PREFIXES] || 'API';
 
       const res = await fetch('http://localhost:5001/api/usecases', {
         method: 'POST',
@@ -212,9 +213,7 @@ export default function UseCasesPage() {
       const createdUseCase = await res.json();
       setProjects((current) =>
         current.map((p) =>
-          p.id === newUseCase.projectId
-            ? { ...p, usecases: [...p.usecases, createdUseCase] }
-            : p,
+          p.id === newUseCase.projectId ? { ...p, usecases: [...p.usecases, createdUseCase] } : p,
         ),
       );
 
@@ -244,7 +243,7 @@ export default function UseCasesPage() {
   };
 
   const filteredProjects = projects.map((project) => ({
-          ...project,
+    ...project,
     usecases: project.usecases.filter((uc) =>
       uc.name.toLowerCase().includes(searchQuery.toLowerCase()),
     ),
@@ -265,14 +264,14 @@ export default function UseCasesPage() {
         </div>
       </div>
 
-                <Input
+      <Input
         placeholder="Search use cases..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
         className="max-w-md"
       />
 
-            {isCreateDialogOpen && (
+      {isCreateDialogOpen && (
         <CreateUseCase
           projects={projects}
           newUseCase={newUseCase}

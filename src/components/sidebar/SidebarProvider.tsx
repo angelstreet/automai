@@ -4,7 +4,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { SidebarContext } from '@/hooks/useSidebar';
 import { SidebarProviderProps } from '@/types/sidebar';
-import { SIDEBAR_COOKIE_NAME, SIDEBAR_COOKIE_MAX_AGE, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON, SIDEBAR_KEYBOARD_SHORTCUT } from '@/constants/sidebar';
+import {
+  SIDEBAR_COOKIE_NAME,
+  SIDEBAR_COOKIE_MAX_AGE,
+  SIDEBAR_WIDTH,
+  SIDEBAR_WIDTH_ICON,
+  SIDEBAR_KEYBOARD_SHORTCUT,
+} from '@/constants/sidebar';
 
 export const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
   (
@@ -96,4 +102,4 @@ export const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderP
       </SidebarContext.Provider>
     );
   },
-); 
+);

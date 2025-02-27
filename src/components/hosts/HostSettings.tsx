@@ -23,9 +23,7 @@ export function VMSettings({ config, onSave }: VMSettingsProps) {
     <Card className="flex-1">
       <CardHeader>
         <CardTitle>VM Configuration</CardTitle>
-        <CardDescription>
-          Configure the virtual host settings.
-        </CardDescription>
+        <CardDescription>Configure the virtual host settings.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -78,7 +76,7 @@ export function VMSettings({ config, onSave }: VMSettingsProps) {
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
@@ -89,7 +87,7 @@ export function VMSettings({ config, onSave }: VMSettingsProps) {
               className="min-h-[100px]"
             />
           </div>
-          
+
           <div className="flex justify-end space-x-2">
             <Button type="submit" size="sm">
               Save Changes
@@ -99,4 +97,4 @@ export function VMSettings({ config, onSave }: VMSettingsProps) {
       </CardContent>
     </Card>
   );
-} 
+}

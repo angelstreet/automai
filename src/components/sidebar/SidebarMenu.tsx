@@ -10,4 +10,4 @@ export const SidebarMenu = React.forwardRef<HTMLUListElement, React.ComponentPro
       {...props}
     />
   ),
-); 
+);
