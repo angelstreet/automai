@@ -26,6 +26,18 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+// Colors for console output
+const colors = {
+  reset: '\x1b[0m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m'
+};
+
 // Parse command line arguments
 const args = process.argv.slice(2);
 let scope = 'quick'; // Default scope
@@ -38,6 +50,18 @@ args.forEach(arg => {
     outputFormat = arg.split('=')[1];
   }
 });
+
+// Validate input arguments
+const validScopes = ['quick', 'full', 'app', 'components'];
+const validOutputs = ['console', 'md'];
+if (!validScopes.includes(scope)) {
+  console.log(`${colors.yellow}Warning: Invalid scope '${scope}'. Using default 'quick'.${colors.reset}`);
+  scope = 'quick';
+}
+if (!validOutputs.includes(outputFormat)) {
+  console.log(`${colors.yellow}Warning: Invalid output format '${outputFormat}'. Using default 'console'.${colors.reset}`);
+  outputFormat = 'console';
+}
 
 // Configuration
 const MAX_LINES = 300;
@@ -91,24 +115,29 @@ const NAMING_PATTERNS = {
   util: /^[a-z][a-zA-Z0-9]*\.ts$/,
   constant: /^[a-z][a-zA-Z0-9]*\.ts$/,
   type: /^[a-z][a-zA-Z0-9]*\.ts$/,
+  shadcnComponent: /^[a-z][a-zA-Z0-9-]*\.(ts|tsx)$/,
 };
 
 const LOCATION_PATTERNS = {
   component: [
     /^src\/components\/common\//,
     /^src\/components\/[a-z]+\//,
-    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/_components\//
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/_components\//,
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/components\//,
+    /^src\/app\/\[locale\]\/components\//
   ],
   shadcnComponent: [
     /^src\/components\/ui\//
   ],
   hook: [
     /^src\/hooks\//,
-    /^src\/lib\/hooks\//
+    /^src\/lib\/hooks\//,
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/hooks\//
   ],
   util: [
     /^src\/utils\//,
-    /^src\/lib\/utils\//
+    /^src\/lib\/utils\//,
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/utils\//
   ],
   constant: [
     /^src\/constants\//,
@@ -131,44 +160,44 @@ const BREAKDOWN_SUGGESTIONS = {
   default: "Review the file's purpose and split based on logical concerns. See 'Refactoring Guidelines' for specific patterns."
 };
 
-// Colors for console output
-const colors = {
-  reset: '\x1b[0m',
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  magenta: '\x1b[35m',
-  cyan: '\x1b[36m',
-  white: '\x1b[37m'
-};
-
 // Get all files in the project
 function getAllFiles(dir, fileList = []) {
-  const files = fs.readdirSync(dir);
-  
-  files.forEach(file => {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
+  try {
+    const files = fs.readdirSync(dir);
     
-    // Skip ignored directories
-    if (stat.isDirectory()) {
-      if (!IGNORED_DIRS.includes(file)) {
-        getAllFiles(filePath, fileList);
+    files.forEach(file => {
+      const filePath = path.join(dir, file);
+      
+      try {
+        const stat = fs.statSync(filePath);
+        
+        // Skip ignored directories
+        if (stat.isDirectory()) {
+          // Check full path against ignored patterns
+          if (IGNORED_DIRS.some(ignored => filePath.includes(`/${ignored}`))) {
+            return;
+          }
+          getAllFiles(filePath, fileList);
+          return;
+        }
+        
+        // Skip ignored files and extensions
+        const ext = path.extname(file);
+        if (IGNORED_FILES.includes(file) || IGNORED_EXTENSIONS.includes(ext)) {
+          return;
+        }
+        
+        fileList.push(filePath);
+      } catch (err) {
+        console.error(`Error accessing ${filePath}: ${err.message}`);
       }
-      return;
-    }
+    });
     
-    // Skip ignored files and extensions
-    const ext = path.extname(file);
-    if (IGNORED_FILES.includes(file) || IGNORED_EXTENSIONS.includes(ext)) {
-      return;
-    }
-    
-    fileList.push(filePath);
-  });
-  
-  return fileList;
+    return fileList;
+  } catch (err) {
+    console.error(`Error reading directory ${dir}: ${err.message}`);
+    return fileList;
+  }
 }
 
 // Check if a file is exempted from the line limit
@@ -190,33 +219,53 @@ function determineFileType(filePath, content) {
   }
   
   const fileName = path.basename(filePath);
+  const ext = path.extname(fileName);
+  
+  // Check file extension first - if not tsx/jsx/ts, unlikely to be a React component
+  if (!['.tsx', '.jsx', '.ts'].includes(ext)) {
+    return 'other';
+  }
   
   // Check if it's a component
   if (filePath.includes('/components/') || filePath.includes('/_components/')) {
-    if (content.includes('React') && (content.includes('function') || content.includes('const') || content.includes('export'))) {
+    // More accurate check for React components
+    if (content.includes('import React') || 
+        content.includes('from "react"') || 
+        content.includes("from 'react'") ||
+        (content.includes('<') && content.includes('/>')) ||
+        (content.includes('export') && 
+         (content.includes('function') || content.includes('const') || content.includes('class')) && 
+         content.includes('return') && 
+         (content.includes('<') || content.includes('null')))) {
       return 'component';
     }
   }
   
   // Check if it's a hook
-  if (fileName.startsWith('use') && content.includes('React') && content.includes('useState')) {
+  if (fileName.startsWith('use') && 
+      (content.includes('useState') || content.includes('useEffect') || 
+       content.includes('useRef') || content.includes('useCallback'))) {
     return 'hook';
   }
   
   // Check if it's a utility
-  if (filePath.includes('/utils/') || filePath.includes('/lib/')) {
-    if (content.includes('export') && content.includes('function')) {
-      return 'util';
-    }
+  if ((filePath.includes('/utils/') || filePath.includes('/lib/')) && 
+      content.includes('export') && content.includes('function')) {
+    return 'util';
   }
   
   // Check if it's a constants file
-  if (filePath.includes('/constants/') || content.includes('export const') || content.includes('export enum')) {
+  if (filePath.includes('/constants/') || 
+      (content.includes('export const') && 
+       !content.includes('return') && !content.includes('function'))) {
     return 'constant';
   }
   
   // Check if it's a types file
-  if (content.includes('interface') || content.includes('type ') || content.includes('enum ')) {
+  if (content.includes('interface ') || 
+      content.includes('type ') || 
+      content.includes('enum ') ||
+      content.match(/export (type|interface|enum)/)) {
     return 'type';
   }
   
@@ -308,9 +357,9 @@ function checkLocationConvention(filePath, fileType) {
 }
 
 // Check file size
-function checkFileSize(filePath, lineCount) {
+function checkFileSize(filePath, lineCount, content) {
   if (lineCount > MAX_LINES && !isExempted(filePath)) {
-    const fileType = determineFileType(filePath, fs.readFileSync(filePath, 'utf8'));
+    const fileType = determineFileType(filePath, content);
     const suggestion = BREAKDOWN_SUGGESTIONS[fileType] || BREAKDOWN_SUGGESTIONS.default;
     
     return {
@@ -353,7 +402,7 @@ function analyzeFile(filePath) {
     
     // Check file size if scope is 'full'
     if (scope === 'full') {
-      const sizeIssue = checkFileSize(filePath, lineCount);
+      const sizeIssue = checkFileSize(filePath, lineCount, content);
       if (sizeIssue) {
         issues.push(sizeIssue);
       }
@@ -383,6 +432,9 @@ function generateMarkdownReports(results) {
   const locationIssues = results.filter(r => r.issues.some(i => i.issue === 'location'));
   const sizeIssues = results.filter(r => r.issues.some(i => i.issue === 'size'));
   
+  // Find files with multiple issues for cross-referencing
+  const multiIssueFiles = results.filter(r => r.issues.length > 1);
+  
   // Generate rename-move-report.md
   let renameMoveContent = `# Files to Rename or Move\n\n`;
   renameMoveContent += `_Generated on ${new Date().toLocaleString()}_\n\n`;
@@ -393,7 +445,15 @@ function generateMarkdownReports(results) {
       const issue = result.issues.find(i => i.issue === 'naming');
       renameMoveContent += `### ${result.filePath}\n`;
       renameMoveContent += `- **Issue**: ${issue.message}\n`;
-      renameMoveContent += `- **Fix**: ${issue.suggestion}\n\n`;
+      renameMoveContent += `- **Fix**: ${issue.suggestion}\n`;
+      
+      // Add cross-reference if the file has multiple issues
+      if (result.issues.length > 1) {
+        const otherIssues = result.issues.filter(i => i.issue !== 'naming').map(i => i.issue);
+        renameMoveContent += `- **Note**: This file also has ${otherIssues.join(', ')} issues. Check other reports.\n`;
+      }
+      
+      renameMoveContent += `\n`;
     });
   } else {
     renameMoveContent += `No naming convention issues found.\n\n`;
@@ -409,7 +469,15 @@ function generateMarkdownReports(results) {
       const issue = result.issues.find(i => i.issue === 'location');
       reviewContent += `### ${result.filePath}\n`;
       reviewContent += `- **Issue**: ${issue.message}\n`;
-      reviewContent += `- **Fix**: ${issue.suggestion}\n\n`;
+      reviewContent += `- **Fix**: ${issue.suggestion}\n`;
+      
+      // Add cross-reference if the file has multiple issues
+      if (result.issues.length > 1) {
+        const otherIssues = result.issues.filter(i => i.issue !== 'location').map(i => i.issue);
+        reviewContent += `- **Note**: This file also has ${otherIssues.join(', ')} issues. Check other reports.\n`;
+      }
+      
+      reviewContent += `\n`;
     });
   } else {
     reviewContent += `No location convention issues found.\n\n`;
@@ -425,10 +493,44 @@ function generateMarkdownReports(results) {
       const issue = result.issues.find(i => i.issue === 'size');
       breakdownContent += `### ${result.filePath} (${result.lineCount} lines)\n`;
       breakdownContent += `- **Issue**: ${issue.message}\n`;
-      breakdownContent += `- **Fix**: ${issue.suggestion}\n\n`;
+      breakdownContent += `- **Fix**: ${issue.suggestion}\n`;
+      
+      // Add cross-reference if the file has multiple issues
+      if (result.issues.length > 1) {
+        const otherIssues = result.issues.filter(i => i.issue !== 'size').map(i => i.issue);
+        breakdownContent += `- **Note**: This file also has ${otherIssues.join(', ')} issues. Check other reports.\n`;
+      }
+      
+      breakdownContent += `\n`;
     });
   } else {
     breakdownContent += `No file size issues found.\n\n`;
+  }
+
+  // If there are files with multiple issues, generate a summary
+  if (multiIssueFiles.length > 0) {
+    let summaryContent = `# Files with Multiple Issues\n\n`;
+    summaryContent += `_Generated on ${new Date().toLocaleString()}_\n\n`;
+    summaryContent += `## Files Requiring Multiple Fixes (${multiIssueFiles.length})\n\n`;
+    
+    multiIssueFiles.forEach(result => {
+      summaryContent += `### ${result.filePath}\n`;
+      summaryContent += `- **File Type**: ${result.fileType}\n`;
+      summaryContent += `- **Line Count**: ${result.lineCount}\n`;
+      summaryContent += `- **Issues Found**: ${result.issues.map(i => i.issue).join(', ')}\n\n`;
+      
+      result.issues.forEach(issue => {
+        summaryContent += `#### ${issue.issue.charAt(0).toUpperCase() + issue.issue.slice(1)} Issue\n`;
+        summaryContent += `- **Issue**: ${issue.message}\n`;
+        summaryContent += `- **Fix**: ${issue.suggestion}\n\n`;
+      });
+      
+      summaryContent += `\n`;
+    });
+    
+    // Write the multi-issue summary
+    fs.writeFileSync(path.join(outputDir, 'multi-issue-summary.md'), summaryContent);
+    console.log(`- ${outputDir}/multi-issue-summary.md`);
   }
   
   // Add refactoring strategy to each report
@@ -480,6 +582,9 @@ function printRecommendations(results) {
   const locationIssues = results.filter(r => r.issues.some(i => i.issue === 'location'));
   const sizeIssues = results.filter(r => r.issues.some(i => i.issue === 'size'));
   
+  // Find files with multiple issues
+  const multiIssueFiles = results.filter(r => r.issues.length > 1);
+  
   // Print naming issues
   if (namingIssues.length > 0) {
     console.log(`${colors.yellow}Naming Convention Issues (${namingIssues.length})${colors.reset}`);
@@ -488,6 +593,13 @@ function printRecommendations(results) {
       console.log(`  ${colors.red}${result.filePath}${colors.reset}`);
       console.log(`    ${colors.yellow}Issue:${colors.reset} ${issue.message}`);
       console.log(`    ${colors.green}Fix:${colors.reset} ${issue.suggestion}`);
+      
+      // Add cross-reference if the file has multiple issues
+      if (result.issues.length > 1) {
+        const otherIssues = result.issues.filter(i => i.issue !== 'naming').map(i => i.issue);
+        console.log(`    ${colors.magenta}Note:${colors.reset} This file also has ${otherIssues.join(', ')} issues`);
+      }
+      
       console.log('');
     });
   }
@@ -516,12 +628,23 @@ function printRecommendations(results) {
     });
   }
   
+  // Print multi-issue file summary
+  if (multiIssueFiles.length > 0) {
+    console.log(`\n${colors.magenta}Files with Multiple Issues (${multiIssueFiles.length})${colors.reset}`);
+    multiIssueFiles.forEach(result => {
+      console.log(`  ${colors.red}${result.filePath}${colors.reset}`);
+      console.log(`    ${colors.yellow}Issues:${colors.reset} ${result.issues.map(i => i.issue).join(', ')}`);
+      console.log('');
+    });
+  }
+  
   // Print summary
   console.log(`\n${colors.cyan}=== Summary ===${colors.reset}`);
   console.log(`Total files analyzed: ${results.length}`);
   console.log(`Naming issues: ${namingIssues.length}`);
   console.log(`Location issues: ${locationIssues.length}`);
   console.log(`Size issues: ${sizeIssues.length}`);
+  console.log(`Files with multiple issues: ${multiIssueFiles.length}`);
   
   // Print refactoring strategy
   console.log(`\n${colors.cyan}=== Refactoring Strategy ===${colors.reset}`);
@@ -573,6 +696,12 @@ function main() {
     }
     
     console.log(`${colors.blue}Target directory:${colors.reset} ${targetDir}\n`);
+    
+    // Check if directory exists
+    if (!fs.existsSync(targetDir)) {
+      console.error(`${colors.red}Error:${colors.reset} Target directory ${targetDir} does not exist`);
+      process.exit(1);
+    }
     
     // Get all files
     const files = getAllFiles(targetDir);
