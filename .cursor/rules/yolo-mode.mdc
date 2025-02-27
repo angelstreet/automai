@@ -189,4 +189,40 @@ node scripts/health-check.js
 - **WebSocket Utility**: Module for WebSocket in Next.js
 - **Prisma Client (Root)**: For standalone servers
 - **Prisma Client (Src)**: For Next.js application
-- **Health Check**: Process to identify large files 
+- **Health Check**: Process to identify large files
+
+## Component Organization Quick Guide
+
+### Shadcn UI Components
+
+Shadcn UI components are located in `src/components/ui/` and should NOT be refactored:
+- These components are exempted from the 300-line limit
+- Keep them as close to their original implementation as possible
+- For customization, create a new component outside the ui directory that imports and extends the original
+
+### Custom Components
+
+For custom components that exceed 300 lines:
+
+1. **Create a directory structure**:
+   ```
+   src/components/feature/
+   ├── index.tsx         # Main component (exports Feature)
+   ├── FeatureHeader.tsx # Subcomponent
+   └── FeatureContent.tsx # Subcomponent
+   ```
+
+2. **Move page-specific components to app directory**:
+   ```
+   src/app/[locale]/[tenant]/feature/
+   ├── page.tsx
+   ├── actions.ts        # Data fetching
+   └── _components/      # Page-specific components
+       ├── FeatureHeader.tsx
+       └── FeatureContent.tsx
+   ```
+
+3. **Shared components organization**:
+   - `src/components/ui/` - Shadcn UI components only
+   - `src/components/common/` - Shared custom components
+   - `src/components/[feature]/` - Feature-specific components 

@@ -114,6 +114,17 @@ function analyzeFile(filePath, lineCount) {
   
   console.log(`${colors.red}File exceeds ${MAX_LINES} lines:${colors.reset} ${filePath} (${lineCount} lines)`);
   
+  // Check if file is in a directory that's similar to exempted patterns but not exactly matching
+  if (filePath.includes('/components/ui/')) {
+    console.log(`${colors.yellow}WARNING: This appears to be in the Shadcn UI directory.${colors.reset}`);
+    console.log(`${colors.yellow}Shadcn UI components should NOT be refactored. If this is a custom component:${colors.reset}`);
+    console.log('1. Create a new directory outside of src/components/ui/ for your custom version');
+    console.log('2. Keep the original Shadcn component intact');
+    console.log('3. Import and extend the original component in your custom implementation');
+    console.log('');
+    return;
+  }
+  
   // Determine file type and provide specific recommendations
   if (ext === '.tsx' || ext === '.jsx') {
     if (filePath.includes('/components/')) {
@@ -170,11 +181,18 @@ function printBestPractices() {
 ${colors.magenta}For detailed refactoring guidelines, see:${colors.reset}
    ${colors.cyan}.cursor/rules/refactoring.mdc${colors.reset}
 
+${colors.magenta}IMPORTANT: Before refactoring, read these rules:${colors.reset}
+   ${colors.cyan}- nextjs.mdc${colors.reset} - For Next.js project structure
+   ${colors.cyan}- code-organization.mdc${colors.reset} - For code organization best practices
+   ${colors.cyan}- general.mdc${colors.reset} - For general project guidelines
+
 ${colors.magenta}Key points to remember:${colors.reset}
    - Refactor ONE file at a time
-   - Test thoroughly after each file refactor
-   - Get explicit agreement before moving to the next file
+   - Check terminal for errors after each file refactor
+   - Get explicit agreement before implementing changes
+   - Commit before and after refactoring each file
    - Document all changes made during refactoring
+   - DO NOT refactor Shadcn UI components in src/components/ui/
 `);
 }
 
@@ -226,9 +244,10 @@ function main() {
       
       console.log(`\n${colors.yellow}=== IMPORTANT: Refactoring Safety Guidelines ===${colors.reset}`);
       console.log(`${colors.yellow}1. Refactor ONE file at a time${colors.reset}`);
-      console.log(`${colors.yellow}2. Test thoroughly after each file refactor${colors.reset}`);
-      console.log(`${colors.yellow}3. Get explicit agreement before moving to the next file${colors.reset}`);
-      console.log(`${colors.yellow}4. Document all changes made during refactoring${colors.reset}`);
+      console.log(`${colors.yellow}2. Check terminal for errors after each file refactor${colors.reset}`);
+      console.log(`${colors.yellow}3. Get explicit agreement before implementing changes${colors.reset}`);
+      console.log(`${colors.yellow}4. Commit before and after refactoring each file${colors.reset}`);
+      console.log(`${colors.yellow}5. Document all changes made during refactoring${colors.reset}`);
     }
   } catch (error) {
     console.error(`${colors.red}Error:${colors.reset}`, error.message);

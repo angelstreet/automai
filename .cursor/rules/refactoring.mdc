@@ -1,6 +1,7 @@
 ---
 description: Guidelines for refactoring code and breaking up large files
 globs: **/*.{ts,tsx,js,jsx}
+alwaysApply: false
 ---
 # Refactoring Guidelines
 
@@ -8,13 +9,37 @@ globs: **/*.{ts,tsx,js,jsx}
 
 This document outlines the process and best practices for refactoring code in the project, with a particular focus on breaking up large files to maintain code quality and readability.
 
+## Important: Read These Rules First
+
+Before starting any refactoring work, you MUST read and understand these cursor rules:
+- `nextjs.mdc` - For Next.js project structure and organization
+- `code-organization.mdc` - For code organization best practices
+- `general.mdc` - For general project guidelines
+
+These rules provide essential context about the project structure and coding standards that must be followed during refactoring.
+
+## Special Considerations
+
+### Shadcn UI Components
+
+Components in `src/components/ui/` that are part of the Shadcn UI library should NOT be refactored. These components:
+- Are exempted from the 300-line limit
+- Should be kept as close to their original implementation as possible
+- May be customized but should remain in single files
+
+If a Shadcn UI component has been heavily customized and exceeds the line limit:
+1. Create a new directory outside of `src/components/ui/` for the customized version
+2. Keep the original Shadcn component intact in `src/components/ui/`
+3. Import and extend the original component in your custom implementation
+
 ## Core Principles
 
 1. **One file at a time**: Always refactor one file at a time to minimize the risk of introducing bugs.
-2. **Verify after each change**: Test thoroughly after each file refactor to ensure nothing is broken.
-3. **Get explicit agreement**: Always get explicit agreement before moving to the next file.
+2. **Verify after each change**: Check the terminal for errors after each file refactor to ensure nothing is broken.
+3. **Get explicit agreement**: Always get explicit agreement before implementing changes and before moving to the next file.
 4. **Document changes**: Keep track of all changes made during refactoring for future reference.
 5. **Maintain functionality**: Ensure that the refactored code maintains the same functionality as the original.
+6. **Commit after each file**: Make a commit after each file is fully refactored to maintain a clean history.
 
 ## File Size Guidelines
 
@@ -28,39 +53,51 @@ This document outlines the process and best practices for refactoring code in th
 
 ### Before Starting
 
-1. **Create a branch**: Always create a new branch for refactoring work
+1. **Assess the component**: Determine if the component should be refactored
+   - Is it a Shadcn UI component? If yes, do not refactor
+   - Is it in an exempted directory? If yes, confirm before refactoring
+   - Does it follow the project structure in `nextjs.mdc`? If not, plan accordingly
+
+2. **Commit current state**: Make a commit before starting refactoring
    ```bash
-   git checkout -b refactor/component-name
+   git add .
+   git commit -m "pre-refactor: save current state before refactoring component-name"
    ```
 
-2. **Run the health check**: Identify files that need refactoring
+3. **Run the health check**: Identify files that need refactoring
    ```bash
    node scripts/health-check.js
    ```
 
-3. **Plan the refactoring**: Create a plan for how to break up each file
+4. **Plan the refactoring**: Create a plan for how to break up each file
    - Identify logical components or functions that can be extracted
-   - Determine appropriate file and directory structure
+   - Determine appropriate file and directory structure according to `code-organization.mdc`
    - Consider dependencies and imports
+   - Ensure the plan aligns with the project structure in `nextjs.mdc`
+
+5. **Get approval**: Present the plan and get explicit approval before implementing
 
 ### During Refactoring
 
 1. **Focus on one file**: Complete the refactoring of one file before moving to the next
 2. **Make small, incremental changes**: Avoid large, sweeping changes
-3. **Commit frequently**: Make small, focused commits with clear messages
-4. **Run tests after each significant change**: Ensure functionality is preserved
+3. **Check for import issues**: Verify that imports in other files are updated if needed
 
 ### After Each File Refactor
 
 1. **Verification checklist**:
-   - Run the application
-   - Test the affected functionality
-   - Check for console errors
+   - Check the terminal where the Next.js server is running for errors
+   - Verify the application reloads without errors
+   - Check for console errors related to your modifications
    - Verify UI components render correctly
-   - Run automated tests if available
 
-2. **Get explicit agreement**: Present the changes to the team and get approval before moving on
-3. **Document the changes**: Update documentation if necessary
+2. **Get explicit agreement**: Present the changes and get approval before moving on
+
+3. **Commit the changes**: Make a commit after refactoring is complete
+   ```bash
+   git add .
+   git commit -m "refactor: break down ComponentName into smaller files"
+   ```
 
 ## Breaking Up Different File Types
 
@@ -212,15 +249,9 @@ When a function becomes too long or handles multiple concerns, break it into sma
 
 Move magic numbers and strings to named constants.
 
-## Testing After Refactoring
-
-- Run existing tests to ensure functionality is preserved
-- Add new tests for extracted components or functions
-- Test edge cases that might be affected by the refactoring
-
 ## Conclusion
 
-Following these guidelines will help maintain a clean, organized codebase that is easier to understand, test, and maintain. Remember that refactoring is an ongoing process, not a one-time task.
+Following these guidelines will help maintain a clean, organized codebase that is easier to understand and maintain. Remember that refactoring is an ongoing process, not a one-time task.
 
 When in doubt, run the health check script to identify files that need attention:
 
