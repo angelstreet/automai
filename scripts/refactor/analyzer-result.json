@@ -1,0 +1,54 @@
+{
+  "timestamp": "2025-02-27T20:46:31.601Z",
+  "checks": "size",
+  "results": [
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/ui/sidebar.tsx",
+      "fileType": "shadcnComponent",
+      "lineCount": 776,
+      "issues": [
+        {
+          "issue": "size",
+          "message": "File exceeds 300 lines (776 lines)",
+          "suggestion": "Review the file's purpose and split based on logical concerns. See 'Refactoring Guidelines' for specific patterns."
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectForm.tsx",
+      "fileType": "component",
+      "lineCount": 363,
+      "issues": [
+        {
+          "issue": "size",
+          "message": "File exceeds 300 lines (363 lines)",
+          "suggestion": "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'."
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectionForm.tsx",
+      "fileType": "component",
+      "lineCount": 370,
+      "issues": [
+        {
+          "issue": "size",
+          "message": "File exceeds 300 lines (370 lines)",
+          "suggestion": "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'."
+        }
+      ]
+    },
+    {
+      "filePath": "/Users/joachimndoye/Documents/automai/src/components/virtualization/Terminal.tsx",
+      "fileType": "component",
+      "lineCount": 367,
+      "issues": [
+        {
+          "issue": "size",
+          "message": "File exceeds 300 lines (367 lines)",
+          "suggestion": "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+# Directories to ignore during refactoring analysis
+node_modules/
+.next/
+.git/
+prisma/migrations/
+scripts/
+
+# Files to ignore
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# File extensions to ignore
+*.md
+*.json
+*.lock
+*.svg
+*.ico
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.env
+*.env.local
+*.env.development
+*.env.production
+*.env.test
+
+# Special cases - modules and shadcn components are allowed to exceed the line limit
+# These will be converted to RegExp patterns in the scanner
+/^src\/lib\/modules\//
+/^src\/components\/ui\//
+/node_modules/
+/^prisma\/migrations\//
+/\.d\.ts$/
+/\.test\./
+/\.spec\./
+/\.config\./ 
