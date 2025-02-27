@@ -284,6 +284,8 @@ app.prepare().then(async () => {
           
           // Fetch connection details from database
           try {
+            console.log('[WebSocketServer] Looking up connection in database:', machineId);
+            
             const connection = await prisma.connection.findUnique({
               where: { id: machineId }
             });
