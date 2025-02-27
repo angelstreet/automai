@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:custom": "node next.server.js",
     "dev:next": "next dev",
+    "dev:all": "node scripts/dev.js",
     "build": "next build",
     "start": "next start",
     "start:next": "next start",
