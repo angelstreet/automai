@@ -15,25 +15,30 @@ export default function AnalyticsPage() {
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch hosts from API
+  // Fetch machines from API
   const fetchHosts = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch('/api/hosts');
+      const response = await fetch('/api/virtualization/machines');
       
       if (!response.ok) {
-        throw new Error('Failed to fetch hosts');
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load hosts',
+        });
+        return;
       }
       
       const data = await response.json();
-      setHosts(data.data || []);
+      const hosts = data.data || [];
+      setHosts(machines);
 
-      // Set first host as selected if none selected
+      // Set first machine as selected if none selected
       if (hosts.length > 0 && !selectedDevice) {
         setSelectedDevice(hosts[0].id);
       }
     } catch (error) {
-      console.error('Error fetching hosts:', error);
+      console.error('Error fetching machines:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -63,14 +68,14 @@ export default function AnalyticsPage() {
         <Card className="w-64 p-4">
           <h2 className="font-semibold mb-4">Devices</h2>
           <div className="space-y-2">
-            {hosts.map(host => (
+            {hosts.map(machine => (
               <Button
-                key={host.id}
-                variant={selectedDevice === host.id ? 'secondary' : 'ghost'}
+                key={machine.id}
+                variant={selectedDevice === machine.id ? 'secondary' : 'ghost'}
                 className="w-full justify-start"
-                onClick={() => setSelectedDevice(host.id)}
+                onClick={() => setSelectedDevice(machine.id)}
               >
-                {host.name}
+                {machine.name}
               </Button>
             ))}
           </div>

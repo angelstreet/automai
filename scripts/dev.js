@@ -80,6 +80,15 @@ function killProcessOnPort(port) {
 async function main() {
   console.log(`${colors.cyan}=== Development Server Manager ===${colors.reset}`);
   
+  // Clean .next directory
+  console.log(`${colors.yellow}Cleaning .next directory...${colors.reset}`);
+  try {
+    execSync('rm -rf .next', { stdio: 'inherit' });
+    console.log(`${colors.green}.next directory cleaned${colors.reset}`);
+  } catch (error) {
+    console.log(`${colors.red}Error cleaning .next directory: ${error.message}${colors.reset}`);
+  }
+  
   // Check and kill Next.js server if running
   if (isPortInUse(NEXT_PORT)) {
     console.log(`${colors.yellow}Next.js server is already running on port ${NEXT_PORT}${colors.reset}`);

@@ -12,35 +12,43 @@ export default function TerminalsPage() {
   const { toast } = useToast();
   const [connection, setConnection] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [host, setHost] = useState<any>(null);
 
   useEffect(() => {
-    const hostId = searchParams.get('machine');
-    if (!hostId) {
-      setError('No host ID provided');
+    const machineId = searchParams.get('machine');
+    if (!machineId) {
+      setError('No machine ID provided');
       return;
     }
 
-    // Fetch host details and establish SSH connection
+    // Fetch machine details and establish SSH connection
     const initializeTerminal = async () => {
       try {
-        setIsLoading(true);
-        // Fetch host details
-        const response = await fetch(`/api/hosts/${hostId}`);
+        const response = await fetch(`/api/virtualization/machines/${machineId}`);
         if (!response.ok) {
-          throw new Error('Failed to fetch host details');
+          throw new Error('Failed to fetch machine details');
         }
-        const hostData = await response.json();
-        setHost(hostData.data);
 
-        // Connect to the host
-        const sshResponse = await fetch('/api/hosts/connect', {
+        const data = await response.json();
+        if (!data.success || !data.data) {
+          throw new Error('Invalid machine data');
+        }
+
+        setConnection(data.data);
+
+        // Initialize SSH connection
+        const sshResponse = await fetch('/api/virtualization/machines/connect', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ id: hostId }),
+          body: JSON.stringify({
+            machineId,
+            type: data.data.type,
+            ip: data.data.ip,
+            port: data.data.port,
+            username: data.data.user,
+            password: data.data.password,
+          }),
         });
 
         if (!sshResponse.ok) {
@@ -49,7 +57,7 @@ export default function TerminalsPage() {
 
         logger.info('SSH connection established', {
           action: 'TERMINAL_CONNECTED',
-          data: { hostId, ip: hostData.data.ip },
+          data: { machineId, ip: data.data.ip },
           saveToDb: true
         });
 
@@ -64,7 +72,7 @@ export default function TerminalsPage() {
         
         logger.error(`Terminal initialization failed: ${message}`, {
           action: 'TERMINAL_INIT_ERROR',
-          data: { hostId, error: message },
+          data: { machineId, error: message },
           saveToDb: true
         });
       }
@@ -72,16 +80,18 @@ export default function TerminalsPage() {
 
     initializeTerminal();
 
-    // Disconnect on unmount
+    // Cleanup on unmount
     return () => {
-      if (hostId) {
-        fetch('/api/hosts/disconnect', {
+      if (connection) {
+        fetch('/api/virtualization/machines/disconnect', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ id: hostId }),
-        }).catch(error => console.error('Error disconnecting:', error));
+          body: JSON.stringify({
+            machineId: connection.id,
+          }),
+        }).catch(console.error);
       }
     };
   }, [searchParams]);
@@ -103,7 +113,7 @@ export default function TerminalsPage() {
     );
   }
 
-  if (isLoading || !host) {
+  if (!connection) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -113,7 +123,7 @@ export default function TerminalsPage() {
 
   return (
     <div className="h-screen bg-background">
-      <Terminal connection={host} />
+      <Terminal connection={connection} />
     </div>
   );
 } 
