@@ -21,22 +21,22 @@ alwaysApply: true
    - Use appropriate Prisma client:
      - For standalone scripts/WebSocket server: `import { prisma } from '../../prisma'`
      - For Next.js application: `import { prisma } from '@/lib/prisma'`
-   - See [Prisma Rules](#prisma-rules) for details
+   - See [Prisma Rules](mdc:#prisma-rules) for details
 
 2. **WebSocket Usage**: 
    - Standalone server (`websocket.server.js`) for terminal connections
    - Utility module (`src/lib/websocket-server.ts`) for Next.js integration
-   - See [WebSocket Rules](#websocket-rules) for details
+   - See [WebSocket Rules](mdc:#websocket-rules) for details
 
 3. **Code Organization**:
    - Keep files under 300 lines
    - Run health check script to identify large files: `node scripts/health-check.js`
-   - See [Code Organization Rules](#code-organization-rules) for refactoring patterns
+   - See [Code Organization Rules](mdc:#code-organization-rules) for refactoring patterns
 
 4. **Performance Optimization**:
    - Minimize client-side JavaScript with Server Components
    - Use proper code splitting and dynamic imports
-   - See [Performance Guidelines](#performance-guidelines) for details
+   - See [Performance Guidelines](mdc:#performance-guidelines) for details
 
 ### Required vs Optional Rules
 
@@ -224,7 +224,7 @@ When the health check script identifies large files, follow these guidelines:
    └── date.ts           # Date utilities
    ```
 
-See [Refactoring Guidelines](#refactoring-guidelines) for detailed patterns.
+See [Refactoring Guidelines](mdc:#refactoring-guidelines) for detailed patterns.
 
 ## <a id="performance-guidelines"></a>Performance Optimization Guidelines
 
