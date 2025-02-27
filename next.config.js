@@ -1,8 +1,10 @@
-const withNextIntl = require('next-intl/plugin')();
+const createNextIntlPlugin = require('next-intl/plugin');
 const { loadEnvConfig } = require('./src/lib/env');
 
 // Load environment variables
 loadEnvConfig();
+
+const withNextIntl = createNextIntlPlugin();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -10,13 +12,24 @@ const nextConfig = {
   // Add any other Next.js config options here
   
   // Ignore optional dependencies that cause warnings
-  webpack: (config, { isServer }) => {
-    // Ignore optional modules that cause warnings
+  webpack: (config) => {
+    config.externals = config.externals || [];
+    config.externals.push({
+      'utf-8-validate': 'commonjs utf-8-validate',
+      'bufferutil': 'commonjs bufferutil',
+    });
+
     config.resolve.fallback = {
       ...config.resolve.fallback,
-      'cpu-features': false,
+      fs: false,
+      net: false,
+      tls: false,
+      dns: false,
     };
-    
+
+    config.module = config.module || {};
+    config.module.exprContextCritical = false;
+
     // Ignore specific module not found warnings
     config.ignoreWarnings = [
       { module: /node_modules\/ssh2\/lib\/protocol\/constants\.js/ },

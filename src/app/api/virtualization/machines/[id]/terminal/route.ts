@@ -24,6 +24,18 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   try {
+    // Log request details for debugging
+    logger.info(`WebSocket terminal request received for machine ${context.params.id}`, {
+      action: 'TERMINAL_WS_REQUEST',
+      data: {
+        url: request.url,
+        method: request.method,
+        id: context.params.id,
+        headers: Object.fromEntries(request.headers.entries())
+      },
+      saveToDb: true
+    });
+    
     console.log('[WebSocket Route] Received request:', {
       url: request.url,
       method: request.method,

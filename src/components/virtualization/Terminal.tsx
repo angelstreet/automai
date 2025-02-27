@@ -7,7 +7,6 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 import { SearchAddon } from 'xterm-addon-search';
 import { AttachAddon } from 'xterm-addon-attach';
 import 'xterm/css/xterm.css';
-import { logger } from '@/lib/logger';
 import { useToast } from '@/components/ui/use-toast';
 
 interface Connection {
@@ -80,15 +79,11 @@ export function Terminal({ connection }: TerminalProps) {
             const initialDimensions = { cols: term.cols, rows: term.rows };
             console.log('Initial terminal dimensions:', initialDimensions);
             
-            logger.info('Terminal initialized with dimensions', {
-              action: 'TERMINAL_INIT_DIMENSIONS',
-              data: { 
-                connectionId: connection?.id || 'unknown',
-                dimensions: initialDimensions
-              },
-              saveToDb: true
+            console.log('Terminal initialized with dimensions', {
+              connectionId: connection?.id || 'unknown',
+              dimensions: initialDimensions
             });
-          }, 100);
+          }, 200);
         }
       } catch (error) {
         console.error('Error fitting terminal:', error);
@@ -102,22 +97,14 @@ export function Terminal({ connection }: TerminalProps) {
     // Set initial terminal text before connection is established
     term.write(`\x1B[1;3;33mInitializing terminal for ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})...\x1B[0m\r\n`);
 
-    // Create WebSocket connection
-    const socketUrl = `ws://${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
+    // Create WebSocket connection with proper protocol
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socketUrl = `${protocol}//${window.location.host}/api/virtualization/machines/${connection.id}/terminal`;
     console.log(`[WebSocket] Connecting to: ${socketUrl}`, { 
       connectionId: connection.id,
       connectionType: connection.type,
-      username: connection.user
-    });
-    
-    // Log connection attempt
-    logger.info('Attempting WebSocket connection', {
-      action: 'TERMINAL_WS_ATTEMPT',
-      data: { 
-        connectionId: connection.id,
-        connectionType: connection.type
-      },
-      saveToDb: true
+      username: connection.user,
+      password: connection.password
     });
     
     const socket = new WebSocket(socketUrl);
@@ -127,10 +114,8 @@ export function Terminal({ connection }: TerminalProps) {
       console.log('[WebSocket] Connection established successfully');
       
       // Log successful connection
-      logger.info('WebSocket connection established', {
-        action: 'TERMINAL_WS_CONNECTED',
-        data: { connectionId: connection.id },
-        saveToDb: true
+      console.log('WebSocket connection established', {
+        connectionId: connection.id
       });
       
       term.write(`\x1B[1;3;33mWebSocket connected, authenticating...\x1B[0m\r\n`);
@@ -151,14 +136,10 @@ export function Terminal({ connection }: TerminalProps) {
       });
       
       // Log authentication attempt
-      logger.info('Sending authentication to server', {
-        action: 'TERMINAL_AUTH_ATTEMPT',
-        data: { 
-          connectionId: connection.id,
-          connectionType: connection.type,
-          username: connection.user
-        },
-        saveToDb: true
+      console.log('Sending authentication to server', {
+        connectionId: connection.id,
+        connectionType: connection.type,
+        username: connection.user
       });
       
       socket.send(JSON.stringify(authMessage));
@@ -170,15 +151,9 @@ export function Terminal({ connection }: TerminalProps) {
 
     socket.onerror = (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[WebSocket] Error:', errorMessage);
-      
-      logger.error('Terminal WebSocket error', {
-        action: 'TERMINAL_WS_ERROR',
-        data: { 
-          connectionId: connection.id, 
-          error: errorMessage
-        },
-        saveToDb: true
+      console.error('[WebSocket] Terminal error:', {
+        message: errorMessage,
+        connectionId: connection.id
       });
       
       // Show toast notification for WebSocket error
@@ -210,14 +185,10 @@ export function Terminal({ connection }: TerminalProps) {
         if (data.error) {
           console.error('[SSH] Error:', data.error);
           
-          logger.error('SSH connection error from server', {
-            action: 'SSH_SERVER_ERROR',
-            data: { 
-              connectionId: connection.id,
-              error: data.error,
-              errorType: data.errorType || 'UNKNOWN_ERROR'
-            },
-            saveToDb: true
+          console.error('SSH connection error from server', {
+            connectionId: connection.id,
+            error: data.error,
+            errorType: data.errorType || 'UNKNOWN_ERROR'
           });
           
           // Customize toast based on error type
@@ -265,10 +236,8 @@ export function Terminal({ connection }: TerminalProps) {
     socket.onclose = () => {
       console.log('[WebSocket] Connection closed');
       
-      logger.info('Terminal WebSocket closed', {
-        action: 'TERMINAL_WS_CLOSED',
-        data: { connectionId: connection.id },
-        saveToDb: true
+      console.log('Terminal WebSocket closed', {
+        connectionId: connection.id
       });
       
       term.write('\r\n\x1B[1;3;33mConnection closed.\x1B[0m\r\n');
@@ -287,13 +256,9 @@ export function Terminal({ connection }: TerminalProps) {
             // Log terminal dimensions for debugging
             console.log('[Terminal] Dimensions after resize:', dimensions);
             
-            logger.info('Terminal resized', {
-              action: 'TERMINAL_RESIZE',
-              data: { 
-                connectionId: connection.id,
-                dimensions: dimensions || { cols: 0, rows: 0 }
-              },
-              saveToDb: false
+            console.log('Terminal resized', {
+              connectionId: connection.id,
+              dimensions: dimensions || { cols: 0, rows: 0 }
             });
             
             if (socket.readyState === WebSocket.OPEN) {
@@ -326,7 +291,7 @@ export function Terminal({ connection }: TerminalProps) {
     <div className="w-full h-full">
       <div 
         ref={terminalRef} 
-        className="w-full h-[calc(100%-20px)] rounded-lg overflow-hidden border border-border"
+        className="w-full h-[calc(90%)] rounded-lg overflow-hidden border border-border"
       />
     </div>
   );
