@@ -5,12 +5,62 @@ alwaysApply: true
 ---
 # General Rules
 
+## 🚀 YOLO Mode Quick Start
+
+**For AI agents in YOLO mode, read this section first to get essential context quickly.**
+
+### Essential Project Context
+- **Project Type**: Next.js 13+ App Router application with PostgreSQL/Prisma and WebSocket server
+- **Key Architecture**: 
+  - Dual WebSocket implementations: Standalone server (port 3001) and utility module
+  - Dual Prisma clients: Root-level singleton and src-level singleton
+  - Next.js HTTP server (port 3000) with App Router and internationalization
+
+### Critical Patterns to Follow
+1. **Database Access**: 
+   - Use appropriate Prisma client:
+     - For standalone scripts/WebSocket server: `import { prisma } from '../../prisma'`
+     - For Next.js application: `import { prisma } from '@/lib/prisma'`
+   - See [Prisma Rules](#prisma-rules) for details
+
+2. **WebSocket Usage**: 
+   - Standalone server (`websocket.server.js`) for terminal connections
+   - Utility module (`src/lib/websocket-server.ts`) for Next.js integration
+   - See [WebSocket Rules](#websocket-rules) for details
+
+3. **Code Organization**:
+   - Keep files under 300 lines
+   - Run health check script to identify large files: `node scripts/health-check.js`
+   - See [Code Organization Rules](#code-organization-rules) for refactoring patterns
+
+4. **Performance Optimization**:
+   - Minimize client-side JavaScript with Server Components
+   - Use proper code splitting and dynamic imports
+   - See [Performance Guidelines](#performance-guidelines) for details
+
+### Required vs Optional Rules
+
+**Required Rules** (read these first in new chats):
+- `general.mdc` (this file) - Essential project context
+- `prisma.mdc` - Database access patterns
+- `websocket.mdc` - WebSocket implementation details
+- `code-organization.mdc` - File size and organization guidelines
+
+**Optional Rules** (read as needed):
+- `config.mdc` - Environment configuration details
+- `nextjs.mdc` - Next.js specific patterns
+- `frontend.mdc` - Frontend development guidelines
+- `backend.mdc` - Backend API patterns
+- `ui.mdc` - UI component guidelines
+- `refactoring.mdc` - Detailed refactoring guidelines
+
 ## Initial Setup - READ FIRST
 
 **IMPORTANT: If this is a new chat, read all cursor rules first to understand the project structure and coding standards.**
 
 1. Read these cursor rules in order:
    - general.mdc (this file) - Project overview and general guidelines
+   - yolo-mode.mdc - Quick reference guide for YOLO mode development
    - config.mdc - Environment configuration
    - prisma.mdc - Database and Prisma setup
    - nextjs.mdc - Next.js structure and best practices
@@ -140,17 +190,72 @@ Before making any refactoring changes:
 4. Wait for user confirmation before implementing any changes
 5. Follow the best practices in the code-organization.mdc rule when refactoring
 
-The health check script will:
-- Scan the codebase for files exceeding 300 lines
-- Provide tailored recommendations for breaking up each file type
-- Display a summary of findings and best practices
-- Exempt certain files like UI components and modules
+### Interpreting Health Check Results
 
-When asked to refactor or health check:
-- Always run the script first
-- Present the results to the user
-- Propose a plan for addressing the issues
-- Only proceed with changes after explicit user confirmation
+When the health check script identifies large files, follow these guidelines:
+
+1. **For Components (>300 lines)**:
+   - Before: Single large component with multiple responsibilities
+   - After: Directory structure with main component and subcomponents
+   ```
+   Button/
+   ├── index.tsx         # Main component (exports Button)
+   ├── ButtonIcon.tsx    # Extracted subcomponent
+   └── ButtonLabel.tsx   # Extracted subcomponent
+   ```
+
+2. **For Pages (>300 lines)**:
+   - Before: Single page file with UI, data fetching, and business logic
+   - After: Separate files for UI components and data operations
+   ```
+   dashboard/
+   ├── page.tsx          # Main page (composition only)
+   ├── actions.ts        # Data fetching logic
+   └── _components/      # UI components
+   ```
+
+3. **For Utility Files (>300 lines)**:
+   - Before: Single utility file with mixed functions
+   - After: Grouped by functionality in separate files
+   ```
+   utils/
+   ├── index.ts          # Re-exports
+   ├── string.ts         # String utilities
+   └── date.ts           # Date utilities
+   ```
+
+See [Refactoring Guidelines](#refactoring-guidelines) for detailed patterns.
+
+## <a id="performance-guidelines"></a>Performance Optimization Guidelines
+
+For optimal performance in YOLO mode:
+
+1. **Server-Side Rendering**:
+   - Use React Server Components (RSC) by default
+   - Only add 'use client' when necessary for interactivity
+   - Keep client-side JavaScript minimal
+
+2. **Code Splitting**:
+   - Use dynamic imports for large components:
+     ```tsx
+     const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
+       loading: () => <LoadingSpinner />
+     });
+     ```
+
+3. **Image Optimization**:
+   - Always use Next.js Image component with proper sizing
+   - Implement lazy loading for below-the-fold images
+
+4. **Data Fetching**:
+   - Use React Server Components for data fetching
+   - Implement proper caching strategies
+   - Use incremental static regeneration where appropriate
+
+5. **Bundle Size**:
+   - Avoid large dependencies when alternatives exist
+   - Use tree-shakable libraries
+   - Monitor bundle size with built-in Next.js analytics
 
 ## Server Management
 
@@ -182,6 +287,33 @@ When asked to refactor or health check:
 - Use browser tools to debug UI issues only when explicitly requested
 - Be concise in task completion confirmations 
 
+## <a id="testing-guidelines"></a>Testing Guidelines for YOLO Mode
+
+In YOLO mode, focus testing efforts on critical paths:
+
+1. **Priority Testing Areas**:
+   - Authentication flows
+   - Data persistence operations
+   - WebSocket connections
+   - Critical user journeys
+
+2. **Testing Approaches**:
+   - Manual testing of UI flows
+   - Console.log debugging for quick verification
+   - Basic API endpoint testing with tools like Postman
+   - Visual verification of UI components
+
+3. **Minimal Testing Setup**:
+   - Use Next.js built-in testing capabilities
+   - Focus on integration tests over unit tests
+   - Test real user flows rather than implementation details
+
+4. **When to Skip Testing**:
+   - UI styling changes
+   - Minor text updates
+   - Internal refactoring without behavior changes
+   - Low-risk enhancements
+
 ## Maintaining Cursor Rules
 
 - Cursor rules should always reflect the current state of the codebase
@@ -203,5 +335,26 @@ When asked to refactor or health check:
   - Best practices
   - File organization
   - Environment configuration
+
+## <a id="project-glossary"></a>Project Glossary
+
+- **Tenant**: A customer organization with its own isolated data and users
+- **Host**: A server or machine that can be connected to via SSH
+- **Connection**: An established SSH session to a host
+- **WebSocket Server**: The standalone server running on port 3001 for terminal connections
+- **WebSocket Utility**: The module in src/lib for WebSocket functionality within Next.js
+- **Prisma Client (Root)**: The Prisma client instance at /prisma/index.ts used by standalone servers
+- **Prisma Client (Src)**: The Prisma client instance at /src/lib/prisma.ts used by Next.js
+- **Health Check**: The process of identifying files exceeding 300 lines that need refactoring
+- **YOLO Mode**: Rapid development mode prioritizing speed and efficiency over comprehensive documentation
+
+## Cross-References
+
+- <a id="prisma-rules"></a>**Prisma Rules**: See `prisma.mdc` for database access patterns and client usage
+- <a id="websocket-rules"></a>**WebSocket Rules**: See `websocket.mdc` for WebSocket implementation details
+- <a id="code-organization-rules"></a>**Code Organization Rules**: See `code-organization.mdc` for file organization guidelines
+- <a id="refactoring-guidelines"></a>**Refactoring Guidelines**: See `refactoring.mdc` for detailed refactoring patterns
+- <a id="ui-guidelines"></a>**UI Guidelines**: See `ui.mdc` for component design patterns
+- <a id="backend-guidelines"></a>**Backend Guidelines**: See `backend.mdc` for API implementation patterns
 
 

@@ -1,0 +1,192 @@
+---
+description: YOLO Mode Development Guidelines
+globs: **/*.{ts,tsx,js,jsx}
+alwaysApply: true
+---
+
+# YOLO Mode Development Guidelines
+
+## What is YOLO Mode?
+
+YOLO Mode ("You Only Look Once") is an approach to rapid development that prioritizes:
+- Quick context acquisition
+- Minimal token usage
+- Efficient development patterns
+- Focus on critical functionality first
+
+## Essential Project Context (Quick Reference)
+
+### Architecture Overview
+- **Next.js App Router** (port 3000) - Main application
+- **Standalone WebSocket Server** (port 3001) - Terminal connections
+- **PostgreSQL Database** - Data persistence with Prisma ORM
+- **Dual Prisma Clients**:
+  - Root-level: `/prisma/index.ts` (for standalone servers)
+  - Src-level: `/src/lib/prisma.ts` (for Next.js app)
+
+### Critical File Paths
+- **WebSocket Server**: `websocket.server.js` (root)
+- **WebSocket Utility**: `src/lib/websocket-server.ts`
+- **Prisma Schema**: `prisma/schema.prisma`
+- **Environment Config**: `src/lib/env.ts`
+- **Health Check Script**: `scripts/health-check.js`
+
+## Rapid Development Patterns
+
+### Database Access
+```typescript
+// For Next.js application code:
+import { prisma } from '@/lib/prisma';
+
+// For standalone scripts or WebSocket server:
+import { prisma } from '../../prisma';
+
+// Example query pattern:
+const data = await prisma.model.findMany({
+  where: { /* conditions */ },
+  include: { /* relations */ },
+});
+```
+
+### WebSocket Implementation
+```typescript
+// In WebSocket server:
+const wss = new WebSocketServer({ noServer: true });
+wss.on('connection', (ws, req) => {
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+  ws.on('message', (message) => {
+    // Handle message
+  });
+});
+
+// In client component:
+'use client';
+const ws = new WebSocket(`ws://localhost:3001/terminal/${id}`);
+ws.onmessage = (event) => {
+  // Handle message
+};
+```
+
+### Component Structure
+```typescript
+// src/components/Feature/index.tsx
+export function Feature() {
+  // Main component logic
+  return (
+    <div>
+      <FeatureHeader />
+      <FeatureContent />
+    </div>
+  );
+}
+
+// src/components/Feature/FeatureHeader.tsx
+function FeatureHeader() {
+  return <header>...</header>;
+}
+
+// src/components/Feature/FeatureContent.tsx
+function FeatureContent() {
+  return <main>...</main>;
+}
+```
+
+## Token Optimization Strategies
+
+1. **Minimize Rule Reading**:
+   - Start with only `general.mdc` and this file
+   - Read other rules only when needed for specific tasks
+
+2. **Use Targeted Searches**:
+   - Search for specific patterns rather than reading entire files
+   - Use semantic search with precise queries
+
+3. **Leverage Code Examples**:
+   - Reference the examples in this file for common patterns
+   - Copy and adapt patterns rather than generating from scratch
+
+4. **Prioritize Server Components**:
+   - Use React Server Components by default
+   - Only add 'use client' when necessary for interactivity
+
+5. **Efficient File Organization**:
+   - Keep related code together
+   - Use the health check script to identify files that need refactoring
+
+## Performance Quick Wins
+
+1. **Server-Side Rendering**:
+   - Use React Server Components for data fetching
+   - Keep client-side JavaScript minimal
+
+2. **Code Splitting**:
+   - Use dynamic imports for large components
+   - Implement lazy loading for below-the-fold content
+
+3. **Image Optimization**:
+   - Use Next.js Image component with proper sizing
+   - Implement lazy loading for images
+
+4. **Bundle Size Reduction**:
+   - Avoid large dependencies
+   - Use tree-shakable libraries
+
+5. **Caching Strategies**:
+   - Implement proper caching for API responses
+   - Use incremental static regeneration where appropriate
+
+## Testing Priorities
+
+1. **Critical Paths**:
+   - Authentication flows
+   - Data persistence operations
+   - WebSocket connections
+   - Core user journeys
+
+2. **Quick Testing Approaches**:
+   - Manual testing of UI flows
+   - Console.log debugging
+   - Basic API endpoint testing
+   - Visual verification
+
+3. **When to Skip Testing**:
+   - UI styling changes
+   - Minor text updates
+   - Internal refactoring
+   - Low-risk enhancements
+
+## Health Check Quick Guide
+
+Run the health check script to identify files that need refactoring:
+```bash
+node scripts/health-check.js
+```
+
+### Quick Refactoring Patterns:
+
+1. **For Components**:
+   - Extract UI sections into subcomponents
+   - Move state logic to custom hooks
+   - Create a directory structure with index.tsx
+
+2. **For Pages**:
+   - Extract sections into _components directory
+   - Move data fetching to actions.ts
+   - Keep page.tsx focused on layout
+
+3. **For Utilities**:
+   - Group by functionality in separate files
+   - Create index.ts for re-exports
+   - Keep functions small and focused
+
+## Project Glossary
+
+- **Tenant**: Customer organization with isolated data
+- **Host**: Server that can be connected via SSH
+- **Connection**: Established SSH session
+- **WebSocket Server**: Standalone server on port 3001
+- **WebSocket Utility**: Module for WebSocket in Next.js
+- **Prisma Client (Root)**: For standalone servers
+- **Prisma Client (Src)**: For Next.js application
+- **Health Check**: Process to identify large files 
