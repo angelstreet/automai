@@ -17,6 +17,8 @@ alwaysApply: true
    - frontend.mdc - Frontend development guidelines
    - backend.mdc - Backend development guidelines
    - ui.mdc - UI component guidelines
+   - websocket.mdc - WebSocket server and terminal implementation
+   - code-organization.mdc - Code organization and file size guidelines
 
 2. Development workflow guidelines:
    - Always ask for permission before creating any new folder or file
@@ -58,7 +60,9 @@ alwaysApply: true
 This is a Next.js application with the following key features:
 - Next.js 13+ App Router with internationalization
 - PostgreSQL database with Prisma ORM
-- Dedicated WebSocket server for terminal connections (port 3001)
+- Dedicated WebSocket server implementation:
+  - Root-level `websocket.server.js` (standalone server on port 3001)
+  - Library module `src/lib/websocket-server.ts` (utility functions)
 - Next.js built-in HTTP server (port 3000)
 - Authentication with NextAuth.js
 - UI built with Shadcn UI and Tailwind CSS
@@ -71,7 +75,9 @@ This is a Next.js application with the following key features:
 automai/
 ├── prisma/                   # Prisma schema and migrations at root
 │   ├── schema.prisma         # Database schema with models for User, Host, Connection, etc.
-│   └── migrations/           # Database migrations
+│   ├── migrations/           # Database migrations
+│   ├── seed.ts               # Database seed script
+│   └── index.ts              # Prisma client export (root-level singleton)
 ├── .env.*                    # Environment files at root (.env.development, .env.production, .env.test)
 ├── scripts/                  # Utility scripts
 │   └── health-check.js       # Script to check file sizes and provide refactoring recommendations
@@ -83,14 +89,16 @@ automai/
 │   │   └── api/              # API Route Handlers including hosts API
 │   ├── lib/                  # Shared utilities
 │   │   ├── services/         # Service layer (data access)
-│   │   ├── prisma.ts         # Prisma client singleton
+│   │   ├── prisma.ts         # Prisma client singleton (src-level)
+│   │   ├── websocket-server.ts # WebSocket utility functions
+│   │   ├── utils.ts          # Helper functions
 │   │   └── env.ts            # Environment configuration
 │   ├── components/           # UI components
 │   │   ├── ui/               # Reusable UI components
 │   │   └── virtualization/   # Terminal component for WebSocket connections
 │   ├── i18n/                 # Internationalization
 │   └── middleware.ts         # Next.js middleware
-├── websocket.server.js       # Custom WebSocket server on port 3001 for terminal connections
+├── websocket.server.js       # Standalone WebSocket server on port 3001 for terminal connections
 ├── electron/                 # Electron app configuration
 ├── tests/                    # Test files
 ├── docs/                     # Project documentation
@@ -101,11 +109,18 @@ automai/
 
 The following has already been set up and should not be recreated:
 - Prisma schema with models for User, Host, Connection, etc.
-- WebSocket server running on port 3001 (separate from Next.js HTTP server on port 3000)
+- Prisma client singletons:
+  - Root-level singleton: `prisma/index.ts`
+  - Src-level singleton: `src/lib/prisma.ts`
+- WebSocket implementations:
+  - Standalone server: `websocket.server.js` (port 3001)
+  - Utility functions: `src/lib/websocket-server.ts`
 - SSH2 integration for terminal connections
-- Environment configuration with validation
+- Environment configuration with validation using Zod
 - Authentication with NextAuth.js
 - Internationalization with next-intl
+- Health check script for code quality monitoring
+- Electron desktop application configuration
 
 ## Code Organization
 

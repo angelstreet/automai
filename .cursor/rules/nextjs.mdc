@@ -15,8 +15,10 @@ automai/
 │   ├── schema.prisma         # Database schema
 │   ├── migrations/           # Database migrations
 │   ├── seed.ts               # Database seed script
-│   └── index.ts              # Prisma client singleton
+│   └── index.ts              # Prisma client singleton (root-level)
 ├── .env.*                    # Environment files at root
+├── scripts/                  # Utility scripts
+│   └── health-check.js       # Script to check file sizes and provide refactoring recommendations
 ├── src/
 │   ├── app/                  # Next.js App Router
 │   │   ├── [locale]/         # Internationalized routes
@@ -25,12 +27,20 @@ automai/
 │   │   └── api/              # API Route Handlers
 │   ├── lib/                  # Shared utilities
 │   │   ├── services/         # Service layer (data access)
-│   │   └── utils/            # Helper functions
+│   │   ├── prisma.ts         # Prisma client singleton (src-level)
+│   │   ├── websocket-server.ts # WebSocket utility functions
+│   │   ├── utils.ts          # Helper functions
+│   │   └── env.ts            # Environment configuration
 │   ├── components/           # UI components
 │   │   ├── ui/               # Reusable UI components
-│   │   └── layout/           # Layout components
+│   │   └── virtualization/   # Terminal component
 │   ├── i18n/                 # Internationalization
 │   └── middleware.ts         # Next.js middleware
+├── websocket.server.js       # Standalone WebSocket server
+├── electron/                 # Electron app configuration
+├── tests/                    # Test files
+├── docs/                     # Project documentation
+└── next.config.js            # Next.js configuration
 ```
 
 ## Coding Standards

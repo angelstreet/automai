@@ -47,7 +47,12 @@ const IGNORED_EXTENSIONS = [
 const EXEMPTED_PATTERNS = [
   /^src\/lib\/modules\//,
   /^src\/components\/ui\//,
-  /node_modules/
+  /node_modules/,
+  /^prisma\/migrations\//,
+  /\.d\.ts$/,
+  /\.test\./,
+  /\.spec\./,
+  /\.config\./
 ];
 
 // Colors for console output
@@ -127,7 +132,17 @@ function analyzeFile(filePath, lineCount) {
       console.log(`   - Create: ${dirName}/actions.ts or ${dirName}/api.ts`);
     }
   } else if (ext === '.ts' || ext === '.js') {
-    if (filePath.includes('/lib/') || filePath.includes('/utils/')) {
+    if (filePath.includes('/hooks/')) {
+      console.log(`${colors.yellow}Recommendation for hook file:${colors.reset}`);
+      console.log('1. Split by functionality:');
+      console.log(`   - Create separate hook files for different concerns`);
+      console.log(`   - Follow the pattern: use[Feature][Action].ts`);
+      console.log('2. Organize hook internals:');
+      console.log(`   - State declarations first`);
+      console.log(`   - Derived state next`);
+      console.log(`   - Event handlers next`);
+      console.log(`   - Effects last`);
+    } else if (filePath.includes('/lib/') || filePath.includes('/utils/')) {
       console.log(`${colors.yellow}Recommendation for utility file:${colors.reset}`);
       console.log('1. Split by functionality:');
       console.log(`   - Create: ${dirName}/${fileName.replace(ext, '')}/index${ext}`);
@@ -138,6 +153,11 @@ function analyzeFile(filePath, lineCount) {
       console.log(`   - Create: ${dirName}/validation${ext}`);
       console.log('2. Move business logic to service layer:');
       console.log(`   - Create: src/lib/services/${path.basename(dirName)}Service${ext}`);
+    } else if (filePath.includes('/constants/') || fileName.includes('constants')) {
+      console.log(`${colors.yellow}Recommendation for constants file:${colors.reset}`);
+      console.log('1. Group constants by domain:');
+      console.log(`   - Split into separate files by feature or domain`);
+      console.log(`   - Use index.ts to re-export all constants`);
     }
   }
   
@@ -237,6 +257,31 @@ ${colors.magenta}7. Imports Organization:${colors.reset}
    - Group imports by: external libraries, internal modules, types, styles
    - Use absolute imports for cross-directory references
    - Use relative imports for files in the same directory
+
+${colors.magenta}8. Hooks Organization:${colors.reset}
+   - State declarations first
+   - Derived state next
+   - Event handlers next
+   - Effects last
+   - Return values in a single object
+   - Example:
+     ```
+     function useFormState() {
+       // State
+       const [values, setValues] = useState({});
+       
+       // Derived state
+       const isValid = Object.keys(values).length > 0;
+       
+       // Handlers
+       const handleChange = () => {...};
+       
+       // Effects
+       useEffect(() => {...}, []);
+       
+       return { values, isValid, handleChange };
+     }
+     ```
 `);
 }
 
