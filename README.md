@@ -3,10 +3,10 @@ Automai is a multi-tenant SaaS platform designed for end-to-end test automation 
 
 ## 🚀 Quick Start Commands
 ```bash
-# Restart next.js frontend and backend
+# Restart next.js frontend
 npm run dev:all
 
-# Restart next.js frontend and backend in debug mode with browser tool and prisma studio
+# Restart next.js frontend in debug mode with browser tool and prisma studio
 npm run dev:debug
 
 # Kill running process node
@@ -17,9 +17,6 @@ rm -rf .next && npm run dev
 
 # Start Electron app (will also start Next.js if not running)
 npm run electron-dev
-
-# Start backend server
-npm run server:dev
 
 # Start browser tools server for logs/debugging
 npx @agentdeskai/browser-tools-server
@@ -43,7 +40,6 @@ npm run prisma:studio
    - Copy `.env.example` to `.env`
    - Update the following variables:
      ```env
-     PORT=5001                   # Server port
      DATABASE_URL=               # Your PostgreSQL connection string
      SUPABASE_URL=              # Your Supabase URL
      SUPABASE_KEY=              # Your Supabase key
@@ -52,19 +48,13 @@ npm run prisma:studio
 
 ## Running the Application
 
-### Frontend
+### Frontend and API
 Start the Next.js development server:
 ```bash
 npm run dev
 ```
 Access the frontend at [http://localhost:3000](http://localhost:3000).
-
-### Backend
-Start the backend server:
-```bash
-npm run server:dev
-```
-The API will be available at [http://localhost:5001](http://localhost:5001).
+The API will be available at [http://localhost:3000/api](http://localhost:3000/api).
 
 ### Desktop App (Electron)
 You can run the desktop app in two ways:
@@ -106,7 +96,7 @@ API endpoints:
 
 ### Setup
 1. Make sure PostgreSQL is installed and running locally
-2. Set up your database connection URL in `src/server/config/env/.env.development`:
+2. Set up your database connection URL in `.env`:
    ```env
    DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db"
    ```

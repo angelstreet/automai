@@ -95,69 +95,100 @@ export async function POST(request: Request) {
 // PATCH /api/projects/[id]
 export async function PATCH(request: Request) {
   try {
-    const token = await getToken({ req: request as any });
-
-    if (!token?.accessToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getServerSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
     const id = request.url.split('/').pop(); // Get the project ID from the URL
 
-    const response = await fetch(`http://localhost:5001/api/projects/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token.accessToken}`,
-      },
-      body: JSON.stringify(body),
+    // Check if project exists and user has access
+    const existingProject = await prisma.project.findUnique({
+      where: { id },
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
+    if (!existingProject) {
       return NextResponse.json(
-        { error: data.error || 'Failed to update project' },
-        { status: response.status },
+        { success: false, message: 'Project not found' },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json(data);
+    if (existingProject.ownerId !== session.user.id) {
+      return NextResponse.json(
+        { success: false, message: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    const updatedProject = await prisma.project.update({
+      where: { id },
+      data: body,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Project updated successfully',
+      data: updatedProject,
+    });
   } catch (error) {
     console.error('Error updating project:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: 'Failed to update project' },
+      { status: 500 }
+    );
   }
 }
 
 // DELETE /api/projects/[id]
 export async function DELETE(request: Request) {
   try {
-    const token = await getToken({ req: request as any });
-
-    if (!token?.accessToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await getServerSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const id = request.url.split('/').pop(); // Get the project ID from the URL
 
-    const response = await fetch(`http://localhost:5001/api/projects/${id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token.accessToken}`,
-      },
+    // Check if project exists and user has access
+    const existingProject = await prisma.project.findUnique({
+      where: { id },
     });
 
-    if (!response.ok) {
-      const data = await response.json();
+    if (!existingProject) {
       return NextResponse.json(
-        { error: data.error || 'Failed to delete project' },
-        { status: response.status },
+        { success: false, message: 'Project not found' },
+        { status: 404 }
       );
     }
 
-    return new NextResponse(null, { status: 204 });
+    if (existingProject.ownerId !== session.user.id) {
+      return NextResponse.json(
+        { success: false, message: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    await prisma.project.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Project deleted successfully',
+    });
   } catch (error) {
     console.error('Error deleting project:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: 'Failed to delete project' },
+      { status: 500 }
+    );
   }
 }

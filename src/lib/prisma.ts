@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { config } from './config';
 
 // Use a single PrismaClient instance
 // https://www.prisma.io/docs/guides/performance-and-optimization/connection-management#prismaclient-in-long-running-applications
@@ -10,8 +11,13 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    log: config.server.isDev ? ['query', 'error', 'warn'] : ['error'],
+    datasources: {
+      db: {
+        url: config.database.url,
+      },
+    },
   });
 
 // In development, attach the client to the global object
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+if (!config.server.isProd) globalForPrisma.prisma = prisma;

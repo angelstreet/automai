@@ -36,13 +36,13 @@ Let’s enhance the **Projects Page** implementation by integrating it with your
    - Click Name → Navigates to `/[locale]/[tenant]/development/projects/[projectId]/usecases`.
 
 #### Backend Assumptions
-- **API**: `/api/projects` endpoints are implemented in `src/server/api/routes.ts` using Node.js/Express or FastAPI.
+- **API**: `/api/projects` endpoints are implemented in `src/app/api/projects/route.ts` using Next.js Route Handlers.
 - **Prisma**: Uses the `Project` model from `schema.prisma`.
 - **Auth**: `ownerId` is derived from the authenticated user (NextAuth.js session).
 - **Response Format**:
-  - `GET /api/projects`: Returns `{ id: string, name: string, description?: string, createdAt: string, ownerId: string }[]`.
-  - `POST /api/projects`: Expects `{ name: string, description?: string, ownerId: string }`, returns created project.
-  - `DELETE /api/projects/:id`: Returns success status.
+  - `GET /api/projects`: Returns `{ success: true, message: string, data: { id: string, name: string, description?: string, createdAt: string, ownerId: string }[] }`.
+  - `POST /api/projects`: Expects `{ name: string, description?: string }`, returns `{ success: true, message: string, data: { id: string, name: string, ... } }`.
+  - `DELETE /api/projects/:id`: Returns `{ success: true, message: string }`.
 
 ---
 

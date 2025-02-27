@@ -28,7 +28,6 @@ const colors = {
 
 // Configuration
 const NEXT_PORT = 3000;
-const SERVER_PORT = 3001;
 const BROWSER_TOOLS_PORT = 8080;
 const PRISMA_STUDIO_PORT = 5555;
 
@@ -115,12 +114,6 @@ async function main() {
     killProcessOnPort(NEXT_PORT);
   }
   
-  // Check and kill backend server if running
-  if (isPortInUse(SERVER_PORT)) {
-    console.log(`${colors.yellow}Backend server is already running on port ${SERVER_PORT}${colors.reset}`);
-    killProcessOnPort(SERVER_PORT);
-  }
-  
   // Check and kill browser tools server if running
   if (isPortInUse(BROWSER_TOOLS_PORT)) {
     console.log(`${colors.yellow}Browser tools server is already running on port ${BROWSER_TOOLS_PORT}${colors.reset}`);
@@ -148,12 +141,6 @@ async function main() {
     shell: true
   });
   
-  // Start backend server
-  const serverProcess = spawn('npm', ['run', 'server:dev'], {
-    stdio: 'inherit',
-    shell: true
-  });
-  
   // Start browser tools server
   const browserToolsProcess = spawn('npx', ['@agentdeskai/browser-tools-server'], {
     stdio: 'inherit',
@@ -172,7 +159,6 @@ async function main() {
     
     // Force kill processes on ports
     killProcessOnPort(NEXT_PORT);
-    killProcessOnPort(SERVER_PORT);
     killProcessOnPort(BROWSER_TOOLS_PORT);
     killProcessOnPort(PRISMA_STUDIO_PORT);
     
@@ -182,14 +168,6 @@ async function main() {
         process.kill(nextProcess.pid, 'SIGKILL');
       } catch (error) {
         console.log(`${colors.yellow}Could not kill Next.js process directly${colors.reset}`);
-      }
-    }
-    
-    if (serverProcess && serverProcess.pid) {
-      try {
-        process.kill(serverProcess.pid, 'SIGKILL');
-      } catch (error) {
-        console.log(`${colors.yellow}Could not kill server process directly${colors.reset}`);
       }
     }
     
@@ -218,7 +196,6 @@ async function main() {
   
   // Log process IDs
   console.log(`${colors.green}Next.js server started (PID: ${nextProcess.pid})${colors.reset}`);
-  console.log(`${colors.green}Backend server started (PID: ${serverProcess.pid})${colors.reset}`);
   console.log(`${colors.green}Browser tools server started (PID: ${browserToolsProcess.pid})${colors.reset}`);
   console.log(`${colors.green}Prisma Studio started (PID: ${prismaStudioProcess.pid})${colors.reset}`);
   console.log(`${colors.cyan}Press Ctrl+C to stop all servers${colors.reset}`);

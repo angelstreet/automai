@@ -3,10 +3,10 @@
 /**
  * Development Server Manager
  * 
- * This script manages the development servers by:
- * 1. Checking if servers are already running
- * 2. Killing existing processes if needed
- * 3. Starting both Next.js and the backend server
+ * This script manages the Next.js development server by:
+ * 1. Checking if server is already running
+ * 2. Killing existing process if needed
+ * 3. Starting Next.js server
  * 
  * Usage: npm run dev:all
  */
@@ -28,7 +28,6 @@ const colors = {
 
 // Configuration
 const NEXT_PORT = 3000;
-const SERVER_PORT = 3001;
 
 // Function to check if a port is in use
 function isPortInUse(port) {
@@ -95,17 +94,11 @@ async function main() {
     killProcessOnPort(NEXT_PORT);
   }
   
-  // Check and kill backend server if running
-  if (isPortInUse(SERVER_PORT)) {
-    console.log(`${colors.yellow}Backend server is already running on port ${SERVER_PORT}${colors.reset}`);
-    killProcessOnPort(SERVER_PORT);
-  }
-  
   // Small delay to ensure ports are released
   await new Promise(resolve => setTimeout(resolve, 1000));
   
-  // Start both servers
-  console.log(`${colors.green}Starting development servers...${colors.reset}`);
+  // Start Next.js server
+  console.log(`${colors.green}Starting Next.js development server...${colors.reset}`);
   
   // Start Next.js
   const nextProcess = spawn('npm', ['run', 'dev:next'], { 
@@ -113,21 +106,14 @@ async function main() {
     shell: true
   });
   
-  // Start backend server
-  const serverProcess = spawn('npm', ['run', 'server:dev'], {
-    stdio: 'inherit',
-    shell: true
-  });
-  
   // Handle process termination
   process.on('SIGINT', () => {
-    console.log(`${colors.red}Shutting down servers...${colors.reset}`);
+    console.log(`${colors.red}Shutting down server...${colors.reset}`);
     
-    // Force kill processes on ports
+    // Force kill process on port
     killProcessOnPort(NEXT_PORT);
-    killProcessOnPort(SERVER_PORT);
     
-    // Also try to kill the child processes directly
+    // Also try to kill the child process directly
     if (nextProcess && nextProcess.pid) {
       try {
         process.kill(nextProcess.pid, 'SIGKILL');
@@ -136,22 +122,13 @@ async function main() {
       }
     }
     
-    if (serverProcess && serverProcess.pid) {
-      try {
-        process.kill(serverProcess.pid, 'SIGKILL');
-      } catch (error) {
-        console.log(`${colors.yellow}Could not kill server process directly${colors.reset}`);
-      }
-    }
-    
-    console.log(`${colors.green}All servers shut down${colors.reset}`);
+    console.log(`${colors.green}Server shut down${colors.reset}`);
     process.exit(0);
   });
   
-  // Log process IDs
+  // Log process ID
   console.log(`${colors.green}Next.js server started (PID: ${nextProcess.pid})${colors.reset}`);
-  console.log(`${colors.green}Backend server started (PID: ${serverProcess.pid})${colors.reset}`);
-  console.log(`${colors.cyan}Press Ctrl+C to stop both servers${colors.reset}`);
+  console.log(`${colors.cyan}Press Ctrl+C to stop the server${colors.reset}`);
 }
 
 // Run the script
