@@ -19,6 +19,7 @@ alwaysApply: true
    - ui.mdc - UI component guidelines
    - websocket.mdc - WebSocket server and terminal implementation
    - code-organization.mdc - Code organization and file size guidelines
+   - refactoring.mdc - Guidelines for refactoring and breaking up large files
 
 2. Development workflow guidelines:
    - Always ask for permission before creating any new folder or file

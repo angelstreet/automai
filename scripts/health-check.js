@@ -164,6 +164,20 @@ function analyzeFile(filePath, lineCount) {
   console.log(''); // Empty line for readability
 }
 
+// Print best practices for breaking up large files
+function printBestPractices() {
+  console.log(`
+${colors.magenta}For detailed refactoring guidelines, see:${colors.reset}
+   ${colors.cyan}.cursor/rules/refactoring.mdc${colors.reset}
+
+${colors.magenta}Key points to remember:${colors.reset}
+   - Refactor ONE file at a time
+   - Test thoroughly after each file refactor
+   - Get explicit agreement before moving to the next file
+   - Document all changes made during refactoring
+`);
+}
+
 // Main function
 function main() {
   console.log(`${colors.cyan}=== Health Check: File Size Analysis ===${colors.reset}\n`);
@@ -207,82 +221,19 @@ function main() {
       console.log(`${colors.green}All files are within the ${MAX_LINES}-line limit. Great job!${colors.reset}`);
     } else {
       console.log(`${colors.red}Files exceeding ${MAX_LINES} lines: ${oversizedFiles}${colors.reset}`);
-      console.log(`\n${colors.cyan}=== Best Practices for Breaking Up Large Files ===${colors.reset}`);
+      console.log(`\n${colors.cyan}=== Refactoring Guidelines ===${colors.reset}`);
       printBestPractices();
+      
+      console.log(`\n${colors.yellow}=== IMPORTANT: Refactoring Safety Guidelines ===${colors.reset}`);
+      console.log(`${colors.yellow}1. Refactor ONE file at a time${colors.reset}`);
+      console.log(`${colors.yellow}2. Test thoroughly after each file refactor${colors.reset}`);
+      console.log(`${colors.yellow}3. Get explicit agreement before moving to the next file${colors.reset}`);
+      console.log(`${colors.yellow}4. Document all changes made during refactoring${colors.reset}`);
     }
   } catch (error) {
     console.error(`${colors.red}Error:${colors.reset}`, error.message);
     process.exit(1);
   }
-}
-
-// Print best practices for breaking up large files
-function printBestPractices() {
-  console.log(`
-${colors.magenta}1. Components:${colors.reset}
-   - Create a directory with the component name
-   - Use index.tsx as the main component file
-   - Name child components with PascalCase and place in the same directory
-   - Example: Button/index.tsx, Button/ButtonIcon.tsx, Button/ButtonLabel.tsx
-
-${colors.magenta}2. Pages:${colors.reset}
-   - Create a _components directory for page-specific components
-   - Extract sections into separate components
-   - Move data fetching to separate files (actions.ts or api.ts)
-   - Example: app/dashboard/_components/DashboardHeader.tsx
-
-${colors.magenta}3. Constants:${colors.reset}
-   - Group related constants in separate files by domain
-   - Place in a constants directory organized by feature
-   - Example: constants/auth.ts, constants/dashboard.ts
-
-${colors.magenta}4. Utility Functions:${colors.reset}
-   - Group by functionality in separate files
-   - Create an index.ts file to re-export functions
-   - Example: utils/string.ts, utils/date.ts, utils/index.ts
-
-${colors.magenta}5. API Routes:${colors.reset}
-   - Split validation logic into separate files
-   - Move business logic to service layer
-   - Keep route handlers focused on request/response handling
-   - Example: app/api/users/validation.ts, lib/services/userService.ts
-
-${colors.magenta}6. Naming Conventions:${colors.reset}
-   - Parent components: ComponentName.tsx
-   - Child components: ComponentNameSubpart.tsx
-   - Utility files: camelCase.ts
-   - Constants: UPPER_SNAKE_CASE for values, PascalCase for objects
-
-${colors.magenta}7. Imports Organization:${colors.reset}
-   - Group imports by: external libraries, internal modules, types, styles
-   - Use absolute imports for cross-directory references
-   - Use relative imports for files in the same directory
-
-${colors.magenta}8. Hooks Organization:${colors.reset}
-   - State declarations first
-   - Derived state next
-   - Event handlers next
-   - Effects last
-   - Return values in a single object
-   - Example:
-     ```
-     function useFormState() {
-       // State
-       const [values, setValues] = useState({});
-       
-       // Derived state
-       const isValid = Object.keys(values).length > 0;
-       
-       // Handlers
-       const handleChange = () => {...};
-       
-       // Effects
-       useEffect(() => {...}, []);
-       
-       return { values, isValid, handleChange };
-     }
-     ```
-`);
 }
 
 // Run the script
