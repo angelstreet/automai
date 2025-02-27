@@ -4,6 +4,17 @@ const next = require('next');
 const { WebSocketServer } = require('ws');
 const { Client } = require('ssh2');
 
+// Create WebSocket singleton
+let wsServerInstance = null;
+
+function getWebSocketServer() {
+  if (!wsServerInstance) {
+    wsServerInstance = new WebSocketServer({ noServer: true });
+    console.log('[WebSocketServer] Singleton instance created');
+  }
+  return wsServerInstance;
+}
+
 // Make WebSocketServer globally available
 global.wss = null;
 
@@ -213,8 +224,8 @@ app.prepare().then(async () => {
     }
   });
 
-  // Initialize WebSocket server
-  const wss = new WebSocketServer({ noServer: true });
+  // Initialize WebSocket server as singleton
+  const wss = getWebSocketServer();
   // Make it globally available
   global.wss = wss;
   
@@ -385,4 +396,21 @@ app.prepare().then(async () => {
     console.log(`> Ready on http://${hostname}:${port}`);
     console.log(`> WebSocket server initialized and ready`);
   });
+  
+  // Handle graceful shutdown
+  const gracefulShutdown = () => {
+    console.log('Received shutdown signal, closing WebSocket server...');
+    if (global.wss) {
+      global.wss.close(() => {
+        console.log('WebSocket server closed');
+        process.exit(0);
+      });
+    } else {
+      process.exit(0);
+    }
+  };
+  
+  // Listen for termination signals
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
 }); 
