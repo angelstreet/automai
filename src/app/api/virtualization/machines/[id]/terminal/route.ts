@@ -14,6 +14,7 @@ export const runtime = 'nodejs';
 export const config = {
   api: {
     bodyParser: false,
+    externalResolver: true,
   },
 };
 
@@ -22,18 +23,35 @@ export async function GET(
   context: { params: { id: string } }
 ) {
   try {
+    console.log('[WebSocket Route] Received request:', {
+      url: request.url,
+      method: request.method,
+      headers: Object.fromEntries(request.headers.entries())
+    });
+
+    // Check for WebSocket upgrade request
+    if (!request.headers.get('upgrade')?.toLowerCase().includes('websocket')) {
+      console.log('[WebSocket Route] No upgrade header found');
+      return new Response('Expected WebSocket connection', { status: 426 });
+    }
+    console.log('[WebSocket Route] WebSocket upgrade request detected');
+
     const session = await getServerSession(authOptions);
     
     if (!session || !session.user) {
+      console.log('[WebSocket Route] No session or user found');
       return new Response('Unauthorized', { status: 401 });
     }
+    console.log('[WebSocket Route] User authenticated:', session.user.id);
     
     const params = await Promise.resolve(context.params);
     const { id } = params;
     
     if (!id) {
+      console.log('[WebSocket Route] No machine ID provided');
       return new Response('Machine ID is required', { status: 400 });
     }
+    console.log('[WebSocket Route] Machine ID:', id);
     
     const userId = session.user.id;
     const tenantId = session.user.tenantId;
@@ -50,8 +68,10 @@ export async function GET(
     });
     
     if (!connection) {
+      console.log('[WebSocket Route] Machine not found or unauthorized');
       return new Response('Machine not found or unauthorized', { status: 404 });
     }
+    console.log('[WebSocket Route] Found connection:', { id: connection.id, type: connection.type });
     
     // Update connection status to connected
     await prisma.connection.update({
@@ -62,28 +82,34 @@ export async function GET(
         errorMessage: null
       }
     });
+    console.log('[WebSocket Route] Updated connection status to connected');
     
     // Invalidate cache for machines data
     const cacheKey = `machines_${userId}_${tenantId || 'personal'}`;
     await serverCache.delete(cacheKey);
     
     // Set up WebSocket connection
+    console.log('[WebSocket Route] Setting up WebSocket connection');
     const { clientSocket, response } = await setupWebSocket(request, id);
+    console.log('[WebSocket Route] WebSocket connection established');
     
     // Set up authentication timeout
+    console.log('[WebSocket Route] Setting up authentication timeout');
     setupAuthTimeout(clientSocket, id);
     
     // Check if this is an SSH connection
     if (connection.type === 'ssh') {
-      // Handle SSH connection
+      console.log('[WebSocket Route] Handling SSH connection');
       handleSshConnection(clientSocket, connection, id);
     } else {
-      // For non-SSH connections, use the mock implementation
+      console.log('[WebSocket Route] Handling mock terminal connection');
       handleMockTerminal(clientSocket, connection, id);
     }
     
+    console.log('[WebSocket Route] Returning response with status:', response.status);
     return response;
   } catch (error) {
+    console.error('[WebSocket Route] Error:', error);
     logger.error(`Error in terminal WebSocket: ${error instanceof Error ? error.message : String(error)}`, {
       action: 'TERMINAL_WS_ERROR',
       data: { error: error instanceof Error ? error.message : String(error) },

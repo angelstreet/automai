@@ -28,7 +28,9 @@ const nextConfig = {
   
   // Configure server options for WebSocket support
   experimental: {
-    serverActions: true,
+    serverActions: {
+      allowedOrigins: ['localhost:3000'],
+    },
   },
   serverExternalPackages: ['ws', 'ssh2'],
   

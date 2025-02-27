@@ -11,7 +11,7 @@ export async function setupWebSocket(
   console.log('[WebSocket] Headers:', JSON.stringify(Object.fromEntries(request.headers.entries())));
 
   // This is a WebSocket endpoint
-  if (!request.headers.get('upgrade')?.includes('websocket')) {
+  if (!request.headers.get('upgrade')?.toLowerCase().includes('websocket')) {
     console.log('[WebSocket] No upgrade header found');
     throw new Error('Expected WebSocket connection');
   }
@@ -48,10 +48,23 @@ export async function setupWebSocket(
           saveToDb: true
         });
         
+        // Set up ping/pong for connection health
+        clientSocket.isAlive = true;
+        clientSocket.on('pong', () => {
+          clientSocket.isAlive = true;
+        });
+        
         // Resolve the promise with the client socket and a response
         resolve({
           clientSocket,
-          response: new Response(null, { status: 101, statusText: 'Switching Protocols' })
+          response: new Response(null, { 
+            status: 101, 
+            statusText: 'Switching Protocols',
+            headers: {
+              'Upgrade': 'websocket',
+              'Connection': 'Upgrade'
+            }
+          })
         });
       });
     } catch (error) {

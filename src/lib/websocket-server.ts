@@ -33,6 +33,7 @@ export function getWebSocketServer(): WebSocketServer {
         return;
       }
       
+      console.log('[WebSocketServer] Checking client connections:', wss.clients.size);
       wss.clients.forEach((ws: WebSocketConnection) => {
         if (ws.isAlive === false) {
           console.log('[WebSocketServer] Terminating dead connection');
@@ -49,6 +50,30 @@ export function getWebSocketServer(): WebSocketServer {
       console.log('[WebSocketServer] Server closed');
       clearInterval(pingInterval);
       wss = null;
+    });
+
+    // Handle server errors
+    wss.on('error', (error) => {
+      console.error('[WebSocketServer] Server error:', error);
+    });
+
+    // Handle new connections
+    wss.on('connection', (ws: WebSocketConnection) => {
+      console.log('[WebSocketServer] New client connected');
+      ws.isAlive = true;
+      
+      ws.on('pong', () => {
+        console.log('[WebSocketServer] Received pong from client');
+        ws.isAlive = true;
+      });
+      
+      ws.on('error', (error) => {
+        console.error('[WebSocketServer] Client connection error:', error);
+      });
+      
+      ws.on('close', () => {
+        console.log('[WebSocketServer] Client disconnected');
+      });
     });
   }
   
@@ -89,7 +114,16 @@ export function handleUpgrade(
       
       // Set up pong handler
       wsConnection.on('pong', () => {
+        console.log('[WebSocketServer] Received pong from client');
         wsConnection.isAlive = true;
+      });
+
+      wsConnection.on('error', (error) => {
+        console.error('[WebSocketServer] Client connection error:', error);
+      });
+
+      wsConnection.on('close', () => {
+        console.log('[WebSocketServer] Client disconnected');
       });
       
       console.log('[WebSocketServer] Emitting connection event');
