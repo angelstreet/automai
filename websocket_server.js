@@ -1,12 +1,60 @@
 const { createServer } = require('http');
-const { parse } = require('url');
-const next = require('next');
 const { WebSocketServer } = require('ws');
 const { Client } = require('ssh2');
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
+const wsPort = 3001;
 
 // Create WebSocket singleton
+let wsServer = null;
 let wsServerInstance = null;
 let pingInterval = null;
+
+function initializeWebSocketServer() {
+  if (wsServer) return wsServer;
+  
+  console.log('[WebSocketServer] Initializing server on first terminal connection');
+  wsServer = createServer();
+  const wss = getWebSocketServer();
+  
+  wsServer.on('upgrade', (request, socket, head) => {
+    const { pathname } = new URL(request.url, `http://${request.headers.host}`);
+    console.log('[WebSocketServer] Received upgrade request:', pathname);
+    
+    const hostIdMatch = pathname.match(/\/terminals\/([^\/]+)/);
+    const hostId = hostIdMatch ? hostIdMatch[1] : 'unknown';
+    console.log('[WebSocketServer] Processing upgrade for host ID:', hostId);
+    
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  });
+  
+  wsServer.listen(wsPort, (err) => {
+    if (err) throw err;
+    console.log(`> WebSocket server ready on ws://localhost:${wsPort}`);
+  });
+  
+  // Handle graceful shutdown
+  const gracefulShutdown = () => {
+    console.log('Received shutdown signal, closing WebSocket server...');
+    if (wss) {
+      wss.close(() => {
+        console.log('WebSocket server closed');
+        process.exit(0);
+      });
+    } else {
+      process.exit(0);
+    }
+  };
+
+  // Listen for termination signals
+  process.on('SIGTERM', gracefulShutdown);
+  process.on('SIGINT', gracefulShutdown);
+  
+  return wsServer;
+}
 
 function getWebSocketServer() {
   if (!wsServerInstance) {
@@ -155,22 +203,6 @@ function getWebSocketServer() {
   }
   return wsServerInstance;
 }
-
-// Make WebSocketServer globally available
-global.wss = null;
-
-const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = 3000;
-const wsPort = 3001; // Separate port for WebSocket server
-
-// Initialize Next.js
-const app = next({ dev, hostname, port });
-const handle = app.getRequestHandler();
-
-// Import prisma for database access
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
 
 // Implement SSH connection handler directly
 function handleSshConnection(clientSocket, connection, machineId) {
@@ -350,58 +382,5 @@ function handleMockTerminal(clientSocket, connection, machineId) {
   });
 }
 
-app.prepare().then(async () => {
-  // Create a separate WebSocket server on a different port
-  const wsServer = createServer();
-  const wss = getWebSocketServer();
-  global.wss = wss;
-  
-  // Handle upgrade requests for the WebSocket server
-  wsServer.on('upgrade', (request, socket, head) => {
-    const { pathname } = parse(request.url);
-    
-    console.log('[WebSocketServer] Received upgrade request on dedicated server:', pathname);
-    
-    // Extract host ID for logging
-    const hostIdMatch = pathname.match(/\/terminals\/([^\/]+)/);
-    const hostId = hostIdMatch ? hostIdMatch[1] : 'unknown';
-    console.log('[WebSocketServer] Processing upgrade for host ID:', hostId);
-    
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      wss.emit('connection', ws, request);
-    });
-  });
-  
-  // Start the WebSocket server on its own port
-  wsServer.listen(wsPort, (err) => {
-    if (err) throw err;
-    console.log(`> WebSocket server ready on ws://localhost:${wsPort}`);
-  });
-  
-  // Let Next.js handle HTTP requests on the main port
-  // This is the default Next.js server
-  app.getRequestHandler();
-  
-  // Start Next.js server
-  app.listen(port, (err) => {
-    if (err) throw err;
-    console.log(`> Next.js server ready on http://${hostname}:${port}`);
-  });
-  
-  // Handle graceful shutdown
-  const gracefulShutdown = () => {
-    console.log('Received shutdown signal, closing servers...');
-    if (global.wss) {
-      global.wss.close(() => {
-        console.log('WebSocket server closed');
-        process.exit(0);
-      });
-    } else {
-      process.exit(0);
-    }
-  };
-  
-  // Listen for termination signals
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
-}); 
+// Export the initialization function
+module.exports = { initializeWebSocketServer }; 

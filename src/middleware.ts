@@ -23,8 +23,8 @@ export default function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all routes except API routes
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    // Match all routes except API routes, static assets, and public files
+    '/((?!api|_next/static|_next/image|avatars|favicon.ico).*)',
     '/(fr|en)/:path*',
   ],
 };
