@@ -9,29 +9,6 @@ alwaysApply: false
 
 This document outlines the process and best practices for refactoring code in the project, with a particular focus on breaking up large files to maintain code quality and readability.
 
-## Important: Read These Rules First
-
-Before starting any refactoring work, you MUST read and understand these cursor rules:
-- `nextjs.mdc` - For Next.js project structure and organization
-- `code-organization.mdc` - For code organization best practices
-- `general.mdc` - For general project guidelines
-
-These rules provide essential context about the project structure and coding standards that must be followed during refactoring.
-
-## Special Considerations
-
-### Shadcn UI Components
-
-Components in `src/components/ui/` that are part of the Shadcn UI library should NOT be refactored. These components:
-- Are exempted from the 300-line limit
-- Should be kept as close to their original implementation as possible
-- May be customized but should remain in single files
-
-If a Shadcn UI component has been heavily customized and exceeds the line limit:
-1. Create a new directory outside of `src/components/ui/` for the customized version
-2. Keep the original Shadcn component intact in `src/components/ui/`
-3. Import and extend the original component in your custom implementation
-
 ## Core Principles
 
 1. **One file at a time**: Always refactor one file at a time to minimize the risk of introducing bugs.
@@ -44,38 +21,36 @@ If a Shadcn UI component has been heavily customized and exceeds the line limit:
 ## File Size Guidelines
 
 - Files should be under 300 lines of code
-- Run the health check script to identify files exceeding this limit:
+- Run the refactor analyzer script to identify files exceeding this limit:
   ```bash
-  node scripts/health-check.js
+  node scripts/refactor-analyzer.js --scope=full --output=md
   ```
+- This will generate three Markdown reports:
+  - `rename-move-report.md`: Files that need to be renamed or moved
+  - `review-report.md`: Files that need code review (naming/location issues)
+  - `breakdown-report.md`: Files that exceed the line limit and need to be broken down
 
 ## Refactoring Process
 
 ### Before Starting
 
-1. **Assess the component**: Determine if the component should be refactored
-   - Is it a Shadcn UI component? If yes, do not refactor
-   - Is it in an exempted directory? If yes, confirm before refactoring
-   - Does it follow the project structure in `nextjs.mdc`? If not, plan accordingly
-
-2. **Commit current state**: Make a commit before starting refactoring
+1. **Commit current state**: Make a commit before starting refactoring
    ```bash
    git add .
    git commit -m "pre-refactor: save current state before refactoring component-name"
    ```
 
-3. **Run the health check**: Identify files that need refactoring
+2. **Run the refactor analyzer**: Identify files that need refactoring
    ```bash
-   node scripts/health-check.js
+   node scripts/refactor-analyzer.js --scope=full --output=md
    ```
 
-4. **Plan the refactoring**: Create a plan for how to break up each file
+3. **Plan the refactoring**: Create a plan for how to break up each file
    - Identify logical components or functions that can be extracted
-   - Determine appropriate file and directory structure according to `code-organization.mdc`
+   - Determine appropriate file and directory structure
    - Consider dependencies and imports
-   - Ensure the plan aligns with the project structure in `nextjs.mdc`
 
-5. **Get approval**: Present the plan and get explicit approval before implementing
+4. **Get approval**: Present the plan and get explicit approval before implementing
 
 ### During Refactoring
 
@@ -253,8 +228,8 @@ Move magic numbers and strings to named constants.
 
 Following these guidelines will help maintain a clean, organized codebase that is easier to understand and maintain. Remember that refactoring is an ongoing process, not a one-time task.
 
-When in doubt, run the health check script to identify files that need attention:
+When in doubt, run the refactor analyzer script to identify files that need attention:
 
 ```bash
-node scripts/health-check.js
+node scripts/refactor-analyzer.js --scope=full --output=md
 ``` 
