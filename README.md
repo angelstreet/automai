@@ -3,6 +3,12 @@ Automai is a multi-tenant SaaS platform designed for end-to-end test automation 
 
 ## 🚀 Quick Start Commands
 ```bash
+# Restart next.js frontend and backend
+npm run dev:all
+
+# Restart next.js frontend and backend in debug mode with browser tool and prisma studio
+npm run dev:debug
+
 # Kill running process node
  pkill -f "node"
  
