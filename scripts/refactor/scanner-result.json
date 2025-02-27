@@ -237,7 +237,7 @@
   ],
   "exemptedPatterns": [
     "/^src\\/lib\\/modules\\//",
-    "/^src\\/components\\/ui\\//",
+    "/^src\\/components\\/shadcn\\//",
     "/node_modules/",
     "/^prisma\\/migrations\\//",
     "/\\.d\\.ts$/",

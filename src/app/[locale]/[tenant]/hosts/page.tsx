@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/shadcn/button';
 import {
   RefreshCcw,
   LayoutGrid,
@@ -14,11 +14,11 @@ import {
   Settings,
   Plus,
 } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { HostOverview } from '@/components/hosts/HostOverview';
 import { Host } from '@/types/hosts';
 import { ConnectHostDialog } from '@/components/hosts/ConnectHostDialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shadcn/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,8 +28,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Skeleton } from '@/components/ui/skeleton';
+} from '@/components/shadcn/alert-dialog';
+import { Skeleton } from '@/components/shadcn/skeleton';
 import { cn } from '@/lib/utils';
 import { Server } from 'lucide-react';
 
