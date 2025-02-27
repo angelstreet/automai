@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"next dev\" \"node websocket_server.js\"",
+    "dev": "concurrently \"node next.server.js\" \"node websocket.server.js\"",
     "dev:next": "next dev",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
