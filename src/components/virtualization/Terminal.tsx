@@ -153,7 +153,9 @@ export function Terminal({ connection }: TerminalProps) {
       // Handle WebSocket error event properly
       let errorMessage;
       try {
-        errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+        // WebSocket error event contains an Event object, not an Error
+        // The actual error details are not accessible in the event object due to browser security
+        errorMessage = 'Connection failed';
       } catch (e) {
         errorMessage = 'Unknown WebSocket error';
       }
@@ -169,7 +171,7 @@ export function Terminal({ connection }: TerminalProps) {
       toast({
         variant: 'destructive',
         title: 'WebSocket Connection Error',
-        description: `Failed to establish WebSocket connection: ${errorMessage || 'Unknown error'}`,
+        description: `Failed to establish WebSocket connection: ${errorMessage}`,
         duration: 5000,
       });
       
