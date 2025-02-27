@@ -89,14 +89,18 @@
   - Supabase (Preferred)
   - AWS Lambda / Firebase Functions
   - Local services for desktop version
+  - Custom Next.js server for WebSocket support
 - **Database:** 
   - Supabase (PostgreSQL)
   - Prisma ORM for DB Access
   - Local storage for desktop
 - **WebSocket Support:**
-  - Ensure deployment environment supports WebSockets
-  - Proper handling of connection upgrades
-  - Fallback mechanisms for environments with WebSocket limitations
+  - Custom Next.js server implementation
+  - WebSocket server initialized at startup
+  - Direct handling of upgrade requests
+  - Path-based routing for terminal connections
+  - Backward compatibility with API routes
+  - Deployment environment must support long-lived connections
 - **Infrastructure as Code:** Terraform / Pulumi
 
 ## 5. Test Execution & Reporting
@@ -158,9 +162,11 @@
 
 ## 8. WebSocket & Terminal Implementation
 - **WebSocket Server**: 
-  - Singleton pattern for efficient connection management
+  - Custom Next.js server with integrated WebSocket support
+  - WebSocket server initialized at startup for immediate availability
+  - Direct handling of upgrade requests in the HTTP server
+  - Path-based routing for terminal connections
   - Connection health monitoring with ping/pong
-  - Path-based upgrade handling
   - Error handling and logging
 - **Terminal Emulation**:
   - xterm.js for browser-based terminal UI
@@ -174,6 +180,11 @@
   - Authentication with username/password
   - Support for terminal commands and output
   - Session management and timeout handling
+- **Deployment Considerations**:
+  - Custom server setup in both development and production
+  - Package.json scripts updated for custom server usage
+  - Backward compatibility with API routes
+  - Proper error handling for WebSocket connections
 
 ---
 This tech stack supports both web and desktop platforms, with shared core functionality and platform-specific optimizations. The WebSocket and terminal implementation provides a secure, responsive, and feature-rich remote access experience. 🚀

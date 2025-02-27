@@ -120,27 +120,70 @@ async function uploadReportToSupabase(filePath, executionId) {
 
 ## 6. WebSocket & SSH Implementation
 ```javascript
-// WebSocket Server Singleton
-import { WebSocketServer, WebSocket } from 'ws';
+// Custom Server Implementation with WebSocket Support
+const { createServer } = require('http');
+const { parse } = require('url');
+const next = require('next');
+const { WebSocketServer } = require('ws');
+
+// Initialize Next.js with custom server
+const app = next({ dev, hostname, port });
+const handle = app.getRequestHandler();
 
 // Global WebSocketServer instance
-let wss: WebSocketServer | null = null;
+let wss = null;
 
-export function getWebSocketServer(): WebSocketServer {
-  if (!wss) {
-    wss = new WebSocketServer({ noServer: true });
+app.prepare().then(() => {
+  // Create HTTP server
+  const server = createServer(async (req, res) => {
+    try {
+      // Parse URL
+      const parsedUrl = parse(req.url, true);
+      
+      // Let Next.js handle the request
+      await handle(req, res, parsedUrl);
+    } catch (err) {
+      console.error('Error occurred handling', req.url, err);
+      res.statusCode = 500;
+      res.end('Internal Server Error');
+    }
+  });
+
+  // Initialize WebSocket server at startup
+  wss = new WebSocketServer({ noServer: true });
+  
+  // Set up ping interval for WebSocket connections
+  const pingInterval = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if (ws.isAlive === false) {
+        return ws.terminate();
+      }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+  
+  // Handle upgrade requests directly in the HTTP server
+  server.on('upgrade', (request, socket, head) => {
+    const { pathname } = parse(request.url);
     
-    // Set up ping interval to detect dead connections
-    const pingInterval = setInterval(() => {
-      wss.clients.forEach((ws) => {
-        if (ws.isAlive === false) return ws.terminate();
-        ws.isAlive = false;
-        ws.ping();
+    // Handle terminal WebSocket connections
+    if (pathname.startsWith('/api/virtualization/machines/') && pathname.endsWith('/terminal')) {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
       });
-    }, 30000);
-  }
-  return wss;
-}
+    } else {
+      socket.destroy();
+    }
+  });
+  
+  // Start listening
+  server.listen(port, (err) => {
+    if (err) throw err;
+    console.log(`> Ready on http://${hostname}:${port}`);
+    console.log(`> WebSocket server initialized and ready`);
+  });
+});
 
 // SSH Connection Handler
 async function handleSshConnection(clientSocket, connection) {
@@ -186,7 +229,12 @@ async function handleSshConnection(clientSocket, connection) {
 - **Backend:** Supabase (Preferred) or AWS Lambda / Firebase Functions.
 - **Database:** Supabase (PostgreSQL) / Prisma ORM.
 - **Infrastructure as Code:** Terraform / Pulumi.
-- **WebSocket Support:** Ensure deployment environment supports WebSocket connections.
+- **WebSocket Support:** 
+  - Custom Next.js server implementation for WebSocket support
+  - Package.json scripts configured for custom server in both development and production
+  - WebSocket server initialized at startup for immediate availability
+  - Direct handling of upgrade requests in the HTTP server
+  - Deployment environment must support long-lived connections
 
 ---
 This backend update ensures **structured test execution, reporting, and integration with Supabase Storage, Kibana, and Git.** The WebSocket implementation provides real-time terminal access with proper connection management and error handling. 🚀

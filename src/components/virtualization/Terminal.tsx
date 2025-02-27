@@ -150,7 +150,7 @@ export function Terminal({ connection }: TerminalProps) {
     };
 
     socket.onerror = (error) => {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
       console.error('[WebSocket] Terminal error:', {
         message: errorMessage,
         connectionId: connection.id
