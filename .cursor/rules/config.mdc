@@ -1,6 +1,6 @@
 ---
 description: Configuration & Environment Best Practices
-globs: src/{server/config,env}/**/*.{ts,js,env}
+globs: src/lib/env/**/*.{ts,js}, .env*
 ---
 
 # Configuration & Environment Best Practices
@@ -18,14 +18,8 @@ globs: src/{server/config,env}/**/*.{ts,js,env}
 ## Environment Configuration
 
 ```typescript
-// src/server/config/env.ts
+// src/lib/env.ts
 import { z } from 'zod';
-import dotenv from 'dotenv';
-
-// Load environment-specific .env file
-dotenv.config({
-  path: `.env.${process.env.NODE_ENV || 'development'}`,
-});
 
 // Define environment schema
 const envSchema = z.object({
@@ -60,7 +54,7 @@ export const env = envSchema.parse(process.env);
 ## Configuration Structure
 
 ```typescript
-// src/server/config/index.ts
+// src/lib/config.ts
 import { env } from './env';
 
 export const config = {

@@ -1,0 +1,141 @@
+---
+description: Next.js Best Practices
+globs: src/**/*.{ts,tsx}
+---
+
+# Next.js Best Practices
+
+## Project Structure
+
+Follow this structure for Next.js applications:
+
+```
+automai/
+├── prisma/                   # Prisma schema and migrations at root
+│   ├── schema.prisma         # Database schema
+│   ├── migrations/           # Database migrations
+│   ├── seed.ts               # Database seed script
+│   └── index.ts              # Prisma client singleton
+├── .env.*                    # Environment files at root
+├── src/
+│   ├── app/                  # Next.js App Router
+│   │   ├── [locale]/         # Internationalized routes
+│   │   │   ├── (auth)/       # Auth route group
+│   │   │   └── [tenant]/     # Tenant-specific routes
+│   │   └── api/              # API Route Handlers
+│   ├── lib/                  # Shared utilities
+│   │   ├── services/         # Service layer (data access)
+│   │   └── utils/            # Helper functions
+│   ├── components/           # UI components
+│   │   ├── ui/               # Reusable UI components
+│   │   └── layout/           # Layout components
+│   ├── i18n/                 # Internationalization
+│   └── middleware.ts         # Next.js middleware
+```
+
+## Coding Standards
+
+1. **API Routes**: Place in `src/app/api/` using Route Handlers
+2. **Database Access**: Use service layer in `src/lib/services/` for all database operations
+3. **Prisma**: Import from `@/lib/prisma` for database access
+4. **Environment Variables**: Define in root `.env.*` files, validate with zod
+5. **Components**: Create reusable components in `src/components/ui`
+6. **Internationalization**: Use `next-intl` with messages in `src/i18n/messages`
+7. **Authentication**: Implement with NextAuth.js
+8. **Middleware**: Define in `src/middleware.ts` at the root of src
+
+## Common Patterns
+
+### Prisma Client Singleton
+
+```typescript
+// src/lib/prisma.ts
+import { PrismaClient } from '@prisma/client'
+
+declare global {
+  var prisma: PrismaClient | undefined
+}
+
+export const prisma = global.prisma || new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma
+}
+```
+
+### Service Layer Pattern
+
+```typescript
+// src/lib/services/hosts.ts
+import { prisma } from '../prisma'
+
+export async function getHosts() {
+  return prisma.host.findMany({
+    orderBy: { createdAt: 'desc' }
+  })
+}
+
+export async function createHost(data) {
+  return prisma.host.create({
+    data
+  })
+}
+```
+
+### API Route Handler
+
+```typescript
+// src/app/api/hosts/route.ts
+import { NextResponse } from 'next/server'
+import { getHosts, createHost } from '@/lib/services/hosts'
+
+export async function GET() {
+  try {
+    const hosts = await getHosts()
+    return NextResponse.json({ success: true, data: hosts })
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch hosts' },
+      { status: 500 }
+    )
+  }
+}
+```
+
+### Environment Variables
+
+```typescript
+// src/lib/env.ts
+import { z } from 'zod'
+
+const envSchema = z.object({
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
+  NEXTAUTH_URL: z.string().url(),
+  NEXTAUTH_SECRET: z.string()
+})
+
+export const env = envSchema.parse(process.env)
+```
+
+## Project Organization
+
+- **IMPORTANT**: Place Prisma at the root level (`/prisma`) as Prisma CLI commands expect the schema there by default
+- Environment files (`.env.*`) should be at the root of the project
+- Use `src/app` for pages and API routes following the App Router pattern
+- Place shared utilities in `src/lib` directory
+- Keep UI components in `src/components` directory
+- Define middleware at `src/middleware.ts`
+
+## Best Practices
+
+- Use TypeScript for type safety
+- Implement proper error handling
+- Follow RESTful API design principles
+- Use middleware for cross-cutting concerns
+- Implement proper authentication and authorization
+- Handle environment configuration properly
+- Follow security best practices
+- Use Server Components where possible
+- Minimize client-side JavaScript
+- Optimize for Core Web Vitals 

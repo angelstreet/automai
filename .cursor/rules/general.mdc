@@ -1,29 +1,29 @@
 ---
 description: Rules for handling internationalization and debugging in the application
-globs: ["**/*"]
+globs: src/**/*.{ts,tsx}
 alwaysApply: true
 ---
 # Cursor Rules for Debugging and i18n
 
 ## Project Structure
 1. Server-side code organization
-   - **IMPORTANT**: All server-related code is located in `src/server` directory
-   - Backend API routes are in `src/server/api`
-   - Database models and migrations are in `src/server/prisma`
-   - Environment files are in `src/server/config/env`
+   - **IMPORTANT**: All server-related code is located in `src/lib` directory
+   - Backend API routes are in `src/app/api`
+   - Database models and migrations are in `/prisma` directory
+   - Environment files are at the root of the project
      - `.env.development` - Development environment variables
      - `.env.production` - Production environment variables
      - `.env.test` - Test environment variables
-   - When working with Prisma, always use the schema at `src/server/prisma/schema.prisma`
-   - Database file is located at `src/server/prisma/dev.db` for SQLite
+   - When working with Prisma, always use the schema at `/prisma/schema.prisma`
+   - Database file is located at `/prisma/dev.db` for SQLite
 
 ## Code Organization
 1. File length limits
    - **MANDATORY**: Keep files under 300 lines of code
-   - If a file exceeds 300 lines, split it into:
-     - Constants -> `src/constants/{feature}.ts`
-     - Types -> `src/types/{feature}.ts`
-     - Components -> `src/components/{feature}/{Component}.tsx`
+   - If a file exceeds 300 lines, split it into multiple files:
+     - For components: Extract subcomponents
+     - For utilities: Group by functionality
+     - For API routes: Split by endpoint or functionality
    - Break down large components into smaller, focused components
    - Use composition to maintain functionality while reducing file size
 2. 
@@ -86,14 +86,14 @@ alwaysApply: true
 3. For all other changes, rely on Next.js Fast Refresh to compile and update the application
 
 ## i18n Handling
-1. Translation files MUST be located ONLY in `/src/i18n/messages/{locale}.json`
+1. Translation files MUST be located ONLY in `src/i18n/messages` directory
 2. When adding translations:
    - Always verify both French (fr) and English (en) files
    - Ensure keys are consistent across both files
    - Keep translations organized by feature/page sections
 3. Ensure the `getMessages` function in `src/i18n/index.ts` is loading from the correct location
 4. Remember that changes to translation files may require a server restart
-5. NEVER create translation files outside of `/src/i18n/messages/`
+5. NEVER create translation files outside of `src/i18n/messages/`
 
 ## Next.js App Router
 1. For pages using translations, check that the namespace exists in all locale files

@@ -1,3 +1,15 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model Host {
   id          String   @id @default(cuid())
   name        String
@@ -10,4 +22,104 @@ model Host {
   status      String   @default("pending")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Connection {
+  id            String          @id @default(cuid())
+  name          String
+  description   String?
+  type          String
+  ip            String
+  port          Int?
+  username      String?
+  password      String?
+  status        String          @default("pending")
+  errorMessage  String?
+  lastConnected DateTime?
+  userId        String
+  tenant        Tenant?         @relation(fields: [tenantId], references: [id])
+  tenantId      String?
+  user          User            @relation(fields: [userId], references: [id])
+  logs          ConnectionLog[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model User {
+  id              String            @id @default(cuid())
+  name            String?
+  email           String?           @unique
+  emailVerified   DateTime?
+  image           String?
+  role            String            @default("USER")
+  tenant          Tenant?           @relation(fields: [tenantId], references: [id])
+  tenantId        String?
+  connections     Connection[]
+  logs            ConnectionLog[]
+  hostFingerprint HostFingerprint[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  provider        String?
+
+  @@index([tenantId])
+  @@index([email, provider])
+}
+
+model Tenant {
+  id              String            @id @default(cuid())
+  name            String
+  domain          String?           @unique
+  plan            String            @default("free")
+  users           User[]
+  connections     Connection[]
+  logs            ConnectionLog[]
+  hostFingerprint HostFingerprint[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model ConnectionLog {
+  id           String     @id @default(cuid())
+  timestamp    DateTime   @default(now())
+  level        String
+  message      String
+  action       String?
+  user         User?      @relation(fields: [userId], references: [id])
+  userId       String?
+  tenant       Tenant?    @relation(fields: [tenantId], references: [id])
+  tenantId     String?
+  connection   Connection? @relation(fields: [connectionId], references: [id])
+  connectionId String?
+  ip           String?
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([connectionId])
+  @@index([action])
+  @@index([level])
+  @@index([timestamp])
+}
+
+model HostFingerprint {
+  id          String   @id @default(cuid())
+  host        String
+  port        Int      @default(22)
+  fingerprint String
+  verified    Boolean  @default(false)
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  tenantId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([host, userId])
+  @@index([userId])
+  @@index([tenantId])
+  @@index([host])
 } 

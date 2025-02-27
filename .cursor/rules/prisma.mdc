@@ -1,19 +1,19 @@
 ---
 description: Prisma & Database Best Practices
-globs: src/server/prisma/**/*.{ts,prisma}
+globs: prisma/**/*.{ts,prisma}
 ---
 
 # Prisma & Database Best Practices
 
 ## Project Structure
 
-- **IMPORTANT**: All Prisma-related files are in `src/server/prisma` directory
-- The Prisma schema file is at `src/server/prisma/schema.prisma`
+- **IMPORTANT**: All Prisma-related files are in the root `/prisma` directory
+- The Prisma schema file is at `/prisma/schema.prisma`
 - PostgreSQL database connection is configured in environment files
-- Migrations are stored in `src/server/prisma/migrations`
-- Environment variables for database connection are in `src/server/config/env/.env.*` files
+- Migrations are stored in `/prisma/migrations`
+- Environment variables for database connection are in root `.env.*` files
 - The DATABASE_URL in environment files should use PostgreSQL format: `postgresql://user@localhost:5432/dbname`
-- **NEVER** create Prisma configurations outside the `src/server/prisma` directory
+- **NEVER** create Prisma configurations outside the `/prisma` directory
 
 ## OAuth & Authentication Rules
 
@@ -49,7 +49,7 @@ globs: src/server/prisma/**/*.{ts,prisma}
 ## Schema Design
 
 ```prisma
-// src/server/prisma/schema.prisma
+// prisma/schema.prisma
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -93,11 +93,9 @@ enum Role {
 ## Database Operations
 
 ```typescript
-// src/server/services/project.ts
-import { PrismaClient } from '@prisma/client';
-import { AppError } from '../utils/errors';
-
-const prisma = new PrismaClient();
+// src/lib/services/project.ts
+import { prisma } from '@/lib/prisma';
+import { AppError } from '@/lib/utils/errors';
 
 export async function createProject(data: CreateProjectInput) {
   try {

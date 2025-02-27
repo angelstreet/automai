@@ -1,9 +1,9 @@
 ---
 description: Backend Best Practices
-globs: src/server/**/*.{ts,js}
+globs: src/app/api/**/*.{ts,js}, src/lib/**/*.{ts,js}
 alwaysApply: false
 ---
-# Backend CursorRules
+# Backend Best Practices
 
 ## **1️⃣ General Guidelines**
 - Keep APIs RESTful with clean, predictable endpoint structures.
@@ -121,41 +121,57 @@ These rules establish a structured, secure, and scalable backend to support auto
 ### **API Route Structure**
 
 ```typescript
-// src/server/api/routes/project.ts
-import { Router } from 'express';
-import { validateRequest } from '../middleware/validate';
-import { isAuthenticated } from '../middleware/auth';
-import { ProjectSchema } from '../schemas/project';
+// src/app/api/projects/route.ts
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { validateRequest } from '@/lib/middleware/validate';
+import { ProjectSchema } from '@/lib/schemas/project';
+import { getProjects, createProject } from '@/lib/services/projects';
 
-const router = Router();
-
-router.get('/', isAuthenticated, async (req, res, next) => {
+export async function GET() {
   try {
-    // Implementation
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/',
-  isAuthenticated,
-  validateRequest(ProjectSchema),
-  async (req, res, next) => {
-    try {
-      // Implementation
-    } catch (error) {
-      next(error);
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    const projects = await getProjects();
+    return NextResponse.json({ success: true, data: projects });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch projects' },
+      { status: 500 }
+    );
   }
-);
+}
 
-export default router;
+export async function POST() {
+  try {
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const validatedData = await validateRequest(ProjectSchema);
+    const project = await createProject(validatedData);
+    
+    return NextResponse.json(
+      { success: true, data: project },
+      { status: 201 }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: 'Failed to create project' },
+      { status: 500 }
+    );
+  }
+}
 ```
 
 ### **Error Handling**
 
 ```typescript
-// src/server/utils/errors.ts
+// src/lib/utils/errors.ts
 export class AppError extends Error {
   constructor(
     public statusCode: number,
@@ -167,27 +183,30 @@ export class AppError extends Error {
   }
 }
 
-// src/server/middleware/error.ts
-export const errorHandler = (
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
-      status: 'error',
-      message: err.message,
-    });
-  }
+// src/middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-  // Log unexpected errors
-  console.error('Unexpected error:', err);
-  return res.status(500).json({
-    status: 'error',
-    message: 'Internal server error',
-  });
-};
+export function middleware(request: NextRequest) {
+  try {
+    // Middleware logic
+    return NextResponse.next();
+  } catch (error) {
+    if (error instanceof AppError) {
+      return NextResponse.json(
+        { status: 'error', message: error.message },
+        { status: error.statusCode }
+      );
+    }
+    
+    // Log unexpected errors
+    console.error('Unexpected error:', error);
+    return NextResponse.json(
+      { status: 'error', message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
 ```
 
 ### **Authentication**
