@@ -22,7 +22,6 @@ export default function UseCasesPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedUseCases, setSelectedUseCases] = useState<Set<string>>(new Set());
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedUseCase, setSelectedUseCase] = useState<UseCase | null>(null);
   const [newUseCase, setNewUseCase] = useState<NewUseCase>({
     projectId: '',
     name: '',
@@ -127,6 +126,12 @@ export default function UseCasesPage() {
       setExpandedProject(projects[0].id);
     }
   }, [projects]);
+
+  useEffect(() => {
+    if (expandedProject) {
+      fetchUseCases(expandedProject);
+    }
+  }, [expandedProject, fetchUseCases]);
 
   const toggleFavorite = async (useCaseId: string) => {
     try {
