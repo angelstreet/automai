@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/Shadcn/select';
-import { PLATFORMS } from '@/constants/platforms';
+import { PLATFORMS } from '@/app/[locale]/[tenant]/platforms/constants';
 
 type CreateUseCaseProps = {
   projects: Project[];

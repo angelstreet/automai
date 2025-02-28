@@ -1,0 +1,202 @@
+# Code Organization Best Practices
+
+## File Size Limits
+
+- All files should be under 300 lines of code
+- Exceptions are allowed for:
+  - Imported UI components from libraries (e.g., Shadcn UI)
+  - Module files that are meant to be comprehensive
+  - Generated code or migrations
+
+## Breaking Up Large Files
+
+### Components
+
+1. **Directory Structure**:
+   - Create a directory with the component name
+   - Use `index.tsx` as the main component file
+   - Place child components in the same directory
+
+   ```
+   Button/
+   ├── index.tsx         # Main Button component
+   ├── ButtonIcon.tsx    # Icon subcomponent
+   └── ButtonLabel.tsx   # Label subcomponent
+   ```
+
+2. **Naming Conventions**:
+   - Parent component: Same name as directory (e.g., `Button`)
+   - Child components: ParentNameChildPart (e.g., `ButtonIcon`)
+   - Hooks: use[ComponentName]State (e.g., `useButtonState`)
+
+3. **Implementation Strategy**:
+   - Extract complex UI sections into subcomponents
+   - Move state management to custom hooks
+   - Keep the main component as a composition of smaller parts
+
+### Pages
+
+1. **Directory Structure**:
+   - Create a `_components` directory for page-specific components
+   - Use `actions.ts` or `api.ts` for data fetching logic
+
+   ```
+   dashboard/
+   ├── page.tsx              # Main page component
+   ├── actions.ts            # Server actions
+   └── _components/
+       ├── DashboardHeader.tsx
+       ├── DashboardStats.tsx
+       └── DashboardTable.tsx
+   ```
+
+2. **Implementation Strategy**:
+   - Extract page sections into separate components
+   - Move data fetching to server actions or API functions
+   - Keep the main page component focused on layout and composition
+
+### Constants and Configuration
+
+1. **Directory Structure**:
+   - For application-wide constants: Place in `src/constants` directory
+   - For feature-specific constants: Place directly in the feature directory
+   - For component-specific constants: Place in the components directory
+
+   ```
+   # Application-wide constants
+   src/constants/
+   ├── sidebar.ts     # Sidebar-related constants
+   └── theme.ts       # Theme-related constants
+
+   # Feature-specific constants
+   src/app/[locale]/[tenant]/feature-name/constants.ts
+
+   # Component-specific constants
+   src/components/FeatureName/constants.ts
+   ```
+
+2. **Naming Conventions**:
+   - Constant values: `UPPER_SNAKE_CASE`
+   - Constant objects: `PascalCase`
+   - Enums: `PascalCase`
+
+3. **Implementation Strategy**:
+   - Group constants by domain or feature
+   - Keep application-wide constants in `src/constants`
+   - Move feature-specific constants to their respective feature directories
+   - Document complex constants with comments
+
+### Utility Functions
+
+1. **Directory Structure**:
+   - Group by functionality in separate files
+   - Create an index.ts file to re-export functions
+
+   ```
+   utils/
+   ├── index.ts       # Re-exports
+   ├── string.ts      # String manipulation utilities
+   ├── date.ts        # Date formatting utilities
+   └── validation.ts  # Form validation utilities
+   ```
+
+2. **Implementation Strategy**:
+   - Keep functions small and focused on a single task
+   - Group related functions in the same file
+   - Use descriptive names that indicate what the function does
+
+### API Routes
+
+1. **Directory Structure**:
+   - Split validation logic into separate files
+   - Move business logic to service layer
+
+   ```
+   app/api/users/
+   ├── route.ts       # Route handler
+   ├── validation.ts  # Request validation
+   └── schema.ts      # Data schema
+   ```
+
+2. **Implementation Strategy**:
+   - Keep route handlers focused on request/response handling
+   - Move business logic to service layer in `src/lib/services`
+   - Extract validation to separate files
+
+## Code Organization Within Files
+
+1. **Imports Organization**:
+   ```typescript
+   // External dependencies
+   import { useState } from 'react';
+   import { z } from 'zod';
+   
+   // Internal modules
+   import { Button } from '@/components/shadcn/button';
+   import { useAuth } from '@/lib/auth';
+   
+   // Types
+   import type { User } from '@/types';
+   
+   // Styles
+   import styles from './styles.module.css';
+   ```
+
+2. **Component Structure**:
+   ```typescript
+   // Types
+   interface ButtonProps {
+     // ...
+   }
+   
+   // Helper functions
+   function formatLabel(label: string) {
+     // ...
+   }
+   
+   // Main component
+   export function Button({ label, ...props }: ButtonProps) {
+     // ...
+   }
+   ```
+
+3. **Hooks Organization**:
+   ```typescript
+   export function useComponentState() {
+     // State declarations first
+     const [isLoading, setIsLoading] = useState(false);
+     
+     // Derived state next
+     const isDisabled = isLoading || someOtherCondition;
+     
+     // Event handlers next
+     const handleClick = () => {
+       // ...
+     };
+     
+     // Effects last
+     useEffect(() => {
+       // ...
+     }, []);
+     
+     // Return values
+     return {
+       isLoading,
+       isDisabled,
+       handleClick
+     };
+   }
+   ```
+
+## Health Check
+
+Run the health check script to identify files that exceed the 300-line limit:
+
+```bash
+node scripts/health-check.js
+```
+
+The script will:
+1. Scan the codebase for files exceeding the line limit
+2. Provide specific recommendations for breaking up each file
+3. Display best practices for different file types 

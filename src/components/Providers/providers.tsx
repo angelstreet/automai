@@ -1,7 +1,7 @@
 'use client';
 
 import { NextIntlClientProvider } from 'next-intl';
-import { ThemeProvider } from '@/components/ThemeProvider';
+import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { SessionProvider } from 'next-auth/react';
 import { SearchProvider } from '@/lib/contexts/SearchContext';
 import { RoleProvider } from '@/context/role-context';
