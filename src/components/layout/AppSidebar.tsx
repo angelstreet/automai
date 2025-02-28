@@ -7,10 +7,10 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/sidebar';
-import { NavGroup } from '@/components/layout/nav-group';
-import { NavUser } from '@/components/layout/nav-user';
-import { TeamSwitcher } from '@/components/layout/team-switcher';
-import { sidebarData } from './data/sidebar-data';
+import { NavGroup } from '@/components/layout/NavGroup';
+import { NavUser } from '@/components/layout/NavUser';
+import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
+import { sidebarData } from './data/sidebarData';
 import { useSession } from 'next-auth/react';
 import { useRole } from '@/context/role-context';
 

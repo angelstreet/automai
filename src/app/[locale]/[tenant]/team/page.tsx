@@ -1,6 +1,10 @@
-import { useTranslations } from 'next-intl';
+'use client';
 
-export default function TeamPage({ _params }: { _params: { tenant: string } }) {
+import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
+
+export default function TeamPage() {
+  const params = useParams();
   const t = useTranslations('Team');
 
   return (

@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getHostById, deleteHost } from '@/lib/services';
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    const host = await getHostById(params.id);
+    const host = await getHostById(context.params.id);
 
     if (!host) {
       return NextResponse.json({ success: false, error: 'Host not found' }, { status: 404 });
@@ -16,9 +19,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: NextRequest,
+  context: { params: { id: string } }
+) {
   try {
-    await deleteHost(params.id);
+    await deleteHost(context.params.id);
 
     return NextResponse.json({
       success: true,

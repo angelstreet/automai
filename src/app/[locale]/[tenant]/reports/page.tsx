@@ -1,14 +1,10 @@
+'use client';
+
 import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
 
-interface Props {
-  params: {
-    tenant: string;
-    locale: string;
-  };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
-
-export default async function ReportsPage(props: Props) {
+export default function ReportsPage() {
+  const params = useParams();
   const t = useTranslations('Reports');
 
   return (

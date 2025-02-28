@@ -1,6 +1,7 @@
 ---
 description: Code Organization Best Practices
 globs: src/**/*.{ts,tsx}
+alwaysApply: false
 ---
 
 # Code Organization Best Practices
