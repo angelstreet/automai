@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useUser } from '@/lib/contexts/UserContext';
+import { useUser } from '@/context/UserContext';
 
 export type Role = 'admin' | 'developer' | 'tester' | 'viewer';
 

@@ -3,9 +3,9 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { SessionProvider } from 'next-auth/react';
-import { SearchProvider } from '@/lib/contexts/SearchContext';
-import { RoleProvider } from '@/context/role-context';
-import { UserProvider } from '@/lib/contexts/UserContext';
+import { SearchProvider } from '@/context/SearchContext';
+import { RoleProvider } from '@/context/RoleContext';
+import { UserProvider } from '@/context/UserContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
