@@ -5,7 +5,7 @@ import { AppSidebar } from '@/components/Layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/Layout/WorkspaceHeader';
 import { TooltipProvider } from '@/components/Shadcn/tooltip';
 import { SidebarProvider } from '@/components/sidebar';
-import { useUser } from '@/lib/contexts/UserContext';
+import { useUser } from '@/context/UserContext';
 import Cookies from 'js-cookie';
 
 // Cache session check timestamp to reduce API calls

@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/Shadcn/dropdown-menu';
-import { useUser } from '@/lib/contexts/UserContext';
+import { useUser } from '@/context/UserContext';
 
 interface TeamSwitcherProps {
   teams?: {

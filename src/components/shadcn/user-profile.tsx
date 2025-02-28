@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { User } from 'lucide-react';
 import { signOut } from 'next-auth/react';
-import { useUser } from '@/lib/contexts/UserContext';
+import { useUser } from '@/context/UserContext';
 import { Button } from '@/components/Shadcn/button';
 import {
   DropdownMenu,

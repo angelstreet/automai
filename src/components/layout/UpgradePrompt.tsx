@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@/lib/contexts/UserContext';
+import { useUser } from '@/context/UserContext';
 import { getUpgradeMessage } from '@/lib/features';
 import { Button } from './ui/button';
 import { useRouter } from 'next/navigation';

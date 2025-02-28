@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/Shadcn/accordion';
-import { useUser } from '@/lib/contexts/UserContext';
+import { useUser } from '@/context/UserContext';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/Shadcn/use-toast';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';

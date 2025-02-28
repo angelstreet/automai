@@ -33,7 +33,7 @@ import { Textarea } from '@/components/Shadcn/textarea';
 import { useToast } from '@/components/Shadcn/use-toast';
 import { Alert, AlertDescription } from '@/components/Shadcn/alert';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
-import { useUser } from '@/lib/contexts/UserContext';
+import { useUser } from '@/context/UserContext';
 
 // Type matching Prisma Project model
 type Project = {
