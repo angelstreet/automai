@@ -99,7 +99,7 @@ import {
   DialogTrigger,
 } from '@/components/shadcn/dialog';
 import { Input } from '@/components/shadcn/input';
-import Sidebar from '@/components/layout/Sidebar';
+import Sidebar from '@/components/Layout/Sidebar';
 
 // Type matching Prisma Project model
 type Project = {

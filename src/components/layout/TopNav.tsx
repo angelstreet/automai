@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { TeamSwitcher } from '@/components/layout/team-switcher';
+import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
 import { sidebarData } from './data/sidebar-data';
 
 export function TopNav() {
