@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
-import { getWebSocketServer } from '@/lib/websocket-server';
+import { getWebSocketServer } from '@/lib/websocketServer';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
