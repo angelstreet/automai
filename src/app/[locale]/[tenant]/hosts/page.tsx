@@ -38,7 +38,7 @@ import { Skeleton } from '@/components/shadcn/skeleton';
 import { cn } from '@/lib/utils';
 import { Server } from 'lucide-react';
 
-export default function VirtualizationPage() {
+export default function HostsPage() {
   const t = useTranslations('Common');
   const params = useParams();
   const router = useRouter();
