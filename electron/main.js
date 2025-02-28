@@ -14,13 +14,9 @@ let nextProcess;
 
 // Filter out non-critical DevTools errors
 function filterDevToolsErrors(level, message) {
-  const ignoredErrors = [
-    'Autofill.enable',
-    'Autofill.setAddresses',
-    'chrome.autofillPrivate'
-  ];
-  
-  return !ignoredErrors.some(error => message.includes(error));
+  const ignoredErrors = ['Autofill.enable', 'Autofill.setAddresses', 'chrome.autofillPrivate'];
+
+  return !ignoredErrors.some((error) => message.includes(error));
 }
 
 async function initializeStore() {
@@ -37,29 +33,32 @@ async function initializeStore() {
 async function checkNextJsHealth() {
   return new Promise((resolve) => {
     console.log(`Checking Next.js health at http://localhost:${PORT}`);
-    http.get(`http://localhost:${PORT}/api/health`, (res) => {
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      res.on('end', () => {
-        console.log('Next.js health check response:', {
-          statusCode: res.statusCode,
-          data: data
+    http
+      .get(`http://localhost:${PORT}/api/health`, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
         });
-        resolve(res.statusCode === 200);
+        res.on('end', () => {
+          console.log('Next.js health check response:', {
+            statusCode: res.statusCode,
+            data: data,
+          });
+          resolve(res.statusCode === 200);
+        });
+      })
+      .on('error', (err) => {
+        console.log('Next.js health check failed:', err.message);
+        resolve(false);
       });
-    }).on('error', (err) => {
-      console.log('Next.js health check failed:', err.message);
-      resolve(false);
-    });
   });
 }
 
 function isPortInUse(port) {
   return new Promise((resolve) => {
     console.log(`Checking if port ${port} is in use...`);
-    const testServer = http.createServer()
+    const testServer = http
+      .createServer()
       .once('error', (err) => {
         if (err.code === 'EADDRINUSE') {
           console.log(`Port ${port} is in use`);
@@ -82,7 +81,7 @@ function isPortInUse(port) {
 async function checkMacPermissions() {
   if (process.platform === 'darwin') {
     console.log('Running detailed macOS permission checks...');
-    
+
     // Ensure electron user directory exists
     const electronUserDir = path.join(os.homedir(), '.electron');
     try {
@@ -97,38 +96,38 @@ async function checkMacPermissions() {
         name: 'App Directory',
         path: app.getAppPath(),
         required: ['read', 'write'],
-        create: false
+        create: false,
       },
       {
         name: 'User Data',
         path: app.getPath('userData'),
         required: ['read', 'write'],
-        create: true
+        create: true,
       },
       {
         name: 'Project Root',
         path: process.cwd(),
         required: ['read', 'write'],
-        create: false
+        create: false,
       },
       {
         name: '.next Directory',
         path: path.join(process.cwd(), '.next'),
         required: ['read', 'write'],
-        create: true
+        create: true,
       },
       {
         name: 'electron Directory',
         path: path.join(process.cwd(), 'electron'),
         required: ['read', 'write'],
-        create: false
+        create: false,
       },
       {
         name: 'src Directory',
         path: path.join(process.cwd(), 'src'),
         required: ['read', 'write'],
-        create: false
-      }
+        create: false,
+      },
     ];
 
     let hasErrors = false;
@@ -137,7 +136,7 @@ async function checkMacPermissions() {
     for (const check of checks) {
       try {
         console.log(`\nChecking ${check.name} at: ${check.path}`);
-        
+
         // Check if path exists
         try {
           await fs.promises.access(check.path);
@@ -157,7 +156,7 @@ async function checkMacPermissions() {
         const mode = stats.mode.toString(8);
         const uid = stats.uid;
         const gid = stats.gid;
-        
+
         console.log(`📊 Permissions: ${mode}`);
         console.log(`👤 Owner: ${uid}:${gid}`);
 
@@ -176,7 +175,6 @@ async function checkMacPermissions() {
         } catch (error) {
           throw new Error(`No write permission: ${error.message}`);
         }
-
       } catch (error) {
         hasErrors = true;
         errors.push(`${check.name}: ${error.message}`);
@@ -185,12 +183,13 @@ async function checkMacPermissions() {
     }
 
     if (hasErrors) {
-      const errorMessage = 'Permission issues detected:\n\n' + 
-        errors.join('\n\n') + 
+      const errorMessage =
+        'Permission issues detected:\n\n' +
+        errors.join('\n\n') +
         '\n\nTry running these commands:\n' +
         `sudo chown -R $(whoami) "${process.cwd()}"\n` +
         `chmod -R u+rw "${process.cwd()}"`;
-      
+
       dialog.showErrorBox('Permission Issues', errorMessage);
       throw new Error('Permission check failed');
     }
@@ -201,7 +200,7 @@ async function checkMacPermissions() {
 
 async function startNextServer() {
   console.log('Starting Next.js server check sequence...');
-  
+
   try {
     const portInUse = await isPortInUse(PORT);
     if (portInUse) {
@@ -232,16 +231,13 @@ async function startNextServer() {
         ...process.env,
         PATH: process.env.PATH,
         // Ensure npm can find node on macOS
-        NODE_PATH: process.execPath
-      }
+        NODE_PATH: process.execPath,
+      },
     });
 
     nextProcess.on('error', (error) => {
       console.error('Failed to start Next.js:', error);
-      dialog.showErrorBox(
-        'Server Start Error',
-        `Failed to start Next.js server: ${error.message}`
-      );
+      dialog.showErrorBox('Server Start Error', `Failed to start Next.js server: ${error.message}`);
     });
 
     // Return a promise that resolves when the server is ready
@@ -256,14 +252,14 @@ async function startNextServer() {
           setTimeout(checkServer, 1000);
         }
       }
-      
+
       setTimeout(checkServer, 1000);
     });
   } catch (error) {
     console.error('Error in startNextServer:', error);
     dialog.showErrorBox(
       'Server Error',
-      'Failed to start or connect to Next.js server. Check your permissions and try again.'
+      'Failed to start or connect to Next.js server. Check your permissions and try again.',
     );
     throw error;
   }
@@ -284,10 +280,10 @@ async function createWindow() {
         webSecurity: true,
         sandbox: false,
         devTools: true,
-        preload: path.join(__dirname, 'preload.js')
+        preload: path.join(__dirname, 'preload.js'),
       },
       show: false,
-      backgroundColor: '#FFFFFF'
+      backgroundColor: '#FFFFFF',
     });
 
     // Set CSP headers
@@ -296,11 +292,11 @@ async function createWindow() {
         responseHeaders: {
           ...details.responseHeaders,
           'Content-Security-Policy': [
-            isDev 
+            isDev
               ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* data: devtools://*;"
-              : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"
-          ]
-        }
+              : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';",
+          ],
+        },
       });
     });
 
@@ -319,7 +315,7 @@ async function createWindow() {
     console.log(`Loading URL: ${startURL}`);
 
     let loadSuccess = false;
-    
+
     // Loading sequence events
     mainWindow.webContents.on('did-start-loading', () => {
       console.log('⏳ Content loading started - This is normal');
@@ -327,7 +323,9 @@ async function createWindow() {
     });
 
     mainWindow.webContents.on('did-stop-loading', () => {
-      console.log(`🛑 Content loading stopped - ${loadSuccess ? 'Successfully' : 'Check for errors'}`);
+      console.log(
+        `🛑 Content loading stopped - ${loadSuccess ? 'Successfully' : 'Check for errors'}`,
+      );
     });
 
     mainWindow.webContents.on('did-finish-load', () => {
@@ -335,22 +333,26 @@ async function createWindow() {
       loadSuccess = true;
     });
 
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
-      console.error('❌ Failed to load:', {
-        errorCode,
-        errorDescription,
-        url: validatedURL
-      });
-      
-      // Attempt to reload if it's a temporary error
-      if (errorCode === -6) { // ERR_FILE_NOT_FOUND
-        console.log('Page not found, waiting for Next.js to be ready...');
-        setTimeout(() => {
-          console.log('Retrying page load...');
-          mainWindow.loadURL(startURL);
-        }, 1000);
-      }
-    });
+    mainWindow.webContents.on(
+      'did-fail-load',
+      (event, errorCode, errorDescription, validatedURL) => {
+        console.error('❌ Failed to load:', {
+          errorCode,
+          errorDescription,
+          url: validatedURL,
+        });
+
+        // Attempt to reload if it's a temporary error
+        if (errorCode === -6) {
+          // ERR_FILE_NOT_FOUND
+          console.log('Page not found, waiting for Next.js to be ready...');
+          setTimeout(() => {
+            console.log('Retrying page load...');
+            mainWindow.loadURL(startURL);
+          }, 1000);
+        }
+      },
+    );
 
     mainWindow.webContents.on('crashed', (event, killed) => {
       console.error('💥 Window crashed:', { killed });
@@ -400,7 +402,9 @@ async function createWindow() {
       console.log('Navigation requested to:', url);
       if (url.includes('/api/auth/callback')) {
         event.preventDefault();
-        mainWindow.loadURL(`http://localhost:${PORT}${new URL(url).pathname}${new URL(url).search}`);
+        mainWindow.loadURL(
+          `http://localhost:${PORT}${new URL(url).pathname}${new URL(url).search}`,
+        );
       }
     });
 
@@ -432,7 +436,7 @@ app.on('ready', async () => {
     console.error('Failed to initialize app:', error);
     dialog.showErrorBox(
       'Initialization Error',
-      'Failed to start the application. Please check permissions and try again.'
+      'Failed to start the application. Please check permissions and try again.',
     );
     app.quit();
   }
@@ -500,4 +504,4 @@ ipcMain.handle('store-get', async (event, { key }) => {
     console.error('Store get error:', error);
     return { success: false, message: error.message };
   }
-}); 
+});

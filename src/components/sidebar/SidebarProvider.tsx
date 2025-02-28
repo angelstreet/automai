@@ -12,7 +12,7 @@ import {
   SIDEBAR_KEYBOARD_SHORTCUT,
 } from '@/constants/sidebar';
 
-export const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
+const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
   (
     {
       defaultOpen = true,
@@ -103,3 +103,7 @@ export const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderP
     );
   },
 );
+
+SidebarProvider.displayName = 'SidebarProvider';
+
+export default SidebarProvider;

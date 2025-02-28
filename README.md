@@ -1,7 +1,9 @@
 # Automai SaaS
+
 Automai is a multi-tenant SaaS platform designed for end-to-end test automation across web, desktop, and mobile environments.
 
 ## 🚀 Quick Start Commands
+
 ```bash
 # Restart next.js frontend
 npm run dev:all
@@ -11,7 +13,7 @@ npm run dev:debug
 
 # Kill running process node
  pkill -f "node"
- 
+
 # Start Next.js frontend
 rm -rf .next && npm run dev
 
@@ -27,7 +29,6 @@ npm test  # or: npx jest tests/e2e.test.ts --runInBand
 # Open Prisma database GUI
 npm run prisma:studio
 ```
-
 
 ## Installation
 
@@ -47,38 +48,52 @@ npm run prisma:studio
 ## Running the Application
 
 ### Frontend and API
+
 Start the Next.js development server:
+
 ```bash
 npm run dev
 ```
+
 Access the frontend at [http://localhost:3000](http://localhost:3000).
 The API will be available at [http://localhost:3000/api](http://localhost:3000/api).
 
 ### Desktop App (Electron)
+
 You can run the desktop app in two ways:
 
 #### Option 1: Using Existing Next.js Server
+
 1. Start the Next.js server first:
+
 ```bash
 npm run dev
 ```
+
 2. In a new terminal, start Electron:
+
 ```bash
 npm run electron-dev
 ```
+
 This will use the existing Next.js server running on port 3000.
 
 #### Option 2: Standalone Mode
+
 If Next.js is not running, simply run:
+
 ```bash
 npm run electron-dev
 ```
+
 This will automatically start both Next.js and Electron.
 
 #### Building for Distribution
+
 ```bash
 npm run electron-pack
 ```
+
 The packaged desktop app will be available in the `dist` directory.
 
 Note: The desktop app automatically detects if Next.js is running on port 3000 and will either use the existing server or start a new one.
@@ -86,6 +101,7 @@ Note: The desktop app automatically detects if Next.js is running on port 3000 a
 For detailed desktop app documentation, see [Desktop Implementation Guide](docs/instructions/desktop.md).
 
 API endpoints:
+
 - Health check: `GET /api/health`
 - Projects: `GET/POST /api/projects`
 - Test Cases: `GET/POST /api/testcases`
@@ -93,6 +109,7 @@ API endpoints:
 ## Database Management
 
 ### Setup
+
 1. Make sure PostgreSQL is installed and running locally
 2. Set up your database connection URL in `.env`:
    ```env
@@ -100,6 +117,7 @@ API endpoints:
    ```
 
 ### Prisma Commands
+
 All Prisma commands are available as npm scripts. Run them from the project root:
 
 ```bash
@@ -120,6 +138,7 @@ npm run prisma:seed
 ```
 
 ### Common Database Tasks
+
 ```bash
 # Reset database (drops all data and recreates tables)
 DATABASE_URL="postgresql://joachimndoye@localhost:5432/automai_db" npx prisma migrate reset --schema=prisma/schema.prisma
@@ -139,10 +158,13 @@ Note: All Prisma commands require the DATABASE_URL environment variable. The npm
 ## Running Tests
 
 To run end-to-end tests, execute:
+
 ```bash
 npx jest tests/e2e.test.ts --runInBand
 ```
+
 Alternatively, if configured in package.json, run:
+
 ```bash
 npm test
 ```
@@ -150,6 +172,7 @@ npm test
 ## Running the Browser MCP Tool
 
 Use the following command to run the browser MCP tool, which helps analyze browser logs and console errors:
+
 ```bash
 npx @agentdeskai/browser-tools-server
 ```

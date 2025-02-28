@@ -1,10 +1,13 @@
 # Core Features of the SaaS Automation Platform
 
 ## **1️⃣ Development: Building Automation Scripts**
+
 ### **Overview**
+
 The primary goal of the SaaS is to enable users to develop automation scripts for Web, Mobile, and Desktop applications efficiently, while also integrating Vision AI capabilities.
 
 ### **Key Features**
+
 - **AI-Powered Automation**: AI assists in script generation, optimization, and error prediction.
 - **Multi-Platform Support**: Web (Playwright), Mobile (Appium), Desktop (Pywinauto), Vision AI (Omniparser).
 - **Script Editor**: Web-based code editor with syntax highlighting and live preview.
@@ -16,6 +19,7 @@ The primary goal of the SaaS is to enable users to develop automation scripts fo
 - **Resource Locking**: Prevents conflicts by ensuring only one user can edit a script at a time.
 
 ### **Development Workflow**
+
 1. **User Creates a Project** → Adds test cases & defines automation steps.
 2. **Selects Platform Type** → Web, Mobile, Desktop, or Vision AI.
 3. **Script is Auto-Generated with AI Assistance** → Based on selected actions (Navigate, Click, Type, Verify, AI Recognition, etc.).
@@ -26,10 +30,13 @@ The primary goal of the SaaS is to enable users to develop automation scripts fo
 ---
 
 ## **2️⃣ Execution: Running Automation Scripts**
+
 ### **Overview**
+
 Once a script is developed, users should be able to execute it either locally (on their machine) or in the cloud.
 
 ### **Key Features**
+
 - **Execution Modes**:
   - **Local Execution** → Runs on the user's local machine using Playwright, Appium, or Pywinauto.
   - **Cloud Execution** → Deploys tests to cloud VMs for distributed execution.
@@ -48,6 +55,7 @@ Once a script is developed, users should be able to execute it either locally (o
 - **Cross-Platform Test Mixing**: Users can execute **Web, Mobile, and Desktop scripts in a single campaign**, ensuring full automation flexibility.
 
 ### **Execution Workflow**
+
 1. **User Selects a Test Case** → Chooses a script from the project.
 2. **Chooses Execution Mode** → Local or Cloud.
 3. **Execution Starts** → Playwright (Web), Appium (Mobile), Pywinauto (Desktop) automates the test.
@@ -58,10 +66,13 @@ Once a script is developed, users should be able to execute it either locally (o
 ---
 
 ## **3️⃣ Analysis: Reviewing & Optimizing Test Results**
+
 ### **Overview**
+
 Analyzing execution results is essential to track test performance, detect failures, and improve scripts.
 
 ### **Key Features**
+
 - **Execution Reports**:
   - HTML reports (`report.html`) for each test run.
   - Includes test steps, logs, execution time, screenshots, and video.
@@ -79,6 +90,7 @@ Analyzing execution results is essential to track test performance, detect failu
   - Compare two test runs to detect performance issues or regressions.
 
 ### **Analysis Workflow**
+
 1. **User Navigates to Reports Section** → Lists all executed tests.
 2. **Filters by Project, Use Case, Execution Date, Status** → Finds relevant test runs.
 3. **Opens `report.html` for a Detailed View** → Contains step-by-step execution logs.
@@ -89,17 +101,21 @@ Analyzing execution results is essential to track test performance, detect failu
 ---
 
 ## **4️⃣ Advantages of Our Solution**
+
 ### **1. AI-Powered Automation**
+
 - **AI-assisted script generation**: Speeds up automation script creation.
 - **AI-driven error detection**: Identifies and suggests fixes for failed test steps.
 - **Self-healing automation**: Automatically adapts scripts to UI changes.
 
 ### **2. All-in-One Automation Platform**
+
 - **Unified development environment** for Web, Mobile, Desktop, and Vision AI.
 - **Cross-platform execution support**: Mix different platforms within the same test campaign.
 - **Centralized reporting & debugging**: One platform to track execution logs, failures, and performance trends.
 
 ### **3. IDE-Compatible & Extensible**
+
 - **Export automation scripts**: Users can download test scripts and run them locally.
 - **Version control & rollback**: Keep track of script changes using built-in Git versioning.
 - **Open integration architecture**: Connect to external tools (Jenkins, Slack, Jira, etc.).
@@ -107,7 +123,9 @@ Analyzing execution results is essential to track test performance, detect failu
 ---
 
 ## **Conclusion**
+
 This document defines the **three core functionalities of the SaaS**:
+
 1. **Development** → Users create & manage automation scripts with AI assistance.
 2. **Execution** → Scripts run locally or in cloud environments, mixing platforms in one campaign.
 3. **Analysis** → Users review execution results, debug failures, and optimize scripts.

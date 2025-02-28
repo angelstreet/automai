@@ -3,6 +3,7 @@
 This guide explains how to use the desktop functionality in AutomAI, which allows the Next.js web application to run as a desktop application using Electron while maintaining a single codebase.
 
 ## Table of Contents
+
 1. [Installation](#installation)
 2. [Project Structure](#project-structure)
 3. [Development and Building](#development-and-building)
@@ -23,6 +24,7 @@ npm install electron-store simple-git
 The desktop implementation consists of several key files:
 
 ### 1. Electron Main Process (`electron/main.js`)
+
 - Handles the main Electron process
 - Creates and manages the application window
 - Sets up IPC (Inter-Process Communication) handlers for:
@@ -31,10 +33,12 @@ The desktop implementation consists of several key files:
   - Local storage operations
 
 ### 2. Electron Environment Detection (`src/utils/isElectron.ts`)
+
 - Utility function to detect if the app is running in Electron
 - Used for conditional rendering of desktop-specific features
 
 ### 3. Electron API Wrapper (`src/utils/electronApi.ts`)
+
 - TypeScript wrapper for Electron IPC communication
 - Provides type-safe interfaces for desktop features
 - Handles errors and provides consistent response format
@@ -54,21 +58,29 @@ The desktop implementation consists of several key files:
 ```
 
 ### Development Mode
+
 To run the application in development mode:
+
 ```bash
 npm run electron-dev
 ```
+
 This will:
+
 1. Start the Next.js development server
 2. Wait for the server to be ready
 3. Launch the Electron application
 
 ### Building for Production
+
 To build the desktop application for distribution:
+
 ```bash
 npm run electron-pack
 ```
+
 This will:
+
 1. Build the Next.js application
 2. Package it with Electron for distribution
 3. Output the packaged application to the `dist` directory
@@ -116,11 +128,13 @@ const YourComponent = () => {
 ### Available Desktop Features
 
 1. **Python Execution**
+
    ```typescript
    const result = await runPython('script.py');
    ```
 
 2. **Git Synchronization**
+
    ```typescript
    const result = await syncGit();
    ```
@@ -134,12 +148,14 @@ const YourComponent = () => {
 ## Important Notes
 
 1. **Feature Availability**
+
    - Desktop features (Python execution, Git sync, local storage) are only available when running in Electron
    - The app continues to work as a web application when accessed through a browser
    - Use `isElectron()` to conditionally render desktop-specific features
 
 2. **Response Format**
    All desktop operations return a consistent response format:
+
    ```typescript
    interface IPCResponse<T> {
      success: boolean;
@@ -149,11 +165,13 @@ const YourComponent = () => {
    ```
 
 3. **Error Handling**
+
    - All desktop operations include built-in error handling
    - Failed operations return `{ success: false, message: 'error message' }`
    - Successful operations return `{ success: true, data: result }`
 
 4. **Security Considerations**
+
    - The desktop app runs with Node.js integration enabled
    - Be cautious when executing Python scripts or Git commands
    - Validate and sanitize all inputs before execution
@@ -166,10 +184,12 @@ const YourComponent = () => {
 ## Troubleshooting
 
 1. **Python Execution Issues**
+
    - Ensure Python is installed and accessible in the system PATH
    - Check script paths are correct and accessible
 
 2. **Git Sync Issues**
+
    - Verify Git is installed and configured
    - Check repository permissions and authentication
 
@@ -188,7 +208,7 @@ const YourComponent = () => {
 {
   "scripts": {
     "dev": "next dev",
-    "electron-dev": "concurrently \"next dev -p 3001\" \"wait-on http://localhost:3001 && cross-env ELECTRON_PORT=3001 electron electron/main.js\"",
+    "electron-dev": "concurrently \"next dev -p 3001\" \"wait-on http://localhost:3001 && cross-env ELECTRON_PORT=3001 electron electron/main.js\""
   }
 }
 ```
@@ -233,12 +253,14 @@ function createWindow() {
 Create separate `.env` files for web and desktop:
 
 1. `.env.web`:
+
 ```env
 NEXTAUTH_URL=http://localhost:3000
 // ... other env variables ...
 ```
 
 2. `.env.desktop`:
+
 ```env
 NEXTAUTH_URL=http://localhost:3001
 // ... other env variables ...
@@ -247,11 +269,13 @@ NEXTAUTH_URL=http://localhost:3001
 ### Running Both Versions
 
 1. Start the web version:
+
 ```bash
 npm run dev
 ```
 
 2. In a separate terminal, start the desktop version:
+
 ```bash
 npm run electron-dev
 ```
@@ -259,6 +283,7 @@ npm run electron-dev
 ### Authentication Flow
 
 1. **Web Version (Port 3000)**
+
    - OAuth callbacks will use: `http://localhost:3000/api/auth/callback/{provider}`
    - Configure this URL in your OAuth provider settings
 
@@ -269,15 +294,18 @@ npm run electron-dev
 ### Important Notes
 
 1. **OAuth Provider Configuration**
+
    - Make sure to add both callback URLs to your OAuth provider settings:
      - `http://localhost:3000/api/auth/callback/{provider}`
      - `http://localhost:3001/api/auth/callback/{provider}`
 
 2. **Session Management**
+
    - Sessions are managed separately for each port
    - Users will need to log in separately for web and desktop versions
 
 3. **Development Considerations**
+
    - API calls should use relative paths to automatically use the correct port
    - Use `window.location.origin` for dynamic base URL construction
    - Test authentication flows on both versions when making changes

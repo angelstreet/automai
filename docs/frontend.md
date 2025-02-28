@@ -1,13 +1,16 @@
 # Frontend Architecture & UI Components
 
 ## 1. Overview
+
 The frontend is built with **Next.js + TypeScript**, designed to handle:
+
 - **Project & Test Case Management** (CRUD Operations, Git Versioning).
 - **Test Execution UI** (Live Execution Table, Logs, Screenshots, Videos via Report HTML).
 - **Integration with Kibana for Deep Reporting.**
 - **Authentication & Multi-Tenant Support.**
 
 ## 2. Tech Stack
+
 - **Framework:** Next.js (React) + TypeScript
 - **State Management:** Zustand / React Context
 - **Styling:** Tailwind CSS, shadcn-ui
@@ -19,16 +22,18 @@ The frontend is built with **Next.js + TypeScript**, designed to handle:
 ## 3. UI Components & Pages
 
 ### **3.1 Sidebar Navigation**
-| **Section**        | **Subsections**                 | **Access Roles** |
-|--------------------|--------------------------------|-----------------|
-| **🏠 Dashboard**    | Overview of project executions | All Roles       |
-| **✍️ Development** | Project, Use Case, Campaign   | Trial, Pro, Enterprise |
-| **🚀 Execution**   | Schedule, Deployment Table    | Pro, Enterprise  |
-| **📊 Reports**     | Results, Performance          | Pro, Enterprise |
-| **⚙️ Settings**    | Team, Configuration, Integration | Enterprise only  |
-| **💳 Billing**     | Subscription Management       | Pro, Enterprise |
+
+| **Section**        | **Subsections**                  | **Access Roles**       |
+| ------------------ | -------------------------------- | ---------------------- |
+| **🏠 Dashboard**   | Overview of project executions   | All Roles              |
+| **✍️ Development** | Project, Use Case, Campaign      | Trial, Pro, Enterprise |
+| **🚀 Execution**   | Schedule, Deployment Table       | Pro, Enterprise        |
+| **📊 Reports**     | Results, Performance             | Pro, Enterprise        |
+| **⚙️ Settings**    | Team, Configuration, Integration | Enterprise only        |
+| **💳 Billing**     | Subscription Management          | Pro, Enterprise        |
 
 ### **3.2 Project & Test Case Management**
+
 - **Page:** `/projects`
 - **Features:**
   - Create, edit, and delete projects.
@@ -37,6 +42,7 @@ The frontend is built with **Next.js + TypeScript**, designed to handle:
   - **Locking system:** Prevents multiple users from editing the same test case.
 
 ### **3.3 Execution UI (Live Test Execution Tracking)**
+
 - **Page:** `/executions`
 - **Features:**
   - **Execution Table:**
@@ -52,6 +58,7 @@ The frontend is built with **Next.js + TypeScript**, designed to handle:
     - **Re-run Test (Optional):** Trigger a retry for failed test cases.
 
 ### **3.4 Reports & Analytics**
+
 - **Page:** `/reports`
 - **Features:**
   - **Filters for test execution history** (status, project, user, timeframe).
@@ -62,15 +69,18 @@ The frontend is built with **Next.js + TypeScript**, designed to handle:
     - Links to `report.html` for each test execution.
 
 ## 4. API Calls & Data Fetching
+
 ### **Fetching Executions**
+
 ```javascript
 const fetchExecutions = async () => {
-  const res = await fetch("/api/executions");
+  const res = await fetch('/api/executions');
   return await res.json();
 };
 ```
 
 ### **Fetching Report HTML Link for an Execution**
+
 ```javascript
 const fetchExecutionDetails = async (executionId) => {
   const res = await fetch(`/api/executions/${executionId}`);
@@ -79,6 +89,7 @@ const fetchExecutionDetails = async (executionId) => {
 ```
 
 ### **Displaying Execution Table with Report Link**
+
 ```jsx
 <Table>
   <thead>
@@ -90,13 +101,15 @@ const fetchExecutionDetails = async (executionId) => {
     </tr>
   </thead>
   <tbody>
-    {executions.map(exec => (
+    {executions.map((exec) => (
       <tr key={exec.id}>
         <td>{exec.id}</td>
         <td>{exec.status}</td>
         <td>{exec.duration} sec</td>
         <td>
-          <a href={exec.reportUrl} target="_blank">View Report</a>
+          <a href={exec.reportUrl} target="_blank">
+            View Report
+          </a>
         </td>
       </tr>
     ))}
@@ -105,12 +118,12 @@ const fetchExecutionDetails = async (executionId) => {
 ```
 
 ## 5. Future Enhancements
+
 - **CI/CD Integration (Trigger test runs from GitHub/GitLab).**
 - **Real-time execution updates (WebSockets for instant status updates).**
 - **Dark mode UI & better analytics visualizations.**
 - **Slack/MS Teams alerting for failed test cases.**
 
 ---
-This frontend update ensures **seamless test management, execution tracking, and integration with Kibana & Supabase Storage.** 🚀
 
-  
+This frontend update ensures **seamless test management, execution tracking, and integration with Kibana & Supabase Storage.** 🚀

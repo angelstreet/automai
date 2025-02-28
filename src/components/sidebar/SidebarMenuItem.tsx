@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { forwardRef } from 'react';
 
-export const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.ComponentProps<'li'>>(
+export const SidebarMenuItem = forwardRef<HTMLLIElement, React.ComponentProps<'li'>>(
   ({ className, ...props }, ref) => (
     <li
       ref={ref}
@@ -11,3 +12,5 @@ export const SidebarMenuItem = React.forwardRef<HTMLLIElement, React.ComponentPr
     />
   ),
 );
+
+SidebarMenuItem.displayName = 'SidebarMenuItem';

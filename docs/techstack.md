@@ -1,6 +1,7 @@
 # Tech Stack & Dependencies
 
 ## 1. Frontend
+
 - **Framework**: Next.js (React) + TypeScript
 - **State Management**: Zustand / React Context
 - **Styling**: Tailwind CSS, shadcn-ui
@@ -19,78 +20,81 @@
   - Shared server architecture with web version
 
 ## 2. Backend
-- **Language & Frameworks**: 
+
+- **Language & Frameworks**:
   - Node.js (Express) for API server
   - Next.js API routes for web endpoints
   - Electron IPC for desktop features
   - FastAPI (Python) for ML tasks
-- **Database**: 
+- **Database**:
   - PostgreSQL (Supabase)
   - Prisma ORM for API Access
   - electron-store for desktop local storage
-- **SSH & Terminal**: 
+- **SSH & Terminal**:
   - ssh2 library for SSH connections
   - xterm.js for browser-based terminal
   - ws library for WebSocket connections
   - Singleton WebSocketServer pattern
   - Connection health monitoring (ping/pong)
   - Terminal session logging and monitoring
-- **Authentication**: 
+- **Authentication**:
   - NextAuth.js (JWT, OAuth via Supabase)
   - Multi-Tenant Support
   - Desktop-specific auth handling
-- **API**: 
+- **API**:
   - REST & GraphQL support
   - IPC (Inter-Process Communication) for desktop features
 - **Subscription Management**: Stripe / Paddle Integration
 - **Execution Queue**: BullMQ / RabbitMQ for test execution
 - **CI/CD**: GitHub Actions, Jenkins (Planned)
-- **Security**: 
+- **Security**:
   - Role-Based Access Control (RBAC)
   - Rate Limiting
   - Subscription-Based API Restrictions
   - Desktop-specific security measures
 
 ## 3. Storage & Integrations
-- **File Storage**: 
+
+- **File Storage**:
   - Supabase Storage / AWS S3 (Cloud storage)
   - Local filesystem (Desktop version)
   - Hybrid storage management
-- **Logging & Monitoring**: 
+- **Logging & Monitoring**:
   - Kibana & Elasticsearch (Cloud logging)
   - Local logging for desktop version
   - Console logging for development
-- **Error Tracking**: 
+- **Error Tracking**:
   - Sentry, LogRocket for web version
   - Electron error handling for desktop
-- **Version Control**: 
+- **Version Control**:
   - GitHub / GitLab integration
   - Local Git operations in desktop version
   - Test case versioning
-- **Notifications**: 
+- **Notifications**:
   - Slack, MS Teams integration
   - Desktop notifications (Electron)
-- **Testing Infrastructure**: 
+- **Testing Infrastructure**:
   - Playwright (Primary for automation)
   - Puppeteer, Cypress for E2E testing
   - Local test execution in desktop version
-- **Containerization & Deployment**: 
+- **Containerization & Deployment**:
   - Docker for web services
   - Electron-builder for desktop distribution
   - Kubernetes for cloud execution (Future)
 
 ## 4. Deployment Strategy
+
 - **Web Frontend:** Vercel (Preferred) / Netlify
 - **Desktop App:**
   - electron-builder for packaging
   - Auto-updates support
   - Platform-specific builds (Windows, macOS, Linux)
-- **Backend:** 
+- **Backend:**
   - Supabase (Preferred)
   - AWS Lambda / Firebase Functions
   - Local services for desktop version
   - Custom Next.js server for WebSocket support
-- **Database:** 
+- **Database:**
   - Supabase (PostgreSQL)
   - Prisma ORM for DB Access
   - Local storage for desktop
@@ -104,7 +108,8 @@
 - **Infrastructure as Code:** Terraform / Pulumi
 
 ## 5. Test Execution & Reporting
-- **Local Execution:** 
+
+- **Local Execution:**
   - Playwright runs on local browser
   - Desktop-integrated test runner
   - Headless or interactive mode
@@ -114,7 +119,7 @@
   - xterm.js for terminal emulation in browser
   - Command execution and session logging
   - Terminal resize support for responsive UI
-- **Cloud Execution:** 
+- **Cloud Execution:**
   - Planned execution on managed VMs
   - Parallel test execution support
 - **Test Reports:**
@@ -126,6 +131,7 @@
   - Desktop-specific report viewer
 
 ## 6. API Documentation
+
 - **Documentation Tools**: Swagger / Postman Collections
 - **API Standards**: OpenAPI 3.0 / GraphQL Schema
 - **Terminal & SSH Endpoints**:
@@ -146,22 +152,24 @@
   - `POST /api/testcases/:id/unlock`: Release lock
 
 ## 7. Development Environment
+
 - **IDE Support**: VS Code / WebStorm
 - **Debug Tools**:
   - Chrome DevTools for web
   - Electron DevTools for desktop
   - React DevTools integration
   - WebSocket inspection tools
-- **Hot Reload**: 
+- **Hot Reload**:
   - Next.js hot module replacement
   - Electron development server
-- **Cross-platform**: 
+- **Cross-platform**:
   - Web browser compatibility
   - Desktop OS support
   - Shared codebase management
 
 ## 8. WebSocket & Terminal Implementation
-- **WebSocket Server**: 
+
+- **WebSocket Server**:
   - Custom Next.js server with integrated WebSocket support
   - WebSocket server initialized at startup for immediate availability
   - Direct handling of upgrade requests in the HTTP server
@@ -187,5 +195,5 @@
   - Proper error handling for WebSocket connections
 
 ---
-This tech stack supports both web and desktop platforms, with shared core functionality and platform-specific optimizations. The WebSocket and terminal implementation provides a secure, responsive, and feature-rich remote access experience. 🚀
 
+This tech stack supports both web and desktop platforms, with shared core functionality and platform-specific optimizations. The WebSocket and terminal implementation provides a secure, responsive, and feature-rich remote access experience. 🚀

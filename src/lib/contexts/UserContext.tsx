@@ -78,7 +78,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       const userData = await response.json();
-      
+
       // Cache the user data
       if (typeof window !== 'undefined') {
         localStorage.setItem(

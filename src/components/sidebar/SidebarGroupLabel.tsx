@@ -21,3 +21,5 @@ export const SidebarGroupLabel = React.forwardRef<
     />
   );
 });
+
+SidebarGroupLabel.displayName = 'SidebarGroupLabel';

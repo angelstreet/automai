@@ -16,3 +16,5 @@ export const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProp
     );
   },
 );
+
+SidebarInset.displayName = 'SidebarInset';

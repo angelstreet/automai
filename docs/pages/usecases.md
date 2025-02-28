@@ -5,44 +5,51 @@ Apologies for the mix-up—I’ll stick with "Use Case" as the terminology, as y
 ### Design Document: Use Cases Listing Page
 
 #### Page Location
+
 - `/[locale]/[tenant]/development/usecases`
 
 #### Purpose
+
 - Display all use cases grouped by project in an accordion layout.
 - Allow users to view details, edit (redirects to edit page), or create new use cases (modal → redirect).
 - Enhance usability with search, sorting, favorites, and a detailed use case modal.
 
 #### Layout
-| **Section**         | **Description**                                                                 | **Components**                     |
-|---------------------|--------------------------------------------------------------------------------|------------------------------------|
-| **Header**          | Search bar and "New" button                                                   | `<Input>`, `<Button>` (shadcn-ui)  |
-| **Sidebar**         | Navigation to Dashboard, Development, Execution, Reports, Settings            | `<Sidebar>` (layout component)     |
-| **Main Content**    | Favorites section (if any) + Accordion of projects with use case tables       | `<Accordion>` (shadcn-ui)          |
-| **Modal (Create)**  | Form to select project and enter use case name                                | Custom modal                       |
-| **Modal (Use Case)**| Detailed view of selected use case with actions (Edit, Delete, Close)         | Custom modal                       |
+
+| **Section**          | **Description**                                                         | **Components**                    |
+| -------------------- | ----------------------------------------------------------------------- | --------------------------------- |
+| **Header**           | Search bar and "New" button                                             | `<Input>`, `<Button>` (shadcn-ui) |
+| **Sidebar**          | Navigation to Dashboard, Development, Execution, Reports, Settings      | `<Sidebar>` (layout component)    |
+| **Main Content**     | Favorites section (if any) + Accordion of projects with use case tables | `<Accordion>` (shadcn-ui)         |
+| **Modal (Create)**   | Form to select project and enter use case name                          | Custom modal                      |
+| **Modal (Use Case)** | Detailed view of selected use case with actions (Edit, Delete, Close)   | Custom modal                      |
 
 #### Accordion Structure
+
 - **Favorites Section**: Appears if use cases are favorited, showing a table of favorite use cases.
 - **Project Accordion**:
-  | **Level**          | **Description**                   | **Interactivity**                  |
+  | **Level** | **Description** | **Interactivity** |
   |--------------------|-----------------------------------|-------------------------------------|
-  | **Project Header** | Project name and use case count   | Expands/collapses accordion        |
-  | **Use Case Table** | Columns: ID, Name, Platform, Status, Modified | Sortable headers, clickable rows  |
+  | **Project Header** | Project name and use case count | Expands/collapses accordion |
+  | **Use Case Table** | Columns: ID, Name, Platform, Status, Modified | Sortable headers, clickable rows |
 
 #### Use Case Table Columns
-| **Column**       | **Description**                   | **Interactivity**                  | **Backend Mapping**          |
-|------------------|-----------------------------------|-------------------------------------|-----------------------------|
-| **ID**           | Unique use case ID (e.g., TC-1001)| Sortable                            | `id` from `TestCase`        |
-| **Name**         | Use case name with favorite star  | Sortable, shows star if favorited   | `name` from `TestCase`      |
-| **Platform**     | Icon (🌐, 📱, 💻, 👁️)            | Sortable                            | `steps.platform`            |
-| **Status**       | Badge (active, draft, archived)   | Sortable                            | `status` (add to model)     |
-| **Modified**     | Last modified date                | Sortable                            | `lastModified` (add to model) |
+
+| **Column**   | **Description**                    | **Interactivity**                 | **Backend Mapping**           |
+| ------------ | ---------------------------------- | --------------------------------- | ----------------------------- |
+| **ID**       | Unique use case ID (e.g., TC-1001) | Sortable                          | `id` from `TestCase`          |
+| **Name**     | Use case name with favorite star   | Sortable, shows star if favorited | `name` from `TestCase`        |
+| **Platform** | Icon (🌐, 📱, 💻, 👁️)              | Sortable                          | `steps.platform`              |
+| **Status**   | Badge (active, draft, archived)    | Sortable                          | `status` (add to model)       |
+| **Modified** | Last modified date                 | Sortable                          | `lastModified` (add to model) |
 
 #### Use Case Modal
+
 - **Fields**: Name, ID, Platform, Status, Created, Last Modified, Author, Tags.
 - **Actions**: Favorite toggle, Edit (redirects), Delete, Close.
 
 #### Workflow
+
 1. **User Lands on Page**:
    - Fetches projects from `/api/projects` and use cases from `/api/testcases`.
    - Displays favorites (if any) and project accordion.
@@ -64,6 +71,7 @@ Apologies for the mix-up—I’ll stick with "Use Case" as the terminology, as y
 ### Instructions for AI Agent: Use Cases Listing Page with Backend Integration
 
 #### Prerequisites
+
 - **Dependencies**:
   ```bash
   npm install @supabase/supabase-js next-auth
@@ -74,6 +82,7 @@ Apologies for the mix-up—I’ll stick with "Use Case" as the terminology, as y
 - **File Location**: `src/app/[locale]/[tenant]/development/usecases/page.tsx`.
 
 #### Step 1: Implement Component
+
 ```jsx
 "use client";
 
@@ -445,6 +454,7 @@ export default function UseCasesPage() {
 ```
 
 #### Step 2: Backend Integration Notes
+
 - **API Calls**:
   - `GET /api/projects`: Fetches all projects for the user (filtered by `ownerId` on backend).
   - `GET /api/testcases?project_id=[id]`: Fetches use cases per project.
@@ -471,38 +481,42 @@ export default function UseCasesPage() {
 - **Search**: Client-side filtering; extend to server-side later (e.g., `GET /api/testcases?search=[query]`).
 
 #### Step 3: Styling
+
 - Uses Tailwind CSS: `bg-gray-50`, `rounded-lg`, `shadow`, `grid grid-cols-12` for layout consistency.
 
 #### Step 4: Testing
-- Add E2E test in `tests/e2e/usecases.spec.ts`:
-```ts
-import { test, expect } from "@playwright/test";
 
-test("Use Cases page lists, creates, and deletes", async ({ page }) => {
-  await page.goto("/en/tenant/development/usecases");
-  await expect(page.locator("text=Project Alpha")).toBeVisible();
-  await page.click("text=Project Alpha");
-  await expect(page.locator("text=Login Flow")).toBeVisible();
+- Add E2E test in `tests/e2e/usecases.spec.ts`:
+
+```ts
+import { test, expect } from '@playwright/test';
+
+test('Use Cases page lists, creates, and deletes', async ({ page }) => {
+  await page.goto('/en/tenant/development/usecases');
+  await expect(page.locator('text=Project Alpha')).toBeVisible();
+  await page.click('text=Project Alpha');
+  await expect(page.locator('text=Login Flow')).toBeVisible();
 
   // Create
-  await page.click("text=New");
-  await page.selectOption("select", "1");
-  await page.fill('input[placeholder="Use Case Name"]', "New Test");
-  await page.click("text=Create");
-  await expect(page.url()).toContain("/usecases/");
+  await page.click('text=New');
+  await page.selectOption('select', '1');
+  await page.fill('input[placeholder="Use Case Name"]', 'New Test');
+  await page.click('text=Create');
+  await expect(page.url()).toContain('/usecases/');
 
   // Delete
-  await page.goto("/en/tenant/development/usecases");
-  await page.click("text=Project Alpha");
-  await page.click("text=Login Flow");
-  await page.click("text=Delete");
-  await expect(page.locator("text=Login Flow")).not.toBeVisible();
+  await page.goto('/en/tenant/development/usecases');
+  await page.click('text=Project Alpha');
+  await page.click('text=Login Flow');
+  await page.click('text=Delete');
+  await expect(page.locator('text=Login Flow')).not.toBeVisible();
 });
 ```
 
 ---
 
 ### Notes
+
 - **Terminology**: Switched to "Use Case" throughout as requested.
 - **Scope**: Limited to the listing page only—edit page will come next once you’re ready.
 - **Backend**: Fully integrated with your existing APIs, with schema extensions for new fields (`lastModified`, etc.).

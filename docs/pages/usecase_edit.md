@@ -1,24 +1,28 @@
 ### Design Document: Use Case Edit Page
 
 #### Page Location
+
 - `/[locale]/[tenant]/development/projects/[projectId]/usecases/[useCaseId]`
 
 #### Purpose
+
 - Allow users to edit an existing use case or create a new one.
 - Provide an IDE-like script editing experience with a preview option and version history.
 - Save changes to the backend and sync with Git.
 
 #### Layout
-| **Section**         | **Description**                                                                 | **Components**                     |
-|---------------------|--------------------------------------------------------------------------------|------------------------------------|
-| **Header**          | Use case name, platform badge, "Save" and "Run" buttons                       | `<Button>` (shadcn-ui)             |
-| **Sidebar**         | Navigation to Dashboard, Development, Execution, Reports, Settings            | `<Sidebar>` (layout component)     |
-| **Main Content**    | Tabs for Editor and Preview, collapsible Version History                     | `<Tabs>`, `<Card>` (shadcn-ui)     |
-| **Editor Tab**      | Script editor with sample code                                                | `<Card>` with `<pre>` (placeholder) |
-| **Preview Tab**     | Displays execution preview (Web only for now)                                 | `<Card>`                           |
-| **Version History** | Collapsible list of Git commits                                               | Custom toggle with `<Card>`        |
+
+| **Section**         | **Description**                                                    | **Components**                      |
+| ------------------- | ------------------------------------------------------------------ | ----------------------------------- |
+| **Header**          | Use case name, platform badge, "Save" and "Run" buttons            | `<Button>` (shadcn-ui)              |
+| **Sidebar**         | Navigation to Dashboard, Development, Execution, Reports, Settings | `<Sidebar>` (layout component)      |
+| **Main Content**    | Tabs for Editor and Preview, collapsible Version History           | `<Tabs>`, `<Card>` (shadcn-ui)      |
+| **Editor Tab**      | Script editor with sample code                                     | `<Card>` with `<pre>` (placeholder) |
+| **Preview Tab**     | Displays execution preview (Web only for now)                      | `<Card>`                            |
+| **Version History** | Collapsible list of Git commits                                    | Custom toggle with `<Card>`         |
 
 #### Workflow
+
 1. **User Lands on Page**:
    - Fetches use case data from `/api/testcases/[useCaseId]` and project name from `/api/projects/[projectId]`.
    - Loads script from `steps.code` into the editor.
@@ -32,6 +36,7 @@
    - Shows Git commit history (mocked for now; fetch from backend later).
 
 #### Notes
+
 - Your artifact uses a `<pre>` tag for the editor—I’ll assume you want to replace this with Monaco Editor for a true IDE experience, as discussed earlier.
 - No metadata section (e.g., platform selection) is present in your artifact; I’ll keep it minimal as per your design, but we can add it back if needed.
 
@@ -40,6 +45,7 @@
 ### Instructions for AI Agent: Use Case Edit Page with Backend Integration
 
 #### Prerequisites
+
 - **Dependencies**:
   ```bash
   npm install @monaco-editor/react @supabase/supabase-js next-auth
@@ -49,6 +55,7 @@
 - **File Location**: `src/app/[locale]/[tenant]/development/projects/[projectId]/usecases/[useCaseId]/page.tsx`.
 
 #### Step 1: Implement Component
+
 ```jsx
 "use client";
 
@@ -250,6 +257,7 @@ export default function UseCaseEditPage() {
 ```
 
 #### Step 2: Backend Integration Notes
+
 - **API Calls**:
   - `GET /api/testcases/[useCaseId]`: Fetches use case details (`id`, `name`, `steps`, etc.).
   - `GET /api/projects/[projectId]`: Fetches project name.
@@ -271,26 +279,30 @@ export default function UseCaseEditPage() {
 - **Preview**: Assumes `/api/execute` returns a URL (e.g., `/test-results/preview.html`) for Web scripts.
 
 #### Step 3: Styling
+
 - Uses Tailwind CSS: `bg-gray-50`, `p-4`, `h-[calc(100vh-8rem)]` for full height, `bg-gray-100` for badge.
 
 #### Step 4: Testing
-- E2E test in `tests/e2e/usecase-edit.spec.ts`:
-```ts
-import { test, expect } from "@playwright/test";
 
-test("Use Case Edit page edits and runs script", async ({ page }) => {
-  await page.goto("/en/tenant/development/projects/1/usecases/1");
-  await expect(page.locator("h1")).toContainText("Login Flow");
-  await page.locator(".monaco-editor").fill("await page.goto('https://test.com');");
-  await page.click("text=Save");
-  await page.click("text=Run");
-  await expect(page.locator("iframe")).toBeVisible();
+- E2E test in `tests/e2e/usecase-edit.spec.ts`:
+
+```ts
+import { test, expect } from '@playwright/test';
+
+test('Use Case Edit page edits and runs script', async ({ page }) => {
+  await page.goto('/en/tenant/development/projects/1/usecases/1');
+  await expect(page.locator('h1')).toContainText('Login Flow');
+  await page.locator('.monaco-editor').fill("await page.goto('https://test.com');");
+  await page.click('text=Save');
+  await page.click('text=Run');
+  await expect(page.locator('iframe')).toBeVisible();
 });
 ```
 
 ---
 
 ### Notes
+
 - **Editor Upgrade**: Replaced `<pre>` with `monaco-editor/react` for a real IDE experience, as your artifact implied a code editor.
 - **Platform**: Hardcoded in the badge based on `steps.platform`; could add a dropdown if metadata editing is desired.
 - **Version History**: Mocked commits for now—extend with Git API data later (e.g., fetch from backend).

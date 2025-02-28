@@ -25,4 +25,4 @@ describe('Automai Homepage', () => {
     const content = await page.content();
     expect(content).toContain('Automai');
   });
-}); 
+});

@@ -16,3 +16,5 @@ export const SidebarContent = React.forwardRef<HTMLDivElement, React.ComponentPr
     );
   },
 );
+
+SidebarContent.displayName = 'SidebarContent';

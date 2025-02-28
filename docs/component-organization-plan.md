@@ -44,11 +44,13 @@ src/
 ### Phase 1: Assessment and Preparation
 
 1. **Audit all components**:
+
    - Identify all Shadcn UI components in `src/components/ui/`
    - Identify custom components that should be moved or refactored
    - Determine which components are page-specific vs. shared
 
 2. **Create new directory structure**:
+
    - Create `src/components/common/` for shared custom components
    - Organize feature-specific directories
 
@@ -59,10 +61,12 @@ src/
 ### Phase 2: Component Migration
 
 1. **Handle the sidebar component**:
+
    - If it's a custom component: Move to `src/components/layout/Sidebar/`
    - If it's a Shadcn UI component: Keep in `ui/` and create a custom extension if needed
 
 2. **Refactor large components**:
+
    - Start with `pin-input.tsx` (428 lines)
    - Move to appropriate directory structure
    - Break down into smaller components
@@ -74,6 +78,7 @@ src/
 ### Phase 3: Import Updates and Testing
 
 1. **Update imports**:
+
    - Fix all import statements across the codebase
    - Ensure backward compatibility where needed
 
@@ -85,11 +90,13 @@ src/
 ## Implementation Guidelines
 
 1. **One component at a time**:
+
    - Commit before starting each component refactor
    - Complete one component before moving to the next
    - Commit after each component is refactored
 
 2. **Verification**:
+
    - Check the terminal for errors after each refactor
    - Verify the application reloads without errors
    - Check for console errors
@@ -103,4 +110,4 @@ src/
 1. Get approval for this plan
 2. Begin with Phase 1: Assessment and Preparation
 3. Proceed with Phase 2 for each component, one at a time
-4. Complete Phase 3 for each component before moving to the next 
+4. Complete Phase 3 for each component before moving to the next

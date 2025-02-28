@@ -3,11 +3,13 @@
 ## Authentication Flow
 
 1. **Initial Login**
+
    - User logs in via email/password or OAuth (Google/GitHub)
    - Backend validates credentials and checks tenant information
    - JWT token is generated containing user info, tenant, and plan
 
 2. **Plan Determination**
+
    ```typescript
    if (no tenant) {
      plan = 'TRIAL'  // Default for new users
@@ -27,11 +29,13 @@
 ## Plan Types
 
 1. **TRIAL**
+
    - Default plan for new users
    - No tenant assigned
    - Redirects to `/trial/dashboard`
 
 2. **PRO**
+
    - Users who subscribed to pro plan
    - Has tenant with name 'pro'
    - Redirects to `/pro/dashboard`
@@ -82,4 +86,4 @@
 1. Enterprise customers get custom tenant name
 2. Admin creates tenant with company name
 3. Users are assigned to tenant
-4. Plan is automatically set to ENTERPRISE based on custom tenant name 
+4. Plan is automatically set to ENTERPRISE based on custom tenant name

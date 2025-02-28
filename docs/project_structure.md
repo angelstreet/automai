@@ -53,36 +53,43 @@ automai/
 ## Key Directories
 
 ### Frontend (`src/app/`)
+
 - Next.js 13+ app directory structure
 - Internationalized routes with `[locale]`
 - Tenant-specific routes with `[tenant]`
 - API routes using Next.js Route Handlers
 
 ### Service Layer (`src/lib/services/`)
+
 - Separation of data access logic from API routes
 - Reusable service functions for database operations
 - Organized by domain (hosts, users, etc.)
 
 ### Database Access (`src/lib/prisma.ts`)
+
 - Singleton Prisma client to prevent connection pool issues
 - Centralized database access point
 
 ### Components (`src/components/`)
+
 - Reusable UI components
 - Terminal virtualization components
 - Layout components for different sections
 
 ### Internationalization
+
 - Messages in `src/i18n/messages/`
 - Supported locales: English (en) and French (fr)
 - Route-based language switching
 
 ### Configuration
+
 - Environment variables in root `.env.*` files
 - Database schema in `prisma/schema.prisma`
 - TypeScript and Next.js configurations
 
 ## Main Features
+
 - Multi-tenant architecture
 - SSH and terminal connections
 - Host management system
@@ -90,4 +97,4 @@ automai/
 - Authentication system
 - Role-based access control
 - Database management with Prisma
-- Connection logging and monitoring 
+- Connection logging and monitoring

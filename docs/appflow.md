@@ -1,11 +1,13 @@
 # AppFlow: User Journey (Updated for Multi-Platform Use Cases & Test Execution)
 
 ## 1. Landing Page
+
 - User visits the **landing page**.
 - Can view **product overview, pricing, and features**.
 - Option to **sign up or log in**.
 
 ## 2. Authentication Flow
+
 - User clicks **Sign Up/Login**.
 - Enters **email/password or uses OAuth** (Google/GitHub).
 - Upon successful authentication:
@@ -14,6 +16,7 @@
   - ENTERPRISE users are redirected to `/en/{tenantId}/dashboard`
 
 ## 3. Dashboard Navigation
+
 - User lands on the **tenant-specific dashboard**.
 - URL structure follows: `/{locale}/{tenantId}/dashboard` where:
   - `tenantId` is "trial" for TRIAL users
@@ -28,20 +31,25 @@
   - **Settings**
 
 ## 4. Multi-Tenant Workspace Selection
+
 - If user belongs to **multiple tenants**, they must select a **workspace**.
 - Each tenant has **isolated data, users, and configurations**.
 - Workspace switcher is available in the **header**.
 - Example URL structure: `http://localhost:3000/en/tenant1/dashboard`
 
 ## 5. Test Development (Project & Use Case Creation)
+
 ### **Example Flow: Creating a Project & Use Case**
+
 #### **Step 1: Create a Project**
+
 - User navigates to **Test Development** → `Projects`.
 - Clicks **Create Project**.
 - Enters project details (Name, Description).
 - Saves and sees the project listed.
 
 #### **Step 2: Create a Use Case**
+
 - Inside a project, user clicks **Add Use Case**.
 - Defines:
   - **Use Case Name**
@@ -53,8 +61,11 @@
 - **Icon Differentiation:** Each use case is visually categorized by platform (Web 🌐, Mobile 📱, Desktop 💻, Vision AI 👁️).
 
 ## 6. Execution & Scheduling
+
 ### **Example Flow: Running a Test (Manual & Deployed)**
+
 #### **Step 1: Run Test Manually (Local Execution)**
+
 - User navigates to **Execution → Deployment Table**.
 - Selects a use case and clicks **Run Locally**.
 - **Playwright (Web), Appium (Mobile), or Pywinauto (Desktop) executes the test.**
@@ -65,6 +76,7 @@
 - User can open `report.html` from **Kibana or in-app Execution UI**.
 
 #### **Step 2: Run Test on Deployed VM (Cloud Execution - Planned)**
+
 - User selects **Deploy Test** instead of manual execution.
 - System provisions a **VM/Dockerized instance** for execution.
 - **Playwright, Appium, or Pywinauto runs in headless mode on the remote VM.**
@@ -73,7 +85,9 @@
 - User accesses `report.html` via execution table.
 
 ## 7. Reports & Analytics
+
 ### **Example Flow: Viewing Test Execution Reports**
+
 - User navigates to **Reports → Results**.
 - **Filters executions by Project, Use Case, Platform, Date, Status.**
 - Sees:
@@ -84,19 +98,23 @@
 - **Exports execution summary to CSV/PDF.**
 
 ## 8. Team & Collaboration
+
 - Admin manages **team roles & permissions**.
 - Assigns **developers/testers/viewers**.
 - Users receive **in-app and email notifications**.
 - Collaboration tools available: **comments, task assignments**.
 
 ## 9. Settings & Integrations
+
 - User accesses **Settings**.
 - Configures **API integrations** (GitHub, Slack, CI/CD tools).
 - Updates **profile & preferences**.
 - Manages **billing & subscription** (if applicable).
 
 ## 10. Subscription Plans & Limitations
+
 ### 10.1 Trial Plan
+
 - **Users:** Individual developers exploring the platform.
 - **URL Structure:** `/{locale}/trial/*`
 - **Limitations:**
@@ -108,6 +126,7 @@
 - **Upgrade Path:** Redirect to `/pricing` when limits are reached.
 
 ### 10.2 Pro Plan
+
 - **Users:** Individual developers who need full platform access.
 - **URL Structure:** `/{locale}/pro/*`
 - **Features:**
@@ -118,6 +137,7 @@
 - **Upgrade Path:** Users can upgrade from trial or sign up directly.
 
 ### 10.3 Enterprise Plan
+
 - **Users:** Companies needing team collaboration.
 - **URL Structure:** `/{locale}/{tenantId}/*`
 - **Features:**
@@ -128,6 +148,7 @@
 - **Signup:** Users can upgrade from Pro or sign up directly.
 
 ### 10.4 Billing & Payment Integration
+
 - **Stripe / Paddle Integration for Payments**
 - **API Endpoints for Subscription Management:**
   - `POST /api/billing/checkout` → Initiates payment.
@@ -135,6 +156,7 @@
   - `POST /api/tenants` → Auto-create tenant on Pro/Enterprise signup.
 
 ## 11. Navigation Logic
+
 - **Tenant-based routing:** All routes include tenant identifier:
   - TRIAL users: `/trial`
   - PRO users: `/pro`
@@ -144,10 +166,10 @@
 - **Feature flags:** Control access to features based on user's plan.
 
 ## 12. Logout
+
 - User logs out from the app.
 - Redirected back to **landing page**.
 
 ---
 
 This document provides a **structured user journey**, integrating **multi-platform test case creation, execution, and reporting via `report.html`, local & cloud execution, Kibana insights, and Supabase storage.** 🚀
-

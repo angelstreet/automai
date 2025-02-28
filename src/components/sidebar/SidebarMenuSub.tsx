@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import { forwardRef } from 'react';
 
-export const SidebarMenuSub = React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
+export const SidebarMenuSub = forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
@@ -11,3 +12,5 @@ export const SidebarMenuSub = React.forwardRef<HTMLDivElement, React.ComponentPr
     />
   ),
 );
+
+SidebarMenuSub.displayName = 'SidebarMenuSub';

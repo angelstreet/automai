@@ -1,15 +1,19 @@
 # Automai Frontend Implementation Guide
 
 ## Status Indicators
+
 🔴 Not Started | 🟡 In Progress | 🟢 Completed
 
 ## 1. Project Setup 🟢
+
 1. Initialize Next.js project ✅
+
    ```bash
    npx create-next-app@latest . --typescript --tailwind --app --src --turbo
    ```
 
 2. Install core dependencies ✅
+
    ```bash
    # UI Components
    npm install @radix-ui/react-slot @radix-ui/react-navigation-menu @radix-ui/react-dropdown-menu @radix-ui/react-dialog lucide-react clsx tailwind-merge
@@ -22,10 +26,13 @@
    ```
 
 3. Setup shadcn-ui ✅
+
    ```bash
    npx shadcn-ui@latest init
    ```
+
    Configuration:
+
    - TypeScript: Yes
    - Style: Default
    - Base color: Slate
@@ -43,6 +50,7 @@
 ## 2. Project Structure 🟢
 
 ### Directory Structure
+
 ```
 src/
 ├── app/
@@ -71,6 +79,7 @@ src/
 ## 3. Core Components Implementation 🟢
 
 ### Sidebar Implementation ✅
+
 - Collapsible sidebar with toggle
 - Role-based menu visibility
 - Click-based submenu expansion
@@ -97,6 +106,7 @@ interface SubMenuItem {
 ```
 
 ### Menu Structure ✅
+
 ```typescript
 const menuItems = [
   {
@@ -113,19 +123,21 @@ const menuItems = [
       { icon: FileCode, label: 'Project', href: '/development/project' },
       { icon: TestTube, label: 'Use Case', href: '/development/use-case' },
       { icon: Flag, label: 'Campaign', href: '/development/campaign' },
-    ]
+    ],
   },
   // ... other menu items
 ];
 ```
 
 ### Role Switcher ✅
+
 - Role selection dropdown
 - Role-based menu filtering
 - Event-based role updates
 - Persistent role state
 
 ### Workspace Layout ✅
+
 - Responsive layout structure
 - Sidebar integration
 - Header with tenant name
@@ -135,21 +147,23 @@ const menuItems = [
 ## 4. Internationalization Setup 🟢
 
 1. Middleware Configuration ✅
+
 ```typescript
 // src/middleware.ts
 import createMiddleware from 'next-intl/middleware';
 
 export default createMiddleware({
   locales: ['en', 'fr'],
-  defaultLocale: 'en'
+  defaultLocale: 'en',
 });
 
 export const config = {
-  matcher: ['/((?!api|_next|.*\\..*).*)']
+  matcher: ['/((?!api|_next|.*\\..*).*)'],
 };
 ```
 
 2. Next.js Configuration ✅
+
 ```javascript
 // next.config.js
 const withNextIntl = require('next-intl/plugin')();
@@ -162,6 +176,7 @@ module.exports = withNextIntl({
 ## 5. Theme Implementation 🟢
 
 1. Theme Configuration ✅
+
 ```typescript
 // tailwind.config.ts
 module.exports = {
@@ -169,12 +184,13 @@ module.exports = {
   theme: {
     extend: {
       // custom theme extensions
-    }
-  }
-}
+    },
+  },
+};
 ```
 
 2. Theme Components ✅
+
 - Theme toggle button
 - Dark mode support
 - System theme detection
@@ -183,6 +199,7 @@ module.exports = {
 ## 6. Authentication Pages 🟢
 
 ### Login Page ✅
+
 - Email/password inputs
 - Remember me option
 - Error handling
@@ -190,6 +207,7 @@ module.exports = {
 - i18n support
 
 ### Signup Page ✅
+
 - Registration form
 - Password confirmation
 - Terms acceptance
@@ -199,18 +217,20 @@ module.exports = {
 ## 7. Testing Setup 🟢
 
 1. Jest Configuration ✅
+
 ```javascript
 // jest.config.js
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest'
-  }
+    '^.+\\.(ts|tsx)$': 'ts-jest',
+  },
 };
 ```
 
 2. E2E Testing ✅
+
 - Puppeteer setup
 - Basic test examples
 - Page load tests
@@ -219,6 +239,7 @@ module.exports = {
 ## Current Status
 
 ### Completed Features 🟢
+
 - Project structure and setup
 - Core UI components
 - Sidebar implementation
@@ -229,6 +250,7 @@ module.exports = {
 - Testing framework
 
 ### Next Steps 🎯
+
 1. Implement remaining workspace pages
 2. Add more comprehensive tests
 3. Enhance error handling
@@ -240,21 +262,25 @@ module.exports = {
 ## Development Guidelines
 
 1. Component Structure
+
    - Use TypeScript for all components
    - Implement proper prop types
    - Add JSDoc comments for complex functions
 
 2. Styling
+
    - Use Tailwind CSS classes
    - Follow shadcn/ui patterns
    - Maintain dark mode support
 
 3. State Management
+
    - Use React hooks for local state
    - Implement context where needed
    - Keep state close to where it's used
 
 4. Testing
+
    - Write unit tests for utilities
    - Add component tests
    - Implement E2E tests for critical paths
@@ -262,4 +288,4 @@ module.exports = {
 5. Code Organization
    - Group related components
    - Use barrel exports
-   - Maintain clear file structure 
+   - Maintain clear file structure

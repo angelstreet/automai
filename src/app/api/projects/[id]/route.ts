@@ -9,17 +9,11 @@ const ProjectSchema = z.object({
 });
 
 // GET /api/projects/[id]
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const project = await prisma.project.findUnique({
@@ -37,18 +31,12 @@ export async function GET(
     });
 
     if (!project) {
-      return NextResponse.json(
-        { success: false, message: 'Project not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, message: 'Project not found' }, { status: 404 });
     }
 
     // Check if user has access to this project
     if (project.ownerId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, message: 'Forbidden' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
     return NextResponse.json({
@@ -60,23 +48,17 @@ export async function GET(
     console.error('Error fetching project:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to fetch project' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 // PATCH /api/projects/[id]
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -88,17 +70,11 @@ export async function PATCH(
     });
 
     if (!existingProject) {
-      return NextResponse.json(
-        { success: false, message: 'Project not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, message: 'Project not found' }, { status: 404 });
     }
 
     if (existingProject.ownerId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, message: 'Forbidden' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
     const project = await prisma.project.update({
@@ -115,30 +91,24 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, message: 'Invalid request data', errors: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     console.error('Error updating project:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to update project' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 // DELETE /api/projects/[id]
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if project exists and user has access
@@ -147,17 +117,11 @@ export async function DELETE(
     });
 
     if (!existingProject) {
-      return NextResponse.json(
-        { success: false, message: 'Project not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, message: 'Project not found' }, { status: 404 });
     }
 
     if (existingProject.ownerId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, message: 'Forbidden' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
     await prisma.project.delete({
@@ -172,7 +136,7 @@ export async function DELETE(
     console.error('Error deleting project:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to delete project' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

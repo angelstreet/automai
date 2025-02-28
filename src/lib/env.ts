@@ -5,26 +5,26 @@ const envSchema = z.object({
   // Server
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.string().transform(Number).default('3000'),
-  
+
   // Database
   DATABASE_URL: z.string().url(),
-  
+
   // Authentication
   JWT_SECRET: z.string().min(1),
   NEXTAUTH_URL: z.string().url(),
   NEXTAUTH_SECRET: z.string(),
   NEXT_PUBLIC_APP_URL: z.string().url(),
-  
+
   // OAuth - Google
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string(),
   GOOGLE_CALLBACK_URL: z.string().url(),
-  
+
   // OAuth - GitHub
   GITHUB_CLIENT_ID: z.string(),
   GITHUB_CLIENT_SECRET: z.string(),
   GITHUB_CALLBACK_URL: z.string().url(),
-  
+
   // Elasticsearch
   ELASTICSEARCH_URL: z.string().url().optional(),
 });

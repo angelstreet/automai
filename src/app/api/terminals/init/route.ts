@@ -11,10 +11,7 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const session = await getServerSession();
     if (!session) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     // Parse request body
@@ -24,7 +21,7 @@ export async function POST(request: NextRequest) {
     if (!connectionId) {
       return NextResponse.json(
         { success: false, message: 'Connection ID is required' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -36,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (!connection) {
       return NextResponse.json(
         { success: false, message: 'Connection not found' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -50,12 +47,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error initializing WebSocket server:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: 'Failed to initialize WebSocket server',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

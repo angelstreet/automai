@@ -4,7 +4,13 @@ import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/shadcn/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/shadcn/card';
 import { Overview } from '@/components/dashboard/overview';
 import { RecentSales } from '@/components/dashboard/recent-sales';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/shadcn/avatar';

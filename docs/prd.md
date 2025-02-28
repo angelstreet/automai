@@ -1,11 +1,13 @@
 # Product Requirements Document (PRD)
 
 ## 1. Overview
+
 **Project Name:** Automai SaaS Platform  
 **Purpose:** A multi-tenant SaaS platform for test automation across web, desktop, and mobile environments.  
-**Primary Users:** Developers, Testers, QA Managers, Product Managers  
+**Primary Users:** Developers, Testers, QA Managers, Product Managers
 
 ## 2. Core Features
+
 - **Test Script Development**: Web-based script editor with Git-based versioning.
 - **Test Execution & Deployment**: Manual & scheduled test execution with CI/CD integration.
 - **Device & Environment Control**: Manage cloud and physical test environments.
@@ -18,6 +20,7 @@
 - **Vision AI Integration**: Omniparser for UI detection-based automation.
 
 ## 3. User Flow
+
 1. **Login/Signup** → User registers or logs in.
 2. **Dashboard** → Overview of test execution and project status.
 3. **Test Development** → Users create/edit test scripts (Playwright, Appium, Pywinauto, Vision AI).
@@ -27,6 +30,7 @@
 7. **Export & IDE Compatibility** → Users can export test cases in script format (Python/JS) to run externally.
 
 ## 4. Tech Stack & APIs
+
 - **Frontend:** Next.js, TypeScript, Tailwind CSS, Zustand.
 - **Backend:** Node.js, FastAPI, PostgreSQL, Supabase, Prisma.
 - **Auth:** NextAuth.js (JWT + OAuth support).
@@ -35,7 +39,9 @@
 - **Vision AI:** Omniparser for visual UI automation.
 
 ## 5. Scope Definition
+
 ### In-Scope
+
 ✅ Multi-Tenant SaaS with role-based access  
 ✅ Web-based script development and execution  
 ✅ CI/CD and API integrations  
@@ -45,8 +51,9 @@
 ✅ Multi-platform automation (Web, Mobile, Desktop)  
 ✅ Unified storage for test cases with icon-based differentiation  
 ✅ Exportable test scripts for external IDE execution  
-✅ AI-driven Vision-based UI automation  
+✅ AI-driven Vision-based UI automation
 
 ### Out-of-Scope
+
 ❌ Native Mobile App Development  
-❌ Full AI-driven test generation (Future Enhancement)  
+❌ Full AI-driven test generation (Future Enhancement)

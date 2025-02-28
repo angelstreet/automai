@@ -9,7 +9,7 @@ import { logger } from './logger';
 export async function getAuthOptions(): Promise<NextAuthOptions> {
   // Dynamically import the provider
   const CredentialsProvider = (await import('next-auth/providers/credentials')).default;
-  
+
   return {
     session: {
       strategy: 'jwt',

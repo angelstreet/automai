@@ -2,18 +2,18 @@
 
 /**
  * Refactor Analyzer Script
- * 
+ *
  * This script analyzes files for refactoring needs:
  * 1. Naming convention issues
  * 2. Location/organization issues
  * 3. File size issues (> 300 lines)
- * 
+ *
  * Usage:
  *   node scripts/refactor/refactor-analyzer.js [--input=<file>] [--check=<checks>]
- * 
+ *
  * Input:
  *   --input=<file>   : JSON file with files to analyze (default: scripts/refactor/scanner-result.json)
- * 
+ *
  * Checks:
  *   --check=all      : Check naming, location, and size issues (default)
  *   --check=naming   : Only check naming issues
@@ -29,7 +29,7 @@ const args = process.argv.slice(2);
 let inputFile = 'scripts/refactor/scanner-result.json';
 let checks = 'all';
 
-args.forEach(arg => {
+args.forEach((arg) => {
   if (arg.startsWith('--input=')) {
     inputFile = arg.split('=')[1];
   } else if (arg.startsWith('--check=')) {
@@ -76,15 +76,13 @@ const LOCATION_PATTERNS = {
     /^src\/components\/profile\//,
     /^src\/components\/settings\//,
     /^src\/components\/dashboard\//,
-    /^src\/components\/icons\//
+    /^src\/components\/icons\//,
   ],
-  shadcnComponent: [
-    /^src\/components\/ui\//
-  ],
+  shadcnComponent: [/^src\/components\/ui\//],
   hook: [
     /^src\/hooks\//,
     /^src\/lib\/hooks\//,
-    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/hooks\//
+    /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/hooks\//,
   ],
   util: [
     /^src\/utils\//,
@@ -92,58 +90,48 @@ const LOCATION_PATTERNS = {
     /^src\/lib\//,
     /^src\/app\/\[locale\]\/\[tenant\]\/[a-z]+\/utils\//,
     /^src\/lib\/services\//,
-    /^src\/lib\/contexts\//
+    /^src\/lib\/contexts\//,
   ],
-  constant: [
-    /^src\/constants\//,
-    /^src\/lib\/constants\//,
-    /^src\/config\//
-  ],
-  type: [
-    /^src\/types\//,
-    /^src\/lib\/types\//,
-    /^src\/interfaces\//,
-    /^src\/context\//
-  ],
+  constant: [/^src\/constants\//, /^src\/lib\/constants\//, /^src\/config\//],
+  type: [/^src\/types\//, /^src\/lib\/types\//, /^src\/interfaces\//, /^src\/context\//],
   page: [
     /^src\/pages\/.*\.(ts|tsx)$/,
     /^src\/app\/\[locale\]\/page\.(ts|tsx)$/,
     /^src\/app\/\[locale\]\/\[tenant\]\/page\.(ts|tsx)$/,
     /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/page\.(ts|tsx)$/,
     /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/[a-z-]+\/page\.(ts|tsx)$/,
-    /^src\/app\/.*\/page\.(ts|tsx)$/
+    /^src\/app\/.*\/page\.(ts|tsx)$/,
   ],
   dynamicRoute: [
     /^src\/pages\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
     /^src\/app\/\[locale\]\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
     /^src\/app\/\[locale\]\/\[tenant\]\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
     /^src\/app\/\[locale\]\/\[tenant\]\/[a-z-]+\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
-    /^src\/app\/.*\/\[([a-z0-9]+-)*[a-z0-9]+\]\//
+    /^src\/app\/.*\/\[([a-z0-9]+-)*[a-z0-9]+\]\//,
   ],
-  api: [
-    /^src\/app\/api\//,
-    /^src\/server\/api\//
-  ],
-  server: [
-    /^src\/server\//
-  ]
+  api: [/^src\/app\/api\//, /^src\/server\/api\//],
+  server: [/^src\/server\//],
 };
 
 // Breakdown suggestions based on file type
 const BREAKDOWN_SUGGESTIONS = {
-  component: "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'.",
+  component:
+    "Create a directory with the component name, use index.tsx as the main component, and extract child components into the same directory. See 'Refactoring Guidelines: Components'.",
   page: "Create a _components directory for page-specific components, extract sections into separate components, and move data fetching to actions.ts or api.ts. See 'Refactoring Guidelines: Pages'.",
-  dynamicRoute: "Create a _components directory for route-specific components, extract sections into separate components, and move data fetching to actions.ts or api.ts. See 'Refactoring Guidelines: Pages'.",
+  dynamicRoute:
+    "Create a _components directory for route-specific components, extract sections into separate components, and move data fetching to actions.ts or api.ts. See 'Refactoring Guidelines: Pages'.",
   util: "Group related functions by functionality into separate files and create an index.ts to re-export them. See 'Refactoring Guidelines: Utility Functions'.",
   hook: "Split by functionality into separate hooks following use[Feature][Action].ts pattern and organize internals (state, derived state, handlers, effects). See 'Refactoring Guidelines: Hooks'.",
-  constant: "Group related constants in separate files by domain and use index.ts to re-export all constants. See 'Refactoring Guidelines: Constants'.",
+  constant:
+    "Group related constants in separate files by domain and use index.ts to re-export all constants. See 'Refactoring Guidelines: Constants'.",
   type: "Group related types in separate files by domain and use index.ts to re-export all types. See 'Refactoring Guidelines: Types'.",
-  default: "Review the file's purpose and split based on logical concerns. See 'Refactoring Guidelines' for specific patterns."
+  default:
+    "Review the file's purpose and split based on logical concerns. See 'Refactoring Guidelines' for specific patterns.",
 };
 
 // Check if a file is exempted from the line limit
 function isExempted(filePath, exemptedPatterns) {
-  return exemptedPatterns.some(pattern => {
+  return exemptedPatterns.some((pattern) => {
     // Convert string representation back to RegExp
     if (typeof pattern === 'string') {
       const match = pattern.match(/^\/(.*)\/([gimuy]*)$/);
@@ -194,46 +182,66 @@ function isDynamicRoute(fileName) {
 
 function isReactComponent(filePath, content) {
   if (filePath.includes('/components/') || filePath.includes('/_components/')) {
-    return content.includes('import React') || 
-           content.includes('from "react"') || 
-           content.includes("from 'react'") ||
-           (content.includes('<') && content.includes('/>')) ||
-           (content.includes('export') && 
-            (content.includes('function') || content.includes('const') || content.includes('class')) && 
-            content.includes('return') && 
-            (content.includes('<') || content.includes('null')));
+    return (
+      content.includes('import React') ||
+      content.includes('from "react"') ||
+      content.includes("from 'react'") ||
+      (content.includes('<') && content.includes('/>')) ||
+      (content.includes('export') &&
+        (content.includes('function') || content.includes('const') || content.includes('class')) &&
+        content.includes('return') &&
+        (content.includes('<') || content.includes('null')))
+    );
   }
   return false;
 }
 
 function isHook(fileName, filePath, content) {
-  return (fileName.startsWith('use') || filePath.includes('/hooks/')) && 
-         (content.includes('useState') || content.includes('useEffect') || 
-          content.includes('useRef') || content.includes('useCallback'));
+  return (
+    (fileName.startsWith('use') || filePath.includes('/hooks/')) &&
+    (content.includes('useState') ||
+      content.includes('useEffect') ||
+      content.includes('useRef') ||
+      content.includes('useCallback'))
+  );
 }
 
 function isContextFile(filePath, fileName) {
-  return filePath.includes('/context/') || filePath.includes('/contexts/') || 
-         fileName.toLowerCase().includes('context') || fileName.toLowerCase().includes('provider');
+  return (
+    filePath.includes('/context/') ||
+    filePath.includes('/contexts/') ||
+    fileName.toLowerCase().includes('context') ||
+    fileName.toLowerCase().includes('provider')
+  );
 }
 
 function isUtilityFile(filePath, content) {
-  return (filePath.includes('/utils/') || filePath.includes('/lib/')) && 
-         content.includes('export') && content.includes('function');
+  return (
+    (filePath.includes('/utils/') || filePath.includes('/lib/')) &&
+    content.includes('export') &&
+    content.includes('function')
+  );
 }
 
 function isConstantsFile(filePath, content) {
-  return filePath.includes('/constants/') || filePath.includes('/config/') || 
-         (content.includes('export const') && 
-          !content.includes('return') && !content.includes('function'));
+  return (
+    filePath.includes('/constants/') ||
+    filePath.includes('/config/') ||
+    (content.includes('export const') &&
+      !content.includes('return') &&
+      !content.includes('function'))
+  );
 }
 
 function isTypesFile(filePath, content) {
-  return filePath.includes('/types/') || filePath.includes('/interfaces/') ||
-         content.includes('interface ') || 
-         content.includes('type ') || 
-         content.includes('enum ') ||
-         content.match(/export (type|interface|enum)/);
+  return (
+    filePath.includes('/types/') ||
+    filePath.includes('/interfaces/') ||
+    content.includes('interface ') ||
+    content.includes('type ') ||
+    content.includes('enum ') ||
+    content.match(/export (type|interface|enum)/)
+  );
 }
 
 // Determine file type based on content and path
@@ -242,15 +250,15 @@ function determineFileType(filePath, content) {
   if (isShadcnComponent(filePath)) {
     return 'shadcnComponent';
   }
-  
+
   const fileName = path.basename(filePath);
   const ext = path.extname(fileName);
-  
+
   // Check file extension first - if not tsx/jsx/ts, unlikely to be a React component
   if (!['.tsx', '.jsx', '.ts'].includes(ext)) {
     return 'other';
   }
-  
+
   // Check for specific file types
   if (isApiRoute(filePath, fileName)) return 'api';
   if (isServerFile(filePath)) return 'server';
@@ -263,7 +271,7 @@ function determineFileType(filePath, content) {
   if (isUtilityFile(filePath, content)) return 'util';
   if (isConstantsFile(filePath, content)) return 'constant';
   if (isTypesFile(filePath, content)) return 'type';
-  
+
   // Default to the directory name
   const dirName = path.basename(path.dirname(filePath));
   return dirName;
@@ -272,7 +280,7 @@ function determineFileType(filePath, content) {
 // Function to check if a file follows naming conventions
 function checkNamingConvention(fileName, fileType) {
   const pattern = NAMING_PATTERNS[fileType];
-  
+
   if (pattern && !pattern.test(fileName)) {
     let message;
     if (fileType === 'component') {
@@ -292,10 +300,10 @@ function checkNamingConvention(fileName, fileType) {
     } else if (fileType === 'pageFolder') {
       message = 'Page folders should use kebab-case';
     }
-    
+
     return { isValid: false, message, suggestion: `Rename to follow ${message}` };
   }
-  
+
   return { isValid: true };
 }
 
@@ -314,11 +322,15 @@ function checkLocationConvention(filePath, fileType) {
   // Get the patterns for this file type
   const patterns = LOCATION_PATTERNS[fileType];
   if (!patterns) {
-    return { valid: false, message: `No location patterns defined for ${fileType}`, suggestion: null };
+    return {
+      valid: false,
+      message: `No location patterns defined for ${fileType}`,
+      suggestion: null,
+    };
   }
 
   // Check if the file path matches any of the patterns
-  const isValid = patterns.some(pattern => pattern.test(filePath));
+  const isValid = patterns.some((pattern) => pattern.test(filePath));
 
   if (isValid) {
     return { valid: true, message: `${fileType} in correct location`, suggestion: null };
@@ -328,7 +340,8 @@ function checkLocationConvention(filePath, fileType) {
   let suggestion;
   switch (fileType) {
     case 'component':
-      suggestion = 'Component should be in src/components/common/, src/components/[feature]/, or src/app/[locale]/[tenant]/[feature]/_components/';
+      suggestion =
+        'Component should be in src/components/common/, src/components/[feature]/, or src/app/[locale]/[tenant]/[feature]/_components/';
       break;
     case 'shadcnComponent':
       suggestion = 'Shadcn UI component should be in src/components/ui/';
@@ -346,10 +359,12 @@ function checkLocationConvention(filePath, fileType) {
       suggestion = 'Types should be in src/types/ or src/lib/types/';
       break;
     case 'page':
-      suggestion = 'Page files should be in src/app/[locale]/ or src/app/[locale]/[tenant]/ directories following Next.js App Router conventions';
+      suggestion =
+        'Page files should be in src/app/[locale]/ or src/app/[locale]/[tenant]/ directories following Next.js App Router conventions';
       break;
     case 'dynamicRoute':
-      suggestion = 'Dynamic route files should be in src/app/[locale]/ or src/app/[locale]/[tenant]/ directories with kebab-case names in square brackets';
+      suggestion =
+        'Dynamic route files should be in src/app/[locale]/ or src/app/[locale]/[tenant]/ directories with kebab-case names in square brackets';
       break;
     default:
       suggestion = `Unknown file type: ${fileType}`;
@@ -363,14 +378,14 @@ function checkFileSize(filePath, lineCount, content, exemptedPatterns) {
   if (lineCount > MAX_LINES && !isExempted(filePath, exemptedPatterns)) {
     const fileType = determineFileType(filePath, content);
     const suggestion = BREAKDOWN_SUGGESTIONS[fileType] || BREAKDOWN_SUGGESTIONS.default;
-    
+
     return {
       issue: 'size',
       message: `File exceeds ${MAX_LINES} lines (${lineCount} lines)`,
-      suggestion: suggestion
+      suggestion: suggestion,
     };
   }
-  
+
   return null;
 }
 
@@ -381,7 +396,7 @@ function analyzeFile(filePath, exemptedPatterns) {
     const lineCount = content.split('\n').length;
     const fileType = determineFileType(filePath, content);
     const issues = [];
-    
+
     // Check naming convention if requested
     if (checks === 'all' || checks === 'naming') {
       const namingIssue = checkNamingConvention(path.basename(filePath), fileType);
@@ -389,11 +404,11 @@ function analyzeFile(filePath, exemptedPatterns) {
         issues.push({
           issue: 'naming',
           message: namingIssue.message,
-          suggestion: namingIssue.suggestion
+          suggestion: namingIssue.suggestion,
         });
       }
     }
-    
+
     // Check location convention if requested
     if (checks === 'all' || checks === 'location') {
       const locationIssue = checkLocationConvention(filePath, fileType);
@@ -401,11 +416,11 @@ function analyzeFile(filePath, exemptedPatterns) {
         issues.push({
           issue: 'location',
           message: locationIssue.message || 'Location issue',
-          suggestion: locationIssue.suggestion || 'Move to correct location'
+          suggestion: locationIssue.suggestion || 'Move to correct location',
         });
       }
     }
-    
+
     // Check file size if requested
     if (checks === 'all' || checks === 'size') {
       const sizeIssue = checkFileSize(filePath, lineCount, content, exemptedPatterns);
@@ -413,12 +428,12 @@ function analyzeFile(filePath, exemptedPatterns) {
         issues.push(sizeIssue);
       }
     }
-    
+
     return {
       filePath,
       fileType,
       lineCount,
-      issues
+      issues,
     };
   } catch (error) {
     console.error(`Error analyzing file ${filePath}: ${error.message}`);
@@ -426,7 +441,7 @@ function analyzeFile(filePath, exemptedPatterns) {
       filePath,
       fileType: 'unknown',
       lineCount: 0,
-      issues: []
+      issues: [],
     };
   }
 }
@@ -434,56 +449,64 @@ function analyzeFile(filePath, exemptedPatterns) {
 // Main function
 function main() {
   console.log(`=== Refactor Analyzer: ${checks.toUpperCase()} Checks ===\n`);
-  
+
   try {
     // Check if input file exists
     if (!fs.existsSync(inputFile)) {
       console.error(`Error: Input file ${inputFile} does not exist`);
-      console.log(`Run 'node scripts/refactor/refactor-scanner.js' first to generate the input file.`);
+      console.log(
+        `Run 'node scripts/refactor/refactor-scanner.js' first to generate the input file.`,
+      );
       process.exit(1);
     }
-    
+
     // Read input file
     const inputData = JSON.parse(fs.readFileSync(inputFile, 'utf8'));
     const { files, exemptedPatterns } = inputData;
-    
+
     console.log(`Analyzing ${files.length} files...\n`);
-    
+
     // Convert string patterns back to RegExp
-    const exemptedPatternsRegExp = exemptedPatterns.map(pattern => {
+    const exemptedPatternsRegExp = exemptedPatterns.map((pattern) => {
       const match = pattern.match(/^\/(.*)\/([gimuy]*)$/);
       if (match) {
         return new RegExp(match[1], match[2]);
       }
       return pattern;
     });
-    
+
     // Analyze each file
     const results = [];
-    files.forEach(file => {
+    files.forEach((file) => {
       const result = analyzeFile(file, exemptedPatternsRegExp);
       if (result.issues.length > 0) {
         results.push(result);
       }
     });
-    
+
     // Create output directory if it doesn't exist
     const outputDir = path.join(process.cwd(), 'scripts', 'refactor');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
-    
+
     // Write results to JSON file
     const outputFile = path.join(outputDir, 'analyzer-result.json');
-    fs.writeFileSync(outputFile, JSON.stringify({
-      timestamp: new Date().toISOString(),
-      checks,
-      results
-    }, null, 2));
-    
+    fs.writeFileSync(
+      outputFile,
+      JSON.stringify(
+        {
+          timestamp: new Date().toISOString(),
+          checks,
+          results,
+        },
+        null,
+        2,
+      ),
+    );
+
     console.log(`Analysis complete. Found ${results.length} files with issues.`);
     console.log(`Results saved to: ${outputFile}`);
-    
   } catch (error) {
     console.error(`Error:`, error.message);
     process.exit(1);
@@ -491,4 +514,4 @@ function main() {
 }
 
 // Run the script
-main(); 
+main();

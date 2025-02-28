@@ -9,14 +9,14 @@ const withNextIntl = createNextIntlPlugin();
 const nextConfig = {
   reactStrictMode: true,
   // Add any other Next.js config options here
-  
+
   // Ignore optional dependencies that cause warnings
   webpack: (config) => {
     config.externals = config.externals || [];
     config.externals.push({
       'utf-8-validate': 'commonjs utf-8-validate',
-      'bufferutil': 'commonjs bufferutil',
-      'bcrypt': 'commonjs bcrypt',
+      bufferutil: 'commonjs bufferutil',
+      bcrypt: 'commonjs bcrypt',
       '@mapbox/node-pre-gyp': 'commonjs @mapbox/node-pre-gyp',
       'oidc-token-hash': 'commonjs oidc-token-hash',
     });
@@ -44,20 +44,27 @@ const nextConfig = {
       { module: /node_modules\/oidc-token-hash/ },
       { module: /node_modules\/openid-client/ },
     ];
-    
+
     return config;
   },
-  
+
   // Configure server options
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000'],
     },
   },
-  
+
   // External packages that should not be bundled
-  serverExternalPackages: ['ws', 'ssh2', 'bcrypt', '@mapbox/node-pre-gyp', 'oidc-token-hash', 'openid-client'],
-  
+  serverExternalPackages: [
+    'ws',
+    'ssh2',
+    'bcrypt',
+    '@mapbox/node-pre-gyp',
+    'oidc-token-hash',
+    'openid-client',
+  ],
+
   // Ensure WebSocket connections are handled properly
   async headers() {
     return [
@@ -77,4 +84,4 @@ if (process.env.JWT_SECRET && !process.env.NEXTAUTH_SECRET) {
   process.env.NEXTAUTH_SECRET = process.env.JWT_SECRET;
 }
 
-module.exports = withNextIntl(nextConfig); 
+module.exports = withNextIntl(nextConfig);
