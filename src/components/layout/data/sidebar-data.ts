@@ -5,8 +5,6 @@ import {
   Monitor,
   BarChart3,
   Settings,
-  Globe,
-  Smartphone,
   FileCode,
   TestTube,
   Flag,
@@ -22,8 +20,6 @@ import {
   Building2,
   Factory,
   Server,
-  Box,
-  Layers,
 } from 'lucide-react';
 
 export type SidebarData = {

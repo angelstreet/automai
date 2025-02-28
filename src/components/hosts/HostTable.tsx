@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { Terminal, BarChart2, MoreHorizontal } from 'lucide-react';
+import { Terminal, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';

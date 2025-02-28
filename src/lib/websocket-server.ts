@@ -4,7 +4,6 @@ import { IncomingMessage } from 'http';
 import { Server } from 'http';
 import { Client } from 'ssh2';
 import { prisma } from './prisma';
-import { LogOptions } from './logger';
 
 // Extend global to include our WebSocketServer
 declare global {
@@ -397,3 +396,11 @@ function handleSshConnection(
     sshClient.end();
   });
 }
+
+handleUpgrade = (_: any) => {
+  // Implementation
+};
+
+handleError = () => {
+  console.error('WebSocket error');
+};

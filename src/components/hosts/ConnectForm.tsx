@@ -13,7 +13,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { Button } from '@/components/shadcn/button';
 import { Badge } from '@/components/shadcn/badge';
-import { z } from 'zod';
 
 export interface FormData {
   name: string;

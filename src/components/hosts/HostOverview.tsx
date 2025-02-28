@@ -5,24 +5,22 @@ import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/shadcn/button';
-import { Grid, List, Plus, RefreshCw } from 'lucide-react';
+import { Grid, List } from 'lucide-react';
 import { ConnectHostDialog } from './ConnectHostDialog';
 import { useToast } from '@/components/shadcn/use-toast';
 
 interface HostOverviewProps {
   hosts: Host[];
-  isLoading?: boolean;
-  onRefresh?: () => void;
-  onDelete?: (id: string) => void;
-  onTestConnection?: (host: Host) => void;
+  onDelete: (id: string) => void;
+  onRefresh: () => void;
+  onTestConnection: (host: Host) => void;
   className?: string;
 }
 
 export function HostOverview({
   hosts,
-  isLoading = false,
-  onRefresh,
   onDelete,
+  onRefresh,
   onTestConnection,
   className,
 }: HostOverviewProps) {

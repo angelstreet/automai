@@ -6,24 +6,13 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import {
   RefreshCcw,
-  LayoutGrid,
-  Table2,
-  ScrollText,
-  Terminal,
-  BarChart2,
-  Settings,
   Plus,
 } from 'lucide-react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { HostOverview } from '@/components/hosts/HostOverview';
 import { Host } from '@/types/hosts';
 import { ConnectHostDialog } from '@/components/hosts/ConnectHostDialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/shadcn/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider } from '@/components/shadcn/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,7 +39,7 @@ export default function HostsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hosts, setHosts] = useState<Host[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [viewMode] = useState<'grid' | 'table'>('grid');
 
   // Fetch hosts from API
   const fetchHosts = async () => {

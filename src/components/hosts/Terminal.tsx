@@ -31,6 +31,7 @@ export function Terminal({ connection }: TerminalProps) {
   const socketRef = useRef<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState<boolean>(true);
   const { toast } = useToast();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeTerminal = async () => {
@@ -180,30 +181,9 @@ export function Terminal({ connection }: TerminalProps) {
         term.loadAddon(attachAddon);
       };
 
-      socket.onerror = (error) => {
-        // Handle WebSocket error event properly
-        let errorMessage = 'Connection failed';
-        setIsConnecting(false);
-
-        console.log('[WebSocket] Error event details:', error);
-
-        console.error('[WebSocket] Terminal error:', {
-          message: errorMessage,
-          connectionId: connection.id,
-        });
-
-        // Show toast notification for WebSocket error
-        toast({
-          variant: 'destructive',
-          title: 'WebSocket Connection Error',
-          description: `Failed to establish WebSocket connection: ${errorMessage}`,
-          duration: 5000,
-        });
-
-        term.write(`\r\n\x1B[1;3;31mWebSocket connection error: ${errorMessage}\x1B[0m\r\n`);
-        term.write(
-          `\r\n\x1B[1;3;31mPlease check your network connection and try again.\x1B[0m\r\n`,
-        );
+      socket.onerror = () => {
+        console.error('WebSocket error');
+        setError('Connection error');
       };
 
       // Handle JSON messages from the server (like error messages)
