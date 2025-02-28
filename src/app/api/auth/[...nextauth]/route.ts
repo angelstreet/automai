@@ -1,4 +1,3 @@
-import { GET, POST } from '@/auth';
+import { handlers } from "@/auth";
 
-// Export the handlers for Next.js API routes
-export { GET, POST };
+export const { GET, POST } = handlers;

@@ -25,27 +25,52 @@ model Host {
 }
 
 model Connection {
-  id            String          @id @default(cuid())
+  id            String           @id @default(cuid())
   name          String
-  description   String?
-  type          String
-  ip            String
-  port          Int?
-  username      String?
+  host          String
+  port          Int             @default(22)
+  username      String
   password      String?
-  status        String          @default("pending")
-  errorMessage  String?
-  lastConnected DateTime?
-  userId        String
-  tenant        Tenant?         @relation(fields: [tenantId], references: [id])
-  tenantId      String?
-  user          User            @relation(fields: [userId], references: [id])
-  logs          ConnectionLog[]
+  privateKey    String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+  userId        String
+  tenantId      String?
+  user          User            @relation(fields: [userId], references: [id])
+  tenant        Tenant?         @relation(fields: [tenantId], references: [id])
+  logs          ConnectionLog[]
 
-  @@index([userId])
-  @@index([tenantId])
+  @@map("connections")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
 
 model User {
@@ -53,73 +78,67 @@ model User {
   name            String?
   email           String?           @unique
   emailVerified   DateTime?
+  password        String?
   image           String?
-  role            String            @default("USER")
-  tenant          Tenant?           @relation(fields: [tenantId], references: [id])
+  role            String            @default("user")
   tenantId        String?
-  connections     Connection[]
-  logs            ConnectionLog[]
-  hostFingerprint HostFingerprint[]
+  tenant          Tenant?           @relation(fields: [tenantId], references: [id])
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   provider        String?
-
-  @@index([tenantId])
-  @@index([email, provider])
-}
-
-model Tenant {
-  id              String            @id @default(cuid())
-  name            String
-  domain          String?           @unique
-  plan            String            @default("free")
-  users           User[]
+  accounts        Account[]
+  sessions        Session[]
   connections     Connection[]
   logs            ConnectionLog[]
   hostFingerprint HostFingerprint[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+
+  @@map("users")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verificationtokens")
+}
+
+model Tenant {
+  id          String            @id @default(cuid())
+  name        String
+  domain      String?           @unique
+  plan        String            @default("free")
+  users       User[]
+  connections Connection[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("tenants")
 }
 
 model ConnectionLog {
-  id           String     @id @default(cuid())
-  timestamp    DateTime   @default(now())
-  level        String
-  message      String
+  id           String      @id @default(cuid())
+  connectionId String
+  connection   Connection  @relation(fields: [connectionId], references: [id])
+  timestamp    DateTime    @default(now())
   action       String?
   user         User?      @relation(fields: [userId], references: [id])
   userId       String?
-  tenant       Tenant?    @relation(fields: [tenantId], references: [id])
-  tenantId     String?
-  connection   Connection? @relation(fields: [connectionId], references: [id])
-  connectionId String?
-  ip           String?
-  metadata     Json?
-  createdAt    DateTime   @default(now())
 
-  @@index([userId])
-  @@index([tenantId])
-  @@index([connectionId])
-  @@index([action])
-  @@index([level])
-  @@index([timestamp])
+  @@map("connection_logs")
 }
 
 model HostFingerprint {
   id          String   @id @default(cuid())
   host        String
-  port        Int      @default(22)
   fingerprint String
   verified    Boolean  @default(false)
   user        User     @relation(fields: [userId], references: [id])
   userId      String
-  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
-  tenantId    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@unique([host, userId])
-  @@index([userId])
-  @@index([tenantId])
-  @@index([host])
+  @@unique([host, fingerprint])
+  @@map("host_fingerprints")
 } 
