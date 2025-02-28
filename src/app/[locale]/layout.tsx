@@ -4,6 +4,7 @@ import { locales } from '@/config';
 import { Inter } from 'next/font/google';
 import { getMessages } from '@/i18n';
 import { UserProvider } from '@/context/UserContext';
+import { RoleProvider } from '@/context/RoleContext';
 import { RouteGuard } from '@/components/Auth/RouteGuard';
 import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { Toaster } from '@/components/Shadcn/toaster';
@@ -49,12 +50,14 @@ export default async function LocaleLayout(props: Props) {
     <html lang={validLocale} suppressHydrationWarning>
       <body className={inter.className}>
         <UserProvider>
-          <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
-            <ThemeProvider defaultTheme={theme} storageKey="theme">
-              <RouteGuard>{children}</RouteGuard>
-              <Toaster />
-            </ThemeProvider>
-          </NextIntlClientProvider>
+          <RoleProvider>
+            <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
+              <ThemeProvider defaultTheme={theme} storageKey="theme">
+                <RouteGuard>{children}</RouteGuard>
+                <Toaster />
+              </ThemeProvider>
+            </NextIntlClientProvider>
+          </RoleProvider>
         </UserProvider>
       </body>
     </html>
