@@ -9,9 +9,9 @@ import {
   Plus,
 } from 'lucide-react';
 import { useToast } from '@/components/shadcn/use-toast';
-import { HostOverview } from '@/components/hosts/HostOverview';
+import { HostOverview } from './_components/HostOverview';
 import { Host } from '@/types/hosts';
-import { ConnectHostDialog } from '@/components/hosts/ConnectHostDialog';
+import { ConnectHostDialog } from './_components/ConnectHostDialog';
 import { Tooltip, TooltipContent, TooltipProvider } from '@/components/shadcn/tooltip';
 import {
   AlertDialog,
