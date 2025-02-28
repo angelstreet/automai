@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Terminal } from '@/components/hosts/Terminal';
+import { Terminal } from '../_components/Terminal';
 import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
 
