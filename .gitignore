@@ -10,3 +10,4 @@ docs/.DS_Store
 shadcn-admin/
 src/server/prisma/dev.db-journal
 prisma/migrations/
+tmp.md

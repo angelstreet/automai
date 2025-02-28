@@ -314,26 +314,6 @@ export const validateRequest = (schema: Schema) => {
 };
 ```
 
-### **Environment Configuration**
-
-```typescript
-// src/server/config/env/index.ts
-import { z } from 'zod';
-import dotenv from 'dotenv';
-
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']),
-  PORT: z.string().transform(Number),
-  DATABASE_URL: z.string().url(),
-  JWT_SECRET: z.string().min(32),
-});
-
-dotenv.config({
-  path: `src/server/config/env/.env.${process.env.NODE_ENV}`,
-});
-
-export const env = envSchema.parse(process.env);
-```
 
 ### **Best Practices**
 
