@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { locales } from '@/config';
 import { Inter } from 'next/font/google';
 import { getMessages } from '@/i18n';
-import { UserProvider } from '@/lib/contexts/UserContext';
+import { UserProvider } from '@/context/UserContext';
 import { RouteGuard } from '@/components/Auth/RouteGuard';
 import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { Toaster } from '@/components/Shadcn/toaster';

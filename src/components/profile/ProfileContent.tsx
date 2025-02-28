@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useUser } from '@/lib/contexts/UserContext';
+import { useUser } from '@/context/UserContext';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/Shadcn/button';
 import { Input } from '@/components/Shadcn/input';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
-import { useSearch } from '@/lib/contexts/SearchContext';
+import { useSearch } from '@/context/SearchContext';
 import {
   CommandDialog,
   CommandEmpty,
