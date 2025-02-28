@@ -1,4 +1,4 @@
-Apologies for the mix-up—I’ll stick with "Use Case" as the terminology, as you’ve confirmed it’s your preference. Below is the **Design Document** and **Instructions for the AI Agent** specifically for the **Use Cases Listing Page**, based on your improved artifact, without touching the edit page yet. This focuses solely on listing use cases grouped by project, with sorting, favorites, search, and modals for creation and details, integrated with your backend.
+Apologies for the mix-up—I'll stick with "Use Case" as the terminology, as you've confirmed it's your preference. Below is the **Design Document** and **Instructions for the AI Agent** specifically for the **Use Cases Listing Page**, based on your improved artifact, without touching the edit page yet. This focuses solely on listing use cases grouped by project, with sorting, favorites, search, and modals for creation and details, integrated with your backend.
 
 ---
 
@@ -93,7 +93,7 @@ import { Button } from "@/components/shadcn/button";
 import { Input } from "@/components/shadcn/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/shadcn/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/shadcn/accordion";
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar from "@/components/Layout/Sidebar";
 
 type Project = {
   id: string;
@@ -518,7 +518,7 @@ test('Use Cases page lists, creates, and deletes', async ({ page }) => {
 ### Notes
 
 - **Terminology**: Switched to "Use Case" throughout as requested.
-- **Scope**: Limited to the listing page only—edit page will come next once you’re ready.
+- **Scope**: Limited to the listing page only—edit page will come next once you're ready.
 - **Backend**: Fully integrated with your existing APIs, with schema extensions for new fields (`lastModified`, etc.).
 
-Let me know if this is spot-on or if you’d like any adjustments before moving to the edit page!
+Let me know if this is spot-on or if you'd like any adjustments before moving to the edit page!

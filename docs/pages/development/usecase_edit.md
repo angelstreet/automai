@@ -37,8 +37,8 @@
 
 #### Notes
 
-- Your artifact uses a `<pre>` tag for the editor—I’ll assume you want to replace this with Monaco Editor for a true IDE experience, as discussed earlier.
-- No metadata section (e.g., platform selection) is present in your artifact; I’ll keep it minimal as per your design, but we can add it back if needed.
+- Your artifact uses a `<pre>` tag for the editor—I'll assume you want to replace this with Monaco Editor for a true IDE experience, as discussed earlier.
+- No metadata section (e.g., platform selection) is present in your artifact; I'll keep it minimal as per your design, but we can add it back if needed.
 
 ---
 
@@ -66,7 +66,7 @@ import { Card } from "@/components/shadcn/card";
 import { Button } from "@/components/shadcn/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/tabs";
 import Editor from "@monaco-editor/react";
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar from "@/components/Layout/Sidebar";
 
 type TestCase = {
   id: string;
@@ -306,6 +306,6 @@ test('Use Case Edit page edits and runs script', async ({ page }) => {
 - **Editor Upgrade**: Replaced `<pre>` with `monaco-editor/react` for a real IDE experience, as your artifact implied a code editor.
 - **Platform**: Hardcoded in the badge based on `steps.platform`; could add a dropdown if metadata editing is desired.
 - **Version History**: Mocked commits for now—extend with Git API data later (e.g., fetch from backend).
-- **Alignment**: Matches your artifact’s layout (header, tabs, version toggle) with backend hooks.
+- **Alignment**: Matches your artifact's layout (header, tabs, version toggle) with backend hooks.
 
-Let me know if this fits your vision or if you’d like adjustments (e.g., add metadata editing, tweak styling) before proceeding further! Next, we can refine or test these pages as needed.
+Let me know if this fits your vision or if you'd like adjustments (e.g., add metadata editing, tweak styling) before proceeding further! Next, we can refine or test these pages as needed.
