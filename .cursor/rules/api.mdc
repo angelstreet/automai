@@ -1,0 +1,151 @@
+---
+description: API Implementation Guidelines
+globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
+---
+
+# API Implementation Rules
+
+## Route Structure
+
+1. **Base Path**
+   ```typescript
+   // ✅ Correct
+   const response = await fetch('/api/auth/profile');
+   
+   // ❌ Incorrect
+   const response = await fetch('http://localhost:5001/api/auth/profile');
+   const response = await fetch('http://localhost:3000/api/auth/profile');
+   ```
+
+2. **Environment Variables**
+   ```typescript
+   // ✅ Correct
+   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+   const response = await fetch(`${baseUrl}/api/auth/profile`);
+   
+   // ❌ Incorrect
+   const response = await fetch('http://localhost:' + port + '/api/auth/profile');
+   ```
+
+## API Route Implementation
+
+1. **Route Handler Pattern**
+   ```typescript
+   // src/app/api/[endpoint]/route.ts
+   import { NextResponse } from 'next/server';
+   
+   export async function GET() {
+     try {
+       // Implementation
+       return NextResponse.json({ data });
+     } catch (error) {
+       return NextResponse.json(
+         { error: 'Error message' },
+         { status: 500 }
+       );
+     }
+   }
+   ```
+
+2. **Authentication Check**
+   ```typescript
+   import { getServerSession } from 'next-auth';
+   
+   export async function GET() {
+     const session = await getServerSession();
+     if (!session) {
+       return NextResponse.json(
+         { error: 'Unauthorized' },
+         { status: 401 }
+       );
+     }
+   }
+   ```
+
+## Error Handling
+
+1. **Standard Error Response**
+   ```typescript
+   {
+     error: string;
+     status: number;
+     details?: any;
+   }
+   ```
+
+2. **Status Codes**
+   - 200: Success
+   - 201: Created
+   - 400: Bad Request
+   - 401: Unauthorized
+   - 403: Forbidden
+   - 404: Not Found
+   - 500: Internal Server Error
+
+## API Client Implementation
+
+1. **Service Layer Pattern**
+   ```typescript
+   // src/lib/services/auth.ts
+   export async function getUserProfile() {
+     const response = await fetch('/api/auth/profile');
+     if (!response.ok) throw new Error('Failed to fetch profile');
+     return response.json();
+   }
+   ```
+
+2. **Error Handling**
+   ```typescript
+   try {
+     const data = await getUserProfile();
+   } catch (error) {
+     console.error('Failed to fetch profile:', error);
+     // Handle error appropriately
+   }
+   ```
+
+## WebSocket Connections
+
+1. **Connection Setup**
+   ```typescript
+   // ✅ Correct
+   const ws = new WebSocket(`ws://localhost:5001/api/ws`);
+   
+   // ❌ Incorrect
+   const ws = new WebSocket('ws://localhost:3000/api/ws');
+   ```
+
+## Database Access
+
+1. **Prisma Client Usage**
+   ```typescript
+   // For Next.js API routes
+   import { prisma } from '@/lib/prisma';
+   
+   export async function GET() {
+     const users = await prisma.user.findMany();
+     return NextResponse.json({ users });
+   }
+   ```
+
+## Documentation Requirements
+
+1. **API Route Documentation**
+   ```typescript
+   /**
+    * @api {get} /api/auth/profile Get User Profile
+    * @apiDescription Fetches the current user's profile
+    * @apiPermission authenticated
+    * @apiSuccess {Object} user User profile data
+    * @apiError {Object} error Error details
+    */
+   ```
+
+2. **Response Types**
+   ```typescript
+   interface ApiResponse<T> {
+     data?: T;
+     error?: string;
+     status: 'success' | 'error';
+   }
+   ``` 
