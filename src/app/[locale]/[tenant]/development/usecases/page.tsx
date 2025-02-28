@@ -15,8 +15,8 @@ import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';
 import { PLATFORM_PREFIXES } from '@/constants/platforms';
-import { UseCaseList } from '@/components/usecases/UseCaseList';
-import { CreateUseCase } from '@/components/usecases/CreateUseCase';
+import { UseCaseList } from '../../usecases/_components/UseCaseList';
+import { CreateUseCase } from '../../usecases/_components/CreateUseCase';
 
 export default function UseCasesPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
