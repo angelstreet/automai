@@ -58,19 +58,19 @@ export function ProfileDropdown() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/settings/profile`)}>
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings/profile`)}>
             Profile
             <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/settings/billing`)}>
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings/billing`)}>
             Billing
             <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/settings`)}>
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings`)}>
             Settings
             <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/settings/team`)}>
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings/team`)}>
             New Team
           </DropdownMenuItem>
         </DropdownMenuGroup>
