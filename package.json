@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:custom": "node next.server.js",
     "dev:next": "next dev",
     "dev:all": "node scripts/dev.js",
     "dev:debug": "node scripts/debug.js",
