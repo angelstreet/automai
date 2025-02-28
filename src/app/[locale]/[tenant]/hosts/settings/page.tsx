@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import {
   Card,
@@ -24,9 +23,7 @@ import { Switch } from '@/components/shadcn/switch';
 import { useToast } from '@/components/shadcn/use-toast';
 
 export default function HostsSettingsPage() {
-  const t = useTranslations('Common');
   const params = useParams();
-  const tenant = params.tenant as string;
   const { toast } = useToast();
 
   const [settings, setSettings] = useState({
@@ -50,11 +47,11 @@ export default function HostsSettingsPage() {
         title: 'Settings saved',
         description: 'Your host settings have been updated successfully.',
       });
-    } catch (error) {
+    } catch {
       toast({
-        title: 'Error',
-        description: 'Failed to save settings. Please try again.',
         variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to save settings',
       });
     }
   };

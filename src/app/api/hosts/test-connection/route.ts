@@ -6,8 +6,8 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json();
-    const { type, ip, port, username, hostId } = data;
+    const body = await request.json();
+    const { ip, port, username, password, hostId } = body;
 
     // Get host from database to get password
     const hostRecord = await prisma.host.findUnique({

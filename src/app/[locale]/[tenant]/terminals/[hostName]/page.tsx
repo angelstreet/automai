@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Terminal } from '@/components/hosts/Terminal';
-import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { AlertCircle } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
 
 interface MachineConnection {
   id: string;
@@ -21,7 +21,6 @@ interface MachineConnection {
 export default function TerminalPage() {
   const router = useRouter();
   const params = useParams();
-  const { toast } = useToast();
   const [connections, setConnections] = useState<MachineConnection[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,8 +81,7 @@ export default function TerminalPage() {
   };
 
   // Initialize terminals
-  const initializeTerminals = async () => {
-    // Reset the initialization flag when manually called (e.g., from retry button)
+  const initializeTerminals = useCallback(async () => {
     if (error) {
       initializationAttemptedRef.current = false;
     }
@@ -136,20 +134,11 @@ export default function TerminalPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [hostName, terminalCount, fetchMachineByName, fetchMachineDetails, error]);
 
   useEffect(() => {
     initializeTerminals();
-
-    // Cleanup on unmount
-    return () => {
-      logger.info('Terminal page unmounted', {
-        action: 'TERMINAL_PAGE_UNMOUNTED',
-        data: { hostName },
-        saveToDb: true,
-      });
-    };
-  }, [hostName, terminalCount]);
+  }, [initializeTerminals]);
 
   if (error) {
     return (

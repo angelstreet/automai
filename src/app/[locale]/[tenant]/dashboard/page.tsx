@@ -13,11 +13,9 @@ import {
 import { Overview } from '@/components/dashboard/overview';
 import { RecentSales } from '@/components/dashboard/recent-sales';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/shadcn/avatar';
-import { useSession } from 'next-auth/react';
 
 export default function DashboardPage() {
-  const t = useTranslations('dashboard');
-  const { data: session } = useSession();
+  const t = useTranslations('Dashboard');
 
   return (
     <div className="flex-1 space-y-4">

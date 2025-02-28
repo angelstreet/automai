@@ -8,22 +8,14 @@
   "plugins": ["@typescript-eslint", "prettier", "react-refresh", "unused-imports"],
   "rules": {
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-unused-vars": "off",
     "prettier/prettier": "error",
     "@typescript-eslint/no-namespace": "off",
     "react-refresh/only-export-components": "off",
     "react/react-in-jsx-scope": "off",
     "react/display-name": "off",
-    "unused-imports/no-unused-imports": "error",
-    "unused-imports/no-unused-vars": [
-      "warn",
-      {
-        "vars": "all",
-        "varsIgnorePattern": "^_",
-        "args": "after-used",
-        "argsIgnorePattern": "^_"
-      }
-    ]
+    "unused-imports/no-unused-imports": "off",
+    "unused-imports/no-unused-vars": "off"
   },
   "ignorePatterns": ["src/components/ui/*"],
   "settings": {

@@ -1,6 +1,10 @@
 import { useTranslations } from 'next-intl';
 
-export default function ReportsPage({ params }: { params: { tenant: string; locale: string } }) {
+type Props = {
+  params: { tenant: string; locale: string }
+}
+
+export default function ReportsPage({ params }: Props) {
   const t = useTranslations('Reports');
 
   return (

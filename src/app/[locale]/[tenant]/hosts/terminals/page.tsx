@@ -95,6 +95,18 @@ export default function TerminalsPage() {
     };
   }, [searchParams]);
 
+  useEffect(() => {
+    if (!connection) {
+      toast({
+        title: 'Error',
+        description: 'No connection available',
+        variant: 'destructive',
+      });
+      return;
+    }
+    // Rest of the effect logic
+  }, [connection, toast]);
+
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen">

@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams, useParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 export default function AuthRedirectPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { locale } = useParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const { data: session } = useSession();

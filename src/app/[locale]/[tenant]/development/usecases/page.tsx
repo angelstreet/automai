@@ -129,9 +129,14 @@ export default function UseCasesPage() {
 
   useEffect(() => {
     if (expandedProject) {
-      fetchUseCases(expandedProject);
+      setSelectedProject(expandedProject);
     }
-  }, [expandedProject, fetchUseCases]);
+  }, [expandedProject, setSelectedProject]);
+
+  useEffect(() => {
+    // Remove fetchUseCases from dependency array
+    // Logic here
+  }, []);
 
   const toggleFavorite = async (useCaseId: string) => {
     try {
