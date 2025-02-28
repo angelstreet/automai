@@ -14,6 +14,132 @@ alwaysApply: false
   - Module files that are meant to be comprehensive
   - Generated code or migrations
 
+## Current Project Structure
+
+```
+automai/
+├── prisma/                   # Prisma schema and migrations at root
+│   ├── schema.prisma         # Database schema with models
+│   ├── migrations/           # Database migrations
+│   ├── seed.ts               # Database seed script
+│   └── index.ts              # Prisma client export (root-level singleton)
+├── src/
+│   ├── app/                  # Next.js App Router
+│   │   ├── [locale]/         # Internationalized routes
+│   │   ├── api/              # API Route Handlers
+│   │   │   ├── terminals/    # Terminal API endpoints
+│   │   │   ├── hosts/        # Hosts API endpoints
+│   │   │   ├── projects/     # Projects API endpoints
+│   │   │   ├── auth/         # Authentication endpoints
+│   │   │   ├── usecases/     # Usecases API endpoints
+│   │   │   ├── admin/        # Admin API endpoints
+│   │   │   └── health/       # Health check endpoints
+│   │   ├── layout.tsx        # Root layout
+│   │   ├── globals.css       # Global styles
+│   │   └── page.tsx          # Root page
+│   ├── components/           # UI components
+│   │   ├── layout/           # Layout components
+│   │   ├── sidebar/          # Sidebar components
+│   │   ├── shadcn/           # Shadcn UI components
+│   │   ├── settings/         # Settings components
+│   │   ├── profile/          # Profile components
+│   │   ├── dashboard/        # Dashboard components
+│   │   ├── common/           # Common reusable components
+│   │   ├── icons/            # Icon components
+│   │   └── [various].tsx     # Individual component files
+│   ├── hooks/                # Custom React hooks
+│   │   ├── use-toast.ts      # Toast notification hook
+│   │   ├── useSidebar.ts     # Sidebar state hook
+│   │   ├── use-dialog-state.tsx # Dialog state hook
+│   │   └── use-mobile.tsx    # Mobile detection hook
+│   ├── lib/                  # Shared utilities
+│   │   ├── websocketServer.ts # WebSocket server implementation
+│   │   ├── contexts/         # React context providers
+│   │   ├── services/         # Service layer (data access)
+│   │   ├── prisma.ts         # Prisma client singleton (src-level)
+│   │   ├── utils.ts          # General utility functions
+│   │   ├── env.ts            # Environment configuration
+│   │   ├── config.ts         # Application configuration
+│   │   ├── auth.ts           # Authentication utilities
+│   │   ├── features.ts       # Feature flags
+│   │   ├── logger.ts         # Logging utilities
+│   │   └── cache.ts          # Caching utilities
+│   ├── constants/            # Application constants
+│   │   ├── hosts.ts          # Host-related constants
+│   │   ├── platforms.ts      # Platform-related constants
+│   │   └── sidebar.ts        # Sidebar-related constants
+│   ├── types/                # TypeScript type definitions
+│   │   ├── next-auth.d.ts    # NextAuth type extensions
+│   │   ├── usecase.ts        # Usecase-related types
+│   │   ├── sidebar.ts        # Sidebar-related types
+│   │   └── hosts.ts          # Host-related types
+│   ├── utils/                # Utility functions
+│   │   ├── isElectron.ts     # Electron detection utility
+│   │   └── electronApi.ts    # Electron API utilities
+│   ├── context/              # React context providers
+│   ├── config/               # Configuration files
+│   ├── i18n/                 # Internationalization
+│   ├── auth.ts               # Authentication setup
+│   ├── middleware.ts         # Next.js middleware
+│   └── config.ts             # Configuration exports
+├── scripts/                  # Utility scripts
+│   └── health-check.js       # Script to check file sizes
+├── electron/                 # Electron app configuration
+├── tests/                    # Test files
+├── docs/                     # Project documentation
+└── [config files]            # Various configuration files
+```
+
+## Key Files and Their Purposes
+
+### Next.js App Structure
+- `src/app/layout.tsx`: Root layout component that wraps all pages
+- `src/app/page.tsx`: Root page component
+- `src/app/globals.css`: Global CSS styles
+- `src/app/[locale]/`: Internationalized routes
+- `src/app/api/`: API route handlers
+
+### Components
+- `src/components/shadcn/`: Shadcn UI components (exempt from 300-line limit)
+- `src/components/layout/`: Layout components like headers, footers
+- `src/components/sidebar/`: Sidebar navigation components
+- `src/components/common/`: Shared reusable components
+- `src/components/ThemeProvider.tsx`: Theme context provider
+- `src/components/RouteGuard.tsx`: Authentication route protection
+- `src/components/ProfileDropdown.tsx`: User profile dropdown menu
+- `src/components/CommandMenu.tsx`: Command palette implementation
+
+### Hooks
+- `src/hooks/use-toast.ts`: Toast notification system
+- `src/hooks/useSidebar.ts`: Sidebar state management
+- `src/hooks/use-dialog-state.tsx`: Dialog/modal state management
+- `src/hooks/use-mobile.tsx`: Mobile device detection
+
+### Library and Utilities
+- `src/lib/websocketServer.ts`: WebSocket server implementation
+- `src/lib/prisma.ts`: Prisma client singleton for Next.js
+- `src/lib/env.ts`: Environment configuration with validation
+- `src/lib/auth.ts`: Authentication utilities
+- `src/lib/features.ts`: Feature flag system
+- `src/lib/logger.ts`: Logging utilities
+- `src/lib/cache.ts`: Caching system
+
+### Types and Constants
+- `src/types/`: TypeScript type definitions
+- `src/constants/`: Application constants
+
+### Authentication
+- `src/auth.ts`: NextAuth.js configuration
+
+### Middleware
+- `src/middleware.ts`: Next.js middleware for routing and auth
+
+### Database
+- `prisma/schema.prisma`: Database schema definition
+- `prisma/index.ts`: Root-level Prisma client singleton
+- `prisma/migrations/`: Database migrations
+- `prisma/seed.ts`: Database seed script
+
 ## Breaking Up Large Files
 
 ### Components
