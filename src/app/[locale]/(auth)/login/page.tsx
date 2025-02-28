@@ -61,7 +61,7 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = (provider: 'google' | 'github') => {
-    signIn(provider, { callbackUrl: `/${locale}/auth-redirect` });
+    signIn(provider, { callbackUrl: `/${locale}/(auth)/auth-redirect` });
   };
 
   // Show nothing while checking initial auth state

@@ -34,7 +34,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       const isPublicRoute =
         pathname.includes('/login') ||
         pathname.includes('/signup') ||
-        pathname.includes('/auth-redirect') ||
+        pathname.includes('/(auth)/auth-redirect') ||
         pathname.includes('/error') ||
         pathname === `/${locale}`;
 
