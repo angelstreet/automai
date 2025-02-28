@@ -4,8 +4,8 @@ import { locales } from '@/config';
 import { Inter } from 'next/font/google';
 import { getMessages } from '@/i18n';
 import { UserProvider } from '@/lib/contexts/UserContext';
-import { RouteGuard } from '@/components/RouteGuard';
-import { ThemeProvider } from '@/components/ThemeProvider';
+import { RouteGuard } from '@/components/Auth/RouteGuard';
+import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { Toaster } from '@/components/Shadcn/toaster';
 import { cookies } from 'next/headers';
 

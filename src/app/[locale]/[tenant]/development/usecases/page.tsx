@@ -14,7 +14,7 @@ import { useUser } from '@/lib/contexts/UserContext';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/Shadcn/use-toast';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';
-import { PLATFORM_PREFIXES } from '@/constants/platforms';
+import { PLATFORM_PREFIXES } from '@/app/[locale]/[tenant]/platforms/constants';
 import { UseCaseList } from '../../usecases/_components/UseCaseList';
 import { CreateUseCase } from '../../usecases/_components/CreateUseCase';
 

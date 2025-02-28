@@ -9,8 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/Shadcn/card';
-import { LanguageSettings } from '@/components/settings/LanguageSettings';
-import { SettingsHeader } from '@/components/settings/SettingsHeader';
+import { LanguageSettings } from '@/components/Settings/LanguageSettings';
+import { SettingsHeader } from '@/components/Settings/SettingsHeader';
 
 export default function SettingsPage() {
   const params = useParams();
