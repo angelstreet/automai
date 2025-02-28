@@ -1,22 +1,37 @@
-import { AuthOptions } from 'next-auth';
+import type { AuthOptions } from 'next-auth';
+import { PrismaAdapter } from "@auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
 
 // Import provider configurations from separate files
 import { getGoogleProvider } from './providers/google';
 import { getGithubProvider } from './providers/github';
 import { getCredentialsProvider } from './providers/credentials';
 
-// Create a simpler version of the auth config
 export const authConfig: AuthOptions = {
-  providers: [],
+  adapter: PrismaAdapter(prisma),
   pages: {
     signIn: '/login',
     error: '/error',
     signOut: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-do-not-use-in-production',
+  secret: process.env.NEXTAUTH_SECRET || (() => {
+    console.warn('Using fallback secret - DO NOT USE IN PRODUCTION');
+    return 'fallback-secret-do-not-use-in-production';
+  })(),
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
     maxAge: 24 * 60 * 60, // 24 hours
+  },
+  cookies: {
+    sessionToken: {
+      name: `__Secure-next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax' as const,
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
   },
   callbacks: {
     async jwt({ token, user, account }) {
@@ -40,8 +55,8 @@ export const authConfig: AuthOptions = {
         session.user.role = token.role as string;
         session.user.tenantId = token.tenantId as string;
         session.user.tenantName = token.tenantName as string;
+        session.accessToken = token.accessToken as string;
       }
-      session.accessToken = token.accessToken as string;
       return session;
     },
   },

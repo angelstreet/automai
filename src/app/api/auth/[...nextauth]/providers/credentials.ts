@@ -1,6 +1,10 @@
 // Dynamically import the provider to reduce initial load time
+import { prisma } from '@/lib/prisma';
+
 export async function getCredentialsProvider() {
   const CredentialsProvider = (await import('next-auth/providers/credentials')).default;
+  const bcrypt = await import('bcrypt');
+  const jwt = await import('jsonwebtoken');
   
   return CredentialsProvider({
     name: 'Credentials',
@@ -14,66 +18,50 @@ export async function getCredentialsProvider() {
       }
 
       try {
-        // Use internal API instead of external server
-        const { PrismaClient } = await import('@prisma/client');
-        const prisma = new PrismaClient();
-        const bcrypt = await import('bcrypt');
+        // Find user by email
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+          include: {
+            tenant: true,
+          },
+        });
         
-        try {
-          // Find user by email
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email },
-            include: {
-              tenant: true,
-            },
-          });
-          
-          // Check if user exists
-          if (!user) {
-            console.error('User not found:', credentials.email);
-            await prisma.$disconnect();
-            return null;
-          }
-          
-          // Verify password
-          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-          if (!isPasswordValid) {
-            console.error('Invalid password for user:', credentials.email);
-            await prisma.$disconnect();
-            return null;
-          }
-          
-          // Generate JWT token
-          const jwt = await import('jsonwebtoken');
-          const token = jwt.sign(
-            { 
-              id: user.id, 
-              email: user.email,
-              role: user.role,
-              tenantId: user.tenantId
-            },
-            process.env.JWT_SECRET || 'fallback-jwt-secret',
-            { expiresIn: '24h' }
-          );
-          
-          await prisma.$disconnect();
-          
-          // Return user data
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            tenantId: user.tenantId,
-            tenantName: user.tenant?.name || '',
-            plan: user.tenant?.plan || 'free',
-            accessToken: token,
-          };
-        } catch (dbError) {
-          console.error('Database error:', dbError);
-          await prisma.$disconnect();
-          throw new Error('Database error during authentication');
+        // Check if user exists
+        if (!user) {
+          console.error('User not found:', credentials.email);
+          return null;
         }
+        
+        // Verify password
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isPasswordValid) {
+          console.error('Invalid password for user:', credentials.email);
+          return null;
+        }
+        
+        // Generate JWT token
+        const token = jwt.sign(
+          { 
+            id: user.id, 
+            email: user.email,
+            role: user.role,
+            tenantId: user.tenantId
+          },
+          process.env.JWT_SECRET || 'fallback-jwt-secret',
+          { expiresIn: '24h' }
+        );
+        
+        // Return user data
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          tenantId: user.tenantId,
+          tenantName: user.tenant?.name || '',
+          plan: user.tenant?.plan || 'free',
+          accessToken: token,
+        };
       } catch (error: any) {
         console.error('Auth error:', error);
         throw error;
