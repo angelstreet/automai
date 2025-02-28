@@ -4,10 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
-import {
-  RefreshCcw,
-  Plus,
-} from 'lucide-react';
+import { RefreshCcw, Plus } from 'lucide-react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { HostOverview } from '@/components/hosts/HostOverview';
 import { Host } from '@/types/hosts';
