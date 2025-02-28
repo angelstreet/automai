@@ -4,6 +4,7 @@ import { IncomingMessage } from 'http';
 import { Server } from 'http';
 import { Client } from 'ssh2';
 import { prisma } from './prisma';
+import { LogOptions } from './logger';
 
 // Extend global to include our WebSocketServer
 declare global {
@@ -417,9 +418,11 @@ export class WebSocketServer {
           const message = JSON.parse(data.toString());
           this.handleMessage(ws, message);
         } catch (error: unknown) {
-          const logOptions = {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            context: 'WebSocket message parsing'
+          const logOptions: LogOptions = {
+            action: 'WEBSOCKET_MESSAGE_PARSE_ERROR',
+            data: {
+              error: error instanceof Error ? error.message : 'Unknown error'
+            }
           };
           logger.error('Failed to parse WebSocket message', logOptions);
           ws.send(JSON.stringify({ error: 'Invalid message format' }));
@@ -427,9 +430,11 @@ export class WebSocketServer {
       });
 
       ws.on('error', (error: Error) => {
-        const logOptions = {
-          error: error.message,
-          context: 'WebSocket connection'
+        const logOptions: LogOptions = {
+          action: 'WEBSOCKET_CONNECTION_ERROR',
+          data: {
+            error: error.message
+          }
         };
         logger.error('WebSocket error', logOptions);
       });
