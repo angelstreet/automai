@@ -16,6 +16,8 @@ const nextConfig = {
     config.externals.push({
       'utf-8-validate': 'commonjs utf-8-validate',
       'bufferutil': 'commonjs bufferutil',
+      'bcrypt': 'commonjs bcrypt',
+      '@mapbox/node-pre-gyp': 'commonjs @mapbox/node-pre-gyp',
     });
 
     config.resolve.fallback = {
@@ -24,6 +26,7 @@ const nextConfig = {
       net: false,
       tls: false,
       dns: false,
+      npm: false,
     };
 
     config.module = config.module || {};
@@ -32,7 +35,9 @@ const nextConfig = {
     // Ignore specific module not found warnings
     config.ignoreWarnings = [
       { module: /node_modules\/ssh2\/lib\/protocol\/constants\.js/ },
-      { module: /node_modules\/ssh2\/lib\/protocol\/crypto\.js/ }
+      { module: /node_modules\/ssh2\/lib\/protocol\/crypto\.js/ },
+      { module: /node_modules\/@mapbox\/node-pre-gyp/ },
+      { module: /node_modules\/bcrypt/ }
     ];
     
     return config;
@@ -46,7 +51,7 @@ const nextConfig = {
   },
   
   // External packages that should not be bundled
-  serverExternalPackages: ['ws', 'ssh2'],
+  serverExternalPackages: ['ws', 'ssh2', 'bcrypt', '@mapbox/node-pre-gyp'],
   
   // Ensure WebSocket connections are handled properly
   async headers() {

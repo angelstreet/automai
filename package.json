@@ -28,6 +28,7 @@
     "electron-pack": "npm run build && electron-builder -c.extraMetadata.main=electron/main.js"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.8.0",
     "@monaco-editor/react": "^4.7.0",
     "@prisma/client": "^6.4.1",
     "@puppeteer/browsers": "^2.7.1",
