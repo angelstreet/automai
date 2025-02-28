@@ -59,18 +59,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             return;
           }
         } catch (e) {
-          // Invalid cache, continue with fetch
           console.warn('Invalid session cache, fetching fresh data');
         }
       }
 
-      if (!session?.accessToken) {
-        console.log('No access token available');
-        setUser(null);
-        return;
-      }
-
-      console.log('Fetching user profile with token:', session.accessToken ? 'present' : 'missing');
       const response = await fetch('/api/auth/profile', {
         credentials: 'include',
       });
@@ -86,13 +78,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       const userData = await response.json();
-      console.log('User profile fetched:', {
-        id: userData.id,
-        email: userData.email,
-        plan: userData.plan,
-        tenantId: userData.tenantId,
-      });
-
+      
       // Cache the user data
       if (typeof window !== 'undefined') {
         localStorage.setItem(
