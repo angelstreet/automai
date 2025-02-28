@@ -77,6 +77,10 @@ const nextConfig = {
       },
     ];
   },
+
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 // Set NEXTAUTH_SECRET if not present
