@@ -33,12 +33,31 @@ async function getHandler() {
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest, { params }: { params: { nextauth: string[] } }) {
   try {
-    console.log('NextAuth GET request received');
+    console.log('NextAuth GET request received', params);
     const handler = await getHandler();
     console.log('NextAuth GET handler created, processing request');
-    return handler(req);
+    
+    // Create a modified request with the params
+    const url = new URL(req.url);
+    url.pathname = `/api/auth/${params.nextauth.join('/')}`;
+    const modifiedReq = new Request(url, {
+      headers: req.headers,
+      method: req.method,
+      body: req.body,
+      cache: req.cache,
+      credentials: req.credentials,
+      integrity: req.integrity,
+      keepalive: req.keepalive,
+      mode: req.mode,
+      redirect: req.redirect,
+      referrer: req.referrer,
+      referrerPolicy: req.referrerPolicy,
+      signal: req.signal,
+    });
+    
+    return handler(modifiedReq);
   } catch (error) {
     console.error('NextAuth GET error:', error);
     if (error instanceof Error) {
@@ -53,12 +72,31 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, { params }: { params: { nextauth: string[] } }) {
   try {
-    console.log('NextAuth POST request received');
+    console.log('NextAuth POST request received', params);
     const handler = await getHandler();
     console.log('NextAuth POST handler created, processing request');
-    return handler(req);
+    
+    // Create a modified request with the params
+    const url = new URL(req.url);
+    url.pathname = `/api/auth/${params.nextauth.join('/')}`;
+    const modifiedReq = new Request(url, {
+      headers: req.headers,
+      method: req.method,
+      body: req.body,
+      cache: req.cache,
+      credentials: req.credentials,
+      integrity: req.integrity,
+      keepalive: req.keepalive,
+      mode: req.mode,
+      redirect: req.redirect,
+      referrer: req.referrer,
+      referrerPolicy: req.referrerPolicy,
+      signal: req.signal,
+    });
+    
+    return handler(modifiedReq);
   } catch (error) {
     console.error('NextAuth POST error:', error);
     if (error instanceof Error) {

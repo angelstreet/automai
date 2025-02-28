@@ -6,7 +6,7 @@
  * This script manages the development servers in debug mode by:
  * 1. Checking if servers are already running
  * 2. Killing existing processes if needed
- * 3. Starting Next.js, backend server, browser tools server, and Prisma Studio
+ * 3. Starting Next.js, browser tools server, and Prisma Studio
  * 
  * Usage: npm run dev:debug
  */

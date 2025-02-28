@@ -13,7 +13,7 @@ export const authConfig: AuthOptions = {
     error: '/error',
     signOut: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-do-not-use-in-production',
   session: {
     strategy: 'jwt',
     maxAge: 24 * 60 * 60, // 24 hours
@@ -33,6 +33,7 @@ export const authConfig: AuthOptions = {
     },
     async session({ session, token }) {
       if (token) {
+        session.user = session.user || {};
         session.user.id = token.id as string;
         session.user.email = token.email as string;
         session.user.name = token.name as string;
@@ -72,6 +73,28 @@ export async function getProviders() {
     const providers = [googleProvider, githubProvider, credentialsProvider].filter(Boolean);
     
     console.log(`Successfully loaded ${providers.length} providers`);
+    
+    // Ensure we have at least one provider
+    if (providers.length === 0) {
+      console.warn('No authentication providers loaded, adding fallback credentials provider');
+      // Add a simple fallback provider to prevent complete auth failure
+      const { default: CredentialsProvider } = await import("next-auth/providers/credentials");
+      return [
+        CredentialsProvider({
+          id: "fallback-credentials",
+          name: "Fallback Credentials",
+          credentials: {
+            email: { label: "Email", type: "email" },
+            password: { label: "Password", type: "password" }
+          },
+          async authorize() {
+            console.error("Using fallback provider - authentication will fail");
+            return null; // Always fail auth with fallback
+          }
+        })
+      ];
+    }
+    
     return providers;
   } catch (error) {
     console.error('Error loading providers:', error);
