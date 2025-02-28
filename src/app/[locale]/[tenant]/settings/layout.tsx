@@ -1,6 +1,6 @@
 'use client';
 
-import { SettingsHeader } from '@/components/settings/settings-header';
+import { SettingsHeader } from '@/components/settings/SettingsHeader';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;

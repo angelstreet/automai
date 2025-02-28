@@ -1,6 +1,6 @@
-import { Hero } from './components/hero';
-import { Features } from './components/features';
-import { SiteHeader } from '@/components/layout/site-header';
+import { Hero } from './(marketing)/_components/Hero';
+import { Features } from './(marketing)/_components/Features';
+import { SiteHeader } from '@/components/layout/SiteHeader';
 import { Footer } from '@/components/layout/footer';
 import { locales } from '@/config';
 

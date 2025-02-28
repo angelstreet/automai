@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/Shadcn/button';
 import { RefreshCcw, Plus } from 'lucide-react';
 import { useToast } from '@/components/Shadcn/use-toast';
-import { HostOverview } from '@/components/hosts/HostOverview';
+import { HostOverview } from './_components/HostOverview';
 import { Host } from '@/types/hosts';
 import { ConnectHostDialog } from './_components/ConnectHostDialog';
 import { Tooltip, TooltipContent, TooltipProvider } from '@/components/Shadcn/tooltip';

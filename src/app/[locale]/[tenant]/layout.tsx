@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { AppSidebar } from '@/components/layout/app-sidebar';
-import { WorkspaceHeader } from '@/components/layout/workspace-header';
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { TooltipProvider } from '@/components/Shadcn/tooltip';
 import { SidebarProvider } from '@/components/sidebar';
 import { useUser } from '@/lib/contexts/UserContext';
