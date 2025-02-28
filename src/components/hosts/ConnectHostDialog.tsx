@@ -36,6 +36,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     username: '',
     password: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const resetForm = useCallback(() => {
     setFormData({

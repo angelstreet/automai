@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
 import { PinInputProps } from './types';
 import { PinInputContext } from './context';
 import { usePinInput } from './usePinInput';

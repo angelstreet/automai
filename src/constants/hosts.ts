@@ -1,5 +1,3 @@
-import { Device, Machine } from '@/types/hosts';
-
 // Keep only real constants (remove mock data)
 export const STATUS_VARIANTS = {
   running: 'bg-green-500/10 text-green-500 border-green-500/20',

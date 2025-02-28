@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/shadcn/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Card } from '@/components/shadcn/card';
 import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Host } from '@/types/hosts';
@@ -65,7 +65,7 @@ export default function HostsLogsPage() {
 
   useEffect(() => {
     fetchMachines();
-  }, []);
+  }, [fetchMachines]);
 
   const filteredLogs = selectedDevice
     ? logs.filter((log) => log.deviceId === selectedDevice)

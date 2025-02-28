@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import Image from "next/image";
+import Image from 'next/image';
 
 interface NavUserProps {
   user: {

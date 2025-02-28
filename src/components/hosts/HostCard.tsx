@@ -5,12 +5,10 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
 import { Button } from '@/components/shadcn/button';
-import { Badge } from '@/components/shadcn/badge';
 import {
   Terminal,
   AlertCircle,

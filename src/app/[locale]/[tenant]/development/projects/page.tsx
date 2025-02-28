@@ -32,7 +32,7 @@ import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
-import { PlanType, canCreateMore, getUpgradeMessage } from '@/lib/features';
+import { PlanType, getUpgradeMessage } from '@/lib/features';
 import { useUser } from '@/lib/contexts/UserContext';
 
 // Type matching Prisma Project model

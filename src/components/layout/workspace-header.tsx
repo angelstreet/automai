@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { RoleSwitcher } from '@/components/shadcn/role-switcher';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 import { UserProfile } from '@/components/shadcn/user-profile';
