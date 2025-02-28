@@ -7,8 +7,8 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/Shadcn/card';
-import { Overview } from '@/components/Dashboard/overview';
-import { RecentSales } from '@/components/Dashboard/recent-sales';
+import { Overview } from '@/components/Dashboard/Overview';
+import { RecentSales } from '@/components/Dashboard/RecentSales';
 import { Button } from '@/components/Shadcn/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/Shadcn/avatar';
 
