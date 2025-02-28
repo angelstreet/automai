@@ -1,5 +1,3 @@
-'use client';
-
 import * as React from 'react';
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {

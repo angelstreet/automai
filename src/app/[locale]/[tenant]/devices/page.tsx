@@ -33,7 +33,6 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
 export default function DevicesPage() {
-  const t = useTranslations('Common');
   const params = useParams();
   const [devices, setDevices] = useState<Device[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,8 +45,8 @@ export default function DevicesPage() {
   const [newDevice, setNewDevice] = useState({
     name: '',
     description: '',
-    type: 'web', // web or mobile
-    platform: 'chrome', // chrome, firefox, safari, android, ios
+    type: 'web',
+    platform: 'chrome',
     version: '',
     resolution: '1920x1080',
   });
