@@ -2,13 +2,13 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Button } from '@/components/shadcn/button';
+import { Button } from '@/components/Shadcn/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
+} from '@/components/Shadcn/dropdown-menu';
 import { Globe } from 'lucide-react';
 
 interface LanguageSwitcherProps {

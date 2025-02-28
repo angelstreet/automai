@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Button } from '@/components/shadcn/button';
-import { Input } from '@/components/shadcn/input';
+import { Button } from '@/components/Shadcn/button';
+import { Input } from '@/components/Shadcn/input';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/shadcn/accordion';
+} from '@/components/Shadcn/accordion';
 import { useUser } from '@/lib/contexts/UserContext';
 import { useSession } from 'next-auth/react';
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/Shadcn/use-toast';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';
 import { PLATFORM_PREFIXES } from '@/constants/platforms';
 import { UseCaseList } from '../../usecases/_components/UseCaseList';

@@ -4,10 +4,10 @@ import { StatusSummary } from './StatusSummary';
 import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/shadcn/button';
+import { Button } from '@/components/Shadcn/button';
 import { Grid, List } from 'lucide-react';
 import { ConnectHostDialog } from './ConnectHostDialog';
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/Shadcn/use-toast';
 
 interface HostOverviewProps {
   hosts: Host[];

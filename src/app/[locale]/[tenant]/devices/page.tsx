@@ -8,8 +8,8 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-} from '@/components/shadcn/card';
-import { Button } from '@/components/shadcn/button';
+} from '@/components/Shadcn/card';
+import { Button } from '@/components/Shadcn/button';
 import {
   Dialog,
   DialogContent,
@@ -17,17 +17,17 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from '@/components/shadcn/dialog';
-import { Input } from '@/components/shadcn/input';
-import { Textarea } from '@/components/shadcn/textarea';
-import { Label } from '@/components/shadcn/label';
+} from '@/components/Shadcn/dialog';
+import { Input } from '@/components/Shadcn/input';
+import { Textarea } from '@/components/Shadcn/textarea';
+import { Label } from '@/components/Shadcn/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/shadcn/select';
+} from '@/components/Shadcn/select';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 

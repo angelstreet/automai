@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
+} from '@/components/Shadcn/dropdown-menu';
 import Image from 'next/image';
 
 interface NavUserProps {

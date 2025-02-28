@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
-import { Button } from '@/components/shadcn/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/Shadcn/avatar';
+import { Button } from '@/components/Shadcn/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
+} from '@/components/Shadcn/dropdown-menu';
 import { useSession, signOut } from 'next-auth/react';
 import { useParams } from 'next/navigation';
 

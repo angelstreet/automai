@@ -7,7 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/shadcn/card';
+} from '@/components/Shadcn/card';
 import { useSession } from 'next-auth/react';
 
 export default function ProfileSettingsPage() {

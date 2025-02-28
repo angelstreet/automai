@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/Shadcn/popover';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/shadcn/tooltip';
+} from '@/components/Shadcn/tooltip';
 
 interface Props {
   children: React.ReactNode;

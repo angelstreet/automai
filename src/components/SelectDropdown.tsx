@@ -1,13 +1,13 @@
 import { IconLoader } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
-import { FormControl } from '@/components/shadcn/form';
+import { FormControl } from '@/components/Shadcn/form';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/shadcn/select';
+} from '@/components/Shadcn/select';
 
 interface SelectDropdownProps {
   onValueChange?: (value: string) => void;

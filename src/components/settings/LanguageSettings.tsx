@@ -8,14 +8,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/shadcn/card';
+} from '@/components/Shadcn/card';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/shadcn/select';
+} from '@/components/Shadcn/select';
 
 const languages = [
   { code: 'en', name: 'English' },

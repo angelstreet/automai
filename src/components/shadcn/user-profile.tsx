@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation';
 import { User } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { useUser } from '@/lib/contexts/UserContext';
-import { Button } from '@/components/shadcn/button';
+import { Button } from '@/components/Shadcn/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
+} from '@/components/Shadcn/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/Shadcn/avatar';
 
 interface UserProfileProps {
   tenant?: string;

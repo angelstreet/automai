@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { TooltipProvider } from '@/components/shadcn/tooltip';
+import { TooltipProvider } from '@/components/Shadcn/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { SidebarContext } from '@/hooks/useSidebar';
