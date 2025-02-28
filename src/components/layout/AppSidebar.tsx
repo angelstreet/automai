@@ -12,7 +12,7 @@ import { NavUser } from '@/components/Layout/NavUser';
 import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
 import { sidebarData } from './data/sidebarData';
 import { useSession } from 'next-auth/react';
-import { useRole } from '@/context/role-context';
+import { useRole } from '@/context/RoleContext';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();
