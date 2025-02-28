@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Card } from '@/components/shadcn/card';
 import { Badge } from '@/components/shadcn/badge';
@@ -23,7 +23,7 @@ export default function HostsLogsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchMachines = async () => {
+  const fetchMachines = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/hosts');
@@ -61,7 +61,16 @@ export default function HostsLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  const handleDeviceChange = useCallback((deviceId: string) => {
+    const device = machines.find((m) => m.id === deviceId);
+    setSelectedDevice(device || null);
+    toast({
+      title: device ? 'Device selected' : 'Device selection cleared',
+      description: device ? `Selected ${device.name}` : 'No device selected',
+    });
+  }, [machines, selectedDevice, toast]);
 
   useEffect(() => {
     fetchMachines();

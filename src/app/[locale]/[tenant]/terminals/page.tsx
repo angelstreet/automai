@@ -8,65 +8,76 @@ export default function TerminalsPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const fetchConnections = async () => {
+    try {
+      // Logic here
+    } catch (_error) {
+      // Rename unused error parameter
+      // Logic here
+    }
+  };
+
   useEffect(() => {
-    // Check if we have selected hosts in session storage
-    const sessionData = sessionStorage.getItem('selectedMachines');
+    if (router && toast) {
+      // Check if we have selected hosts in session storage
+      const sessionData = sessionStorage.getItem('selectedMachines');
 
-    if (sessionData) {
-      try {
-        const hostIds = JSON.parse(sessionData);
+      if (sessionData) {
+        try {
+          const hostIds = JSON.parse(sessionData);
 
-        // Redirect to the dashboard if no hosts are selected
-        if (!Array.isArray(hostIds) || hostIds.length === 0) {
+          // Redirect to the dashboard if no hosts are selected
+          if (!Array.isArray(hostIds) || hostIds.length === 0) {
+            toast({
+              title: 'No hosts selected',
+              description: 'Please select a host from the hosts page.',
+              variant: 'destructive',
+            });
+            router.push('./hosts');
+            return;
+          }
+
+          // Fetch host details for the first host
+          if (hostIds.length > 0) {
+            fetch(`/api/hosts/${hostIds[0]}`)
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.success && data.data) {
+                  const hostName = data.data.name;
+                  const count = hostIds.length > 1 ? `?count=${hostIds.length}` : '';
+                  router.push(`./terminals/${hostName}${count}`);
+                } else {
+                  throw new Error('Failed to fetch host details');
+                }
+              })
+              .catch((error) => {
+                toast({
+                  title: 'Error',
+                  description: 'Failed to load terminal. Please try again.',
+                  variant: 'destructive',
+                });
+                router.push('./hosts');
+              });
+          }
+        } catch (error) {
           toast({
-            title: 'No hosts selected',
-            description: 'Please select a host from the hosts page.',
+            title: 'Error',
+            description: 'Invalid host data. Please try again.',
             variant: 'destructive',
           });
           router.push('./hosts');
-          return;
         }
-
-        // Fetch host details for the first host
-        if (hostIds.length > 0) {
-          fetch(`/api/hosts/${hostIds[0]}`)
-            .then((response) => response.json())
-            .then((data) => {
-              if (data.success && data.data) {
-                const hostName = data.data.name;
-                const count = hostIds.length > 1 ? `?count=${hostIds.length}` : '';
-                router.push(`./terminals/${hostName}${count}`);
-              } else {
-                throw new Error('Failed to fetch host details');
-              }
-            })
-            .catch((error) => {
-              toast({
-                title: 'Error',
-                description: 'Failed to load terminal. Please try again.',
-                variant: 'destructive',
-              });
-              router.push('./hosts');
-            });
-        }
-      } catch (error) {
+      } else {
+        // No hosts selected, redirect to hosts page
         toast({
-          title: 'Error',
-          description: 'Invalid host data. Please try again.',
+          title: 'No hosts selected',
+          description: 'Please select a host from the hosts page.',
           variant: 'destructive',
         });
         router.push('./hosts');
       }
-    } else {
-      // No hosts selected, redirect to hosts page
-      toast({
-        title: 'No hosts selected',
-        description: 'Please select a host from the hosts page.',
-        variant: 'destructive',
-      });
-      router.push('./hosts');
     }
-  }, []);
+  }, [router, toast]);
 
   return (
     <div className="flex items-center justify-center h-screen">

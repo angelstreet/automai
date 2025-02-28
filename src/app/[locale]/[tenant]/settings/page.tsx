@@ -11,7 +11,7 @@ import {
 import { LanguageSettings } from '@/components/settings/language-settings';
 import { SettingsHeader } from '@/components/settings/settings-header';
 
-export default function SettingsPage({ params }: { params: { tenant: string; locale: string } }) {
+export default function SettingsPage({ _params }: { _params: { tenant: string } }) {
   const t = useTranslations('Settings');
 
   return (

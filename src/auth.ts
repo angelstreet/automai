@@ -126,7 +126,7 @@ export const authOptions = {
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: JWT }) {
+    async session({ session, token, _req }) {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;

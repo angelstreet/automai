@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
   ColumnDef,
@@ -54,13 +54,12 @@ export default function ProjectsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newProject, setNewProject] = useState({ name: '', description: '' });
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
-  const params = useParams();
   const { data: session, status } = useSession();
   const { toast } = useToast();
-  const { user, canCreateMore: checkCanCreateMore } = useUser();
+  const { user } = useUser();
 
   // Fetch projects on mount
   useEffect(() => {

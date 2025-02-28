@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
@@ -38,30 +38,25 @@ export default function HostsPage() {
   const [hosts, setHosts] = useState<Host[]>([]);
   const [viewMode] = useState<'grid' | 'table'>('grid');
 
-  // Fetch hosts from API
-  const fetchHosts = async () => {
+  const fetchHosts = useCallback(async () => {
     try {
-      setIsLoading(true);
       const response = await fetch('/api/hosts');
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch hosts');
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch hosts');
       const data = await response.json();
-      setHosts(data.data || []);
+      setHosts(data);
     } catch (error) {
       console.error('Error fetching hosts:', error);
       toast({
-        variant: 'destructive',
         title: 'Error',
-        description: 'Failed to load hosts',
+        description: 'Failed to fetch hosts',
+        variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchHosts();
+  }, [fetchHosts]);
 
   // Test a single host connection
   const testHostConnection = async (host: Host) => {
@@ -143,11 +138,6 @@ export default function HostsPage() {
       });
     }
   };
-
-  // Fetch hosts on component mount
-  useEffect(() => {
-    fetchHosts();
-  }, []);
 
   // Refresh hosts
   const refreshHosts = async () => {

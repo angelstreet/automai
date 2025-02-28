@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 
-export default function TeamPage({ params }: { params: { tenant: string; locale: string } }) {
+export default function TeamPage({ _params }: { _params: { tenant: string } }) {
   const t = useTranslations('Team');
 
   return (

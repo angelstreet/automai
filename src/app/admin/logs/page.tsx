@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   Card,
@@ -50,7 +50,7 @@ interface ConnectionLog {
 }
 
 export default function LogsPage() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const [logs, setLogs] = useState<ConnectionLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export default function LogsPage() {
     search: '',
   });
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -81,13 +81,11 @@ export default function LogsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, filter.level, filter.action, filter.search]);
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      fetchLogs();
-    }
-  }, [status, page, filter]);
+    fetchLogs();
+  }, [fetchLogs]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilter((prev) => ({ ...prev, [key]: value }));
@@ -109,11 +107,11 @@ export default function LogsPage() {
     }
   };
 
-  if (status === 'loading') {
+  if (loading) {
     return <div className="flex justify-center p-8">Loading...</div>;
   }
 
-  if (status === 'unauthenticated') {
+  if (!session) {
     return <div className="flex justify-center p-8">Please sign in to access this page</div>;
   }
 

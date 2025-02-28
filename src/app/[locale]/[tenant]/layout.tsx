@@ -6,25 +6,20 @@ import { WorkspaceHeader } from '@/components/layout/workspace-header';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { SidebarProvider } from '@/components/sidebar';
 import { useUser } from '@/lib/contexts/UserContext';
-import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 
 // Cache session check timestamp to reduce API calls
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 let lastSessionCheck = 0;
 
-export default function WorkspaceLayout({
+export default function TenantLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ tenant: string; locale: string }>;
+  params: { tenant: string; locale: string };
 }) {
   const { user, isLoading, checkSession } = useUser();
-  const router = useRouter();
-
-  // Properly handle params as a Promise
-  const { locale, tenant } = React.use(params);
 
   // Check session only at intervals to reduce API calls
   React.useEffect(() => {
@@ -55,7 +50,7 @@ export default function WorkspaceLayout({
         <SidebarProvider defaultOpen={Cookies.get('sidebar:state') !== 'false'}>
           <AppSidebar />
           <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
-            <WorkspaceHeader tenant={tenant} />
+            <WorkspaceHeader tenant={params.tenant} />
             <main className="flex-1 p-4 w-full max-w-full">{children}</main>
           </div>
         </SidebarProvider>

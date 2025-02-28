@@ -4,7 +4,7 @@ import { UsePinInputProps } from './types';
 export const usePinInput = ({
   value,
   defaultValue,
-  placeholder,
+  _placeholder,
   type,
   length,
   readOnly,
@@ -33,9 +33,9 @@ export const usePinInput = ({
     return refMap.current;
   }
 
-  function getNode(index: number) {
+  function getNode(_index: number) {
     const map = getMap();
-    return map.get(index);
+    return map.get(_index);
   }
 
   function focusInput(itemId: number) {
@@ -45,23 +45,23 @@ export const usePinInput = ({
     }
   }
 
-  function handleFocus(event: React.FocusEvent<HTMLInputElement>, index: number) {
+  function handleFocus(event: React.FocusEvent<HTMLInputElement>, _index: number) {
     event.target.select();
-    setFocusedIndex(index);
+    setFocusedIndex(_index);
   }
 
-  function handleBlur(index: number) {
+  function handleBlur(_index: number) {
     setFocusedIndex(-1);
   }
 
-  function updateInputField(val: string, index: number) {
+  function updateInputField(val: string, _index: number) {
     const nextPins = [...pins];
-    nextPins[index] = val;
+    nextPins[_index] = val;
     setPins(nextPins);
 
     // auto focus next pin field
-    if (val !== '' && index < length - 1) {
-      focusInput(index + 1);
+    if (val !== '' && _index < length - 1) {
+      focusInput(_index + 1);
     }
   }
 
@@ -72,13 +72,13 @@ export const usePinInput = ({
     return true;
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>, index: number) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>, _index: number) {
     if (readOnly) return;
     const val = e.target.value;
     const nextVal = val.trim().slice(-1);
 
     if (nextVal === '' || validate(nextVal)) {
-      updateInputField(nextVal, index);
+      updateInputField(nextVal, _index);
     }
   }
 
@@ -102,40 +102,40 @@ export const usePinInput = ({
     focusInput(Math.min(currentIndex, length - 1));
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>, index: number) {
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>, _index: number) {
     if (readOnly) return;
     const key = event.key;
 
     if (key === 'ArrowLeft' || key === 'ArrowUp') {
       event.preventDefault();
-      focusInput(index - 1);
+      focusInput(_index - 1);
     }
 
     if (key === 'ArrowRight' || key === 'ArrowDown') {
       event.preventDefault();
-      focusInput(index + 1);
+      focusInput(_index + 1);
     }
 
     if (key === 'Delete') {
       event.preventDefault();
       const nextPins = [...pins];
-      nextPins[index] = '';
+      nextPins[_index] = '';
       setPins(nextPins);
     }
 
     if (key === 'Backspace') {
       event.preventDefault();
       const nextPins = [...pins];
-      nextPins[index] = '';
+      nextPins[_index] = '';
       setPins(nextPins);
-      if (index > 0) {
-        focusInput(index - 1);
+      if (_index > 0) {
+        focusInput(_index - 1);
       }
     }
 
     if (key === 'Escape') {
       event.preventDefault();
-      const node = getNode(index);
+      const node = getNode(_index);
       if (node) {
         node.blur();
       }
