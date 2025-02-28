@@ -5,7 +5,7 @@ const sidebarItems = [
   // ... existing items ...
   {
     title: 'Logs',
-    href: '/admin/logs',
+    href: '/[locale]/[tenant]/admin/logs',
     icon: <ActivityLogIcon className="h-5 w-5" />,
   },
   // ... existing items ...
