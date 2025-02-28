@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getHostById, deleteHost } from '@/lib/services';
 
+type Props = {
+  params: { id: string }
+}
+
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: Props
 ) {
   try {
-    const host = await getHostById(context.params.id);
+    const host = await getHostById(params.id);
 
     if (!host) {
       return NextResponse.json({ success: false, error: 'Host not found' }, { status: 404 });
@@ -21,10 +25,10 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: Props
 ) {
   try {
-    await deleteHost(context.params.id);
+    await deleteHost(params.id);
 
     return NextResponse.json({
       success: true,

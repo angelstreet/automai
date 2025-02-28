@@ -122,6 +122,32 @@
    - Keep route handlers focused on request/response handling
    - Move business logic to service layer in `src/lib/services`
    - Extract validation to separate files
+   - Use consistent Props type for dynamic routes:
+     ```typescript
+     type Props = {
+       params: { id: string }
+     }
+
+     export async function GET(request: Request, { params }: Props) {
+       // ... handler implementation
+     }
+     ```
+
+3. **Response Format**:
+   ```typescript
+   // Success response
+   return NextResponse.json({
+     success: true,
+     data: result,
+     message: 'Operation successful'
+   })
+
+   // Error response
+   return NextResponse.json({
+     success: false,
+     error: 'Error message'
+   }, { status: errorCode })
+   ```
 
 ## Code Organization Within Files
 

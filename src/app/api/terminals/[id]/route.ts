@@ -5,7 +5,11 @@ import { headers } from 'next/headers';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+type Props = {
+  params: { id: string }
+}
+
+export async function GET(request: NextRequest, { params }: Props) {
   const connectionId = params.id;
 
   // Check if this is a WebSocket upgrade request
