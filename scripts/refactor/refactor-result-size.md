@@ -1,21 +1,21 @@
 # Files to Break Down
 
-_Generated on 2/27/2025, 10:15:06 PM_
+_Generated on 2/28/2025, 7:52:38 PM_
 
-## File Size Issues (10)
+## File Size Issues (9)
 
-| File                                                                                                           | Lines |
-| -------------------------------------------------------------------------------------------------------------- | ----- |
-| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/development/projects/page.tsx                  | 431   |
-| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/development/usecases/edit/[useCaseId]/page.tsx | 381   |
-| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/development/usecases/page.tsx                  | 322   |
-| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/hosts/page.tsx                                 | 385   |
-| /Users/joachimndoye/Documents/automai/src/app/[locale]/[tenant]/virtualization/page.tsx                        | 380   |
-| /Users/joachimndoye/Documents/automai/src/components/ui/sidebar.tsx                                            | 776   |
-| /Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectForm.tsx                   | 363   |
-| /Users/joachimndoye/Documents/automai/src/components/virtualization/Overview/ConnectionForm.tsx                | 370   |
-| /Users/joachimndoye/Documents/automai/src/components/virtualization/Terminal.tsx                               | 367   |
-| /Users/joachimndoye/Documents/automai/src/server/api/auth/controller.ts                                        | 779   |
+| File | Lines |
+| ---- | ----- |
+| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/projects/page.tsx | 431 |
+| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/usecases/edit/[useCaseId]/page.tsx | 381 |
+| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/usecases/page.tsx | 326 |
+| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/hosts/page.tsx | 386 |
+| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/ConnectForm.tsx | 364 |
+| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/ConnectionForm.tsx | 373 |
+| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/Terminal.tsx | 367 |
+| /Users/joachimndoye/Documents/automai3/automai/src/components/shadcn/sidebar.tsx | 749 |
+| /Users/joachimndoye/Documents/automai3/automai/src/lib/websocket-server.ts | 407 |
+
 
 ## Refactoring Strategy
 

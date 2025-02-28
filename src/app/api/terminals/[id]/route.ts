@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getWebSocketServer, handleUpgrade } from '@/lib/websocket-server';
+import { getWebSocketServer, handleUpgrade } from '@/lib/websocketServer';
 import { headers } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
