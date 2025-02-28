@@ -12,20 +12,19 @@ alwaysApply: true
 ### Essential Project Context
 - **Project Type**: Next.js 13+ App Router application with PostgreSQL/Prisma and WebSocket server
 - **Key Architecture**: 
-  - Dual WebSocket implementations: Standalone server (port 3001) and utility module
+  - WebSocket implementation in `src/lib/websocketServer.ts`
   - Dual Prisma clients: Root-level singleton and src-level singleton
   - Next.js HTTP server (port 3000) with App Router and internationalization
 
 ### Critical Patterns to Follow
 1. **Database Access**: 
    - Use appropriate Prisma client:
-     - For standalone scripts/WebSocket server: `import { prisma } from '../../prisma'`
+     - For standalone scripts: `import { prisma } from '../../prisma'`
      - For Next.js application: `import { prisma } from '@/lib/prisma'`
    - See [Prisma Rules](mdc:#prisma-rules) for details
 
 2. **WebSocket Usage**: 
-   - Standalone server (`websocket.server.js`) for terminal connections
-   - Utility module (`src/lib/websocket-server.ts`) for Next.js integration
+   - WebSocket implementation in `src/lib/websocketServer.ts`
    - See [WebSocket Rules](mdc:#websocket-rules) for details
 
 3. **Code Organization**:
@@ -113,9 +112,7 @@ alwaysApply: true
 This is a Next.js application with the following key features:
 - Next.js 13+ App Router with internationalization
 - PostgreSQL database with Prisma ORM
-- Dedicated WebSocket server implementation:
-  - Root-level `websocket.server.js` (standalone server on port 3001)
-  - Library module `src/lib/websocket-server.ts` (utility functions)
+- WebSocket implementation in `src/lib/websocketServer.ts`
 - Next.js built-in HTTP server (port 3000)
 - Authentication with NextAuth.js
 - UI built with Shadcn UI and Tailwind CSS
@@ -124,39 +121,7 @@ This is a Next.js application with the following key features:
 
 ## Project Structure
 
-```
-automai/
-├── prisma/                   # Prisma schema and migrations at root
-│   ├── schema.prisma         # Database schema with models for User, Host, Connection, etc.
-│   ├── migrations/           # Database migrations
-│   ├── seed.ts               # Database seed script
-│   └── index.ts              # Prisma client export (root-level singleton)
-├── .env.*                    # Environment files at root (.env.development, .env.production, .env.test)
-├── scripts/                  # Utility scripts
-│   └── health-check.js       # Script to check file sizes and provide refactoring recommendations
-├── src/
-│   ├── app/                  # Next.js App Router
-│   │   ├── [locale]/         # Internationalized routes
-│   │   │   ├── (auth)/       # Auth route group
-│   │   │   └── [tenant]/     # Tenant-specific routes including hosts page
-│   │   └── api/              # API Route Handlers including hosts API
-│   ├── lib/                  # Shared utilities
-│   │   ├── services/         # Service layer (data access)
-│   │   ├── prisma.ts         # Prisma client singleton (src-level)
-│   │   ├── websocket-server.ts # WebSocket utility functions
-│   │   ├── utils.ts          # Helper functions
-│   │   └── env.ts            # Environment configuration
-│   ├── components/           # UI components
-│   │   ├── ui/               # Reusable UI components
-│   │   └── /   # Terminal component for WebSocket connections
-│   ├── i18n/                 # Internationalization
-│   └── middleware.ts         # Next.js middleware
-├── websocket.server.js       # Standalone WebSocket server on port 3001 for terminal connections
-├── electron/                 # Electron app configuration
-├── tests/                    # Test files
-├── docs/                     # Project documentation
-└── next.config.js            # Next.js configuration
-```
+For a detailed project structure, please refer to the [Code Organization Rules](mdc:#code-organization-rules) in `code-organization.mdc`. The structure there is verified against the actual codebase and contains accurate folder and file listings.
 
 ## Completed Setup
 
@@ -165,9 +130,7 @@ The following has already been set up and should not be recreated:
 - Prisma client singletons:
   - Root-level singleton: `prisma/index.ts`
   - Src-level singleton: `src/lib/prisma.ts`
-- WebSocket implementations:
-  - Standalone server: `websocket.server.js` (port 3001)
-  - Utility functions: `src/lib/websocket-server.ts`
+- WebSocket implementation in `src/lib/websocketServer.ts`
 - SSH2 integration for terminal connections
 - Environment configuration with validation using Zod
 - Authentication with NextAuth.js
@@ -343,9 +306,8 @@ In YOLO mode, focus testing efforts on critical paths:
 - **Tenant**: A customer organization with its own isolated data and users
 - **Host**: A server or host that can be connected to via SSH
 - **Connection**: An established SSH session to a host
-- **WebSocket Server**: The standalone server running on port 3001 for terminal connections
-- **WebSocket Utility**: The module in src/lib for WebSocket functionality within Next.js
-- **Prisma Client (Root)**: The Prisma client instance at /prisma/index.ts used by standalone servers
+- **WebSocket Server**: The WebSocket implementation in src/lib/websocketServer.ts
+- **Prisma Client (Root)**: The Prisma client instance at /prisma/index.ts used by standalone scripts
 - **Prisma Client (Src)**: The Prisma client instance at /src/lib/prisma.ts used by Next.js
 - **Health Check**: The process of identifying files exceeding 300 lines that need refactoring
 - **YOLO Mode**: Rapid development mode prioritizing speed and efficiency over comprehensive documentation
