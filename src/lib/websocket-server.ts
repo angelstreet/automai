@@ -157,10 +157,11 @@ export function initializeWebSocketServer(server: Server) {
                   errorType: 'UNSUPPORTED_CONNECTION_TYPE'
                 }));
               }
-            } catch (dbError) {
+            } catch (dbError: unknown) {
               console.error('[WebSocketServer] Database error:', dbError);
+              const errorMessage = dbError instanceof Error ? dbError.message : 'Unknown database error';
               ws.send(JSON.stringify({ 
-                error: 'Database error: ' + dbError.message,
+                error: 'Database error: ' + errorMessage,
                 errorType: 'DATABASE_ERROR'
               }));
             }
@@ -170,8 +171,9 @@ export function initializeWebSocketServer(server: Server) {
           }
         } catch (error) {
           console.error('[WebSocketServer] Error processing message:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           ws.send(JSON.stringify({ 
-            error: 'Invalid message format: ' + (error as Error).message,
+            error: 'Invalid message format: ' + errorMessage,
             errorType: 'INVALID_MESSAGE'
           }));
         }
@@ -304,7 +306,7 @@ function handleSshConnection(clientSocket: WebSocketConnection, connection: any,
       }
       
       // Pipe data from SSH to WebSocket
-      stream.on('data', (data) => {
+      stream.on('data', (data: Buffer) => {
         clientSocket.send(data);
       });
       
@@ -331,7 +333,7 @@ function handleSshConnection(clientSocket: WebSocketConnection, connection: any,
       });
       
       // Handle stream errors
-      stream.on('error', (err) => {
+      stream.on('error', (err: Error) => {
         console.error('[SSH] Stream error:', err.message);
         clientSocket.send(JSON.stringify({ 
           error: `SSH stream error: ${err.message}`,
@@ -414,14 +416,22 @@ export class WebSocketServer {
         try {
           const message = JSON.parse(data.toString());
           this.handleMessage(ws, message);
-        } catch (error) {
-          logger.error('Failed to parse WebSocket message:', error);
+        } catch (error: unknown) {
+          const logOptions = {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            context: 'WebSocket message parsing'
+          };
+          logger.error('Failed to parse WebSocket message', logOptions);
           ws.send(JSON.stringify({ error: 'Invalid message format' }));
         }
       });
 
-      ws.on('error', (error) => {
-        logger.error('WebSocket error:', error);
+      ws.on('error', (error: Error) => {
+        const logOptions = {
+          error: error.message,
+          context: 'WebSocket connection'
+        };
+        logger.error('WebSocket error', logOptions);
       });
 
       ws.on('close', () => {

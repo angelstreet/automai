@@ -128,8 +128,8 @@ export function Terminal({ connection }: TerminalProps) {
         return;
       }
 
-      // Use the dedicated WebSocket server on port 3001
-      const socketUrl = `${protocol}//${window.location.hostname}:3001/terminals/${connection.id}`;
+      // Use the Next.js API route for WebSocket connections instead of the standalone server
+      const socketUrl = `${protocol}//${window.location.host}/api/terminals/${connection.id}`;
       console.log(`[WebSocket] Connecting to: ${socketUrl}`, {
         connectionId: connection.id,
         connectionType: connection.type,

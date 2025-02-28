@@ -35,7 +35,7 @@ export default function TerminalsPage() {
 
         setConnection(data.data);
 
-        // Initialize SSH connection
+        // Initialize SSH connection through the Next.js API
         const sshResponse = await fetch('/api/hosts/connect', {
           method: 'POST',
           headers: {
