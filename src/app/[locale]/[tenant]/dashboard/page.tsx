@@ -14,17 +14,17 @@ import {
 import { Overview } from '@/components/dashboard/overview';
 import { RecentSales } from '@/components/dashboard/recent-sales';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/shadcn/avatar';
+import { useSession } from 'next-auth/react';
 
-export default function DashboardPage() {
-  const t = useTranslations('Dashboard');
-  const params = useParams();
-  const tenant = params.tenant as string;
+export default function DashboardPage({ params }: { params: { tenant: string; locale: string } }) {
+  const t = useTranslations('dashboard');
+  const { data: session } = useSession();
 
   return (
     <div className="flex-1 space-y-4">
       {/* Title section with action button */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">{t('welcome')}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <div className="flex items-center space-x-2">
           <Button>Run Tests</Button>
         </div>
