@@ -46,7 +46,7 @@ export async function getElements(selector: string) {
 
 export async function getText(selector: string) {
   const element = await getElement(selector);
-  return element?.evaluate(el => el.textContent);
+  return element?.evaluate((el) => el.textContent);
 }
 
 export async function click(selector: string) {
@@ -65,4 +65,4 @@ export async function selectRole(role: string) {
 }
 
 // Make page and browser available to tests
-export { page, browser }; 
+export { page, browser };

@@ -22,3 +22,5 @@ export const SidebarGroupAction = React.forwardRef<
     />
   );
 });
+
+SidebarGroupAction.displayName = 'SidebarGroupAction';

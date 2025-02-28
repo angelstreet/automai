@@ -28,3 +28,5 @@ export const SidebarTrigger = React.forwardRef<
     </Button>
   );
 });
+
+SidebarTrigger.displayName = 'SidebarTrigger';

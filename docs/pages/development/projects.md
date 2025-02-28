@@ -5,22 +5,25 @@ Let’s enhance the **Projects Page** implementation by integrating it with your
 ### Updated Design Document: Projects Page with Backend Integration
 
 #### Layout
-| **Section**         | **Description**                                                                 | **Components**                     |
-|---------------------|--------------------------------------------------------------------------------|------------------------------------|
-| **Header**          | Title: "Projects", button to "Create New Project"                              | `<Button>` (shadcn-ui)            |
-| **Sidebar**         | Navigation to Dashboard, Development, Execution, Reports, Settings             | `<Sidebar>` (layout component)    |
-| **Main Content**    | Elegant table listing all projects fetched from `/api/projects`                | `<Table>` (shadcn-ui), `@tanstack/react-table` |
-| **Modal (Create/Edit)** | Form to input project name and description, syncs with `POST /api/projects` | `<Dialog>` (shadcn-ui)            |
+
+| **Section**             | **Description**                                                             | **Components**                                 |
+| ----------------------- | --------------------------------------------------------------------------- | ---------------------------------------------- |
+| **Header**              | Title: "Projects", button to "Create New Project"                           | `<Button>` (shadcn-ui)                         |
+| **Sidebar**             | Navigation to Dashboard, Development, Execution, Reports, Settings          | `<Sidebar>` (layout component)                 |
+| **Main Content**        | Elegant table listing all projects fetched from `/api/projects`             | `<Table>` (shadcn-ui), `@tanstack/react-table` |
+| **Modal (Create/Edit)** | Form to input project name and description, syncs with `POST /api/projects` | `<Dialog>` (shadcn-ui)                         |
 
 #### Table Columns
-| **Column**       | **Description**                   | **Interactivity**                  | **Backend Mapping**          |
-|------------------|-----------------------------------|-------------------------------------|-----------------------------|
-| **Name**         | Project name                     | Sortable, clickable to view use cases | `name` from `Project` model |
-| **Description**  | Brief project description        | -                                   | `description` (optional)    |
-| **Created At**   | Date of creation                 | Sortable                            | `createdAt` from `Project`  |
-| **Actions**      | Edit, Delete buttons             | `<Button>` (Edit/Delete triggers)   | Triggers API calls          |
+
+| **Column**      | **Description**           | **Interactivity**                     | **Backend Mapping**         |
+| --------------- | ------------------------- | ------------------------------------- | --------------------------- |
+| **Name**        | Project name              | Sortable, clickable to view use cases | `name` from `Project` model |
+| **Description** | Brief project description | -                                     | `description` (optional)    |
+| **Created At**  | Date of creation          | Sortable                              | `createdAt` from `Project`  |
+| **Actions**     | Edit, Delete buttons      | `<Button>` (Edit/Delete triggers)     | Triggers API calls          |
 
 #### Workflow with Backend Integration
+
 1. **User Lands on Page**:
    - Fetches projects from `GET /api/projects` (returns `Project[]` from Prisma).
    - Table renders data with `@tanstack/react-table`.
@@ -36,6 +39,7 @@ Let’s enhance the **Projects Page** implementation by integrating it with your
    - Click Name → Navigates to `/[locale]/[tenant]/development/projects/[projectId]/usecases`.
 
 #### Backend Assumptions
+
 - **API**: `/api/projects` endpoints are implemented in `src/app/api/projects/route.ts` using Next.js Route Handlers.
 - **Prisma**: Uses the `Project` model from `schema.prisma`.
 - **Auth**: `ownerId` is derived from the authenticated user (NextAuth.js session).
@@ -49,6 +53,7 @@ Let’s enhance the **Projects Page** implementation by integrating it with your
 ### Updated Instructions for AI Agent: Projects Page with Backend Integration
 
 #### Prerequisites
+
 - **Dependencies**:
   ```bash
   npm install @tanstack/react-table @supabase/supabase-js
@@ -59,22 +64,24 @@ Let’s enhance the **Projects Page** implementation by integrating it with your
 - **Supabase**: Configure `SUPABASE_URL` and `SUPABASE_KEY` in `.env` (not directly used here but part of your stack).
 
 #### Step 1: File Setup
+
 - Create `src/app/[locale]/[tenant]/development/projects/page.tsx`.
 
 #### Step 2: Implement Page with Backend Integration
-```tsx
-"use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+```tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
   getSortedRowModel,
-} from "@tanstack/react-table";
+} from '@tanstack/react-table';
 import {
   Table,
   TableBody,
@@ -82,17 +89,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/shadcn/table";
-import { Button } from "@/components/shadcn/button";
+} from '@/components/shadcn/table';
+import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/shadcn/dialog";
-import { Input } from "@/components/shadcn/input";
-import Sidebar from "@/components/layout/Sidebar";
+} from '@/components/shadcn/dialog';
+import { Input } from '@/components/shadcn/input';
+import Sidebar from '@/components/layout/Sidebar';
 
 // Type matching Prisma Project model
 type Project = {
@@ -106,7 +113,7 @@ type Project = {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newProject, setNewProject] = useState({ name: "", description: "" });
+  const [newProject, setNewProject] = useState({ name: '', description: '' });
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const router = useRouter();
   const { data: session } = useSession();
@@ -114,7 +121,7 @@ export default function ProjectsPage() {
   // Fetch projects on mount
   useEffect(() => {
     const fetchProjects = async () => {
-      const res = await fetch("/api/projects", {
+      const res = await fetch('/api/projects', {
         headers: { Authorization: `Bearer ${session?.accessToken}` },
       });
       if (res.ok) {
@@ -128,45 +135,35 @@ export default function ProjectsPage() {
   // Define table columns
   const columns: ColumnDef<Project>[] = [
     {
-      accessorKey: "name",
-      header: "Name",
+      accessorKey: 'name',
+      header: 'Name',
       cell: ({ row }) => (
         <span
           className="cursor-pointer text-blue-600 hover:underline"
           onClick={() =>
-            router.push(
-              `/[locale]/[tenant]/development/projects/${row.original.id}/usecases`
-            )
+            router.push(`/[locale]/[tenant]/development/projects/${row.original.id}/usecases`)
           }
         >
-          {row.getValue("name")}
+          {row.getValue('name')}
         </span>
       ),
       enableSorting: true,
     },
-    { accessorKey: "description", header: "Description" },
+    { accessorKey: 'description', header: 'Description' },
     {
-      accessorKey: "createdAt",
-      header: "Created At",
-      cell: ({ row }) => new Date(row.getValue("createdAt")).toLocaleDateString(),
+      accessorKey: 'createdAt',
+      header: 'Created At',
+      cell: ({ row }) => new Date(row.getValue('createdAt')).toLocaleDateString(),
       enableSorting: true,
     },
     {
-      id: "actions",
+      id: 'actions',
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setEditingProject(row.original)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setEditingProject(row.original)}>
             Edit
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => handleDelete(row.original.id)}
-          >
+          <Button variant="destructive" size="sm" onClick={() => handleDelete(row.original.id)}>
             Delete
           </Button>
         </div>
@@ -189,10 +186,10 @@ export default function ProjectsPage() {
       description: newProject.description,
       ownerId: session.user.id,
     };
-    const res = await fetch("/api/projects", {
-      method: "POST",
+    const res = await fetch('/api/projects', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${session.accessToken}`,
       },
       body: JSON.stringify(payload),
@@ -201,16 +198,16 @@ export default function ProjectsPage() {
       const createdProject = await res.json();
       setProjects([...projects, createdProject]);
       setIsDialogOpen(false);
-      setNewProject({ name: "", description: "" });
+      setNewProject({ name: '', description: '' });
     }
   };
 
   const handleEdit = async () => {
     if (!editingProject || !session) return;
     const res = await fetch(`/api/projects/${editingProject.id}`, {
-      method: "PATCH", // Assuming PATCH is supported; adjust if backend uses PUT
+      method: 'PATCH', // Assuming PATCH is supported; adjust if backend uses PUT
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${session.accessToken}`,
       },
       body: JSON.stringify({
@@ -220,9 +217,7 @@ export default function ProjectsPage() {
     });
     if (res.ok) {
       const updatedProject = await res.json();
-      setProjects(
-        projects.map((p) => (p.id === updatedProject.id ? updatedProject : p))
-      );
+      setProjects(projects.map((p) => (p.id === updatedProject.id ? updatedProject : p)));
       setEditingProject(null);
     }
   };
@@ -230,7 +225,7 @@ export default function ProjectsPage() {
   const handleDelete = async (id: string) => {
     if (!session) return;
     const res = await fetch(`/api/projects/${id}`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: { Authorization: `Bearer ${session.accessToken}` },
     });
     if (res.ok) {
@@ -256,16 +251,12 @@ export default function ProjectsPage() {
                 <Input
                   placeholder="Name"
                   value={newProject.name}
-                  onChange={(e) =>
-                    setNewProject({ ...newProject, name: e.target.value })
-                  }
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
                 />
                 <Input
                   placeholder="Description"
                   value={newProject.description}
-                  onChange={(e) =>
-                    setNewProject({ ...newProject, description: e.target.value })
-                  }
+                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                 />
                 <Button onClick={handleCreate}>Save</Button>
               </div>
@@ -275,10 +266,7 @@ export default function ProjectsPage() {
 
         {/* Edit Dialog */}
         {editingProject && (
-          <Dialog
-            open={!!editingProject}
-            onOpenChange={() => setEditingProject(null)}
-          >
+          <Dialog open={!!editingProject} onOpenChange={() => setEditingProject(null)}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Edit Project</DialogTitle>
@@ -287,13 +275,11 @@ export default function ProjectsPage() {
                 <Input
                   placeholder="Name"
                   value={editingProject.name}
-                  onChange={(e) =>
-                    setEditingProject({ ...editingProject, name: e.target.value })
-                  }
+                  onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
                 />
                 <Input
                   placeholder="Description"
-                  value={editingProject.description || ""}
+                  value={editingProject.description || ''}
                   onChange={(e) =>
                     setEditingProject({
                       ...editingProject,
@@ -319,8 +305,8 @@ export default function ProjectsPage() {
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
                     {{
-                      asc: " ↑",
-                      desc: " ↓",
+                      asc: ' ↑',
+                      desc: ' ↓',
                     }[header.column.getIsSorted() as string] ?? null}
                   </TableHead>
                 ))}
@@ -346,6 +332,7 @@ export default function ProjectsPage() {
 ```
 
 #### Step 3: Backend Integration Notes
+
 - **API Calls**:
   - `GET /api/projects`: Fetches all projects for the authenticated user (filtered by `ownerId` on backend).
   - `POST /api/projects`: Creates a new project with `name`, `description`, and `ownerId` from session.
@@ -360,41 +347,45 @@ export default function ProjectsPage() {
   - Matches `Project` model: `{ id, name, ownerId, createdAt, description? }`.
 
 #### Step 4: Styling
+
 - Tailwind CSS in `tailwind.config.js`:
   - Table: `hover:bg-gray-100` on `<TableRow>`.
   - Headers: `font-semibold text-gray-700` on `<TableHead>`.
 
 #### Step 5: Testing
-- Update `tests/e2e/projects.spec.ts`:
-```ts
-import { test, expect } from "@playwright/test";
 
-test("Projects page loads and integrates with backend", async ({ page }) => {
-  await page.goto("/en/tenant/development/projects");
-  await expect(page.locator("h1")).toHaveText("Projects");
+- Update `tests/e2e/projects.spec.ts`:
+
+```ts
+import { test, expect } from '@playwright/test';
+
+test('Projects page loads and integrates with backend', async ({ page }) => {
+  await page.goto('/en/tenant/development/projects');
+  await expect(page.locator('h1')).toHaveText('Projects');
 
   // Create project
-  await page.click("text=Create New Project");
-  await page.fill('input[placeholder="Name"]', "Test Project");
-  await page.fill('input[placeholder="Description"]', "Test Desc");
-  await page.click("text=Save");
-  await expect(page.locator("text=Test Project")).toBeVisible();
+  await page.click('text=Create New Project');
+  await page.fill('input[placeholder="Name"]', 'Test Project');
+  await page.fill('input[placeholder="Description"]', 'Test Desc');
+  await page.click('text=Save');
+  await expect(page.locator('text=Test Project')).toBeVisible();
 
   // Edit project
-  await page.click("text=Edit");
-  await page.fill('input[placeholder="Name"]', "Updated Project");
-  await page.click("text=Save");
-  await expect(page.locator("text=Updated Project")).toBeVisible();
+  await page.click('text=Edit');
+  await page.fill('input[placeholder="Name"]', 'Updated Project');
+  await page.click('text=Save');
+  await expect(page.locator('text=Updated Project')).toBeVisible();
 
   // Delete project
-  await page.click("text=Delete");
-  await expect(page.locator("text=Updated Project")).not.toBeVisible();
+  await page.click('text=Delete');
+  await expect(page.locator('text=Updated Project')).not.toBeVisible();
 });
 ```
 
 ---
 
 ### Key Backend Integration Points
+
 1. **Authentication**: Leverages NextAuth.js for session management, ensuring `ownerId` links projects to users.
 2. **API Endpoints**: Uses `/api/projects` endpoints as defined, with PATCH assumed for edits (confirm with backend implementation).
 3. **Data Model**: Aligns with Prisma `Project` schema, ensuring frontend and backend sync perfectly.
@@ -403,6 +394,7 @@ test("Projects page loads and integrates with backend", async ({ page }) => {
 ---
 
 ### Next Steps
+
 - **Confirmation**: Does this integration match your backend setup? Any adjustments (e.g., `PATCH` vs `PUT`, error handling)?
 - **Use Case Page**: Ready to move to that next, or refine this further?
 - **Agent Deployment**: Instructions are detailed—ready to hand off, or need a specific format?

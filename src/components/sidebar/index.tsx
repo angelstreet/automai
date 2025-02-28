@@ -1,5 +1,5 @@
-export { Sidebar } from './Sidebar';
-export { SidebarProvider } from './SidebarProvider';
+export { default as Sidebar } from './Sidebar';
+export { default as SidebarProvider } from './SidebarProvider';
 export { SidebarTrigger } from './SidebarTrigger';
 export { SidebarRail } from './SidebarRail';
 export { SidebarInset } from './SidebarInset';

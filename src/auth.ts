@@ -1,26 +1,26 @@
 // src/app/lib/auth.ts
-import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "@/lib/prisma";
-import { compare } from "bcrypt";
-import type { JWT } from "next-auth/jwt";
-import type { Session, User } from "next-auth";
-import { env } from "@/lib/env";
+import NextAuth from 'next-auth';
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { prisma } from '@/lib/prisma';
+import { compare } from 'bcrypt';
+import type { JWT } from 'next-auth/jwt';
+import type { Session, User } from 'next-auth';
+import { env } from '@/lib/env';
 
 // Import providers
-import GoogleProvider from "next-auth/providers/google";
-import GitHubProvider from "next-auth/providers/github";
-import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from 'next-auth/providers/google';
+import GitHubProvider from 'next-auth/providers/github';
+import CredentialsProvider from 'next-auth/providers/credentials';
 
 // Ensure environment variables are loaded
 // Next.js automatically loads .env.development in development mode
 // and .env.production in production mode
 if (!process.env.NEXTAUTH_SECRET) {
-  console.warn("Warning: NEXTAUTH_SECRET is not set in your .env.development file");
+  console.warn('Warning: NEXTAUTH_SECRET is not set in your .env.development file');
 }
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-  console.warn("Warning: Google provider credentials are missing in your .env.development file");
+  console.warn('Warning: Google provider credentials are missing in your .env.development file');
 }
 
 // Define our session and user types
@@ -53,7 +53,7 @@ export const authOptions = {
       clientSecret: env.GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
-          prompt: "select_account",
+          prompt: 'select_account',
         },
       },
     }),
@@ -62,55 +62,55 @@ export const authOptions = {
       clientSecret: env.GITHUB_CLIENT_SECRET,
     }),
     CredentialsProvider({
-      name: "Credentials",
+      name: 'Credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required");
+          throw new Error('Email and password are required');
         }
 
         try {
-          const user = await prisma.user.findUnique({
+          const user = (await prisma.user.findUnique({
             where: { email: credentials.email },
             include: {
               tenant: true,
             },
-          }) as (CustomUser & { tenant: any }) | null;
-          
+          })) as (CustomUser & { tenant: any }) | null;
+
           if (!user || !user.password) {
             return null;
           }
-          
+
           const isPasswordValid = await compare(credentials.password, user.password);
           if (!isPasswordValid) {
             return null;
           }
-          
+
           return {
             id: user.id,
-            email: user.email || "",
-            name: user.name || "",
-            role: user.role || "user",
+            email: user.email || '',
+            name: user.name || '',
+            role: user.role || 'user',
             tenantId: user.tenantId || null,
-            tenantName: user.tenant?.name || "",
+            tenantName: user.tenant?.name || '',
           };
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error('Auth error:', error);
           return null;
         }
       },
     }),
   ],
   pages: {
-    signIn: "/login",
-    error: "/error",
-    signOut: "/login",
+    signIn: '/login',
+    error: '/error',
+    signOut: '/login',
   },
   session: {
-    strategy: "jwt" as const,
+    strategy: 'jwt' as const,
     maxAge: 24 * 60 * 60,
   },
   callbacks: {
@@ -138,7 +138,7 @@ export const authOptions = {
     },
   },
   secret: env.NEXTAUTH_SECRET,
-  debug: env.NODE_ENV === "development",
+  debug: env.NODE_ENV === 'development',
 };
 
 // Export auth utilities

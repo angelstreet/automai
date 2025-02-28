@@ -5,6 +5,7 @@
 The project uses a WebSocket implementation integrated with Next.js:
 
 1. **WebSocket Utility Module** (`src/lib/websocket-server.ts`)
+
    - Provides utility functions for WebSocket connections
    - Used within the Next.js application
    - Exports functions like `getWebSocketServer()` and `handleUpgrade()`
@@ -18,12 +19,14 @@ The project uses a WebSocket implementation integrated with Next.js:
 ## WebSocket Utility Module (src/lib/websocket-server.ts)
 
 1. **Singleton Pattern**
+
    - **IMPORTANT**: Always use the global WebSocketServer instance
    - Never create new WebSocketServer instances in route handlers
    - Use `getWebSocketServer()` to access the singleton instance
    - Handle WebSocket upgrades through the `handleUpgrade()` utility function
 
 2. **Connection Management**
+
    - Implement ping/pong for connection health monitoring
    - Set `isAlive` flag to true on connection and on pong events
    - Terminate connections that don't respond to pings
@@ -36,13 +39,16 @@ The project uses a WebSocket implementation integrated with Next.js:
    - Include proper status codes in error responses
 
 ## Terminal Implementation
+
 1. **xterm.js Integration**
+
    - Use xterm.js for terminal UI in the browser
    - Configure with appropriate options for performance
    - Handle terminal resize events
    - Support copy/paste operations
 
 2. **SSH Connection**
+
    - Use ssh2 library for SSH connections
    - Implement proper authentication flow
    - Handle fingerprint verification
@@ -55,13 +61,17 @@ The project uses a WebSocket implementation integrated with Next.js:
    - Sanitize input/output to prevent injection attacks
 
 ## WebSocket API Routes
+
 1. **Route Configuration**
+
    - Set `dynamic = 'force-dynamic'` and `runtime = 'nodejs'` in the route config
    - Check for 'upgrade' header in the request
    - Return appropriate status codes for WebSocket responses
 
 2. **Connection Establishment**
+
    - Follow this pattern for WebSocket setup:
+
    ```typescript
    // Check if this is a WebSocket upgrade request
    const upgradeHeader = request.headers.get('upgrade');
@@ -72,10 +82,10 @@ The project uses a WebSocket implementation integrated with Next.js:
    try {
      // Get the WebSocket server
      const wss = getWebSocketServer();
-     
+
      // Handle the upgrade
      handleUpgrade(req, socket, buffer, path);
-     
+
      return response;
    } catch (error) {
      // Handle errors
@@ -88,13 +98,16 @@ The project uses a WebSocket implementation integrated with Next.js:
    - Send structured responses to the client
 
 ## Frontend Integration
+
 1. **WebSocket Client**
+
    - Create WebSocket connections with appropriate URL: `ws://${window.location.host}/api/terminals/${connectionId}`
    - Implement reconnection logic
    - Handle connection state changes
    - Process binary and text messages appropriately
 
 2. **Terminal UI**
+
    - Initialize xterm.js with proper configuration
    - Attach WebSocket data handlers
    - Implement terminal resize logic
@@ -107,7 +120,9 @@ The project uses a WebSocket implementation integrated with Next.js:
    - Support terminal customization (colors, font size)
 
 ## Testing WebSocket Connections
+
 1. **Manual Testing**
+
    - Use browser developer tools to inspect WebSocket traffic
    - Test reconnection scenarios
    - Verify terminal functionality with various commands
@@ -117,4 +132,4 @@ The project uses a WebSocket implementation integrated with Next.js:
    - Mock WebSocket connections in tests
    - Verify correct message handling
    - Test error scenarios and recovery
-   - Ensure proper cleanup of resources 
+   - Ensure proper cleanup of resources

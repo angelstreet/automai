@@ -1,6 +1,6 @@
 import type { AuthOptions } from 'next-auth';
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { prisma } from "@/lib/prisma";
+import { PrismaAdapter } from '@auth/prisma-adapter';
+import { prisma } from '@/lib/prisma';
 
 // Import provider configurations from separate files
 import { getGoogleProvider } from './providers/google';
@@ -14,10 +14,12 @@ export const authConfig: AuthOptions = {
     error: '/error',
     signOut: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET || (() => {
-    console.warn('Using fallback secret - DO NOT USE IN PRODUCTION');
-    return 'fallback-secret-do-not-use-in-production';
-  })(),
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    (() => {
+      console.warn('Using fallback secret - DO NOT USE IN PRODUCTION');
+      return 'fallback-secret-do-not-use-in-production';
+    })(),
   session: {
     strategy: 'jwt' as const,
     maxAge: 24 * 60 * 60, // 24 hours
@@ -67,49 +69,49 @@ export const authConfig: AuthOptions = {
 export async function getProviders() {
   try {
     console.log('Loading auth providers...');
-    
+
     // Load each provider with error handling
-    const googleProvider = await getGoogleProvider().catch(err => {
+    const googleProvider = await getGoogleProvider().catch((err) => {
       console.error('Error loading Google provider:', err);
       return null;
     });
-    
-    const githubProvider = await getGithubProvider().catch(err => {
+
+    const githubProvider = await getGithubProvider().catch((err) => {
       console.error('Error loading GitHub provider:', err);
       return null;
     });
-    
-    const credentialsProvider = await getCredentialsProvider().catch(err => {
+
+    const credentialsProvider = await getCredentialsProvider().catch((err) => {
       console.error('Error loading Credentials provider:', err);
       return null;
     });
-    
+
     // Filter out any providers that failed to load
     const providers = [googleProvider, githubProvider, credentialsProvider].filter(Boolean);
-    
+
     console.log(`Successfully loaded ${providers.length} providers`);
-    
+
     // Ensure we have at least one provider
     if (providers.length === 0) {
       console.warn('No authentication providers loaded, adding fallback credentials provider');
       // Add a simple fallback provider to prevent complete auth failure
-      const { default: CredentialsProvider } = await import("next-auth/providers/credentials");
+      const { default: CredentialsProvider } = await import('next-auth/providers/credentials');
       return [
         CredentialsProvider({
-          id: "fallback-credentials",
-          name: "Fallback Credentials",
+          id: 'fallback-credentials',
+          name: 'Fallback Credentials',
           credentials: {
-            email: { label: "Email", type: "email" },
-            password: { label: "Password", type: "password" }
+            email: { label: 'Email', type: 'email' },
+            password: { label: 'Password', type: 'password' },
           },
           async authorize() {
-            console.error("Using fallback provider - authentication will fail");
+            console.error('Using fallback provider - authentication will fail');
             return null; // Always fail auth with fallback
-          }
-        })
+          },
+        }),
       ];
     }
-    
+
     return providers;
   } catch (error) {
     console.error('Error loading providers:', error);

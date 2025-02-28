@@ -311,7 +311,9 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
             Host Key Verification Failed
           </AlertTitle>
           <AlertDescription className="mt-2">
-            <p className="mb-2">The authenticity of host '{formData.ip}' can't be established.</p>
+            <p className="text-sm text-muted-foreground">
+              The authenticity of host &apos;{formData.ip}&apos; can&apos;t be established.
+            </p>
             <p className="mb-2">
               Fingerprint: <code className="bg-muted p-1 rounded">{fingerprint}</code>
             </p>

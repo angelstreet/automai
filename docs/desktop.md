@@ -1,11 +1,13 @@
 # Next.js Web-to-Desktop App Integration
 
 ## Summary
+
 Integration of Next.js React web app with Electron for desktop functionality, featuring shared server capabilities, Python execution, and Git synchronization. The implementation allows both web and desktop versions to coexist and evolve together, with smart server management that can either use an existing Next.js server or start a new one.
 
 ## Implementation Details
 
 ### 1. Project Setup
+
 - **Dependencies**:
   ```bash
   npm install --save-dev electron electron-builder cross-env
@@ -15,6 +17,7 @@ Integration of Next.js React web app with Electron for desktop functionality, fe
 ### 2. Core Implementation
 
 #### Main Process (electron/main.js)
+
 ```javascript
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
@@ -31,7 +34,8 @@ let nextProcess;
 // Server detection and management
 async function isPortInUse(port) {
   return new Promise((resolve) => {
-    const testServer = http.createServer()
+    const testServer = http
+      .createServer()
       .once('error', (err) => {
         resolve(err.code === 'EADDRINUSE');
       })
@@ -57,13 +61,15 @@ async function startNextServer() {
 
   return new Promise((resolve) => {
     function checkServer() {
-      http.get(`http://localhost:${PORT}`, (res) => {
-        if (res.statusCode === 200) {
-          resolve();
-        } else {
-          setTimeout(checkServer, 1000);
-        }
-      }).on('error', () => setTimeout(checkServer, 1000));
+      http
+        .get(`http://localhost:${PORT}`, (res) => {
+          if (res.statusCode === 200) {
+            resolve();
+          } else {
+            setTimeout(checkServer, 1000);
+          }
+        })
+        .on('error', () => setTimeout(checkServer, 1000));
     }
     setTimeout(checkServer, 1000);
   });
@@ -73,6 +79,7 @@ async function startNextServer() {
 ### 3. Development Workflow
 
 #### Option 1: Shared Server Mode
+
 ```bash
 # Terminal 1: Start Next.js for web development
 npm run dev
@@ -82,6 +89,7 @@ npm run electron-dev
 ```
 
 #### Option 2: Standalone Mode
+
 ```bash
 # Single command (will start Next.js if needed)
 npm run electron-dev
@@ -90,6 +98,7 @@ npm run electron-dev
 ### 4. Features
 
 #### Store Management
+
 ```javascript
 // Initialize electron-store
 async function initializeStore() {
@@ -119,6 +128,7 @@ ipcMain.handle('store-get', async (event, { key }) => {
 ```
 
 #### Python Execution
+
 ```javascript
 ipcMain.handle('run-python', async (event, script) => {
   return new Promise((resolve, reject) => {
@@ -131,6 +141,7 @@ ipcMain.handle('run-python', async (event, script) => {
 ```
 
 #### Git Synchronization
+
 ```javascript
 const git = simpleGit();
 ipcMain.handle('git-sync', async () => {
@@ -151,6 +162,7 @@ npm run electron-pack
 ```
 
 This will:
+
 1. Build the Next.js application
 2. Package everything with electron-builder
 3. Output to the `dist` directory
@@ -174,6 +186,7 @@ This will:
 ### 8. Debugging
 
 The application includes comprehensive logging:
+
 - Server status and port detection
 - Window lifecycle events
 - Content loading states

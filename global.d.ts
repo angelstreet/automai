@@ -1,2 +1,2 @@
 declare module 'lucide-react/icons/github';
-declare module 'lucide-react/icons/chrome'; 
+declare module 'lucide-react/icons/chrome';

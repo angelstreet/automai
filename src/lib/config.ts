@@ -8,7 +8,7 @@ export const config = {
     isProd: env.NODE_ENV === 'production',
     isTest: env.NODE_ENV === 'test',
   },
-  
+
   database: {
     url: env.DATABASE_URL,
     pool: {
@@ -16,7 +16,7 @@ export const config = {
       max: 10,
     },
   },
-  
+
   auth: {
     jwt: {
       secret: env.JWT_SECRET,
@@ -36,14 +36,14 @@ export const config = {
       callbackUrl: env.GITHUB_CALLBACK_URL,
     },
   },
-  
+
   services: {
     elasticsearch: env.ELASTICSEARCH_URL,
   },
-  
+
   api: {
     baseUrl: env.NEXTAUTH_URL,
   },
 } as const;
 
-export default config; 
+export default config;

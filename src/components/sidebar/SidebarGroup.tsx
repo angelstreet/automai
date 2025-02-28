@@ -13,3 +13,5 @@ export const SidebarGroup = React.forwardRef<HTMLDivElement, React.ComponentProp
     );
   },
 );
+
+SidebarGroup.displayName = 'SidebarGroup';

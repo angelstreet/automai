@@ -18,7 +18,12 @@ import { useToast } from '@/components/shadcn/use-toast';
 import { HostOverview } from '@/components/hosts/HostOverview';
 import { Host } from '@/types/hosts';
 import { ConnectHostDialog } from '@/components/hosts/ConnectHostDialog';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shadcn/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/shadcn/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
