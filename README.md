@@ -37,12 +37,10 @@ npm run prisma:studio
    npm install
    ```
 3. Set up environment variables:
-   - Copy `.env.example` to `.env`
+   - Copy `.env.example` to `.env.development`,`.env.production`,`.env.test`
    - Update the following variables:
      ```env
-     DATABASE_URL=               # Your PostgreSQL connection string
-     SUPABASE_URL=              # Your Supabase URL
-     SUPABASE_KEY=              # Your Supabase key
+     DATABASE_URL=               # Your Prisma Url
      JWT_SECRET=                # Your JWT secret key
      ```
 
