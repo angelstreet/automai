@@ -2,25 +2,26 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Button } from '@/components/shadcn/button';
+import { useTranslations } from 'next-intl';
+import { Button } from '@/components/Shadcn/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/shadcn/card';
-import { Input } from '@/components/shadcn/input';
-import { Label } from '@/components/shadcn/label';
+} from '@/components/Shadcn/card';
+import { Input } from '@/components/Shadcn/input';
+import { Label } from '@/components/Shadcn/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/shadcn/select';
-import { Switch } from '@/components/shadcn/switch';
-import { useToast } from '@/components/shadcn/use-toast';
+} from '@/components/Shadcn/select';
+import { Switch } from '@/components/Shadcn/switch';
+import { useToast } from '@/components/Shadcn/use-toast';
 
 export default function HostsSettingsPage() {
   const params = useParams();

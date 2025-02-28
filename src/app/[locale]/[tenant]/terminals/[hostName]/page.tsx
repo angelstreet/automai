@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Terminal } from '@/components/hosts/Terminal';
+import { useToast } from '@/components/Shadcn/use-toast';
 import { logger } from '@/lib/logger';
-import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/Shadcn/alert';
 import { AlertCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 

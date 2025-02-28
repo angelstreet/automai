@@ -4,9 +4,9 @@ import { locales } from '@/config';
 import { Inter } from 'next/font/google';
 import { getMessages } from '@/i18n';
 import { UserProvider } from '@/lib/contexts/UserContext';
-import { RouteGuard } from '@/components/route-guard';
-import { ThemeProvider } from '@/components/theme-provider';
-import { Toaster } from '@/components/shadcn/toaster';
+import { RouteGuard } from '@/components/RouteGuard';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { Toaster } from '@/components/Shadcn/toaster';
 import { cookies } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'] });

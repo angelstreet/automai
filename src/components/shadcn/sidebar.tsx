@@ -5,17 +5,17 @@ import { VariantProps, cva } from 'class-variance-authority';
 import { PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Button } from '@/components/shadcn/button';
-import { Input } from '@/components/shadcn/input';
-import { Separator } from '@/components/shadcn/separator';
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/shadcn/sheet';
-import { Skeleton } from '@/components/shadcn/skeleton';
+import { Button } from '@/components/Shadcn/button';
+import { Input } from '@/components/Shadcn/input';
+import { Separator } from '@/components/Shadcn/separator';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/Shadcn/sheet';
+import { Skeleton } from '@/components/Shadcn/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/shadcn/tooltip';
+} from '@/components/Shadcn/tooltip';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar:state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
