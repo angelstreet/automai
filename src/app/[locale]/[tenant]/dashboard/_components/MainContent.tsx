@@ -1,5 +1,9 @@
 'use client';
 
+import { Overview } from '@/components/Dashboard/Overview';
+import { RecentSales } from '@/components/Dashboard/RecentSales';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/Shadcn/avatar';
+import { Button } from '@/components/Shadcn/button';
 import {
   Card,
   CardContent,
@@ -7,10 +11,6 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/Shadcn/card';
-import { Overview } from '@/components/Dashboard/Overview';
-import { RecentSales } from '@/components/Dashboard/RecentSales';
-import { Button } from '@/components/Shadcn/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/Shadcn/avatar';
 
 export function MainContent() {
   return (
@@ -130,4 +130,4 @@ export function MainContent() {
       </div>
     </div>
   );
-} 
+}

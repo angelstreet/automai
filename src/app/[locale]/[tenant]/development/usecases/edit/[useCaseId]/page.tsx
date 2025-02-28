@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import Editor from '@monaco-editor/react';
 import { useRouter, useParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+
 import { Button } from '@/components/Shadcn/button';
 import { Card } from '@/components/Shadcn/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Shadcn/tabs';
-import Editor from '@monaco-editor/react';
 import { useUser } from '@/context/UserContext';
-import { useSession } from 'next-auth/react';
 
 type TestCase = {
   id: string;

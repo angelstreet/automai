@@ -1,9 +1,10 @@
+import { compare } from 'bcrypt';
 import { NextAuthOptions } from 'next-auth';
+
 // Remove direct import of CredentialsProvider
 // import CredentialsProvider from 'next-auth/providers/credentials';
-import { prisma } from './prisma';
-import { compare } from 'bcrypt';
 import { logger } from './logger';
+import { prisma } from './prisma';
 
 // Create a function to get the auth options with dynamically loaded providers
 export async function getAuthOptions(): Promise<NextAuthOptions> {

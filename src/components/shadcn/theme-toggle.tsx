@@ -1,15 +1,16 @@
 'use client';
 
-import * as React from 'react';
 import { Moon, Sun, Laptop } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import * as React from 'react';
+
+import { Button } from '@/components/Shadcn/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/Shadcn/dropdown-menu';
-import { Button } from '@/components/Shadcn/button';
 
 export function ThemeToggle() {
   const { setTheme, theme } = useTheme();

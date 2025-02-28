@@ -1,14 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/Shadcn/card';
-import { Button } from '@/components/Shadcn/button';
 import {
   Terminal,
   AlertCircle,
@@ -19,20 +10,30 @@ import {
   ScrollText,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Host } from '@/types/hosts';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/Shadcn/dialog';
+import { useState } from 'react';
+
+import { Button } from '@/components/Shadcn/button';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/Shadcn/tooltip';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/Shadcn/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/Shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/Shadcn/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/Shadcn/tooltip';
+import { Host } from '@/types/hosts';
 
 interface HostCardProps {
   host: Host;

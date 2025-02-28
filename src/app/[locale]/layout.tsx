@@ -1,14 +1,15 @@
-import { NextIntlClientProvider } from 'next-intl';
-import { notFound } from 'next/navigation';
-import { locales } from '@/config';
 import { Inter } from 'next/font/google';
-import { getMessages } from '@/i18n';
-import { UserProvider } from '@/context/UserContext';
-import { RoleProvider } from '@/context/RoleContext';
-import { RouteGuard } from '@/components/Auth/RouteGuard';
-import { ThemeProvider } from '@/components/Theme/ThemeProvider';
-import { Toaster } from '@/components/Shadcn/toaster';
 import { cookies } from 'next/headers';
+import { notFound } from 'next/navigation';
+import { NextIntlClientProvider } from 'next-intl';
+
+import { RouteGuard } from '@/components/Auth/RouteGuard';
+import { Toaster } from '@/components/Shadcn/toaster';
+import { ThemeProvider } from '@/components/Theme/ThemeProvider';
+import { locales } from '@/config';
+import { RoleProvider } from '@/context/RoleContext';
+import { UserProvider } from '@/context/UserContext';
+import { getMessages } from '@/i18n';
 
 const inter = Inter({ subsets: ['latin'] });
 

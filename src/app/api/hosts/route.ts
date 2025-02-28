@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { getHosts, createHost } from '@/lib/services';
 
 export async function GET() {

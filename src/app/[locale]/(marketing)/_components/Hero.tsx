@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations, useLocale } from 'next-intl';
+
 import { Button } from '@/components/Shadcn/button';
-import { useTranslations } from 'next-intl';
-import { useLocale } from 'next-intl';
 
 export function Hero() {
   const t = useTranslations('Index');

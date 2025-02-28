@@ -1,16 +1,15 @@
 // src/app/lib/auth.ts
-import NextAuth from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
-import { prisma } from '@/lib/prisma';
 import { compare } from 'bcrypt';
-import type { JWT } from 'next-auth/jwt';
+import NextAuth from 'next-auth';
 import type { Session, User } from 'next-auth';
-import { env } from '@/lib/env';
-
-// Import providers
-import GoogleProvider from 'next-auth/providers/google';
+import type { JWT } from 'next-auth/jwt';
+import { default as CredentialsProvider } from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
-import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
+
+import { env } from '@/lib/env';
+import { prisma } from '@/lib/prisma';
 
 // Ensure environment variables are loaded
 // Next.js automatically loads .env.development in development mode
@@ -126,7 +125,7 @@ export const authOptions = {
       }
       return token;
     },
-    async session({ session, token, _req }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
@@ -139,8 +138,8 @@ export const authOptions = {
   },
   secret: env.NEXTAUTH_SECRET,
   debug: env.NODE_ENV === 'development',
-};
+} as const;
 
 // Export auth utilities
-const handler = NextAuth(authOptions);
-export const { auth, signIn, signOut } = handler;
+export default NextAuth(authOptions);
+export const { auth, signIn, signOut } = NextAuth(authOptions);

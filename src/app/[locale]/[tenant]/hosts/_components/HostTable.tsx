@@ -1,4 +1,16 @@
-import { Host } from '@/types/hosts';
+import { Terminal, MoreHorizontal } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { Badge } from '@/components/Shadcn/badge';
+import { Button } from '@/components/Shadcn/button';
+import { Checkbox } from '@/components/Shadcn/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/Shadcn/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -7,19 +19,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/Shadcn/table';
-import { Button } from '@/components/Shadcn/button';
-import { Checkbox } from '@/components/Shadcn/checkbox';
-import { Badge } from '@/components/Shadcn/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/Shadcn/dropdown-menu';
-import { Terminal, MoreHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { Host } from '@/types/hosts';
 
 interface HostTableProps {
   hosts: Host[];

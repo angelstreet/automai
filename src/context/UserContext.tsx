@@ -1,8 +1,9 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
 import { useSession } from 'next-auth/react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+
+import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
 
 type User = {
   id: string;
@@ -165,4 +166,4 @@ export function useUser() {
     throw new Error('useUser must be used within a UserProvider');
   }
   return context;
-} 
+}

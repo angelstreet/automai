@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { PinInputProps } from './Types';
+
 import { PinInputContext } from './Context';
-import { usePinInput } from './usePinInput';
-import { getValidChildren, getInputFieldCount } from './Utils';
 import { PinInputField as PinInputFieldComponent } from './PinInputField';
+import { PinInputProps } from './Types';
+import { getValidChildren, getInputFieldCount } from './Utils';
+import { usePinInput } from './usePinInput';
 
 export const PinInputField = PinInputFieldComponent;
 

@@ -1,8 +1,9 @@
-import * as React from 'react';
-import { useRouter } from 'next/navigation';
 import { User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { useUser } from '@/context/UserContext';
+import * as React from 'react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/Shadcn/avatar';
 import { Button } from '@/components/Shadcn/button';
 import {
   DropdownMenu,
@@ -13,7 +14,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/Shadcn/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/Shadcn/avatar';
+import { useUser } from '@/context/UserContext';
 
 interface UserProfileProps {
   tenant?: string;

@@ -1,7 +1,10 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+
+import { LanguageSettings } from '@/components/Settings/LanguageSettings';
+import { SettingsHeader } from '@/components/Settings/SettingsHeader';
 import {
   Card,
   CardContent,
@@ -9,8 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/Shadcn/card';
-import { LanguageSettings } from '@/components/Settings/LanguageSettings';
-import { SettingsHeader } from '@/components/Settings/SettingsHeader';
 
 export default function SettingsPage() {
   const params = useParams();

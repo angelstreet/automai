@@ -1,5 +1,7 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
+
 import { SettingsHeader } from '@/components/Settings/SettingsHeader';
 import {
   Card,
@@ -8,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/Shadcn/card';
-import { useSession } from 'next-auth/react';
 
 export default function ProfileSettingsPage() {
   const { data: session } = useSession();

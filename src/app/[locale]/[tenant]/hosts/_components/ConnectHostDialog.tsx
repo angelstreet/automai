@@ -1,4 +1,6 @@
+import { Loader2 } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
+
 import { Button } from '@/components/Shadcn/button';
 import {
   Dialog,
@@ -10,7 +12,7 @@ import {
 } from '@/components/Shadcn/dialog';
 import { useToast } from '@/components/Shadcn/use-toast';
 import { Host } from '@/types/hosts';
-import { Loader2 } from 'lucide-react';
+
 import { ConnectionForm, FormData } from './ConnectionForm';
 
 interface ConnectHostDialogProps {

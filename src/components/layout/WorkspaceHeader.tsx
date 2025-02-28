@@ -1,17 +1,20 @@
 'use client';
 
-import * as React from 'react';
+import Cookies from 'js-cookie';
+import { ChevronUp } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import * as React from 'react';
+
+import { Button } from '@/components/Shadcn/button';
 import { RoleSwitcher } from '@/components/Shadcn/role-switcher';
+import { Search } from '@/components/Shadcn/search';
+import { Separator } from '@/components/Shadcn/separator';
 import { ThemeToggle } from '@/components/Shadcn/theme-toggle';
 import { UserProfile } from '@/components/Shadcn/user-profile';
-import { Separator } from '@/components/Shadcn/separator';
 import { SidebarTrigger } from '@/components/sidebar';
-import { Search } from '@/components/Shadcn/search';
+import { SidebarMenuButton } from '@/components/Sidebar/SidebarMenuButton';
+
 import { useRole } from '@/context/role-context';
-import { Button } from '@/components/Shadcn/button';
-import { ChevronUp } from 'lucide-react';
-import Cookies from 'js-cookie';
 
 interface WorkspaceHeaderProps {
   className?: string;

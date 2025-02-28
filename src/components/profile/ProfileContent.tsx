@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
-import { useUser } from '@/context/UserContext';
-import { useParams } from 'next/navigation';
+import { useState } from 'react';
+
 import { Button } from '@/components/Shadcn/button';
 import { Input } from '@/components/Shadcn/input';
-import { useSession } from 'next-auth/react';
-import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useUser } from '@/context/UserContext';
 
 export function ProfileContent() {
   const { user, isLoading, refreshUser } = useUser();

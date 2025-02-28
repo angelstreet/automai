@@ -1,8 +1,9 @@
-import { WebSocket, WebSocketServer as WSServer } from 'ws';
-import { logger } from './logger';
-import { IncomingMessage } from 'http';
-import { Server } from 'http';
+import { IncomingMessage, Server } from 'http';
+
 import { Client } from 'ssh2';
+import { WebSocket, WebSocketServer as WSServer } from 'ws';
+
+import { logger } from './logger';
 import { prisma } from './prisma';
 
 // Extend global to include our WebSocketServer

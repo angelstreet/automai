@@ -1,9 +1,11 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+
 import { useUser } from '@/context/UserContext';
 import { getUpgradeMessage } from '@/lib/features';
-import { Button } from './ui/button';
-import { useRouter } from 'next/navigation';
+
+import { Button } from '@/components/Shadcn/button';
 
 interface UpgradePromptProps {
   feature: string;

@@ -1,13 +1,15 @@
+import { Grid, List } from 'lucide-react';
 import { useState } from 'react';
+
+import { Button } from '@/components/Shadcn/button';
+import { useToast } from '@/components/Shadcn/use-toast';
+import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
-import { StatusSummary } from './StatusSummary';
+
+import { ConnectHostDialog } from './ConnectHostDialog';
 import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/Shadcn/button';
-import { Grid, List } from 'lucide-react';
-import { ConnectHostDialog } from './ConnectHostDialog';
-import { useToast } from '@/components/Shadcn/use-toast';
+import { StatusSummary } from './StatusSummary';
 
 interface HostOverviewProps {
   hosts: Host[];

@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Terminal } from '../_components/Terminal';
+import { useEffect, useState } from 'react';
+
 import { useToast } from '@/components/Shadcn/use-toast';
 import { logger } from '@/lib/logger';
+
+import { Terminal } from '../_components/Terminal';
 
 export default function TerminalsPage() {
   const router = useRouter();

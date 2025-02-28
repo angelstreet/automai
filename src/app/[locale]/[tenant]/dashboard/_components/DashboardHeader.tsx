@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+
 import { Button } from '@/components/Shadcn/button';
 
 export function DashboardHeader() {
@@ -14,4 +15,4 @@ export function DashboardHeader() {
       </div>
     </div>
   );
-} 
+}

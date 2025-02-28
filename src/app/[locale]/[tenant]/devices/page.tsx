@@ -1,7 +1,10 @@
 'use client';
 
+import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+
+import { Button } from '@/components/Shadcn/button';
 import {
   Card,
   CardContent,
@@ -9,7 +12,6 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/Shadcn/card';
-import { Button } from '@/components/Shadcn/button';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +21,6 @@ import {
   DialogFooter,
 } from '@/components/Shadcn/dialog';
 import { Input } from '@/components/Shadcn/input';
-import { Textarea } from '@/components/Shadcn/textarea';
 import { Label } from '@/components/Shadcn/label';
 import {
   Select,
@@ -28,8 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/Shadcn/select';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { Textarea } from '@/components/Shadcn/textarea';
 
 export default function DevicesPage() {
   return (

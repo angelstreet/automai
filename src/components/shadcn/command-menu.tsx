@@ -1,7 +1,7 @@
-import React from 'react';
-import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
-import { useSearch } from '@/context/SearchContext';
+import { useRouter } from 'next/navigation';
+import React from 'react';
+
 import {
   CommandDialog,
   CommandEmpty,
@@ -10,6 +10,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/Shadcn/command';
+import { useSearch } from '@/context/SearchContext';
 
 const navigation = [
   {

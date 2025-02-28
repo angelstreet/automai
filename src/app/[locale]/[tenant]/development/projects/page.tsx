@@ -1,8 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import {
   ColumnDef,
   flexRender,
@@ -11,14 +8,11 @@ import {
   getSortedRowModel,
   Row,
 } from '@tanstack/react-table';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/Shadcn/table';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+
+import { Alert, AlertDescription } from '@/components/Shadcn/alert';
 import { Button } from '@/components/Shadcn/button';
 import {
   Dialog,
@@ -29,11 +23,18 @@ import {
   DialogFooter,
 } from '@/components/Shadcn/dialog';
 import { Input } from '@/components/Shadcn/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/Shadcn/table';
 import { Textarea } from '@/components/Shadcn/textarea';
 import { useToast } from '@/components/Shadcn/use-toast';
-import { Alert, AlertDescription } from '@/components/Shadcn/alert';
-import { PlanType, getUpgradeMessage } from '@/lib/features';
 import { useUser } from '@/context/UserContext';
+import { PlanType, getUpgradeMessage } from '@/lib/features';
 
 // Type matching Prisma Project model
 type Project = {
@@ -336,7 +337,11 @@ export default function ProjectsPage() {
         <Alert variant="destructive">
           <AlertDescription className="flex items-center justify-between">
             <span>You have reached the limitation - Upgrade to Pro for unlimited projects</span>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/${params.locale}/${params.tenant}/settings/billing`)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/${params.locale}/${params.tenant}/settings/billing`)}
+            >
               Upgrade to Pro
             </Button>
           </AlertDescription>

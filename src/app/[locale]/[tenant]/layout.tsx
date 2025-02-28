@@ -1,12 +1,13 @@
 'use client';
 
+import Cookies from 'js-cookie';
 import * as React from 'react';
+
 import { AppSidebar } from '@/components/Layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/Layout/WorkspaceHeader';
+import { SidebarProvider } from '@/components/Shadcn/sidebar';
 import { TooltipProvider } from '@/components/Shadcn/tooltip';
-import { SidebarProvider } from '@/components/sidebar';
 import { useUser } from '@/context/UserContext';
-import Cookies from 'js-cookie';
 
 // Cache session check timestamp to reduce API calls
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes

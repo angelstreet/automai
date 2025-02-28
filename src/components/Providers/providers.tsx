@@ -1,10 +1,11 @@
 'use client';
 
-import { NextIntlClientProvider } from 'next-intl';
-import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { SessionProvider } from 'next-auth/react';
-import { SearchProvider } from '@/context/SearchContext';
+import { NextIntlClientProvider } from 'next-intl';
+
+import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { RoleProvider } from '@/context/RoleContext';
+import { SearchProvider } from '@/context/SearchContext';
 import { UserProvider } from '@/context/UserContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {

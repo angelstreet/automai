@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+
 import {
   Select,
   SelectContent,
@@ -7,6 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/Shadcn/select';
+import { cn } from '@/lib/utils';
+
 import { type Role } from '@/context/role-context';
 
 const roles: { value: Role; label: string }[] = [

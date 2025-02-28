@@ -163,7 +163,11 @@ export const sidebarData: SidebarData = {
           roles: ['admin'],
           items: [
             { title: 'Team', href: '/[locale]/[tenant]/settings/team', icon: Users },
-            { title: 'Configuration', href: '/[locale]/[tenant]/settings/configuration', icon: Plug },
+            {
+              title: 'Configuration',
+              href: '/[locale]/[tenant]/settings/configuration',
+              icon: Plug,
+            },
             { title: 'Integration', href: '/[locale]/[tenant]/settings/integration', icon: Plug },
           ],
         },

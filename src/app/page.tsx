@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+
 import { defaultLocale } from '@/config';
 
 export const dynamic = 'force-static';
