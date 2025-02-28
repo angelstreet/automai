@@ -43,6 +43,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUser = async () => {
     try {
+      if (!session?.user) {
+        setUser(null);
+        setError('No active session');
+        setIsLoading(false);
+        return;
+      }
       // Check if we have a cached user and it's still valid
       const now = Date.now();
       const cachedData =
@@ -111,7 +117,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [lastFetch]);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (status === 'authenticated' && session?.user) {
       fetchUser();
     } else if (status === 'unauthenticated') {
       setUser(null);

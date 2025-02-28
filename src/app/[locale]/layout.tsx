@@ -1,4 +1,4 @@
-ou import { NextIntlClientProvider } from 'next-intl';
+import { NextIntlClientProvider } from 'next-intl';
 import { notFound } from 'next/navigation';
 import { locales } from '@/config';
 import { Inter } from 'next/font/google';
