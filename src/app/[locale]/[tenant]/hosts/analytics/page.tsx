@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 export default function AnalyticsPage() {
   return (
     <div className="container mx-auto p-4">
