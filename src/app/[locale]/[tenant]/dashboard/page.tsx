@@ -1,6 +1,5 @@
 'use client';
 
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
@@ -16,7 +15,7 @@ import { RecentSales } from '@/components/dashboard/recent-sales';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/shadcn/avatar';
 import { useSession } from 'next-auth/react';
 
-export default function DashboardPage({ params }: { params: { tenant: string; locale: string } }) {
+export default function DashboardPage() {
   const t = useTranslations('dashboard');
   const { data: session } = useSession();
 

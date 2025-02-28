@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/shadcn/button';
-import { Card } from '@/components/shadcn/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Host } from '@/types/hosts';
@@ -18,17 +16,16 @@ interface Log {
   message: string;
 }
 
-export default function LogsPage() {
-  const t = useTranslations('Common');
-  const { toast } = useToast();
-  const [hosts, setMachines] = useState<Host[]>([]);
+export default function HostsLogsPage() {
+  const [machines, setMachines] = useState<Host[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Fetch hosts from API
   const fetchMachines = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch('/api/hosts');
 
       if (!response.ok) {
@@ -51,11 +48,11 @@ export default function LogsPage() {
       }
 
       // Set first host as selected if none selected
-      if (hosts.length > 0 && !selectedDevice) {
-        setSelectedDevice(hosts[0].id);
+      if (machines.length > 0 && !selectedDevice) {
+        setSelectedDevice(machines[0].id);
       }
     } catch (error) {
-      console.error('Error fetching hosts:', error);
+      console.error('Error fetching machines:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -79,11 +76,11 @@ export default function LogsPage() {
   }
 
   return (
-    <div className="flex-1 space-y-2 pt-2 h-[calc(100vh-90px)] max-h-[calc(100vh-90px)] flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Logs</h1>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Logs</h1>
+        <Button onClick={fetchMachines}>Refresh</Button>
       </div>
-
       <div className="flex gap-4 h-full">
         {/* Sidebar */}
         <Card className="w-64 p-4">
@@ -96,7 +93,7 @@ export default function LogsPage() {
             >
               All Devices
             </Button>
-            {hosts.map((host) => (
+            {machines.map((host) => (
               <Button
                 key={host.id}
                 variant={selectedDevice === host.id ? 'secondary' : 'ghost'}
@@ -114,7 +111,7 @@ export default function LogsPage() {
           <ScrollArea className="h-[calc(100vh-200px)]">
             <div className="space-y-4">
               {filteredLogs.map((log) => {
-                const device = hosts.find((m) => m.id === log.deviceId);
+                const device = machines.find((m) => m.id === log.deviceId);
 
                 return (
                   <div key={log.id} className="flex items-start gap-4 p-2 rounded border">
