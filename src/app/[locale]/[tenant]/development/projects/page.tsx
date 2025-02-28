@@ -337,7 +337,7 @@ export default function ProjectsPage() {
         <Alert variant="destructive">
           <AlertDescription className="flex items-center justify-between">
             <span>You have reached the limitation - Upgrade to Pro for unlimited projects</span>
-            <Button variant="outline" size="sm" onClick={() => router.push('/settings/billing')}>
+            <Button variant="outline" size="sm" onClick={() => router.push(`/${params.locale}/${params.tenant}/settings/billing`)}>
               Upgrade to Pro
             </Button>
           </AlertDescription>
