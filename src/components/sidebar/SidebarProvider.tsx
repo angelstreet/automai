@@ -2,7 +2,7 @@ import * as React from 'react';
 import { TooltipProvider } from '@/components/Shadcn/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { SidebarContext } from '@/hooks/useSidebar';
+import { SidebarContext } from '@/context/SidebarContext';
 import { SidebarProviderProps } from '@/types/sidebar';
 import {
   SIDEBAR_COOKIE_NAME,

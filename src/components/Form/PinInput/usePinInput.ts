@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { UsePinInputProps } from './types';
+import { UsePinInputProps } from './Types';
 
 export const usePinInput = ({
   value,
