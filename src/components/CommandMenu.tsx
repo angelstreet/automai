@@ -11,7 +11,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@/components/shadcn/command';
+} from '@/components/Shadcn/command';
 import { sidebarData } from './layout/data/sidebar-data';
 import { ScrollArea } from './ui/scroll-area';
 

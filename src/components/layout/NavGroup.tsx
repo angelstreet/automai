@@ -15,7 +15,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from '@/components/sidebar';
-import { ScrollArea } from '@/components/shadcn/scroll-area';
+import { ScrollArea } from '@/components/Shadcn/scroll-area';
 import { useRole } from '@/context/role-context';
 
 interface NavGroupProps {

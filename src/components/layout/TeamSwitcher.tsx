@@ -10,7 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
+} from '@/components/Shadcn/dropdown-menu';
 import { useUser } from '@/lib/contexts/UserContext';
 
 interface TeamSwitcherProps {

@@ -3,9 +3,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Terminal } from '../../hosts/_components/Terminal';
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/Shadcn/use-toast';
 import { logger } from '@/lib/logger';
-import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/Shadcn/alert';
 import { AlertCircle } from 'lucide-react';
 
 interface MachineConnection {

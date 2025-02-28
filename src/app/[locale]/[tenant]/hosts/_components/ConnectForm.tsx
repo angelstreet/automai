@@ -1,18 +1,18 @@
 import { useState, useRef } from 'react';
-import { Input } from '@/components/shadcn/input';
-import { Textarea } from '@/components/shadcn/textarea';
-import { Label } from '@/components/shadcn/label';
+import { Input } from '@/components/Shadcn/input';
+import { Textarea } from '@/components/Shadcn/textarea';
+import { Label } from '@/components/Shadcn/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/shadcn/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
+} from '@/components/Shadcn/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/Shadcn/alert';
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
-import { Button } from '@/components/shadcn/button';
-import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/Shadcn/button';
+import { Badge } from '@/components/Shadcn/badge';
 
 export interface FormData {
   name: string;

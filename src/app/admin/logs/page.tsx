@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/shadcn/card';
+} from '@/components/Shadcn/card';
 import {
   Table,
   TableBody,
@@ -16,17 +16,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/shadcn/table';
+} from '@/components/Shadcn/table';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/shadcn/select';
-import { Input } from '@/components/shadcn/input';
-import { Button } from '@/components/shadcn/button';
-import { Badge } from '@/components/shadcn/badge';
+} from '@/components/Shadcn/select';
+import { Input } from '@/components/Shadcn/input';
+import { Button } from '@/components/Shadcn/button';
+import { Badge } from '@/components/Shadcn/badge';
 import {
   Pagination,
   PaginationContent,
@@ -34,7 +34,7 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@/components/shadcn/pagination';
+} from '@/components/Shadcn/pagination';
 
 interface ConnectionLog {
   id: string;
