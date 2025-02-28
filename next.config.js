@@ -18,6 +18,7 @@ const nextConfig = {
       'bufferutil': 'commonjs bufferutil',
       'bcrypt': 'commonjs bcrypt',
       '@mapbox/node-pre-gyp': 'commonjs @mapbox/node-pre-gyp',
+      'oidc-token-hash': 'commonjs oidc-token-hash',
     });
 
     config.resolve.fallback = {
@@ -27,6 +28,8 @@ const nextConfig = {
       tls: false,
       dns: false,
       npm: false,
+      crypto: require.resolve('crypto-browserify'),
+      stream: require.resolve('stream-browserify'),
     };
 
     config.module = config.module || {};
@@ -37,7 +40,9 @@ const nextConfig = {
       { module: /node_modules\/ssh2\/lib\/protocol\/constants\.js/ },
       { module: /node_modules\/ssh2\/lib\/protocol\/crypto\.js/ },
       { module: /node_modules\/@mapbox\/node-pre-gyp/ },
-      { module: /node_modules\/bcrypt/ }
+      { module: /node_modules\/bcrypt/ },
+      { module: /node_modules\/oidc-token-hash/ },
+      { module: /node_modules\/openid-client/ },
     ];
     
     return config;
@@ -51,7 +56,7 @@ const nextConfig = {
   },
   
   // External packages that should not be bundled
-  serverExternalPackages: ['ws', 'ssh2', 'bcrypt', '@mapbox/node-pre-gyp'],
+  serverExternalPackages: ['ws', 'ssh2', 'bcrypt', '@mapbox/node-pre-gyp', 'oidc-token-hash', 'openid-client'],
   
   // Ensure WebSocket connections are handled properly
   async headers() {

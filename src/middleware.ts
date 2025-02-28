@@ -1,7 +1,6 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { locales, defaultLocale, pathnames } from './config';
-import { handler } from '@/auth';
 
 // Lazy load the internationalization middleware
 let intlMiddleware: any = null;
@@ -25,9 +24,9 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Auth paths should bypass internationalization
+  // Auth paths should bypass internationalization and be handled by the API route
   if (request.nextUrl.pathname.startsWith('/api/auth')) {
-    return handler(request as any);
+    return NextResponse.next();
   }
 
   // Apply internationalization middleware for regular requests
@@ -40,6 +39,5 @@ export const config = {
     // Match all routes except static assets and public files
     '/((?!_next/static|_next/image|avatars|favicon.ico).*)',
     '/(fr|en)/:path*',
-    '/api/auth/:path*',
   ],
 };

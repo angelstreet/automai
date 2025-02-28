@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import type { NextAuthConfig } from "next-auth"
+import { NextResponse } from "next/server"
 
 // Import provider configurations
 import { getGoogleProvider } from './app/api/auth/[...nextauth]/providers/google'
@@ -43,6 +44,16 @@ async function loadProviders() {
   }
 }
 
+// Initialize providers first to avoid top-level await
+let providers = []
+
+// Load providers immediately but don't await
+loadProviders().then(loadedProviders => {
+  providers = loadedProviders
+}).catch(error => {
+  console.error('Failed to load providers:', error)
+})
+
 export const authConfig = {
   adapter: PrismaAdapter(prisma),
   pages: {
@@ -83,26 +94,39 @@ export const authConfig = {
     },
   },
   debug: process.env.NODE_ENV === 'development',
+  trustHost: true,
 } satisfies NextAuthConfig
 
-// Avoid top-level await - initialize with empty providers
-// and initialize them later in the handler
-export const { handlers, auth, signIn, signOut } = NextAuth({
+// Initialize NextAuth with configuration
+const nextAuth = NextAuth({
   ...authConfig,
-  providers: [],
+  providers: [],  // Will be populated after providers are loaded
 })
 
-// Dynamic provider loading at runtime
-// This will update the handler's providers when first called
-let providersLoaded = false
-const originalAuth = auth
+// Export auth utilities
+export const { auth, signIn, signOut } = nextAuth
 
-export const handler = async (req: Request) => {
-  if (!providersLoaded) {
-    const providers = await loadProviders()
-    // @ts-ignore - Update the internal providers list
-    auth.providers = providers
-    providersLoaded = true
+// Handler for API routes
+export async function handler(req: Request) {
+  // Ensure providers are loaded
+  if (providers.length === 0) {
+    providers = await loadProviders()
   }
-  return originalAuth(req)
+  
+  // Create NextAuth instance with loaded providers
+  const handler = NextAuth({
+    ...authConfig,
+    providers,
+  })
+  
+  try {
+    // Use the handler directly
+    return await handler(req)
+  } catch (error) {
+    console.error('NextAuth handler error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Authentication error' },
+      { status: 500 }
+    )
+  }
 } 
