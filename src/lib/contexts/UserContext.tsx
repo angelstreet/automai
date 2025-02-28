@@ -71,10 +71,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('Fetching user profile with token:', session.accessToken ? 'present' : 'missing');
-      const response = await fetch('http://localhost:5001/api/auth/profile', {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
+      const response = await fetch('/api/auth/profile', {
+        credentials: 'include',
       });
 
       if (!response.ok) {

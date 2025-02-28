@@ -25,13 +25,14 @@ export function ProfileContent() {
     if (!session?.accessToken) return;
     try {
       setIsUpdating(true);
-      const response = await fetch('http://localhost:5001/api/auth/profile', {
+      const response = await fetch('/api/auth/profile', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.accessToken}`,
         },
         body: JSON.stringify({ name }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
