@@ -29,6 +29,7 @@ interface CustomUser extends User {
   role?: string;
   tenantId?: string;
   tenantName?: string;
+  password?: string;
 }
 
 interface CustomSession extends Session {
@@ -77,7 +78,7 @@ export const authOptions = {
             include: {
               tenant: true,
             },
-          });
+          }) as (CustomUser & { tenant: any }) | null;
           
           if (!user || !user.password) {
             return null;
@@ -140,4 +141,6 @@ export const authOptions = {
   debug: env.NODE_ENV === "development",
 };
 
-export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+// Export auth utilities
+const handler = NextAuth(authOptions);
+export const { auth, signIn, signOut } = handler;
