@@ -1,10 +1,11 @@
 'use client';
 
-import * as React from 'react';
+import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
-import { ChevronDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import * as React from 'react';
+
+import { ScrollArea } from '@/components/Shadcn/scroll-area';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -15,7 +16,8 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from '@/components/sidebar';
-import { ScrollArea } from '@/components/Shadcn/scroll-area';
+import { cn } from '@/lib/utils';
+
 import { useRole } from '@/context/role-context';
 
 interface NavGroupProps {

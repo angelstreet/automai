@@ -1,7 +1,7 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 export default function TeamPage() {
   const params = useParams();

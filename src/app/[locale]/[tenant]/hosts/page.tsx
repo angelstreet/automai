@@ -1,15 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { RefreshCcw, Plus, Server } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/Shadcn/button';
-import { RefreshCcw, Plus } from 'lucide-react';
-import { useToast } from '@/components/Shadcn/use-toast';
-import { HostOverview } from './_components/HostOverview';
-import { Host } from '@/types/hosts';
-import { ConnectHostDialog } from './_components/ConnectHostDialog';
-import { Tooltip, TooltipContent, TooltipProvider } from '@/components/Shadcn/tooltip';
+import { useState, useEffect, useCallback } from 'react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,9 +15,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/Shadcn/alert-dialog';
+import { Button } from '@/components/Shadcn/button';
 import { Skeleton } from '@/components/Shadcn/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider } from '@/components/Shadcn/tooltip';
+import { useToast } from '@/components/Shadcn/use-toast';
 import { cn } from '@/lib/utils';
-import { Server } from 'lucide-react';
+import { Host } from '@/types/hosts';
+
+import { ConnectHostDialog } from './_components/ConnectHostDialog';
+import { HostOverview } from './_components/HostOverview';
 
 export default function HostsPage() {
   const t = useTranslations('Common');

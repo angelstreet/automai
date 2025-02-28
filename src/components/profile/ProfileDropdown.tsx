@@ -1,4 +1,6 @@
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/Shadcn/avatar';
 import { Button } from '@/components/Shadcn/button';
 import {
@@ -11,8 +13,6 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/Shadcn/dropdown-menu';
-import { useSession, signOut } from 'next-auth/react';
-import { useParams } from 'next/navigation';
 
 export function ProfileDropdown() {
   const { data: session } = useSession();
@@ -58,11 +58,15 @@ export function ProfileDropdown() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings/profile`)}>
+          <DropdownMenuItem
+            onClick={() => router.push(`/${locale}/${params.tenant}/settings/profile`)}
+          >
             Profile
             <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings/billing`)}>
+          <DropdownMenuItem
+            onClick={() => router.push(`/${locale}/${params.tenant}/settings/billing`)}
+          >
             Billing
             <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
           </DropdownMenuItem>
@@ -70,7 +74,9 @@ export function ProfileDropdown() {
             Settings
             <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings/team`)}>
+          <DropdownMenuItem
+            onClick={() => router.push(`/${locale}/${params.tenant}/settings/team`)}
+          >
             New Team
           </DropdownMenuItem>
         </DropdownMenuGroup>

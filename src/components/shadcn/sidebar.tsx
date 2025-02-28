@@ -1,10 +1,10 @@
-import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { VariantProps, cva } from 'class-variance-authority';
+import type { VariantProps } from 'class-variance-authority';
+import { cva } from 'class-variance-authority';
 import { PanelLeft } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
+import * as React from 'react';
+
 import { Button } from '@/components/Shadcn/button';
 import { Input } from '@/components/Shadcn/input';
 import { Separator } from '@/components/Shadcn/separator';
@@ -16,6 +16,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/Shadcn/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 const SIDEBAR_COOKIE_NAME = 'sidebar:state';
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;

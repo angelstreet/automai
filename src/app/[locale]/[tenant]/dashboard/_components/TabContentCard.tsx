@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/Shadcn/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/Shadcn/card';
 
 interface TabContentCardProps {
   title: string;
@@ -24,4 +19,4 @@ export function TabContentCard({ title }: TabContentCardProps) {
       </CardContent>
     </Card>
   );
-} 
+}

@@ -1,6 +1,7 @@
-import { Host } from '@/types/hosts';
 import { Checkbox } from '@/components/Shadcn/checkbox';
 import { cn } from '@/lib/utils';
+import { Host } from '@/types/hosts';
+
 import { HostCard } from './HostCard';
 
 interface HostGridProps {

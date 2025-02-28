@@ -1,4 +1,4 @@
-import { NewUseCase, Project } from '@/types/usecase';
+import { PLATFORMS } from '@/app/[locale]/[tenant]/platforms/constants';
 import { Button } from '@/components/Shadcn/button';
 import { Input } from '@/components/Shadcn/input';
 import {
@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/Shadcn/select';
-import { PLATFORMS } from '@/app/[locale]/[tenant]/platforms/constants';
+import { NewUseCase, Project } from '@/types/usecase';
 
 type CreateUseCaseProps = {
   projects: Project[];

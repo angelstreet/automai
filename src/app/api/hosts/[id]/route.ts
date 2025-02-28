@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getHostById, deleteHost } from '@/lib/services';
 
 type Props = {
-  params: { id: string }
-}
+  params: { id: string };
+};
 
-export async function GET(
-  request: NextRequest,
-  { params }: Props
-) {
+export async function GET(request: NextRequest, { params }: Props) {
   try {
     const host = await getHostById(params.id);
 
@@ -23,10 +21,7 @@ export async function GET(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: Props
-) {
+export async function DELETE(request: NextRequest, { params }: Props) {
   try {
     await deleteHost(params.id);
 

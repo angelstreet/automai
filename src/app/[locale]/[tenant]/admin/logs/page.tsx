@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useState, useEffect, useCallback } from 'react';
+
+import { Badge } from '@/components/Shadcn/badge';
+import { Button } from '@/components/Shadcn/button';
 import {
   Card,
   CardContent,
@@ -9,24 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/Shadcn/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/Shadcn/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/Shadcn/select';
 import { Input } from '@/components/Shadcn/input';
-import { Button } from '@/components/Shadcn/button';
-import { Badge } from '@/components/Shadcn/badge';
 import {
   Pagination,
   PaginationContent,
@@ -35,6 +21,21 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/Shadcn/pagination';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/Shadcn/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/Shadcn/table';
 
 interface ConnectionLog {
   id: string;

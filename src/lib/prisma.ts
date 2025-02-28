@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+
 import { config } from './config';
 
 // Use a single PrismaClient instance

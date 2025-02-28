@@ -1,6 +1,7 @@
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/Shadcn/button';
 import { ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+import { Button } from '@/components/Shadcn/button';
 
 interface SettingsHeaderProps {
   title: string;

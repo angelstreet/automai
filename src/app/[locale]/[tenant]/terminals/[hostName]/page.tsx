@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { Terminal } from '../../hosts/_components/Terminal';
+import { useEffect, useState, useRef, useCallback } from 'react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/Shadcn/alert';
 import { useToast } from '@/components/Shadcn/use-toast';
 import { logger } from '@/lib/logger';
-import { Alert, AlertDescription, AlertTitle } from '@/components/Shadcn/alert';
-import { AlertCircle } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+
+import { Terminal } from '../../hosts/_components/Terminal';
 
 interface MachineConnection {
   id: string;

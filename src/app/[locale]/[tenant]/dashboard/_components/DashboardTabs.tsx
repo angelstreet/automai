@@ -1,8 +1,9 @@
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Shadcn/tabs';
-import { StatsCards } from './StatsCards';
+
 import { MainContent } from './MainContent';
+import { StatsCards } from './StatsCards';
 import { TabContentCard } from './TabContentCard';
 
 export function DashboardTabs() {
@@ -35,4 +36,4 @@ export function DashboardTabs() {
       </TabsContent>
     </Tabs>
   );
-} 
+}

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+
+import { prisma } from '@/lib/prisma';
 
 // Schema for project creation/update
 const ProjectSchema = z.object({

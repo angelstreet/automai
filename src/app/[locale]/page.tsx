@@ -1,8 +1,9 @@
-import { Hero } from './(marketing)/_components/Hero';
-import { Features } from './(marketing)/_components/Features';
-import { SiteHeader } from '@/components/Layout/SiteHeader';
 import { Footer } from '@/components/Layout/Footer';
+import { SiteHeader } from '@/components/Layout/SiteHeader';
 import { locales } from '@/config';
+
+import { Features } from './(marketing)/_components/Features';
+import { Hero } from './(marketing)/_components/Hero';
 
 export const dynamic = 'force-static';
 

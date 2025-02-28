@@ -1,5 +1,6 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
+
 import { locales, defaultLocale, pathnames } from './config';
 
 // Lazy load the internationalization middleware

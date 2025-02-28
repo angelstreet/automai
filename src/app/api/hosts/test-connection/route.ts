@@ -1,6 +1,6 @@
+import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { Client } from 'ssh2';
-import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 

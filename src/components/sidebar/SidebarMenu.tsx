@@ -1,4 +1,5 @@
 import * as React from 'react';
+
 import { cn } from '@/lib/utils';
 
 export const SidebarMenu = React.forwardRef<HTMLUListElement, React.ComponentProps<'ul'>>(

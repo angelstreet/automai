@@ -1,5 +1,10 @@
 'use client';
 
+import { useSession } from 'next-auth/react';
+
+import { NavGroup } from '@/components/Layout/NavGroup';
+import { NavUser } from '@/components/Layout/NavUser';
+import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
 import {
   Sidebar,
   SidebarContent,
@@ -7,12 +12,9 @@ import {
   SidebarHeader,
   SidebarRail,
 } from '@/components/sidebar';
-import { NavGroup } from '@/components/Layout/NavGroup';
-import { NavUser } from '@/components/Layout/NavUser';
-import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
-import { sidebarData } from './data/sidebarData';
-import { useSession } from 'next-auth/react';
 import { useRole } from '@/context/RoleContext';
+
+import { sidebarData } from './data/sidebarData';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession();

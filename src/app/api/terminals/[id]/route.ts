@@ -1,13 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getWebSocketServer, handleUpgrade } from '@/lib/websocketServer';
 import { headers } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { getWebSocketServer, handleUpgrade } from '@/lib/websocketServer';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 type Props = {
-  params: { id: string }
-}
+  params: { id: string };
+};
 
 export async function GET(request: NextRequest, { params }: Props) {
   const connectionId = params.id;

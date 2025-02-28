@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
 import { forwardRef } from 'react';
+
+import { cn } from '@/lib/utils';
 
 export const SidebarMenuSub = forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
   ({ className, ...props }, ref) => (

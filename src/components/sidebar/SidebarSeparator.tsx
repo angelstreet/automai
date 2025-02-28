@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+
 import { Separator } from '@/components/Shadcn/separator';
+import { cn } from '@/lib/utils';
 
 export const SidebarSeparator = React.forwardRef<
   React.ElementRef<typeof Separator>,

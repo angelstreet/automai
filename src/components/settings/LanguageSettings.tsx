@@ -2,6 +2,7 @@
 
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+
 import {
   Card,
   CardContent,

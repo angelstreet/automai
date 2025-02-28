@@ -1,9 +1,6 @@
 import * as React from 'react';
+
 import { TooltipProvider } from '@/components/Shadcn/tooltip';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import { SidebarContext } from '@/context/SidebarContext';
-import { SidebarProviderProps } from '@/types/sidebar';
 import {
   SIDEBAR_COOKIE_NAME,
   SIDEBAR_COOKIE_MAX_AGE,
@@ -11,6 +8,10 @@ import {
   SIDEBAR_WIDTH_ICON,
   SIDEBAR_KEYBOARD_SHORTCUT,
 } from '@/constants/sidebar';
+import { SidebarContext } from '@/context/SidebarContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+import { SidebarProviderProps } from '@/types/sidebar';
 
 const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
   (

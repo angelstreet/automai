@@ -1,22 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Button } from '@/components/Shadcn/button';
-import { Input } from '@/components/Shadcn/input';
+import { useSession } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+
+import { PLATFORM_PREFIXES } from '@/app/[locale]/[tenant]/platforms/constants';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/Shadcn/accordion';
-import { useUser } from '@/context/UserContext';
-import { useSession } from 'next-auth/react';
+import { Button } from '@/components/Shadcn/button';
+import { Input } from '@/components/Shadcn/input';
 import { useToast } from '@/components/Shadcn/use-toast';
+import { useUser } from '@/context/UserContext';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';
-import { PLATFORM_PREFIXES } from '@/app/[locale]/[tenant]/platforms/constants';
-import { UseCaseList } from '../../usecases/_components/UseCaseList';
+
 import { CreateUseCase } from '../../usecases/_components/CreateUseCase';
+import { UseCaseList } from '../../usecases/_components/UseCaseList';
 
 export default function UseCasesPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);

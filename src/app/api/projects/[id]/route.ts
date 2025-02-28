@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
+import { prisma } from '@/lib/prisma';
+
 type Props = {
-  params: { id: string }
-}
+  params: { id: string };
+};
 
 const ProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),

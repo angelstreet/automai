@@ -1,10 +1,11 @@
-import * as React from 'react';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { cn } from '@/lib/utils';
-import { useSidebar } from '@/hooks/use-sidebar';
-import { SidebarProps } from '@/types/sidebar';
+import * as React from 'react';
+
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/Shadcn/sheet';
 import { SIDEBAR_WIDTH_MOBILE } from '@/constants/sidebar';
+import { useSidebar } from '@/hooks/use-sidebar';
+import { cn } from '@/lib/utils';
+import { SidebarProps } from '@/types/sidebar';
 
 const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
   (

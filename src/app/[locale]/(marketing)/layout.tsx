@@ -1,5 +1,6 @@
-import { SiteHeader } from '@/components/Layout/SiteHeader';
 import React from 'react';
+
+import { SiteHeader } from '@/components/Layout/SiteHeader';
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (

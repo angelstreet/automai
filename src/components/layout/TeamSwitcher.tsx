@@ -1,8 +1,8 @@
 'use client';
 
-import * as React from 'react';
 import { ChevronDown, Code2, Building2, Factory } from 'lucide-react';
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/sidebar';
+import * as React from 'react';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/Shadcn/dropdown-menu';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/sidebar';
 import { useUser } from '@/context/UserContext';
 
 interface TeamSwitcherProps {
