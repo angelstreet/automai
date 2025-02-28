@@ -1,24 +1,32 @@
 // src/middleware.ts
-import createIntlMiddleware from 'next-intl/middleware';
-import { locales, defaultLocale, pathnames } from './config';
 import { NextRequest, NextResponse } from 'next/server';
+import { locales, defaultLocale, pathnames } from './config';
 
-// Create the internationalization middleware
-const intlMiddleware = createIntlMiddleware({
-  locales,
-  defaultLocale,
-  pathnames,
-  localePrefix: 'always',
-});
+// Lazy load the internationalization middleware
+let intlMiddleware: any = null;
 
-export default function middleware(request: NextRequest) {
+async function getIntlMiddleware() {
+  if (!intlMiddleware) {
+    const { default: createIntlMiddleware } = await import('next-intl/middleware');
+    intlMiddleware = createIntlMiddleware({
+      locales,
+      defaultLocale,
+      pathnames,
+      localePrefix: 'always',
+    });
+  }
+  return intlMiddleware;
+}
+
+export default async function middleware(request: NextRequest) {
   // Skip internationalization middleware for WebSocket connections
   if (request.headers.get('upgrade')?.includes('websocket')) {
     return NextResponse.next();
   }
 
   // Apply internationalization middleware for regular requests
-  return intlMiddleware(request);
+  const middleware = await getIntlMiddleware();
+  return middleware(request);
 }
 
 export const config = {
