@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import Image from "next/image";
 
 interface NavUserProps {
   user: {
@@ -48,7 +49,13 @@ export function NavUser({ user }: NavUserProps) {
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background">
                 {user.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="h-7 w-7 rounded-full" />
+                  <Image
+                    src={user.avatar}
+                    alt={user.name}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 rounded-full"
+                  />
                 ) : (
                   <User className="h-4 w-4" />
                 )}

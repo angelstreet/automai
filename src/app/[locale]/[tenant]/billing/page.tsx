@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 
-export default function BillingPage({ params }: { params: { tenant: string; locale: string } }) {
+export default function BillingPage() {
   const t = useTranslations('billing');
 
   return (
