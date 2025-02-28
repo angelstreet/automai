@@ -3,13 +3,17 @@ import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
+type Props = {
+  params: { id: string }
+}
+
 const ProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
 });
 
 // GET /api/projects/[id]
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: Props) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
@@ -54,7 +58,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // PATCH /api/projects/[id]
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: Props) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
@@ -104,7 +108,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 // DELETE /api/projects/[id]
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: Props) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
