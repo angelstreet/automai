@@ -9,7 +9,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/shadcn/command';
+} from '@/components/Shadcn/command';
 
 const navigation = [
   {

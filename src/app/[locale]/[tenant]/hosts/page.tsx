@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/shadcn/button';
+import { Button } from '@/components/Shadcn/button';
 import { RefreshCcw, Plus } from 'lucide-react';
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/Shadcn/use-toast';
 import { HostOverview } from '@/components/hosts/HostOverview';
 import { Host } from '@/types/hosts';
-import { ConnectHostDialog } from '@/components/hosts/ConnectHostDialog';
-import { Tooltip, TooltipContent, TooltipProvider } from '@/components/shadcn/tooltip';
+import { ConnectHostDialog } from './_components/ConnectHostDialog';
+import { Tooltip, TooltipContent, TooltipProvider } from '@/components/Shadcn/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,8 +19,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/shadcn/alert-dialog';
-import { Skeleton } from '@/components/shadcn/skeleton';
+} from '@/components/Shadcn/alert-dialog';
+import { Skeleton } from '@/components/Shadcn/skeleton';
 import { cn } from '@/lib/utils';
 import { Server } from 'lucide-react';
 

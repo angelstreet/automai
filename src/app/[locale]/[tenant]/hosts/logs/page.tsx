@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Button } from '@/components/shadcn/button';
-import { Card } from '@/components/shadcn/card';
-import { Badge } from '@/components/shadcn/badge';
-import { ScrollArea } from '@/components/shadcn/scroll-area';
+import { Button } from '@/components/Shadcn/button';
+import { Card } from '@/components/Shadcn/card';
+import { Badge } from '@/components/Shadcn/badge';
+import { ScrollArea } from '@/components/Shadcn/scroll-area';
 import { Host } from '@/types/hosts';
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/Shadcn/use-toast';
 
 interface Log {
   id: string;

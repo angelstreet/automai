@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Button } from '@/components/shadcn/button';
-import { Card } from '@/components/shadcn/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import { Button } from '@/components/Shadcn/button';
+import { Card } from '@/components/Shadcn/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Shadcn/tabs';
 import Editor from '@monaco-editor/react';
 import { useUser } from '@/lib/contexts/UserContext';
 import { useSession } from 'next-auth/react';

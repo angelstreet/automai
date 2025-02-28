@@ -7,7 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/shadcn/card';
+} from '@/components/Shadcn/card';
 import { LanguageSettings } from '@/components/settings/language-settings';
 import { SettingsHeader } from '@/components/settings/settings-header';
 

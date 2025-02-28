@@ -3,8 +3,8 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/shadcn/button';
-import { Input } from '@/components/shadcn/input';
+import { Button } from '@/components/Shadcn/button';
+import { Input } from '@/components/Shadcn/input';
 import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
 import Github from 'lucide-react/icons/github';
@@ -61,7 +61,7 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = (provider: 'google' | 'github') => {
-    signIn(provider, { callbackUrl: `/${locale}/auth-redirect` });
+    signIn(provider, { callbackUrl: `/${locale}/(auth)/auth-redirect` });
   };
 
   // Show nothing while checking initial auth state
