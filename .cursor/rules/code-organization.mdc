@@ -312,16 +312,3 @@ automai/
      };
    }
    ```
-
-## Health Check
-
-Run the health check script to identify files that exceed the 300-line limit:
-
-```bash
-node scripts/health-check.js
-```
-
-The script will:
-1. Scan the codebase for files exceeding the line limit
-2. Provide specific recommendations for breaking up each file
-3. Display best practices for different file types 

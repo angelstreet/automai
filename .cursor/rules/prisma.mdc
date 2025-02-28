@@ -1,6 +1,7 @@
 ---
 description: Prisma & Database Best Practices
 globs: prisma/**/*.{ts,prisma}
+alwaysApply: false
 ---
 
 # Prisma & Database Best Practices
@@ -15,23 +16,16 @@ globs: prisma/**/*.{ts,prisma}
 - The DATABASE_URL in environment files should use PostgreSQL format: `postgresql://user@localhost:5432/dbname`
 - **NEVER** create Prisma configurations outside the `/prisma` directory
 
-### Prisma Client Implementations
+### Prisma Client Implementation
 
-The project has two Prisma client implementations:
+The project has a single Prisma client implementation:
 
 1. **Root-level Prisma client** (`/prisma/index.ts`)
-   - Primary client implementation
-   - Used by standalone servers and scripts
+   - Used by all parts of the application
    - Export: `export const prisma` and `export default prisma`
+   - Import using: `import { prisma } from '../../prisma'`
 
-2. **Src-level Prisma client** (`/src/lib/prisma.ts`)
-   - Used within the Next.js application
-   - Creates a singleton instance attached to the global object
-   - Export: `export const prisma`
-
-**IMPORTANT**: Both implementations follow the singleton pattern to prevent connection pool exhaustion. Always import the appropriate client based on the context:
-- For standalone scripts or the WebSocket server: `import { prisma } from '../../prisma'`
-- For Next.js application code: `import { prisma } from '@/lib/prisma'`
+**IMPORTANT**: The implementation follows the singleton pattern to prevent connection pool exhaustion.
 
 ## OAuth & Authentication Rules
 
@@ -112,7 +106,7 @@ enum Role {
 
 ```typescript
 // src/lib/services/project.ts
-import { prisma } from '@/lib/prisma';
+import { prisma } from '../../../prisma';
 import { AppError } from '@/lib/utils/errors';
 
 export async function createProject(data: CreateProjectInput) {
@@ -149,6 +143,8 @@ export async function updateProject(
 
 ```typescript
 // src/server/services/test.ts
+import { prisma } from '../../../prisma';
+
 export async function createTestWithResults(data: TestData) {
   return await prisma.$transaction(async (tx) => {
     const test = await tx.test.create({

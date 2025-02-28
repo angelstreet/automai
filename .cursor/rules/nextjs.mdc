@@ -1,6 +1,7 @@
 ---
 description: Next.js Best Practices
 globs: src/**/*.{ts,tsx}
+alwaysApply: false
 ---
 
 # Next.js Best Practices
@@ -18,7 +19,7 @@ automai/
 │   └── index.ts              # Prisma client singleton (root-level)
 ├── .env.*                    # Environment files at root
 ├── scripts/                  # Utility scripts
-│   └── health-check.js       # Script to check file sizes and provide refactoring recommendations
+│   └── health-check.js       # Script to check file sizes and provide refactoring 
 ├── src/
 │   ├── app/                  # Next.js App Router
 │   │   ├── [locale]/         # Internationalized routes
@@ -32,11 +33,10 @@ automai/
 │   │   ├── utils.ts          # Helper functions
 │   │   └── env.ts            # Environment configuration
 │   ├── components/           # UI components
-│   │   ├── ui/               # Reusable UI components
-│   │   └── hosts/   # Terminal component
+│   │   ├── Feature/          # Reusable UI components
+│   │   └── Shadcn/           # fe component
 │   ├── i18n/                 # Internationalization
 │   └── middleware.ts         # Next.js middleware
-├── websocket.server.js       # Standalone WebSocket server
 ├── electron/                 # Electron app configuration
 ├── tests/                    # Test files
 ├── docs/                     # Project documentation
@@ -49,7 +49,7 @@ automai/
 2. **Database Access**: Use service layer in `src/lib/services/` for all database operations
 3. **Prisma**: Import from `@/lib/prisma` for database access
 4. **Environment Variables**: Define in root `.env.*` files, validate with zod
-5. **Components**: Create reusable components in `src/components/ui`
+5. **Components**: Create reusable components in `src/components/`
 6. **Internationalization**: Use `next-intl` with messages in `src/i18n/messages`
 7. **Authentication**: Implement with NextAuth.js
 8. **Middleware**: Define in `src/middleware.ts` at the root of src
@@ -70,25 +70,6 @@ export const prisma = global.prisma || new PrismaClient()
 
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma
-}
-```
-
-### Service Layer Pattern
-
-```typescript
-// src/lib/services/hosts.ts
-import { prisma } from '../prisma'
-
-export async function getHosts() {
-  return prisma.host.findMany({
-    orderBy: { createdAt: 'desc' }
-  })
-}
-
-export async function createHost(data) {
-  return prisma.host.create({
-    data
-  })
 }
 ```
 
@@ -149,3 +130,39 @@ export const env = envSchema.parse(process.env)
 - Use Server Components where possible
 - Minimize client-side JavaScript
 - Optimize for Core Web Vitals 
+
+## Frontend Development
+
+### Code Style and Structure
+- Write concise, technical TypeScript code with accurate examples
+- Use functional and declarative programming patterns; avoid classes
+- Prefer iteration and modularization over code duplication
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError)
+- Structure files: exported component, subcomponents, helpers, static content, types
+
+### Naming Conventions
+- All components should go in src/components and be named like new-component.tsx
+- Use lowercase with dashes for directories (e.g., components/auth-wizard)
+- Favor named exports for components
+
+### TypeScript Usage
+- Use TypeScript for all code; prefer interfaces over types
+- Avoid enums; use maps instead
+- Use functional components with TypeScript interfaces
+
+### Syntax and Formatting
+- Use the "function" keyword for pure functions
+- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements
+- Use declarative JSX
+
+### UI and Styling
+- Use Shadcn UI and Tailwind for components and styling
+- Implement responsive design with Tailwind CSS; use a mobile-first approach
+
+### Performance Optimization
+- Limit 'use client':
+  - Favor server components and Next.js SSR
+  - Use only for Web API access in small components
+  - Avoid for data fetching or state management
+- Use 'nuqs' for URL search parameter state management
+- While creating placeholder images as a part of your seed data, use https://placekitten.com/

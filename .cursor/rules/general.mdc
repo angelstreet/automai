@@ -1,324 +1,109 @@
 ---
 description: General rules for the project
-globs: src/**/*.{ts,tsx}
+globs: 
 alwaysApply: true
 ---
 # General Rules
 
-## 🚀 YOLO Mode Quick Start
+## 🚀 Essential Project Information
 
-**For AI agents in YOLO mode, read this section first to get essential context quickly.**
+### Project Architecture
+- **Next.js 13+ App Router** application nodejs
+- **Prisma Client**:  Follow  @Prisma Rules 
+- **WebSocket Server**: Follow @WebSocket Rules
+- **HTTP Server**: Next.js on port 3000
+- **Authentication**: NextAuth.js
+- **UI**: Shadcn UI + Tailwind CSS
+- **i18n**: next-intl with translations in `src/i18n/messages`
 
-### Essential Project Context
-- **Project Type**: Next.js 13+ App Router application with PostgreSQL/Prisma and WebSocket server
-- **Key Architecture**: 
-  - WebSocket implementation in `src/lib/websocketServer.ts`
-  - Dual Prisma clients: Root-level singleton and src-level singleton
-  - Next.js HTTP server (port 3000) with App Router and internationalization
+### Critical Development Guidelines
+1. **Code Organization**: Follow @Code Organization Rules
+   -TODO : add most important rule  and structure folder overview 
 
-### Critical Patterns to Follow
-1. **Database Access**: 
-   - Use appropriate Prisma client:
-     - For standalone scripts: `import { prisma } from '../../prisma'`
-     - For Next.js application: `import { prisma } from '@/lib/prisma'`
-   - See [Prisma Rules](mdc:#prisma-rules) for details
-
-2. **WebSocket Usage**: 
-   - WebSocket implementation in `src/lib/websocketServer.ts`
-   - See [WebSocket Rules](mdc:#websocket-rules) for details
-
-3. **Code Organization**:
-   - Keep files under 300 lines
-   - Run health check script to identify large files: `node scripts/health-check.js`
-   - See [Code Organization Rules](mdc:#code-organization-rules) for refactoring patterns
-
-4. **Performance Optimization**:
-   - Minimize client-side JavaScript with Server Components
-   - Use proper code splitting and dynamic imports
-   - See [Performance Guidelines](mdc:#performance-guidelines) for details
-
-### Required vs Optional Rules
-
-**Required Rules** (read these first in new chats):
-- `general.mdc` (this file) - Essential project context
-- `prisma.mdc` - Database access patterns
-- `websocket.mdc` - WebSocket implementation details
-- `code-organization.mdc` - File size and organization guidelines
-
-**Optional Rules** (read as needed):
-- `config.mdc` - Environment configuration details
-- `nextjs.mdc` - Next.js specific patterns
-- `frontend.mdc` - Frontend development guidelines
-- `backend.mdc` - Backend API patterns
-- `ui.mdc` - UI component guidelines
-- `refactoring.mdc` - Detailed refactoring guidelines
-
-## Initial Setup - READ FIRST
-
-**IMPORTANT: If this is a new chat, read all cursor rules first to understand the project structure and coding standards.**
-
-1. Read these cursor rules in order:
-   - general.mdc (this file) - Project overview and general guidelines
-   - yolo-mode.mdc - Quick reference guide for YOLO mode development
-   - config.mdc - Environment configuration
-   - prisma.mdc - Database and Prisma setup
-   - nextjs.mdc - Next.js structure and best practices
-   - frontend.mdc - Frontend development guidelines
-   - backend.mdc - Backend development guidelines
-   - ui.mdc - UI component guidelines
-   - websocket.mdc - WebSocket server and terminal implementation
-   - code-organization.mdc - Code organization and file size guidelines
-   - refactoring.mdc - Guidelines for refactoring and breaking up large files
-
-2. Development workflow guidelines:
-   - Always ask for permission before creating any new folder or file
-   - Before suggesting removal of any file or folder, examine all related files to ensure nothing important is deleted
-   - When troubleshooting issues, identify all possible causes, rank them by probability, and focus on the most likely one
-   - For any code changes, first provide a detailed plan specifying:
-     - Which files need to be modified
-     - What specific changes are needed in each file
-     - Why these changes will address the issue
-   - Wait for explicit user approval before implementing any code changes
-   - Never use Express.js for any server implementations
-   - When running npm build, fix all warnings and errors before rerunning the build
-
-3. Information gathering approach:
-   - First consult all cursor rules to find relevant information
-   - If cursor rules don't contain the needed information, check documents in the docs folder
-   - Only ask the user for information if it cannot be found in existing documentation
-
-4. Communication style:
-   - Keep responses concise and focused on the task
-   - After implementing changes, confirm completion without explaining what was done
-   - Avoid lengthy explanations unless specifically requested
-   - Focus on solutions rather than descriptions of problems
-
-5. Tool usage:
-   - Do not use browser tools (screenshots, console logs, network logs) unless explicitly requested
-   - Do not run tests on browser or execute commands without specific user permission
-   - When using tools is necessary, explain why before using them
-   - If browser tools are requested but fail to work:
-     1. Check if the browser tools server is running
-     2. If not running, start it with: `npx @agentdeskai/browser-tools-server`
-     3. Wait for the server to initialize before trying again
-
-6. Error handling:
-   - If you make a mistake or misunderstand requirements, acknowledge it
-   - Propose specific improvements to this general cursor rule to prevent similar issues in the future
-   - Focus on fixing the immediate issue before suggesting rule improvements
-
-## Project Overview
-
-This is a Next.js application with the following key features:
-- Next.js 13+ App Router with internationalization
-- PostgreSQL database with Prisma ORM
-- WebSocket implementation in `src/lib/websocketServer.ts`
-- Next.js built-in HTTP server (port 3000)
-- Authentication with NextAuth.js
-- UI built with Shadcn UI and Tailwind CSS
-- Health check script for code quality monitoring
-- Electron desktop application support
-
-## Project Structure
-
-For a detailed project structure, please refer to the [Code Organization Rules](mdc:#code-organization-rules) in `code-organization.mdc`. The structure there is verified against the actual codebase and contains accurate folder and file listings.
-
-## Completed Setup
-
-The following has already been set up and should not be recreated:
-- Prisma schema with models for User, Host, Connection, etc.
-- Prisma client singletons:
-  - Root-level singleton: `prisma/index.ts`
-  - Src-level singleton: `src/lib/prisma.ts`
-- WebSocket implementation in `src/lib/websocketServer.ts`
-- SSH2 integration for terminal connections
-- Environment configuration with validation using Zod
-- Authentication with NextAuth.js
-- Internationalization with next-intl
-- Health check script for code quality monitoring
-- Electron desktop application configuration
-
-## Code Organization
-
-- Files should be under 300 lines
-- If a file exceeds 300 lines, split it into multiple files:
-  - For components: Extract subcomponents
-  - For utilities: Group by functionality
-  - For API routes: Split by endpoint or functionality
-
-## Health Check Process
-
-Before making any refactoring changes:
-1. Run the health check script: `node scripts/health-check.js`
-2. Review the output to identify files exceeding the 300-line limit
-3. Present findings to the user with specific recommendations for each file
-4. Wait for user confirmation before implementing any changes
-5. Follow the best practices in the code-organization.mdc rule when refactoring
-
-### Interpreting Health Check Results
-
-When the health check script identifies large files, follow these guidelines:
-
-1. **For Components (>300 lines)**:
-   - Before: Single large component with multiple responsibilities
-   - After: Directory structure with main component and subcomponents
-   ```
-   Button/
-   ├── index.tsx         # Main component (exports Button)
-   ├── ButtonIcon.tsx    # Extracted subcomponent
-   └── ButtonLabel.tsx   # Extracted subcomponent
-   ```
-
-2. **For Pages (>300 lines)**:
-   - Before: Single page file with UI, data fetching, and business logic
-   - After: Separate files for UI components and data operations
-   ```
-   dashboard/
-   ├── page.tsx          # Main page (composition only)
-   ├── actions.ts        # Data fetching logic
-   └── _components/      # UI components
-   ```
-
-3. **For Utility Files (>300 lines)**:
-   - Before: Single utility file with mixed functions
-   - After: Grouped by functionality in separate files
-   ```
-   utils/
-   ├── index.ts          # Re-exports
-   ├── string.ts         # String utilities
-   └── date.ts           # Date utilities
-   ```
-
-See [Refactoring Guidelines](mdc:#refactoring-guidelines) for detailed patterns.
-
-## <a id="performance-guidelines"></a>Performance Optimization Guidelines
-
-For optimal performance in YOLO mode:
-
-1. **Server-Side Rendering**:
-   - Use React Server Components (RSC) by default
-   - Only add 'use client' when necessary for interactivity
-   - Keep client-side JavaScript minimal
-
-2. **Code Splitting**:
-   - Use dynamic imports for large components:
-     ```tsx
-     const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
-       loading: () => <LoadingSpinner />
-     });
-     ```
-
-3. **Image Optimization**:
-   - Always use Next.js Image component with proper sizing
-   - Implement lazy loading for below-the-fold images
-
-4. **Data Fetching**:
-   - Use React Server Components for data fetching
+2. **Performance Best Practices**:
+   - Use React Server Components by default
+   - Only add 'use client' when necessary
+   - Use dynamic imports for large components
    - Implement proper caching strategies
-   - Use incremental static regeneration where appropriate
+   - Minimize 'useEffect' and 'setState'; favor React Server Components
+   - Wrap client components in Suspense with fallback
+   - Use dynamic loading for non-critical components
+   - Optimize images: use WebP format, include size data, implement lazy loading
+   - Use 'nuqs' for URL search parameter state management
+   - Optimize Web Vitals (LCP, CLS, FID)
 
-5. **Bundle Size**:
-   - Avoid large dependencies when alternatives exist
-   - Use tree-shakable libraries
-   - Monitor bundle size with built-in Next.js analytics
+3. **Development Workflow**:
+   - Get approval before creating new files/folders
+   - Verify dependencies and content before removing files
+   - Fix all warnings/errors before rerunning builds
+   - Never use Express.js for server implementations
+
+4. **Communication Style**:
+   - Keep responses concise and focused
+   - Confirm completion without lengthy explanations
+   - Focus on solutions over problem descriptions
+   - Do not apologize instead explain circumstances and help update cursor rules for improvement
+
+### Required Rules Reference
+- **general.mdc** (this file): Essential project context
+- **code-organization.mdc**: File organization guidelines
+- **nextjs.mdc**: Next.js implementation guidelines
+- **yolo-mode.mdc**: Quick reference for rapid development
+- **prisma.mdc**: Database access patterns
+- **websocket.mdc**: WebSocket implementation details
+- **ui.mdc**: Component design patterns
+- **refactoring.mdc**: Code refactoring guidelines
+- **frontend.mdc**: Frontend development best practices
+- **backend.mdc**: API implementation patterns
+- **config.mdc**: Configuration and environment setup
+- **nextjs-naming.mdc**: Next.js naming conventions
+
+## Project Structure & Components
+
+### Key File Paths
+- **WebSocket Server**: `src/lib/websocketServer.ts`
+- **Prisma Client**: `prisma/index.ts`
+- **Environment Config**: `src/lib/env.ts`
+
+### Component Organization
+- **Shared Components**:`src/components/[feature]/`
+- **Shadcn UI Components**: `src/components/Shadcn/`
+- **Page Components**: `src/app/[locale]/[tenant]/[feature]/_components/`
+- **Private Components**: For components used only within specific pages, create a _components folder within the relevant /app subdirectory
+- **Shared Components**: The /src/components folder should contain reusable components used across multiple pages or features
+- **Modular Approach**: As the project grows, adopt a more modular structure, where each feature or domain has its own folder containing components, hooks, and utilities specific to that feature
 
 ## Server Management
 
-- When to restart the Next.js development server:
-  - After adding new environment variables
-  - After modifying middleware.ts
-  - After changing next.config.js
-  - When Fast Refresh fails with an error message
+### When to Restart the Server
+- After adding new environment variables
+- After modifying middleware.ts or next.config.js
+- When Fast Refresh fails with an error
 
-- Server restart procedure:
-  1. Check if port 3000 is in use: `lsof -i :3000`
-  2. If in use, kill the process: `kill -9 <PID>`
-  3. Start the server with `npm run dev`
-  4. Wait for "Ready" message before proceeding
+## Debugging & Testing
 
-- UI changes should not require server restart (Next.js Fast Refresh will handle these)
-
-## i18n Handling
-
-- Translation files should be in `src/i18n/messages` directory
-- All languages should have the same keys
-- Use `next-intl` for translations
-- Support language switching via URL parameters
-
-## Debugging Guidelines
-
+### Debugging Guidelines
 - Use proper error handling in API routes
-- Check terminal logs only when server-side errors occur
-- Use browser tools to debug UI issues only when explicitly requested
-- Be concise in task completion confirmations 
+- Check terminal logs for server-side errors
+- Use browser tools only when explicitly requested
 
-## <a id="testing-guidelines"></a>Testing Guidelines for YOLO Mode
+## Project Glossary
 
-In YOLO mode, focus testing efforts on critical paths:
-
-1. **Priority Testing Areas**:
-   - Authentication flows
-   - Data persistence operations
-   - WebSocket connections
-   - Critical user journeys
-
-2. **Testing Approaches**:
-   - Manual testing of UI flows
-   - Console.log debugging for quick verification
-   - Basic API endpoint testing with tools like Postman
-   - Visual verification of UI components
-
-3. **Minimal Testing Setup**:
-   - Use Next.js built-in testing capabilities
-   - Focus on integration tests over unit tests
-   - Test real user flows rather than implementation details
-
-4. **When to Skip Testing**:
-   - UI styling changes
-   - Minor text updates
-   - Internal refactoring without behavior changes
-   - Low-risk enhancements
-
-## Maintaining Cursor Rules
-
-- Cursor rules should always reflect the current state of the codebase
-- When modifying code structure or architecture, update relevant cursor rules to match
-- If you identify improvements that should be documented in cursor rules:
-  1. Note the improvement in your response
-  2. Suggest specific updates to the relevant cursor rule
-  3. Wait for user confirmation before updating the rule
-
-- When updating cursor rules:
-  1. Be precise and concise
-  2. Include examples where helpful
-  3. Ensure consistency with other rules
-  4. Update the `globs` pattern if file paths have changed
-
-- Periodically verify that cursor rules accurately reflect:
-  - Project structure
-  - Coding standards
-  - Best practices
-  - File organization
-  - Environment configuration
-
-## <a id="project-glossary"></a>Project Glossary
-
-- **Tenant**: A customer organization with its own isolated data and users
-- **Host**: A server or host that can be connected to via SSH
-- **Connection**: An established SSH session to a host
-- **WebSocket Server**: The WebSocket implementation in src/lib/websocketServer.ts
-- **Prisma Client (Root)**: The Prisma client instance at /prisma/index.ts used by standalone scripts
-- **Prisma Client (Src)**: The Prisma client instance at /src/lib/prisma.ts used by Next.js
-- **Health Check**: The process of identifying files exceeding 300 lines that need refactoring
-- **YOLO Mode**: Rapid development mode prioritizing speed and efficiency over comprehensive documentation
+- **Tenant**: Customer organization with isolated data
+- **Host**: Server that can be connected via SSH
+- **Connection**: Established SSH session
+- **WebSocket Server**: Implementation for terminal connections
 
 ## Cross-References
-
-- <a id="prisma-rules"></a>**Prisma Rules**: See `prisma.mdc` for database access patterns and client usage
-- <a id="websocket-rules"></a>**WebSocket Rules**: See `websocket.mdc` for WebSocket implementation details
-- <a id="code-organization-rules"></a>**Code Organization Rules**: See `code-organization.mdc` for file organization guidelines
-- <a id="refactoring-guidelines"></a>**Refactoring Guidelines**: See `refactoring.mdc` for detailed refactoring patterns
+- <a id="prisma-rules"></a>**Prisma Rules**: See `prisma.mdc` for database access patterns
+- <a id="websocket-rules"></a>**WebSocket Rules**: See `websocket.mdc` for implementation details
+- <a id="code-organization-rules"></a>**Code Organization Rules**: See `code-organization.mdc` for file organization
+- <a id="performance-guidelines"></a>**Performance Guidelines**: See section above for optimization tips
+- <a id="refactoring-guidelines"></a>**Refactoring Guidelines**: See `refactoring.mdc` for detailed patterns
 - <a id="ui-guidelines"></a>**UI Guidelines**: See `ui.mdc` for component design patterns
 - <a id="backend-guidelines"></a>**Backend Guidelines**: See `backend.mdc` for API implementation patterns
-
-
+- <a id="frontend-guidelines"></a>**Frontend Guidelines**: See `frontend.mdc` for frontend best practices
+- <a id="nextjs-guidelines"></a>**Next.js Guidelines**: See `nextjs.mdc` for Next.js implementation details
+- <a id="nextjs-naming-guidelines"></a>**Next.js Naming Guidelines**: See `nextjs-naming.mdc` for naming conventions
+- <a id="config-guidelines"></a>**Configuration Guidelines**: See `config.mdc` for environment setup
+- <a id="yolo-mode-guidelines"></a>**YOLO Mode Guidelines**: See `yolo-mode.mdc` for rapid development patterns
