@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.8.0",
+    "@hookform/resolvers": "4.1.2",
     "@monaco-editor/react": "^4.7.0",
     "@prisma/client": "^6.4.1",
     "@radix-ui/react-accordion": "^1.2.3",
@@ -72,6 +73,7 @@
     "clsx": "2.1.1",
     "cmdk": "^1.0.4",
     "crypto-browserify": "^3.12.1",
+    "date-fns": "4.1.0",
     "dotenv": "^16.4.7",
     "electron-store": "^10.0.1",
     "is-electron": "^2.2.2",
@@ -91,7 +93,7 @@
     "tailwind-merge": "3.0.2",
     "ts-node": "^10.9.2",
     "ws": "^8.18.1",
-    "zod": "^3.24.2"
+    "zod": "3.24.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.0.0",

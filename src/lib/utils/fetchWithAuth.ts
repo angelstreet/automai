@@ -1,33 +1,59 @@
 /**
  * Utility function to make authenticated API requests
  * Automatically adds the Authorization header with the access token from the session
+ * Includes retry mechanism for server errors
  */
 export async function fetchWithAuth(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retryConfig = { maxRetries: 3, initialDelay: 500, shouldRetry: false }
 ): Promise<Response> {
-  try {
-    // Get the CSRF token from the cookie
-    const csrfToken = getCsrfToken();
-    
-    // Merge the headers with the Authorization header
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-      ...options.headers,
-    };
+  const { maxRetries, initialDelay, shouldRetry } = retryConfig;
+  let retries = 0;
+  let delay = initialDelay;
 
-    // Make the request with the merged options
-    const response = await fetch(url, {
-      ...options,
-      headers,
-      credentials: 'include', // Include cookies in the request
-    });
+  while (true) {
+    try {
+      // Get the CSRF token from the cookie
+      const csrfToken = getCsrfToken();
+      
+      // Merge the headers with the Authorization header
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+        ...options.headers,
+      };
 
-    return response;
-  } catch (error) {
-    console.error('Error in fetchWithAuth:', error);
-    throw error;
+      // Make the request with the merged options
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include', // Include cookies in the request
+      });
+
+      // If shouldRetry is true and we get a 500 error, retry the request
+      if (shouldRetry && response.status === 500 && retries < maxRetries) {
+        retries++;
+        console.log(`Retrying fetch to ${url} (${retries}/${maxRetries}) after ${delay}ms delay...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      // If shouldRetry is true and we have retries left, retry on network errors
+      if (shouldRetry && retries < maxRetries) {
+        retries++;
+        console.error(`Error in fetchWithAuth (retry ${retries}/${maxRetries}):`, error);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+        continue;
+      }
+      
+      console.error('Error in fetchWithAuth:', error);
+      throw error;
+    }
   }
 }
 
