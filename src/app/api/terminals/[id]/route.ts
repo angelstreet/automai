@@ -7,11 +7,12 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export async function GET(request: NextRequest, { params }: Props) {
-  const connectionId = params.id;
+  const { id } = await params;
+  const connectionId = id;
 
   // Check if this is a WebSocket upgrade request
   const upgradeHeader = request.headers.get('upgrade');

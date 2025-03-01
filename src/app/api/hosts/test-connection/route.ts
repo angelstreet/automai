@@ -4,7 +4,7 @@ import { Client } from 'ssh2';
 
 const prisma = new PrismaClient();
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
   try {
     const body = await request.json();
     const { ip, port, username, password, hostId } = body;
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     // Test SSH connection
-    return new Promise((resolve) => {
+    return await new Promise<Response>((resolve) => {
       const conn = new Client();
       let resolved = false;
 
