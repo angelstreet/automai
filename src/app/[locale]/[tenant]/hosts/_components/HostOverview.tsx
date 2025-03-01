@@ -2,7 +2,7 @@ import { Grid, List } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useToast } from '@/components/shadcn/useToast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
 

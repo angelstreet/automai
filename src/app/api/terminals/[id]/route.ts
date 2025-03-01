@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 /* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getWebSocketServer, handleUpgrade } from '@/lib/websocketServer';
+import { getWebSocketServer, handleUpgrade } from '@/lib/services/websocket';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
