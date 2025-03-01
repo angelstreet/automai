@@ -12,30 +12,28 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    log: process.env.NODE_ENV === 'development' ? ['error'] : ['error'],
     datasources: {
       db: {
         url: config.database.url,
       },
-    },
+    }
   });
 
-// Attempt to connect to the database and log any errors
-async function testConnection() {
-  try {
-    console.log('Testing Prisma database connection...');
-    // Simple query to test connection
-    await prisma.$queryRaw`SELECT 1`;
-    console.log('Database connection successful');
-  } catch (error) {
-    console.error('Failed to connect to database:', error);
-  }
+// Test connection only once at startup
+if (!globalForPrisma.prisma) {
+  (async () => {
+    try {
+      console.log('Testing initial Prisma database connection...');
+      await prisma.$queryRaw`SELECT 1`;
+      console.log('Initial database connection successful');
+    } catch (error) {
+      console.error('Failed to connect to database:', error);
+      process.exit(1); // Exit if we can't connect to database
+    }
+  })();
 }
 
-// Run the test in development mode
-if (process.env.NODE_ENV === 'development') {
-  testConnection();
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
 }
-
-// In development, attach the client to the global object
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
