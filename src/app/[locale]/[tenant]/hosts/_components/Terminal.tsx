@@ -14,6 +14,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 
 import '@xterm/xterm/css/xterm.css';
 import { useToast } from '@/components/shadcn/use-toast';
+import { toast } from 'sonner';
 
 interface Connection {
   id: string;

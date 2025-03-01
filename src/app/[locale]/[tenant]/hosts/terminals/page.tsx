@@ -3,8 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { useToast } from '@/components/shadcn/useToast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
+import { toast } from 'sonner';
 
 import { Terminal } from '../_components/Terminal';
 

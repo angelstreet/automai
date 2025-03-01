@@ -8,6 +8,7 @@ import { Card } from '@/components/shadcn/card';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from '@/types/hosts';
+import { toast } from 'sonner';
 
 interface Log {
   id: string;

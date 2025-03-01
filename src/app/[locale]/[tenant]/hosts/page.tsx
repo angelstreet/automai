@@ -24,12 +24,13 @@ import { Skeleton } from '@/components/shadcn/skeleton';
 
 import { Tooltip, TooltipContent, TooltipProvider } from '@/components/shadcn/tooltip';
 
-import { useToast } from '@/components/shadcn/useToast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
 
 import { ConnectHostDialog } from './_components/ConnectHostDialog';
 import { HostOverview } from './_components/HostOverview';
+import { toast } from 'sonner';
 
 export default function HostsPage() {
   const t = useTranslations('Common');

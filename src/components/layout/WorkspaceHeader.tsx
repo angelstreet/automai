@@ -18,9 +18,9 @@ import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 
 import { UserProfile } from '@/components/shadcn/user-profile';
 
-import { SidebarTrigger } from '@/components/sidebar';
+import { SidebarTrigger } from '@/components/Sidebar';
 
-import { SidebarMenuButton } from '@/components/sidebar/SidebarMenuButton';
+import { SidebarMenuButton } from '@/components/Sidebar/SidebarMenuButton';
 import { useRole } from '@/context/RoleContext';
 
 interface WorkspaceHeaderProps {

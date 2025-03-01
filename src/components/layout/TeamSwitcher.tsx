@@ -17,7 +17,7 @@ import {
   SidebarMenuItem,
   useSidebar,
   SidebarTrigger,
-} from '@/components/sidebar';
+} from '@/components/Sidebar';
 import { useUser } from '@/context/UserContext';
 
 interface TeamSwitcherProps {
