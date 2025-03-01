@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 const ProjectSchema = z.object({
@@ -16,13 +16,14 @@ const ProjectSchema = z.object({
 // GET /api/projects/[id]
 export async function GET(request: Request, { params }: Props) {
   try {
+    const { id } = await params;
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         owner: {
           select: {
@@ -61,6 +62,7 @@ export async function GET(request: Request, { params }: Props) {
 // PATCH /api/projects/[id]
 export async function PATCH(request: Request, { params }: Props) {
   try {
+    const { id } = await params;
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -71,7 +73,7 @@ export async function PATCH(request: Request, { params }: Props) {
 
     // Check if project exists and user has access
     const existingProject = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existingProject) {
@@ -83,7 +85,7 @@ export async function PATCH(request: Request, { params }: Props) {
     }
 
     const project = await prisma.project.update({
-      where: { id: params.id },
+      where: { id: id },
       data: validatedData,
     });
 
@@ -111,6 +113,7 @@ export async function PATCH(request: Request, { params }: Props) {
 // DELETE /api/projects/[id]
 export async function DELETE(request: Request, { params }: Props) {
   try {
+    const { id } = await params;
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -118,7 +121,7 @@ export async function DELETE(request: Request, { params }: Props) {
 
     // Check if project exists and user has access
     const existingProject = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!existingProject) {
@@ -130,7 +133,7 @@ export async function DELETE(request: Request, { params }: Props) {
     }
 
     await prisma.project.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     return NextResponse.json({

@@ -9,7 +9,6 @@
     "dev:all": "node scripts/dev.js",
     "dev:debug": "node scripts/debug.js",
     "build": "next build",
-    "build:analyze": "ANALYZE=true next build",
     "start": "next start",
     "start:next": "next start",
     "lint": "next lint",

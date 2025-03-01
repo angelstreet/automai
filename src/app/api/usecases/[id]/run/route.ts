@@ -5,18 +5,19 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export async function POST(request: Request, { params }: Props) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const useCase = await prisma.useCase.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!useCase) {
@@ -26,7 +27,7 @@ export async function POST(request: Request, { params }: Props) {
     // Create an execution record
     const execution = await prisma.useCaseExecution.create({
       data: {
-        useCaseId: params.id,
+        useCaseId: id,
         status: 'RUNNING',
         startedAt: new Date(),
       },

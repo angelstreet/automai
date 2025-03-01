@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     // Get SSH fingerprint
-    return new Promise((resolve) => {
+    return new Promise<Response>((resolve) => {
       const conn = new Client();
       let resolved = false;
 
