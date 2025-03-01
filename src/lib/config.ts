@@ -1,15 +1,13 @@
-import { env } from './env';
-
 export const config = {
   server: {
-    env: env.NODE_ENV,
-    isDev: env.NODE_ENV === 'development',
-    isProd: env.NODE_ENV === 'production',
-    isTest: env.NODE_ENV === 'test',
+    env: process.env.NODE_ENV,
+    isDev: process.env.NODE_ENV === 'development',
+    isProd: process.env.NODE_ENV === 'production',
+    isTest: process.env.NODE_ENV === 'test',
   },
 
   database: {
-    url: env.DATABASE_URL,
+    url: process.env.DATABASE_URL,
     pool: {
       min: 2,
       max: 10,
@@ -18,21 +16,21 @@ export const config = {
 
   auth: {
     nextAuth: {
-      url: env.NEXTAUTH_URL,
-      secret: env.NEXTAUTH_SECRET,
+      url: process.env.NEXTAUTH_URL,
+      secret: process.env.NEXTAUTH_SECRET,
     },
     google: {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     },
     github: {
-      clientId: env.GITHUB_CLIENT_ID,
-      clientSecret: env.GITHUB_CLIENT_SECRET,
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
     },
   },
 
   api: {
-    baseUrl: env.NEXTAUTH_URL,
+    baseUrl: process.env.NEXTAUTH_URL,
   },
 } as const;
 
