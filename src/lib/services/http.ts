@@ -177,13 +177,29 @@ export async function startServer(options: {
  * Stop the server
  */
 export async function stopServer(): Promise<void> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (!httpServer) {
       resolve();
       return;
     }
     
     logger.info('Stopping server');
+    
+    // First close WebSocket server if initialized
+    if (isWebSocketInitialized) {
+      try {
+        const { closeWebSocketServer } = await import('./websocket');
+        await closeWebSocketServer();
+        isWebSocketInitialized = false;
+      } catch (err) {
+        logger.error(`Error closing WebSocket server: ${err}`);
+      }
+    }
+    
+    // Force close all connections
+    httpServer.closeAllConnections();
+    
+    // Then close HTTP server
     httpServer.close((err) => {
       if (err) {
         logger.error(`Error stopping server: ${err.message}`);
@@ -192,7 +208,6 @@ export async function stopServer(): Promise<void> {
       }
       
       httpServer = null;
-      isWebSocketInitialized = false;
       logger.info('Server stopped');
       resolve();
     });
