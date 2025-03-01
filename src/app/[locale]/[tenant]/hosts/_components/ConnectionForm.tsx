@@ -1,5 +1,6 @@
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { useState, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/Shadcn/alert';
 import { Badge } from '@/components/Shadcn/badge';
@@ -34,6 +35,7 @@ interface ConnectionFormProps {
 }
 
 export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: ConnectionFormProps) {
+  const t = useTranslations('Virtualization');
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
@@ -188,35 +190,35 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
       <form onKeyDown={handleKeyDown} onSubmit={(e) => e.preventDefault()}>
         <div className="grid grid-cols-12 items-center gap-3">
           <Label htmlFor="name" className="text-right col-span-2">
-            Name
+            {t('form.name')}
           </Label>
           <div className="col-span-10 space-y-1">
             <Input
               id="name"
-              placeholder="Host name (lowercase letters, numbers, and hyphens only)"
+              placeholder={t('form.namePlaceholder')}
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               className="w-full"
             />
             <p className="text-xs text-muted-foreground">
-              Only lowercase letters, numbers, and hyphens are allowed
+              {t('form.nameHint')}
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-12 items-center gap-3 mt-3">
           <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">
-            Connection
+            {t('form.connection')}
           </Label>
           <div className="col-span-10">
             <Select value={formData.type} onValueChange={handleTypeChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder={t('form.selectType')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ssh">SSH</SelectItem>
-                <SelectItem value="docker">Docker</SelectItem>
-                <SelectItem value="portainer">Portainer</SelectItem>
+                <SelectItem value="ssh">{t('ssh')}</SelectItem>
+                <SelectItem value="docker">{t('docker')}</SelectItem>
+                <SelectItem value="portainer">{t('portainer')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -224,21 +226,21 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
 
         <div className="grid grid-cols-12 items-center gap-3 mt-3">
           <Label htmlFor="ip" className="text-right col-span-2 whitespace-nowrap">
-            IP Address
+            {t('form.ipAddress')}
           </Label>
           <Input
             id="ip"
-            placeholder="IP Address"
+            placeholder={t('form.ipAddress')}
             value={formData.ip}
             onChange={(e) => handleInputChange('ip', e.target.value)}
             className="col-span-7"
           />
           <Label htmlFor="port" className="text-right whitespace-nowrap col-span-1">
-            Port
+            {t('form.port')}
           </Label>
           <Input
             id="port"
-            placeholder="Port"
+            placeholder={t('form.port')}
             value={formData.port}
             onChange={(e) => handleInputChange('port', e.target.value)}
             className="col-span-2"
@@ -248,25 +250,27 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         {connectionType === 'ssh' && (
           <div className="grid grid-cols-12 items-center gap-3 mt-3">
             <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">
-              Username
+              {t('form.username')}
             </Label>
             <Input
               id="username"
-              placeholder="Username"
+              placeholder={t('form.username')}
               value={formData.username}
               onChange={(e) => handleInputChange('username', e.target.value)}
-              className="col-span-4"
+              className="col-span-10"
             />
-            <Label htmlFor="password" className="text-right whitespace-nowrap col-span-2">
-              Password
+          </div>
+          <div className="grid grid-cols-12 items-center gap-3 mt-3">
+            <Label htmlFor="password" className="text-right col-span-2 whitespace-nowrap">
+              {t('form.password')}
             </Label>
             <Input
               id="password"
               type="password"
-              placeholder="Password"
+              placeholder={t('form.password')}
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
-              className="col-span-4"
+              className="col-span-10"
             />
           </div>
         )}

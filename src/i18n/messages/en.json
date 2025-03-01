@@ -98,7 +98,44 @@
     "deleteWarning": "This action cannot be undone.",
     "noMachines": "No machines found. Add a new machine to get started.",
     "refreshMachines": "Refresh Machines",
-    "manualTestingMessage": "Connections are not tested automatically. Click the test button to check connection status."
+    "manualTestingMessage": "Connections are not tested automatically. Click the test button to check connection status.",
+    "connectionError": "Connection Error",
+    "errorDetails": "Error Details",
+    "noErrorDetails": "No error details available",
+    "metrics": "Metrics",
+    "refresh": "Refresh",
+    "delete": "Delete",
+    "form": {
+      "name": "Name",
+      "namePlaceholder": "Host name (lowercase letters, numbers, and hyphens only)",
+      "nameHint": "Only lowercase letters, numbers, and hyphens are allowed",
+      "connection": "Connection",
+      "selectType": "Select type",
+      "ipAddress": "IP Address",
+      "port": "Port",
+      "username": "Username",
+      "password": "Password"
+    },
+    "errors": {
+      "validation": "Validation Error",
+      "nameRequired": "Please provide a name for the connection",
+      "ipRequired": "Please provide an IP address",
+      "invalidPort": "Port must be a number between 1 and 65535",
+      "sshCredentials": "Username and password are required for SSH connections",
+      "connectionFailed": "Connection failed",
+      "createFailed": "Failed to create connection",
+      "unknownError": "Unknown error occurred",
+      "timeout": "Connection timed out. Please check if the IP address and port are correct and that any firewalls allow the connection.",
+      "refused": "Connection refused. Please check if the service is running on the target host and the port is correct.",
+      "authentication": "Authentication failed. Please check your username and password.",
+      "hostConnection": "Failed to connect to the remote host. Please check your connection details.",
+      "testFailed": "Connection test failed",
+      "fingerprintFailed": "Failed to verify fingerprint"
+    },
+    "success": {
+      "created": "Connection created",
+      "connected": "Successfully connected to {name}"
+    }
   },
   "Dashboard": {
     "title": "Dashboard",
