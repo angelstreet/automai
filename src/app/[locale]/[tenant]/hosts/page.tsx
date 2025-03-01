@@ -1,7 +1,5 @@
-import { getHosts } from '@/lib/services/hosts';
-import { HostsPageClient } from './_components/HostsPageClient';
+import HostList from './_components/HostList';
 
-export default async function HostsPage() {
-  const hosts = await getHosts();
-  return <HostsPageClient initialHosts={hosts} />;
+export default function HostsPage() {
+  return <HostList />;
 }

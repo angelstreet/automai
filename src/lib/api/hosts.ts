@@ -11,7 +11,9 @@ export const hostsApi = {
    * Get all hosts
    */
   getHosts: async (locale: string) => {
-    const response = await fetch(`/api/hosts`);
+    // Add cache-busting parameter to prevent browser caching
+    const timestamp = new Date().getTime();
+    const response = await fetch(`/api/hosts?_=${timestamp}`);
     if (!response.ok) throw new Error('Failed to fetch hosts');
     return response.json();
   },
@@ -118,5 +120,16 @@ export const hostsApi = {
     }
 
     return response.json();
-  }
+  },
+
+  /**
+   * Test all host connections
+   */
+  testAllConnections: async (locale: string) => {
+    // Add cache-busting parameter to prevent browser caching
+    const timestamp = new Date().getTime();
+    const response = await fetch(`/api/hosts/test-all?_=${timestamp}`);
+    if (!response.ok) throw new Error('Failed to test all connections');
+    return response.json();
+  },
 }; 
