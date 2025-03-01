@@ -1,5 +1,8 @@
 import dotenv from 'dotenv';
 
+// Start timing the boot process
+const startTime = Date.now();
+
 // Load environment variables before any imports that might use them
 const envFile = process.env.NODE_ENV === 'production'
   ? '.env.production'
@@ -35,7 +38,10 @@ async function main() {
     const address = server.address();
     const actualPort = typeof address === 'object' && address ? address.port : port;
 
-    console.log(`\n✓ Ready in 0s`);
+    // Calculate boot time
+    const bootTimeInSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
+    
+    console.log(`\n✓ Ready in ${bootTimeInSeconds}s`);
     console.log(`> Ready on http://${hostname}:${actualPort}`);
   } catch (err) {
     // Don't exit on EADDRINUSE as it's handled by startServer
