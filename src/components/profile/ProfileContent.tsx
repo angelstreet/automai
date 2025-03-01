@@ -114,14 +114,14 @@ export function ProfileContent() {
           <div className="space-y-4">
             <Button
               variant="outline"
-              onClick={() => (window.location.href = `/${locale}/settings`)}
+              onClick={() => router.push(`/${locale}/${tenant || 'default'}/settings`)}
             >
               {t('manageSettings')}
             </Button>
             {user.plan !== 'ENTERPRISE' && (
               <Button
                 variant="outline"
-                onClick={() => (window.location.href = `/${locale}/upgrade`)}
+                onClick={() => router.push(`/${locale}/${tenant || 'default'}/upgrade`)}
               >
                 {t('upgradePlan')}
               </Button>
