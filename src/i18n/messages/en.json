@@ -105,5 +105,30 @@
     "overview": "Overview",
     "description": "Welcome to your dashboard",
     "welcome": "Welcome back!"
+  },
+  "Profile": {
+    "title": "Profile",
+    "settings": "Profile Settings",
+    "edit": "Edit Profile",
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "personalInfo": "Personal Information",
+    "email": "Email",
+    "name": "Name",
+    "avatar": "Avatar",
+    "changeAvatar": "Change Avatar",
+    "removeAvatar": "Remove Avatar",
+    "accountSettings": "Account Settings",
+    "manageSettings": "Manage Settings",
+    "upgradePlan": "Upgrade Plan",
+    "workspaceInfo": "Workspace Information",
+    "manageTeam": "Manage Team",
+    "sessionExpired": "Session Expired",
+    "pleaseLogin": "Please log in again to continue",
+    "logIn": "Log In",
+    "updating": "Updating...",
+    "update": "Update",
+    "enterName": "Enter your name",
+    "plan": "Plan"
   }
 }

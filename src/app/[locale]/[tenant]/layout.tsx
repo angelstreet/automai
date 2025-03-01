@@ -5,7 +5,7 @@ import * as React from 'react';
 
 import { AppSidebar } from '@/components/Layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/Layout/WorkspaceHeader';
-import SidebarProvider from '@/components/sidebar/SidebarProvider';
+import { SidebarProvider } from '@/components/Sidebar';
 import { TooltipProvider } from '@/components/Shadcn/tooltip';
 import { useUser } from '@/context/UserContext';
 
