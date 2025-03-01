@@ -18,30 +18,49 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
+async function validateLocale(locale: string) {
+  // Simulate async validation
+  await Promise.resolve();
+  return locales.includes(locale as any) ? locale : null;
+}
+
 export default async function LocaleLayout(props: Props) {
   const { children, params } = props;
   const resolvedParams = await params;
-  const locale = resolvedParams.locale;
 
-  if (!locale || !locales.includes(locale as any)) {
+  if (!resolvedParams.locale) {
     notFound();
+    return null;
   }
 
-  const messages = await getMessages(locale);
-  const cookieStore = cookies();
-  const themeCookie = await cookieStore.get('theme');
+  const validLocale = await validateLocale(resolvedParams.locale);
+
+  if (!validLocale) {
+    notFound();
+    return null;
+  }
+
+  const messages = await getMessages(validLocale);
+
+  // Get theme from cookie
+  const cookieList = await cookies();
+  const themeCookie = cookieList.get('theme');
   const theme = themeCookie ? themeCookie.value : 'system';
 
   return (
-    <UserProvider>
-      <RoleProvider>
-        <NextIntlClientProvider locale={locale} messages={messages} timeZone="UTC">
-          <ThemeProvider defaultTheme={theme} storageKey="theme">
-            <RouteGuard>{children}</RouteGuard>
-            <Toaster />
-          </ThemeProvider>
-        </NextIntlClientProvider>
-      </RoleProvider>
-    </UserProvider>
+    <html lang={validLocale} suppressHydrationWarning>
+      <body className={inter.className}>
+        <UserProvider>
+          <RoleProvider>
+            <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
+              <ThemeProvider defaultTheme={theme} storageKey="theme">
+                <RouteGuard>{children}</RouteGuard>
+                <Toaster />
+              </ThemeProvider>
+            </NextIntlClientProvider>
+          </RoleProvider>
+        </UserProvider>
+      </body>
+    </html>
   );
 }
