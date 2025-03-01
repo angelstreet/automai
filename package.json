@@ -75,7 +75,7 @@
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "next": "^15.2.0",
-    "next-auth": "^4.24.11",
+    "next-auth": "^4.24.7",
     "next-intl": "^3.26.4",
     "prisma": "^6.4.1",
     "react": "latest",
