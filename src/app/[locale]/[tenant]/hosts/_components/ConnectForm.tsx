@@ -88,7 +88,10 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
     setFingerprintVerified(false);
 
     try {
-      const response = await fetch('/api/hosts/test-connection', {
+      // Get the base URL from the current window location
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      
+      const response = await fetch(`${baseUrl}/api/hosts/test-connection`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +148,10 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
     setTestError(null);
 
     try {
-      const response = await fetch('/api/hosts/verify-fingerprint', {
+      // Get the base URL from the current window location
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+      
+      const response = await fetch(`${baseUrl}/api/hosts/verify-fingerprint`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
