@@ -25,8 +25,8 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Auth paths should bypass internationalization and be handled by the API route
-  if (request.nextUrl.pathname.startsWith('/api/auth')) {
+  // All API paths should bypass internationalization and be handled by the API route
+  if (request.nextUrl.pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
@@ -37,8 +37,8 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all routes except static assets and public files
-    '/((?!_next/static|_next/image|avatars|favicon.ico).*)',
+    // Match all routes except static assets, public files, and API routes
+    '/((?!_next/static|_next/image|avatars|favicon.ico|api/).*)',
     // Match all locale routes
     '/(fr|en)/:path*',
     // Match root path
