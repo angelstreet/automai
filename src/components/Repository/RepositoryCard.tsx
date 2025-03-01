@@ -1,9 +1,9 @@
 import { GitBranch, GitFork, Star, RefreshCw, ExternalLink } from 'lucide-react';
 import { Repository } from '@prisma/client';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Button } from '@/components/shadcn/button';
+import { Badge } from '@/components/shadcn/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shadcn/tooltip';
 import { formatDistanceToNow } from 'date-fns';
 
 interface RepositoryCardProps {

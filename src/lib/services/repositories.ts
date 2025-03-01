@@ -10,7 +10,7 @@ import {
 import { GitHubProviderService } from './git-providers/github';
 
 // Factory to get the appropriate provider service
-export function getGitProviderService(providerType: GitProviderType) {
+export function getGitProviderService(providerType: GitProviderType, options?: { serverUrl?: string, accessToken?: string }) {
   switch (providerType) {
     case 'github':
       return new GitHubProviderService();
@@ -18,8 +18,11 @@ export function getGitProviderService(providerType: GitProviderType) {
       // TODO: Implement GitLab provider
       throw new Error('GitLab provider not implemented yet');
     case 'gitea':
-      // TODO: Implement Gitea provider
-      throw new Error('Gitea provider not implemented yet');
+      if (options?.serverUrl) {
+        const { GiteaProviderService } = require('./git-providers/gitea');
+        return new GiteaProviderService(options.serverUrl, options.accessToken);
+      }
+      throw new Error('Server URL is required for Gitea provider');
     default:
       throw new Error(`Unknown provider type: ${providerType}`);
   }
@@ -51,11 +54,25 @@ export async function getGitProvider(id: string): Promise<GitProvider | null> {
 
 export async function createGitProvider(
   userId: string,
-  data: { name: GitProviderType; displayName: string; accessToken?: string; refreshToken?: string; expiresAt?: Date }
+  data: { 
+    name: GitProviderType; 
+    displayName: string; 
+    accessToken?: string; 
+    refreshToken?: string; 
+    expiresAt?: Date;
+    serverUrl?: string;
+  }
 ): Promise<GitProvider> {
+  const { name, displayName, accessToken, refreshToken, expiresAt, serverUrl } = data;
+  
   const provider = await prisma.gitProvider.create({
     data: {
-      ...data,
+      name,
+      displayName,
+      accessToken,
+      refreshToken,
+      expiresAt,
+      serverUrl,
       userId,
     },
   });

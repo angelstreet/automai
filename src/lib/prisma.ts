@@ -5,24 +5,21 @@ import { config } from './config';
 // Use a single PrismaClient instance
 // https://www.prisma.io/docs/guides/performance-and-optimization/connection-management#prismaclient-in-long-running-applications
 
-// Initialize Prisma Client
+// PrismaClient is attached to the `global` object in development to prevent
+// exhausting your database connection limit.
+// Learn more: https://pris.ly/d/help/next-js-best-practices
+
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-// Check if we already have a Prisma instance in global
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['error'] : ['error'],
-    datasources: {
-      db: {
-        url: config.database.url,
-      },
-    }
+    log: ['query', 'error', 'warn'],
   });
 
 // Test connection only once at startup
 let isInitialized = false;
-if (!globalForPrisma.prisma && !isInitialized) {
+if (!isInitialized) {
   isInitialized = true;
   (async () => {
     try {
@@ -36,6 +33,9 @@ if (!globalForPrisma.prisma && !isInitialized) {
   })();
 }
 
+// Assign the PrismaClient instance to the global object in non-production environments
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
+
+export default prisma;

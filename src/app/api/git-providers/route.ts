@@ -9,6 +9,8 @@ import { GitProviderType } from '@/types/repositories';
 const GitProviderCreateSchema = z.object({
   name: z.enum(['github', 'gitlab', 'gitea'] as const),
   displayName: z.string().min(1, 'Display name is required'),
+  serverUrl: z.string().url('Valid URL is required').optional(),
+  token: z.string().optional(),
 });
 
 // GET /api/git-providers
@@ -42,25 +44,39 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = GitProviderCreateSchema.parse(body);
 
-    // Check if provider already exists for this user
-    const existingProviders = await repositoryService.listGitProviders(session.user.id);
-    const providerExists = existingProviders.some(
-      (provider) => provider.name === validatedData.name
-    );
+    // For Gitea, we need serverUrl and token
+    if (validatedData.name === 'gitea') {
+      if (!validatedData.serverUrl || !validatedData.token) {
+        return NextResponse.json(
+          { success: false, message: 'Server URL and token are required for Gitea' },
+          { status: 400 },
+        );
+      }
 
-    if (providerExists) {
-      return NextResponse.json(
-        { success: false, message: `A ${validatedData.name} provider already exists for this user` },
-        { status: 400 },
-      );
+      // Create Gitea provider directly with token
+      const provider = await repositoryService.createGitProvider(session.user.id, {
+        name: validatedData.name,
+        displayName: validatedData.displayName,
+        accessToken: validatedData.token,
+        serverUrl: validatedData.serverUrl,
+      });
+
+      return NextResponse.json(provider);
     }
 
+    // For OAuth providers (GitHub, GitLab)
     const provider = await repositoryService.createGitProvider(session.user.id, {
-      name: validatedData.name as GitProviderType,
+      name: validatedData.name,
       displayName: validatedData.displayName,
     });
 
-    return NextResponse.json(provider, { status: 201 });
+    // Generate OAuth URL
+    const providerService = repositoryService.getGitProviderService(validatedData.name);
+    const state = provider.id; // Use provider ID as state for callback
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/${validatedData.name}`;
+    const authUrl = providerService.getAuthorizationUrl(redirectUri, state);
+
+    return NextResponse.json({ ...provider, authUrl });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
