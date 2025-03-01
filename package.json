@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server.js",
+    "dev": "NODE_ENV=development ts-node server.ts",
+    "dev:server": "ts-node server.ts",
     "dev:next": "next dev",
     "dev:all": "node scripts/dev.js",
     "dev:debug": "node scripts/debug.js",

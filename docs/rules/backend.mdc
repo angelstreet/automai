@@ -1,0 +1,124 @@
+# Backend Best Practices
+
+## **1️⃣ Server Architecture**
+
+### Custom Server Setup
+- Use TypeScript for server implementation
+- Place server entry point in root `server.ts`
+- Organize server components in service layer:
+  ```
+  src/lib/services/
+  ├── http.ts       # HTTP server service
+  ├── websocket.ts  # WebSocket service
+  ├── ssh.ts        # SSH connection service
+  ├── terminal.ts   # Terminal management
+  └── hosts.ts      # Host management
+  ```
+
+### Service Layer Rules
+- Keep services focused and single-responsibility
+- Use dependency injection pattern
+- Implement proper error handling and logging
+- Follow TypeScript best practices
+- Use async/await for asynchronous operations
+
+### WebSocket Integration
+- Initialize WebSocket server on-demand
+- Handle protocol upgrades properly
+- Implement proper connection lifecycle
+- Use proper error handling and logging
+- Support reconnection strategies
+
+## **2️⃣ API Implementation**
+
+### Route Handlers
+```typescript
+// src/app/api/[endpoint]/route.ts
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+
+export async function GET() {
+  try {
+    const session = await getServerSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // Implementation
+    return NextResponse.json({ success: true, data: result });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: 'Error message' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+[Rest of the existing backend rules remain unchanged...]
+
+## **🔄 Server Implementation Guidelines**
+
+### HTTP Server
+```typescript
+// src/lib/services/http.ts
+import { Server } from 'http';
+import next from 'next';
+
+export async function startServer(options: {
+  dev?: boolean;
+  hostname?: string;
+  port?: number;
+  enableWebSockets?: boolean;
+}): Promise<Server> {
+  // Server implementation
+}
+```
+
+### WebSocket Server
+```typescript
+// src/lib/services/websocket.ts
+import { WebSocketServer } from 'ws';
+import { Server } from 'http';
+
+export function initializeWebSocketServer(server: Server): WebSocketServer {
+  // WebSocket implementation
+}
+```
+
+### SSH Service
+```typescript
+// src/lib/services/ssh.ts
+import { Client } from 'ssh2';
+import { WebSocket } from 'ws';
+
+export async function handleSshConnection(
+  socket: WebSocket,
+  connectionId: string
+): Promise<void> {
+  // SSH implementation
+}
+```
+
+## **📝 Development Setup**
+
+### Scripts
+```json
+{
+  "scripts": {
+    "dev": "ts-node server.ts",
+    "build": "next build",
+    "start": "next start"
+  }
+}
+```
+
+### Environment Variables
+```env
+# .env.development
+NODE_ENV=development
+PORT=3000
+HOST=localhost
+```
+
+[Rest of the existing backend rules remain unchanged...] 
