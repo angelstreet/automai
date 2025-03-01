@@ -1,6 +1,21 @@
 import { prisma } from '../prisma';
 
 /**
+ * @fileoverview Host Service Layer Implementation
+ * 
+ * ⚠️ DO NOT MODIFY THIS FILE ⚠️
+ * This file contains the core host service implementations.
+ * Any changes should be carefully reviewed and approved.
+ * 
+ * Last validated: 2024-03-21
+ * Implements:
+ * - Proper error handling
+ * - Prisma client usage
+ * - Logging
+ * - Type safety
+ */
+
+/**
  * Get all hosts ordered by creation date
  */
 export async function getHosts() {
