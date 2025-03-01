@@ -24,7 +24,6 @@ import { Skeleton } from '@/components/shadcn/skeleton';
 
 import { Tooltip, TooltipContent, TooltipProvider } from '@/components/shadcn/tooltip';
 
-import { useToast } from '@/components/shadcn/use-toast';
 import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
 
@@ -37,7 +36,6 @@ export default function HostsPage() {
   const params = useParams();
   const router = useRouter();
   const tenant = params.tenant as string;
-  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hostToDelete, setHostToDelete] = useState<string | null>(null);
