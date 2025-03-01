@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 
 import { RouteGuard } from '@/components/Auth/RouteGuard';
-import { Toaster } from '@/components/Shadcn/toaster';
+import { Toaster } from '@/components/shadcn/toaster';
 import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { locales } from '@/config';
 import { RoleProvider } from '@/context/RoleContext';
