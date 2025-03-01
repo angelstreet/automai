@@ -9,7 +9,7 @@ import {
   Row,
 } from '@tanstack/react-table';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
@@ -41,7 +41,6 @@ import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
-import { toast } from 'sonner';
 
 // Type matching Prisma Project model
 type Project = {
@@ -65,6 +64,7 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
+  const params = useParams();
   const { data: session, status } = useSession();
   const { toast } = useToast();
   const { user } = useUser();
@@ -145,6 +145,22 @@ export default function ProjectsPage() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  // Function to check if user can create more of a resource based on plan limits
+  const checkCanCreateMore = (limitKey: string, currentCount: number): boolean => {
+    if (!user) return false;
+    
+    // If user is on a paid plan, they can create unlimited resources
+    if (user.plan !== 'TRIAL') return true;
+    
+    // For trial users, check against specific limits
+    const limits: Record<string, number> = {
+      maxProjects: 3,
+      // Add other limits as needed
+    };
+    
+    return currentCount < (limits[limitKey] || 0);
+  };
 
   // CRUD handlers
   const handleCreate = async () => {

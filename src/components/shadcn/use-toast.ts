@@ -1,8 +1,27 @@
 'use client';
 
-import { toast } from 'sonner';
+import { toast as sonnerToast } from 'sonner';
 
-export { toast };
+type ToastProps = {
+  title?: string;
+  description?: string;
+  variant?: 'default' | 'destructive';
+};
+
+export const toast = (props: ToastProps) => {
+  const { title, description, variant } = props;
+  
+  if (variant === 'destructive') {
+    return sonnerToast.error(title, {
+      description,
+    });
+  }
+  
+  return sonnerToast.success(title, {
+    description,
+  });
+};
+
 export const useToast = () => {
   return {
     toast,
