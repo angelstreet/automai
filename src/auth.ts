@@ -1,4 +1,19 @@
 // src/app/lib/auth.ts
+/**
+ * ⚠️ CRITICAL WARNING ⚠️
+ * 
+ * This file contains sensitive authentication configuration that works with the
+ * internationalization middleware. Modifications to this file can break authentication
+ * across all locales.
+ * 
+ * IMPORTANT RULES:
+ * 1. NEVER hardcode locales in page URLs (e.g., '/en/login')
+ * 2. ALWAYS use paths without locale prefixes (e.g., '/login')
+ * 3. Let the middleware handle locale detection and routing
+ * 4. Test any changes with ALL supported locales
+ * 
+ * See .cursor/rules/backend.mdc for detailed authentication guidelines.
+ */
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { compare } from 'bcrypt';
 import NextAuth from 'next-auth';
