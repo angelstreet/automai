@@ -113,8 +113,10 @@ export async function testHostConnection(data: {
   try {
     logger.info('Testing host connection', { ...data, password: '***' });
 
+    let result;
+    
     if (data.type === 'ssh') {
-      return new Promise((resolve) => {
+      result = await new Promise((resolve) => {
         const conn = new Client();
         let resolved = false;
 
@@ -159,13 +161,33 @@ export async function testHostConnection(data: {
       });
     } else if (data.type === 'docker') {
       // TODO: Implement Docker connection test
-      return { success: false, message: 'Docker connection test not implemented yet' };
+      result = { success: false, message: 'Docker connection test not implemented yet' };
     } else if (data.type === 'portainer') {
       // TODO: Implement Portainer connection test
-      return { success: false, message: 'Portainer connection test not implemented yet' };
+      result = { success: false, message: 'Portainer connection test not implemented yet' };
+    } else {
+      result = { success: false, message: 'Unsupported connection type' };
     }
-
-    return { success: false, message: 'Unsupported connection type' };
+    
+    // Update host status in database if hostId is provided
+    if (data.hostId) {
+      try {
+        await prisma.host.update({
+          where: { id: data.hostId },
+          data: {
+            status: result.success ? 'connected' : 'failed',
+            lastConnected: result.success ? new Date() : undefined,
+            errorMessage: !result.success ? result.message : null,
+          },
+        });
+        logger.info(`Updated host status for ${data.hostId} to ${result.success ? 'connected' : 'failed'}`);
+      } catch (dbError) {
+        logger.error('Failed to update host status in database:', dbError);
+        // Don't throw here, we still want to return the connection test result
+      }
+    }
+    
+    return result;
   } catch (error) {
     if (error instanceof Error) {
       logger.error('Error testing connection:', { error: error.message });

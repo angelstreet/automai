@@ -72,13 +72,20 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           hostId: host.id,
         });
         
+        // Debug the response
+        console.log(`Connection test response for ${host.name}:`, data);
+        
         // Only update if component is still mounted
         if (isMounted.current) {
           // Update the host status based on the connection test
           setHosts(prevHosts => 
             prevHosts.map(h => 
               h.id === host.id 
-                ? { ...h, status: data.success ? 'connected' : 'failed' } 
+                ? { 
+                    ...h, 
+                    status: data.success ? 'connected' : 'failed',
+                    errorMessage: !data.success ? (data.message || 'Connection failed') : undefined
+                  } 
                 : h
             )
           );
@@ -88,7 +95,11 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
             if (!oldData) return oldData;
             return oldData.map(h => 
               h.id === host.id 
-                ? { ...h, status: data.success ? 'connected' : 'failed' } 
+                ? { 
+                    ...h, 
+                    status: data.success ? 'connected' : 'failed',
+                    errorMessage: !data.success ? (data.message || 'Connection failed') : undefined
+                  } 
                 : h
             );
           });
@@ -117,8 +128,11 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       
       if (!isMounted.current) return;
       
+      // Use a local copy of the initial hosts to avoid dependency on changing state
+      const hostsToTest = [...initialHosts];
+      
       // Test each host with a delay between tests
-      for (const host of hosts) {
+      for (const host of hostsToTest) {
         if (!isMounted.current) break;
         await testHostConnection(host);
         // Add a small delay between tests to avoid overwhelming the server
@@ -133,7 +147,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
     return () => {
       isMounted.current = false;
     };
-  }, [locale, hosts, queryClient]);
+  }, [locale, queryClient, initialHosts]);
 
   // Function to manually refresh connections
   const refreshConnections = async () => {
