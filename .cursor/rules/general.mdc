@@ -149,3 +149,62 @@ Available rules in `.cursor/rules`:
 - <a id="nextjs-naming-guidelines"></a>**Next.js Naming Guidelines**: See `nextjs-naming.mdc` for naming conventions
 - <a id="config-guidelines"></a>**Configuration Guidelines**: See `config.mdc` for environment setup
 - <a id="yolo-mode-guidelines"></a>**YOLO Mode Guidelines**: See `yolo-mode.mdc` for rapid development patterns
+
+# Common Mistakes to Avoid When Using AI Agents in Next.js
+
+Here's a comprehensive guide on avoiding common mistakes when integrating AI agents into your Next.js applications:
+
+## Promise Handling Issues
+
+### Server Components
+- **Missing `React.use()`**: Server Components need `React.use()` to properly unwrap promises and enable suspense boundaries
+- **Forgotten `await`**: Always await async functions to prevent promise resolution issues
+- **Improper `.then()` chains**: Avoid using `.then()` in Server Components; use `await` for better readability and error handling
+- **Unhandled rejections**: Always implement proper error boundaries or try/catch blocks
+
+### Client Components
+- **Misusing `useEffect` for data fetching**: This can cause waterfalls and race conditions
+- **Incorrect mixing of `async/await` with `React.use()`**: These patterns serve different purposes and should be used appropriately
+- **Missing suspense boundaries**: Proper suspense boundaries are essential for handling async operations
+
+## Code Example: Correct Promise Handling
+
+```jsx
+// CORRECT Server Component approach
+async function DataComponent() {
+  try {
+    // Properly awaiting the AI agent response
+    const aiResponse = await fetchFromAIAgent();
+    return <div>{aiResponse.result}</div>;
+  } catch (error) {
+    return <ErrorDisplay error={error} />;
+  }
+}
+
+// CORRECT Client Component approach
+function ClientDataComponent() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+  
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      try {
+        const result = await fetchFromAIAgent();
+        if (isMounted) setData(result);
+      } catch (err) {
+        if (isMounted) setError(err);
+      }
+    };
+    
+    fetchData();
+    return () => { isMounted = false; };
+  }, []);
+  
+  if (error) return <ErrorDisplay error={error} />;
+  if (!data) return <Loading />;
+  
+  return <div>{data.result}</div>;
+}
+```
