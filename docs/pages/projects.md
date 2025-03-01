@@ -1,4 +1,4 @@
-Let’s enhance the **Projects Page** implementation by integrating it with your backend architecture as outlined in the "Backend Architecture & API Updates" document. I’ll ensure the table (using `shadcn-ui` + `@tanstack/react-table`) interacts with your existing APIs (`/api/projects`) and respects your tech stack (Next.js, Prisma, Supabase, etc.). I’ll also refine the AI agent instructions to include these backend integrations.
+Let's enhance the **Projects Page** implementation by integrating it with your backend architecture as outlined in the "Backend Architecture & API Updates" document. I'll ensure the table (using `shadcn-ui` + `@tanstack/react-table`) interacts with your existing APIs (`/api/projects`) and respects your tech stack (Next.js, Prisma, Supabase, etc.). I'll also refine the AI agent instructions to include these backend integrations.
 
 ---
 
