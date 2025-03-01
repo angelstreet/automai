@@ -4,4 +4,7 @@
  */
 
 export * from './hosts';
-export * from './server';
+export * from './http';
+export * from './ssh';
+export * from './websocket';
+export * from './terminal';

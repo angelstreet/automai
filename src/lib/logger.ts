@@ -13,6 +13,12 @@ export interface LogOptions {
   connectionId?: string;
   data?: Record<string, any>;
   saveToDb?: boolean; // Flag is kept for compatibility but ignored
+  pathname?: string;
+  connectionType?: string;
+  type?: string;
+  error?: string | Error;
+  path?: string;
+  [key: string]: any; // Allow any additional properties
 }
 
 // Environment-based logging (more verbose in development)
