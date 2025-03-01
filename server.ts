@@ -37,11 +37,33 @@ async function main() {
 }
 
 // Handle graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('Shutting down server...');
-  await stopServer();
-  console.log('Server shut down');
-  process.exit(0);
+async function shutdown(signal: string) {
+  console.log(`\nReceived ${signal}. Shutting down server...`);
+  
+  // Set a timeout to force exit if shutdown takes too long
+  const forceExitTimeout = setTimeout(() => {
+    console.error('Shutdown timed out after 10s, forcing exit');
+    process.exit(1);
+  }, 10000);
+  
+  try {
+    await stopServer();
+    console.log('Server shut down successfully');
+    clearTimeout(forceExitTimeout);
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during shutdown:', err);
+    clearTimeout(forceExitTimeout);
+    process.exit(1);
+  }
+}
+
+// Handle termination signals
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  shutdown('uncaughtException');
 });
 
 // Start the server
