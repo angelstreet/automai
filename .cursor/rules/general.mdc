@@ -6,6 +6,16 @@ alwaysApply: true
 
 # General Rules
 
+## 🚨 CRITICAL WORKFLOW RULE
+
+> **ALWAYS FOLLOW THIS WORKFLOW**:
+> 1. **ALWAYS provide a plan first** before making any changes
+> 2. **ALWAYS ask for agreement** before proceeding with modifications
+> 3. **ALWAYS ask to continue** after 5 iterations or tool calls
+> 4. **ALWAYS read and verify requirements** before starting
+> 5. **ALWAYS follow Next.js best practices** and warn if a request conflicts with them
+> 6. **Handle mistakes constructively** without apologizing / respect nextjs best practices
+
 ## ⚠️ CRITICAL LOCATION RULE
 
 > **IMPORTANT**: All cursor rules MUST be in `.cursor/rules` folder. 
