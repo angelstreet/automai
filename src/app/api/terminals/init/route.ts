@@ -29,10 +29,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`Initializing WebSocket for connection: ${connectionId}`);
     
-    // Verify connection exists in database
-    const connection = await prisma.connection.findUnique({
-      where: { id: connectionId },
-    });
+    // Use the compatibility function to get the connection with proper fields
+    const connection = await getCompatibleConnection(connectionId);
     
     if (!connection) {
       console.log(`Connection not found: ${connectionId}`);
