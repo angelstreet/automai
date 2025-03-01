@@ -18,8 +18,9 @@ export default function TenantLayout({
   params,
 }: {
   children: React.ReactNode;
-  params: { tenant: string; locale: string };
+  params: Promise<{ tenant: string; locale: string }>;
 }) {
+  const { tenant, locale } = React.use(params);
   const { user, isLoading, error, checkSession } = useUser();
   const [loadingError, setLoadingError] = React.useState<string | null>(null);
 
@@ -43,10 +44,10 @@ export default function TenantLayout({
       isLoading, 
       hasUser: !!user, 
       error,
-      tenant: params.tenant,
-      locale: params.locale
+      tenant,
+      locale
     });
-  }, [isLoading, user, error, params.tenant, params.locale]);
+  }, [isLoading, user, error, tenant, locale]);
 
   // Only show loading state while user data is being fetched
   if (isLoading) {
@@ -65,7 +66,7 @@ export default function TenantLayout({
         <button 
           className="px-4 py-2 bg-primary text-white rounded"
           onClick={() => {
-            window.location.href = `/${params.locale}/login`;
+            window.location.href = `/${locale}/login`;
           }}
         >
           Go to Login
@@ -86,7 +87,7 @@ export default function TenantLayout({
         <SidebarProvider defaultOpen={Cookies.get('sidebar:state') !== 'false'}>
           <AppSidebar />
           <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
-            <WorkspaceHeader tenant={params.tenant} />
+            <WorkspaceHeader tenant={tenant} />
             <main className="flex-1 p-4 w-full max-w-full">{children}</main>
           </div>
         </SidebarProvider>
