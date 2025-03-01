@@ -5,7 +5,7 @@ import * as React from 'react';
 
 import { AppSidebar } from '@/components/Layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/Layout/WorkspaceHeader';
-import { SidebarProvider } from '@/components/Shadcn/sidebar';
+import SidebarProvider from '@/components/sidebar/SidebarProvider';
 import { TooltipProvider } from '@/components/Shadcn/tooltip';
 import { useUser } from '@/context/UserContext';
 
@@ -81,17 +81,19 @@ export default function TenantLayout({
     return null;
   }
 
+  const sidebarState = Cookies.get('sidebar:state') !== 'false';
+
   return (
-    <TooltipProvider>
-      <div className="relative flex min-h-screen w-full">
-        <SidebarProvider defaultOpen={Cookies.get('sidebar:state') !== 'false'}>
+    <SidebarProvider defaultOpen={sidebarState}>
+      <TooltipProvider>
+        <div className="relative flex min-h-screen w-full">
           <AppSidebar />
           <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
             <WorkspaceHeader tenant={tenant} />
             <main className="flex-1 p-4 w-full max-w-full">{children}</main>
           </div>
-        </SidebarProvider>
-      </div>
-    </TooltipProvider>
+        </div>
+      </TooltipProvider>
+    </SidebarProvider>
   );
 }
