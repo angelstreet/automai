@@ -66,7 +66,7 @@ export default function HostsPage() {
       setError(error instanceof Error ? error.message : 'Failed to fetch hosts');
       setIsLoading(false);
     }
-  }, [params.locale]);
+  }, []);
 
   useEffect(() => {
     fetchHosts();
@@ -84,7 +84,7 @@ export default function HostsPage() {
       setHosts(updatedHosts);
 
       // Test connection
-      const testResponse = await fetch(`/${params.locale}/api/hosts/test-connection`, {
+      const testResponse = await fetch(`/api/hosts/test-connection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -181,7 +181,7 @@ export default function HostsPage() {
           }
 
           // Test connection
-          const testResponse = await fetch(`/${params.locale}/api/hosts/test-connection`, {
+          const testResponse = await fetch(`/api/hosts/test-connection`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -287,7 +287,7 @@ export default function HostsPage() {
     if (!hostToDelete) return;
 
     try {
-      const response = await fetch(`/${params.locale}/api/hosts/${hostToDelete}`, {
+      const response = await fetch(`/api/hosts/${hostToDelete}`, {
         method: 'DELETE',
       });
 
