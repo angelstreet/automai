@@ -8,39 +8,183 @@ alwaysApply: false
 
 ## Project Structure
 
-Follow this structure for Next.js applications:
+Follow this structure for Next.js applications with custom server:
 
 ```
 automai/
-├── prisma/                   # Prisma schema and migrations at root
-│   ├── schema.prisma         # Database schema
-│   ├── migrations/           # Database migrations
-│   ├── seed.ts               # Database seed script
-│   └── index.ts              # Prisma client singleton (root-level)
-├── .env.*                    # Environment files at root
-├── scripts/                  # Utility scripts
-│   └── health-check.js       # Script to check file sizes and provide refactoring 
+├── server.ts                # Custom server entry point
+├── prisma/                  # Prisma schema and migrations at root
+│   ├── schema.prisma        # Database schema
+│   ├── migrations/          # Database migrations
+│   ├── seed.ts              # Database seed script
+│   └── index.ts             # Prisma client singleton (root-level)
+├── .env.*                   # Environment files at root
+├── scripts/                 # Utility scripts
+│   └── health-check.js      # Script to check file sizes and provide refactoring 
 ├── src/
-│   ├── app/                  # Next.js App Router
-│   │   ├── [locale]/         # Internationalized routes
-│   │   │   ├── (auth)/       # Auth route group
-│   │   │   └── [tenant]/     # Tenant-specific routes
-│   │   └── api/              # API Route Handlers
-│   ├── lib/                  # Shared utilities
-│   │   ├── services/         # Service layer (data access)
-│   │   ├── prisma.ts         # Prisma client singleton (src-level)
-│   │   ├── websocket-server.ts # WebSocket utility functions
-│   │   ├── utils.ts          # Helper functions
-│   │   └── env.ts            # Environment configuration
-│   ├── components/           # UI components
-│   │   ├── Feature/          # Reusable UI components
-│   │   └── Shadcn/           # fe component
-│   ├── i18n/                 # Internationalization
-│   └── middleware.ts         # Next.js middleware
-├── electron/                 # Electron app configuration
-├── tests/                    # Test files
-├── docs/                     # Project documentation
-└── next.config.js            # Next.js configuration
+│   ├── app/                 # Next.js App Router
+│   │   ├── [locale]/        # Internationalized routes
+│   │   │   ├── (auth)/      # Auth route group
+│   │   │   └── [tenant]/    # Tenant-specific routes
+│   │   └── api/             # API Route Handlers
+│   ├── lib/                 # Shared utilities
+│   │   ├── services/        # Service layer (data access)
+│   │   │   ├── http.ts      # HTTP server implementation
+│   │   │   ├── websocket.ts # WebSocket server implementation
+│   │   │   ├── ssh.ts       # SSH connection handling
+│   │   │   ├── terminal.ts  # Terminal session management
+│   │   │   └── hosts.ts     # Host management
+│   │   ├── prisma.ts        # Prisma client singleton (src-level)
+│   │   ├── utils.ts         # Helper functions
+│   │   └── env.ts           # Environment configuration
+│   ├── components/          # UI components
+│   │   ├── Feature/         # Reusable UI components
+│   │   └── Shadcn/          # fe component
+│   ├── i18n/                # Internationalization
+│   └── middleware.ts        # Next.js middleware
+├── electron/                # Electron app configuration
+├── tests/                   # Test files
+├── docs/                    # Project documentation
+└── next.config.js           # Next.js configuration
+```
+
+## Custom Server Setup
+
+The project uses a custom server implementation with lazy-loaded WebSocket support:
+
+```typescript
+// server.ts
+import dotenv from 'dotenv';
+
+// Load environment variables before any imports that might use them
+const envFile = process.env.NODE_ENV === 'production'
+  ? '.env.production'
+  : process.env.NODE_ENV === 'test'
+    ? '.env.test'
+    : '.env.development';
+
+console.log(`Loading environment from ${envFile}`);
+dotenv.config({ path: envFile });
+
+// Now import modules that depend on environment variables
+import { startServer, stopServer } from './src/lib/services/http';
+
+const dev = process.env.NODE_ENV !== 'production';
+const hostname = process.env.HOST || 'localhost';
+const port = parseInt(process.env.PORT || '3000', 10);
+
+async function main() {
+  try {
+    // Start server without WebSocket support by default
+    // WebSockets will be lazily initialized when needed
+    await startServer({
+      dev,
+      hostname,
+      port,
+      enableWebSockets: false
+    });
+
+    console.log(`\n✓ Ready in 0s`);
+    console.log(`> Ready on http://${hostname}:${port}`);
+  } catch (err) {
+    console.error('Error starting server:', err);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down server...');
+  await stopServer();
+  console.log('Server shut down');
+  process.exit(0);
+});
+
+// Start the server
+main();
+```
+
+## Service Layer Organization
+
+The service layer is organized as follows:
+
+```
+src/lib/services/
+├── http.ts         # HTTP server implementation with Next.js integration
+├── websocket.ts    # WebSocket server implementation
+├── ssh.ts          # SSH connection handling
+├── terminal.ts     # Terminal session management
+└── hosts.ts        # Host management
+```
+
+### HTTP Service
+
+```typescript
+// src/lib/services/http.ts
+export async function startServer(options: {
+  dev?: boolean;
+  hostname?: string;
+  port?: number;
+  enableWebSockets?: boolean;
+}): Promise<Server> {
+  // Initialize Next.js app
+  const app = await initializeNextApp({ dev, hostname, port });
+  const handle = app.getRequestHandler();
+  
+  // Create HTTP server
+  const server = createServer({ dev, hostname, port, enableWebSockets });
+  
+  // Set up request handler
+  server.on('request', (req, res) => {
+    const parsedUrl = parse(req.url || '', true);
+    handle(req, res, parsedUrl);
+  });
+  
+  // Start listening
+  server.listen(port, hostname);
+  
+  return server;
+}
+```
+
+### WebSocket Service
+
+```typescript
+// src/lib/services/websocket.ts
+export function initializeWebSocketServer(server: Server): WSServer {
+  // Create new WebSocketServer if none exists
+  if (!wss) {
+    wss = new WSServer({ noServer: true });
+    
+    // Set up ping interval to detect dead connections
+    pingInterval = setInterval(() => {
+      if (wss) {
+        wss.clients.forEach((ws: WebSocketConnection) => {
+          if (ws.isAlive === false) return ws.terminate();
+          ws.isAlive = false;
+          ws.ping();
+        });
+      }
+    }, 30000);
+  }
+  
+  return wss;
+}
+```
+
+## Development Scripts
+
+```json
+// package.json
+{
+  "scripts": {
+    "dev": "NODE_ENV=development ts-node server.ts",
+    "dev:next": "next dev",
+    "dev:server": "ts-node server.ts",
+    "build": "next build",
+    "start": "NODE_ENV=production node dist/server.js"
+  }
+}
 ```
 
 ## Coding Standards

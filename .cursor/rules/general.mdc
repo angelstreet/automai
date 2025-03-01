@@ -8,10 +8,11 @@ alwaysApply: true
 ## 🚀 Essential Project Information
 
 ### Project Architecture
-- **Next.js 13+ App Router** application nodejs
+- **Next.js 13+ App Router** application with custom TypeScript server
+- **Custom Server**: TypeScript server with lazy-loaded WebSocket support
 - **Prisma Client**:  Follow  @Prisma Rules 
-- **WebSocket Server**: Follow @WebSocket Rules
-- **HTTP Server**: Next.js on port 3000
+- **WebSocket Server**: Integrated with HTTP server, follow @WebSocket Rules
+- **HTTP Server**: Custom server on port 3000 with Next.js integration
 - **Authentication**: NextAuth.js
 - **UI**: Shadcn UI + Tailwind CSS
 - **i18n**: next-intl with translations in `src/i18n/messages`
@@ -36,7 +37,7 @@ alwaysApply: true
    - Get approval before creating new files/folders
    - Verify dependencies and content before removing files
    - Fix all warnings/errors before rerunning builds
-   - Never use Express.js for server implementations
+   - Use the custom server implementation with `npm run dev`
 
 4. **Communication Style**:
    - Keep responses concise and focused
@@ -61,7 +62,11 @@ alwaysApply: true
 ## Project Structure & Components
 
 ### Key File Paths
-- **WebSocket Server**: `src/lib/websocketServer.ts`
+- **Custom Server**: `server.ts` at project root
+- **HTTP Service**: `src/lib/services/http.ts`
+- **WebSocket Service**: `src/lib/services/websocket.ts`
+- **SSH Service**: `src/lib/services/ssh.ts`
+- **Terminal Service**: `src/lib/services/terminal.ts`
 - **Prisma Client**: `prisma/index.ts`
 - **Environment Config**: `src/lib/env.ts`
 
@@ -79,6 +84,7 @@ alwaysApply: true
 - After adding new environment variables
 - After modifying middleware.ts or next.config.js
 - When Fast Refresh fails with an error
+- After modifying server.ts or any files in src/lib/services/
 
 ## Debugging & Testing
 
