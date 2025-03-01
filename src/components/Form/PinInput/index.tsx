@@ -6,7 +6,7 @@ import { PinInputProps } from './Types';
 import { getValidChildren, getInputFieldCount } from './Utils';
 import { usePinInput } from './usePinInput';
 
-export { PinInputField } from './common/PinInput';
+export { PinInput };
 
 export const PinInput = ({ className, children, ref, ...props }: PinInputProps) => {
   const {

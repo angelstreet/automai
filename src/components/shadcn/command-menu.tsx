@@ -1,6 +1,6 @@
 import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import {
   CommandDialog,
@@ -30,6 +30,11 @@ const navigation = [
     ],
   },
 ];
+
+const useCommandMenu = () => {
+  // Move shared logic here
+  return {};
+};
 
 export function CommandMenu() {
   const router = useRouter();
