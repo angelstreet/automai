@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.js",
     "dev:next": "next dev",
     "dev:all": "node scripts/dev.js",
     "dev:debug": "node scripts/debug.js",

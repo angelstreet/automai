@@ -1,35 +1,45 @@
-const next = require('next');
-const { setupHttpServer } = require('./src/server/http/routes');
+// Load environment variables first
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production'
+    ? '.env.production'
+    : process.env.NODE_ENV === 'test'
+      ? '.env.test'
+      : '.env.development'
+});
+
+// Import server service
+const { startServer } = require('./src/lib/services/server');
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = 3000;
+const hostname = process.env.HOST || 'localhost';
+const port = parseInt(process.env.PORT || '3000', 10);
 
-// Initialize Next.js
-const app = next({ dev, hostname, port });
-
-async function startServer() {
+async function main() {
   try {
-    console.log('Preparing Next.js app...');
-    await app.prepare();
-    console.log('Next.js app prepared successfully');
-    
-    // Setup HTTP server
-    console.log('Setting up HTTP server...');
-    const server = setupHttpServer(app);
-    console.log('HTTP server setup complete');
-    
-    // Start listening
-    server.listen(port, hostname, (err) => {
-      if (err) throw err;
-      console.log(`\n✓ Ready in 0s`);
-      console.log(`> Ready on http://${hostname}:${port}`);
+    // Start server with WebSocket support
+    await startServer({
+      dev,
+      hostname,
+      port,
+      enableWebSockets: true
     });
     
+    console.log(`\n✓ Ready in 0s`);
+    console.log(`> Ready on http://${hostname}:${port}`);
   } catch (err) {
     console.error('Error starting server:', err);
     process.exit(1);
   }
 }
 
-startServer(); 
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down server...');
+  const { stopServer } = require('./src/lib/services/server');
+  await stopServer();
+  console.log('Server shut down');
+  process.exit(0);
+});
+
+// Start the server
+main(); 
