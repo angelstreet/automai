@@ -16,7 +16,7 @@ export const PinInputField = React.forwardRef<HTMLInputElement, PinInputFieldPro
         {...props}
       />
     );
-  }
+  },
 );
 
-PinInputField.displayName = 'PinInputField'; 
+PinInputField.displayName = 'PinInputField';
