@@ -10,37 +10,17 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/Shadcn/command';
-import { useSearch } from '@/context/SearchContext';
+import { navigation } from '@/lib/utils/commandMenuUtils';
 
-const navigation = [
-  {
-    title: 'Main',
-    items: [
-      { title: 'Dashboard', url: '/dashboard' },
-      { title: 'Projects', url: '/projects' },
-      { title: 'Test Cases', url: '/test-cases' },
-      { title: 'Reports', url: '/reports' },
-    ],
-  },
-  {
-    title: 'Settings',
-    items: [
-      { title: 'Profile', url: '/profile' },
-      { title: 'Settings', url: '/settings' },
-    ],
-  },
-];
+interface CommandMenuProps {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}
 
-const useCommandMenu = () => {
-  // Move shared logic here
-  return {};
-};
-
-export function CommandMenu() {
+export function CommandMenu({ open, setOpen }: CommandMenuProps) {
   const router = useRouter();
-  const { open, setOpen } = useSearch();
 
-  const runCommand = React.useCallback(
+  const runCommand = useCallback(
     (command: () => unknown) => {
       setOpen(false);
       command();

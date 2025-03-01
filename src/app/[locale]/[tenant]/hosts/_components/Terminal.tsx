@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Terminal as XTerminal } from 'xterm';
-import { AttachAddon } from 'xterm-addon-attach';
-import { FitAddon } from 'xterm-addon-fit';
-import { SearchAddon } from 'xterm-addon-search';
-import { WebLinksAddon } from 'xterm-addon-web-links';
+import { Terminal as XTerm } from 'xterm';
+import type { AttachAddon } from 'xterm-addon-attach';
+import type { FitAddon } from 'xterm-addon-fit';
+import type { SearchAddon } from 'xterm-addon-search';
+import type { WebLinksAddon } from 'xterm-addon-web-links';
 
 import 'xterm/css/xterm.css';
 import { useToast } from '@/components/Shadcn/use-toast';
@@ -26,7 +26,7 @@ interface TerminalProps {
 
 export function Terminal({ connection }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<XTerminal | null>(null);
+  const xtermRef = useRef<XTerm | null>(null);
   const connectionAttemptedRef = useRef<boolean>(false);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
@@ -48,7 +48,7 @@ export function Terminal({ connection }: TerminalProps) {
       setIsConnecting(true);
 
       // Initialize xterm.js
-      const term = new XTerminal({
+      const term = new XTerm({
         cursorBlink: true,
         fontSize: 14,
         fontFamily: 'Menlo, Monaco, "Courier New", monospace',
