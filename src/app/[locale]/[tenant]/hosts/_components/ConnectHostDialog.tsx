@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
 
 import { useTranslations } from 'next-intl';
+import { useParams } from 'next/navigation';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -14,8 +15,8 @@ import {
   DialogDescription,
 } from '@/components/shadcn/dialog';
 
-import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from '@/types/hosts';
+import { hostsApi } from '@/lib/api/hosts';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 import { toast } from 'sonner';
@@ -27,8 +28,9 @@ interface ConnectHostDialogProps {
 }
 
 export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHostDialogProps) {
-  const { toast } = useToast();
   const t = useTranslations('Common');
+  const params = useParams();
+  const locale = params.locale as string;
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -63,39 +65,23 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
   const validateFormData = (): boolean => {
     if (!formData.name.trim()) {
-      toast({
-        variant: 'destructive',
-        title: t('errors.validation'),
-        description: t('errors.nameRequired'),
-      });
+      toast.error(t('errors.nameRequired'));
       return false;
     }
 
     if (!formData.ip.trim()) {
-      toast({
-        variant: 'destructive',
-        title: t('errors.validation'),
-        description: t('errors.ipRequired'),
-      });
+      toast.error(t('errors.ipRequired'));
       return false;
     }
 
     const port = parseInt(formData.port);
     if (isNaN(port) || port < 1 || port > 65535) {
-      toast({
-        variant: 'destructive',
-        title: t('errors.validation'),
-        description: t('errors.invalidPort'),
-      });
+      toast.error(t('errors.invalidPort'));
       return false;
     }
 
     if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
-      toast({
-        variant: 'destructive',
-        title: t('errors.validation'),
-        description: t('errors.sshCredentials'),
-      });
+      toast.error(t('errors.sshCredentials'));
       return false;
     }
 
@@ -114,36 +100,19 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
     setIsCreating(true);
     try {
-      const response = await fetch('/api/hosts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          type: formData.type,
-          ip: formData.ip,
-          port: formData.port ? parseInt(formData.port) : undefined,
-          username: formData.username,
-          password: formData.password,
-          status: testStatus === 'success' ? 'connected' : 'pending',
-          lastConnected: testStatus === 'success' ? new Date().toISOString() : undefined,
-        }),
+      const host = await hostsApi.createHost(locale, {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        ip: formData.ip,
+        port: formData.port ? parseInt(formData.port) : undefined,
+        user: formData.username,
+        password: formData.password,
+        status: testStatus === 'success' ? 'connected' : 'pending',
+        lastConnected: testStatus === 'success' ? new Date().toISOString() : undefined,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || t('errors.createFailed'));
-      }
-
-      const host = await response.json();
-
-      toast({
-        title: t('success.created'),
-        description: t('success.connected', { name: formData.name }),
-        duration: 5000,
-      });
+      toast.success(t('success.connected', { name: formData.name }));
 
       resetForm();
       onOpenChange(false);
@@ -153,12 +122,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       }
     } catch (error) {
       console.error('Error creating connection:', error);
-      toast({
-        variant: 'destructive',
-        title: t('errors.connectionFailed'),
-        description: error instanceof Error ? error.message : t('errors.createFailed'),
-        duration: 5000,
-      });
+      toast.error(error instanceof Error ? error.message : t('errors.createFailed'));
     } finally {
       setIsCreating(false);
     }
@@ -203,32 +167,24 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     setTestError(null);
 
     try {
-      const response = await fetch('/api/hosts/test-connection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: formData.type,
-          ip: formData.ip,
-          port: formData.port ? parseInt(formData.port) : undefined,
-          username: formData.username,
-          password: formData.password,
-          hostId: formData.id,
-        }),
+      const data = await hostsApi.testConnection(locale, {
+        type: formData.type,
+        ip: formData.ip,
+        port: formData.port ? parseInt(formData.port) : undefined,
+        username: formData.username,
+        password: formData.password,
+        hostId: formData.id,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (data.success) {
+        setTestStatus('success');
+        return true;
+      } else {
         setTestStatus('error');
         const errorMessage = getDetailedErrorMessage(data);
         setTestError(errorMessage || t('errors.testFailed'));
         return false;
       }
-
-      setTestStatus('success');
-      return true;
     } catch (error) {
       console.error('Error testing connection:', error);
       setTestStatus('error');
@@ -293,7 +249,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
                 Connecting...
               </>
             ) : (
-              'Connect'
+              'Save'
             )}
           </Button>
         </DialogFooter>
