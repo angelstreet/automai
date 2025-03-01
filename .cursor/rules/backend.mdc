@@ -140,9 +140,14 @@ When configuring NextAuth:
      newUser: '/en/(auth)/auth-redirect',
    }
    
-   // ✅ CORRECT - Never include route groups in URLs
+   // ❌ INCORRECT - Hardcoding locales in URLs
    pages: {
      newUser: '/en/auth-redirect',
+   }
+   
+   // ✅ CORRECT - Never include route groups or hardcoded locales in URLs
+   pages: {
+     newUser: '/auth-redirect',
    }
    ```
 
@@ -151,7 +156,8 @@ When configuring NextAuth:
    async redirect({ url, baseUrl }) {
      // Handle OAuth callbacks
      if (url.includes('/api/auth/callback/')) {
-       return `${baseUrl}/en/auth-redirect`;
+       // Let the middleware handle locale detection and routing
+       return `${baseUrl}/auth-redirect`;
      }
      
      // Clean route groups from URLs
@@ -175,6 +181,34 @@ When configuring NextAuth:
    }
    ```
 
+### **Internationalization and Authentication**
+
+The authentication system must work with the internationalization middleware:
+
+1. **⚠️ CRITICAL: Never hardcode locales in NextAuth configuration**
+   - Always use paths without locale prefixes in NextAuth config
+   - Let the middleware handle locale detection and routing
+
+2. **Middleware Responsibility**:
+   - The middleware detects the locale from the URL
+   - It handles redirects to login with the correct locale
+   - It ensures authentication works across all supported locales
+
+3. **Login Redirect Pattern**:
+   ```typescript
+   // Extract locale from URL for redirect
+   const locale = pathParts[0];
+   const validLocale = locales.includes(locale) ? locale : defaultLocale;
+   
+   // Redirect to login with the current URL as the callbackUrl
+   const loginUrl = new URL(`/${validLocale}/login`, request.url);
+   ```
+
+4. **Auth File Modifications**:
+   - The auth.ts file should rarely be modified
+   - Changes to redirect logic can break internationalization
+   - Always test changes with all supported locales
+
 ### **Debugging Auth Issues**
 
 Common auth problems and solutions:
@@ -182,6 +216,7 @@ Common auth problems and solutions:
 1. **404 on Redirect**: Check for route groups in URLs, verify page exists
 2. **Missing Cookies**: Ensure secure and httpOnly settings match environment
 3. **Token Validation**: Add detailed logging for token validity checks
+4. **Locale Issues**: Ensure NextAuth is not hardcoding locales in redirects
 
 ## **1️⃣2️⃣ General Guidelines**
 - Keep APIs RESTful with clean, predictable endpoint structures.
