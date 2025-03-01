@@ -1,0 +1,492 @@
+# Terminal, WebSocket & SSH Implementation Guidelines
+
+## Complete Terminal-WebSocket-SSH Workflow
+
+The terminal connection workflow follows these steps:
+
+1. **User Initiates Terminal Connection**
+   - User clicks on a terminal button in the UI
+   - Terminal component renders and initializes xterm.js
+
+2. **Terminal Initialization**
+   - Frontend makes a POST request to `/api/terminals/init` with the connection ID
+   - Backend initializes the WebSocket server on-demand (if not already running)
+   - Backend responds with success status
+
+3. **WebSocket Connection**
+   - Frontend creates a WebSocket connection to `/api/terminals/ws/[connectionId]`
+   - Backend handles the WebSocket upgrade request
+   - WebSocket connection is established
+
+4. **Authentication**
+   - Frontend sends authentication message with SSH credentials
+   - Backend validates credentials and establishes SSH connection
+   - SSH connection is established with the remote server
+
+5. **Data Streaming**
+   - Terminal input is sent from frontend to backend via WebSocket
+   - Backend forwards input to SSH connection
+   - SSH output is sent from backend to frontend via WebSocket
+   - Frontend displays output in the terminal UI
+
+## Architecture Components
+
+1. **Custom Server with Lazy-Loaded WebSocket Support** (`server.ts` and `src/lib/services/http.ts`)
+   - Runs on the same port as the Next.js HTTP server (port 3000)
+   - WebSockets are initialized on-demand when needed (NOT at server startup)
+   - Integrated with the Next.js application
+
+2. **WebSocket Service Module** (`src/lib/services/websocket.ts`)
+   - Provides utility functions for WebSocket server management
+   - Implements singleton pattern with `getWebSocketServer()` and `initializeWebSocketServer()`
+   - Handles WebSocket upgrade requests with `handleUpgrade()`
+   - Manages connection lifecycle with ping/pong for connection health
+
+3. **SSH Service Module** (`src/lib/services/ssh.ts`)
+   - Handles SSH connections and authentication
+   - Manages SSH sessions and streams
+   - Integrates with WebSocket connections
+
+4. **Terminal Service Module** (`src/lib/services/terminal.ts`)
+   - Manages terminal sessions
+   - Handles terminal resize events
+   - Processes terminal input/output
+
+5. **API Routes**
+   - `/api/terminals/init` - Initializes the WebSocket server
+   - `/api/terminals/ws/[id]` - Handles WebSocket connections
+
+6. **Frontend Components**
+   - Terminal UI component using xterm.js
+   - WebSocket client implementation
+   - Terminal resize and input handling
+
+## WebSocket Server Implementation
+
+1. **Lazy Initialization (CRITICAL)**
+   ```typescript
+   // server.ts
+   const server = await startServer({
+     dev,
+     hostname,
+     port,
+     enableWebSockets: false // MUST be false for lazy initialization
+   });
+   ```
+
+   ```typescript
+   // src/lib/services/http.ts
+   export async function createServer(options: {
+     dev?: boolean;
+     hostname?: string;
+     port?: number;
+     enableWebSockets?: boolean;
+   }): Promise<Server> {
+     const { enableWebSockets = false } = options;
+     
+     // Create HTTP server
+     const server = http.createServer();
+     
+     // Only initialize WebSocket server if explicitly enabled
+     if (enableWebSockets) {
+       initializeWebSocketSupport(server);
+     } else {
+       // Set up upgrade handler to initialize WebSockets on-demand
+       server.on('upgrade', (request, socket, head) => {
+         const { pathname } = parse(request.url || '');
+         
+         // Only handle WebSocket connections for our terminal endpoints
+         if (pathname && pathname.startsWith('/api/terminals/ws/')) {
+           // Initialize WebSockets on-demand if not already initialized
+           if (!isWebSocketInitialized) {
+             initializeWebSocketSupport(server);
+           }
+           
+           // Handle the terminal WebSocket upgrade
+           handleUpgrade(request, socket, head);
+         }
+       });
+     }
+     
+     return server;
+   }
+   ```
+
+2. **Singleton Pattern Implementation**
+   ```typescript
+   // src/lib/services/websocket.ts
+   
+   // Global variable to store the WebSocket server instance
+   declare global {
+     var websocketServer: WebSocketServer | undefined;
+   }
+   
+   export function getWebSocketServer(): WebSocketServer {
+     if (!global.websocketServer) {
+       return initializeWebSocketServer();
+     }
+     return global.websocketServer;
+   }
+   
+   export function initializeWebSocketServer(): WebSocketServer {
+     // Check if we already have an instance
+     if (global.websocketServer) {
+       return global.websocketServer;
+     }
+   
+     // Create a new WebSocket server
+     const wss = new WebSocketServer({ noServer: true });
+     
+     // Set up ping interval to detect dead connections
+     // ... ping/pong implementation ...
+     
+     // Store the instance in the global variable
+     global.websocketServer = wss;
+     
+     return wss;
+   }
+   ```
+
+3. **WebSocket Upgrade Handling**
+   ```typescript
+   // src/lib/services/websocket.ts
+   export function handleUpgrade(
+     request: IncomingMessage,
+     socket: Socket,
+     head: Buffer
+   ) {
+     const wss = getWebSocketServer();
+     
+     if (!wss) {
+       socket.destroy();
+       return;
+     }
+     
+     // Extract the connection ID from the request
+     const connectionId = (request as any).connectionId;
+     
+     wss.handleUpgrade(request, socket, head, (ws) => {
+       // Store the connection ID on the WebSocket object
+       if (connectionId) {
+         (ws as any).connectionId = connectionId;
+       }
+       
+       // Set up message handler
+       ws.on('message', (message) => {
+         try {
+           handleMessage(ws as WebSocketConnection, message.toString());
+         } catch (error) {
+           // Error handling
+         }
+       });
+       
+       wss.emit('connection', ws, request);
+     });
+   }
+   ```
+
+## Terminal Initialization API
+
+```typescript
+// src/app/api/terminals/init/route.ts
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { connectionId } = body;
+    
+    if (!connectionId) {
+      return NextResponse.json(
+        { success: false, error: 'Connection ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Get connection details from database
+    const connection = await getConnectionDetails(connectionId);
+    
+    if (!connection) {
+      return NextResponse.json(
+        { success: false, error: 'Connection not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Initialize the WebSocket server (lazy initialization)
+    const wss = getWebSocketServer();
+    
+    if (!wss) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to initialize WebSocket server' },
+        { status: 500 }
+      );
+    }
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: 'Failed to initialize terminal' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## WebSocket Route Handler
+
+```typescript
+// src/app/api/terminals/ws/[id]/route.ts
+export async function GET(request: NextRequest, context: { params: { id: string } }) {
+  // Check if it's a WebSocket request
+  const upgradeHeader = request.headers.get('upgrade');
+  
+  if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
+    return new Response('Expected WebSocket request', { status: 400 });
+  }
+  
+  try {
+    // Extract the connection ID from the URL
+    const connectionId = context.params.id;
+    
+    // Get the raw request and socket objects
+    const req = request as unknown as any;
+    
+    if (!req.socket) {
+      return new Response('Internal server error: No socket available', { status: 500 });
+    }
+    
+    // Store the connection ID on the request object for later use
+    req.connectionId = connectionId;
+    
+    // Create a promise that will resolve with the socket and response
+    return new Promise<Response>((resolve) => {
+      try {
+        // Handle the WebSocket upgrade
+        handleUpgrade(req, req.socket, Buffer.from([]));
+        
+        // This response is not actually used, as the WebSocket takes over
+        resolve(new Response(null, { status: 101 }));
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        resolve(new Response('WebSocket connection failed: ' + errorMessage, { status: 500 }));
+      }
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return new Response('WebSocket connection failed: ' + errorMessage, { status: 500 });
+  }
+}
+```
+
+## SSH Connection Handling
+
+```typescript
+// src/lib/services/ssh.ts
+export async function handleSshConnection(
+  clientSocket: WebSocketConnection,
+  connectionId: string,
+  authData?: { username?: string; password?: string },
+) {
+  try {
+    // Get connection details from database or cache
+    const connectionData = await getConnectionData(connectionId);
+    
+    if (!connectionData) {
+      clientSocket.send(JSON.stringify({ 
+        error: 'Connection not found',
+        errorType: 'CONNECTION_NOT_FOUND' 
+      }));
+      clientSocket.close(1000, 'Connection not found');
+      return;
+    }
+    
+    // Create SSH client
+    const sshClient = new Client();
+    
+    // Set up SSH client event handlers
+    sshClient.on('ready', () => {
+      // Send connection status to client
+      clientSocket.send(JSON.stringify({
+        status: 'connected',
+        message: 'SSH connection established successfully',
+      }));
+      
+      // Create an SSH shell session
+      sshClient.shell((err, stream) => {
+        if (err) {
+          // Handle shell error
+          return;
+        }
+        
+        // Pipe data from SSH to WebSocket
+        stream.on('data', (data: Buffer) => {
+          clientSocket.send(data);
+        });
+        
+        // Handle WebSocket messages
+        clientSocket.on('message', (message) => {
+          try {
+            const data = JSON.parse(message.toString());
+            
+            // Handle resize event
+            if (data.type === 'resize') {
+              stream.setWindow(data.rows, data.cols, 0, 0);
+            }
+          } catch (e) {
+            // Not JSON data, treat as terminal input
+            stream.write(message);
+          }
+        });
+        
+        // Handle stream close
+        stream.on('close', () => {
+          clientSocket.close();
+        });
+      });
+    });
+    
+    // Connect to SSH server
+    sshClient.connect({
+      host: connectionData.ip,
+      port: connectionData.port || 22,
+      username: authData?.username || connectionData.username,
+      password: authData?.password || connectionData.password,
+      // Additional SSH options
+    });
+  } catch (error) {
+    // Handle connection error
+  }
+}
+```
+
+## Frontend Terminal Implementation
+
+```typescript
+// src/app/[locale]/[tenant]/hosts/_components/Terminal.tsx
+export function Terminal({ connection }: TerminalProps) {
+  // Initialize terminal
+  useEffect(() => {
+    const initializeTerminal = async () => {
+      // Create xterm.js terminal
+      const term = new Terminal({
+        // Terminal configuration
+      });
+      
+      // Initialize WebSocket server first
+      try {
+        const initResponse = await fetch('/api/terminals/init', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ connectionId: connection.id }),
+        });
+        
+        if (!initResponse.ok) {
+          // Handle initialization error
+          return;
+        }
+        
+        // Connect to WebSocket
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socketUrl = `${protocol}//${window.location.host}/api/terminals/ws/${connection.id}`;
+        
+        const socket = new WebSocket(socketUrl);
+        
+        socket.onopen = () => {
+          // Send authentication message
+          const authMessage = {
+            type: 'auth',
+            connectionType: connection.type,
+            username: connection.username,
+            password: connection.password,
+          };
+          
+          socket.send(JSON.stringify(authMessage));
+          
+          // Attach WebSocket to terminal
+          const attachAddon = new AttachAddon(socket);
+          term.loadAddon(attachAddon);
+        };
+        
+        // Handle socket events
+        socket.onerror = (event) => {
+          // Handle connection error
+        };
+        
+        socket.onmessage = (event) => {
+          // Handle messages from server
+        };
+      } catch (error) {
+        // Handle initialization error
+      }
+    };
+    
+    initializeTerminal();
+  }, [connection]);
+  
+  // Render terminal container
+}
+```
+
+## Security Considerations
+
+1. **Authentication**
+   - Validate user permissions before establishing connections
+   - Implement timeouts for authentication
+   - Use secure credentials storage
+
+2. **Connection Management**
+   - Close idle connections after a period of inactivity
+   - Implement proper error handling
+   - Sanitize input/output to prevent injection attacks
+
+3. **Resource Management**
+   - Implement connection limits per user
+   - Clean up resources when connections close
+   - Monitor server load and implement throttling if needed
+
+## Logging
+
+1. **Console Logging**
+   - All terminal and SSH operations are logged to the console
+   - Logs include connection details, user information, and operation status
+   - Sensitive information is redacted from logs
+
+2. **Log Levels**
+   - Use appropriate log levels (info, warn, error) for different operations
+   - Include relevant context in log messages
+   - Structured logging format for easier parsing
+
+3. **Error Handling**
+   - Log detailed error information for troubleshooting
+   - Include stack traces for unexpected errors
+   - Log connection failures with specific error codes
+
+## Troubleshooting
+
+1. **WebSocket Connection Issues**
+   - Check browser console for connection errors
+   - Verify WebSocket server initialization
+   - Ensure correct URL paths in frontend code
+
+2. **SSH Connection Issues**
+   - Verify SSH credentials
+   - Check server connectivity
+   - Review SSH client configuration
+
+3. **Terminal Display Issues**
+   - Check xterm.js configuration
+   - Verify data flow between components
+   - Inspect terminal resize handling
+
+## Testing WebSocket Connections
+
+1. **Manual Testing**
+   - Use browser developer tools to inspect WebSocket traffic
+   - Test reconnection scenarios
+   - Verify terminal functionality with various commands
+   - Check error handling and recovery
+
+2. **Automated Testing**
+   - Mock WebSocket connections in tests
+   - Verify correct message handling
+   - Test error scenarios and recovery
+   - Ensure proper cleanup of resources 

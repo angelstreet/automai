@@ -37,10 +37,10 @@ export default function TerminalPage() {
 
   // Log the host name for debugging
   useEffect(() => {
-    logger.info(`Terminal page loaded with host name: ${hostName}`, {
-      action: 'TERMINAL_PAGE_LOADED',
+    logger.info('Terminal page viewed', {
+      userId: session?.user?.id,
+      action: 'TERMINAL_PAGE_VIEW',
       data: { hostName },
-      saveToDb: true,
     });
   }, [hostName]);
 
@@ -158,10 +158,10 @@ export default function TerminalPage() {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';
       setError(message);
 
-      logger.error(`Terminal initialization failed: ${message}`, {
-        action: 'TERMINAL_INIT_ERROR',
-        data: { error: message },
-        saveToDb: true,
+      logger.error(`Error in terminal page: ${message}`, {
+        userId: session?.user?.id,
+        action: 'TERMINAL_PAGE_ERROR',
+        data: { hostName, error: message },
       });
     } finally {
       setLoading(false);

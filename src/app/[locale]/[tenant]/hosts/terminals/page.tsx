@@ -61,7 +61,6 @@ export default function TerminalsPage() {
         logger.info('SSH connection established', {
           action: 'TERMINAL_CONNECTED',
           data: { hostId, ip: data.data.ip },
-          saveToDb: true,
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to initialize terminal';
@@ -75,7 +74,6 @@ export default function TerminalsPage() {
         logger.error(`Terminal initialization failed: ${message}`, {
           action: 'TERMINAL_INIT_ERROR',
           data: { hostId, error: message },
-          saveToDb: true,
         });
       }
     };
@@ -110,7 +108,17 @@ export default function TerminalsPage() {
     // Rest of the effect logic
   }, [connection, toast]);
 
+  logger.info('User viewed terminals page', {
+    userId: session?.user?.id,
+    action: 'TERMINALS_PAGE_VIEW',
+  });
+
   if (error) {
+    logger.error(`Error fetching connections: ${error}`, {
+      userId: session?.user?.id,
+      action: 'CONNECTIONS_FETCH_ERROR',
+      data: { error },
+    });
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
