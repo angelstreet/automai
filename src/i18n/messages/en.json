@@ -130,5 +130,24 @@
     "update": "Update",
     "enterName": "Enter your name",
     "plan": "Plan"
+  },
+  "billing": {
+    "title": "Billing & Plans",
+    "currentPlan": "Current Plan",
+    "upgrade": "Upgrade Plan",
+    "manageSubscription": "Manage Subscription",
+    "billingHistory": "Billing History",
+    "paymentMethods": "Payment Methods",
+    "addPaymentMethod": "Add Payment Method",
+    "planDetails": "Plan Details",
+    "features": "Features",
+    "price": "Price",
+    "period": "Period",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "enterprise": "Enterprise",
+    "free": "Free",
+    "pro": "Pro",
+    "team": "Team"
   }
 }
