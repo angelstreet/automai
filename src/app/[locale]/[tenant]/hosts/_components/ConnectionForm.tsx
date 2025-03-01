@@ -35,7 +35,7 @@ interface ConnectionFormProps {
 }
 
 export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: ConnectionFormProps) {
-  const t = useTranslations('Virtualization');
+  const t = useTranslations('Common');
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );

@@ -38,22 +38,35 @@ export default function HostsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hosts, setHosts] = useState<Host[]>([]);
   const [viewMode] = useState<'grid' | 'table'>('grid');
+  const [error, setError] = useState<string | null>(null);
 
   const fetchHosts = useCallback(async () => {
     try {
-      const response = await fetch('/api/hosts');
-      if (!response.ok) throw new Error('Failed to fetch hosts');
-      const data = await response.json();
-      setHosts(data);
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('Fetching hosts from API...');
+      const response = await fetch(`/api/hosts`);
+      
+      if (!response.ok) {
+        console.error('API response not OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
+      }
+      
+      console.log('API response OK, parsing JSON...');
+      const hosts = await response.json();
+      console.log('Hosts data received:', hosts);
+      
+      setHosts(hosts);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error fetching hosts:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch hosts',
-        variant: 'destructive',
-      });
+      setError(error instanceof Error ? error.message : 'Failed to fetch hosts');
+      setIsLoading(false);
     }
-  }, [toast]);
+  }, [params.locale]);
 
   useEffect(() => {
     fetchHosts();
@@ -71,7 +84,7 @@ export default function HostsPage() {
       setHosts(updatedHosts);
 
       // Test connection
-      const testResponse = await fetch('/api/hosts/test-connection', {
+      const testResponse = await fetch(`/${params.locale}/api/hosts/test-connection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -82,6 +95,12 @@ export default function HostsPage() {
           hostId: host.id,
         }),
       });
+
+      if (!testResponse.ok) {
+        console.error('Test connection response not OK:', testResponse.status, testResponse.statusText);
+        const errorText = await testResponse.text();
+        console.error('Error response body:', errorText);
+      }
 
       const testData = await testResponse.json();
 
@@ -162,7 +181,7 @@ export default function HostsPage() {
           }
 
           // Test connection
-          const testResponse = await fetch('/api/hosts/test-connection', {
+          const testResponse = await fetch(`/${params.locale}/api/hosts/test-connection`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -174,7 +193,15 @@ export default function HostsPage() {
             }),
           });
 
+          if (!testResponse.ok) {
+            console.error('Test connection response not OK:', testResponse.status, testResponse.statusText);
+            const errorText = await testResponse.text();
+            console.error('Error response body:', errorText);
+            throw new Error(`API error: ${testResponse.status} ${testResponse.statusText}`);
+          }
+
           const testData = await testResponse.json();
+
           const isSuccess = testResponse.ok && testData.success === true;
 
           // Check for network errors
@@ -260,12 +287,15 @@ export default function HostsPage() {
     if (!hostToDelete) return;
 
     try {
-      const response = await fetch(`/api/hosts/${hostToDelete}`, {
+      const response = await fetch(`/${params.locale}/api/hosts/${hostToDelete}`, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete host');
+        console.error('Delete host response not OK:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('Error response body:', errorText);
+        throw new Error(`Failed to delete host: ${response.status} ${response.statusText}`);
       }
 
       setHosts((prev) => prev.filter((host) => host.id !== hostToDelete));
@@ -278,7 +308,7 @@ export default function HostsPage() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to delete host',
+        description: error instanceof Error ? error.message : 'Failed to delete host',
       });
     } finally {
       setHostToDelete(null);
@@ -291,7 +321,7 @@ export default function HostsPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">{t('hosts')}</h1>
-          <p className="text-muted-foreground">{t('manage_virtual_hosts')}</p>
+          <p className="text-muted-foreground">{t('manage_hosts')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={refreshHosts} disabled={isRefreshing}>

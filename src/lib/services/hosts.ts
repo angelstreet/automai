@@ -4,18 +4,31 @@ import { prisma } from '../prisma';
  * Get all hosts ordered by creation date
  */
 export async function getHosts() {
-  return prisma.host.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
+  try {
+    console.log('Calling prisma.host.findMany...');
+    const hosts = await prisma.host.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    console.log('Prisma returned hosts successfully');
+    return hosts;
+  } catch (error) {
+    console.error('Error in getHosts service:', error);
+    throw error;
+  }
 }
 
 /**
  * Get a single host by ID
  */
 export async function getHostById(id: string) {
-  return prisma.host.findUnique({
-    where: { id },
-  });
+  try {
+    return await prisma.host.findUnique({
+      where: { id },
+    });
+  } catch (error) {
+    console.error(`Error in getHostById service for id ${id}:`, error);
+    throw error;
+  }
 }
 
 /**
@@ -30,25 +43,38 @@ export async function createHost(data: {
   user?: string;
   password?: string;
 }) {
-  return prisma.host.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      type: data.type,
-      ip: data.ip,
-      port: data.port || (data.type === 'ssh' ? 22 : null),
-      user: data.type === 'ssh' ? data.user : null,
-      password: data.type === 'ssh' ? data.password : null,
-      status: 'pending',
-    },
-  });
+  try {
+    console.log('Calling prisma.host.create with data:', { ...data, password: '***' });
+    const host = await prisma.host.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        ip: data.ip,
+        port: data.port || (data.type === 'ssh' ? 22 : null),
+        user: data.type === 'ssh' ? data.user : null,
+        password: data.type === 'ssh' ? data.password : null,
+        status: 'pending',
+      },
+    });
+    console.log('Prisma created host successfully');
+    return host;
+  } catch (error) {
+    console.error('Error in createHost service:', error);
+    throw error;
+  }
 }
 
 /**
  * Delete a host by ID
  */
 export async function deleteHost(id: string) {
-  return prisma.host.delete({
-    where: { id },
-  });
+  try {
+    return await prisma.host.delete({
+      where: { id },
+    });
+  } catch (error) {
+    console.error(`Error in deleteHost service for id ${id}:`, error);
+    throw error;
+  }
 }
