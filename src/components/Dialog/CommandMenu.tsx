@@ -11,12 +11,11 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/Shadcn/command';
-
-import { sidebarData } from '@/data/sidebar-data';
 import { ScrollArea } from '@/components/Shadcn/scroll-area';
 
 import { useSearch } from '@/context/search-context';
 import { useTheme } from '@/context/theme-context';
+import { sidebarData } from '@/data/sidebar-data';
 
 export function CommandMenu() {
   const navigate = useNavigate();

@@ -1,4 +1,4 @@
-import isElectron from './isElectron';
+import isElectronModule from 'is-electron';
 
 // Type definitions for IPC communication
 interface IPCResponse<T> {
@@ -9,7 +9,7 @@ interface IPCResponse<T> {
 
 // Safe require of electron
 const getIpcRenderer = () => {
-  if (isElectron()) {
+  if (isElectronModule()) {
     const electron = window.require('electron');
     return electron.ipcRenderer;
   }

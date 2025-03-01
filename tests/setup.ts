@@ -1,4 +1,5 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import { launch } from 'puppeteer';
+import { Browser, Page } from 'puppeteer';
 
 let browser: Browser;
 let page: Page;
@@ -6,7 +7,7 @@ let page: Page;
 // Setup before all tests
 beforeAll(async () => {
   // Launch browser
-  browser = await puppeteer.launch({
+  browser = await launch({
     headless: 'new', // Use new headless mode
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });

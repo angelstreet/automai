@@ -11,8 +11,8 @@ import { Search } from '@/components/Shadcn/search';
 import { Separator } from '@/components/Shadcn/separator';
 import { ThemeToggle } from '@/components/Shadcn/theme-toggle';
 import { UserProfile } from '@/components/Shadcn/user-profile';
-import { SidebarTrigger } from '@/components/sidebar';
 import { SidebarMenuButton } from '@/components/Sidebar/SidebarMenuButton';
+import { SidebarTrigger } from '@/components/sidebar';
 
 import { useRole } from '@/context/role-context';
 

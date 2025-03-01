@@ -42,7 +42,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<number>(0);
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       if (!session?.user) {
         setUser(null);
@@ -107,7 +107,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   // Check session only when needed
   const checkSession = useCallback(() => {
@@ -115,7 +119,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     if (now - lastFetch > SESSION_CACHE_EXPIRY) {
       fetchUser();
     }
-  }, [lastFetch]);
+  }, [lastFetch, fetchUser]);
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
@@ -124,7 +128,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setIsLoading(false);
     }
-  }, [status, session]);
+  }, [status, session, fetchUser]);
 
   const checkFeature = (feature: string): boolean => {
     if (!user) return false;
