@@ -1,4 +1,4 @@
-import React from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 import { CommandMenu } from '@/components/Shadcn/command-menu';
 
@@ -7,14 +7,14 @@ interface SearchContextType {
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const SearchContext = React.createContext<SearchContextType | undefined>(undefined);
+const SearchContext = createContext<SearchContextType | undefined>(undefined);
 
 interface Props {
   children: React.ReactNode;
 }
 
 export function useSearch() {
-  const context = React.useContext(SearchContext);
+  const context = useContext(SearchContext);
   if (context === undefined) {
     throw new Error('useSearch must be used within a SearchProvider');
   }
@@ -22,9 +22,9 @@ export function useSearch() {
 }
 
 export function SearchProvider({ children }: Props) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();

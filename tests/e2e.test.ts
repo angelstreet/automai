@@ -1,13 +1,14 @@
 jest.setTimeout(30000);
 
-import puppeteer, { Browser, Page } from 'puppeteer';
+import { launch } from 'puppeteer';
+import { Browser, Page } from 'puppeteer';
 
 describe('Automai Homepage', () => {
   let browser: Browser;
   let page: Page;
 
   beforeAll(async () => {
-    browser = await puppeteer.launch({ headless: true });
+    browser = await launch({ headless: true });
     page = await browser.newPage();
   });
 

@@ -9,7 +9,7 @@ import {
 } from '@/components/Shadcn/select';
 import { cn } from '@/lib/utils';
 
-import { type Role } from '@/context/role-context';
+import { useRole } from '@/context/role-context';
 
 const roles: { value: Role; label: string }[] = [
   { value: 'admin', label: 'Admin' },
