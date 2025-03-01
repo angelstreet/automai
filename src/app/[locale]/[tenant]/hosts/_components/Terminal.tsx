@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Terminal as XTerminal } from 'xterm';
-import { AttachAddon } from 'xterm-addon-attach/lib';
-import { FitAddon } from 'xterm-addon-fit/lib';
-import { SearchAddon } from 'xterm-addon-search/lib';
-import { WebLinksAddon } from 'xterm-addon-web-links/lib';
+import { AttachAddon } from 'xterm-addon-attach';
+import { FitAddon } from 'xterm-addon-fit';
+import { SearchAddon } from 'xterm-addon-search';
+import { WebLinksAddon } from 'xterm-addon-web-links';
 
 import 'xterm/css/xterm.css';
 import { useToast } from '@/components/Shadcn/use-toast';

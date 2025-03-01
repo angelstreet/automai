@@ -7,9 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/Shadcn/select';
+import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';
-
-import { useRole } from '@/context/role-context';
 
 const roles: { value: Role; label: string }[] = [
   { value: 'admin', label: 'Admin' },

@@ -6,12 +6,7 @@ import { NavGroup } from '@/components/Layout/NavGroup';
 import { NavUser } from '@/components/Layout/NavUser';
 import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
 import { Sidebar } from '@/components/Sidebar';
-import {
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from '@/components/sidebar';
+import { SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
 
 import { sidebarData } from './data/sidebarData';

@@ -8,9 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/Shadcn/dropdown-menu';
+import { useTheme } from '@/context/ThemeContext';
 import { cn } from '@/lib/utils';
-
-import { useTheme } from '@/context/theme-context';
 
 export function ThemeSwitch() {
   const { theme, setTheme } = useTheme();

@@ -12,9 +12,9 @@ import {
   CommandSeparator,
 } from '@/components/Shadcn/command';
 import { ScrollArea } from '@/components/Shadcn/scroll-area';
-
 import { useSearch } from '@/context/SearchContext';
 import { useTheme } from '@/context/ThemeContext';
+
 import { sidebarData } from '@/data/sidebarData';
 
 export function CommandMenu() {
