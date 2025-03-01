@@ -21,18 +21,27 @@ async function main() {
   try {
     // Start server without WebSocket support by default
     // WebSockets will be lazily initialized when needed
-    await startServer({
+    const server = await startServer({
       dev,
       hostname,
       port,
       enableWebSockets: false
     });
 
+    // Get the actual port the server is listening on
+    const address = server.address();
+    const actualPort = typeof address === 'object' && address ? address.port : port;
+
     console.log(`\n✓ Ready in 0s`);
-    console.log(`> Ready on http://${hostname}:${port}`);
+    console.log(`> Ready on http://${hostname}:${actualPort}`);
   } catch (err) {
-    console.error('Error starting server:', err);
-    process.exit(1);
+    // Don't exit on EADDRINUSE as it's handled by startServer
+    if (err instanceof Error && 'code' in err && err.code === 'EADDRINUSE') {
+      console.log('Port handling is managed by the HTTP service');
+    } else {
+      console.error('Error starting server:', err);
+      process.exit(1);
+    }
   }
 }
 
@@ -62,6 +71,12 @@ async function shutdown(signal: string) {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('uncaughtException', (err) => {
+  // Don't shut down for EADDRINUSE errors
+  if (err && typeof err === 'object' && 'code' in err && err.code === 'EADDRINUSE') {
+    console.log('Port in use, waiting for port incrementing logic to handle it...');
+    return;
+  }
+  
   console.error('Uncaught exception:', err);
   shutdown('uncaughtException');
 });
