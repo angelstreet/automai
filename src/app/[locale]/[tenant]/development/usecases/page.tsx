@@ -17,7 +17,7 @@ import { Button } from '@/components/shadcn/button';
 
 import { Input } from '@/components/shadcn/input';
 
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/shadcn/useToast';
 import { useUser } from '@/context/UserContext';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';
 

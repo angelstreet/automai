@@ -26,8 +26,12 @@ alwaysApply: false
 
 ### Hooks
 - Use `camelCase` starting with `use`
-  - ✅ `useAuth.ts`, `useWindowSize.ts`
-  - ❌ `UseAuth.ts`, `windowSize.ts`
+  - ✅ `useAuth.ts`, `useWindowSize.ts`, `useSidebar.ts`
+  - ❌ `UseAuth.ts`, `use-window-size.ts`, `use-sidebar.ts`
+- Both file names and exported functions must use camelCase
+  - ✅ `export function useAuth()`
+  - ❌ `export function use_auth()`
+  - ❌ `export function use-auth()`
 
 ### Constants
 - Use `camelCase` for constant files

@@ -38,7 +38,7 @@ import {
 
 import { Textarea } from '@/components/shadcn/textarea';
 
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/shadcn/useToast';
 import { useUser } from '@/context/UserContext';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
 

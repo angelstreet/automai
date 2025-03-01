@@ -48,10 +48,6 @@ automai/
 │   │   ├── icons/            # Icon components
 │   │   └── [various].tsx     # Individual component files
 │   ├── hooks/                # Custom React hooks
-│   │   ├── use-toast.ts      # Toast notification hook
-│   │   ├── useSidebar.ts     # Sidebar state hook
-│   │   ├── use-dialog-state.tsx # Dialog state hook
-│   │   └── use-mobile.tsx    # Mobile detection hook
 │   ├── lib/                  # Shared utilities
 │   │   ├── websocketServer.ts # WebSocket server implementation
 │   │   ├── contexts/         # React context providers

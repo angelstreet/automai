@@ -48,6 +48,7 @@ alwaysApply: true
 ### Required Rules Reference
 - **general.mdc** (this file): Essential project context
 - **code-organization.mdc**: File organization guidelines
+- **nextjs-naming-guidelines.mdc**: Naming rules
 - **nextjs.mdc**: Next.js implementation guidelines
 - **yolo-mode.mdc**: Quick reference for rapid development
 - **prisma.mdc**: Database access patterns
@@ -60,15 +61,6 @@ alwaysApply: true
 - **nextjs-naming.mdc**: Next.js naming conventions
 
 ## Project Structure & Components
-
-### Key File Paths
-- **Custom Server**: `server.ts` at project root
-- **HTTP Service**: `src/lib/services/http.ts`
-- **WebSocket Service**: `src/lib/services/websocket.ts`
-- **SSH Service**: `src/lib/services/ssh.ts`
-- **Terminal Service**: `src/lib/services/terminal.ts`
-- **Prisma Client**: `prisma/index.ts`
-- **Environment Config**: `src/lib/env.ts`
 
 ### Core Files and Their Purposes
 1. **server.ts** - Custom server entry point that initializes the Next.js application with WebSocket support and handles port management
@@ -100,25 +92,19 @@ alwaysApply: true
 - **Shared Components**: The /src/components folder should contain reusable components used across multiple pages or features
 - **Modular Approach**: As the project grows, adopt a more modular structure, where each feature or domain has its own folder containing components, hooks, and utilities specific to that feature
 
-## Server Management
+## Debugging & Testing
+
+### Debugging Guidelines
+- Check terminal logs for server-side errors
+- Use browser tools only when explicitly requested
+
 
 ### When to Restart the Server
 - After adding new environment variables
 - After modifying middleware.ts or next.config.js
 - When Fast Refresh fails with an error
 - After modifying server.ts or any files in src/lib/services/
-
-### Port Management
-- The server automatically handles port incrementing when the default port (3000) is already in use
-- If port 3000 is taken, the server will try port 3001, then 3002, and so on
-- The actual port being used will be displayed in the console output
-
-## Debugging & Testing
-
-### Debugging Guidelines
-- Use proper error handling in API routes
-- Check terminal logs for server-side errors
-- Use browser tools only when explicitly requested
+- If you need to restart server with npm run dev kill the process first
 
 ## Project Glossary
 

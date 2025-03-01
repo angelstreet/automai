@@ -9,7 +9,7 @@ import {
   SIDEBAR_KEYBOARD_SHORTCUT,
 } from '@/constants/sidebar';
 import { SidebarContext } from '@/context/SidebarContext';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 import { SidebarProviderProps } from '@/types/sidebar';
 

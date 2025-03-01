@@ -4,7 +4,7 @@ import { cva } from 'class-variance-authority';
 import * as React from 'react';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
-import { useSidebar } from '@/hooks/use-sidebar';
+import { useSidebar } from '@/hooks/useSidebar';
 import { cn } from '@/lib/utils';
 
 const sidebarMenuSubButtonVariants = cva(
