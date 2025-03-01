@@ -23,8 +23,9 @@ interface Connection {
   name: string;
   createdAt: Date;
   updatedAt: Date;
-  type?: string; // Add the missing type property
-  ip?: string; // Add the missing ip property
+  // Make these required as they're used throughout the code
+  type: string;
+  ip: string;
 }
 
 /**
@@ -36,7 +37,18 @@ async function getConnection(connectionId: string): Promise<Connection | null> {
       where: { id: connectionId },
     });
 
-    return connection as unknown as Connection;
+    if (!connection) {
+      logger.error('Connection not found in database', { connectionId });
+      return null;
+    }
+
+    // Map database fields to expected format
+    return {
+      ...connection,
+      // Ensure these fields exist for compatibility
+      ip: connection.host,
+      type: 'ssh' // Default type for connections
+    } as Connection;
   } catch (error: any) {
     logger.error('Error fetching connection', {
       error: error.message || String(error),
@@ -124,7 +136,7 @@ export async function handleSshConnection(
               error: errorMessage,
               errorType: 'SSH_SHELL_ERROR',
               details: {
-                host: connectionData.ip,
+                host: connectionData.host,
                 port: connectionData.port || 22,
               },
             }),
@@ -180,7 +192,7 @@ export async function handleSshConnection(
           error: `SSH connection error: ${err.message}`,
           errorType: 'SSH_CONNECTION_ERROR',
           details: {
-            host: connectionData.ip,
+            host: connectionData.host,
             port: connectionData.port || 22,
           },
         }),
@@ -189,12 +201,22 @@ export async function handleSshConnection(
 
     // When using password in SSH config, convert null to undefined
     const sshConfig = {
-      host: connectionData.host || connectionData.ip,
+      host: connectionData.host,
       port: connectionData.port || 22,
       username: connectionData.username,
       password: connectionData.password || undefined, // Convert null to undefined
       privateKey: connectionData.privateKey || undefined,
     };
+
+    // Log connection attempt details
+    logger.info('Connecting to SSH server', {
+      connectionId,
+      host: sshConfig.host,
+      port: sshConfig.port,
+      username: sshConfig.username,
+      hasPassword: !!sshConfig.password,
+      hasPrivateKey: !!sshConfig.privateKey
+    });
 
     // Connect to SSH server
     sshClient.connect(sshConfig);

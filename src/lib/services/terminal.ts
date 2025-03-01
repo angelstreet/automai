@@ -172,3 +172,33 @@ export const {
   closeTerminalConnection,
   getTerminalConnections,
 } = terminalService;
+
+/**
+ * Alternative fetch terminal connection details with added compatibility fields
+ */
+export async function getCompatibleConnection(connectionId: string) {
+  try {
+    const connection = await prisma.connection.findUnique({
+      where: { id: connectionId },
+    });
+
+    if (!connection) {
+      logger.error('Terminal connection not found', { connectionId });
+      return null;
+    }
+
+    // Add missing properties for compatibility
+    return {
+      ...connection,
+      ip: connection.host,
+      type: 'ssh' // Default type for connections
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Error fetching terminal connection', { 
+      error: errorMessage,
+      connectionId
+    });
+    return null;
+  }
+}

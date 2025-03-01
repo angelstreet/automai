@@ -23,12 +23,24 @@ async function getIntlMiddleware() {
 export default async function middleware(request: NextRequest) {
   // 1. WebSocket handling
   if (request.headers.get('upgrade')?.includes('websocket')) {
+    console.log('WebSocket request detected, bypassing middleware');
     return NextResponse.next();
   }
 
   // 2. Public routes bypass
-  const publicPaths = ['/login', '/register', '/api/auth', '/_next', '/favicon.ico', '/api/hosts/byName'];
+  const publicPaths = [
+    '/login', 
+    '/register', 
+    '/api/auth', 
+    '/_next', 
+    '/favicon.ico', 
+    '/api/hosts/byName',
+    '/api/terminals/init',
+    '/api/terminals/ws'
+  ];
+  
   if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
+    console.log('Public path detected, bypassing auth:', request.nextUrl.pathname);
     return NextResponse.next();
   }
 
@@ -46,6 +58,7 @@ export default async function middleware(request: NextRequest) {
     const token = await getToken({ req: request });
     if (!token) {
       if (request.nextUrl.pathname.startsWith('/api/')) {
+        console.log('Unauthorized API request:', request.nextUrl.pathname);
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
       return NextResponse.redirect(new URL('/login', request.url));

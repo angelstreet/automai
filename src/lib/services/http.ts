@@ -6,6 +6,7 @@ import next from 'next';
 import { NextServer } from 'next/dist/server/next';
 import { initializeWebSocketServer, handleUpgrade } from './websocket';
 import { logger } from '../logger';
+import { Socket } from 'net';
 
 // Server instance cache
 let httpServer: Server | null = null;
@@ -93,7 +94,7 @@ export async function createServer(options: {
         const { pathname } = parse(request.url || '');
 
         // Only handle WebSocket connections for our terminal endpoints
-        if (pathname && pathname.startsWith('/terminals/')) {
+        if (pathname && pathname.startsWith('/api/terminals/ws/')) {
           // If WebSockets aren't initialized yet, initialize them on-demand
           if (!isWebSocketInitialized) {
             logger.info('Initializing WebSocket server on-demand');
@@ -101,7 +102,7 @@ export async function createServer(options: {
           }
           
           // Handle the terminal WebSocket upgrade
-          handleUpgrade(request, socket, head, pathname);
+          handleUpgrade(request, socket as Socket, head);
         }
         // For all other WebSocket connections (including Next.js HMR),
         // do nothing and let Next.js handle them
@@ -125,7 +126,7 @@ function initializeWebSocketSupport(server: Server) {
   }
 
   logger.info('Initializing WebSocket server');
-  initializeWebSocketServer(server);
+  initializeWebSocketServer();
   isWebSocketInitialized = true;
 
   // Handle upgrade requests without removing existing listeners
@@ -133,8 +134,8 @@ function initializeWebSocketSupport(server: Server) {
     const { pathname } = parse(request.url || '');
 
     // Handle terminal connections
-    if (pathname && pathname.startsWith('/terminals/')) {
-      handleUpgrade(request, socket, head, pathname);
+    if (pathname && pathname.startsWith('/api/terminals/ws/')) {
+      handleUpgrade(request, socket as Socket, head);
     }
   });
 

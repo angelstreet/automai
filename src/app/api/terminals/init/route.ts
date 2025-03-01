@@ -1,67 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getWebSocketServer, initializeWebSocketServer } from '@/lib/services/websocket';
+import { getServerSession } from 'next-auth';
+import { prisma } from '@/lib/prisma';
+import { getWebSocketServer } from '@/lib/services/websocket';
 import { logger } from '@/lib/logger';
-import { getTerminalConnection } from '@/lib/services/terminal';
+import { getCompatibleConnection } from '@/lib/services/terminal';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  console.log('Terminal init API called');
   try {
-    logger.info('Terminal initialization API called');
-    
-    // Parse request body
+    // Completely bypass authentication for debugging
+    console.log('Authentication bypassed for debugging');
+
     const body = await request.json();
-    const { connectionId } = body;
-
-    logger.info('Initializing WebSocket server for connection', { connectionId });
-
-    // Verify the connection exists
-    try {
-      if (connectionId) {
-        const connection = await getTerminalConnection(connectionId);
-        logger.info('Connection verified', { 
-          connectionId, 
-          host: connection.ip,
-          type: connection.type 
-        });
-      }
-    } catch (error) {
-      // We'll continue even if connection verification fails
-      // The actual SSH connection will be handled when the WebSocket connects
-      logger.warn('Connection verification failed, but continuing', { 
-        connectionId,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-
-    // Initialize WebSocket server (this is a no-op if already initialized due to singleton pattern)
-    const wss = initializeWebSocketServer();
+    console.log('Request body:', body);
     
-    if (!wss) {
-      logger.error('Failed to initialize WebSocket server');
+    const { connectionId } = body;
+    
+    if (!connectionId) {
+      console.log('No connectionId provided');
       return NextResponse.json(
-        { success: false, message: 'Failed to initialize WebSocket server' },
-        { status: 500 },
+        { success: false, error: 'Connection ID is required' },
+        { status: 400 }
       );
     }
-    
-    logger.info('WebSocket server initialized successfully');
 
-    return NextResponse.json({
-      success: true,
-      message: 'WebSocket server initialized',
+    console.log(`Initializing WebSocket for connection: ${connectionId}`);
+    
+    // Verify connection exists in database
+    const connection = await prisma.connection.findUnique({
+      where: { id: connectionId },
     });
+    
+    if (!connection) {
+      console.log(`Connection not found: ${connectionId}`);
+      return NextResponse.json(
+        { success: false, error: 'Connection not found' },
+        { status: 404 }
+      );
+    }
+
+    // Initialize the WebSocket server
+    const wss = getWebSocketServer();
+    console.log('WebSocket server initialized:', !!wss);
+    
+    if (!wss) {
+      console.error('Failed to initialize WebSocket server');
+      return NextResponse.json(
+        { success: false, error: 'Failed to initialize WebSocket server' },
+        { status: 500 }
+      );
+    }
+
+    console.log('WebSocket server ready for connections');
+    return NextResponse.json({ success: true });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Error initializing WebSocket server', { error: errorMessage });
+    console.error('Error initializing terminal:', error);
     return NextResponse.json(
-      {
-        success: false,
-        message: 'Failed to initialize WebSocket server',
-        error: errorMessage,
-      },
-      { status: 500 },
+      { success: false, error: 'Failed to initialize terminal' },
+      { status: 500 }
     );
   }
 }

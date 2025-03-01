@@ -110,7 +110,11 @@ export function Terminal({ connection }: TerminalProps) {
 
       // Initialize WebSocket server first
       try {
-        console.log('[Terminal] Initializing WebSocket server');
+        console.log('[Terminal] Initializing WebSocket server', {
+          connectionId: connection.id,
+          host: connection.ip,
+          port: connection.port
+        });
         term.write(`\x1B[1;3;33mInitializing terminal server...\x1B[0m\r\n`);
         
         const initResponse = await fetch('/api/terminals/init', {
@@ -121,11 +125,21 @@ export function Terminal({ connection }: TerminalProps) {
           body: JSON.stringify({ connectionId: connection.id }),
         });
         
+        if (!initResponse.ok) {
+          const statusText = initResponse.statusText;
+          console.error('[Terminal] Server returned error status:', initResponse.status, statusText);
+          term.write(`\r\n\x1B[1;3;31mServer error: ${initResponse.status} ${statusText}\x1B[0m\r\n`);
+          setIsConnecting(false);
+          setError(`Server error: ${initResponse.status} ${statusText}`);
+          return;
+        }
+        
         const initResult = await initResponse.json();
+        console.log('[Terminal] Init response:', initResult);
         
         if (!initResult.success) {
-          console.error('[Terminal] Failed to initialize WebSocket server:', initResult.message);
-          term.write(`\r\n\x1B[1;3;31mFailed to initialize terminal server: ${initResult.message}\x1B[0m\r\n`);
+          console.error('[Terminal] Failed to initialize WebSocket server:', initResult.error || initResult.message);
+          term.write(`\r\n\x1B[1;3;31mFailed to initialize terminal server: ${initResult.error || initResult.message}\x1B[0m\r\n`);
           setIsConnecting(false);
           setError('Failed to initialize terminal server');
           return;
@@ -135,7 +149,7 @@ export function Terminal({ connection }: TerminalProps) {
         term.write(`\x1B[1;3;33mTerminal server initialized, connecting...\x1B[0m\r\n`);
       } catch (error) {
         console.error('[Terminal] Error initializing WebSocket server:', error);
-        term.write(`\r\n\x1B[1;3;31mError initializing terminal server\x1B[0m\r\n`);
+        term.write(`\r\n\x1B[1;3;31mError initializing terminal server: ${error instanceof Error ? error.message : String(error)}\x1B[0m\r\n`);
         setIsConnecting(false);
         setError('Error initializing terminal server');
         return;
@@ -143,12 +157,13 @@ export function Terminal({ connection }: TerminalProps) {
 
       // Use the Next.js API route for WebSocket connections instead of the standalone server
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const socketUrl = `${protocol}//${window.location.host}/api/terminals/${connection.id}`;
+      const socketUrl = `${protocol}//${window.location.host}/api/terminals/ws/${connection.id}`;
       console.log(`[WebSocket] Connecting to: ${socketUrl}`, {
         connectionId: connection.id,
         connectionType: connection.type,
         username: connection.username,
-        password: connection.password ? '********' : undefined,
+        host: connection.ip,
+        port: connection.port
       });
 
       try {
