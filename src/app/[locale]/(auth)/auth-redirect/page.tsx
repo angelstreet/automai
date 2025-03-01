@@ -20,7 +20,7 @@ export default function AuthRedirectPage() {
         // If we have a session, redirect to the appropriate dashboard
         if (session?.user) {
           // Use tenant name or default to plan-based name
-          const tenant = (session.user as any).tenantName || 'trial';
+          const tenant = session.user.tenantName || 'trial';
           console.log('Session data:', {
             userId: session.user.id,
             email: session.user.email,

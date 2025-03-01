@@ -71,14 +71,14 @@ export default function ProjectsPage() {
           throw new Error('Not authenticated');
         }
 
-        const res = await fetch('/api/projects', {
+        const response = await fetch('/api/projects', {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${session.accessToken}`,
           },
         });
-        if (res.ok) {
-          const data = await res.json();
+        if (response.ok) {
+          const data = await response.json();
           setProjects(data);
         } else {
           throw new Error('Failed to fetch projects');
