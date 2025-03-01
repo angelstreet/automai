@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getHosts, createHost } from '@/lib/services';
+import { getHosts, createHost, deleteHost } from '@/lib/services/hosts';
 
 export async function GET() {
   try {
@@ -10,14 +10,10 @@ export async function GET() {
 
     return NextResponse.json(hosts);
   } catch (error) {
-    console.error('Error fetching hosts:', error);
+    console.error('Error in GET /api/hosts:', error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch hosts',
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 },
+      { error: 'Failed to fetch hosts' },
+      { status: 500 }
     );
   }
 }
@@ -55,6 +51,26 @@ export async function POST(request: Request) {
         details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const id = request.url.split('/').pop();
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Host ID is required' },
+        { status: 400 }
+      );
+    }
+    await deleteHost(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error in DELETE /api/hosts:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete host' },
+      { status: 500 }
     );
   }
 }

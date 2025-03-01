@@ -1,67 +1,16 @@
-import { PrismaClient } from '@prisma/client';
-/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { NextResponse } from 'next/server';
-import { Client } from 'ssh2';
+import { testHostConnection } from '@/lib/services/hosts';
 
-const prisma = new PrismaClient();
-
-export async function POST(request: Request): Promise<Response> {
+export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { ip, port, username, password, hostId } = body;
-
-    // Get host from database to get password
-    const hostRecord = await prisma.host.findUnique({
-      where: { id: hostId },
-    });
-
-    if (!hostRecord) {
-      return NextResponse.json({ success: false, message: 'Host not found' }, { status: 404 });
-    }
-
-    // Test SSH connection
-    return await new Promise<Response>((resolve) => {
-      const conn = new Client();
-      let resolved = false;
-
-      // Set a timeout for the connection attempt
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          conn.end();
-          resolved = true;
-          resolve(
-            NextResponse.json({ success: false, message: 'Connection timed out' }, { status: 408 }),
-          );
-        }
-      }, 5000);
-
-      conn.on('ready', () => {
-        clearTimeout(timeout);
-        if (!resolved) {
-          conn.end();
-          resolved = true;
-          resolve(NextResponse.json({ success: true }));
-        }
-      });
-
-      conn.on('error', (err) => {
-        clearTimeout(timeout);
-        if (!resolved) {
-          resolved = true;
-          resolve(NextResponse.json({ success: false, message: err.message }, { status: 500 }));
-        }
-      });
-
-      // Attempt connection
-      conn.connect({
-        host: ip,
-        port: port || 22,
-        username: username,
-        password: hostRecord.password,
-      });
-    });
+    const host = await request.json();
+    const result = await testHostConnection(host);
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('Error testing connection:', error);
-    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
+    console.error('Error in POST /api/hosts/test-connection:', error);
+    return NextResponse.json(
+      { error: 'Failed to test connection' },
+      { status: 500 }
+    );
   }
 }

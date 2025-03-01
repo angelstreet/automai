@@ -308,3 +308,76 @@ automai/
      };
    }
    ```
+
+## Service Layer Pattern
+
+```typescript
+// ✅ Correct: Service layer in src/lib/services
+// src/lib/services/hosts.ts
+export async function getHosts() {
+  // Implementation
+}
+
+// ✅ Correct: Server component using service
+// src/app/[feature]/page.tsx
+import { getHosts } from '@/lib/services/hosts';
+
+export default async function Page() {
+  const data = await getHosts();
+  return <ClientComponent initialData={data} />;
+}
+
+// ✅ Correct: Client component with mutations
+// src/app/[feature]/_components/ClientComponent.tsx
+'use client';
+import { useMutation } from '@tanstack/react-query';
+import { deleteHost } from '@/lib/services/hosts';
+
+export function ClientComponent({ initialData }) {
+  const mutation = useMutation({ mutationFn: deleteHost });
+  // Implementation
+}
+
+// ❌ Incorrect: Mixing concerns
+export default function Page() {
+  const data = await fetch('/api/hosts');  // Don't fetch directly
+  // Implementation
+}
+```
+
+## Protected Service Files
+Files in `src/lib/services` are protected and should not be modified without careful review.
+Each service file should have the following header:
+```typescript
+/**
+ * @fileoverview Service Layer Implementation
+ * ⚠️ DO NOT MODIFY THIS FILE ⚠️
+ * Last validated: [DATE]
+ */
+```
+
+## Component Organization
+
+1. **Server Components**:
+   - Located in `src/app/[feature]/page.tsx`
+   - Use service layer for data fetching
+   - Pass data to client components
+
+2. **Client Components**:
+   - Located in `src/app/[feature]/_components/`
+   - Handle UI interactions and mutations
+   - Receive initial data as props
+
+3. **Shared Components**:
+   - Located in `src/components/`
+   - Reusable across features
+
+## Data Flow Pattern
+
+```mermaid
+graph TD
+    A[Service Layer] --> B[Server Component]
+    B --> C[Client Component]
+    C --> D[UI State & Mutations]
+    D --> A
+```
