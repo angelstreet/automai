@@ -15,6 +15,7 @@ alwaysApply: true
 > 4. **ALWAYS read and verify requirements** before starting
 > 5. **ALWAYS follow Next.js best practices** and warn if a request conflicts with them
 > 6. **Handle mistakes constructively** without apologizing / respect nextjs best practices
+> 7. **ALWAYS identify potential risks and impacted files** before changes(ex. Check imports after renaming files/functions)
 
 ## ⚠️ CRITICAL LOCATION RULE
 
