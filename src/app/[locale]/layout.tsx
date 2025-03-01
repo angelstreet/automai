@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 
 import { RouteGuard } from '@/components/Auth/RouteGuard';
-import { Toaster } from '@/components/Shadcn/toaster';
+import { ToasterProvider } from '@/components/shadcn/toaster';
 import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { locales } from '@/config';
 import { RoleProvider } from '@/context/RoleContext';
@@ -54,7 +54,7 @@ export default async function LocaleLayout({ children, params }: Props) {
             <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
               <ThemeProvider defaultTheme={theme} storageKey="theme">
                 <RouteGuard>{children}</RouteGuard>
-                <Toaster />
+                <ToasterProvider />
               </ThemeProvider>
             </NextIntlClientProvider>
           </RoleProvider>
