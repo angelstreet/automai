@@ -14,7 +14,7 @@ import {
   DialogDescription,
 } from '@/components/shadcn/dialog';
 
-import { useToast } from '@/components/shadcn/useToast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from '@/types/hosts';
 
 import { ConnectionForm, FormData } from './ConnectionForm';

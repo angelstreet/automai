@@ -27,7 +27,7 @@ import {
 
 import { Switch } from '@/components/shadcn/switch';
 
-import { useToast } from '@/components/shadcn/useToast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { toast } from 'sonner';
 
 export default function HostsSettingsPage() {

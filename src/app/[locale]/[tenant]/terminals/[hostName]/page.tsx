@@ -7,7 +7,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 
-import { useToast } from '@/components/shadcn/useToast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
 

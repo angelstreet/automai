@@ -71,12 +71,6 @@ async function shutdown(signal: string) {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('uncaughtException', (err) => {
-  // Don't shut down for EADDRINUSE errors
-  if (err && typeof err === 'object' && 'code' in err && err.code === 'EADDRINUSE') {
-    console.log('Port in use, waiting for port incrementing logic to handle it...');
-    return;
-  }
-  
   console.error('Uncaught exception:', err);
   shutdown('uncaughtException');
 });
