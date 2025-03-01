@@ -1,16 +1,17 @@
 'use client';
 
 import { Globe } from 'lucide-react';
+
 import { usePathname, useRouter } from 'next/navigation';
 import * as React from 'react';
 
-import { Button } from '@/components/Shadcn/button';
+import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/Shadcn/dropdown-menu';
+} from '@/components/shadcn/dropdown-menu';
 
 interface LanguageSwitcherProps {
   className?: string;

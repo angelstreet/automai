@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLocale } from 'next-intl';
 
-import { Button } from '@/components/Shadcn/button';
-import { LanguageSwitcher } from '@/components/Shadcn/language-switcher';
-import { ThemeToggle } from '@/components/Shadcn/theme-toggle';
+import { Button } from '@/components/shadcn/button';
+import { LanguageSwitcher } from '@/components/shadcn/language-switcher';
+import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 
 interface HeaderProps {
   showAuth?: boolean;

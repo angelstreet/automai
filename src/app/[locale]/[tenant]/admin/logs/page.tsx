@@ -3,16 +3,18 @@
 import { useSession } from 'next-auth/react';
 import { useState, useEffect, useCallback } from 'react';
 
-import { Badge } from '@/components/Shadcn/badge';
-import { Button } from '@/components/Shadcn/button';
+import { Badge } from '@/components/shadcn/badge';
+
+import { Button } from '@/components/shadcn/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/Shadcn/card';
-import { Input } from '@/components/Shadcn/input';
+} from '@/components/shadcn/card';
+
+import { Input } from '@/components/shadcn/input';
 import {
   Pagination,
   PaginationContent,
@@ -20,14 +22,14 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@/components/Shadcn/pagination';
+} from '@/components/shadcn/pagination';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/Shadcn/select';
+} from '@/components/shadcn/select';
 import {
   Table,
   TableBody,
@@ -35,7 +37,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/Shadcn/table';
+} from '@/components/shadcn/table';
 
 interface ConnectionLog {
   id: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/Shadcn/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 
 export function RecentSales() {
   return (

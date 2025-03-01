@@ -1,13 +1,17 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
+
 import { useParams, useRouter } from 'next/navigation';
+
 import { useSession } from 'next-auth/react';
+
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
-import { Button } from '@/components/Shadcn/button';
-import { Input } from '@/components/Shadcn/input';
+import { Button } from '@/components/shadcn/button';
+
+import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
 
 export function ProfileContent() {
@@ -29,7 +33,7 @@ export function ProfileContent() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify({ name }),
         credentials: 'include',

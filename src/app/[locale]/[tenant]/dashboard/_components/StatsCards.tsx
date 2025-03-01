@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/Shadcn/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 
 export function StatsCards() {
   return (

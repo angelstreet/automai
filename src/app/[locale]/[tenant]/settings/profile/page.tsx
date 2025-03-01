@@ -2,14 +2,14 @@
 
 import { useSession } from 'next-auth/react';
 
-import { SettingsHeader } from '@/components/Settings/SettingsHeader';
+import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/Shadcn/card';
+} from '@/components/shadcn/card';
 
 export default function ProfileSettingsPage() {
   const { data: session } = useSession();

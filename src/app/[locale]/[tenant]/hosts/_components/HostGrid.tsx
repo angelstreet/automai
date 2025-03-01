@@ -1,4 +1,4 @@
-import { Checkbox } from '@/components/Shadcn/checkbox';
+import { Checkbox } from '@/components/shadcn/checkbox';
 import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
 

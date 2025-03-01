@@ -2,15 +2,15 @@ import { Terminal, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { Badge } from '@/components/Shadcn/badge';
-import { Button } from '@/components/Shadcn/button';
-import { Checkbox } from '@/components/Shadcn/checkbox';
+import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/shadcn/button';
+import { Checkbox } from '@/components/shadcn/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/Shadcn/dropdown-menu';
+} from '@/components/shadcn/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -18,7 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/Shadcn/table';
+} from '@/components/shadcn/table';
 import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
 

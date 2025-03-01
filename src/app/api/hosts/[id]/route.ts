@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 
 import { getHostById, deleteHost } from '@/lib/services';
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const host = await getHostById(id);
@@ -21,10 +19,7 @@ export async function GET(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     await deleteHost(id);

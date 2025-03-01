@@ -2,8 +2,8 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { PinInputContext } from './Context';
-import { PinInputFieldProps, _PinInputFieldProps } from './Types';
+import { PinInputContext } from './context';
+import { PinInputFieldProps, _PinInputFieldProps } from './types';
 
 export const PinInputField = <T extends React.ElementType = 'input'>({
   className,

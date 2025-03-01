@@ -1,20 +1,26 @@
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { useState, useRef } from 'react';
+
 import { useTranslations } from 'next-intl';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/Shadcn/alert';
-import { Badge } from '@/components/Shadcn/badge';
-import { Button } from '@/components/Shadcn/button';
-import { Input } from '@/components/Shadcn/input';
-import { Label } from '@/components/Shadcn/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
+
+import { Badge } from '@/components/shadcn/badge';
+
+import { Button } from '@/components/shadcn/button';
+
+import { Input } from '@/components/shadcn/input';
+
+import { Label } from '@/components/shadcn/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/Shadcn/select';
-import { Textarea } from '@/components/Shadcn/textarea';
+} from '@/components/shadcn/select';
+
+import { Textarea } from '@/components/shadcn/textarea';
 
 export interface FormData {
   name: string;
@@ -200,9 +206,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
               onChange={(e) => handleInputChange('name', e.target.value)}
               className="w-full"
             />
-            <p className="text-xs text-muted-foreground">
-              {t('form.nameHint')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('form.nameHint')}</p>
           </div>
         </div>
 
@@ -249,31 +253,31 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
 
         {connectionType === 'ssh' && (
           <>
-          <div className="grid grid-cols-12 items-center gap-3 mt-3">
-            <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">
-              {t('form.username')}
-            </Label>
-            <Input
-              id="username"
-              placeholder={t('form.username')}
-              value={formData.username}
-              onChange={(e) => handleInputChange('username', e.target.value)}
-              className="col-span-10"
-            />
-          </div>
-          <div className="grid grid-cols-12 items-center gap-3 mt-3">
-            <Label htmlFor="password" className="text-right col-span-2 whitespace-nowrap">
-              {t('form.password')}
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder={t('form.password')}
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
-              className="col-span-10"
-            />
-          </div>
+            <div className="grid grid-cols-12 items-center gap-3 mt-3">
+              <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">
+                {t('form.username')}
+              </Label>
+              <Input
+                id="username"
+                placeholder={t('form.username')}
+                value={formData.username}
+                onChange={(e) => handleInputChange('username', e.target.value)}
+                className="col-span-10"
+              />
+            </div>
+            <div className="grid grid-cols-12 items-center gap-3 mt-3">
+              <Label htmlFor="password" className="text-right col-span-2 whitespace-nowrap">
+                {t('form.password')}
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder={t('form.password')}
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                className="col-span-10"
+              />
+            </div>
           </>
         )}
 

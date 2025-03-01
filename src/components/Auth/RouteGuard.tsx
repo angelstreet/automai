@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, usePathname, useParams } from 'next/navigation';
+
 import { useSession } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -34,7 +35,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       isUserLoading,
       hasUser: !!user,
       userError,
-      isRedirecting: isRedirecting.current
+      isRedirecting: isRedirecting.current,
     };
     console.log('RouteGuard state:', info);
     setDebugInfo(info);
@@ -56,12 +57,12 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         pathname.includes('/error') ||
         pathname === `/${locale}`;
 
-      console.log('Handling routing:', { 
-        isPublicRoute, 
-        pathname, 
-        status, 
+      console.log('Handling routing:', {
+        isPublicRoute,
+        pathname,
+        status,
         hasUser: !!user,
-        currentTenant
+        currentTenant,
       });
 
       // Handle OAuth errors
@@ -91,7 +92,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         ) {
           const tenant = user.tenantName || 'trial'; // Default to trial if no tenant
           if (tenant && !isRedirecting.current) {
-            console.log(`Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`);
+            console.log(
+              `Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`,
+            );
             isRedirecting.current = true;
             router.replace(`/${locale}/${tenant}/dashboard`);
           }
@@ -105,7 +108,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
         // Only redirect if we have a definite tenant mismatch
         if (expectedTenant && currentTenant !== expectedTenant && !isRedirecting.current) {
-          console.log(`Tenant mismatch, redirecting: current=${currentTenant}, expected=${expectedTenant}`);
+          console.log(
+            `Tenant mismatch, redirecting: current=${currentTenant}, expected=${expectedTenant}`,
+          );
           isRedirecting.current = true;
           router.replace(`/${locale}/${expectedTenant}/dashboard`);
         }

@@ -1,8 +1,10 @@
 import { Loader2 } from 'lucide-react';
+/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { useState, useCallback, useRef } from 'react';
+
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/Shadcn/button';
+import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
   DialogContent,
@@ -10,8 +12,9 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from '@/components/Shadcn/dialog';
-import { useToast } from '@/components/Shadcn/use-toast';
+} from '@/components/shadcn/dialog';
+
+import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from '@/types/hosts';
 
 import { ConnectionForm, FormData } from './ConnectionForm';

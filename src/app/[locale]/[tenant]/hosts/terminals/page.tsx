@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { useToast } from '@/components/Shadcn/use-toast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
 
 import { Terminal } from '../_components/Terminal';

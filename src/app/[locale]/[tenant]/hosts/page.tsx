@@ -1,7 +1,9 @@
 'use client';
 
 import { RefreshCcw, Plus, Server } from 'lucide-react';
+
 import { useParams, useRouter } from 'next/navigation';
+
 import { useTranslations } from 'next-intl';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -14,11 +16,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/Shadcn/alert-dialog';
-import { Button } from '@/components/Shadcn/button';
-import { Skeleton } from '@/components/Shadcn/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider } from '@/components/Shadcn/tooltip';
-import { useToast } from '@/components/Shadcn/use-toast';
+} from '@/components/shadcn/alert-dialog';
+
+import { Button } from '@/components/shadcn/button';
+
+import { Skeleton } from '@/components/shadcn/skeleton';
+
+import { Tooltip, TooltipContent, TooltipProvider } from '@/components/shadcn/tooltip';
+
+import { useToast } from '@/components/shadcn/use-toast';
 import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
 
@@ -44,21 +50,21 @@ export default function HostsPage() {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       console.log('Fetching hosts from API...');
       const response = await fetch(`/${params.locale}/api/hosts`);
-      
+
       if (!response.ok) {
         console.error('API response not OK:', response.status, response.statusText);
         const errorText = await response.text();
         console.error('Error response body:', errorText);
         throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
-      
+
       console.log('API response OK, parsing JSON...');
       const hosts = await response.json();
       console.log('Hosts data received:', hosts);
-      
+
       setHosts(hosts);
       setIsLoading(false);
     } catch (error) {
@@ -97,7 +103,11 @@ export default function HostsPage() {
       });
 
       if (!testResponse.ok) {
-        console.error('Test connection response not OK:', testResponse.status, testResponse.statusText);
+        console.error(
+          'Test connection response not OK:',
+          testResponse.status,
+          testResponse.statusText,
+        );
         const errorText = await testResponse.text();
         console.error('Error response body:', errorText);
       }
@@ -194,7 +204,11 @@ export default function HostsPage() {
           });
 
           if (!testResponse.ok) {
-            console.error('Test connection response not OK:', testResponse.status, testResponse.statusText);
+            console.error(
+              'Test connection response not OK:',
+              testResponse.status,
+              testResponse.statusText,
+            );
             const errorText = await testResponse.text();
             console.error('Error response body:', errorText);
             throw new Error(`API error: ${testResponse.status} ${testResponse.statusText}`);

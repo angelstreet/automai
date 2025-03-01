@@ -1,13 +1,13 @@
 import { IconLoader } from '@tabler/icons-react';
 
-import { FormControl } from '@/components/Shadcn/form';
+import { FormControl } from '@/components/shadcn/form';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/Shadcn/select';
+} from '@/components/shadcn/select';
 import { cn } from '@/lib/utils';
 
 interface SelectDropdownProps {

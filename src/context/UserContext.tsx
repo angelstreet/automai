@@ -51,9 +51,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
         return;
       }
-      
+
       console.log('Session found, fetching user data');
-      
+
       // Check if we have a cached user and it's still valid
       const now = Date.now();
       const cachedData =
@@ -129,7 +129,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       return;
     }
-    
+
     if (status === 'authenticated' && session?.user) {
       console.log('Session authenticated, fetching user data');
       fetchUser();

@@ -1,7 +1,7 @@
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import * as React from 'react';
 
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/Shadcn/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/shadcn/sheet';
 import { SIDEBAR_WIDTH_MOBILE } from '@/constants/sidebar';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { cn } from '@/lib/utils';

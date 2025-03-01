@@ -1,16 +1,16 @@
 'use client';
 
-import { Overview } from '@/components/Dashboard/Overview';
-import { RecentSales } from '@/components/Dashboard/RecentSales';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/Shadcn/avatar';
-import { Button } from '@/components/Shadcn/button';
+import { Overview } from '@/components/dashboard/Overview';
+import { RecentSales } from '@/components/dashboard/RecentSales';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/shadcn/avatar';
+import { Button } from '@/components/shadcn/button';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from '@/components/Shadcn/card';
+} from '@/components/shadcn/card';
 
 export function MainContent() {
   return (
