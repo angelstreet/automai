@@ -112,7 +112,7 @@ export function Terminal({ connection }: TerminalProps) {
       try {
         console.log('[Terminal] Initializing WebSocket server', {
           connectionId: connection.id,
-          host: connection.ip,
+          host: connection.host || connection.ip,
           port: connection.port
         });
         term.write(`\x1B[1;3;33mInitializing terminal server...\x1B[0m\r\n`);
@@ -127,10 +127,30 @@ export function Terminal({ connection }: TerminalProps) {
         
         if (!initResponse.ok) {
           const statusText = initResponse.statusText;
-          console.error('[Terminal] Server returned error status:', initResponse.status, statusText);
-          term.write(`\r\n\x1B[1;3;31mServer error: ${initResponse.status} ${statusText}\x1B[0m\r\n`);
+          const responseText = await initResponse.text();
+          let errorMsg = `Server error: ${initResponse.status} ${statusText}`;
+          try {
+            // Try to parse error message from JSON response
+            const errorJson = JSON.parse(responseText);
+            if (errorJson.error) {
+              errorMsg = `Server error: ${errorJson.error}`;
+            }
+          } catch (e) {
+            // If parsing fails, use the raw response text
+            if (responseText) {
+              errorMsg += ` - ${responseText}`;
+            }
+          }
+          
+          console.error('[Terminal] Server returned error:', {
+            status: initResponse.status,
+            statusText,
+            responseText
+          });
+          
+          term.write(`\r\n\x1B[1;3;31m${errorMsg}\x1B[0m\r\n`);
           setIsConnecting(false);
-          setError(`Server error: ${initResponse.status} ${statusText}`);
+          setError(errorMsg);
           return;
         }
         

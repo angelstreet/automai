@@ -178,6 +178,8 @@ export const {
  */
 export async function getCompatibleConnection(connectionId: string) {
   try {
+    logger.info('Getting compatible connection', { connectionId });
+    
     const connection = await prisma.connection.findUnique({
       where: { id: connectionId },
     });
@@ -187,12 +189,28 @@ export async function getCompatibleConnection(connectionId: string) {
       return null;
     }
 
+    logger.info('Connection found in database', { 
+      connectionId, 
+      connectionType: connection.type,
+      connectionHasHost: !!connection.host,
+      connectionHasIp: !!(connection as any).ip,
+    });
+
     // Add missing properties for compatibility
-    return {
+    const compatibleConnection = {
       ...connection,
-      ip: connection.host,
-      type: 'ssh' // Default type for connections
+      ip: connection.host, // Map host to ip for backward compatibility
+      type: connection.type || 'ssh' // Default type for connections
     };
+
+    logger.info('Returning compatible connection', { 
+      connectionId,
+      host: compatibleConnection.host,
+      ip: compatibleConnection.ip,
+      type: compatibleConnection.type
+    });
+
+    return compatibleConnection;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('Error fetching terminal connection', { 
