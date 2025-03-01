@@ -2,11 +2,11 @@
 
 import { useSession } from 'next-auth/react';
 
-import { NavGroup } from '@/components/layout/NavGroup';
-import { NavUser } from '@/components/layout/NavUser';
-import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
-import { Sidebar, SidebarContent } from '@/components/sidebar';
-import { SidebarFooter, SidebarHeader, SidebarRail } from '@/components/sidebar';
+import { NavGroup } from '@/components/Layout/NavGroup';
+import { NavUser } from '@/components/Layout/NavUser';
+import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
+import { Sidebar, SidebarContent } from '@/components/Sidebar';
+import { SidebarFooter, SidebarHeader, SidebarRail } from '@/components/Sidebar';
 import { useRole } from '@/context/RoleContext';
 
 import { sidebarData } from './data/sidebarData';

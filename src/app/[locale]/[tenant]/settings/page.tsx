@@ -3,8 +3,8 @@
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
-import { LanguageSettings } from '@/components/settings/LanguageSettings';
-import { SettingsHeader } from '@/components/settings/SettingsHeader';
+import { LanguageSettings } from '@/components/Settings/LanguageSettings';
+import { SettingsHeader } from '@/components/Settings/SettingsHeader';
 import {
   Card,
   CardContent,

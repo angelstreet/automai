@@ -17,12 +17,13 @@ import { Button } from '@/components/shadcn/button';
 
 import { Input } from '@/components/shadcn/input';
 
-import { useToast } from '@/components/shadcn/useToast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';
 
 import { CreateUseCase } from '../../usecases/_components/CreateUseCase';
 import { UseCaseList } from '../../usecases/_components/UseCaseList';
+import { toast } from 'sonner';
 
 export default function UseCasesPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -45,7 +46,6 @@ export default function UseCasesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { data: session } = useSession();
-  const { toast } = useToast();
 
   // Redirect if not authenticated
   useEffect(() => {

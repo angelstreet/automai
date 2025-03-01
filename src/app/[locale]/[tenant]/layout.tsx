@@ -3,11 +3,12 @@
 import Cookies from 'js-cookie';
 import * as React from 'react';
 
-import { AppSidebar } from '@/components/layout/AppSidebar';
-import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
-import { SidebarProvider } from '@/components/sidebar';
+import { AppSidebar } from '@/components/Layout/AppSidebar';
+import { WorkspaceHeader } from '@/components/Layout/WorkspaceHeader';
+import { SidebarProvider } from '@/components/Sidebar';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { useUser } from '@/context/UserContext';
+import { ToasterProvider } from '@/components/shadcn/toaster';
 
 // Cache session check timestamp to reduce API calls
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -86,6 +87,7 @@ export default function TenantLayout({
   return (
     <SidebarProvider defaultOpen={sidebarState}>
       <TooltipProvider>
+        <ToasterProvider />
         <div className="relative flex min-h-screen w-full">
           <AppSidebar />
           <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">

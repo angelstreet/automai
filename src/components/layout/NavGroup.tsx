@@ -17,9 +17,9 @@ import {
   SidebarMenuButton,
   SidebarMenuSub,
   SidebarMenuSubButton,
-} from '@/components/sidebar';
+} from '@/components/Sidebar';
 
-import { Sidebar } from '@/components/sidebar';
+import { Sidebar } from '@/components/Sidebar';
 import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';
 

@@ -2,7 +2,7 @@ import { Grid, List } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/shadcn/useToast';
 import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
 
@@ -10,6 +10,7 @@ import { ConnectHostDialog } from './ConnectHostDialog';
 import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
 import { StatusSummary } from './StatusSummary';
+import { toast } from 'sonner';
 
 interface HostOverviewProps {
   hosts: Host[];

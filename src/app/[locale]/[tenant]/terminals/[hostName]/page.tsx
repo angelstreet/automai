@@ -7,8 +7,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/shadcn/useToast';
 import { logger } from '@/lib/logger';
+import { toast } from 'sonner';
 
 import { Terminal } from '../../hosts/_components/Terminal';
 
@@ -29,6 +30,7 @@ export default function TerminalPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const initializationAttemptedRef = useRef<boolean>(false);
+  const { toast } = useToast();
 
   // Get host name from URL params
   const hostName = params.hostName as string;
