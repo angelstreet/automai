@@ -119,13 +119,12 @@ globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
 
 1. **Prisma Client Usage**
    ```typescript
-   // For Next.js API routes
-   import { prisma } from '@/lib/prisma';
+   // ✅ Correct: Single instance pattern
+   const globalForPrisma = global as unknown as { prisma: PrismaClient };
+   export const prisma = globalForPrisma.prisma || new PrismaClient();
    
-   export async function GET() {
-     const users = await prisma.user.findMany();
-     return NextResponse.json({ users });
-   }
+   // ❌ Incorrect: Multiple instances
+   const prisma = new PrismaClient();
    ```
 
 ## Documentation Requirements

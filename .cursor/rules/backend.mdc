@@ -413,3 +413,54 @@ export const validateRequest = (schema: Schema) => {
 - Keep controllers thin
 - Use proper naming conventions
 
+## **1️⃣ Authentication & Session Management**
+- Use centralized auth in middleware
+- Avoid individual route auth checks
+- Implement proper session caching
+- Use Next-Auth with proper configuration
+
+### **Middleware Auth Pattern**
+```typescript
+// src/middleware.ts
+export default async function middleware(request: NextRequest) {
+  // 1. WebSocket bypass
+  if (request.headers.get('upgrade')?.includes('websocket')) {
+    return NextResponse.next();
+  }
+
+  // 2. Auth check for protected routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const token = await getToken({ req: request });
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
+}
+```
+
+## **2️⃣ Database Connection Management**
+- Use single Prisma instance (singleton pattern)
+- Initialize connection only once at startup
+- Implement proper error handling
+- Use appropriate logging levels
+
+### **Prisma Client Pattern**
+```typescript
+// src/lib/prisma.ts
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+export const prisma = globalForPrisma.prisma || new PrismaClient({
+  log: ['error']
+});
+
+// Test connection only once at startup
+if (!globalForPrisma.prisma) {
+  testConnection();
+}
+
+// Save to global in development
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+```
+
