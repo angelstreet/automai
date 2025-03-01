@@ -160,10 +160,15 @@ export function getWebSocketServer(): WSServer | null {
 }
 
 /**
- * Close the WebSocket server
+ * Close the WebSocket server and clean up resources
  */
-export function closeWebSocketServer(): void {
-  if (wss) {
+export function closeWebSocketServer(): Promise<void> {
+  return new Promise((resolve) => {
+    if (!wss) {
+      resolve();
+      return;
+    }
+
     logger.info('Closing WebSocket server');
     
     // Clear ping interval
@@ -173,14 +178,15 @@ export function closeWebSocketServer(): void {
     }
     
     // Close all connections
-    wss.clients.forEach((client) => {
-      client.terminate();
+    wss.clients.forEach((ws) => {
+      ws.terminate();
     });
     
-    // Close server
-    wss.close();
-    wss = null;
-    
-    logger.info('WebSocket server closed');
-  }
+    // Close the server
+    wss.close(() => {
+      logger.info('WebSocket server closed');
+      wss = null;
+      resolve();
+    });
+  });
 } 
