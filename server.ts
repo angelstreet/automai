@@ -49,28 +49,9 @@ async function main() {
 }
 
 // Handle graceful shutdown
-process.on('SIGINT', async () => {
-  // Prevent multiple shutdown attempts
-  if (isShuttingDown) {
-    console.log('Shutdown already in progress...');
-    return;
-  }
-  
-  isShuttingDown = true;
-  console.log('Received SIGINT. Shutting down server...');
-  
-  try {
-    await stopServer();
-    console.log('Server shut down successfully');
-  } catch (err) {
-    console.error('Error during shutdown:', err);
-  } finally {
-    // Force exit after 3 seconds if shutdown is stuck
-    setTimeout(() => {
-      console.log('Forcing exit after timeout');
-      process.exit(0);
-    }, 3000);
-  }
+process.on('SIGINT', () => {
+  console.log('Received SIGINT. Force exiting...');
+  process.exit(0);
 });
 
 // Remove the listener when the process is about to exit
