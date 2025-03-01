@@ -15,10 +15,10 @@ import {
   SidebarMenuButton,
   SidebarMenuSub,
   SidebarMenuSubButton,
-} from '@/components/sidebar';
+} from '@/components/Sidebar';
+import { Sidebar } from '@/components/Sidebar';
+import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';
-
-import { useRole } from '@/context/role-context';
 
 interface NavGroupProps {
   title: string;

@@ -2,4 +2,4 @@
 // The actual implementation has been moved to src/components/common/PinInput
 export * from './common/PinInput';
 
-export { PinInput } from './PinInput/common/PinInput';
+export * from './PinInput/common/PinInput';
