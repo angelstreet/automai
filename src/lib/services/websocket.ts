@@ -186,6 +186,13 @@ export function closeWebSocketServer(): Promise<void> {
       pingInterval = null;
     }
 
+    // Close all connections with a timeout
+    const closeTimeout = setTimeout(() => {
+      logger.warn('WebSocket server close timed out, forcing close');
+      wss = null;
+      resolve();
+    }, 2000); // 2 second timeout
+
     // Close all connections
     wss.clients.forEach((ws) => {
       ws.terminate();
@@ -193,6 +200,7 @@ export function closeWebSocketServer(): Promise<void> {
 
     // Close the server
     wss.close(() => {
+      clearTimeout(closeTimeout);
       logger.info('WebSocket server closed');
       wss = null;
       resolve();

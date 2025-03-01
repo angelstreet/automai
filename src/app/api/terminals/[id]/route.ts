@@ -45,15 +45,17 @@ export async function GET(request: NextRequest, { params }: Props) {
     const wss = getWebSocketServer();
 
     // Handle the upgrade
-    const headersList = headers();
+    const headersList = await headers();
     const rawHeaders: string[] = [];
-    headersList.forEach((value, key) => {
+    
+    // Convert headers to array format
+    Array.from(headersList.entries()).forEach(([key, value]: [string, string]) => {
       rawHeaders.push(key, value);
     });
 
     // Create a minimal IncomingMessage-like object
     const req = {
-      headers: Object.fromEntries(headersList.entries()),
+      headers: Object.fromEntries(Array.from(headersList.entries())),
       rawHeaders,
       url: `/terminals/${connectionId}`,
       socket,
