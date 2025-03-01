@@ -134,7 +134,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                             isActive={isSubActive}
                             className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                           >
-                            <Link href={`/${params.locale}/${params.tenant}${subItem.href}`}>
+                            <Link href={subItem.href}>
                               <SubIcon className="h-4 w-4" />
                               <span>{subItem.title}</span>
                             </Link>
