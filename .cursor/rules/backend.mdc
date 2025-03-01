@@ -117,7 +117,73 @@ useEffect(() => {
 }, [session, user, pathname]);
 ```
 
-## **1️⃣1️⃣ General Guidelines**
+## **1️⃣1️⃣ Authentication Flow and NextAuth Configuration**
+
+### **Authentication Workflow**
+
+The authentication flow in our application follows these steps:
+
+1. **User initiates login** via Google, GitHub, or credentials
+2. **Auth provider callback** is processed by NextAuth
+3. **Server middleware** validates token and authorizes access
+4. **Auth-redirect page** processes successful login and redirects to dashboard
+5. **UserContext** manages session state across the application
+
+### **Critical NextAuth Configuration**
+
+When configuring NextAuth:
+
+1. **Route Groups and URLs**: 
+   ```typescript
+   // ❌ INCORRECT - Using route groups in redirect URLs
+   pages: {
+     newUser: '/en/(auth)/auth-redirect',
+   }
+   
+   // ✅ CORRECT - Never include route groups in URLs
+   pages: {
+     newUser: '/en/auth-redirect',
+   }
+   ```
+
+2. **Redirect Callback**: Always sanitize URLs to remove route groups
+   ```typescript
+   async redirect({ url, baseUrl }) {
+     // Handle OAuth callbacks
+     if (url.includes('/api/auth/callback/')) {
+       return `${baseUrl}/en/auth-redirect`;
+     }
+     
+     // Clean route groups from URLs
+     if (url.includes('/(')) {
+       return url.replace(/\/\([^)]+\)/g, '');
+     }
+     
+     return url;
+   }
+   ```
+
+3. **File Structure**: Avoid duplicating auth pages in route groups
+   - Keep authentication pages in consistent locations
+   - Prefer `/app/[locale]/auth-redirect` over `/app/[locale]/(auth)/auth-redirect`
+
+4. **Session Handling**: 
+   ```typescript
+   session: {
+     strategy: 'jwt', // Use JWT for stateless auth
+     maxAge: 24 * 60 * 60, // 24 hours
+   }
+   ```
+
+### **Debugging Auth Issues**
+
+Common auth problems and solutions:
+
+1. **404 on Redirect**: Check for route groups in URLs, verify page exists
+2. **Missing Cookies**: Ensure secure and httpOnly settings match environment
+3. **Token Validation**: Add detailed logging for token validity checks
+
+## **1️⃣2️⃣ General Guidelines**
 - Keep APIs RESTful with clean, predictable endpoint structures.
 - Use JWT authentication for secured access to all endpoints.
 - Follow Role-Based Access Control (RBAC) to manage permissions.

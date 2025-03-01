@@ -107,7 +107,7 @@ export const authOptions = {
     signIn: '/login',
     error: '/error',
     signOut: '/login',
-    newUser: '/en/auth-redirect',
+    newUser: '/auth-redirect',
   },
   session: {
     strategy: 'jwt' as const,
@@ -127,7 +127,16 @@ export const authOptions = {
       // Check if this is a callback from OAuth provider
       if (url.includes('/api/auth/callback/')) {
         console.log('OAuth callback detected, redirecting to auth-redirect');
-        return `${baseUrl}/en/auth-redirect`;
+        // Let the middleware handle locale detection and routing
+        return `${baseUrl}/auth-redirect`;
+      }
+      
+      // For routes that might contain route groups, clean them up
+      if (url.includes('/(auth)')) {
+        // Remove route group notation from URL
+        const cleanUrl = url.replace('/(auth)', '');
+        console.log('Cleaned route group from URL:', { original: url, cleaned: cleanUrl });
+        return cleanUrl;
       }
       
       // For other redirects, use the URL as is
