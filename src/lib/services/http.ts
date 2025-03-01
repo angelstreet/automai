@@ -89,41 +89,19 @@ export async function createServer(options: {
       httpServer.on('upgrade', (request, socket, head) => {
         const { pathname } = parse(request.url || '');
 
-        // If this is a terminal connection and WebSockets aren't initialized yet,
-        // initialize them on-demand
-        if (pathname && pathname.startsWith('/terminals/') && !isWebSocketInitialized) {
-          logger.info('Initializing WebSocket server on-demand');
-          initializeWebSocketSupport(httpServer!);
-
-          // Now that WebSockets are initialized, handle this upgrade request
-          handleUpgrade(request, socket, head, pathname);
-        } else if (isWebSocketInitialized && pathname && pathname.startsWith('/terminals/')) {
-          // WebSockets are already initialized, just handle the upgrade
-          handleUpgrade(request, socket, head, pathname);
-        } else if (pathname === '/_next/webpack-hmr') {
-          // Allow Next.js HMR WebSocket connections
-          const key = request.headers['sec-websocket-key'];
-          if (key) {
-            const crypto = require('crypto');
-            const acceptKey = crypto
-              .createHash('sha1')
-              .update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
-              .digest('base64');
-            
-            socket.write(
-              'HTTP/1.1 101 Switching Protocols\r\n' +
-                'Upgrade: websocket\r\n' +
-                'Connection: Upgrade\r\n' +
-                `Sec-WebSocket-Accept: ${acceptKey}\r\n\r\n`
-            );
-            socket.pipe(socket);
-          } else {
-            socket.destroy();
+        // Only handle WebSocket connections for our terminal endpoints
+        if (pathname && pathname.startsWith('/terminals/')) {
+          // If WebSockets aren't initialized yet, initialize them on-demand
+          if (!isWebSocketInitialized) {
+            logger.info('Initializing WebSocket server on-demand');
+            initializeWebSocketSupport(httpServer!);
           }
-        } else {
-          // Not a terminal connection or WebSockets not initialized
-          socket.destroy();
+          
+          // Handle the terminal WebSocket upgrade
+          handleUpgrade(request, socket, head, pathname);
         }
+        // For all other WebSocket connections (including Next.js HMR),
+        // do nothing and let Next.js handle them
       });
     }
 
