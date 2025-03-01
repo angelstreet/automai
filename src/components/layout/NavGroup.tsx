@@ -109,7 +109,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                       tooltip={item.title}
                       className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
-                      <Link href={`/${params.locale}/${params.tenant}${item.href}`}>
+                      <Link href={item.href.replace(/^\/?/, `/${params.locale}/${params.tenant}/`)}>
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
@@ -134,7 +134,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                             isActive={isSubActive}
                             className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                           >
-                            <Link href={subItem.href}>
+                            <Link href={subItem.href.replace(/^\/?/, `/${params.locale}/${params.tenant}/`)}>
                               <SubIcon className="h-4 w-4" />
                               <span>{subItem.title}</span>
                             </Link>
