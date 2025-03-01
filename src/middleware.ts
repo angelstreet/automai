@@ -39,6 +39,9 @@ export const config = {
   matcher: [
     // Match all routes except static assets and public files
     '/((?!_next/static|_next/image|avatars|favicon.ico).*)',
+    // Match all locale routes
     '/(fr|en)/:path*',
+    // Match root path
+    '/'
   ],
 };
