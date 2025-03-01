@@ -1,21 +1,40 @@
 {
   "parser": "@typescript-eslint/parser",
-  "extends": ["next/core-web-vitals", "plugin:import/recommended", "plugin:import/typescript"],
+  "extends": [
+    "next/core-web-vitals", 
+    "plugin:import/recommended", 
+    "plugin:import/typescript",
+    "prettier"
+  ],
   "parserOptions": {
-    "ecmaVersion": 2020,
+    "ecmaVersion": 2022,
     "sourceType": "module"
   },
-  "plugins": ["@typescript-eslint", "prettier", "react-refresh", "unused-imports", "import"],
+  "plugins": [
+    "@typescript-eslint", 
+    "prettier", 
+    "react-refresh", 
+    "unused-imports", 
+    "import"
+  ],
   "rules": {
-    "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": "warn",
     "prettier/prettier": "error",
     "@typescript-eslint/no-namespace": "off",
-    "react-refresh/only-export-components": "off",
+    "react-refresh/only-export-components": "warn",
     "react/react-in-jsx-scope": "off",
     "react/display-name": "off",
-    "unused-imports/no-unused-imports": "off",
-    "unused-imports/no-unused-vars": "off",
+    "unused-imports/no-unused-imports": "warn",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      { 
+        "vars": "all", 
+        "varsIgnorePattern": "^_", 
+        "args": "after-used", 
+        "argsIgnorePattern": "^_" 
+      }
+    ],
     "import/no-unresolved": "error",
     "import/named": "error",
     "import/default": "error",
@@ -34,7 +53,7 @@
       }
     ]
   },
-  "ignorePatterns": ["src/components/ui/*"],
+  "ignorePatterns": ["src/components/ui/*", "node_modules", ".next", "out"],
   "settings": {
     "react": {
       "version": "detect"
