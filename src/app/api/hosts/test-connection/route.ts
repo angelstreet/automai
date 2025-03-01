@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { NextResponse } from 'next/server';
 import { Client } from 'ssh2';
 

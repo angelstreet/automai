@@ -1,11 +1,13 @@
 'use client';
 
 import { AlertCircle } from 'lucide-react';
+
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/Shadcn/alert';
-import { useToast } from '@/components/Shadcn/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
+
+import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
 
 import { Terminal } from '../../hosts/_components/Terminal';

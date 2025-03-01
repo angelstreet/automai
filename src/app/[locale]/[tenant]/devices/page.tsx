@@ -1,17 +1,19 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 
 import { useParams, useRouter } from 'next/navigation';
+
 import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
-import { Button } from '@/components/Shadcn/button';
+import { Button } from '@/components/shadcn/button';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from '@/components/Shadcn/card';
+} from '@/components/shadcn/card';
 import {
   Dialog,
   DialogContent,
@@ -19,17 +21,20 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from '@/components/Shadcn/dialog';
-import { Input } from '@/components/Shadcn/input';
-import { Label } from '@/components/Shadcn/label';
+} from '@/components/shadcn/dialog';
+
+import { Input } from '@/components/shadcn/input';
+
+import { Label } from '@/components/shadcn/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/Shadcn/select';
-import { Textarea } from '@/components/Shadcn/textarea';
+} from '@/components/shadcn/select';
+
+import { Textarea } from '@/components/shadcn/textarea';
 
 export default function DevicesPage() {
   return (

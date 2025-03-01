@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { TooltipProvider } from '@/components/Shadcn/tooltip';
+import { TooltipProvider } from '@/components/shadcn/tooltip';
 import {
   SIDEBAR_COOKIE_NAME,
   SIDEBAR_COOKIE_MAX_AGE,

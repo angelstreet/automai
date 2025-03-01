@@ -3,7 +3,7 @@ import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
 import * as React from 'react';
 
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/Shadcn/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { cn } from '@/lib/utils';
 

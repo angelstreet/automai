@@ -1,3 +1,4 @@
+/* eslint-disable */
 import http from 'http';
 import { Server } from 'http';
 import { parse } from 'url';
@@ -20,18 +21,18 @@ export async function initializeNextApp(options: {
   port?: number;
 }): Promise<NextServer> {
   const { dev = false, hostname = 'localhost', port = 3000 } = options;
-  
+
   if (nextApp) {
     logger.info('Reusing existing Next.js app');
     return nextApp;
   }
-  
+
   // Create new Next.js app
   logger.info('Initializing Next.js app');
   nextApp = next({ dev, hostname, port }) as unknown as NextServer;
   await nextApp.prepare();
   logger.info('Next.js app prepared successfully');
-  
+
   return nextApp;
 }
 
@@ -44,42 +45,42 @@ export async function createServer(options: {
   port?: number;
   enableWebSockets?: boolean;
 }): Promise<Server> {
-  const { 
-    dev = process.env.NODE_ENV !== 'production', 
-    hostname = 'localhost', 
+  const {
+    dev = process.env.NODE_ENV !== 'production',
+    hostname = 'localhost',
     port = 3000,
-    enableWebSockets = false
+    enableWebSockets = false,
   } = options;
-  
+
   // Reuse existing server if available
   if (httpServer) {
     logger.info('Reusing existing HTTP server');
-    
+
     // Initialize WebSocket server if enabled and not already initialized
     if (enableWebSockets && !isWebSocketInitialized) {
       initializeWebSocketSupport(httpServer);
     }
-    
+
     return httpServer;
   }
-  
+
   try {
     // Initialize Next.js
     const app = await initializeNextApp({ dev, hostname, port });
-    
+
     if (!app) {
       throw new Error('Failed to initialize Next.js app');
     }
-    
+
     const handle = app.getRequestHandler();
-    
+
     // Create HTTP server
     logger.info('Creating HTTP server');
     httpServer = http.createServer((req, res) => {
       const parsedUrl = parse(req.url || '', true);
       handle(req, res, parsedUrl);
     });
-    
+
     // Initialize WebSocket server if enabled
     if (enableWebSockets) {
       initializeWebSocketSupport(httpServer);
@@ -87,13 +88,13 @@ export async function createServer(options: {
       // Set up upgrade handler to initialize WebSockets on-demand
       httpServer.on('upgrade', (request, socket, head) => {
         const { pathname } = parse(request.url || '');
-        
+
         // If this is a terminal connection and WebSockets aren't initialized yet,
         // initialize them on-demand
         if (pathname && pathname.startsWith('/terminals/') && !isWebSocketInitialized) {
           logger.info('Initializing WebSocket server on-demand');
           initializeWebSocketSupport(httpServer!);
-          
+
           // Now that WebSockets are initialized, handle this upgrade request
           handleUpgrade(request, socket, head, pathname);
         } else if (isWebSocketInitialized && pathname && pathname.startsWith('/terminals/')) {
@@ -101,10 +102,12 @@ export async function createServer(options: {
           handleUpgrade(request, socket, head, pathname);
         } else if (pathname === '/_next/webpack-hmr') {
           // Allow Next.js HMR WebSocket connections
-          socket.write('HTTP/1.1 101 Switching Protocols\r\n' +
-                      'Upgrade: websocket\r\n' +
-                      'Connection: Upgrade\r\n' +
-                      '\r\n');
+          socket.write(
+            'HTTP/1.1 101 Switching Protocols\r\n' +
+              'Upgrade: websocket\r\n' +
+              'Connection: Upgrade\r\n' +
+              '\r\n',
+          );
           socket.pipe(socket);
         } else {
           // Not a terminal connection or WebSockets not initialized
@@ -112,7 +115,7 @@ export async function createServer(options: {
         }
       });
     }
-    
+
     return httpServer;
   } catch (error) {
     logger.error(`Error creating server: ${error}`);
@@ -128,21 +131,21 @@ function initializeWebSocketSupport(server: Server) {
     logger.info('WebSocket server already initialized');
     return;
   }
-  
+
   logger.info('Initializing WebSocket server');
   initializeWebSocketServer(server);
   isWebSocketInitialized = true;
-  
+
   // Handle upgrade requests without removing existing listeners
   server.on('upgrade', (request, socket, head) => {
     const { pathname } = parse(request.url || '');
-    
+
     // Handle terminal connections
     if (pathname && pathname.startsWith('/terminals/')) {
       handleUpgrade(request, socket, head, pathname);
     }
   });
-  
+
   logger.info('WebSocket server initialized successfully');
 }
 
@@ -155,18 +158,18 @@ export async function startServer(options: {
   port?: number;
   enableWebSockets?: boolean;
 }): Promise<Server> {
-  const { 
-    dev = process.env.NODE_ENV !== 'production', 
-    hostname = 'localhost', 
+  const {
+    dev = process.env.NODE_ENV !== 'production',
+    hostname = 'localhost',
     port = 3000,
-    enableWebSockets = false
+    enableWebSockets = false,
   } = options;
-  
+
   // Create server if not already created
   if (!httpServer) {
     httpServer = await createServer({ dev, hostname, port, enableWebSockets });
   }
-  
+
   // Start listening with port incrementing logic
   return new Promise((resolve, reject) => {
     const tryPort = (currentPort: number, maxRetries = 10, retryCount = 0) => {
@@ -178,13 +181,13 @@ export async function startServer(options: {
       }
 
       logger.info(`Attempting to listen on port ${currentPort}`);
-      
+
       // Create a server just to test if the port is available
       const testServer = http.createServer();
-      
+
       testServer.once('error', (err: NodeJS.ErrnoException) => {
         testServer.close();
-        
+
         if (err.code === 'EADDRINUSE') {
           logger.info(`Port ${currentPort} in use, trying ${currentPort + 1}`);
           tryPort(currentPort + 1, maxRetries, retryCount + 1);
@@ -193,10 +196,10 @@ export async function startServer(options: {
           reject(err);
         }
       });
-      
+
       testServer.once('listening', () => {
         testServer.close();
-        
+
         // Now that we know the port is available, start the actual server
         httpServer?.listen(currentPort, hostname, (err?: Error) => {
           if (err) {
@@ -204,12 +207,12 @@ export async function startServer(options: {
             reject(err);
             return;
           }
-          
+
           logger.info(`Server ready on http://${hostname}:${currentPort}`);
           resolve(httpServer as Server);
         });
       });
-      
+
       testServer.listen(currentPort, hostname);
     };
 
@@ -226,9 +229,9 @@ export async function stopServer(): Promise<void> {
       resolve();
       return;
     }
-    
+
     logger.info('Stopping server');
-    
+
     // First close WebSocket server if initialized
     if (isWebSocketInitialized) {
       try {
@@ -239,10 +242,10 @@ export async function stopServer(): Promise<void> {
         logger.error(`Error closing WebSocket server: ${err}`);
       }
     }
-    
+
     // Force close all connections
     httpServer.closeAllConnections();
-    
+
     // Then close HTTP server
     httpServer.close((err) => {
       if (err) {
@@ -250,7 +253,7 @@ export async function stopServer(): Promise<void> {
         reject(err);
         return;
       }
-      
+
       httpServer = null;
       logger.info('Server stopped');
       resolve();
@@ -273,12 +276,12 @@ export function initializeWebSockets(): boolean {
     logger.error('Cannot initialize WebSockets: HTTP server not running');
     return false;
   }
-  
+
   if (isWebSocketInitialized) {
     logger.info('WebSockets already initialized');
     return true;
   }
-  
+
   initializeWebSocketSupport(httpServer);
   return true;
-} 
+}

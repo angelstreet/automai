@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { WebSocket, WebSocketServer as WSServer } from 'ws';
 import { IncomingMessage } from 'http';
 import { Server } from 'http';
@@ -13,11 +14,11 @@ let pingInterval: NodeJS.Timeout | null = null;
  */
 export function initializeWebSocketServer(server: Server): WSServer {
   logger.info('Initializing WebSocket server');
-  
+
   // Create new WebSocketServer if none exists
   if (!wss) {
     wss = new WSServer({ noServer: true });
-    
+
     // Set up ping interval to detect dead connections
     pingInterval = setInterval(() => {
       if (wss) {
@@ -28,7 +29,7 @@ export function initializeWebSocketServer(server: Server): WSServer {
         });
       }
     }, 30000);
-    
+
     // Handle server close
     wss.on('close', () => {
       if (pingInterval) {
@@ -36,83 +37,91 @@ export function initializeWebSocketServer(server: Server): WSServer {
         pingInterval = null;
       }
     });
-    
+
     // Set up connection handler
     wss.on('connection', (ws: WebSocketConnection, request: IncomingMessage) => {
       ws.isAlive = true;
       ws.on('pong', () => {
         ws.isAlive = true;
       });
-      
+
       logger.info('WebSocket client connected');
-      
+
       // Extract connection ID from URL
       const url = new URL(request.url || '', `http://${request.headers.host}`);
       const pathname = url.pathname;
       const connectionIdMatch = pathname.match(/\/terminals\/([^\/]+)/);
       const connectionId = connectionIdMatch ? connectionIdMatch[1] : null;
-      
+
       if (!connectionId) {
         logger.error('No connection ID found in URL', { pathname });
-        ws.send(JSON.stringify({ 
-          error: 'Invalid connection ID',
-          errorType: 'INVALID_CONNECTION_ID'
-        }));
+        ws.send(
+          JSON.stringify({
+            error: 'Invalid connection ID',
+            errorType: 'INVALID_CONNECTION_ID',
+          }),
+        );
         return;
       }
-      
+
       logger.info('Connection ID extracted', { connectionId });
-      
+
       // Set up authentication timeout (5 seconds)
       const authTimeout = setTimeout(() => {
         logger.error('Authentication timeout', { connectionId });
-        ws.send(JSON.stringify({ 
-          error: 'Authentication timeout',
-          errorType: 'AUTH_TIMEOUT'
-        }));
+        ws.send(
+          JSON.stringify({
+            error: 'Authentication timeout',
+            errorType: 'AUTH_TIMEOUT',
+          }),
+        );
         ws.terminate();
       }, 5000);
-      
+
       // Store the timeout in the socket for later cleanup
       ws.authTimeout = authTimeout;
-      
+
       // Handle messages from client
       ws.on('message', async (message) => {
         try {
           const data = JSON.parse(message.toString());
-          
+
           // Handle authentication
           if (data.type === 'auth') {
             logger.info('Received auth request', {
               connectionId,
               connectionType: data.connectionType,
-              username: data.username
+              username: data.username,
             });
-            
+
             // Handle SSH connection
             if (data.connectionType === 'ssh') {
               await handleSshConnection(ws, connectionId, {
                 username: data.username,
-                password: data.password
+                password: data.password,
               });
             } else {
               logger.error('Unsupported connection type', { type: data.connectionType });
-              ws.send(JSON.stringify({ 
-                error: `Unsupported connection type: ${data.connectionType}`,
-                errorType: 'UNSUPPORTED_CONNECTION_TYPE'
-              }));
+              ws.send(
+                JSON.stringify({
+                  error: `Unsupported connection type: ${data.connectionType}`,
+                  errorType: 'UNSUPPORTED_CONNECTION_TYPE',
+                }),
+              );
             }
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           logger.error('Error processing message', { error: errorMessage });
-          ws.send(JSON.stringify({ 
-            error: 'Invalid message format: ' + errorMessage,
-            errorType: 'INVALID_MESSAGE'
-          }));
+          ws.send(
+            JSON.stringify({
+              error: 'Invalid message format: ' + errorMessage,
+              errorType: 'INVALID_MESSAGE',
+            }),
+          );
         }
       });
-      
+
       // Handle client disconnect
       ws.on('close', () => {
         // Clear any pending timeouts
@@ -124,7 +133,7 @@ export function initializeWebSocketServer(server: Server): WSServer {
       });
     });
   }
-  
+
   return wss;
 }
 
@@ -138,10 +147,10 @@ export function handleUpgrade(
   path: string,
 ): void {
   logger.info('Handling WebSocket upgrade', { path });
-  
+
   // Get or create WebSocketServer
   const websocketServer = wss || initializeWebSocketServer(socket.server);
-  
+
   if (websocketServer) {
     websocketServer.handleUpgrade(request, socket, head, (ws: WebSocket) => {
       websocketServer.emit('connection', ws, request);
@@ -170,18 +179,18 @@ export function closeWebSocketServer(): Promise<void> {
     }
 
     logger.info('Closing WebSocket server');
-    
+
     // Clear ping interval
     if (pingInterval) {
       clearInterval(pingInterval);
       pingInterval = null;
     }
-    
+
     // Close all connections
     wss.clients.forEach((ws) => {
       ws.terminate();
     });
-    
+
     // Close the server
     wss.close(() => {
       logger.info('WebSocket server closed');
@@ -189,4 +198,4 @@ export function closeWebSocketServer(): Promise<void> {
       resolve();
     });
   });
-} 
+}

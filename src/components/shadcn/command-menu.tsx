@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react';
+
 import { useRouter } from 'next/navigation';
 import React, { useCallback } from 'react';
 
@@ -9,7 +10,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/Shadcn/command';
+} from '@/components/shadcn/command';
 import { navigation } from '@/lib/utils/commandMenuUtils';
 
 interface CommandMenuProps {

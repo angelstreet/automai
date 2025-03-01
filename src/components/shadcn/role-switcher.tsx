@@ -6,7 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/Shadcn/select';
+} from '@/components/shadcn/select';
 import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';
 

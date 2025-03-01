@@ -8,12 +8,15 @@ import {
   getSortedRowModel,
   Row,
 } from '@tanstack/react-table';
+
 import { useRouter } from 'next/navigation';
+
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 
-import { Alert, AlertDescription } from '@/components/Shadcn/alert';
-import { Button } from '@/components/Shadcn/button';
+import { Alert, AlertDescription } from '@/components/shadcn/alert';
+
+import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
   DialogContent,
@@ -21,8 +24,9 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from '@/components/Shadcn/dialog';
-import { Input } from '@/components/Shadcn/input';
+} from '@/components/shadcn/dialog';
+
+import { Input } from '@/components/shadcn/input';
 import {
   Table,
   TableBody,
@@ -30,9 +34,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/Shadcn/table';
-import { Textarea } from '@/components/Shadcn/textarea';
-import { useToast } from '@/components/Shadcn/use-toast';
+} from '@/components/shadcn/table';
+
+import { Textarea } from '@/components/shadcn/textarea';
+
+import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
 
@@ -74,7 +80,7 @@ export default function ProjectsPage() {
         const response = await fetch('/api/projects', {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${session?.accessToken}`,
           },
         });
         if (response.ok) {

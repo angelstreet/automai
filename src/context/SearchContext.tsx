@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
-import { CommandMenu } from '@/components/Shadcn/command-menu';
+import { CommandMenu } from '@/components/shadcn/command-menu';
 
 interface SearchContextType {
   open: boolean;

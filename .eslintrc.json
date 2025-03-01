@@ -18,7 +18,7 @@
     "import"
   ],
   "rules": {
-    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/no-unused-vars": "warn",
     "prettier/prettier": "error",
     "@typescript-eslint/no-namespace": "off",
@@ -31,7 +31,7 @@
       { 
         "vars": "all", 
         "varsIgnorePattern": "^_", 
-        "args": "after-used", 
+        "args": "all", 
         "argsIgnorePattern": "^_" 
       }
     ],
@@ -51,7 +51,8 @@
         "newlines-between": "always",
         "alphabetize": { "order": "asc" }
       }
-    ]
+    ],
+    "react-hooks/exhaustive-deps": "warn"
   },
   "ignorePatterns": ["src/components/ui/*", "node_modules", ".next", "out"],
   "settings": {

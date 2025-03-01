@@ -1,11 +1,13 @@
 'use client';
 
 import { ChevronDown } from 'lucide-react';
+
 import Link from 'next/link';
+
 import { usePathname, useParams } from 'next/navigation';
 import * as React from 'react';
 
-import { ScrollArea } from '@/components/Shadcn/scroll-area';
+import { ScrollArea } from '@/components/shadcn/scroll-area';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -15,8 +17,9 @@ import {
   SidebarMenuButton,
   SidebarMenuSub,
   SidebarMenuSubButton,
-} from '@/components/Sidebar';
-import { Sidebar } from '@/components/Sidebar';
+} from '@/components/sidebar';
+
+import { Sidebar } from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';
 
@@ -109,7 +112,9 @@ export function NavGroup({ title, items }: NavGroupProps) {
                       tooltip={item.title}
                       className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
-                      <Link href={`/${params.locale as string}/${params.tenant as string}${item.href}`}>
+                      <Link
+                        href={`/${params.locale as string}/${params.tenant as string}${item.href}`}
+                      >
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
@@ -134,7 +139,9 @@ export function NavGroup({ title, items }: NavGroupProps) {
                             isActive={isSubActive}
                             className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                           >
-                            <Link href={`/${params.locale as string}/${params.tenant as string}${subItem.href}`}>
+                            <Link
+                              href={`/${params.locale as string}/${params.tenant as string}${subItem.href}`}
+                            >
                               <SubIcon className="h-4 w-4" />
                               <span>{subItem.title}</span>
                             </Link>

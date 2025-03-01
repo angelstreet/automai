@@ -42,6 +42,6 @@ export const config = {
     // Match all locale routes
     '/(fr|en)/:path*',
     // Match root path
-    '/'
+    '/',
   ],
 };

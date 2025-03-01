@@ -1,13 +1,17 @@
 'use client';
 
 import Editor from '@monaco-editor/react';
+
 import { useRouter, useParams } from 'next/navigation';
+
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 
-import { Button } from '@/components/Shadcn/button';
-import { Card } from '@/components/Shadcn/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/Shadcn/tabs';
+import { Button } from '@/components/shadcn/button';
+
+import { Card } from '@/components/shadcn/card';
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useUser } from '@/context/UserContext';
 
 type TestCase = {
@@ -51,7 +55,7 @@ export default function UseCaseEditPage() {
         const tcRes = await fetch(`http://localhost:5001/api/usecases/${useCaseId}`, {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${session?.accessToken}`,
           },
         });
         if (!tcRes.ok) {
@@ -107,7 +111,7 @@ export default function UseCaseEditPage() {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -120,7 +124,7 @@ export default function UseCaseEditPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session?.accessToken}`,
         },
       });
       if (!syncRes.ok) {
@@ -141,7 +145,7 @@ export default function UseCaseEditPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify({ useCaseId, script }),
       });

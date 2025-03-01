@@ -1,6 +1,6 @@
 import { CheckCircle2, AlertCircle, Server } from 'lucide-react';
 
-import { Badge } from '@/components/Shadcn/badge';
+import { Badge } from '@/components/shadcn/badge';
 
 interface StatusSummaryProps {
   vmStatusSummary: {

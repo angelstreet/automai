@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';

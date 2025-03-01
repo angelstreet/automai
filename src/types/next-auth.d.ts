@@ -1,6 +1,6 @@
 declare module 'next-auth' {
   interface Session {
-    accessToken?: string;
+    accessToken: string;
     user: {
       id: string;
       name?: string | null;
@@ -8,7 +8,7 @@ declare module 'next-auth' {
       image?: string | null;
       role?: string;
       tenantId?: string | null;
-      tenantName?: string | null;
+      tenantName: string | null;
       plan?: string;
       accessToken?: string;
     };

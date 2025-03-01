@@ -1,4 +1,4 @@
-import { Button } from '@/components/Shadcn/button';
+import { Button } from '@/components/shadcn/button';
 import { UseCase } from '@/types/usecase';
 
 type UseCaseListProps = {

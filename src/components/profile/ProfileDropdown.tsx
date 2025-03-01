@@ -1,8 +1,8 @@
 import { useRouter, useParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/Shadcn/avatar';
-import { Button } from '@/components/Shadcn/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
+import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from '@/components/Shadcn/dropdown-menu';
+} from '@/components/shadcn/dropdown-menu';
 
 export function ProfileDropdown() {
   const { data: session } = useSession();

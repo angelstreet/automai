@@ -6,8 +6,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/Shadcn/alert-dialog';
-import { Button } from '@/components/Shadcn/button';
+} from '@/components/shadcn/alert-dialog';
+import { Button } from '@/components/shadcn/button';
 import { cn } from '@/lib/utils';
 
 interface ConfirmDialogProps {

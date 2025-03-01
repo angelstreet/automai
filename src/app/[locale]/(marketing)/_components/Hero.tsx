@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
 
-import { Button } from '@/components/Shadcn/button';
+import { Button } from '@/components/shadcn/button';
 
 export function Hero() {
   const t = useTranslations('Index');

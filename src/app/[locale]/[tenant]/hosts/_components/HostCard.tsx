@@ -8,31 +8,34 @@ import {
   XCircle,
   ScrollText,
 } from 'lucide-react';
+
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
 import { useTranslations } from 'next-intl';
 
-import { Button } from '@/components/Shadcn/button';
+import { Button } from '@/components/shadcn/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/Shadcn/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/Shadcn/dialog';
+} from '@/components/shadcn/card';
+
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/Shadcn/dropdown-menu';
+} from '@/components/shadcn/dropdown-menu';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/Shadcn/tooltip';
+} from '@/components/shadcn/tooltip';
 import { Host } from '@/types/hosts';
 
 interface HostCardProps {

@@ -1,13 +1,13 @@
 import { PLATFORMS } from '@/app/[locale]/[tenant]/platforms/constants';
-import { Button } from '@/components/Shadcn/button';
-import { Input } from '@/components/Shadcn/input';
+import { Button } from '@/components/shadcn/button';
+import { Input } from '@/components/shadcn/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/Shadcn/select';
+} from '@/components/shadcn/select';
 import { NewUseCase, Project } from '@/types/usecase';
 
 type CreateUseCaseProps = {

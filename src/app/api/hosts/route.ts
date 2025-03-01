@@ -11,7 +11,14 @@ export async function GET() {
     return NextResponse.json(hosts);
   } catch (error) {
     console.error('Error fetching hosts:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch hosts', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch hosts',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -41,6 +48,13 @@ export async function POST(request: Request) {
     return NextResponse.json(host);
   } catch (error) {
     console.error('Error creating host:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create host', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to create host',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    );
   }
 }

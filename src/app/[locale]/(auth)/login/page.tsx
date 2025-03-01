@@ -1,15 +1,20 @@
 'use client';
 
 import { Chrome, Github } from 'lucide-react';
+
 import Link from 'next/link';
+
 import { useRouter, useParams } from 'next/navigation';
+
 import { signIn, useSession } from 'next-auth/react';
+
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import { useEffect } from 'react';
 
-import { Button } from '@/components/Shadcn/button';
-import { Input } from '@/components/Shadcn/input';
+import { Button } from '@/components/shadcn/button';
+
+import { Input } from '@/components/shadcn/input';
 
 export default function LoginPage() {
   const router = useRouter();

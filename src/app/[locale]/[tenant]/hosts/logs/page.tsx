@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
-import { Badge } from '@/components/Shadcn/badge';
-import { Button } from '@/components/Shadcn/button';
-import { Card } from '@/components/Shadcn/card';
-import { ScrollArea } from '@/components/Shadcn/scroll-area';
-import { useToast } from '@/components/Shadcn/use-toast';
+import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/shadcn/button';
+import { Card } from '@/components/shadcn/card';
+import { ScrollArea } from '@/components/shadcn/scroll-area';
+import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from '@/types/hosts';
 
 interface Log {

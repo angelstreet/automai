@@ -10,8 +10,8 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '@/components/Shadcn/command';
-import { ScrollArea } from '@/components/Shadcn/scroll-area';
+} from '@/components/shadcn/command';
+import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { useSearch } from '@/context/SearchContext';
 import { useTheme } from '@/context/ThemeContext';
 import { sidebarData } from '@/data/sidebarData';

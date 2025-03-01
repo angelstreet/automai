@@ -1,7 +1,7 @@
 import { PanelLeft } from 'lucide-react';
 import * as React from 'react';
 
-import { Button } from '@/components/Shadcn/button';
+import { Button } from '@/components/shadcn/button';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { cn } from '@/lib/utils';
 

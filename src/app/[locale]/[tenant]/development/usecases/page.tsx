@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
+
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 
@@ -10,10 +11,13 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/Shadcn/accordion';
-import { Button } from '@/components/Shadcn/button';
-import { Input } from '@/components/Shadcn/input';
-import { useToast } from '@/components/Shadcn/use-toast';
+} from '@/components/shadcn/accordion';
+
+import { Button } from '@/components/shadcn/button';
+
+import { Input } from '@/components/shadcn/input';
+
+import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';
 
@@ -149,7 +153,7 @@ export default function UseCasesPage() {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${session?.accessToken}`,
           },
         });
       } else {
@@ -158,7 +162,7 @@ export default function UseCasesPage() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${session?.accessToken}`,
           },
         });
       }
@@ -203,7 +207,7 @@ export default function UseCasesPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session?.accessToken}`,
         },
         body: JSON.stringify({
           projectId: newUseCase.projectId,
