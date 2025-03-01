@@ -13,7 +13,7 @@ export default function AuthRedirectPage() {
   const { data: session, status } = useSession();
 
   // Debug logging on initial render
-  console.log('Auth redirect page loaded:', {
+  console.log('Auth redirect page loaded (without route group):', {
     params,
     locale,
     sessionStatus: status,
@@ -111,4 +111,4 @@ export default function AuthRedirectPage() {
       </div>
     </div>
   );
-}
+} 

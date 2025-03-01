@@ -107,12 +107,42 @@ export const authOptions = {
     signIn: '/login',
     error: '/error',
     signOut: '/login',
+    newUser: '/en/auth-redirect',
   },
   session: {
     strategy: 'jwt' as const,
     maxAge: 24 * 60 * 60,
   },
   callbacks: {
+    async signIn({ user, account, profile }) {
+      console.log('SignIn callback:', { 
+        user: { id: user.id, email: user.email },
+        account: account ? { provider: account.provider } : null
+      });
+      return true;
+    },
+    async redirect({ url, baseUrl }) {
+      console.log('Redirect callback:', { url, baseUrl });
+      
+      // Check if this is a callback from OAuth provider
+      if (url.includes('/api/auth/callback/')) {
+        console.log('OAuth callback detected, redirecting to auth-redirect');
+        return `${baseUrl}/en/auth-redirect`;
+      }
+      
+      // For other redirects, use the URL as is
+      if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      
+      // For relative URLs, append to baseUrl
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // Default fallback
+      return url;
+    },
     async jwt({ token, user, account }: { token: JWT; user: any; account: any }) {
       if (user) {
         token.id = user.id;
