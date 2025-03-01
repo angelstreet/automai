@@ -76,8 +76,8 @@
     "note": "Ajoutez et gérez vos hôtes, accédez aux terminaux, surveillez les journaux et déployez des conteneurs, le tout en un seul endroit"
   },
   "Virtualization": {
-    "machines": "Machines",
-    "addMachine": "Ajouter une machine",
+    "machines": "Hôtes",
+    "addMachine": "Ajouter un hôte",
     "testConnection": "Tester la connexion",
     "connected": "Connecté",
     "failed": "Échec",
@@ -91,14 +91,50 @@
     "connect": "Connecter",
     "disconnect": "Déconnecter",
     "terminal": "Terminal",
-    "analytics": "Analytiques",
+    "analytics": "Analyses",
     "logs": "Journaux",
     "settings": "Paramètres",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer cette machine ?",
     "deleteWarning": "Cette action ne peut pas être annulée.",
     "noMachines": "Aucune machine trouvée. Ajoutez une nouvelle machine pour commencer.",
     "refreshMachines": "Actualiser les machines",
-    "manualTestingMessage": "Les connexions ne sont pas testées automatiquement. Cliquez sur le bouton de test pour vérifier l'état de la connexion."
+    "manualTestingMessage": "Les connexions ne sont pas testées automatiquement. Cliquez sur le bouton de test pour vérifier l'état de la connexion.",
+    "connectionError": "Erreur de connexion",
+    "errorDetails": "Détails de l'erreur",
+    "noErrorDetails": "Aucun détail d'erreur disponible",
+    "metrics": "Métriques",
+    "delete": "Supprimer",
+    "form": {
+      "name": "Nom",
+      "namePlaceholder": "Nom de l'hôte (lettres minuscules, chiffres et tirets uniquement)",
+      "nameHint": "Seuls les lettres minuscules, les chiffres et les tirets sont autorisés",
+      "connection": "Connexion",
+      "selectType": "Sélectionner le type",
+      "ipAddress": "Adresse IP",
+      "port": "Port",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe"
+    },
+    "errors": {
+      "validation": "Erreur de validation",
+      "nameRequired": "Veuillez fournir un nom pour la connexion",
+      "ipRequired": "Veuillez fournir une adresse IP",
+      "invalidPort": "Le port doit être un nombre entre 1 et 65535",
+      "sshCredentials": "Le nom d'utilisateur et le mot de passe sont requis pour les connexions SSH",
+      "connectionFailed": "Échec de la connexion",
+      "createFailed": "Échec de la création de la connexion",
+      "unknownError": "Une erreur inconnue s'est produite",
+      "timeout": "La connexion a expiré. Veuillez vérifier si l'adresse IP et le port sont corrects et que les pare-feu autorisent la connexion.",
+      "refused": "Connexion refusée. Veuillez vérifier si le service est en cours d'exécution sur l'hôte cible et si le port est correct.",
+      "authentication": "Échec de l'authentification. Veuillez vérifier votre nom d'utilisateur et votre mot de passe.",
+      "hostConnection": "Impossible de se connecter à l'hôte distant. Veuillez vérifier vos détails de connexion.",
+      "testFailed": "Le test de connexion a échoué",
+      "fingerprintFailed": "Échec de la vérification de l'empreinte digitale"
+    },
+    "success": {
+      "created": "Connexion créée",
+      "connected": "Connecté avec succès à {name}"
+    }
   },
   "Dashboard": {
     "title": "Tableau de bord",
