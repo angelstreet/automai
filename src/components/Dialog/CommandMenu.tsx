@@ -13,9 +13,9 @@ import {
 } from '@/components/Shadcn/command';
 import { ScrollArea } from '@/components/Shadcn/scroll-area';
 
-import { useSearch } from '@/context/search-context';
-import { useTheme } from '@/context/theme-context';
-import { sidebarData } from '@/data/sidebar-data';
+import { useSearch } from '@/context/SearchContext';
+import { useTheme } from '@/context/ThemeContext';
+import { sidebarData } from '@/data/sidebarData';
 
 export function CommandMenu() {
   const navigate = useNavigate();

@@ -5,8 +5,8 @@ import { useSession } from 'next-auth/react';
 import { NavGroup } from '@/components/Layout/NavGroup';
 import { NavUser } from '@/components/Layout/NavUser';
 import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
+import { Sidebar } from '@/components/Sidebar';
 import {
-  Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,

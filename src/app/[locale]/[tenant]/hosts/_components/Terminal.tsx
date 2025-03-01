@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Terminal as XTerm } from 'xterm';
-import { AttachAddon as XtermAttachAddon } from 'xterm-addon-attach';
-import { FitAddon as XtermFitAddon } from 'xterm-addon-fit';
-import { SearchAddon as XtermSearchAddon } from 'xterm-addon-search';
-import { WebLinksAddon as XtermWebLinksAddon } from 'xterm-addon-web-links';
+import { Terminal as XTerminal } from 'xterm';
+import { AttachAddon } from 'xterm-addon-attach/lib';
+import { FitAddon } from 'xterm-addon-fit/lib';
+import { SearchAddon } from 'xterm-addon-search/lib';
+import { WebLinksAddon } from 'xterm-addon-web-links/lib';
 
 import 'xterm/css/xterm.css';
 import { useToast } from '@/components/Shadcn/use-toast';
@@ -26,9 +26,9 @@ interface TerminalProps {
 
 export function Terminal({ connection }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<XTerm | null>(null);
+  const xtermRef = useRef<XTerminal | null>(null);
   const connectionAttemptedRef = useRef<boolean>(false);
-  const fitAddonRef = useRef<XtermFitAddon | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
   const [isConnecting, setIsConnecting] = useState<boolean>(true);
   const { toast } = useToast();
@@ -48,7 +48,7 @@ export function Terminal({ connection }: TerminalProps) {
       setIsConnecting(true);
 
       // Initialize xterm.js
-      const term = new XTerm({
+      const term = new XTerminal({
         cursorBlink: true,
         fontSize: 14,
         fontFamily: 'Menlo, Monaco, "Courier New", monospace',
@@ -61,9 +61,9 @@ export function Terminal({ connection }: TerminalProps) {
       });
 
       // Add addons
-      const fitAddon = new XtermFitAddon();
-      const searchAddon = new XtermSearchAddon();
-      const webLinksAddon = new XtermWebLinksAddon();
+      const fitAddon = new FitAddon();
+      const searchAddon = new SearchAddon();
+      const webLinksAddon = new WebLinksAddon();
 
       term.loadAddon(fitAddon);
       term.loadAddon(searchAddon);
@@ -178,7 +178,7 @@ export function Terminal({ connection }: TerminalProps) {
         socket.send(JSON.stringify(authMessage));
 
         // Attach WebSocket to terminal - this will handle the SSH connection
-        const attachAddon = new XtermAttachAddon(socket);
+        const attachAddon = new AttachAddon(socket);
         term.loadAddon(attachAddon);
       };
 
