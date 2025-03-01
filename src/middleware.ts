@@ -43,6 +43,11 @@ export default async function middleware(request: NextRequest) {
       }
       return NextResponse.redirect(new URL('/login', request.url));
     }
+    
+    // Skip i18n middleware for API routes
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      return NextResponse.next();
+    }
   }
 
   // 4. i18n handling

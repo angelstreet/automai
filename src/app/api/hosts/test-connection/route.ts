@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in POST /api/hosts/test-connection:', error);
     return NextResponse.json(
-      { error: 'Failed to test connection' },
+      { success: false, message: error instanceof Error ? error.message : 'Failed to test connection' },
       { status: 500 }
     );
   }
