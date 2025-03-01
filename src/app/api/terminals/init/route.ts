@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getWebSocketServer } from '@/lib/services/websocket';
+import { getWebSocketServer, initializeWebSocketServer } from '@/lib/services/websocket';
 import { logger } from '@/lib/logger';
+import { getTerminalConnection } from '@/lib/services/terminal';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,11 +16,30 @@ export async function POST(request: NextRequest) {
 
     logger.info('Initializing WebSocket server for connection', { connectionId });
 
+    // Verify the connection exists
+    try {
+      if (connectionId) {
+        const connection = await getTerminalConnection(connectionId);
+        logger.info('Connection verified', { 
+          connectionId, 
+          host: connection.ip,
+          type: connection.type 
+        });
+      }
+    } catch (error) {
+      // We'll continue even if connection verification fails
+      // The actual SSH connection will be handled when the WebSocket connects
+      logger.warn('Connection verification failed, but continuing', { 
+        connectionId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
     // Initialize WebSocket server (this is a no-op if already initialized due to singleton pattern)
-    const wss = getWebSocketServer();
+    const wss = initializeWebSocketServer();
     
     if (!wss) {
-      logger.error('Failed to get WebSocket server instance');
+      logger.error('Failed to initialize WebSocket server');
       return NextResponse.json(
         { success: false, message: 'Failed to initialize WebSocket server' },
         { status: 500 },
