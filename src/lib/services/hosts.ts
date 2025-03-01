@@ -191,9 +191,7 @@ export async function testHostConnection(data: {
           where: { id: data.hostId },
           data: {
             status: result.success ? 'connected' : 'failed',
-            // Only update fields that exist in Prisma schema
-            ...(result.success ? { errorMessage: null } : {}),
-            ...(!result.success && result.message ? { errorMessage: result.message } : {})
+            // Remove errorMessage field as it doesn't exist in the schema
           },
         });
         logger.info(`Updated host status for ${data.hostId} to ${result.success ? 'connected' : 'failed'}`);
