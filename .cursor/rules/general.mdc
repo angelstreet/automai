@@ -1,9 +1,32 @@
 ---
 description: General rules for the project
-globs: 
+globs: "*"
 alwaysApply: true
 ---
+
 # General Rules
+
+## ⚠️ CRITICAL LOCATION RULE
+
+> **IMPORTANT**: All cursor rules MUST be in `.cursor/rules` folder. 
+> - NEVER create or modify rules in the root folder
+> - ALWAYS edit rules in `.cursor/rules` directory
+> - ALWAYS verify you're editing the correct file path before making changes
+
+Available rules in `.cursor/rules`:
+- **general.mdc** (this file): Essential project context
+- **code-organization.mdc**: File organization guidelines
+- **nextjs-naming-guidelines.mdc**: Naming rules
+- **nextjs.mdc**: Next.js implementation guidelines
+- **yolo-mode.mdc**: Quick reference for rapid development
+- **prisma.mdc**: Database access patterns
+- **websocket.mdc**: WebSocket implementation details
+- **ui.mdc**: Component design patterns
+- **refactoring.mdc**: Code refactoring guidelines
+- **frontend.mdc**: Frontend development best practices
+- **backend.mdc**: API implementation patterns
+- **config.mdc**: Configuration and environment setup
+- **nextjs-naming.mdc**: Next.js naming conventions
 
 ## 🚀 Essential Project Information
 
