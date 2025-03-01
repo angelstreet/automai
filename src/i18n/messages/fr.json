@@ -105,5 +105,30 @@
     "overview": "Vue d'ensemble",
     "description": "Bienvenue sur votre tableau de bord",
     "welcome": "Bon retour !"
+  },
+  "Profile": {
+    "title": "Profil",
+    "settings": "Paramètres du profil",
+    "edit": "Modifier le profil",
+    "save": "Enregistrer les modifications",
+    "cancel": "Annuler",
+    "personalInfo": "Informations personnelles",
+    "email": "Email",
+    "name": "Nom",
+    "avatar": "Avatar",
+    "changeAvatar": "Changer l'avatar",
+    "removeAvatar": "Supprimer l'avatar",
+    "accountSettings": "Paramètres du compte",
+    "manageSettings": "Gérer les paramètres",
+    "upgradePlan": "Mettre à niveau",
+    "workspaceInfo": "Informations de l'espace de travail",
+    "manageTeam": "Gérer l'équipe",
+    "sessionExpired": "Session expirée",
+    "pleaseLogin": "Veuillez vous reconnecter pour continuer",
+    "logIn": "Se connecter",
+    "updating": "Mise à jour...",
+    "update": "Mettre à jour",
+    "enterName": "Entrez votre nom",
+    "plan": "Plan"
   }
 }

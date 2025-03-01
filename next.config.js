@@ -10,6 +10,16 @@ const nextConfig = {
   reactStrictMode: true,
   // Add any other Next.js config options here
 
+  // Configure allowed image domains
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+    ],
+  },
+
   // Ignore optional dependencies that cause warnings
   webpack: (config) => {
     config.externals = config.externals || [];

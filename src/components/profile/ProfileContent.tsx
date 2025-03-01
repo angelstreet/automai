@@ -59,9 +59,9 @@ export function ProfileContent() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-4">Session Expired</h2>
-          <p className="text-muted-foreground mb-4">Please log in again to continue</p>
-          <Button onClick={() => (window.location.href = `/${locale}/login`)}>Log In</Button>
+          <h2 className="text-xl font-semibold mb-4">{t('sessionExpired')}</h2>
+          <p className="text-muted-foreground mb-4">{t('pleaseLogin')}</p>
+          <Button onClick={() => (window.location.href = `/${locale}/login`)}>{t('logIn')}</Button>
         </div>
       </div>
     );
@@ -84,25 +84,25 @@ export function ProfileContent() {
           <h2 className="text-xl font-semibold mb-4">{t('personalInfo')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Name</label>
+              <label className="text-sm font-medium">{t('name')}</label>
               <div className="flex gap-2 mt-1">
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter your name"
+                  placeholder={t('enterName')}
                   className="max-w-md"
                 />
                 <Button onClick={handleUpdateName} disabled={isUpdating || name === user.name}>
-                  {isUpdating ? 'Updating...' : 'Update'}
+                  {isUpdating ? t('updating') : t('update')}
                 </Button>
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium">Email</label>
+              <label className="text-sm font-medium">{t('email')}</label>
               <p className="text-muted-foreground">{user.email}</p>
             </div>
             <div>
-              <label className="text-sm font-medium">Plan</label>
+              <label className="text-sm font-medium">{t('plan')}</label>
               <p className="text-muted-foreground">{user.plan}</p>
             </div>
           </div>
