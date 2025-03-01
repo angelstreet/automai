@@ -1,7 +1,8 @@
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { useState, useRef } from 'react';
-
+import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { hostsApi } from '@/lib/api/hosts';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 
@@ -42,6 +43,8 @@ interface ConnectionFormProps {
 
 export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: ConnectionFormProps) {
   const t = useTranslations('Common');
+  const params = useParams();
+  const locale = params.locale as string;
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
@@ -83,7 +86,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
     }
   };
 
-  // Update the testConnection function to handle fingerprint verification
+  // Update the testConnection function to use the API service
   const testConnection = async () => {
     // Throttle requests
     const now = Date.now();
@@ -100,36 +103,25 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
     setFingerprintVerified(false);
 
     try {
-      const response = await fetch('/api/hosts/test-connection', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: formData.type,
-          ip: formData.ip,
-          port: formData.port ? parseInt(formData.port) : undefined,
-          username: formData.username,
-          password: formData.password,
-          hostId: formData.id,
-        }),
+      const data = await hostsApi.testConnection(locale, {
+        type: formData.type,
+        ip: formData.ip,
+        port: formData.port ? parseInt(formData.port) : undefined,
+        username: formData.username,
+        password: formData.password,
+        hostId: formData.id,
       });
 
-      const data = await response.json();
-
-      if (response.status === 428) {
-        // Fingerprint verification required
+      if (data.requireVerification) {
         setRequireVerification(true);
         setFingerprint(data.fingerprint);
         setTestError(data.message);
       } else if (data.success) {
         setTestSuccess(true);
-        // If the response includes fingerprint information
         if (data.fingerprint) {
           setFingerprint(data.fingerprint);
           setFingerprintVerified(data.fingerprintVerified || false);
         }
-        // Notify parent component of successful test
         if (onTestSuccess) {
           onTestSuccess();
         }
@@ -137,16 +129,15 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         setTestError(data.message);
       }
     } catch (error) {
-      setTestError('Failed to test connection');
+      setTestError(error instanceof Error ? error.message : 'Failed to test connection');
       console.error('Error testing connection:', error);
     } finally {
       setTesting(false);
     }
   };
 
-  // Add a function to verify fingerprint
+  // Update verifyFingerprint to use the API service
   const verifyFingerprint = async () => {
-    // Throttle requests
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
       return;
@@ -157,26 +148,16 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
     setTestError(null);
 
     try {
-      const response = await fetch('/api/hosts/verify-fingerprint', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fingerprint,
-          host: formData.ip,
-          port: formData.port ? parseInt(formData.port) : undefined,
-        }),
+      const data = await hostsApi.verifyFingerprint(locale, {
+        fingerprint: fingerprint || '',
+        host: formData.ip,
+        port: formData.port ? parseInt(formData.port) : undefined,
       });
-
-      const data = await response.json();
 
       if (data.success) {
         setTestSuccess(true);
         setFingerprintVerified(true);
         setRequireVerification(false);
-
-        // Notify parent component of successful test
         if (onTestSuccess) {
           onTestSuccess();
         }
@@ -184,7 +165,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         setTestError(data.message);
       }
     } catch (error) {
-      setTestError('Failed to verify fingerprint');
+      setTestError(error instanceof Error ? error.message : 'Failed to verify fingerprint');
       console.error('Error verifying fingerprint:', error);
     } finally {
       setTesting(false);
