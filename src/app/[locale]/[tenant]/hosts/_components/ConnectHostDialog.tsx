@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import { useState, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/Shadcn/button';
 import {
@@ -23,6 +24,7 @@ interface ConnectHostDialogProps {
 
 export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHostDialogProps) {
   const { toast } = useToast();
+  const t = useTranslations('Virtualization');
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -59,8 +61,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     if (!formData.name.trim()) {
       toast({
         variant: 'destructive',
-        title: 'Validation Error',
-        description: 'Please provide a name for the connection',
+        title: t('errors.validation'),
+        description: t('errors.nameRequired'),
       });
       return false;
     }
@@ -68,8 +70,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     if (!formData.ip.trim()) {
       toast({
         variant: 'destructive',
-        title: 'Validation Error',
-        description: 'Please provide an IP address',
+        title: t('errors.validation'),
+        description: t('errors.ipRequired'),
       });
       return false;
     }
@@ -78,8 +80,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     if (isNaN(port) || port < 1 || port > 65535) {
       toast({
         variant: 'destructive',
-        title: 'Validation Error',
-        description: 'Port must be a number between 1 and 65535',
+        title: t('errors.validation'),
+        description: t('errors.invalidPort'),
       });
       return false;
     }
@@ -87,8 +89,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
       toast({
         variant: 'destructive',
-        title: 'Validation Error',
-        description: 'Username and password are required for SSH connections',
+        title: t('errors.validation'),
+        description: t('errors.sshCredentials'),
       });
       return false;
     }
@@ -128,14 +130,14 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create connection');
+        throw new Error(errorData.message || t('errors.createFailed'));
       }
 
       const data = await response.json();
 
       toast({
-        title: 'Connection created',
-        description: `Successfully connected to ${formData.name}`,
+        title: t('success.created'),
+        description: t('success.connected', { name: formData.name }),
         duration: 5000,
       });
 
@@ -149,8 +151,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       console.error('Error creating connection:', error);
       toast({
         variant: 'destructive',
-        title: 'Connection failed',
-        description: error instanceof Error ? error.message : 'Failed to create connection',
+        title: t('errors.connectionFailed'),
+        description: error instanceof Error ? error.message : t('errors.createFailed'),
         duration: 5000,
       });
     } finally {
@@ -159,27 +161,27 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   };
 
   const getDetailedErrorMessage = (errorData: any): string => {
-    if (!errorData) return 'Unknown error occurred';
+    if (!errorData) return t('errors.unknownError');
 
     if (errorData.message) {
       const message = errorData.message;
 
       if (message.includes('timeout')) {
-        return `Connection timed out. Please check if the IP address and port are correct and that any firewalls allow the connection.`;
+        return t('errors.timeout');
       }
 
       if (message.includes('refused')) {
-        return `Connection refused. Please check if the service is running on the target host and the port is correct.`;
+        return t('errors.refused');
       }
 
       if (message.includes('authentication') || message.includes('password')) {
-        return `Authentication failed. Please check your username and password.`;
+        return t('errors.authentication');
       }
 
       return message;
     }
 
-    return 'Failed to connect to the remote host. Please check your connection details.';
+    return t('errors.hostConnection');
   };
 
   const testConnection = async (): Promise<boolean> => {
@@ -217,7 +219,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       if (!response.ok) {
         setTestStatus('error');
         const errorMessage = getDetailedErrorMessage(data);
-        setTestError(errorMessage || 'Connection test failed');
+        setTestError(errorMessage || t('errors.testFailed'));
         return false;
       }
 
@@ -226,7 +228,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     } catch (error) {
       console.error('Error testing connection:', error);
       setTestStatus('error');
-      setTestError(error instanceof Error ? error.message : 'Connection test failed');
+      setTestError(error instanceof Error ? error.message : t('errors.testFailed'));
       return false;
     } finally {
       setIsTesting(false);
