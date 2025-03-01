@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Terminal as XTerm } from 'xterm';
-import type { AttachAddon } from 'xterm-addon-attach';
-import type { FitAddon } from 'xterm-addon-fit';
-import type { SearchAddon } from 'xterm-addon-search';
-import type { WebLinksAddon } from 'xterm-addon-web-links';
+import { Terminal as XTerm } from '@xterm/xterm';
+import { AttachAddon } from '@xterm/addon-attach';
+import { FitAddon } from '@xterm/addon-fit';
+import { SearchAddon } from '@xterm/addon-search';
+import { WebLinksAddon } from '@xterm/addon-web-links';
 
-import 'xterm/css/xterm.css';
+import '@xterm/xterm/css/xterm.css';
 import { useToast } from '@/components/Shadcn/use-toast';
 
 interface Connection {
