@@ -24,7 +24,7 @@ interface ConnectHostDialogProps {
 
 export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHostDialogProps) {
   const { toast } = useToast();
-  const t = useTranslations('Virtualization');
+  const t = useTranslations('Common');
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -133,7 +133,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         throw new Error(errorData.message || t('errors.createFailed'));
       }
 
-      const data = await response.json();
+      const host = await response.json();
 
       toast({
         title: t('success.created'),
@@ -145,7 +145,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       onOpenChange(false);
 
       if (onSuccess) {
-        onSuccess(data.data);
+        onSuccess(host);
       }
     } catch (error) {
       console.error('Error creating connection:', error);

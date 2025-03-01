@@ -45,7 +45,7 @@ interface HostCardProps {
 export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
   const [showError, setShowError] = useState(false);
-  const t = useTranslations('Virtualization');
+  const t = useTranslations('Common');
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full';

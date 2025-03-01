@@ -4,21 +4,21 @@ import { getHosts, createHost } from '@/lib/services';
 
 export async function GET() {
   try {
+    console.log('Fetching hosts from database...');
     const hosts = await getHosts();
+    console.log('Hosts fetched successfully:', hosts);
 
-    return NextResponse.json({
-      success: true,
-      data: hosts,
-    });
+    return NextResponse.json(hosts);
   } catch (error) {
     console.error('Error fetching hosts:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch hosts' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch hosts', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const data = await request.json();
+    console.log('Creating host with data:', data);
 
     // Validate required fields
     if (!data.name || !data.type || !data.ip) {
@@ -36,13 +36,11 @@ export async function POST(request: Request) {
     }
 
     const host = await createHost(data);
+    console.log('Host created successfully:', host);
 
-    return NextResponse.json({
-      success: true,
-      data: host,
-    });
+    return NextResponse.json(host);
   } catch (error) {
     console.error('Error creating host:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create host' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to create host', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 }
