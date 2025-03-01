@@ -9,7 +9,9 @@ import { hostsApi } from '@/lib/api/hosts';
 import { toast } from '@/components/shadcn/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Button } from '@/components/shadcn/button';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw, Grid, List } from 'lucide-react';
+import { HostTable } from './HostTable';
+import { HostGrid } from './HostGrid';
 
 export default function HostList() {
   const { locale = 'en', tenant = 'default' } = useParams();
@@ -17,6 +19,9 @@ export default function HostList() {
   const [loading, setLoading] = useState(true);
   const [testingHosts, setTestingHosts] = useState<Record<string, boolean>>({});
   const [showAddHost, setShowAddHost] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -145,10 +150,7 @@ export default function HostList() {
       await new Promise(resolve => setTimeout(resolve, 300));
     }
     
-    // Show a single toast at the end
-    if (testedCount > 0) {
-      toast.success(`Tested connections for ${testedCount} hosts`);
-    }
+    // No toast needed - visual feedback is enough
   };
 
   useEffect(() => {
@@ -205,6 +207,7 @@ export default function HostList() {
         user: formData.username, // API expects user, but form has username
         password: formData.password,
         status: 'connected', // Set status to connected since we've already tested it
+        lastConnected: new Date().toISOString(), // Set lastConnected to current date
       });
       
       // Close dialog
@@ -224,18 +227,50 @@ export default function HostList() {
         password: '',
       });
       
-      toast.success("Host created successfully");
+      // No toast needed - visual feedback is enough
     } catch (error) {
       console.error('Error saving host:', error);
       toast.error("Failed to create host");
     }
   };
 
+  const handleSelectHost = (id: string) => {
+    setSelectedHosts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Hosts</h1>
-        <div className="space-x-2">
+        <div className="flex items-center space-x-2">
+          <div className="border rounded-md p-1 mr-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'ghost'}
+              size="sm"
+              className="px-2"
+              onClick={() => setViewMode('grid')}
+              aria-label="Grid view"
+            >
+              <Grid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="sm"
+              className="px-2"
+              onClick={() => setViewMode('table')}
+              aria-label="Table view"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
           <Button onClick={() => testAllHostsSequentially()} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
@@ -256,17 +291,21 @@ export default function HostList() {
             Add your first host
           </Button>
         </div>
+      ) : viewMode === 'grid' ? (
+        <HostGrid
+          hosts={hosts}
+          selectedHosts={selectedHosts}
+          selectMode={selectMode}
+          onSelect={handleSelectHost}
+          onDelete={handleDelete}
+          onTestConnection={handleTestConnection}
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" key={hosts.map(h => h.id).join(',')}>
-          {hosts.map((host) => (
-            <HostCard
-              key={host.id}
-              host={host}
-              onDelete={handleDelete}
-              onTestConnection={handleTestConnection}
-            />
-          ))}
-        </div>
+        <HostTable 
+          hosts={hosts} 
+          onDelete={handleDelete} 
+          onTestConnection={handleTestConnection} 
+        />
       )}
       
       <Dialog open={showAddHost} onOpenChange={setShowAddHost}>

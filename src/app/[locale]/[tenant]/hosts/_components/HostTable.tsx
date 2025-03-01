@@ -1,16 +1,10 @@
-import { Terminal, MoreHorizontal } from 'lucide-react';
+'use client';
+
+import { Terminal, RefreshCw, XCircle, ScrollText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-
-import { Badge } from '@/components/shadcn/badge';
+import { Host } from '@/types/hosts';
 import { Button } from '@/components/shadcn/button';
-import { Checkbox } from '@/components/shadcn/checkbox';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -19,145 +13,110 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { cn } from '@/lib/utils';
-import { Host } from '@/types/hosts';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu';
+import { MoreHorizontal } from 'lucide-react';
 
 interface HostTableProps {
   hosts: Host[];
-  selectedHosts: Set<string>;
-  selectMode: boolean;
-  onSelect: (id: string) => void;
-  onSelectAll: () => void;
   onDelete?: (id: string) => void;
   onTestConnection?: (host: Host) => void;
 }
 
-export function HostTable({
-  hosts,
-  selectedHosts,
-  selectMode,
-  onSelect,
-  onSelectAll,
-  onDelete,
-  onTestConnection,
-}: HostTableProps) {
+export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps) {
   const router = useRouter();
-  const t = useTranslations('Hosts');
+  const t = useTranslations('Common');
 
-  // Get status badge based on host.status
-  const getStatusBadge = (status: string) => {
+  const getStatusDot = (status: string) => {
+    const baseClasses = 'h-3 w-3 rounded-full';
+
     switch (status) {
       case 'connected':
-        return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            {t('connected')}
-          </Badge>
-        );
+        return <div className={`${baseClasses} bg-green-500`} title={t('connected')} />;
       case 'failed':
-        return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-            {t('failed')}
-          </Badge>
-        );
+        return <div className={`${baseClasses} bg-red-500`} title={t('failed')} />;
       case 'pending':
-        return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-            {t('pending')}
-          </Badge>
-        );
+        return <div className={`${baseClasses} bg-yellow-500`} title={t('pending')} />;
       default:
-        return <Badge variant="outline">{t('unknown')}</Badge>;
+        return <div className={`${baseClasses} bg-gray-400`} title={t('unknown')} />;
     }
   };
 
-  // Format date for last connected
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleString();
+  const handleTerminalClick = (host: Host) => {
+    // Get the current URL path segments to extract locale and tenant
+    const pathSegments = window.location.pathname.split('/');
+    const locale = pathSegments[1] || 'en';
+    const tenant = pathSegments[2] || 'default';
+
+    // Build the correct path with locale and tenant
+    const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
+    console.log(`Redirecting to terminal: ${terminalPath}`);
+    router.push(terminalPath);
   };
 
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
-          <TableRow>
-            {selectMode && (
-              <TableHead className="w-12">
-                <Checkbox
-                  checked={selectedHosts.size === hosts.length}
-                  onCheckedChange={onSelectAll}
-                  aria-label="Select all"
-                />
-              </TableHead>
-            )}
-            <TableHead>Name</TableHead>
-            <TableHead>IP Address</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Last Connected</TableHead>
-            <TableHead>Terminal</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="h-10">
+            <TableHead className="w-[40px] py-2">Status</TableHead>
+            <TableHead className="py-2">Name</TableHead>
+            <TableHead className="py-2">Address</TableHead>
+            <TableHead className="py-2">Last Connected</TableHead>
+            <TableHead className="w-[120px] py-2">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {hosts.map((host) => (
-            <TableRow
-              key={host.id}
-              className={cn({
-                'bg-muted/50': selectedHosts.has(host.id),
-              })}
-            >
-              {selectMode && (
-                <TableCell>
-                  <Checkbox
-                    checked={selectedHosts.has(host.id)}
-                    onCheckedChange={() => onSelect(host.id)}
-                    aria-label="Select row"
-                  />
-                </TableCell>
-              )}
-              <TableCell className="font-medium">{host.name}</TableCell>
-              <TableCell>
+            <TableRow key={host.id} className="h-10">
+              <TableCell className="py-2">
+                <div className="flex justify-center">
+                  {getStatusDot(host.status)}
+                </div>
+              </TableCell>
+              <TableCell className="font-medium py-2">{host.name}</TableCell>
+              <TableCell className="py-2">
                 {host.ip}
                 {host.port ? `:${host.port}` : ''}
               </TableCell>
-              <TableCell>{getStatusBadge(host.status)}</TableCell>
-              <TableCell>
-                {formatDate(host.lastConnected ? new Date(host.lastConnected) : undefined)}
+              <TableCell className="py-2">
+                {host.lastConnected 
+                  ? new Date(host.lastConnected).toLocaleString() 
+                  : (host.status === 'connected' ? new Date().toLocaleString() : t('never'))}
               </TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => router.push(`/terminals/${host.name}`)}
-                  disabled={host.status !== 'connected'}
-                >
-                  <Terminal className="h-4 w-4" />
-                </Button>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end space-x-2">
+              <TableCell className="py-2">
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => handleTerminalClick(host)}
+                    disabled={host.status !== 'connected'}
+                  >
+                    <Terminal className="h-3.5 w-3.5" />
+                  </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                        <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onTestConnection?.(host)}>
-                        Refresh
+                    <DropdownMenuContent align="end" className="w-[140px]">
+                      <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)} className="py-1.5">
+                        <ScrollText className="mr-2 h-3.5 w-3.5" />
+                        <span className="text-sm">{t('logs')}</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push(`/metrics/${host.name}`)}>
-                        Metrics
+                      <DropdownMenuItem onClick={() => onTestConnection?.(host)} className="py-1.5">
+                        <RefreshCw className="mr-2 h-3.5 w-3.5" />
+                        <span className="text-sm">{t('refresh')}</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)}>
-                        Logs
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onDelete?.(host.id)}
-                        className="text-destructive"
-                      >
-                        Delete
+                      <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive py-1.5">
+                        <XCircle className="mr-2 h-3.5 w-3.5" />
+                        <span className="text-sm">{t('delete')}</span>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
