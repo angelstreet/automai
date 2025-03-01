@@ -70,6 +70,28 @@ alwaysApply: true
 - **Prisma Client**: `prisma/index.ts`
 - **Environment Config**: `src/lib/env.ts`
 
+### Core Files and Their Purposes
+1. **server.ts** - Custom server entry point that initializes the Next.js application with WebSocket support and handles port management
+2. **src/lib/services/http.ts** - Core HTTP service implementation that manages server creation, port handling, and integration with Next.js
+3. **src/lib/services/websocket.ts** - WebSocket service that handles real-time communication for terminal connections
+4. **src/lib/services/ssh.ts** - SSH service for establishing and managing secure shell connections to remote hosts
+5. **src/lib/services/terminal.ts** - Terminal service that manages terminal sessions and connects WebSockets with SSH
+6. **prisma/schema.prisma** - Database schema definition with models for Hosts, Connections, Users, Tenants, and other core entities
+7. **prisma/index.ts** - Prisma client singleton for database access throughout the application
+8. **src/lib/env.ts** - Environment configuration with validation using Zod for type safety
+9. **src/auth.ts** - Authentication configuration using NextAuth.js for user authentication
+10. **src/lib/logger.ts** - Logging service for consistent application logging
+11. **src/middleware.ts** - Next.js middleware for handling internationalization, authentication, and tenant routing
+12. **next.config.js** - Next.js configuration including internationalization, redirects, and other project settings
+13. **src/app/[locale]/layout.tsx** - Root layout component for the internationalized application
+14. **src/lib/services/hosts.ts** - Service for managing host connections and configurations
+15. **src/app/api/hosts/route.ts** - API route handler for host management operations
+16. **src/app/api/terminals/route.ts** - API route handler for terminal operations
+17. **src/lib/websocketServer.ts** - WebSocket server implementation for terminal connections
+18. **src/components/Terminal/Terminal.tsx** - Terminal component for the frontend interface
+19. **src/lib/prisma.ts** - Prisma client configuration and initialization
+20. **tailwind.config.js** - Tailwind CSS configuration for styling the application
+
 ### Component Organization
 - **Shared Components**:`src/components/[feature]/`
 - **Shadcn UI Components**: `src/components/Shadcn/`
@@ -85,6 +107,11 @@ alwaysApply: true
 - After modifying middleware.ts or next.config.js
 - When Fast Refresh fails with an error
 - After modifying server.ts or any files in src/lib/services/
+
+### Port Management
+- The server automatically handles port incrementing when the default port (3000) is already in use
+- If port 3000 is taken, the server will try port 3001, then 3002, and so on
+- The actual port being used will be displayed in the console output
 
 ## Debugging & Testing
 
