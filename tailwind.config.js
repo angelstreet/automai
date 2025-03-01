@@ -6,6 +6,16 @@ module.exports = {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    'text-red-500',
+    'bg-blue-500',
+    'hover:bg-blue-700',
+  ],
+  mode: 'jit',
+  future: {
+    hoverOnlyWhenSupported: true,
+    respectDefaultRingColorOpacity: true,
+  },
   theme: {
     container: {
       center: true,
