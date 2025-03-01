@@ -3,7 +3,7 @@
 import { RefreshCcw, Plus, Server } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   AlertDialog,
@@ -49,6 +49,107 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hostToDelete, setHostToDelete] = useState<string | null>(null);
   const [viewMode] = useState<'grid' | 'table'>('grid');
+  const [hosts, setHosts] = useState<Host[]>(initialHosts);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isMounted = useRef(true);
+
+  // Background connection testing
+  useEffect(() => {
+    // Set up the ref to track component mount state
+    isMounted.current = true;
+    
+    // Function to test connection for a single host
+    const testHostConnection = async (host: Host) => {
+      if (!isMounted.current) return;
+      
+      try {
+        const data = await hostsApi.testConnection(locale, {
+          type: host.type,
+          ip: host.ip,
+          port: host.port || undefined,
+          username: host.user || undefined,
+          password: undefined, // We don't have access to the password in the client
+          hostId: host.id,
+        });
+        
+        // Only update if component is still mounted
+        if (isMounted.current) {
+          // Update the host status based on the connection test
+          setHosts(prevHosts => 
+            prevHosts.map(h => 
+              h.id === host.id 
+                ? { ...h, status: data.success ? 'connected' : 'failed' } 
+                : h
+            )
+          );
+          
+          // Update the cache in React Query
+          queryClient.setQueryData(['hosts'], (oldData: Host[] | undefined) => {
+            if (!oldData) return oldData;
+            return oldData.map(h => 
+              h.id === host.id 
+                ? { ...h, status: data.success ? 'connected' : 'failed' } 
+                : h
+            );
+          });
+        }
+      } catch (error) {
+        console.error(`Background connection test failed for host ${host.name}:`, error);
+        // We don't show toasts for background tests to avoid UI noise
+        
+        // Update status to failed if there was an error
+        if (isMounted.current) {
+          setHosts(prevHosts => 
+            prevHosts.map(h => 
+              h.id === host.id 
+                ? { ...h, status: 'failed', errorMessage: error instanceof Error ? error.message : 'Connection failed' } 
+                : h
+            )
+          );
+        }
+      }
+    };
+    
+    // Test connections in sequence with delays to avoid overwhelming the server
+    const testAllConnections = async () => {
+      // Wait for initial render to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (!isMounted.current) return;
+      
+      // Test each host with a delay between tests
+      for (const host of hosts) {
+        if (!isMounted.current) break;
+        await testHostConnection(host);
+        // Add a small delay between tests to avoid overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    };
+    
+    // Start the background testing
+    testAllConnections();
+    
+    // Cleanup function
+    return () => {
+      isMounted.current = false;
+    };
+  }, [locale, hosts, queryClient]);
+
+  // Function to manually refresh connections
+  const refreshConnections = async () => {
+    setIsRefreshing(true);
+    try {
+      // Fetch fresh hosts data
+      const freshHosts = await hostsApi.getHosts(locale);
+      setHosts(freshHosts);
+      queryClient.setQueryData(['hosts'], freshHosts);
+      toast.success('Hosts refreshed');
+    } catch (error) {
+      toast.error('Failed to refresh hosts');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Mutations
   const deleteHostMutation = useMutation({
@@ -83,8 +184,8 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           <p className="text-muted-foreground">{t('manage_hosts')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => {}} disabled={true}>
-            <RefreshCcw className={cn('h-4 w-4 mr-2', { 'animate-spin': true })} />
+          <Button variant="outline" size="sm" onClick={refreshConnections} disabled={isRefreshing}>
+            <RefreshCcw className={cn('h-4 w-4 mr-2', { 'animate-spin': isRefreshing })} />
             {t('refresh')}
           </Button>
 
@@ -103,7 +204,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
         </div>
       </div>
 
-      {initialHosts.length === 0 ? (
+      {hosts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Server className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium">{t('no_hosts')}</h3>
@@ -115,9 +216,9 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
         </div>
       ) : (
         <HostOverview
-          hosts={initialHosts}
+          hosts={hosts}
           onDelete={handleDeleteHost}
-          onRefresh={() => queryClient.invalidateQueries({ queryKey: ['hosts'] })}
+          onRefresh={refreshConnections}
           onTestConnection={async (host) => {
             const data = await hostsApi.testConnection(locale, host);
             if (data.success) {

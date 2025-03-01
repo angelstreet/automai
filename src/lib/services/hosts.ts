@@ -75,6 +75,9 @@ export async function createHost(data: {
       },
     });
     console.log('Prisma created host successfully');
+    // Log host without password
+    const safeHost = { ...host, password: '***' };
+    console.log('Host created successfully:', safeHost);
     return host;
   } catch (error) {
     console.error('Error in createHost service:', error);
