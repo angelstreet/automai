@@ -9,6 +9,7 @@
     "dev:all": "node scripts/dev.js",
     "dev:debug": "node scripts/debug.js",
     "build": "next build",
+    "build:analyze": "ANALYZE=true next build",
     "start": "next start",
     "start:next": "next start",
     "lint": "next lint",
@@ -102,6 +103,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@next/bundle-analyzer": "^15.2.0",
     "@next/eslint-plugin-next": "^15.2.0",
     "@radix-ui/react-radio-group": "^1.2.3",
     "@shadcn/ui": "^0.0.4",
