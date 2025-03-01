@@ -6,7 +6,7 @@ import { HostCard } from './HostCard';
 import { ConnectForm, FormData } from './ConnectForm';
 import { Host } from '@/types/hosts';
 import { hostsApi } from '@/lib/api/hosts';
-import { toast } from '@/components/shadcn/use-toast';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Button } from '@/components/shadcn/button';
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';

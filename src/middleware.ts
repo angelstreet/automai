@@ -24,7 +24,8 @@ async function getIntlMiddleware() {
 function createLoginRedirect(request: NextRequest, pathParts: string[]) {
   // Extract locale from URL for redirect
   const locale = pathParts[0];
-  const validLocale = locales.includes(locale) ? locale : defaultLocale;
+  // Fix type error by asserting locale is a valid locale type
+  const validLocale = locales.includes(locale as any) ? locale as typeof locales[number] : defaultLocale;
   
   // Redirect to login with the current URL as the callbackUrl
   const loginUrl = new URL(`/${validLocale}/login`, request.url);
@@ -77,7 +78,7 @@ export default async function middleware(request: NextRequest) {
     // Root path
     request.nextUrl.pathname === '/' ||
     // Locale root paths like /en or /fr
-    (pathParts.length === 1 && locales.includes(pathParts[0])) ||
+    (pathParts.length === 1 && locales.includes(pathParts[0] as any)) ||
     // Public API routes
     (request.nextUrl.pathname.startsWith('/api/auth/')) ||
     // Auth redirect page (with locale and route group)
@@ -149,7 +150,7 @@ export default async function middleware(request: NextRequest) {
         path: request.nextUrl.pathname, 
         hasToken: !!token,
         hasValidData: token ? (!!token.email && !!token.id) : false,
-        tokenExp: token?.exp ? new Date(token.exp * 1000).toISOString() : null,
+        tokenExp: token?.exp ? new Date(Number(token.exp) * 1000).toISOString() : null,
         now: new Date().toISOString(),
         tokenFields: token ? Object.keys(token) : []
       });
