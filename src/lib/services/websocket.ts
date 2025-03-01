@@ -1,134 +1,96 @@
 /* eslint-disable */
-import { WebSocket, WebSocketServer as WSServer } from 'ws';
-import { IncomingMessage } from 'http';
-import { Server } from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
 import { logger } from '../logger';
+import { IncomingMessage } from 'http';
+import { Socket } from 'net';
 import { handleSshConnection, WebSocketConnection } from './ssh';
 
-// Define global type for WebSocketServer singleton
-declare global {
-  var websocketServer: WSServer | undefined;
+// Define custom WebSocket interface with isAlive property
+interface ExtendedWebSocket extends WebSocket {
+  isAlive?: boolean;
 }
 
-// WebSocketServer instance cache
-let wss: WSServer | null = global.websocketServer || null;
-let pingInterval: NodeJS.Timeout | null = null;
+// Global variable to store the WebSocket server instance
+declare global {
+  var websocketServer: WebSocketServer | undefined;
+}
 
 /**
- * Initialize the WebSocket server with an HTTP server
+ * Initialize the WebSocket server as a singleton
  */
-export function initializeWebSocketServer(server?: Server): WSServer {
-  logger.info('Initializing WebSocket server');
-
-  // Create new WebSocketServer if none exists
-  if (!wss) {
-    logger.info('Creating new WebSocketServer instance');
-    wss = new WSServer({ noServer: true });
-
-    // Set up ping interval to detect dead connections
-    pingInterval = setInterval(() => {
-      if (wss) {
-        wss.clients.forEach((ws: WebSocketConnection) => {
-          if (ws.isAlive === false) return ws.terminate();
-          ws.isAlive = false;
-          ws.ping();
-        });
-      }
-    }, 30000);
-
-    // Handle server close
-    wss.on('close', () => {
-      if (pingInterval) {
-        clearInterval(pingInterval);
-        pingInterval = null;
-      }
-    });
-
-    // Set up connection handler
-    wss.on('connection', (ws: WebSocketConnection, request: IncomingMessage) => {
-      // Extract connection ID from URL
-      const url = request.url || '';
-      const connectionId = url.split('/').pop() || '';
-      
-      logger.info('WebSocket client connected', { connectionId });
-      
-      // Set up ping-pong to detect dead connections
-      ws.isAlive = true;
-      ws.on('pong', () => {
-        ws.isAlive = true;
-      });
-
-      // Set authentication timeout
-      ws.authTimeout = setTimeout(() => {
-        logger.warn('Authentication timeout', { connectionId });
-        ws.send(
-          JSON.stringify({
-            error: 'Authentication timeout',
-            errorType: 'AUTH_TIMEOUT',
-          }),
-        );
-        ws.terminate();
-      }, 30000); // 30 second timeout
-
-      // Handle messages from client
-      ws.on('message', async (message) => {
-        try {
-          const data = JSON.parse(message.toString());
-
-          // Handle authentication
-          if (data.type === 'auth') {
-            logger.info('Received auth request', {
-              connectionId,
-              connectionType: data.connectionType,
-              username: data.username,
-            });
-
-            // Handle SSH connection
-            if (data.connectionType === 'ssh') {
-              await handleSshConnection(ws, connectionId, {
-                username: data.username,
-                password: data.password,
-              });
-            } else {
-              logger.error('Unsupported connection type', { type: data.connectionType });
-              ws.send(
-                JSON.stringify({
-                  error: `Unsupported connection type: ${data.connectionType}`,
-                  errorType: 'UNSUPPORTED_CONNECTION_TYPE',
-                }),
-              );
-            }
-          }
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          logger.error('Error processing message', { error: errorMessage });
-          ws.send(
-            JSON.stringify({
-              error: 'Invalid message format: ' + errorMessage,
-              errorType: 'INVALID_MESSAGE',
-            }),
-          );
-        }
-      });
-
-      // Handle client disconnect
-      ws.on('close', () => {
-        // Clear any pending timeouts
-        if (ws.authTimeout) {
-          clearTimeout(ws.authTimeout);
-          delete ws.authTimeout;
-        }
-        logger.info('WebSocket client disconnected');
-      });
-    });
-
-    // Store in global for singleton pattern
-    if (process.env.NODE_ENV !== 'production') {
-      global.websocketServer = wss;
-    }
+export function initializeWebSocketServer(): WebSocketServer {
+  console.log('Initializing WebSocket server (singleton)');
+  
+  // Check if we already have an instance
+  if (global.websocketServer) {
+    console.log('Using existing WebSocket server instance');
+    return global.websocketServer;
   }
 
+  // Create a new WebSocket server
+  console.log('Creating new WebSocket server instance');
+  const wss = new WebSocketServer({ noServer: true });
+
+  // Set up ping interval to detect dead connections
+  const pingInterval = setInterval(() => {
+    wss.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (extClient.isAlive === false) {
+        logger.info('Terminating inactive WebSocket connection');
+        return client.terminate();
+      }
+
+      extClient.isAlive = false;
+      client.ping();
+    });
+  }, 30000);
+
+  // Handle server close
+  wss.on('close', () => {
+    logger.info('WebSocket server closed, clearing ping interval');
+    clearInterval(pingInterval);
+    global.websocketServer = undefined;
+  });
+
+  // Log client connections
+  wss.on('connection', (ws, req) => {
+    logger.info('Client connected to WebSocket server', {
+      ip: req.socket.remoteAddress,
+    });
+
+    const extWs = ws as ExtendedWebSocket;
+    extWs.isAlive = true;
+
+    ws.on('pong', () => {
+      (ws as ExtendedWebSocket).isAlive = true;
+    });
+
+    ws.on('error', (error) => {
+      logger.error('WebSocket error', { error: error.message });
+    });
+
+    ws.on('close', () => {
+      logger.info('Client disconnected from WebSocket server');
+    });
+  });
+
+  // Store the instance in the global variable (in development/test)
+  if (process.env.NODE_ENV !== 'production') {
+    global.websocketServer = wss;
+  }
+
+  logger.info('WebSocket server initialized');
   return wss;
+}
+
+/**
+ * Get the WebSocket server instance, initializing it if necessary
+ */
+export function getWebSocketServer(): WebSocketServer {
+  if (!global.websocketServer) {
+    return initializeWebSocketServer();
+  }
+  return global.websocketServer;
 }
 
 /**
@@ -136,34 +98,92 @@ export function initializeWebSocketServer(server?: Server): WSServer {
  */
 export function handleUpgrade(
   request: IncomingMessage,
-  socket: any,
-  head: Buffer,
-  path: string,
-): void {
-  logger.info('Handling WebSocket upgrade', { path });
-
-  // Get or create WebSocketServer
-  const websocketServer = wss || initializeWebSocketServer();
-
-  if (websocketServer) {
-    websocketServer.handleUpgrade(request, socket, head, (ws: WebSocket) => {
-      websocketServer.emit('connection', ws, request);
-    });
-  } else {
-    logger.error('No WebSocketServer instance available');
+  socket: Socket,
+  head: Buffer
+) {
+  const wss = getWebSocketServer();
+  
+  if (!wss) {
+    logger.error('No WebSocket server instance available');
     socket.destroy();
+    return;
   }
+
+  logger.info('Handling WebSocket upgrade request');
+  
+  // Extract the connection ID from the request if available
+  const connectionId = (request as any).connectionId;
+  if (connectionId) {
+    logger.info('WebSocket upgrade with connection ID:', { connectionId });
+  }
+  
+  wss.handleUpgrade(request, socket, head, (ws) => {
+    // Store the connection ID on the WebSocket object if available
+    if (connectionId) {
+      (ws as any).connectionId = connectionId;
+    }
+    
+    // Set up message handler
+    ws.on('message', (message) => {
+      try {
+        const messageStr = message.toString();
+        logger.debug('Received WebSocket message', { 
+          connectionId: (ws as any).connectionId,
+          message: messageStr.substring(0, 100) // Log only first 100 chars
+        });
+        handleMessage(ws as WebSocketConnection, messageStr);
+      } catch (error) {
+        logger.error('Error handling WebSocket message', { 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
+      }
+    });
+    
+    wss.emit('connection', ws, request);
+  });
 }
 
 /**
- * Get the WebSocket server instance
+ * Handle messages from client
  */
-export function getWebSocketServer(): WSServer | null {
-  if (!wss) {
-    logger.info('WebSocketServer not initialized yet, initializing now');
-    return initializeWebSocketServer();
+export function handleMessage(ws: WebSocketConnection, message: string): void {
+  try {
+    const data = JSON.parse(message);
+
+    // Handle authentication
+    if (data.type === 'auth') {
+      logger.info('Received auth request', {
+        connectionId: (ws as any).connectionId,
+        connectionType: data.connectionType,
+        username: data.username,
+      });
+
+      // Handle SSH connection
+      if (data.connectionType === 'ssh') {
+        handleSshConnection(ws, (ws as any).connectionId, {
+          username: data.username,
+          password: data.password,
+        });
+      } else {
+        logger.error('Unsupported connection type', { type: data.connectionType });
+        ws.send(
+          JSON.stringify({
+            error: `Unsupported connection type: ${data.connectionType}`,
+            errorType: 'UNSUPPORTED_CONNECTION_TYPE',
+          }),
+        );
+      }
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error processing message', { error: errorMessage });
+    ws.send(
+      JSON.stringify({
+        error: 'Invalid message format: ' + errorMessage,
+        errorType: 'INVALID_MESSAGE',
+      }),
+    );
   }
-  return wss;
 }
 
 /**
@@ -171,37 +191,29 @@ export function getWebSocketServer(): WSServer | null {
  */
 export function closeWebSocketServer(): Promise<void> {
   return new Promise((resolve) => {
-    if (!wss) {
+    if (!global.websocketServer) {
       resolve();
       return;
     }
 
     logger.info('Closing WebSocket server');
 
-    // Clear ping interval
-    if (pingInterval) {
-      clearInterval(pingInterval);
-      pingInterval = null;
-    }
-
     // Close all connections with a timeout
     const closeTimeout = setTimeout(() => {
       logger.warn('WebSocket server close timed out, forcing close');
-      wss = null;
       global.websocketServer = undefined;
       resolve();
     }, 2000); // 2 second timeout
 
     // Close all connections
-    wss.clients.forEach((ws) => {
+    global.websocketServer.clients.forEach((ws) => {
       ws.terminate();
     });
 
     // Close the server
-    wss.close(() => {
+    global.websocketServer.close(() => {
       clearTimeout(closeTimeout);
       logger.info('WebSocket server closed');
-      wss = null;
       global.websocketServer = undefined;
       resolve();
     });

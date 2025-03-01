@@ -31,7 +31,7 @@ async function main() {
       dev,
       hostname,
       port,
-      enableWebSockets: true
+      enableWebSockets: false
     });
 
     // Get the actual port the server is listening on

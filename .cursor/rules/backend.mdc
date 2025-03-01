@@ -83,6 +83,7 @@ src/lib/services/
 - Manage WebSocket connection lifecycle
 - Implement ping/pong for connection health monitoring
 - Handle errors and reconnection gracefully
+- For detailed terminal-websocket-ssh implementation, refer to `terminal-websocket-ssh.mdc`
 
 ## **5️⃣ API Implementation**
 - Use Next.js Route Handlers in `src/app/api/`
