@@ -137,7 +137,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
 
   return (
     <>
-      <Card className="relative w-[350px]">
+      <Card className="relative w-[350px] h-[180px]">
         <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
           <div className="flex flex-col space-y-1.5">
             <div className="flex items-center">
@@ -179,7 +179,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
         </CardHeader>
         <CardContent className="p-4 pt-2">
           <div className="flex flex-col space-y-2">
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground min-h-[20px]">
               {host.description && <p>{host.description}</p>}
             </div>
             <Button
@@ -192,11 +192,13 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               <Terminal className="h-4 w-4 mr-2" />
               {t('terminal')}
             </Button>
-            {host.lastConnected && (
-              <p className="text-xs mt-1 text-muted-foreground">
-                {t('lastConnected')}: {new Date(host.lastConnected).toLocaleString()}
-              </p>
-            )}
+            <div className="min-h-[20px]">
+              {host.lastConnected && (
+                <p className="text-xs mt-1 text-muted-foreground">
+                  {t('lastConnected')}: {new Date(host.lastConnected).toLocaleString()}
+                </p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
