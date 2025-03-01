@@ -11,10 +11,9 @@ import { Search } from '@/components/Shadcn/search';
 import { Separator } from '@/components/Shadcn/separator';
 import { ThemeToggle } from '@/components/Shadcn/theme-toggle';
 import { UserProfile } from '@/components/Shadcn/user-profile';
-import { SidebarMenuButton } from '@/components/Sidebar/SidebarMenuButton';
 import { SidebarTrigger } from '@/components/Sidebar';
-
-import { useRole } from '@/context/role-context';
+import { SidebarMenuButton } from '@/components/Sidebar/SidebarMenuButton';
+import { useRole } from '@/context/RoleContext';
 
 interface WorkspaceHeaderProps {
   className?: string;
