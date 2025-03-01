@@ -27,7 +27,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   // 2. Public routes bypass
-  const publicPaths = ['/login', '/register', '/api/auth', '/_next', '/favicon.ico'];
+  const publicPaths = ['/login', '/register', '/api/auth', '/_next', '/favicon.ico', '/api/hosts/byName'];
   if (publicPaths.some(path => request.nextUrl.pathname.startsWith(path))) {
     return NextResponse.next();
   }
@@ -36,6 +36,13 @@ export default async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith('/api/') || 
       request.nextUrl.pathname.startsWith('/dashboard') ||
       request.nextUrl.pathname.startsWith('/admin')) {
+    
+    // Skip auth check for hosts API for debugging
+    if (request.nextUrl.pathname.startsWith('/api/hosts/byName')) {
+      console.log('Bypassing auth for hosts API');
+      return NextResponse.next();
+    }
+    
     const token = await getToken({ req: request });
     if (!token) {
       if (request.nextUrl.pathname.startsWith('/api/')) {
