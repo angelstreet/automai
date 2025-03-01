@@ -94,28 +94,19 @@ export const sidebarData: SidebarData = {
           items: [
             { title: 'Projects', href: '/development/projects', icon: FileCode },
             { title: 'Use Cases', href: '/development/usecases', icon: TestTube },
-            { title: 'Campaigns', href: '/development/campaigns', icon: Flag },
           ],
         },
         {
-          title: 'Execution',
-          href: '/execution',
+          title: 'Tests',
+          href: '/tests',
           icon: Rocket,
           roles: ['admin', 'developer', 'tester'],
-          items: [
-            { title: 'Schedule', href: '/execution/schedule', icon: Calendar },
-            { title: 'Deployment', href: '/execution/deployment', icon: Table },
-          ],
         },
         {
           title: 'Reports',
           href: '/reports',
           icon: BarChart3,
           roles: ['admin', 'developer', 'tester', 'viewer'],
-          items: [
-            { title: 'Results', href: '/reports/results', icon: LineChart },
-            { title: 'Performance', href: '/reports/metrics', icon: Gauge },
-          ],
         },
       ],
     },
@@ -134,48 +125,34 @@ export const sidebarData: SidebarData = {
           icon: Server,
           roles: ['admin', 'developer', 'tester'],
         },
-      ],
-    },
-    {
-      title: 'Features',
-      items: [
         {
-          title: 'Tasks',
-          href: '/tasks',
-          icon: CheckSquare,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
-        },
-        {
-          title: 'Chats',
-          href: '/chats',
+          title: 'Terminals',
+          href: '/terminals',
           icon: MessageSquare,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
+          roles: ['admin', 'developer', 'tester'],
         },
       ],
     },
     {
-      title: 'Other',
+      title: 'Admin',
       items: [
         {
           title: 'Settings',
           href: '/settings',
           icon: Settings,
           roles: ['admin'],
-          items: [
-            { title: 'Team', href: '/[locale]/[tenant]/settings/team', icon: Users },
-            {
-              title: 'Configuration',
-              href: '/[locale]/[tenant]/settings/configuration',
-              icon: Plug,
-            },
-            { title: 'Integration', href: '/[locale]/[tenant]/settings/integration', icon: Plug },
-          ],
         },
         {
-          title: 'Help Center',
-          href: '/help',
-          icon: HelpCircle,
-          roles: ['admin', 'developer', 'tester', 'viewer'],
+          title: 'Team',
+          href: '/team',
+          icon: Users,
+          roles: ['admin'],
+        },
+        {
+          title: 'Billing',
+          href: '/billing',
+          icon: Building2,
+          roles: ['admin'],
         },
       ],
     },
