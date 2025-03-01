@@ -248,6 +248,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         </div>
 
         {connectionType === 'ssh' && (
+          <>
           <div className="grid grid-cols-12 items-center gap-3 mt-3">
             <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">
               {t('form.username')}
@@ -273,6 +274,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
               className="col-span-10"
             />
           </div>
+          </>
         )}
 
         <div className="grid grid-cols-12 items-center gap-3 mt-3">
