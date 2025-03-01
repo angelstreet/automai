@@ -2,6 +2,7 @@
   "name": "automai",
   "version": "0.1.0",
   "private": true,
+  "type": "commonjs",
   "scripts": {
     "dev": "NODE_ENV=development ts-node server.ts",
     "dev:server": "ts-node server.ts",
@@ -154,5 +155,22 @@
     "linux": {
       "target": "AppImage"
     }
-  }
+  },
+  "description": "Automai is a multi-tenant SaaS platform designed for end-to-end test automation across web, desktop, and mobile environments.",
+  "main": "jest.config.e2e.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/angelstreet/automai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/angelstreet/automai/issues"
+  },
+  "homepage": "https://github.com/angelstreet/automai#readme"
 }

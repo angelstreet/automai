@@ -1,7 +1,4 @@
 const createNextIntlPlugin = require('next-intl/plugin');
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-});
 
 // No need to manually load env files - Next.js handles this automatically
 // when .env files are in the root directory
@@ -101,4 +98,4 @@ if (process.env.JWT_SECRET && !process.env.NEXTAUTH_SECRET) {
   process.env.NEXTAUTH_SECRET = process.env.JWT_SECRET;
 }
 
-module.exports = withBundleAnalyzer(withNextIntl(nextConfig));
+module.exports = withNextIntl(nextConfig);
