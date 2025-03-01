@@ -17,6 +17,9 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOST || 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);
 
+// Add a shutdown flag to prevent multiple shutdown attempts
+let isShuttingDown = false;
+
 async function main() {
   try {
     // Start server without WebSocket support by default
@@ -46,33 +49,34 @@ async function main() {
 }
 
 // Handle graceful shutdown
-async function shutdown(signal: string) {
-  console.log(`\nReceived ${signal}. Shutting down server...`);
+process.on('SIGINT', async () => {
+  // Prevent multiple shutdown attempts
+  if (isShuttingDown) {
+    console.log('Shutdown already in progress...');
+    return;
+  }
   
-  // Set a timeout to force exit if shutdown takes too long
-  const forceExitTimeout = setTimeout(() => {
-    console.error('Shutdown timed out after 10s, forcing exit');
-    process.exit(1);
-  }, 10000);
+  isShuttingDown = true;
+  console.log('Received SIGINT. Shutting down server...');
   
   try {
     await stopServer();
     console.log('Server shut down successfully');
-    clearTimeout(forceExitTimeout);
-    process.exit(0);
   } catch (err) {
     console.error('Error during shutdown:', err);
-    clearTimeout(forceExitTimeout);
-    process.exit(1);
+  } finally {
+    // Force exit after 3 seconds if shutdown is stuck
+    setTimeout(() => {
+      console.log('Forcing exit after timeout');
+      process.exit(0);
+    }, 3000);
   }
-}
+});
 
-// Handle termination signals
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught exception:', err);
-  shutdown('uncaughtException');
+// Remove the listener when the process is about to exit
+process.on('exit', () => {
+  // Clean up by removing all listeners
+  process.removeAllListeners('SIGINT');
 });
 
 // Start the server
