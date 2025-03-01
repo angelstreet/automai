@@ -21,6 +21,7 @@ import {
   Building2,
   Factory,
   Server,
+  GitBranch,
 } from 'lucide-react';
 
 export type SidebarData = {
@@ -96,6 +97,12 @@ export const sidebarData: SidebarData = {
             { title: 'Projects', href: '/development/projects', icon: FileCode },
             { title: 'Use Cases', href: '/development/usecases', icon: TestTube },
           ],
+        },
+        {
+          title: 'Repositories',
+          href: '/repositories',
+          icon: GitBranch,
+          roles: ['admin', 'developer'],
         },
         {
           title: 'Tests',

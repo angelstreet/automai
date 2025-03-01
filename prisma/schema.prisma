@@ -91,6 +91,8 @@ model User {
   connections     Connection[]
   logs            ConnectionLog[]
   hostFingerprint HostFingerprint[]
+  gitProviders    GitProvider[]
+  projects        Project[]         @relation(name: "ProjectOwner")
 
   @@map("users")
 }
@@ -141,4 +143,52 @@ model HostFingerprint {
 
   @@unique([host, fingerprint])
   @@map("host_fingerprints")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  ownerId     String
+  owner       User          @relation("ProjectOwner", fields: [ownerId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  repositories Repository[]
+
+  @@map("projects")
+}
+
+model GitProvider {
+  id                String        @id @default(cuid())
+  name              String        // "github", "gitlab", "gitea"
+  displayName       String        // "GitHub", "GitLab", "Gitea"
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  repositories      Repository[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@map("git_providers")
+}
+
+model Repository {
+  id                String       @id @default(cuid())
+  name              String
+  description       String?
+  url               String
+  defaultBranch     String       @default("main")
+  providerId        String
+  provider          GitProvider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  projectId         String?
+  project           Project?     @relation(fields: [projectId], references: [id])
+  lastSyncedAt      DateTime?
+  syncStatus        String       @default("IDLE") // "IDLE", "SYNCING", "ERROR", "SYNCED"
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  @@unique([providerId, name])
+  @@map("repositories")
 } 
