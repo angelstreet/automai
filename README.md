@@ -5,7 +5,7 @@ Automai is a multi-tenant SaaS platform designed for end-to-end test automation 
 ## 🚀 Quick Start Commands
 
 ```bash
-npx eslint . --ext .ts,.tsx
+npx eslint . --ext .ts,.tsx --quiet
 # Restart next.js frontend
 npm run dev:all
 
