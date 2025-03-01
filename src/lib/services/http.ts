@@ -81,6 +81,9 @@ export async function createServer(options: {
       handle(req, res, parsedUrl);
     });
 
+    // Set max listeners to avoid warnings
+    httpServer.setMaxListeners(20);
+
     // Initialize WebSocket server if enabled
     if (enableWebSockets) {
       initializeWebSocketSupport(httpServer);
@@ -224,6 +227,12 @@ export async function stopServer(): Promise<void> {
     // Set a timeout for the entire shutdown process
     const shutdownTimeout = setTimeout(() => {
       logger.warn('Server shutdown timed out after 5 seconds, forcing exit');
+      
+      // Remove all listeners to prevent memory leaks
+      if (httpServer) {
+        httpServer.removeAllListeners();
+      }
+      
       httpServer = null;
       resolve();
     }, 5000);
@@ -237,6 +246,11 @@ export async function stopServer(): Promise<void> {
       } catch (err) {
         logger.error(`Error closing WebSocket server: ${err}`);
       }
+    }
+
+    // Remove all upgrade listeners to prevent memory leaks
+    if (httpServer) {
+      httpServer.removeAllListeners('upgrade');
     }
 
     // Force close all connections
