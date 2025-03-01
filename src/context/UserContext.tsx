@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
 
@@ -42,9 +42,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<number>(0);
+  
+  // Add refs to track fetch state and prevent duplicate requests
+  const isFetchingRef = useRef(false);
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fetchAttempts = useRef(0);
 
   const fetchUser = useCallback(async () => {
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('Fetch already in progress, skipping duplicate request');
+      return;
+    }
+    
+    // Limit fetch attempts to prevent infinite loops
+    if (fetchAttempts.current > 3) {
+      console.warn('Too many fetch attempts, stopping to prevent infinite loop');
+      setError('Failed to fetch user data after multiple attempts');
+      setIsLoading(false);
+      return;
+    }
+    
     try {
+      isFetchingRef.current = true;
+      fetchAttempts.current += 1;
+      
       if (!session?.user) {
         console.log('No active session found in fetchUser');
         setUser(null);
@@ -88,6 +110,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           statusText: response.statusText,
           error: errorData.error,
         });
+        
+        // If user not found (404), clear session cache and set appropriate error
+        if (response.status === 404) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(SESSION_CACHE_KEY);
+          }
+          setError('User not found - please log in again');
+          setUser(null);
+          // Don't throw here, just return to prevent further processing
+          return;
+        }
+        
         throw new Error(errorData.error || `Failed to fetch user profile: ${response.status}`);
       }
 
@@ -108,12 +142,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setUser(userData);
       setError(null);
       setLastFetch(now);
+      // Reset fetch attempts on success
+      fetchAttempts.current = 0;
     } catch (err) {
       console.error('Error in fetchUser:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setUser(null);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, [session]);
 
@@ -148,11 +185,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session, fetchUser]);
 
-  // Check session only when needed
+  // Check session only when needed with debounce
   const checkSession = useCallback(() => {
     const now = Date.now();
     if (now - lastFetch > SESSION_CACHE_EXPIRY) {
-      fetchUser();
+      // Clear any existing timeout
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+      
+      // Debounce the fetch call to prevent multiple rapid calls
+      fetchTimeoutRef.current = setTimeout(() => {
+        fetchUser();
+        fetchTimeoutRef.current = null;
+      }, 300);
     }
   }, [lastFetch, fetchUser]);
 
@@ -164,7 +210,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     if (status === 'authenticated' && session?.user) {
       console.log('Session authenticated, fetching user data');
-      fetchUser();
+      // Debounce the initial fetch
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+      
+      fetchTimeoutRef.current = setTimeout(() => {
+        fetchUser();
+        fetchTimeoutRef.current = null;
+      }, 300);
     } else if (status === 'unauthenticated') {
       console.log('Session unauthenticated, clearing user data');
       setUser(null);
@@ -173,6 +227,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(SESSION_CACHE_KEY);
       }
     }
+    
+    // Cleanup timeouts on unmount
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
   }, [status, session, fetchUser]);
 
   const checkFeature = (feature: string): boolean => {
