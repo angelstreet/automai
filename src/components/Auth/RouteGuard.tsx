@@ -15,6 +15,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const { user, isLoading: isUserLoading, error: userError } = useUser();
   const isRedirecting = useRef(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const userErrorHandled = useRef(false);
 
   // Properly handle params
   const locale = (params?.locale as string) || 'en';
@@ -23,6 +24,12 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Reset redirecting flag when pathname changes
     isRedirecting.current = false;
+    
+    // Reset user error handled flag when pathname changes
+    // But only if we're not on the login page anymore
+    if (!pathname.includes('/login')) {
+      userErrorHandled.current = false;
+    }
   }, [pathname]);
 
   useEffect(() => {
@@ -36,6 +43,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       hasUser: !!user,
       userError,
       isRedirecting: isRedirecting.current,
+      userErrorHandled: userErrorHandled.current
     };
     console.log('RouteGuard state:', info);
     setDebugInfo(info);
@@ -63,6 +71,8 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         status,
         hasUser: !!user,
         currentTenant,
+        userError,
+        userErrorHandled: userErrorHandled.current
       });
 
       // Handle OAuth errors
@@ -75,19 +85,17 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // If session is in error state (e.g. 403), redirect to login
-      if (status === 'unauthenticated' && !isPublicRoute && !isRedirecting.current) {
-        console.log('Redirecting due to unauthenticated session');
-        isRedirecting.current = true;
-        router.replace(`/${locale}/login?error=Session expired. Please login again.`);
-        return;
-      }
-
+      // DISABLE CLIENT-SIDE REDIRECTS FOR UNAUTHENTICATED USERS
+      // Let the middleware handle this instead
+      // The middleware will redirect unauthenticated users to login
+      
       // For public routes, only redirect if user is authenticated and trying to access auth pages
       if (isPublicRoute) {
+        // Only redirect from login/signup to dashboard if we have a valid user and no user error
         if (
           session?.user &&
           user &&
+          !userError &&
           (pathname.includes('/login') || pathname.includes('/signup'))
         ) {
           const tenant = user.tenantName || 'trial'; // Default to trial if no tenant
@@ -118,7 +126,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     };
 
     handleRouting();
-  }, [pathname, router, locale, currentTenant, session, status, user, isUserLoading]);
+  }, [pathname, locale, currentTenant, status, isUserLoading, user, userError, router, session]);
 
   // Show loading state while checking auth
   if (isUserLoading || status === 'loading') {
@@ -131,15 +139,11 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
   // Show debug info in development
   if (process.env.NODE_ENV === 'development' && debugInfo && userError) {
-    return (
-      <div className="p-4">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <p className="font-bold">Auth Error: {userError}</p>
-          <pre className="mt-2 text-xs">{JSON.stringify(debugInfo, null, 2)}</pre>
-        </div>
-        {children}
-      </div>
-    );
+    // Log the error but don't show the banner
+    console.error('Auth Error:', userError, debugInfo);
+    
+    // Return children without the error banner
+    return <>{children}</>;
   }
 
   return <>{children}</>;

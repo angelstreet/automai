@@ -12,164 +12,112 @@ alwaysApply: false
 - Lazy-load WebSocket functionality when needed
 - Follow a modular approach with clear separation of concerns
 
-## **2️⃣ Server Implementation**
-### **Entry Point (server.ts)**
+## **1️⃣0️⃣ Authentication Middleware Best Practices**
+
+### **Path-Based Authentication**
+
+When implementing authentication middleware, follow these critical guidelines:
+
+1. **Precise Path Matching**: Never use loose string matching (like `includes()`) for protected routes
+   ```typescript
+   // ❌ INCORRECT - Too loose, can cause false matches
+   const isProtectedRoute = request.nextUrl.pathname.includes('/dashboard');
+   
+   // ✅ CORRECT - Parse path parts and match exactly
+   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+   const isProtectedRoute = pathParts.some(part => part === 'dashboard');
+   ```
+
+2. **Single Source of Truth**: Server middleware should be the single authority for authentication
+   ```typescript
+   // ✅ CORRECT - Server middleware handles unauthenticated users
+   if (!token && isProtectedRoute) {
+     return NextResponse.redirect(loginUrl);
+   }
+   
+   // ❌ INCORRECT - Don't duplicate auth logic in client components
+   // Don't add client-side redirects for unauthenticated users
+   ```
+
+3. **Proper Path Structure Handling**: Account for internationalization in path structure
+   ```typescript
+   // ✅ CORRECT - Handle i18n paths properly
+   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+   const locale = pathParts[0];
+   const validLocale = locales.includes(locale) ? locale : defaultLocale;
+   ```
+
+4. **Comprehensive Logging**: Log authentication decisions for debugging
+   ```typescript
+   // ✅ CORRECT - Log auth decisions
+   console.log('Auth token check:', { 
+     path: request.nextUrl.pathname, 
+     hasToken: !!token,
+     isProtectedRoute
+   });
+   ```
+
+5. **Clear Redirect Logic**: Include proper parameters in redirects
+   ```typescript
+   // ✅ CORRECT - Include callbackUrl for post-login redirect
+   const loginUrl = new URL(`/${validLocale}/login`, request.url);
+   loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+   return NextResponse.redirect(loginUrl);
+   ```
+
+### **Middleware Implementation Example**
+
 ```typescript
-// Load environment variables before any imports that might use them
-import dotenv from 'dotenv';
-
-const envFile = process.env.NODE_ENV === 'production'
-  ? '.env.production'
-  : process.env.NODE_ENV === 'test'
-    ? '.env.test'
-    : '.env.development';
-
-console.log(`Loading environment from ${envFile}`);
-dotenv.config({ path: envFile });
-
-// Now import modules that depend on environment variables
-import { startServer, stopServer } from './src/lib/services/http';
-
-const dev = process.env.NODE_ENV !== 'production';
-const hostname = process.env.HOST || 'localhost';
-const port = parseInt(process.env.PORT || '3000', 10);
-
-async function main() {
-  try {
-    // Start server without WebSocket support by default
-    // WebSockets will be lazily initialized when needed
-    await startServer({
-      dev,
-      hostname,
-      port,
-      enableWebSockets: false
-    });
-  } catch (err) {
-    console.error('Error starting server:', err);
-    process.exit(1);
-  }
-}
-
-// Handle graceful shutdown
-process.on('SIGINT', async () => {
-  await stopServer();
-  process.exit(0);
-});
-
-// Start the server
-main();
-```
-
-### **Service Layer Organization**
-```
-src/lib/services/
-├── http.ts         # HTTP server implementation
-├── websocket.ts    # WebSocket server implementation
-├── ssh.ts          # SSH connection handling
-├── terminal.ts     # Terminal session management
-└── hosts.ts        # Host management
-```
-
-## **3️⃣ Service Layer Rules**
-- Each service should have a single responsibility
-- Use dependency injection for service dependencies
-- Implement proper error handling and logging
-- Use async/await for asynchronous operations
-- Export clear interfaces for service functions
-
-## **4️⃣ WebSocket Integration**
-- Initialize WebSocket server lazily when needed
-- Handle WebSocket upgrade requests properly
-- Manage WebSocket connection lifecycle
-- Implement ping/pong for connection health monitoring
-- Handle errors and reconnection gracefully
-- For detailed terminal-websocket-ssh implementation, refer to `terminal-websocket-ssh.mdc`
-
-## **5️⃣ API Implementation**
-- Use Next.js Route Handlers in `src/app/api/`
-- Implement proper error handling
-- Use session management with `getServerSession`
-- Follow RESTful API design principles
-- Validate request data before processing
-
-## **6️⃣ Server Implementation**
-### **HTTP Server**
-```typescript
-// src/lib/services/http.ts
-export async function startServer(options: {
-  dev?: boolean;
-  hostname?: string;
-  port?: number;
-  enableWebSockets?: boolean;
-}): Promise<Server> {
-  const { dev, hostname, port, enableWebSockets } = options;
+// src/middleware.ts
+export default async function middleware(request: NextRequest) {
+  // Extract path parts for better matching
+  const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
   
-  // Initialize Next.js app
-  const app = await initializeNextApp({ dev, hostname, port });
-  const handle = app.getRequestHandler();
+  // Define protected paths
+  const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings'];
   
-  // Create HTTP server
-  const server = createServer({ dev, hostname, port, enableWebSockets });
+  // Check if any part of the path matches a protected path
+  const isProtectedRoute = protectedPaths.some(protectedPath => 
+    pathParts.some(part => part === protectedPath)
+  );
   
-  // Set up request handler
-  server.on('request', (req, res) => {
-    const parsedUrl = parse(req.url || '', true);
-    handle(req, res, parsedUrl);
-  });
-  
-  // Start listening
-  server.listen(port, hostname);
-  
-  return server;
-}
-```
-
-### **WebSocket Server**
-```typescript
-// src/lib/services/websocket.ts
-export function initializeWebSocketServer(server: Server): WSServer {
-  // Create new WebSocketServer if none exists
-  if (!wss) {
-    wss = new WSServer({ noServer: true });
+  if (isProtectedRoute) {
+    const token = await getToken({ req: request });
     
-    // Set up ping interval to detect dead connections
-    pingInterval = setInterval(() => {
-      if (wss) {
-        wss.clients.forEach((ws: WebSocketConnection) => {
-          if (ws.isAlive === false) return ws.terminate();
-          ws.isAlive = false;
-          ws.ping();
-        });
-      }
-    }, 30000);
-    
-    // Handle server close and connection events
-    // ...
+    if (!token) {
+      // Extract locale from URL for redirect
+      const locale = pathParts[0];
+      const validLocale = locales.includes(locale) ? locale : defaultLocale;
+      
+      // Redirect to login with the current URL as the callbackUrl
+      const loginUrl = new URL(`/${validLocale}/login`, request.url);
+      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
   
-  return wss;
+  return NextResponse.next();
 }
 ```
 
-## **7️⃣ Development Setup**
-- Use `ts-node` to run the server in development
-- Set environment variables in `.env.development`
-- Configure proper scripts in `package.json`
-- Implement graceful shutdown handling
+### **Client-Side Authentication Handling**
 
-### **Scripts**
-```json
-{
-  "scripts": {
-    "dev": "NODE_ENV=development ts-node server.ts",
-    "dev:next": "next dev",
-    "build": "next build",
-    "start": "NODE_ENV=production node dist/server.js"
+For client components, focus only on:
+1. Redirecting authenticated users away from login pages
+2. Handling tenant mismatches for authenticated users
+3. Showing loading states during authentication checks
+
+```typescript
+// Client component auth handling
+useEffect(() => {
+  // Only redirect if user is authenticated and on login page
+  if (session?.user && user && !userError && pathname.includes('/login')) {
+    router.replace(`/${locale}/${user.tenantName || 'trial'}/dashboard`);
   }
-}
+}, [session, user, pathname]);
 ```
 
-## **8️⃣ General Guidelines**
+## **1️⃣1️⃣ General Guidelines**
 - Keep APIs RESTful with clean, predictable endpoint structures.
 - Use JWT authentication for secured access to all endpoints.
 - Follow Role-Based Access Control (RBAC) to manage permissions.
