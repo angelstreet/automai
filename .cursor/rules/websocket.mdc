@@ -1,6 +1,6 @@
 ---
 description: WebSocket & Terminal Implementation Guidelines
-globs: src/lib/websocket-server.ts, websocket.server.js, src/components/hosts/**/*.tsx
+globs: src/lib/services/websocket.ts, src/lib/services/ssh.ts, src/lib/services/terminal.ts, src/components/hosts/**/*.tsx
 alwaysApply: false
 ---
 
@@ -8,54 +8,175 @@ alwaysApply: false
 
 ## WebSocket Architecture Overview
 
-The project uses a dual WebSocket implementation:
+The project uses a lazy-loaded WebSocket implementation:
 
-1. **Standalone WebSocket Server** (`websocket.server.js`)
-   - Located at the root of the project
-   - Runs on port 3001 (separate from Next.js HTTP server)
-   - Handles terminal connections for SSH
-   - Started independently from the Next.js server
+1. **Custom Server with WebSocket Support** (`server.ts` and `src/lib/services/http.ts`)
+   - Runs on the same port as the Next.js HTTP server (port 3000)
+   - WebSockets are initialized on-demand when needed
+   - Integrated with the Next.js application
 
-2. **WebSocket Utility Module** (`src/lib/websocket-server.ts`)
-   - Provides utility functions for WebSocket connections
-   - Used within the Next.js application
-   - Exports functions like `getWebSocketServer()` and `handleUpgrade()`
+2. **WebSocket Service Module** (`src/lib/services/websocket.ts`)
+   - Provides utility functions for WebSocket server management
+   - Exports functions like `initializeWebSocketServer()`, `handleUpgrade()`, and `getWebSocketServer()`
+   - Implements connection lifecycle management
 
-## Standalone WebSocket Server (websocket.server.js)
+3. **SSH Service Module** (`src/lib/services/ssh.ts`)
+   - Handles SSH connections and authentication
+   - Manages SSH sessions and streams
+   - Integrates with WebSocket connections
+
+4. **Terminal Service Module** (`src/lib/services/terminal.ts`)
+   - Manages terminal sessions
+   - Handles terminal resize events
+   - Processes terminal input/output
+
+## WebSocket Server Implementation
 
 1. **Initialization**
-   - Server is initialized on first terminal connection
-   - Handles WebSocket upgrade requests for terminal paths
+   ```typescript
+   // src/lib/services/http.ts
+   export async function createServer(options: {
+     dev?: boolean;
+     hostname?: string;
+     port?: number;
+     enableWebSockets?: boolean;
+   }): Promise<Server> {
+     const { enableWebSockets = false } = options;
+     
+     // Create HTTP server
+     const server = http.createServer();
+     
+     // Initialize WebSocket server if enabled
+     if (enableWebSockets) {
+       const wss = initializeWebSocketServer(server);
+       
+       // Handle WebSocket upgrade requests
+       server.on('upgrade', (request, socket, head) => {
+         const { pathname } = parse(request.url || '');
+         
+         if (pathname?.startsWith('/api/terminal')) {
+           handleUpgrade(request, socket, head, pathname);
+         }
+       });
+     }
+     
+     return server;
+   }
+   ```
 
 2. **Connection Management**
-   - Implements ping/pong for connection health monitoring
-   - Terminates connections that don't respond to pings
-   - Cleans up resources when connections close
+   ```typescript
+   // src/lib/services/websocket.ts
+   export function initializeWebSocketServer(server: Server): WSServer {
+     if (!wss) {
+       wss = new WSServer({ noServer: true });
+       
+       // Set up ping interval to detect dead connections
+       pingInterval = setInterval(() => {
+         if (wss) {
+           wss.clients.forEach((ws: WebSocketConnection) => {
+             if (ws.isAlive === false) return ws.terminate();
+             ws.isAlive = false;
+             ws.ping();
+           });
+         }
+       }, 30000);
+       
+       // Handle server close
+       wss.on('close', () => {
+         if (pingInterval) {
+           clearInterval(pingInterval);
+           pingInterval = null;
+         }
+       });
+     }
+     
+     return wss;
+   }
+   ```
 
-3. **SSH Integration**
-   - Uses ssh2 library for SSH connections
-   - Handles host authentication and terminal sessions
-   - Streams data between SSH and WebSocket clients
+3. **Upgrade Handling**
+   ```typescript
+   // src/lib/services/websocket.ts
+   export function handleUpgrade(
+     request: IncomingMessage,
+     socket: any,
+     head: Buffer,
+     path: string,
+   ): void {
+     const wss = getWebSocketServer();
+     if (!wss) {
+       socket.destroy();
+       return;
+     }
+     
+     wss.handleUpgrade(request, socket, head, (ws: WebSocketConnection) => {
+       ws.isAlive = true;
+       ws.on('pong', () => {
+         ws.isAlive = true;
+       });
+       
+       // Extract connection ID from URL
+       const url = new URL(request.url || '', `http://${request.headers.host}`);
+       const connectionId = url.searchParams.get('id');
+       
+       if (path.startsWith('/api/terminal') && connectionId) {
+         handleSshConnection(ws, connectionId);
+       } else {
+         ws.close(1000, 'Invalid connection path');
+       }
+     });
+   }
+   ```
 
-## WebSocket Utility Module (src/lib/websocket-server.ts)
+## SSH Integration
 
-1. **Singleton Pattern**
-   - **IMPORTANT**: Always use the global WebSocketServer instance
-   - Never create new WebSocketServer instances in route handlers
-   - Use `getWebSocketServer()` to access the singleton instance
-   - Handle WebSocket upgrades through the `handleUpgrade()` utility function
-
-2. **Connection Management**
-   - Implement ping/pong for connection health monitoring
-   - Set `isAlive` flag to true on connection and on pong events
-   - Terminate connections that don't respond to pings
-   - Clean up resources when connections close
-
-3. **Error Handling**
-   - Always wrap WebSocket operations in try/catch blocks
-   - Log errors with appropriate action tags
-   - Send error messages to clients in JSON format
-   - Include proper status codes in error responses
+1. **Connection Handling**
+   ```typescript
+   // src/lib/services/ssh.ts
+   export function handleSshConnection(ws: WebSocketConnection, connectionId: string): void {
+     try {
+       // Get connection details from database or cache
+       const connection = getConnection(connectionId);
+       if (!connection) {
+         ws.send(JSON.stringify({ error: 'Connection not found' }));
+         ws.close(1000, 'Connection not found');
+         return;
+       }
+       
+       // Create SSH client
+       const ssh = new Client();
+       
+       // Set up event handlers
+       ssh.on('ready', () => {
+         // Create shell session
+         ssh.shell((err, stream) => {
+           if (err) {
+             ws.send(JSON.stringify({ error: 'Failed to create shell' }));
+             ws.close(1000, 'Failed to create shell');
+             return;
+           }
+           
+           // Set up data handlers
+           setupDataHandlers(ws, stream, connectionId);
+         });
+       });
+       
+       // Connect to SSH server
+       ssh.connect({
+         host: connection.host,
+         port: connection.port,
+         username: connection.username,
+         password: connection.password,
+         privateKey: connection.privateKey,
+       });
+     } catch (error: any) {
+       logger.error(`SSH connection error: ${error.message || String(error)}`, { connectionId });
+       ws.send(JSON.stringify({ error: 'Failed to establish SSH connection' }));
+       ws.close(1000, 'Connection error');
+     }
+   }
+   ```
 
 ## Terminal Implementation
 1. **xterm.js Integration**
