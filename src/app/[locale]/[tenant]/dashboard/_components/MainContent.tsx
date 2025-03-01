@@ -1,6 +1,5 @@
 'use client';
 
-import { Overview } from '@/components/Dashboard/Overview';
 import { RecentSales } from '@/components/Dashboard/RecentSales';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/Shadcn/avatar';
 import { Button } from '@/components/Shadcn/button';
@@ -23,7 +22,9 @@ export function MainContent() {
             <CardDescription>Monthly success rate for all test executions</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-            <Overview />
+            <div className="flex items-center justify-center h-[350px] bg-muted/20 rounded-md">
+              <p className="text-muted-foreground">Chart visualization coming soon</p>
+            </div>
           </CardContent>
         </Card>
 
