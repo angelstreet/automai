@@ -53,6 +53,20 @@ export default function TerminalPage() {
   // Fetch host by name
   const fetchMachineByName = async (name: string) => {
     try {
+      // First check if we have the host data in session storage
+      if (typeof window !== 'undefined') {
+        const storedHost = sessionStorage.getItem('currentHost');
+        if (storedHost) {
+          const parsedHost = JSON.parse(storedHost);
+          // Verify this is the correct host
+          if (parsedHost.name.toLowerCase() === name.toLowerCase()) {
+            console.log('Using host data from session storage');
+            return parsedHost;
+          }
+        }
+      }
+
+      // If not in session storage, fetch from API
       const response = await fetch(`/api/hosts/byName/${name}`);
       if (!response.ok) {
         throw new Error('Failed to fetch host');

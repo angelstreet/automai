@@ -129,6 +129,13 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
     const locale = pathSegments[1] || 'en';
     const tenant = pathSegments[2] || 'default';
 
+    // Store host data in session storage to avoid unnecessary API calls
+    try {
+      sessionStorage.setItem('currentHost', JSON.stringify(host));
+    } catch (error) {
+      console.error('Failed to store host data in session storage:', error);
+    }
+
     // Build the correct path with locale and tenant
     const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
     console.log(`Redirecting to terminal: ${terminalPath}`);
@@ -137,11 +144,11 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
 
   return (
     <>
-      <Card className="relative w-[350px] h-[180px]">
+      <Card className="relative w-[320px] h-[180px]">
         <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
           <div className="flex flex-col space-y-1.5">
             <div className="flex items-center">
-              <div className="w-[200px] flex items-center">
+              <div className="w-[180px] flex items-center">
                 <div className="mr-2">{getStatusDot(host.status)}</div>
                 <CardTitle className="text-base font-semibold truncate flex-1">
                   {host.name}
@@ -179,22 +186,22 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
         </CardHeader>
         <CardContent className="p-4 pt-2">
           <div className="flex flex-col space-y-2">
-            <div className="text-sm text-muted-foreground min-h-[20px]">
-              {host.description && <p>{host.description}</p>}
+            <div className="text-sm text-muted-foreground min-h-[20px] max-h-[40px] overflow-hidden">
+              {host.description && <p className="truncate">{host.description}</p>}
             </div>
             <Button
               variant="default"
               size="sm"
-              className="w-full mt-2"
+              className="w-full mt-1"
               onClick={handleTerminalClick}
               disabled={host.status !== 'connected'}
             >
               <Terminal className="h-4 w-4 mr-2" />
               {t('terminal')}
             </Button>
-            <div className="min-h-[20px]">
+            <div className="min-h-[20px] max-h-[20px] overflow-hidden">
               {host.lastConnected && (
-                <p className="text-xs mt-1 text-muted-foreground">
+                <p className="text-xs text-muted-foreground truncate">
                   {t('lastConnected')}: {new Date(host.lastConnected).toLocaleString()}
                 </p>
               )}
