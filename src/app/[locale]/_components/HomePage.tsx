@@ -13,10 +13,11 @@ export function HomePage() {
   const { data: session } = useSession();
   const { user } = useUser();
   const params = useParams();
+  const locale = params.locale as string;
 
   if (session?.user && user) {
     const tenant = user.tenantName || 'trial';
-    redirect(`/${params.locale}/${tenant}/dashboard`);
+    redirect(`/${locale}/${tenant}/dashboard`);
   }
 
   return (
