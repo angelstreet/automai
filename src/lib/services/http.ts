@@ -243,6 +243,13 @@ export async function stopServer(): Promise<void> {
 
     logger.info('Stopping server');
 
+    // Set a timeout for the entire shutdown process
+    const shutdownTimeout = setTimeout(() => {
+      logger.warn('Server shutdown timed out after 5 seconds, forcing exit');
+      httpServer = null;
+      resolve();
+    }, 5000);
+
     // First close WebSocket server if initialized
     if (isWebSocketInitialized) {
       try {
@@ -259,6 +266,7 @@ export async function stopServer(): Promise<void> {
 
     // Then close HTTP server
     httpServer.close((err) => {
+      clearTimeout(shutdownTimeout);
       if (err) {
         logger.error(`Error stopping server: ${err.message}`);
         reject(err);
