@@ -102,13 +102,24 @@ export async function createServer(options: {
           handleUpgrade(request, socket, head, pathname);
         } else if (pathname === '/_next/webpack-hmr') {
           // Allow Next.js HMR WebSocket connections
-          socket.write(
-            'HTTP/1.1 101 Switching Protocols\r\n' +
-              'Upgrade: websocket\r\n' +
-              'Connection: Upgrade\r\n' +
-              '\r\n',
-          );
-          socket.pipe(socket);
+          const key = request.headers['sec-websocket-key'];
+          if (key) {
+            const crypto = require('crypto');
+            const acceptKey = crypto
+              .createHash('sha1')
+              .update(key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11')
+              .digest('base64');
+            
+            socket.write(
+              'HTTP/1.1 101 Switching Protocols\r\n' +
+                'Upgrade: websocket\r\n' +
+                'Connection: Upgrade\r\n' +
+                `Sec-WebSocket-Accept: ${acceptKey}\r\n\r\n`
+            );
+            socket.pipe(socket);
+          } else {
+            socket.destroy();
+          }
         } else {
           // Not a terminal connection or WebSockets not initialized
           socket.destroy();
