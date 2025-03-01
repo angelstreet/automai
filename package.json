@@ -73,6 +73,7 @@
     "electron-store": "^10.0.1",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
+    "is-electron": "^2.2.2",
     "js-cookie": "^3.0.5",
     "jsonwebtoken": "^9.0.2",
     "next": "^15.2.0",
