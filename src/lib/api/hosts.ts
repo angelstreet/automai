@@ -6,6 +6,11 @@
 
 import { Host } from '@/types/hosts';
 
+// Helper to get the base URL
+const getBaseUrl = () => {
+  return typeof window !== 'undefined' ? window.location.origin : '';
+};
+
 export const hostsApi = {
   /**
    * Get all hosts
@@ -13,7 +18,7 @@ export const hostsApi = {
   getHosts: async (locale: string) => {
     // Add cache-busting parameter to prevent browser caching
     const timestamp = new Date().getTime();
-    const response = await fetch(`/api/hosts?_=${timestamp}`);
+    const response = await fetch(`${getBaseUrl()}/api/hosts?_=${timestamp}`);
     if (!response.ok) throw new Error('Failed to fetch hosts');
     return response.json();
   },
@@ -22,7 +27,7 @@ export const hostsApi = {
    * Delete a host
    */
   deleteHost: async (locale: string, id: string) => {
-    const response = await fetch(`/api/hosts/${id}`, {
+    const response = await fetch(`${getBaseUrl()}/api/hosts/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete host');
@@ -40,7 +45,7 @@ export const hostsApi = {
     password?: string;
     hostId?: string;
   }) => {
-    const response = await fetch(`/api/hosts/test-connection`, {
+    const response = await fetch(`${getBaseUrl()}/api/hosts/test-connection`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -66,7 +71,7 @@ export const hostsApi = {
     host: string;
     port?: number;
   }) {
-    const response = await fetch(`/api/hosts/verify-fingerprint`, {
+    const response = await fetch(`${getBaseUrl()}/api/hosts/verify-fingerprint`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -86,50 +91,4 @@ export const hostsApi = {
 
     return response.json();
   },
-
-  /**
-   * Create a new host
-   */
-  createHost: async (locale: string, data: {
-    name: string;
-    description?: string;
-    type: string;
-    ip: string;
-    port?: number;
-    user?: string;
-    password?: string;
-    status?: string;
-    lastConnected?: string;
-  }) => {
-    const response = await fetch(`/api/hosts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      try {
-        const parsed = JSON.parse(error);
-        throw new Error(parsed.message || 'Failed to create host');
-      } catch {
-        throw new Error('Failed to create host');
-      }
-    }
-
-    return response.json();
-  },
-
-  /**
-   * Test all host connections
-   */
-  testAllConnections: async (locale: string) => {
-    // Add cache-busting parameter to prevent browser caching
-    const timestamp = new Date().getTime();
-    const response = await fetch(`/api/hosts/test-all?_=${timestamp}`);
-    if (!response.ok) throw new Error('Failed to test all connections');
-    return response.json();
-  },
-}; 
+};
