@@ -73,7 +73,8 @@
     "add_machine": "Add Host",
     "no_machines": "No hosts found. Add a new host to get started.",
     "add_machine_description": "Connect to your servers, containers, and cloud instances.",
-    "note": "Add and manage your hosts, access terminals, monitor logs, and deploy containers all in one place"
+    "note": "Add and manage your hosts, access terminals, monitor logs, and deploy containers all in one place",
+    "hosts": "Hosts"
   },
   "Virtualization": {
     "machines": "Hosts",
