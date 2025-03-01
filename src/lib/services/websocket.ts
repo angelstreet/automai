@@ -17,7 +17,7 @@ let pingInterval: NodeJS.Timeout | null = null;
 /**
  * Initialize the WebSocket server with an HTTP server
  */
-export function initializeWebSocketServer(server: Server): WSServer {
+export function initializeWebSocketServer(server?: Server): WSServer {
   logger.info('Initializing WebSocket server');
 
   // Create new WebSocketServer if none exists
@@ -46,35 +46,21 @@ export function initializeWebSocketServer(server: Server): WSServer {
 
     // Set up connection handler
     wss.on('connection', (ws: WebSocketConnection, request: IncomingMessage) => {
+      // Extract connection ID from URL
+      const url = request.url || '';
+      const connectionId = url.split('/').pop() || '';
+      
+      logger.info('WebSocket client connected', { connectionId });
+      
+      // Set up ping-pong to detect dead connections
       ws.isAlive = true;
       ws.on('pong', () => {
         ws.isAlive = true;
       });
 
-      logger.info('WebSocket client connected');
-
-      // Extract connection ID from URL
-      const url = new URL(request.url || '', `http://${request.headers.host}`);
-      const pathname = url.pathname;
-      const connectionIdMatch = pathname.match(/\/terminals\/([^\/]+)/);
-      const connectionId = connectionIdMatch ? connectionIdMatch[1] : null;
-
-      if (!connectionId) {
-        logger.error('No connection ID found in URL', { pathname });
-        ws.send(
-          JSON.stringify({
-            error: 'Invalid connection ID',
-            errorType: 'INVALID_CONNECTION_ID',
-          }),
-        );
-        return;
-      }
-
-      logger.info('Connection ID extracted', { connectionId });
-
-      // Set up authentication timeout (5 seconds)
-      const authTimeout = setTimeout(() => {
-        logger.error('Authentication timeout', { connectionId });
+      // Set authentication timeout
+      ws.authTimeout = setTimeout(() => {
+        logger.warn('Authentication timeout', { connectionId });
         ws.send(
           JSON.stringify({
             error: 'Authentication timeout',
@@ -82,10 +68,7 @@ export function initializeWebSocketServer(server: Server): WSServer {
           }),
         );
         ws.terminate();
-      }, 5000);
-
-      // Store the timeout in the socket for later cleanup
-      ws.authTimeout = authTimeout;
+      }, 30000); // 30 second timeout
 
       // Handle messages from client
       ws.on('message', async (message) => {
@@ -160,7 +143,7 @@ export function handleUpgrade(
   logger.info('Handling WebSocket upgrade', { path });
 
   // Get or create WebSocketServer
-  const websocketServer = wss || initializeWebSocketServer(socket.server);
+  const websocketServer = wss || initializeWebSocketServer();
 
   if (websocketServer) {
     websocketServer.handleUpgrade(request, socket, head, (ws: WebSocket) => {
@@ -177,7 +160,8 @@ export function handleUpgrade(
  */
 export function getWebSocketServer(): WSServer | null {
   if (!wss) {
-    logger.warn('WebSocketServer not initialized yet');
+    logger.info('WebSocketServer not initialized yet, initializing now');
+    return initializeWebSocketServer();
   }
   return wss;
 }
