@@ -121,7 +121,7 @@ export function ProfileContent() {
             {user.plan !== 'ENTERPRISE' && (
               <Button
                 variant="outline"
-                onClick={() => router.push(`/${locale}/${tenant || 'default'}/upgrade`)}
+                onClick={() => router.push(`/${locale}/${tenant || 'default'}/billing`)}
               >
                 {t('upgradePlan')}
               </Button>
