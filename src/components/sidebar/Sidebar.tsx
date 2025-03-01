@@ -3,7 +3,7 @@ import * as React from 'react';
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/shadcn/sheet';
 import { SIDEBAR_WIDTH_MOBILE } from '@/constants/sidebar';
-import { useSidebar } from '@/hooks/use-sidebar';
+import { useSidebar } from '@/hooks/useSidebar';
 import { cn } from '@/lib/utils';
 import { SidebarProps } from '@/types/sidebar';
 

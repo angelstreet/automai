@@ -1,25 +1,14 @@
 'use client';
 
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import dynamic from 'next/dynamic';
+import { useEffect, useState } from 'react';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
+// Import chart config
+import '@/lib/chart';
+
+const LineChart = dynamic(
+  () => import('react-chartjs-2').then((mod) => mod.Line),
+  { ssr: false }
 );
 
 const options = {
@@ -60,9 +49,19 @@ const data = {
 };
 
 export function Overview() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return <div className="h-[350px] bg-muted/5 animate-pulse rounded-lg" />;
+  }
+
   return (
     <div className="h-[350px]">
-      <Line options={options} data={data} />
+      <LineChart options={options} data={data} />
     </div>
   );
 } 
