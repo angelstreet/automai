@@ -5,7 +5,170 @@ alwaysApply: false
 ---
 # Backend Best Practices
 
-## **1️⃣ General Guidelines**
+## **1️⃣ Server Architecture**
+- Use TypeScript for server implementation
+- Implement custom server in `server.ts` at project root
+- Organize server components in a service layer
+- Lazy-load WebSocket functionality when needed
+- Follow a modular approach with clear separation of concerns
+
+## **2️⃣ Server Implementation**
+### **Entry Point (server.ts)**
+```typescript
+// Load environment variables before any imports that might use them
+import dotenv from 'dotenv';
+
+const envFile = process.env.NODE_ENV === 'production'
+  ? '.env.production'
+  : process.env.NODE_ENV === 'test'
+    ? '.env.test'
+    : '.env.development';
+
+console.log(`Loading environment from ${envFile}`);
+dotenv.config({ path: envFile });
+
+// Now import modules that depend on environment variables
+import { startServer, stopServer } from './src/lib/services/http';
+
+const dev = process.env.NODE_ENV !== 'production';
+const hostname = process.env.HOST || 'localhost';
+const port = parseInt(process.env.PORT || '3000', 10);
+
+async function main() {
+  try {
+    // Start server without WebSocket support by default
+    // WebSockets will be lazily initialized when needed
+    await startServer({
+      dev,
+      hostname,
+      port,
+      enableWebSockets: false
+    });
+  } catch (err) {
+    console.error('Error starting server:', err);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  await stopServer();
+  process.exit(0);
+});
+
+// Start the server
+main();
+```
+
+### **Service Layer Organization**
+```
+src/lib/services/
+├── http.ts         # HTTP server implementation
+├── websocket.ts    # WebSocket server implementation
+├── ssh.ts          # SSH connection handling
+├── terminal.ts     # Terminal session management
+└── hosts.ts        # Host management
+```
+
+## **3️⃣ Service Layer Rules**
+- Each service should have a single responsibility
+- Use dependency injection for service dependencies
+- Implement proper error handling and logging
+- Use async/await for asynchronous operations
+- Export clear interfaces for service functions
+
+## **4️⃣ WebSocket Integration**
+- Initialize WebSocket server lazily when needed
+- Handle WebSocket upgrade requests properly
+- Manage WebSocket connection lifecycle
+- Implement ping/pong for connection health monitoring
+- Handle errors and reconnection gracefully
+
+## **5️⃣ API Implementation**
+- Use Next.js Route Handlers in `src/app/api/`
+- Implement proper error handling
+- Use session management with `getServerSession`
+- Follow RESTful API design principles
+- Validate request data before processing
+
+## **6️⃣ Server Implementation**
+### **HTTP Server**
+```typescript
+// src/lib/services/http.ts
+export async function startServer(options: {
+  dev?: boolean;
+  hostname?: string;
+  port?: number;
+  enableWebSockets?: boolean;
+}): Promise<Server> {
+  const { dev, hostname, port, enableWebSockets } = options;
+  
+  // Initialize Next.js app
+  const app = await initializeNextApp({ dev, hostname, port });
+  const handle = app.getRequestHandler();
+  
+  // Create HTTP server
+  const server = createServer({ dev, hostname, port, enableWebSockets });
+  
+  // Set up request handler
+  server.on('request', (req, res) => {
+    const parsedUrl = parse(req.url || '', true);
+    handle(req, res, parsedUrl);
+  });
+  
+  // Start listening
+  server.listen(port, hostname);
+  
+  return server;
+}
+```
+
+### **WebSocket Server**
+```typescript
+// src/lib/services/websocket.ts
+export function initializeWebSocketServer(server: Server): WSServer {
+  // Create new WebSocketServer if none exists
+  if (!wss) {
+    wss = new WSServer({ noServer: true });
+    
+    // Set up ping interval to detect dead connections
+    pingInterval = setInterval(() => {
+      if (wss) {
+        wss.clients.forEach((ws: WebSocketConnection) => {
+          if (ws.isAlive === false) return ws.terminate();
+          ws.isAlive = false;
+          ws.ping();
+        });
+      }
+    }, 30000);
+    
+    // Handle server close and connection events
+    // ...
+  }
+  
+  return wss;
+}
+```
+
+## **7️⃣ Development Setup**
+- Use `ts-node` to run the server in development
+- Set environment variables in `.env.development`
+- Configure proper scripts in `package.json`
+- Implement graceful shutdown handling
+
+### **Scripts**
+```json
+{
+  "scripts": {
+    "dev": "NODE_ENV=development ts-node server.ts",
+    "dev:next": "next dev",
+    "build": "next build",
+    "start": "NODE_ENV=production node dist/server.js"
+  }
+}
+```
+
+## **8️⃣ General Guidelines**
 - Keep APIs RESTful with clean, predictable endpoint structures.
 - Use JWT authentication for secured access to all endpoints.
 - Follow Role-Based Access Control (RBAC) to manage permissions.
@@ -48,122 +211,6 @@ src/
           ├── auth.ts
           └── validate.ts
 ```
-
----
-
-## **2️⃣ Authentication Rules**
-- OAuth (Google, GitHub) and email/password supported via NextAuth.js.
-- Passwords must be hashed using bcrypt before storage.
-- JWT expiration should be set to 1 hour; refresh tokens available.
-- Multi-Tenancy Support: Every request must be scoped to a tenant.
-- Session Middleware: Attach authenticated user details to `req.user`.
-- Logout API must revoke tokens from active sessions.
-
----
-
-## **3️⃣ API Design Rules**
-### **Projects & Use Cases**
-- `POST /api/projects` → Create new project
-- `GET /api/projects/:id` → Fetch project details
-- `DELETE /api/projects/:id` → Soft-delete project
-- `POST /api/usecases` → Create a new test case
-- `GET /api/usecases/:id` → Fetch test case details
-- Ensure all API endpoints validate user ownership of resources.
-
-### **Test Execution Rules**
-- `POST /api/execute/local` → Runs the test case locally
-- `POST /api/execute/cloud` → Runs the test case on cloud infrastructure
-- `GET /api/executions` → Fetch test run history
-- Store execution logs in Elasticsearch for debugging.
-- Store test results, videos, and screenshots in Supabase Storage.
-- Rate-limit execution API to prevent excessive automated calls.
-
----
-
-## **4️⃣ Data Storage Rules**
-- PostgreSQL (Supabase) as the primary database.
-- Use Prisma ORM for structured queries and migrations.
-- Store test execution logs in Elasticsearch for fast querying.
-- Use Supabase Storage / AWS S3 for storing test reports & assets.
-- Implement soft deletes instead of hard deletes where possible.
-- Use database transactions for creating and updating related resources.
-
----
-
-## **5️⃣ Security & Performance Rules**
-- Implement CORS policy to allow only whitelisted origins.
-- Validate all user inputs to prevent SQL injection & XSS.
-- Use Redis or a caching mechanism for frequently accessed data.
-- Monitor API performance metrics with Prometheus & Grafana.
-- Enforce strict API rate limits (e.g., max 10 requests/sec per user).
-
----
-
-## **6️⃣ Error Handling & Logging**
-- Use a global error handler to return structured API responses.
-- Store logs in Kibana (Elasticsearch) for debugging & analysis.
-- Return appropriate HTTP status codes:
-  - `200 OK` for successful requests.
-  - `201 Created` for successful resource creation.
-  - `400 Bad Request` for validation errors.
-  - `401 Unauthorized` for authentication failures.
-  - `403 Forbidden` for permission issues.
-  - `500 Internal Server Error` for unexpected failures.
-- Critical errors must trigger alerts to Slack/Email.
-
----
-
-## **7️⃣ Deployment & CI/CD Rules**
-- Use GitHub Actions for CI/CD pipelines.
-- Deploy to Vercel (Frontend) & Supabase/AWS (Backend).
-- Automate database migrations during deployment.
-- Perform zero-downtime deployments with rolling updates.
-- Enable auto-scaling in production environments.
-
----
-
-## **8️⃣ Future Enhancements**
-- WebSockets for real-time execution tracking.
-- AI-assisted test script generation & failure analysis.
-- Integration with CI/CD tools (GitHub Actions, Jenkins, CircleCI).
-- Automated test scheduling & parallel execution on cloud VMs.
-
----
-
-## **🔄 Migration Guidelines**
-When migrating from standalone servers:
-1. Move all routes to `src/app/api/[endpoint]/route.ts`
-2. Convert middleware to Next.js middleware format
-3. Move business logic to service layer
-4. Update npm scripts to use Next.js dev server
-5. Remove standalone server files
-
-## **📝 NPM Scripts**
-Correct npm scripts setup:
-```json
-{
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
-  }
-}
-```
-
-Incorrect npm scripts to avoid:
-```json
-{
-  "scripts": {
-    "server:dev": "ts-node-dev src/server/index.ts",  // ❌
-    "server:start": "node dist/server/index.js"       // ❌
-  }
-}
-```
-
----
-
-### **Conclusion**
-These rules establish a structured, secure, and scalable backend to support automation script development, execution, and analysis.
 
 ---
 
