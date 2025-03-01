@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 
 import { RouteGuard } from '@/components/Auth/RouteGuard';
-import { Toaster } from '@/components/shadcn/toaster';
+import { Toaster } from '@/components/Shadcn/toaster';
 import { ThemeProvider } from '@/components/Theme/ThemeProvider';
 import { locales } from '@/config';
 import { RoleProvider } from '@/context/RoleContext';
@@ -15,7 +15,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 type Props = {
   children: React.ReactNode;
-  params: Promise<{ locale: string }>;
+  params: { locale: string };
 };
 
 async function validateLocale(locale: string) {
@@ -24,16 +24,15 @@ async function validateLocale(locale: string) {
   return locales.includes(locale as any) ? locale : null;
 }
 
-export default async function LocaleLayout(props: Props) {
-  const { children, params } = props;
-  const resolvedParams = await params;
+export default async function LocaleLayout({ children, params }: Props) {
+  const { locale } = params;
 
-  if (!resolvedParams.locale) {
+  if (!locale) {
     notFound();
     return null;
   }
 
-  const validLocale = await validateLocale(resolvedParams.locale);
+  const validLocale = await validateLocale(locale);
 
   if (!validLocale) {
     notFound();
