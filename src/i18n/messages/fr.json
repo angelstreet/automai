@@ -130,5 +130,24 @@
     "update": "Mettre à jour",
     "enterName": "Entrez votre nom",
     "plan": "Plan"
+  },
+  "billing": {
+    "title": "Facturation & Plans",
+    "currentPlan": "Plan actuel",
+    "upgrade": "Mettre à niveau",
+    "manageSubscription": "Gérer l'abonnement",
+    "billingHistory": "Historique de facturation",
+    "paymentMethods": "Moyens de paiement",
+    "addPaymentMethod": "Ajouter un moyen de paiement",
+    "planDetails": "Détails du plan",
+    "features": "Fonctionnalités",
+    "price": "Prix",
+    "period": "Période",
+    "monthly": "Mensuel",
+    "yearly": "Annuel",
+    "enterprise": "Entreprise",
+    "free": "Gratuit",
+    "pro": "Pro",
+    "team": "Équipe"
   }
 }
