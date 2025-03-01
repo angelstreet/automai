@@ -12,7 +12,6 @@ export interface LogOptions {
   action?: string;
   connectionId?: string;
   data?: Record<string, any>;
-  saveToDb?: boolean; // Flag is kept for compatibility but ignored
   pathname?: string;
   connectionType?: string;
   type?: string;

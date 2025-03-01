@@ -29,7 +29,6 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
           if (!credentials?.email || !credentials?.password) {
             logger.warn('Missing credentials', {
               action: 'AUTH_MISSING_CREDENTIALS',
-              saveToDb: true,
             });
             return null;
           }
@@ -47,7 +46,6 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
               logger.warn('User not found', {
                 action: 'AUTH_USER_NOT_FOUND',
                 data: { email: credentials.email },
-                saveToDb: true,
               });
               return null;
             }
@@ -59,7 +57,6 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
               logger.warn('Invalid password', {
                 action: 'AUTH_INVALID_PASSWORD',
                 data: { email: credentials.email },
-                saveToDb: true,
               });
               return null;
             }
@@ -68,7 +65,6 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
               userId: user.id,
               tenantId: user.tenantId,
               action: 'AUTH_SUCCESS',
-              saveToDb: true,
             });
 
             return {
@@ -83,7 +79,6 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
             logger.error(`Auth error: ${error instanceof Error ? error.message : String(error)}`, {
               action: 'AUTH_ERROR',
               data: { error: error instanceof Error ? error.message : String(error) },
-              saveToDb: true,
             });
             return null;
           }

@@ -110,9 +110,15 @@ export function Terminal({ connection }: TerminalProps) {
 
       // Initialize WebSocket server first
       try {
+        // For testing, allow overriding connection ID (this should be removed in production)
+        const testConnectionId = 'test-connection-id'; // Hardcoded test connection ID
+        const connectionId = connection.id === 'test' ? testConnectionId : connection.id;
+        
         console.log('[Terminal] Initializing WebSocket server', {
-          connectionId: connection.id,
-          host: connection.host || connection.ip,
+          connectionId: connectionId,
+          originalId: connection.id,
+          usingTestId: connection.id === 'test',
+          host: connection.host || connection.ip, // Use either host or ip
           port: connection.port
         });
         term.write(`\x1B[1;3;33mInitializing terminal server...\x1B[0m\r\n`);
@@ -122,7 +128,7 @@ export function Terminal({ connection }: TerminalProps) {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ connectionId: connection.id }),
+          body: JSON.stringify({ connectionId: connectionId }),
         });
         
         if (!initResponse.ok) {
@@ -177,9 +183,16 @@ export function Terminal({ connection }: TerminalProps) {
 
       // Use the Next.js API route for WebSocket connections instead of the standalone server
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const socketUrl = `${protocol}//${window.location.host}/api/terminals/ws/${connection.id}`;
+      
+      // For testing, allow overriding connection ID (this should be removed in production)
+      const testConnectionId = 'test-connection-id'; // Hardcoded test connection ID
+      const connectionId = connection.id === 'test' ? testConnectionId : connection.id;
+      
+      const socketUrl = `${protocol}//${window.location.host}/api/terminals/ws/${connectionId}`;
       console.log(`[WebSocket] Connecting to: ${socketUrl}`, {
-        connectionId: connection.id,
+        connectionId: connectionId,
+        originalId: connection.id,
+        usingTestId: connection.id === 'test',
         connectionType: connection.type,
         username: connection.username,
         host: connection.ip,
