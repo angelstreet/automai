@@ -113,7 +113,7 @@ export default async function middleware(request: NextRequest) {
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
   
   // More precise protected route detection
-  const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings'];
+  const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings', 'trial'];
   
   // Check if any part of the path matches a protected path
   const isProtectedRoute = isApiRoute || 
@@ -174,17 +174,44 @@ export default async function middleware(request: NextRequest) {
       
       // NEW: For protected UI routes, check if user exists in database via profile API
       if (!isApiRoute) {
-        // Make a request to the profile API to check if user exists
-        const profileUrl = new URL(`/api/auth/profile`, request.url);
-        const profileResponse = await fetch(profileUrl, {
-          headers: {
-            cookie: request.headers.get('cookie') || '',
-          },
-        });
-        
-        // If profile API returns 404, user doesn't exist in database
-        if (profileResponse.status === 404) {
-          console.log('User not found in database, redirecting to login');
+        try {
+          // Make a request to the profile API to check if user exists
+          // Use the same host as the current request to avoid CORS issues
+          const host = request.headers.get('host') || 'localhost:3000';
+          const protocol = host.includes('localhost') ? 'http' : 'https';
+          const profileUrl = `${protocol}://${host}/api/auth/profile`;
+          
+          console.log('Checking user profile at:', profileUrl);
+          
+          const profileResponse = await fetch(profileUrl, {
+            headers: {
+              cookie: request.headers.get('cookie') || '',
+              'Content-Type': 'application/json',
+            },
+            // Add a timeout to prevent hanging
+            signal: AbortSignal.timeout(3000),
+          });
+          
+          // If profile API returns 404, user doesn't exist in database
+          if (profileResponse.status === 404) {
+            console.log('User not found in database, redirecting to login');
+            return createLoginRedirect(request, pathParts);
+          }
+          
+          // If we get any other error status, also redirect to login
+          if (!profileResponse.ok) {
+            console.log(`Profile API returned ${profileResponse.status}, redirecting to login`);
+            return createLoginRedirect(request, pathParts);
+          }
+          
+          // User exists and is valid, continue
+          console.log('User profile validated successfully');
+        } catch (fetchError) {
+          // If fetch fails, log the error but don't block the request
+          // This prevents issues with the middleware blocking all requests if the profile API is down
+          console.error('Error checking user profile:', fetchError);
+          
+          // For safety, we'll redirect to login if we can't verify the user
           return createLoginRedirect(request, pathParts);
         }
       }
@@ -199,14 +226,9 @@ export default async function middleware(request: NextRequest) {
       
       return createLoginRedirect(request, pathParts);
     }
-    
-    // Skip i18n middleware for API routes
-    if (isApiRoute) {
-      return NextResponse.next();
-    }
   }
-
-  // 4. i18n handling
+  
+  // 4. Apply internationalization middleware
   const intl = await getIntlMiddleware();
   return intl(request);
 }
