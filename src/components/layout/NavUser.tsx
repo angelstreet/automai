@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/Shadcn/dropdown-menu';
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/Sidebar';
 
 interface NavUserProps {
   user: {
