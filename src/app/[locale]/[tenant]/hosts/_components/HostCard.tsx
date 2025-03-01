@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/Shadcn/button';
 import {
@@ -44,11 +45,11 @@ interface HostCardProps {
 export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
   const [showError, setShowError] = useState(false);
+  const t = useTranslations('Virtualization');
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full';
 
-    // If status is undefined, null, or empty string, treat as pending
     if (!status) {
       return (
         <TooltipProvider>
@@ -57,7 +58,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               <div className={`${baseClasses} bg-gray-400`} />
             </TooltipTrigger>
             <TooltipContent>
-              <p>Unknown</p>
+              <p>{t('unknown')}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -73,7 +74,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 <div className={`${baseClasses} bg-green-500`} />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Connected</p>
+                <p>{t('connected')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -86,7 +87,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 <div className={`${baseClasses} bg-red-500`} />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Error</p>
+                <p>{t('failed')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -99,7 +100,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 <div className={`${baseClasses} bg-yellow-500`} />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Pending</p>
+                <p>{t('pending')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -112,7 +113,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 <div className={`${baseClasses} bg-orange-500`} />
               </TooltipTrigger>
               <TooltipContent>
-                <p>Unknown Status</p>
+                <p>{t('unknown')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -160,19 +161,19 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               <DropdownMenuContent align="end" className="w-[160px]">
                 <DropdownMenuItem onClick={() => router.push(`/metrics/${host.name}`)}>
                   <BarChart2 className="mr-2 h-4 w-4" />
-                  <span>Metrics</span>
+                  <span>{t('metrics')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)}>
                   <ScrollText className="mr-2 h-4 w-4" />
-                  <span>Logs</span>
+                  <span>{t('logs')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onTestConnection?.(host)}>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  <span>Refresh</span>
+                  <span>{t('refresh')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
                   <XCircle className="mr-2 h-4 w-4" />
-                  <span>Delete</span>
+                  <span>{t('delete')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -184,7 +185,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               {host.description && <p>{host.description}</p>}
               {host.lastConnected && (
                 <p className="text-xs mt-1">
-                  Last connected: {new Date(host.lastConnected).toLocaleString()}
+                  {t('lastConnected')}: {new Date(host.lastConnected).toLocaleString()}
                 </p>
               )}
             </div>
@@ -196,7 +197,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               disabled={host.status !== 'connected'}
             >
               <Terminal className="h-4 w-4 mr-2" />
-              Terminal
+              {t('terminal')}
             </Button>
           </div>
         </CardContent>
@@ -207,20 +208,20 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
           <DialogHeader>
             <DialogTitle className="flex items-center text-destructive">
               <AlertCircle className="h-5 w-5 mr-2" />
-              Connection Error
+              {t('connectionError')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="text-sm">
-              <p className="font-medium mb-2">Error Details:</p>
+              <p className="font-medium mb-2">{t('errorDetails')}:</p>
               <pre className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-xs">
-                {host.errorMessage || 'No error details available'}
+                {host.errorMessage || t('noErrorDetails')}
               </pre>
             </div>
             <div className="text-sm text-muted-foreground">
               <p>
-                Last successful connection:{' '}
-                {host.lastConnected ? new Date(host.lastConnected).toLocaleString() : 'Never'}
+                {t('lastConnected')}:{' '}
+                {host.lastConnected ? new Date(host.lastConnected).toLocaleString() : t('never')}
               </p>
             </div>
           </div>
