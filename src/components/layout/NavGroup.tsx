@@ -43,7 +43,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
   const isActive = (href: string) => {
-    return pathname === `/${params.locale}/${params.tenant}${href}`;
+    return pathname === `/${params.locale as string}/${params.tenant as string}${href}`;
   };
 
   const toggleSubmenu = (href: string) => {
@@ -109,7 +109,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                       tooltip={item.title}
                       className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
-                      <Link href={item.href.replace(/^\/?/, `/${params.locale}/${params.tenant}/`)}>
+                      <Link href={`/${params.locale as string}/${params.tenant as string}${item.href}`}>
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
@@ -134,7 +134,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                             isActive={isSubActive}
                             className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                           >
-                            <Link href={subItem.href.replace(/^\/?/, `/${params.locale}/${params.tenant}/`)}>
+                            <Link href={`/${params.locale as string}/${params.tenant as string}${subItem.href}`}>
                               <SubIcon className="h-4 w-4" />
                               <span>{subItem.title}</span>
                             </Link>
