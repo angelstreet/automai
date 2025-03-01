@@ -116,10 +116,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session]);
 
-  useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
-
   // Check session only when needed
   const checkSession = useCallback(() => {
     const now = Date.now();
@@ -129,6 +125,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [lastFetch, fetchUser]);
 
   useEffect(() => {
+    if (status === 'loading') {
+      setIsLoading(true);
+      return;
+    }
+    
     if (status === 'authenticated' && session?.user) {
       console.log('Session authenticated, fetching user data');
       fetchUser();
@@ -136,6 +137,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       console.log('Session unauthenticated, clearing user data');
       setUser(null);
       setIsLoading(false);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(SESSION_CACHE_KEY);
+      }
     }
   }, [status, session, fetchUser]);
 

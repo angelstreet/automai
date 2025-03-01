@@ -99,6 +99,13 @@ export async function createServer(options: {
         } else if (isWebSocketInitialized && pathname && pathname.startsWith('/terminals/')) {
           // WebSockets are already initialized, just handle the upgrade
           handleUpgrade(request, socket, head, pathname);
+        } else if (pathname === '/_next/webpack-hmr') {
+          // Allow Next.js HMR WebSocket connections
+          socket.write('HTTP/1.1 101 Switching Protocols\r\n' +
+                      'Upgrade: websocket\r\n' +
+                      'Connection: Upgrade\r\n' +
+                      '\r\n');
+          socket.pipe(socket);
         } else {
           // Not a terminal connection or WebSockets not initialized
           socket.destroy();
@@ -126,16 +133,13 @@ function initializeWebSocketSupport(server: Server) {
   initializeWebSocketServer(server);
   isWebSocketInitialized = true;
   
-  // Replace the upgrade listener with one that directly handles terminal connections
-  server.removeAllListeners('upgrade');
+  // Handle upgrade requests without removing existing listeners
   server.on('upgrade', (request, socket, head) => {
     const { pathname } = parse(request.url || '');
     
     // Handle terminal connections
     if (pathname && pathname.startsWith('/terminals/')) {
       handleUpgrade(request, socket, head, pathname);
-    } else {
-      socket.destroy();
     }
   });
   
