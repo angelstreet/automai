@@ -45,11 +45,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const fetchUser = useCallback(async () => {
     try {
       if (!session?.user) {
+        console.log('No active session found in fetchUser');
         setUser(null);
         setError('No active session');
         setIsLoading(false);
         return;
       }
+      
+      console.log('Session found, fetching user data');
+      
       // Check if we have a cached user and it's still valid
       const now = Date.now();
       const cachedData =
@@ -59,6 +63,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         try {
           const { user: cachedUser, timestamp } = JSON.parse(cachedData);
           if (now - timestamp < SESSION_CACHE_EXPIRY) {
+            console.log('Using cached user data');
             setUser(cachedUser);
             setError(null);
             setIsLoading(false);
@@ -70,6 +75,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      console.log('Fetching fresh user data from API');
       const response = await fetch('/api/auth/profile', {
         credentials: 'include',
       });
@@ -85,6 +91,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       const userData = await response.json();
+      console.log('User data fetched successfully:', { ...userData, id: '***' });
 
       // Cache the user data
       if (typeof window !== 'undefined') {
@@ -107,7 +114,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     fetchUser();
@@ -123,8 +130,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
+      console.log('Session authenticated, fetching user data');
       fetchUser();
     } else if (status === 'unauthenticated') {
+      console.log('Session unauthenticated, clearing user data');
       setUser(null);
       setIsLoading(false);
     }

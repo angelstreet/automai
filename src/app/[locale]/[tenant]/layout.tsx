@@ -20,16 +20,33 @@ export default function TenantLayout({
   children: React.ReactNode;
   params: { tenant: string; locale: string };
 }) {
-  const { user, isLoading, checkSession } = useUser();
+  const { user, isLoading, error, checkSession } = useUser();
+  const [loadingError, setLoadingError] = React.useState<string | null>(null);
 
   // Check session only at intervals to reduce API calls
   React.useEffect(() => {
     const now = Date.now();
     if (now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
-      checkSession();
-      lastSessionCheck = now;
+      try {
+        checkSession();
+        lastSessionCheck = now;
+      } catch (err) {
+        console.error('Error checking session:', err);
+        setLoadingError('Failed to check session');
+      }
     }
   }, [checkSession]);
+
+  // Log important state for debugging
+  React.useEffect(() => {
+    console.log('TenantLayout state:', { 
+      isLoading, 
+      hasUser: !!user, 
+      error,
+      tenant: params.tenant,
+      locale: params.locale
+    });
+  }, [isLoading, user, error, params.tenant, params.locale]);
 
   // Only show loading state while user data is being fetched
   if (isLoading) {
@@ -40,8 +57,26 @@ export default function TenantLayout({
     );
   }
 
+  // Show error state if there's an error
+  if (error || loadingError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="text-red-500 mb-4">Error: {error || loadingError}</div>
+        <button 
+          className="px-4 py-2 bg-primary text-white rounded"
+          onClick={() => {
+            window.location.href = `/${params.locale}/login`;
+          }}
+        >
+          Go to Login
+        </button>
+      </div>
+    );
+  }
+
   // If no user, let RouteGuard handle the redirect
   if (!user) {
+    console.log('No user found in TenantLayout, returning null');
     return null;
   }
 
