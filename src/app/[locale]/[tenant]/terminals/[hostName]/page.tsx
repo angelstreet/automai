@@ -66,19 +66,27 @@ export default function TerminalPage() {
         }
       }
 
+      console.log(`Fetching host by name: ${name}`);
       // If not in session storage, fetch from API
       const response = await fetch(`/api/hosts/byName/${name}`);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch host');
+        const errorData = await response.json();
+        console.error('Error response from API:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch host');
       }
+      
       const data = await response.json();
       if (!data.success || !data.data) {
+        console.error('Invalid host data returned:', data);
         throw new Error('Invalid host data');
       }
+      
+      console.log('Host data fetched successfully:', data.data.name);
       return data.data;
     } catch (error) {
       console.error('Error fetching host:', error);
-      return null;
+      throw error;
     }
   };
 
@@ -114,11 +122,15 @@ export default function TerminalPage() {
 
     initializationAttemptedRef.current = true;
     setLoading(true);
+    setError(null);
 
     try {
       // For single terminal case
       if (terminalCount === 1) {
         const host = await fetchMachineByName(hostName);
+        if (!host) {
+          throw new Error(`Host not found: ${hostName}`);
+        }
         setConnections([host]);
         return;
       }

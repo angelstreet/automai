@@ -5,8 +5,13 @@ import { Server } from 'http';
 import { logger } from '../logger';
 import { handleSshConnection, WebSocketConnection } from './ssh';
 
+// Define global type for WebSocketServer singleton
+declare global {
+  var websocketServer: WSServer | undefined;
+}
+
 // WebSocketServer instance cache
-let wss: WSServer | null = null;
+let wss: WSServer | null = global.websocketServer || null;
 let pingInterval: NodeJS.Timeout | null = null;
 
 /**
@@ -17,6 +22,7 @@ export function initializeWebSocketServer(server: Server): WSServer {
 
   // Create new WebSocketServer if none exists
   if (!wss) {
+    logger.info('Creating new WebSocketServer instance');
     wss = new WSServer({ noServer: true });
 
     // Set up ping interval to detect dead connections
@@ -132,6 +138,11 @@ export function initializeWebSocketServer(server: Server): WSServer {
         logger.info('WebSocket client disconnected');
       });
     });
+
+    // Store in global for singleton pattern
+    if (process.env.NODE_ENV !== 'production') {
+      global.websocketServer = wss;
+    }
   }
 
   return wss;
@@ -165,6 +176,9 @@ export function handleUpgrade(
  * Get the WebSocket server instance
  */
 export function getWebSocketServer(): WSServer | null {
+  if (!wss) {
+    logger.warn('WebSocketServer not initialized yet');
+  }
   return wss;
 }
 
@@ -190,6 +204,7 @@ export function closeWebSocketServer(): Promise<void> {
     const closeTimeout = setTimeout(() => {
       logger.warn('WebSocket server close timed out, forcing close');
       wss = null;
+      global.websocketServer = undefined;
       resolve();
     }, 2000); // 2 second timeout
 
@@ -203,6 +218,7 @@ export function closeWebSocketServer(): Promise<void> {
       clearTimeout(closeTimeout);
       logger.info('WebSocket server closed');
       wss = null;
+      global.websocketServer = undefined;
       resolve();
     });
   });
