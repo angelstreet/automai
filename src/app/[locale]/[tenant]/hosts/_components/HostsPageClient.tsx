@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60,
-      cacheTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 5,
       refetchOnWindowFocus: false,
       retry: 1,
     },
@@ -55,19 +55,12 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
     mutationFn: (id: string) => hostsApi.deleteHost(locale, id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hosts'] });
-      toast({
-        title: 'Success',
-        description: 'Host deleted successfully',
-      });
+      toast.success('Host deleted successfully');
       setHostToDelete(null);
       setIsDeleteDialogOpen(false);
     },
     onError: (error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete host',
-      });
+      toast.error(error instanceof Error ? error.message : 'Failed to delete host');
     },
   });
 
