@@ -38,9 +38,10 @@ import {
 
 import { Textarea } from '@/components/shadcn/textarea';
 
-import { useToast } from '@/components/shadcn/useToast';
+import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
+import { toast } from 'sonner';
 
 // Type matching Prisma Project model
 type Project = {

@@ -18,6 +18,7 @@ import { useToast } from '@/components/shadcn/useToast';
 import { Host } from '@/types/hosts';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
+import { toast } from 'sonner';
 
 interface ConnectHostDialogProps {
   open: boolean;

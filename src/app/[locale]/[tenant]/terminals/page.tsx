@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-import { useToast } from '@/components/shadcn/use-toast';
+import { useToast } from '@/components/shadcn/useToast';
+import { toast } from 'sonner';
 
 export default function TerminalsPage() {
   const router = useRouter();

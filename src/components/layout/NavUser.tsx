@@ -18,7 +18,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
-} from '@/components/sidebar';
+} from '@/components/Sidebar';
 
 interface NavUserProps {
   user: {

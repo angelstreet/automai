@@ -5,6 +5,18 @@ alwaysApply: false
 ---
 # Next.js Naming Conventions
 
+⚠️ IMPORTANT: These naming conventions DO NOT apply to shadcn components and their files.
+For shadcn components:
+1. Maintain their original file naming (kebab-case) to ensure compatibility and easier updates
+2. Keep their original export names and styles exactly as they come from shadcn
+3. Use their exports exactly as provided by shadcn (do not modify import/export patterns)
+
+Example:
+```typescript
+// Original shadcn file: use-toast.ts with its original export
+import { useToast } from '@/components/shadcn/use-toast';
+```
+
 ## File and Directory Naming
 
 ### Pages & Folders

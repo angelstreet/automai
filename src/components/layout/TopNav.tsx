@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
+import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
 import { sidebarData } from '@/data/sidebarData';
 
 export function TopNav() {
