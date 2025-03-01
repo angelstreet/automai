@@ -27,6 +27,7 @@ type UserContextType = {
   logout: () => void;
   refreshUser: () => Promise<void>;
   checkSession: () => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
 };
 
 // Cache for session data
@@ -116,6 +117,37 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session]);
 
+  const updateProfile = useCallback(async (data: Partial<User>) => {
+    if (!session?.accessToken) {
+      throw new Error('No active session');
+    }
+
+    try {
+      console.log('Updating user profile...');
+      const response = await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to update profile: ${response.status}`);
+      }
+
+      // Refresh user data after successful update
+      await fetchUser();
+      console.log('Profile updated successfully');
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      throw err;
+    }
+  }, [session, fetchUser]);
+
   // Check session only when needed
   const checkSession = useCallback(() => {
     const now = Date.now();
@@ -172,6 +204,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     logout,
     refreshUser: fetchUser,
     checkSession,
+    updateProfile,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

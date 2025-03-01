@@ -4,8 +4,6 @@ import { ArrowLeft } from 'lucide-react';
 
 import { useParams, useRouter } from 'next/navigation';
 
-import { useSession } from 'next-auth/react';
-
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
@@ -15,8 +13,7 @@ import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
 
 export function ProfileContent() {
-  const { user, isLoading, refreshUser } = useUser();
-  const { data: session } = useSession();
+  const { user, isLoading, updateProfile } = useUser();
   const t = useTranslations('Profile');
   const params = useParams();
   const locale = params.locale as string;
@@ -26,24 +23,9 @@ export function ProfileContent() {
   const router = useRouter();
 
   const handleUpdateName = async () => {
-    if (!session?.accessToken) return;
     try {
       setIsUpdating(true);
-      const response = await fetch('/api/auth/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-        body: JSON.stringify({ name }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      await refreshUser();
+      await updateProfile({ name });
     } catch (error) {
       console.error('Error updating profile:', error);
     } finally {

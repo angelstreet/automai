@@ -21,7 +21,9 @@ export const prisma =
   });
 
 // Test connection only once at startup
-if (!globalForPrisma.prisma) {
+let isInitialized = false;
+if (!globalForPrisma.prisma && !isInitialized) {
+  isInitialized = true;
   (async () => {
     try {
       console.log('Testing initial Prisma database connection...');
