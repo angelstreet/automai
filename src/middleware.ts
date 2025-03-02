@@ -32,10 +32,9 @@ function createLoginRedirect(request: NextRequest, pathParts: string[]) {
   loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
   console.log('Redirecting to:', loginUrl.toString());
   
-  // Force clear any session cookies that might be causing issues
+  // Create the redirect response without deleting any session cookies
+  // We should only delete session cookies during explicit logout
   const response = NextResponse.redirect(loginUrl);
-  response.cookies.delete('next-auth.session-token');
-  response.cookies.delete('__Secure-next-auth.session-token');
   
   return response;
 }
@@ -189,7 +188,7 @@ export default async function middleware(request: NextRequest) {
       
       // For protected UI routes, check if user exists in database via profile API
       // But only for non-API routes and only if we're not in development mode
-      if (!isApiRoute) {
+      if (!isApiRoute && process.env.NODE_ENV === 'production') {
         try {
           // Make a request to the profile API to check if user exists
           // Use the same host as the current request to avoid CORS issues
@@ -217,14 +216,12 @@ export default async function middleware(request: NextRequest) {
             return createLoginRedirect(request, pathParts);
           }
           
-          // If we get any other error status, also redirect to login
+          // If we get any other error status, log it but allow the request to continue
           if (!profileResponse.ok) {
-            console.log(`Profile API returned ${profileResponse.status}, redirecting to login`);
-            return createLoginRedirect(request, pathParts);
+            console.log(`Profile API returned ${profileResponse.status}, but allowing request to continue`);
+          } else {
+            console.log('User profile validated successfully');
           }
-          
-          // User exists and is valid, continue
-          console.log('User profile validated successfully');
         } catch (fetchError) {
           // If fetch fails, log the error but don't block the request
           // This prevents issues with the middleware blocking all requests if the profile API is down
@@ -233,7 +230,6 @@ export default async function middleware(request: NextRequest) {
           // Allow the request to continue even if profile check fails
           // This prevents users from being logged out after server restart
           console.log('Allowing request despite profile check failure');
-          return NextResponse.next();
         }
       }
       

@@ -49,11 +49,13 @@ export default function RepositoriesPage() {
             router.push('/login');
             return;
           }
-          throw new Error('Failed to fetch providers');
+          // For non-401 errors, just set empty providers array
+          console.log('Failed to fetch providers:', providersResponse.status);
+          setProviders([]);
+        } else {
+          const providersData = await providersResponse.json();
+          setProviders(providersData);
         }
-        
-        const providersData = await providersResponse.json();
-        setProviders(providersData);
 
         // Fetch all repositories in a single call with retry enabled
         const reposResponse = await fetchWithAuth('/api/fetch-all-repositories', {}, { 
@@ -68,11 +70,13 @@ export default function RepositoriesPage() {
             return;
           }
           
-          // Don't show error toast for 400 (no repositories found)
-          if (reposResponse.status !== 400) {
-            throw new Error('Failed to fetch repositories');
+          // Don't show error toast for 400 (no repositories found) or 404 (table doesn't exist)
+          if (reposResponse.status !== 400 && reposResponse.status !== 404) {
+            console.error('Error fetching repositories:', reposResponse.status);
+          } else {
+            console.log('No repositories found or table does not exist yet');
           }
-          // If status is 400, just set empty repositories array
+          // Set empty repositories array for any error
           setRepositories([]);
         } else {
           const reposData = await reposResponse.json();
@@ -80,11 +84,17 @@ export default function RepositoriesPage() {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load repositories and providers',
-          variant: 'destructive',
-        });
+        // Only show toast for unexpected errors, not for "Failed to fetch" which is common
+        if (!(error instanceof Error && error.message.includes('Failed to fetch'))) {
+          toast({
+            title: 'Error',
+            description: 'Failed to load repositories and providers',
+            variant: 'destructive',
+          });
+        }
+        // Set empty arrays for both
+        setProviders([]);
+        setRepositories([]);
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
@@ -280,87 +290,120 @@ export default function RepositoriesPage() {
         return true;
       });
 
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+
+    if (providers.length === 0) {
+      return (
+        <EmptyState
+          icon={<GitBranch className="h-10 w-10" />}
+          title="No Git Providers Connected"
+          description="Connect to GitHub, GitLab, or Gitea to manage your repositories."
+          action={
+            <Button onClick={() => setAddProviderOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Connect Git Provider
+            </Button>
+          }
+        />
+      );
+    }
+
+    if (repositories.length === 0) {
+      return (
+        <div>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-4">Connected Providers</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {providers.map((provider) => (
+                <GitProviderCard
+                  key={provider.id}
+                  provider={provider}
+                  onDelete={handleDeleteProvider}
+                  onRefresh={handleRefreshProvider}
+                  isRefreshing={refreshingProviderId === provider.id}
+                />
+              ))}
+              <Button
+                variant="outline"
+                className="h-40 border-dashed"
+                onClick={() => setAddProviderOpen(true)}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Provider
+              </Button>
+            </div>
+          </div>
+          <EmptyState
+            icon={<GitBranch className="h-10 w-10" />}
+            title="No Repositories Found"
+            description="Sync your Git provider to import repositories."
+            action={
+              <Button onClick={() => providers.length > 0 && handleRefreshProvider(providers[0].id)}>
+                <GitBranch className="mr-2 h-4 w-4" />
+                Sync Repositories
+              </Button>
+            }
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Repositories</h2>
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="private">Private</TabsTrigger>
+              <TabsTrigger value="public">Public</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value={activeTab} className="mt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredRepositories.map(repo => (
+                <RepositoryCard
+                  key={repo.id}
+                  repository={repo}
+                  onSync={handleSyncRepository}
+                  isSyncing={syncingRepoId === repo.id}
+                />
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  };
+
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container py-6">
       <PageHeader
         title="Repositories"
         description="Manage your Git repositories"
-        icon={<GitBranch className="h-6 w-6" />}
-      >
-        <Button onClick={() => setAddProviderOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Provider
-        </Button>
-      </PageHeader>
-
+        action={
+          <Button onClick={() => setAddProviderOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Connect Provider
+          </Button>
+        }
+      />
+      
+      {renderContent()}
+      
       <AddGitProviderDialog
         open={addProviderOpen}
         onOpenChange={setAddProviderOpen}
         onSubmit={handleAddProvider}
         isLoading={isAddingProvider}
       />
-
-      {!isLoading && providers.length > 0 && (
-        <div className="space-y-6">
-          <h2 className="text-xl font-semibold">Connected Providers</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {providers.map(provider => (
-              <GitProviderCard
-                key={provider.id}
-                provider={provider}
-                onDelete={handleDeleteProvider}
-                onRefresh={handleRefreshProvider}
-                isRefreshing={refreshingProviderId === provider.id}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!isLoading && repositories.length > 0 ? (
-        <div className="space-y-4">
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold">Repositories</h2>
-              <TabsList>
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="private">Private</TabsTrigger>
-                <TabsTrigger value="public">Public</TabsTrigger>
-              </TabsList>
-            </div>
-            <TabsContent value={activeTab} className="mt-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredRepositories.map(repo => (
-                  <RepositoryCard
-                    key={repo.id}
-                    repository={repo}
-                    onSync={handleSyncRepository}
-                    isSyncing={syncingRepoId === repo.id}
-                  />
-                ))}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      ) : !isLoading && providers.length > 0 ? (
-        <EmptyState
-          title="No repositories found"
-          description="Sync your Git providers to fetch repositories"
-          icon={<GitBranch className="h-12 w-12" />}
-        />
-      ) : !isLoading ? (
-        <EmptyState
-          title="No Git providers connected"
-          description="Connect to a Git provider to access your repositories"
-          icon={<GitBranch className="h-12 w-12" />}
-          action={
-            <Button onClick={() => setAddProviderOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Provider
-            </Button>
-          }
-        />
-      ) : null}
     </div>
   );
 } 
