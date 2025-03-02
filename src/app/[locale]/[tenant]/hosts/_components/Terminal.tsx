@@ -218,15 +218,19 @@ export function Terminal({ connection }: TerminalProps) {
           const authMessage = {
             type: 'auth',
             connectionType: connection.type,
-            username: connection.username,
+            username: connection.username || connection.user || 'root', // Fallback to connection.user or 'root'
             password: connection.password,
+            host: connection.ip,
+            port: connection.port
           };
 
           console.log('[WebSocket] Sending authentication', {
             type: 'auth',
             connectionType: connection.type,
-            username: connection.username,
+            username: connection.username || connection.user || 'root', // Same fallback
             hasPassword: !!connection.password,
+            host: connection.ip,
+            port: connection.port
           });
 
           // Log authentication attempt
