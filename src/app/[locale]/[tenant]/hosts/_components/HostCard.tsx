@@ -50,7 +50,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const t = useTranslations('Common');
 
   const getStatusDot = (status: string) => {
-    const baseClasses = 'h-4 w-3 rounded-full';
+    const baseClasses = 'h-4 w-4 rounded-full';
 
     if (!status) {
       return (
