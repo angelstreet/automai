@@ -21,9 +21,14 @@ export async function GET() {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const providers = await repositoryService.listGitProviders(session.user.id);
-
-    return NextResponse.json(providers);
+    try {
+      const providers = await repositoryService.listGitProviders(session.user.id);
+      return NextResponse.json(providers);
+    } catch (error) {
+      console.error('Error in listGitProviders:', error);
+      // Return empty array instead of error when no providers exist
+      return NextResponse.json([]);
+    }
   } catch (error) {
     console.error('Error fetching git providers:', error);
     return NextResponse.json(

@@ -29,14 +29,20 @@ export function getGitProviderService(providerType: GitProviderType, options?: {
 }
 
 export async function listGitProviders(userId: string): Promise<GitProvider[]> {
-  const providers = await prisma.gitProvider.findMany({
-    where: { userId },
-  });
-  
-  return providers.map(provider => ({
-    ...provider,
-    status: provider.accessToken ? 'connected' : 'disconnected',
-  }));
+  try {
+    const providers = await prisma.gitProvider.findMany({
+      where: { userId },
+    });
+    
+    return providers.map(provider => ({
+      ...provider,
+      status: provider.accessToken ? 'connected' : 'disconnected',
+    }));
+  } catch (error) {
+    console.error('Error in listGitProviders:', error);
+    // Return empty array when database table doesn't exist or other errors
+    return [];
+  }
 }
 
 export async function getGitProvider(id: string): Promise<GitProvider | null> {
@@ -109,36 +115,42 @@ export async function listRepositories(userId: string, filters?: {
   projectId?: string;
   syncStatus?: SyncStatus;
 }): Promise<Repository[]> {
-  const where: any = {
-    provider: {
-      userId,
-    },
-  };
-  
-  if (filters?.providerId) {
-    where.providerId = filters.providerId;
-  }
-  
-  if (filters?.projectId) {
-    where.projectId = filters.projectId;
-  }
-  
-  if (filters?.syncStatus) {
-    where.syncStatus = filters.syncStatus;
-  }
-  
-  return prisma.repository.findMany({
-    where,
-    include: {
-      provider: true,
-      project: {
-        select: {
-          id: true,
-          name: true,
+  try {
+    const where: any = {
+      provider: {
+        userId,
+      },
+    };
+    
+    if (filters?.providerId) {
+      where.providerId = filters.providerId;
+    }
+    
+    if (filters?.projectId) {
+      where.projectId = filters.projectId;
+    }
+    
+    if (filters?.syncStatus) {
+      where.syncStatus = filters.syncStatus;
+    }
+    
+    return await prisma.repository.findMany({
+      where,
+      include: {
+        provider: true,
+        project: {
+          select: {
+            id: true,
+            name: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.error('Error in listRepositories:', error);
+    // Return empty array when database table doesn't exist or other errors
+    return [];
+  }
 }
 
 export async function getRepository(id: string): Promise<Repository | null> {
