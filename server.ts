@@ -17,6 +17,9 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOST || 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);
 
+// Track shutdown status to prevent duplicate signals
+let isShuttingDown = false;
+
 async function main() {
   try {
     // Start server without WebSocket support by default
@@ -47,6 +50,15 @@ async function main() {
 
 // Handle graceful shutdown
 async function shutdown(signal: string) {
+  // Skip if shutdown is already in progress
+  if (isShuttingDown) {
+    console.log(`Ignoring additional ${signal} signal, shutdown already in progress`);
+    return;
+  }
+  
+  // Set flag to prevent multiple shutdown procedures
+  isShuttingDown = true;
+  
   console.log(`\nReceived ${signal}. Shutting down server...`);
   
   // Set a timeout to force exit if shutdown takes too long

@@ -7,7 +7,7 @@ import { handleSshConnection, WebSocketConnection } from './ssh';
 
 // Define custom WebSocket interface with isAlive property
 interface ExtendedWebSocket extends WebSocket {
-  isAlive?: boolean;
+  ws_isAlive?: boolean;
 }
 
 // Global variable to store the WebSocket server instance
@@ -35,12 +35,12 @@ export function initializeWebSocketServer(): WebSocketServer {
   const pingInterval = setInterval(() => {
     wss.clients.forEach((client) => {
       const extClient = client as ExtendedWebSocket;
-      if (extClient.isAlive === false) {
+      if (extClient.ws_isAlive === false) {
         logger.info('Terminating inactive WebSocket connection');
         return client.terminate();
       }
 
-      extClient.isAlive = false;
+      extClient.ws_isAlive = false;
       client.ping();
     });
   }, 30000);
@@ -55,14 +55,14 @@ export function initializeWebSocketServer(): WebSocketServer {
   // Log client connections
   wss.on('connection', (ws, req) => {
     logger.info('Client connected to WebSocket server', {
-      ip: req.socket.remoteAddress,
+      ws_ip: req.socket.remoteAddress,
     });
 
     const extWs = ws as ExtendedWebSocket;
-    extWs.isAlive = true;
+    extWs.ws_isAlive = true;
 
     ws.on('pong', () => {
-      (ws as ExtendedWebSocket).isAlive = true;
+      (ws as ExtendedWebSocket).ws_isAlive = true;
     });
 
     ws.on('error', (error) => {
@@ -121,17 +121,17 @@ export function handleUpgrade(
   logger.info('Handling WebSocket upgrade request');
   
   // Extract the connection ID from the request if available
-  let connectionId = (request as any).connectionId;
+  let ws_connectionId = (request as any).connectionId;
   
   // Try to extract from URL as fallback
-  if (!connectionId && request.url) {
+  if (!ws_connectionId && request.url) {
     try {
       const urlPath = request.url || '';
       const pathParts = urlPath.split('/');
       const potentialId = pathParts[pathParts.length - 1].split('?')[0]; // Remove query params if any
       if (potentialId && potentialId.length > 0) {
         console.log('Extracted ID from URL:', potentialId);
-        connectionId = potentialId;
+        ws_connectionId = potentialId;
         (request as any).connectionId = potentialId;
       }
     } catch (e) {
@@ -139,9 +139,9 @@ export function handleUpgrade(
     }
   }
   
-  if (connectionId) {
-    logger.info('WebSocket upgrade with connection ID:', { connectionId });
-    console.log('Connection ID for WebSocket:', connectionId);
+  if (ws_connectionId) {
+    logger.info('WebSocket upgrade with connection ID:', { ws_connectionId });
+    console.log('Connection ID for WebSocket:', ws_connectionId);
   } else {
     logger.warn('WebSocket upgrade request missing connectionId');
     console.log('No connectionId found on WebSocket upgrade request');
@@ -153,9 +153,9 @@ export function handleUpgrade(
 
     wss.handleUpgrade(request, socket, head, (ws) => {
       // Store the connection ID on the WebSocket object if available
-      if (connectionId) {
-        (ws as any).connectionId = connectionId;
-        console.log('Set connectionId on WebSocket object:', connectionId);
+      if (ws_connectionId) {
+        (ws as any).connectionId = ws_connectionId;
+        console.log('Set connectionId on WebSocket object:', ws_connectionId);
       } else {
         console.warn('Cannot set connectionId on WebSocket: undefined');
       }
@@ -165,8 +165,8 @@ export function handleUpgrade(
         try {
           const messageStr = message.toString();
           logger.debug('Received WebSocket message', { 
-            connectionId: (ws as any).connectionId,
-            message: messageStr.substring(0, 100) // Log only first 100 chars
+            ws_connectionId: (ws as any).connectionId,
+            ws_message: messageStr.substring(0, 100) // Log only first 100 chars
           });
           handleMessage(ws as WebSocketConnection, messageStr);
         } catch (error) {
@@ -181,7 +181,7 @@ export function handleUpgrade(
   } catch (error) {
     logger.error('Error in WebSocket upgrade', {
       error: error instanceof Error ? error.message : String(error),
-      connectionId
+      ws_connectionId
     });
     
     // Only destroy socket if it hasn't been handled
@@ -197,37 +197,38 @@ export function handleUpgrade(
 export function handleMessage(ws: WebSocketConnection, message: string): void {
   try {
     const data = JSON.parse(message);
-    const connectionId = (ws as any).connectionId;
+    const ws_connectionId = (ws as any).connectionId;
     
     console.log('handleMessage received data:', {
       type: data.type,
-      connectionId: connectionId,
-      messageType: typeof message
+      ws_connectionId: ws_connectionId,
+      ws_messageType: typeof message
     });
 
     // Handle authentication
     if (data.type === 'auth') {
       logger.info('Received auth request', {
-        connectionId: connectionId,
+        ws_connectionId: ws_connectionId,
         connectionType: data.connectionType,
-        username: data.username,
+        ssh_username: data.username || data.ssh_username,
       });
       
-      console.log('DEBUG: WebSocket connectionId:', connectionId);
+      console.log('DEBUG: WebSocket connectionId:', ws_connectionId);
       console.log('DEBUG: Auth data:', JSON.stringify({
         connectionType: data.connectionType,
-        username: data.username,
-        hasPassword: !!data.password,
-        host: data.host
+        ssh_username: data.username || data.ssh_username,
+        ssh_hasPassword: !!(data.password || data.ssh_password),
+        ssh_host: data.host || data.ssh_host
       }));
 
       // Handle SSH connection
       if (data.connectionType === 'ssh') {
-        handleSshConnection(ws, connectionId, {
-          username: data.username,
-          password: data.password,
-          host: data.host,
-          port: data.port
+        // Map incoming parameters to ssh_ prefixed parameters
+        handleSshConnection(ws, ws_connectionId, {
+          ssh_username: data.username || data.ssh_username,
+          ssh_password: data.password || data.ssh_password,
+          ssh_host: data.host || data.ssh_host,
+          ssh_port: data.port || data.ssh_port
         });
       } else {
         logger.error('Unsupported connection type', { type: data.connectionType });

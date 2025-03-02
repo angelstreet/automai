@@ -1,5 +1,5 @@
 import { GitProviderService } from './base';
-import { ProviderInfo, RepositoryInfo, UserInfo } from '@/types/repositories';
+import { GitProvider, Repository } from '@/types/repositories';
 
 export class GiteaProviderService implements GitProviderService {
   private serverUrl: string | null = null;
@@ -11,15 +11,15 @@ export class GiteaProviderService implements GitProviderService {
   }
 
   // For Gitea, we don't need OAuth flow as we're using direct access token
-  generateAuthorizationUrl(redirectUri: string): string {
+  getAuthorizationUrl(redirectUri: string, state: string): string {
     return '';
   }
 
   // For Gitea, we use the provided token directly
   async exchangeCodeForToken(code: string, redirectUri: string): Promise<{
     accessToken: string;
-    refreshToken: string | null;
-    expiresAt: Date | null;
+    refreshToken?: string;
+    expiresAt?: Date;
   }> {
     if (!this.accessToken) {
       throw new Error('No access token provided for Gitea');
@@ -27,12 +27,17 @@ export class GiteaProviderService implements GitProviderService {
 
     return {
       accessToken: this.accessToken,
-      refreshToken: null,
-      expiresAt: null, // Gitea tokens don't typically expire
+      // Gitea tokens don't typically expire
     };
   }
 
-  async getUserInfo(accessToken: string): Promise<UserInfo> {
+  async getUserInfo(accessToken: string): Promise<{
+    id: string;
+    login: string;
+    name: string;
+    email: string;
+    avatarUrl: string;
+  }> {
     if (!this.serverUrl) {
       throw new Error('Server URL is required for Gitea');
     }
@@ -57,9 +62,14 @@ export class GiteaProviderService implements GitProviderService {
     };
   }
 
-  async listRepositories(accessToken: string): Promise<RepositoryInfo[]> {
+  async listRepositories(provider: GitProvider): Promise<Repository[]> {
     if (!this.serverUrl) {
       throw new Error('Server URL is required for Gitea');
+    }
+
+    const accessToken = provider.accessToken;
+    if (!accessToken) {
+      throw new Error('Access token is required for Gitea');
     }
 
     const response = await fetch(`${this.serverUrl}/api/v1/user/repos`, {
@@ -76,27 +86,17 @@ export class GiteaProviderService implements GitProviderService {
     return data.map((repo: any) => ({
       id: repo.id.toString(),
       name: repo.name,
-      fullName: repo.full_name,
       description: repo.description || '',
       url: repo.html_url,
-      sshUrl: repo.ssh_url,
-      cloneUrl: repo.clone_url,
       defaultBranch: repo.default_branch || 'main',
-      private: repo.private,
-      archived: repo.archived,
+      providerId: provider.id,
+      syncStatus: 'IDLE',
       createdAt: new Date(repo.created_at),
       updatedAt: new Date(repo.updated_at),
-      pushedAt: repo.pushed_at ? new Date(repo.pushed_at) : null,
-      language: repo.language,
-      owner: {
-        id: repo.owner.id.toString(),
-        login: repo.owner.login,
-        avatarUrl: repo.owner.avatar_url,
-      },
     }));
   }
 
-  async isTokenValid(accessToken: string): Promise<boolean> {
+  async validateAccessToken(accessToken: string): Promise<boolean> {
     if (!this.serverUrl) {
       return false;
     }
@@ -113,11 +113,19 @@ export class GiteaProviderService implements GitProviderService {
     }
   }
 
-  async getProviderInfo(): Promise<ProviderInfo> {
-    return {
-      name: 'gitea',
-      displayName: 'Gitea',
-      url: this.serverUrl || '',
-    };
+  async getRepository(provider: GitProvider, repoName: string): Promise<Repository> {
+    throw new Error('Method not implemented.');
+  }
+
+  async syncRepository(repository: Repository): Promise<Repository> {
+    throw new Error('Method not implemented.');
+  }
+
+  async refreshAccessToken(refreshToken: string): Promise<{
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt?: Date;
+  }> {
+    throw new Error('Method not implemented.');
   }
 } 
