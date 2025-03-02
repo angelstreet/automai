@@ -146,7 +146,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       fetchAttempts.current = 0;
     } catch (err) {
       console.error('Error in fetchUser:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(null);
       setUser(null);
     } finally {
       setIsLoading(false);
