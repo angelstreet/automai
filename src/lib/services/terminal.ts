@@ -1,4 +1,5 @@
 /* eslint-disable */
+import { prisma } from '../prisma';
 import { logger } from '../logger';
 
 // Define a TerminalService class to implement singleton pattern
@@ -15,15 +16,28 @@ class TerminalService {
     logger.info('Creating terminal connection', { hostId: data.hostId, type: data.type });
 
     try {
-      // Return a simple connection object without database interaction
-      const connection = {
-        id: `term_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        type: data.type,
-        status: 'pending',
-        username: data.username,
-        password: data.password,
-        hostId: data.hostId,
-      };
+      // Get host information
+      const host = await prisma.host.findUnique({
+        where: { id: data.hostId },
+      });
+
+      if (!host) {
+        logger.error('Host not found', { hostId: data.hostId });
+        throw new Error(`Host not found: ${data.hostId}`);
+      }
+
+      // Create connection record
+      const connection = await prisma.connection.create({
+        data: {
+          type: data.type,
+          status: 'pending',
+          ip: host.ip,
+          port: host.port,
+          username: data.username || host.user,
+          password: data.password || host.password,
+          hostId: host.id,
+        },
+      });
 
       logger.info('Terminal connection created', { connectionId: connection.id });
 
@@ -41,10 +55,25 @@ class TerminalService {
   async getTerminalConnection(id: string) {
     logger.info('Getting terminal connection', { connectionId: id });
 
-    // This is now a no-op since we're not using the database
-    // Just log the request and return null
-    logger.info('Terminal connection request received', { connectionId: id });
-    return null;
+    try {
+      const connection = await prisma.connection.findUnique({
+        where: { id },
+        include: {
+          host: true,
+        },
+      });
+
+      if (!connection) {
+        logger.error('Connection not found', { connectionId: id });
+        throw new Error(`Connection not found: ${id}`);
+      }
+
+      return connection;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Error getting terminal connection', { error: errorMessage, connectionId: id });
+      throw new Error(`Failed to get terminal connection: ${errorMessage}`);
+    }
   }
 
   /**
@@ -53,10 +82,26 @@ class TerminalService {
   async updateTerminalConnectionStatus(id: string, status: string) {
     logger.info('Updating terminal connection status', { connectionId: id, status });
 
-    // This is now a no-op since we're not using the database
-    // Just log the status update
-    logger.info('Terminal connection status updated', { connectionId: id, status });
-    return null;
+    try {
+      const connection = await prisma.connection.update({
+        where: { id },
+        data: {
+          status,
+          updatedAt: new Date(),
+        },
+      });
+
+      logger.info('Terminal connection status updated', { connectionId: id, status });
+
+      return connection;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Error updating terminal connection status', {
+        error: errorMessage,
+        connectionId: id,
+      });
+      throw new Error(`Failed to update terminal connection status: ${errorMessage}`);
+    }
   }
 
   /**
@@ -65,10 +110,23 @@ class TerminalService {
   async closeTerminalConnection(id: string) {
     logger.info('Closing terminal connection', { connectionId: id });
 
-    // This is now a no-op since we're not using the database
-    // Just log the closure
-    logger.info('Terminal connection closed', { connectionId: id });
-    return null;
+    try {
+      const connection = await prisma.connection.update({
+        where: { id },
+        data: {
+          status: 'closed',
+          updatedAt: new Date(),
+        },
+      });
+
+      logger.info('Terminal connection closed', { connectionId: id });
+
+      return connection;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Error closing terminal connection', { error: errorMessage, connectionId: id });
+      throw new Error(`Failed to close terminal connection: ${errorMessage}`);
+    }
   }
 
   /**
@@ -77,9 +135,19 @@ class TerminalService {
   async getTerminalConnections() {
     logger.info('Getting all terminal connections');
 
-    // This is now a no-op since we're not using the database
-    // Just log the request and return an empty array
-    return [];
+    try {
+      const connections = await prisma.connection.findMany({
+        include: {
+          host: true,
+        },
+      });
+
+      return connections;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Error getting terminal connections', { error: errorMessage });
+      throw new Error(`Failed to get terminal connections: ${errorMessage}`);
+    }
   }
 }
 
@@ -112,10 +180,37 @@ export async function getCompatibleConnection(connectionId: string) {
   try {
     logger.info('Getting compatible connection', { connectionId });
     
-    // This is now a no-op since we're not using the database
-    // Just log the request and return null
-    logger.info('Compatible connection request received', { connectionId });
-    return null;
+    const connection = await prisma.connection.findUnique({
+      where: { id: connectionId },
+    });
+
+    if (!connection) {
+      logger.error('Terminal connection not found', { connectionId });
+      return null;
+    }
+
+    logger.info('Connection found in database', { 
+      connectionId, 
+      connectionType: connection.type,
+      connectionHasHost: !!connection.host,
+      connectionHasIp: !!(connection as any).ip,
+    });
+
+    // Add missing properties for compatibility
+    const compatibleConnection = {
+      ...connection,
+      ip: connection.host, // Map host to ip for backward compatibility
+      type: connection.type || 'ssh' // Default type for connections
+    };
+
+    logger.info('Returning compatible connection', { 
+      connectionId,
+      host: compatibleConnection.host,
+      ip: compatibleConnection.ip,
+      type: compatibleConnection.type
+    });
+
+    return compatibleConnection;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('Error fetching terminal connection', { 
