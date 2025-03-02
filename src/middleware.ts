@@ -88,11 +88,24 @@ export default async function middleware(request: NextRequest) {
   if ((request.nextUrl.pathname === '/' || (pathParts.length === 1 && locales.includes(pathParts[0] as any))) && 
       !request.nextUrl.pathname.includes('/login')) {
     try {
+      // Check for all possible session token cookie names
+      const sessionTokenCookie = request.cookies.get('next-auth.session-token') || 
+                               request.cookies.get('__Secure-next-auth.session-token');
+      
+      console.log('Login redirect check, found session token:', !!sessionTokenCookie);
+      
       const token = await getToken({ 
         req: request,
         secret: process.env.NEXTAUTH_SECRET,
         secureCookie: process.env.NODE_ENV === 'production',
-        cookieName: 'next-auth.session-token',
+        // Check both possible cookie names
+        cookieName: sessionTokenCookie?.name || 'next-auth.session-token',
+      });
+      
+      console.log('Dashboard redirect check:', { 
+        hasToken: !!token,
+        tokenFields: token ? Object.keys(token) : [],
+        sessionCookie: sessionTokenCookie?.name
       });
       
       if (token && typeof token === 'object' && token.id && token.email) {
@@ -161,12 +174,21 @@ export default async function middleware(request: NextRequest) {
     }
     
     try {
+      // Check for all possible session token cookie names and log their presence
+      const sessionCookies = [
+        request.cookies.get('next-auth.session-token'),
+        request.cookies.get('__Secure-next-auth.session-token')
+      ].filter(Boolean);
+      
+      console.log('Session cookies present:', sessionCookies.map(c => c?.name));
+      
       // Get and validate token - use strict validation
       const token = await getToken({ 
         req: request,
         secret: process.env.NEXTAUTH_SECRET,
         secureCookie: process.env.NODE_ENV === 'production',
-        cookieName: 'next-auth.session-token',
+        // Use specific cookie name if available
+        cookieName: sessionCookies[0]?.name || 'next-auth.session-token',
       });
       
       // Log token details for debugging (safely)
