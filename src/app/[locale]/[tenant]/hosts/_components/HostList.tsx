@@ -76,7 +76,6 @@ export default function HostList() {
         ip: host.ip,
         port: host.port,
         username: host.user,
-        password: host.password,
         hostId: host.id,
       });
       
@@ -88,7 +87,7 @@ export default function HostList() {
                 ...h, 
                 status: result.success ? 'connected' : 'failed',
                 errorMessage: result.success ? null : (result.message || 'Unknown error'),
-                lastConnected: result.success ? new Date().toISOString() : h.lastConnected
+                lastConnected: result.success ? new Date() : h.lastConnected
               } 
             : h
         )
@@ -204,10 +203,9 @@ export default function HostList() {
         type: formData.type,
         ip: formData.ip,
         port: parseInt(formData.port),
-        user: formData.username, // API expects user, but form has username
+        user: formData.username,
         password: formData.password,
-        status: 'connected', // Set status to connected since we've already tested it
-        lastConnected: new Date().toISOString(), // Set lastConnected to current date
+        status: 'connected',
       });
       
       // Close dialog
