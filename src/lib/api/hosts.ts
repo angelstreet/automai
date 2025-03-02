@@ -45,12 +45,21 @@ export const hostsApi = {
     password?: string;
     hostId?: string;
   }) => {
+    const requestData = {
+      type: data.type,
+      ip: data.ip,
+      port: data.port,
+      username: data.username,
+      hostId: data.hostId,
+      ...(data.password && { password: data.password }),
+    };
+
     const response = await fetch(`${getBaseUrl()}/api/hosts/test-connection`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(requestData),
     });
 
     if (!response.ok) {
@@ -118,5 +127,24 @@ export const hostsApi = {
     }
 
     return response.json();
+  },
+
+  /**
+   * Check connections for multiple hosts sequentially
+   */
+  checkAllConnections: async (locale: string, hosts: Host[]) => {
+    const results = [];
+    for (const host of hosts) {
+      const result = await hostsApi.testConnection(locale, {
+        type: host.type,
+        ip: host.ip,
+        port: host.port,
+        username: host.user,
+        hostId: host.id,
+      });
+      results.push({ hostId: host.id, result });
+      await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to avoid overwhelming the server
+    }
+    return results;
   },
 };
