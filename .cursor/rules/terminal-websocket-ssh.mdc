@@ -12,28 +12,46 @@ The terminal connection workflow follows these steps:
 
 1. **User Initiates Terminal Connection**
    - User clicks on a terminal button in the UI
-   - Terminal component renders and initializes xterm.js
+   - Terminal component renders and initializes xterm.js in the browser
 
 2. **Terminal Initialization**
    - Frontend makes a POST request to `/api/terminals/init` with the connection ID
    - Backend initializes the WebSocket server on-demand (if not already running)
    - Backend responds with success status
+   - Terminal shows "Initializing terminal server..." message
 
 3. **WebSocket Connection**
    - Frontend creates a WebSocket connection to `/api/terminals/ws/[connectionId]`
-   - Backend handles the WebSocket upgrade request
-   - WebSocket connection is established
+   - Backend handles the WebSocket upgrade request via HTTP server's upgrade handler (NOT in the Next.js API route)
+   - WebSocket connection is established between browser and server
+   - Terminal shows "WebSocket connected, authenticating..." message
 
-4. **Authentication**
-   - Frontend sends authentication message with SSH credentials
-   - Backend validates credentials and establishes SSH connection
-   - SSH connection is established with the remote server
+4. **Authentication and SSH Connection**
+   - Frontend sends authentication message with SSH credentials through the WebSocket:
+     ```javascript
+     {
+       type: 'auth',
+       connectionType: connection.type,
+       ssh_username: connection.username,
+       ssh_password: connection.password,
+       ssh_host: connection.ip,
+       ssh_port: connection.port
+     }
+     ```
+   - Server receives auth message and establishes SSH connection to remote host
+   - Server acts as a proxy between WebSocket and SSH connection
+   - On successful connection, server sends success message and terminal shows "SSH connection established successfully"
 
-5. **Data Streaming**
-   - Terminal input is sent from frontend to backend via WebSocket
-   - Backend forwards input to SSH connection
-   - SSH output is sent from backend to frontend via WebSocket
-   - Frontend displays output in the terminal UI
+5. **Bidirectional Data Flow**
+   - Input path: Browser Terminal (keyboard) → WebSocket → Server → SSH Connection → Remote Host
+   - Output path: Remote Host → SSH Connection → Server → WebSocket → Browser Terminal (display)
+   - The server bridges these protocols, allowing browser-based interaction with remote SSH servers
+
+6. **Terminal Management**
+   - Terminal resize events are sent through WebSocket to update the SSH session dimensions
+   - Connection health is monitored with ping/pong messages
+   - On WebSocket close, SSH connection is terminated
+   - On SSH connection close, WebSocket connection is terminated
 
 ## Architecture Components
 
@@ -52,6 +70,7 @@ The terminal connection workflow follows these steps:
    - Handles SSH connections and authentication
    - Manages SSH sessions and streams
    - Integrates with WebSocket connections
+   - Implements comprehensive error handling for SSH connections
 
 4. **Terminal Service Module** (`src/lib/services/terminal.ts`)
    - Manages terminal sessions
@@ -60,7 +79,7 @@ The terminal connection workflow follows these steps:
 
 5. **API Routes**
    - `/api/terminals/init` - Initializes the WebSocket server
-   - `/api/terminals/ws/[id]` - Handles WebSocket connections
+   - `/api/terminals/ws/[id]` - Handles WebSocket routing (does NOT handle the actual upgrade)
 
 6. **Frontend Components**
    - Terminal UI component using xterm.js
@@ -231,39 +250,14 @@ export async function GET(request: NextRequest, context: { params: { id: string 
     return new Response('Expected WebSocket request', { status: 400 });
   }
   
-  try {
-    // Extract the connection ID from the URL
-    const connectionId = context.params.id;
-    
-    // Get the raw request and socket objects
-    const req = request as unknown as any;
-    
-    if (!req.socket) {
-      return new Response('Internal server error: No socket available', { status: 500 });
-    }
-    
-    // Store the connection ID on the request object for later use
-    req.connectionId = connectionId;
-    
-    // Create a promise that will resolve with the socket and response
-    return new Promise<Response>((resolve) => {
-      try {
-        // Handle the WebSocket upgrade
-        handleUpgrade(req, req.socket, Buffer.from([]));
-        
-        // This response is not actually used, as the WebSocket takes over
-        resolve(new Response(null, { status: 101 }));
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        resolve(new Response('WebSocket connection failed: ' + errorMessage, { status: 500 }));
-      }
-    });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response('WebSocket connection failed: ' + errorMessage, { status: 500 });
-  }
+  // Return a successful WebSocket upgrade response
+  // The actual upgrade is handled by the HTTP server's upgrade handler
+  // This route exists only for Next.js routing purposes
+  return new Response(null, { status: 101 });
 }
 ```
+
+**CRITICAL**: Do NOT attempt to handle the WebSocket upgrade in the API route. The upgrade must be handled exclusively by the HTTP server's upgrade event handler to prevent "handleUpgrade() was called more than once with the same socket" errors.
 
 ## SSH Connection Handling
 
@@ -272,18 +266,15 @@ export async function GET(request: NextRequest, context: { params: { id: string 
 export async function handleSshConnection(
   clientSocket: WebSocketConnection,
   connectionId: string,
-  authData?: { username?: string; password?: string },
+  authData?: { username?: string; password?: string; host: string; port?: number },
 ) {
   try {
-    // Get connection details from database or cache
-    const connectionData = await getConnectionData(connectionId);
-    
-    if (!connectionData) {
+    // Perform input validation
+    if (!authData || !authData.host || !authData.username) {
       clientSocket.send(JSON.stringify({ 
-        error: 'Connection not found',
-        errorType: 'CONNECTION_NOT_FOUND' 
+        error: 'Missing SSH credentials',
+        errorType: 'MISSING_CREDENTIALS' 
       }));
-      clientSocket.close(1000, 'Connection not found');
       return;
     }
     
@@ -302,46 +293,100 @@ export async function handleSshConnection(
       sshClient.shell((err, stream) => {
         if (err) {
           // Handle shell error
+          clientSocket.send(JSON.stringify({
+            error: `SSH shell error: ${err.message}`,
+            errorType: 'SSH_SHELL_ERROR',
+          }));
           return;
         }
         
-        // Pipe data from SSH to WebSocket
+        // Pipe data from SSH to WebSocket with error handling
         stream.on('data', (data: Buffer) => {
-          clientSocket.send(data);
+          try {
+            clientSocket.send(data);
+          } catch (e) {
+            logger.error(`Error sending data to WebSocket: ${e}`);
+          }
         });
         
-        // Handle WebSocket messages
+        // Handle WebSocket messages with error handling
         clientSocket.on('message', (message) => {
           try {
+            // Try parsing as JSON for commands like resize
             const data = JSON.parse(message.toString());
-            
-            // Handle resize event
             if (data.type === 'resize') {
               stream.setWindow(data.rows, data.cols, 0, 0);
             }
           } catch (e) {
             // Not JSON data, treat as terminal input
-            stream.write(message);
+            try {
+              stream.write(message);
+            } catch (err) {
+              logger.error(`Error writing to SSH stream: ${err}`);
+            }
           }
         });
         
         // Handle stream close
         stream.on('close', () => {
-          clientSocket.close();
+          try {
+            clientSocket.close();
+          } catch (e) {
+            logger.error(`Error closing WebSocket: ${e}`);
+          }
         });
       });
     });
     
-    // Connect to SSH server
-    sshClient.connect({
-      host: connectionData.ip,
-      port: connectionData.port || 22,
-      username: authData?.username || connectionData.username,
-      password: authData?.password || connectionData.password,
-      // Additional SSH options
+    // Handle SSH connection errors
+    sshClient.on('error', (err) => {
+      logger.error('SSH connection error', { error: err.message, connectionId });
+      try {
+        clientSocket.send(JSON.stringify({
+          error: `SSH connection error: ${err.message}`,
+          errorType: 'SSH_CONNECTION_ERROR',
+        }));
+      } catch (e) {
+        logger.error(`Error sending error to WebSocket: ${e}`);
+      }
+    });
+    
+    // Connect to SSH server with error handling
+    try {
+      sshClient.connect({
+        host: authData.host,
+        port: authData.port || 22,
+        username: authData.username,
+        password: authData.password,
+        readyTimeout: 10000, // 10 seconds timeout
+      });
+    } catch (e) {
+      logger.error(`Error connecting to SSH server: ${e}`);
+      clientSocket.send(JSON.stringify({
+        error: `SSH connection attempt error: ${e}`,
+        errorType: 'SSH_CONNECTION_ATTEMPT_ERROR',
+      }));
+    }
+    
+    // Cleanup on WebSocket close
+    clientSocket.on('close', () => {
+      try {
+        sshClient.end();
+      } catch (e) {
+        logger.error(`Error ending SSH client: ${e}`);
+      }
     });
   } catch (error) {
-    // Handle connection error
+    // Handle any uncaught errors
+    logger.error(`Uncaught error in handleSshConnection: ${error}`);
+    try {
+      clientSocket.send(JSON.stringify({
+        error: `Internal server error: ${error}`,
+        errorType: 'INTERNAL_ERROR',
+      }));
+    } catch (e) {
+      // Cannot send error to client
+    }
   }
 }
 ```
@@ -372,9 +417,10 @@ export function Terminal({ connection }: TerminalProps) {
           return;
         }
         
-        // Connect to WebSocket
+        // Connect to WebSocket using current port and protocol
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const socketUrl = `${protocol}//${window.location.host}/api/terminals/ws/${connection.id}`;
+        const port = window.location.port;
+        const socketUrl = `${protocol}//${window.location.hostname}:${port}/api/terminals/ws/${connection.id}`;
         
         const socket = new WebSocket(socketUrl);
         
@@ -383,8 +429,10 @@ export function Terminal({ connection }: TerminalProps) {
           const authMessage = {
             type: 'auth',
             connectionType: connection.type,
-            username: connection.username,
-            password: connection.password,
+            ssh_username: connection.username,
+            ssh_password: connection.password,
+            ssh_host: connection.ip,
+            ssh_port: connection.port
           };
           
           socket.send(JSON.stringify(authMessage));
@@ -431,17 +479,38 @@ export function Terminal({ connection }: TerminalProps) {
    - Clean up resources when connections close
    - Monitor server load and implement throttling if needed
 
+## Common Issues and Solutions
+
+1. **Double WebSocket Upgrade Handling**
+   - **Problem**: Error "handleUpgrade() was called more than once with the same socket".
+   - **Solution**: Ensure the WebSocket upgrade is only handled by the HTTP server's upgrade handler, not in the API route.
+   - The API route should only validate the request is a WebSocket and return status 101.
+
+2. **SSH Connection Errors**
+   - **Problem**: SSH connection fails without detailed error information.
+   - **Solution**: Implement comprehensive error handling in the SSH connection function.
+   - Wrap all operations in try/catch blocks and log detailed error information.
+   - Send error messages back to the client with appropriate error types.
+
+3. **WebSocket Disconnections**
+   - **Problem**: WebSocket connection closes unexpectedly.
+   - **Solution**: Implement reconnection logic in the frontend.
+   - Use ping/pong mechanism to detect dead connections.
+   - Properly clean up resources when connections close.
+
 ## Troubleshooting
 
 1. **WebSocket Connection Issues**
    - Check browser console for connection errors
    - Verify WebSocket server initialization
    - Ensure correct URL paths in frontend code
+   - Check that WebSocket connection URL matches the actual server hostname and port
 
 2. **SSH Connection Issues**
-   - Verify SSH credentials
-   - Check server connectivity
+   - Verify SSH credentials are being passed correctly
+   - Check server connectivity (try SSH from command line)
    - Review SSH client configuration
+   - Check SSH server logs for connection attempts
 
 3. **Terminal Display Issues**
    - Check xterm.js configuration

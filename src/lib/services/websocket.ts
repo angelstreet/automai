@@ -101,9 +101,14 @@ export function handleUpgrade(
   socket: Socket,
   head: Buffer
 ) {
+  // Check if the socket has already been handled
+  if ((socket as any).__websocketHandled) {
+    logger.info('Skipping already handled socket');
+    return;
+  }
+
   console.log('handleUpgrade called with request headers:', request.headers);
   console.log('handleUpgrade request URL:', request.url);
-  console.log('handleUpgrade request properties:', Object.keys(request));
   
   const wss = getWebSocketServer();
   
@@ -116,21 +121,17 @@ export function handleUpgrade(
   logger.info('Handling WebSocket upgrade request');
   
   // Extract the connection ID from the request if available
-  const connectionId = (request as any).connectionId;
-  if (connectionId) {
-    logger.info('WebSocket upgrade with connection ID:', { connectionId });
-    console.log('Found connectionId on request:', connectionId);
-  } else {
-    logger.warn('WebSocket upgrade request missing connectionId');
-    console.log('No connectionId found on WebSocket upgrade request');
-    
-    // Try to extract from URL as fallback
+  let connectionId = (request as any).connectionId;
+  
+  // Try to extract from URL as fallback
+  if (!connectionId && request.url) {
     try {
       const urlPath = request.url || '';
       const pathParts = urlPath.split('/');
-      const potentialId = pathParts[pathParts.length - 1];
+      const potentialId = pathParts[pathParts.length - 1].split('?')[0]; // Remove query params if any
       if (potentialId && potentialId.length > 0) {
-        console.log('Extracted potential ID from URL:', potentialId);
+        console.log('Extracted ID from URL:', potentialId);
+        connectionId = potentialId;
         (request as any).connectionId = potentialId;
       }
     } catch (e) {
@@ -138,33 +139,56 @@ export function handleUpgrade(
     }
   }
   
-  wss.handleUpgrade(request, socket, head, (ws) => {
-    // Store the connection ID on the WebSocket object if available
-    if (connectionId) {
-      (ws as any).connectionId = connectionId;
-      console.log('Set connectionId on WebSocket:', connectionId);
-    } else {
-      console.warn('Cannot set connectionId on WebSocket: undefined');
-    }
-    
-    // Set up message handler
-    ws.on('message', (message) => {
-      try {
-        const messageStr = message.toString();
-        logger.debug('Received WebSocket message', { 
-          connectionId: (ws as any).connectionId,
-          message: messageStr.substring(0, 100) // Log only first 100 chars
-        });
-        handleMessage(ws as WebSocketConnection, messageStr);
-      } catch (error) {
-        logger.error('Error handling WebSocket message', { 
-          error: error instanceof Error ? error.message : 'Unknown error' 
-        });
+  if (connectionId) {
+    logger.info('WebSocket upgrade with connection ID:', { connectionId });
+    console.log('Connection ID for WebSocket:', connectionId);
+  } else {
+    logger.warn('WebSocket upgrade request missing connectionId');
+    console.log('No connectionId found on WebSocket upgrade request');
+  }
+  
+  try {
+    // Mark socket as handled to prevent duplicate handling
+    (socket as any).__websocketHandled = true;
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      // Store the connection ID on the WebSocket object if available
+      if (connectionId) {
+        (ws as any).connectionId = connectionId;
+        console.log('Set connectionId on WebSocket object:', connectionId);
+      } else {
+        console.warn('Cannot set connectionId on WebSocket: undefined');
       }
+      
+      // Set up message handler
+      ws.on('message', (message) => {
+        try {
+          const messageStr = message.toString();
+          logger.debug('Received WebSocket message', { 
+            connectionId: (ws as any).connectionId,
+            message: messageStr.substring(0, 100) // Log only first 100 chars
+          });
+          handleMessage(ws as WebSocketConnection, messageStr);
+        } catch (error) {
+          logger.error('Error handling WebSocket message', { 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          });
+        }
+      });
+      
+      wss.emit('connection', ws, request);
+    });
+  } catch (error) {
+    logger.error('Error in WebSocket upgrade', {
+      error: error instanceof Error ? error.message : String(error),
+      connectionId
     });
     
-    wss.emit('connection', ws, request);
-  });
+    // Only destroy socket if it hasn't been handled
+    if (!(socket as any).__websocketHandled) {
+      socket.destroy();
+    }
+  }
 }
 
 /**
@@ -173,16 +197,23 @@ export function handleUpgrade(
 export function handleMessage(ws: WebSocketConnection, message: string): void {
   try {
     const data = JSON.parse(message);
+    const connectionId = (ws as any).connectionId;
+    
+    console.log('handleMessage received data:', {
+      type: data.type,
+      connectionId: connectionId,
+      messageType: typeof message
+    });
 
     // Handle authentication
     if (data.type === 'auth') {
       logger.info('Received auth request', {
-        connectionId: (ws as any).connectionId,
+        connectionId: connectionId,
         connectionType: data.connectionType,
         username: data.username,
       });
       
-      console.log('DEBUG: WebSocket connectionId:', (ws as any).connectionId);
+      console.log('DEBUG: WebSocket connectionId:', connectionId);
       console.log('DEBUG: Auth data:', JSON.stringify({
         connectionType: data.connectionType,
         username: data.username,
@@ -192,7 +223,7 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
 
       // Handle SSH connection
       if (data.connectionType === 'ssh') {
-        handleSshConnection(ws, (ws as any).connectionId, {
+        handleSshConnection(ws, connectionId, {
           username: data.username,
           password: data.password,
           host: data.host,

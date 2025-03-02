@@ -24,6 +24,8 @@ interface Connection {
   port: number;
   username: string;
   password: string;
+  host?: string;
+  user?: string;
 }
 
 interface TerminalProps {
@@ -118,7 +120,7 @@ export function Terminal({ connection }: TerminalProps) {
           connectionId: connectionId,
           originalId: connection.id,
           usingTestId: connection.id === 'test',
-          host: connection.host || connection.ip, // Use either host or ip
+          host: connection.ip,
           port: connection.port
         });
         term.write(`\x1B[1;3;33mInitializing terminal server...\x1B[0m\r\n`);
@@ -182,21 +184,26 @@ export function Terminal({ connection }: TerminalProps) {
       }
 
       // Use the Next.js API route for WebSocket connections instead of the standalone server
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const websocket_protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      // Use the same port that the page is being served from
+      const websocket_port = window.location.port;
       
-      // For testing, allow overriding connection ID (this should be removed in production)
-      const testConnectionId = 'test-connection-id'; // Hardcoded test connection ID
+      // Redefine connectionId for this scope
+      const testConnectionId = 'test-connection-id';
       const connectionId = connection.id === 'test' ? testConnectionId : connection.id;
       
-      const socketUrl = `${protocol}//${window.location.host}/api/terminals/ws/${connectionId}`;
+      const socketUrl = `${websocket_protocol}//${window.location.hostname}:${websocket_port}/api/terminals/ws/${connectionId}`;
       console.log(`[WebSocket] Connecting to: ${socketUrl}`, {
         connectionId: connectionId,
+        websocket_protocol: websocket_protocol,
+        hostname: window.location.hostname,
+        websocket_port: websocket_port,
         originalId: connection.id,
         usingTestId: connection.id === 'test',
         connectionType: connection.type,
-        username: connection.username,
-        host: connection.ip,
-        port: connection.port
+        ssh_username: connection.username,
+        ssh_host: connection.ip,
+        ssh_port: connection.port
       });
 
       try {
@@ -218,26 +225,26 @@ export function Terminal({ connection }: TerminalProps) {
           const authMessage = {
             type: 'auth',
             connectionType: connection.type,
-            username: connection.username || connection.user || 'root', // Fallback to connection.user or 'root'
-            password: connection.password,
-            host: connection.ip,
-            port: connection.port
+            ssh_username: connection.username || connection.user || 'root',
+            ssh_password: connection.password,
+            ssh_host: connection.ip,
+            ssh_port: connection.port
           };
 
           console.log('[WebSocket] Sending authentication', {
             type: 'auth',
             connectionType: connection.type,
-            username: connection.username || connection.user || 'root', // Same fallback
+            ssh_username: connection.username || connection.user || 'root',
             hasPassword: !!connection.password,
-            host: connection.ip,
-            port: connection.port
+            ssh_host: connection.ip,
+            ssh_port: connection.port
           });
 
           // Log authentication attempt
           console.log('Sending authentication to server', {
             connectionId: connection.id,
             connectionType: connection.type,
-            username: connection.username,
+            ssh_username: connection.username,
           });
 
           socket.send(JSON.stringify(authMessage));
@@ -310,7 +317,6 @@ export function Terminal({ connection }: TerminalProps) {
                 variant: 'destructive',
                 title: toastTitle,
                 description: toastDescription,
-                duration: 5000,
               });
 
               // Display error in terminal with appropriate message
@@ -365,7 +371,6 @@ export function Terminal({ connection }: TerminalProps) {
               title: 'Connection Lost',
               description:
                 'The WebSocket connection was closed abnormally. The server may be unavailable.',
-              duration: 5000,
             });
           } else {
             term.write('\r\n\x1B[1;3;33mConnection closed.\x1B[0m\r\n');
@@ -434,7 +439,7 @@ export function Terminal({ connection }: TerminalProps) {
   }, [connection, toast]);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full flex flex-col">
       {isConnecting && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
           <div className="flex flex-col items-center space-y-4">
@@ -445,7 +450,7 @@ export function Terminal({ connection }: TerminalProps) {
       )}
       <div
         ref={terminalRef}
-        className="w-full h-[calc(90%)] rounded-lg overflow-hidden border border-border"
+        className="w-full h-[calc(100vh-4rem)] rounded-lg overflow-hidden border border-border"
       />
     </div>
   );
