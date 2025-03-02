@@ -22,7 +22,7 @@ export function HostGrid({
   onTestConnection,
 }: HostGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {hosts.map((host) => (
         <div
           key={host.id}
@@ -30,7 +30,7 @@ export function HostGrid({
             'opacity-70': selectMode && !selectedHosts.has(host.id),
           })}
         >
-          <div className="relative">
+          <div className="relative h-full">
             {selectMode && (
               <div className="absolute right-4 top-4 z-10">
                 <Checkbox
