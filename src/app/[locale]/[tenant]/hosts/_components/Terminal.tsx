@@ -252,7 +252,8 @@ export function Terminal({ connection }: TerminalProps) {
             ssh_password: connection.password,
             ssh_host: connection.ip,
             ssh_port: connection.port,
-            is_windows: is_windows
+            is_windows: is_windows,
+            ws_connectionId: connection.id
           };
 
           console.log('[WebSocket] Sending authentication', {
@@ -262,7 +263,8 @@ export function Terminal({ connection }: TerminalProps) {
             hasPassword: !!connection.password,
             ssh_host: connection.ip,
             ssh_port: connection.port,
-            is_windows: is_windows
+            is_windows: is_windows,
+            ws_connectionId: connection.id
           });
 
           // Log authentication attempt
@@ -306,22 +308,25 @@ export function Terminal({ connection }: TerminalProps) {
             console.log('[WebSocket] Received message:', data);
 
             // Handle connection status messages
-            if (data.status === 'connected') {
-              console.log('[SSH] Connection established successfully', data.details);
-              term.write(`\r\n\x1B[1;3;32mSSH connection established successfully.\x1B[0m\r\n`);
-              
-              // Add Windows-specific message if connected to Windows
-              if (data.details?.is_windows) {
-                term.write(`\r\n\x1B[1;3;32mConnected to Windows system. Using cmd.exe shell.\x1B[0m\r\n`);
+            if (data.status) {
+              if (data.status === 'connecting') {
+                console.log('[SSH] Connection in progress...', data.details);
+                term.write(`\r\n\x1B[1;3;33mEstablishing SSH connection...\x1B[0m\r\n`);
+                return;
+              } else if (data.status === 'connected') {
+                console.log('[SSH] Connection established successfully', data.details);
+                term.write(`\r\n\x1B[1;3;32mSSH connection established successfully.\x1B[0m\r\n`);
+                
+                // Add Windows-specific message if connected to Windows
+                if (data.details?.is_windows) {
+                  term.write(`\r\n\x1B[1;3;32mConnected to Windows system. Using cmd.exe shell.\x1B[0m\r\n`);
+                }
+                return;
+              } else if (data.status === 'retry') {
+                console.log('[SSH] Retrying with Windows mode:', data);
+                term.write(`\r\n\x1B[1;3;33m${data.message || 'Trying Windows connection mode...'}\x1B[0m\r\n`);
+                return;
               }
-              return;
-            }
-            
-            // Handle retry with Windows mode message
-            if (data.status === 'retry') {
-              console.log('[SSH] Retrying with Windows mode:', data);
-              term.write(`\r\n\x1B[1;3;33m${data.message || 'Trying Windows connection mode...'}\x1B[0m\r\n`);
-              return;
             }
             
             // Handle server banner messages
@@ -403,34 +408,14 @@ export function Terminal({ connection }: TerminalProps) {
         };
 
         socket.onclose = (event) => {
-          console.log('[WebSocket] Connection closed', {
-            code: event.code,
-            reason: event.reason,
-            wasClean: event.wasClean,
-            connectionId: connection.id,
+          console.warn('[WebSocket] Connection closed:', event);
+          term.write(`\r\n\x1B[1;3;31mWebSocket connection closed unexpectedly. Code: ${event.code}, Reason: ${event.reason}\x1B[0m\r\n`);
+
+          toast({
+            variant: 'destructive',
+            title: 'Connection Closed',
+            description: `WebSocket closed unexpectedly. Code: ${event.code}, Reason: ${event.reason}`,
           });
-
-          console.log('Terminal WebSocket closed', {
-            connectionId: connection.id,
-          });
-
-          // Show different messages based on close code
-          if (event.code === 1006) {
-            // Abnormal closure
-            term.write(
-              '\r\n\x1B[1;3;31mConnection closed abnormally. The server may be unavailable.\x1B[0m\r\n',
-            );
-
-            // Show toast for abnormal closure
-            toast({
-              variant: 'destructive',
-              title: 'Connection Lost',
-              description:
-                'The WebSocket connection was closed abnormally. The server may be unavailable.',
-            });
-          } else {
-            term.write('\r\n\x1B[1;3;33mConnection closed.\x1B[0m\r\n');
-          }
         };
 
         // Handle window resize
