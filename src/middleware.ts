@@ -64,6 +64,7 @@ export default async function middleware(request: NextRequest) {
 
   // 2. Define public paths that bypass auth checks
   const publicPaths = [
+    '/',
     '/login', 
     '/register',
     '/signup',
