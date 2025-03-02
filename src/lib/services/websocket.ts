@@ -101,6 +101,10 @@ export function handleUpgrade(
   socket: Socket,
   head: Buffer
 ) {
+  console.log('handleUpgrade called with request headers:', request.headers);
+  console.log('handleUpgrade request URL:', request.url);
+  console.log('handleUpgrade request properties:', Object.keys(request));
+  
   const wss = getWebSocketServer();
   
   if (!wss) {
@@ -119,6 +123,19 @@ export function handleUpgrade(
   } else {
     logger.warn('WebSocket upgrade request missing connectionId');
     console.log('No connectionId found on WebSocket upgrade request');
+    
+    // Try to extract from URL as fallback
+    try {
+      const urlPath = request.url || '';
+      const pathParts = urlPath.split('/');
+      const potentialId = pathParts[pathParts.length - 1];
+      if (potentialId && potentialId.length > 0) {
+        console.log('Extracted potential ID from URL:', potentialId);
+        (request as any).connectionId = potentialId;
+      }
+    } catch (e) {
+      console.error('Failed to extract ID from URL', e);
+    }
   }
   
   wss.handleUpgrade(request, socket, head, (ws) => {
