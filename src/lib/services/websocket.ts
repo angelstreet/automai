@@ -210,25 +210,27 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
       logger.info('Received auth request', {
         ws_connectionId: ws_connectionId,
         connectionType: data.connectionType,
-        ssh_username: data.username || data.ssh_username,
+        ssh_username: data.ssh_username || data.username,
       });
       
       console.log('DEBUG: WebSocket connectionId:', ws_connectionId);
       console.log('DEBUG: Auth data:', JSON.stringify({
         connectionType: data.connectionType,
-        ssh_username: data.username || data.ssh_username,
-        ssh_hasPassword: !!(data.password || data.ssh_password),
-        ssh_host: data.host || data.ssh_host
+        ssh_username: data.ssh_username || data.username,
+        ssh_hasPassword: !!(data.ssh_password || data.password),
+        ssh_host: data.ssh_host || data.host,
+        is_windows: data.is_windows
       }));
 
       // Handle SSH connection
       if (data.connectionType === 'ssh') {
         // Map incoming parameters to ssh_ prefixed parameters
         handleSshConnection(ws, ws_connectionId, {
-          ssh_username: data.username || data.ssh_username,
-          ssh_password: data.password || data.ssh_password,
-          ssh_host: data.host || data.ssh_host,
-          ssh_port: data.port || data.ssh_port
+          ssh_username: data.ssh_username || data.username,
+          ssh_password: data.ssh_password || data.password,
+          ssh_host: data.ssh_host || data.host,
+          ssh_port: data.ssh_port || data.port,
+          is_windows: data.is_windows
         });
       } else {
         logger.error('Unsupported connection type', { type: data.connectionType });

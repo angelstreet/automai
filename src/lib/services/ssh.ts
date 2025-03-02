@@ -2,7 +2,6 @@
 import { Client } from 'ssh2';
 import { WebSocket } from 'ws';
 import { logger } from '../logger';
-import { prisma } from '../prisma';
 
 // Define WebSocketConnection type
 export type WebSocketConnection = WebSocket & {
@@ -46,6 +45,20 @@ export async function handleSshConnection(
   let isConnecting = true;
   let sshClient: Client | null = null;
   let attemptingWindowsFallback = false;
+
+  // Send initial connecting status to keep client informed
+  try {
+    if (clientSocket.readyState === WebSocket.OPEN) {
+      clientSocket.send(
+        JSON.stringify({
+          status: 'connecting',
+          message: 'Establishing SSH connection...',
+        }),
+      );
+    }
+  } catch (e) {
+    logger.error(`Failed to send connecting message: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
+  }
 
   // For backward compatibility, check both prefixed and non-prefixed parameters
   const ssh_username = (authData as any)?.ssh_username || (authData as any)?.username;
@@ -106,11 +119,12 @@ export async function handleSshConnection(
         password: ssh_password,
         forceIPv4: true,  // Force IPv4 to avoid IPv6 issues
         debug: (message: string) => {
-          console.log(`SSH DEBUG [${connectionId}]:`, message);
+          // Enhanced debug logging to capture more connection details
           if (message.includes('KEX') || message.includes('AUTH') || message.includes('USERAUTH') || 
               message.includes('handshake') || message.includes('timeout') || 
-              message.includes('error') || message.includes('close')) {
+              message.includes('error') || message.includes('close') || message.includes('DISCONNECT')) {
             logger.info(`SSH DETAIL [${connectionId}]:`, { message, ssh_host, ssh_port: ssh_port || 22 });
+            console.log(`SSH DEBUG [${connectionId}]:`, message);
           }
         },
         readyTimeout: 25000, // 25 seconds timeout for slow networks
@@ -174,8 +188,8 @@ export async function handleSshConnection(
             
             try {
               if (clientSocket.readyState === WebSocket.OPEN) {
-    clientSocket.send(
-      JSON.stringify({
+                clientSocket.send(
+                  JSON.stringify({
                     error: `SSH connection timed out after 25 seconds`,
                     errorType: 'SSH_CONNECTION_TIMEOUT',
                     details: {
@@ -183,8 +197,8 @@ export async function handleSshConnection(
                       ssh_port: ssh_port || 22,
                       is_windows: is_windows
                     }
-      }),
-    );
+                  }),
+                );
               }
             } catch (e) {
               logger.error(`Error sending timeout error to WebSocket: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
@@ -223,8 +237,8 @@ export async function handleSshConnection(
                 level: err.level
               });
               attemptConnection(true);
-    return;
-  }
+              return;
+            }
           }
           
           // Otherwise, handle the error normally
@@ -240,19 +254,19 @@ export async function handleSshConnection(
   const setupSshClientEvents = () => {
     if (!sshClient) return;
 
-  sshClient.on('ready', () => {
+    sshClient.on('ready', () => {
       isConnecting = false;
       logger.info('SSH connection ready', { connectionId, ssh_host, ssh_port: ssh_port || 22, is_windows });
 
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
-    clientSocket.send(
-      JSON.stringify({
-        status: 'connected',
-        message: 'SSH connection established successfully',
+          clientSocket.send(
+            JSON.stringify({
+              status: 'connected',
+              message: 'SSH connection established successfully',
               details: { is_windows }
-      }),
-    );
+            }),
+          );
         }
       } catch (e) {
         logger.error(`Failed to send connection success message: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
@@ -298,7 +312,7 @@ export async function handleSshConnection(
       }
     });
     
-    // Add handshake event handler if available
+    // Add handshake event handler to capture connection details
     sshClient.on('handshake', (negotiated: any) => {
       logger.info('SSH handshake completed', { 
         connectionId, 
@@ -311,67 +325,66 @@ export async function handleSshConnection(
     });
   };
   
-  // Error handler for SSH client errors
+  // Handle SSH errors
   const handleSshError = (err: SSHError) => {
-    // Skip error handling if we're already attempting fallback
-    if (attemptingWindowsFallback) return;
-    
-    const errorInfo = {
+    logger.error('SSH connection error', { 
       error: err.message, 
-      code: err.code,
+      code: err.code, 
       level: err.level,
-      connectionId,
-      ssh_host: ssh_host,
-      ssh_port: ssh_port || 22,
-      is_windows: is_windows
-    };
-    
-    logger.error('SSH connection error', errorInfo);
-    console.error(`SSH connection error for ${connectionId}:`, err);
-    
-    try {
-      const errorType = err.code === 'ECONNREFUSED' ? 'SSH_CONNECTION_REFUSED' : 
-                        err.code === 'ECONNRESET' ? 'SSH_CONNECTION_RESET' :
-                        err.level === 'authentication' ? 'SSH_AUTH_ERROR' : 
-                        err.level === 'client-timeout' ? 'SSH_HANDSHAKE_TIMEOUT' : 'SSH_CONNECTION_ERROR';
-      
-      if (clientSocket.readyState === WebSocket.OPEN) {
-    clientSocket.send(
-      JSON.stringify({
-        error: `SSH connection error: ${err.message}`,
-            errorType: errorType,
-            details: {
-              code: err.code,
-              level: err.level,
-              ssh_host: ssh_host,
-              ssh_port: ssh_port || 22,
-              is_windows: is_windows
-            }
-      }),
-    );
-      }
-    } catch (e) {
-      logger.error(`Error sending error to WebSocket: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
-    }
-  };
-  
-  // Error handler for connection attempt errors
-  const handleConnectionError = (e: unknown) => {
-    // Skip error handling if we're already attempting fallback
-    if (attemptingWindowsFallback) return;
-    
-    logger.error(`Error connecting to SSH server: ${e instanceof Error ? e.message : String(e)}`, { 
-      connectionId,
-      ssh_host: ssh_host,
-      ssh_port: ssh_port || 22,
-      is_windows: is_windows
+      connectionId 
     });
+    
+    // Determine error type for better client feedback
+    let errorType = 'SSH_CONNECTION_ERROR';
+    
+    if (err.level === 'authentication') {
+      errorType = 'SSH_AUTH_ERROR';
+    } else if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
+      errorType = 'SSH_NETWORK_ERROR';
+    } else if (err.message?.includes('handshake')) {
+      errorType = 'SSH_HANDSHAKE_ERROR';
+    } else if (err.message?.includes('timeout')) {
+      errorType = 'SSH_HANDSHAKE_TIMEOUT';
+    }
     
     try {
       if (clientSocket.readyState === WebSocket.OPEN) {
         clientSocket.send(
           JSON.stringify({
-            error: `SSH connection attempt error: ${e instanceof Error ? e.message : String(e)}`,
+            error: `SSH connection error: ${err.message}`,
+            errorType: errorType,
+            details: {
+              ssh_host: ssh_host,
+              ssh_port: ssh_port || 22,
+              is_windows: is_windows
+            }
+          }),
+        );
+      }
+    } catch (e) {
+      logger.error(`Error sending SSH error to WebSocket: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
+    }
+    
+    // End SSH client if it exists
+    if (sshClient) {
+      try {
+        sshClient.end();
+      } catch (e) {
+        logger.error(`Error ending SSH client: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
+      }
+    }
+  };
+  
+  // Handle connection errors
+  const handleConnectionError = (e: unknown) => {
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    logger.error(`Error in SSH connection attempt: ${errorMessage}`, { connectionId });
+    
+    try {
+      if (clientSocket.readyState === WebSocket.OPEN) {
+        clientSocket.send(
+          JSON.stringify({
+            error: `SSH connection attempt error: ${errorMessage}`,
             errorType: 'SSH_CONNECTION_ATTEMPT_ERROR',
             details: {
               ssh_host: ssh_host,
@@ -381,164 +394,112 @@ export async function handleSshConnection(
           }),
         );
       }
-    } catch (sendErr) {
-      logger.error(`Error sending connection error to WebSocket: ${sendErr instanceof Error ? sendErr.message : String(sendErr)}`, { connectionId });
+    } catch (err) {
+      logger.error(`Error sending connection error to WebSocket: ${err instanceof Error ? err.message : String(err)}`, { connectionId });
     }
   };
-
-  // Function to create a shell session (normal SSH or fallback for Windows)
+  
+  // Create shell session
   function createShellSession() {
     if (!sshClient) return;
     
-    const shellOptions: any = {};
-    
-    // Even in shell mode, use pty for Windows
-    if (is_windows) {
-      shellOptions.pty = true;
-      shellOptions.term = 'xterm-256color';
-    }
-    
-    sshClient.shell(shellOptions, (err, stream) => {
+    sshClient.shell((err, stream) => {
       if (err) {
-        logger.error(`SSH shell error: ${err.message}`, { connectionId, ssh_host });
+        logger.error(`SSH shell error: ${err.message}`, { connectionId });
+        
         try {
           if (clientSocket.readyState === WebSocket.OPEN) {
             clientSocket.send(
               JSON.stringify({
                 error: `SSH shell error: ${err.message}`,
                 errorType: 'SSH_SHELL_ERROR',
-                details: { ssh_host, ssh_port: ssh_port || 22, is_windows }
               }),
             );
           }
         } catch (e) {
-          logger.error(`Failed to send shell error message: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
+          logger.error(`Error sending shell error to WebSocket: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
         }
+        
         return;
       }
       
       setupStream(stream);
-      
-      // If this is a Windows connection using shell, send cmd.exe command explicitly
-      if (is_windows) {
-        // Small delay to ensure the shell is ready
-        setTimeout(() => {
-          if (stream && !stream.destroyed) {
-            logger.info('Launching Windows cmd.exe via shell', { connectionId });
-            stream.write('cmd.exe\r\n');
-          }
-        }, 500);
-      }
     });
   }
-
-  // Common stream setup function to avoid code duplication
+  
+  // Common stream setup function
   function setupStream(stream: any) {
+    // Handle stream data
     stream.on('data', (data: Buffer) => {
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
           clientSocket.send(data);
-        } else {
-          logger.warn('Cannot send data, WebSocket is not open', { connectionId });
         }
       } catch (e) {
         logger.error(`Error sending data to WebSocket: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
       }
     });
-
-    clientSocket.on('message', (message) => {
-      try {
-        // Only process messages if we have a stream
-        if (!stream || stream.destroyed) {
-          logger.warn('Cannot process message, SSH stream is closed', { connectionId });
-          return;
-        }
-
-        try {
-          const data = JSON.parse(message.toString());
-          if (data.type === 'disconnect') {
-            logger.info('Client requested disconnect', { connectionId });
-            if (sshClient) {
-              sshClient.end();
-            }
-            clientSocket.close();
-            return;
-          }
-          // If it's a JSON message but not a disconnect, fall through to handle as data
-        } catch (e) {
-          // Not a JSON message, ignore (probably terminal data)
-        }
-        
-        // Handle terminal data (keystrokes, etc.)
-        if (stream && !stream.destroyed) {
-          stream.write(message);
-        }
-      } catch (e) {
-        logger.error(`Error processing WebSocket message: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
-      }
-    });
-
+    
+    // Handle stream close
     stream.on('close', () => {
       logger.info('SSH stream closed', { connectionId });
-      // Don't close the WebSocket, let the client handle disconnection
+      
+      try {
+        if (clientSocket.readyState === WebSocket.OPEN) {
+          clientSocket.send(
+            JSON.stringify({
+              status: 'disconnected',
+              message: 'SSH connection closed',
+            }),
+          );
+          
+          clientSocket.close();
+        }
+      } catch (e) {
+        logger.error(`Error sending stream close to WebSocket: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
+      }
+    });
+    
+    // Handle WebSocket messages
+    clientSocket.on('message', (message) => {
+      try {
+        // Try parsing as JSON for commands
+        const data = JSON.parse(message.toString());
+        
+        // Handle resize command
+        if (data.type === 'resize') {
+          logger.debug('Resize terminal', { 
+            connectionId, 
+            rows: data.rows, 
+            cols: data.cols 
+          });
+          
+          stream.setWindow(data.rows, data.cols, 0, 0);
+        }
+      } catch (e) {
+        // Not JSON, treat as terminal input
+        try {
+          stream.write(message);
+        } catch (err) {
+          logger.error(`Error writing to SSH stream: ${err instanceof Error ? err.message : String(err)}`, { connectionId });
+        }
+      }
+    });
+    
+    // Handle WebSocket close
+    clientSocket.on('close', () => {
+      logger.info('WebSocket closed, ending SSH client', { connectionId });
+      
+      if (sshClient) {
+        try {
+          sshClient.end();
+        } catch (e) {
+          logger.error(`Error ending SSH client: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
+        }
+      }
     });
   }
-
-  // Set up WebSocket close handler first
-  clientSocket.on('close', () => {
-    logger.info('WebSocket closed by client', { connectionId, isConnecting });
-    if (sshClient) {
-      try {
-        logger.info('Ending SSH client due to WebSocket closure', { connectionId });
-        sshClient.end();
-      } catch (e) {
-        logger.error(`Error ending SSH client: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
-      }
-    }
-  });
-
-  logger.info('Establishing SSH connection', { connectionId });
-  console.log('DEBUG: handleSshConnection called with connectionId:', connectionId);
   
-  // Log connection details for troubleshooting but sanitize password
-  console.log('DEBUG: authData:', JSON.stringify({
-    ssh_username: ssh_username,
-    ssh_password: ssh_password ? '[REDACTED]' : 'none',
-    ssh_host: ssh_host,
-    ssh_port: ssh_port || 22,
-    raw_keys: Object.keys(authData || {}).join(', '),
-    is_windows: is_windows
-  }));
-
-  if (clientSocket.authTimeout) {
-    clearTimeout(clientSocket.authTimeout);
-    delete clientSocket.authTimeout;
-  }
-
-  if (!ssh_host || !ssh_username) {
-    const missingFields = [];
-    if (!ssh_host) missingFields.push('ssh_host');
-    if (!ssh_username) missingFields.push('ssh_username');
-    
-    logger.error('Missing SSH credentials', { connectionId, missingFields });
-    
-    try {
-      if (clientSocket.readyState === WebSocket.OPEN) {
-        clientSocket.send(
-          JSON.stringify({
-            error: `Missing SSH credentials: ${missingFields.join(', ')}`,
-            errorType: 'MISSING_CREDENTIALS',
-            details: { missingFields }
-          }),
-        );
-      }
-    } catch (e) {
-      logger.error(`Failed to send error message: ${e instanceof Error ? e.message : String(e)}`, { connectionId });
-    }
-    return;
-  }
-
-  // Start connection process - first with default mode (Linux or explicit Windows)
-  // Will automatically try Windows mode as fallback if needed
+  // Start the connection attempt
   attemptConnection(is_windows);
 }
