@@ -13,7 +13,7 @@ import { Plus, RefreshCw, Grid, List } from 'lucide-react';
 import { HostTable } from './HostTable';
 import { HostGrid } from './HostGrid';
 
-export default function HostList() {
+export default function HostContainer() {
   const { locale = 'en', tenant = 'default' } = useParams();
   const [hosts, setHosts] = useState<Host[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,30 +56,26 @@ export default function HostList() {
 
   // Test a single host connection
   const testHostConnection = async (host: Host, silent: boolean = false) => {
-    // Skip if already testing this host
     if (testingHosts[host.id]) return { success: false, message: 'Already testing' };
-    
-    // Set testing flag for this host
+
     setTestingHosts(prev => ({ ...prev, [host.id]: true }));
-    
-    // Set status to pending for this host
+
     setHosts(prevHosts => 
       prevHosts.map(h => 
         h.id === host.id ? { ...h, status: 'pending' } : h
       )
     );
-    
+
     try {
-      // Test this specific host
       const result = await hostsApi.testConnection(String(locale), {
         type: host.type,
         ip: host.ip,
         port: host.port,
         username: host.user,
+        password: formData.password || (host as any).password,
         hostId: host.id,
       });
-      
-      // Update this host's status based on the result
+
       setHosts(prevHosts => 
         prevHosts.map(h => 
           h.id === host.id 
@@ -92,7 +88,7 @@ export default function HostList() {
             : h
         )
       );
-      
+
       if (!silent) {
         if (result.success) {
           toast.success(`Connection to ${host.name} successful`);
@@ -100,15 +96,13 @@ export default function HostList() {
           toast.error(`Connection to ${host.name} failed: ${result.message || 'Unknown error'}`);
         }
       }
-      
-      // Clear testing flag
+
       setTestingHosts(prev => ({ ...prev, [host.id]: false }));
-      
+
       return result;
     } catch (error) {
       console.error(`Error testing connection for host ${host.name}:`, error);
-      
-      // Update this host as failed
+
       setHosts(prevHosts => 
         prevHosts.map(h => 
           h.id === host.id 
@@ -120,14 +114,13 @@ export default function HostList() {
             : h
         )
       );
-      
+
       if (!silent) {
         toast.error(`Failed to test connection to ${host.name}`);
       }
-      
-      // Clear testing flag
+
       setTestingHosts(prev => ({ ...prev, [host.id]: false }));
-      
+
       return { success: false, message: 'Connection test failed' };
     }
   };
@@ -135,21 +128,9 @@ export default function HostList() {
   // Test all connections one by one
   const testAllHostsSequentially = async (hostsToTest?: Host[]) => {
     const currentHosts = hostsToTest || [...hosts];
-    let testedCount = 0;
-    
-    // Process hosts one by one
     for (const host of currentHosts) {
-      // Skip if already testing this host
-      if (testingHosts[host.id]) continue;
-      
-      await testHostConnection(host, true); // Silent mode for bulk testing
-      testedCount++;
-      
-      // Small delay between tests to avoid overwhelming the server
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await testHostConnection(host, true);
     }
-    
-    // No toast needed - visual feedback is enough
   };
 
   useEffect(() => {
@@ -195,8 +176,6 @@ export default function HostList() {
 
   const handleSaveHost = async () => {
     try {
-      // We only allow saving if the connection test was successful,
-      // so we can set the status to 'connected' directly
       const newHost = await hostsApi.createHost(String(locale), {
         name: formData.name,
         description: formData.description,
@@ -208,13 +187,9 @@ export default function HostList() {
         status: 'connected',
       });
       
-      // Close dialog
       setShowAddHost(false);
-      
-      // Add the new host to the state directly
       setHosts(currentHosts => [newHost, ...currentHosts]);
       
-      // Reset form data
       setFormData({
         name: '',
         description: '',
@@ -224,8 +199,6 @@ export default function HostList() {
         username: '',
         password: '',
       });
-      
-      // No toast needed - visual feedback is enough
     } catch (error) {
       console.error('Error saving host:', error);
       toast.error("Failed to create host");
@@ -269,7 +242,7 @@ export default function HostList() {
               <List className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={() => testAllHostsSequentially()} variant="outline" size="sm">
+          <Button onClick={() => testAllHostsSequentially(hosts)} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
