@@ -94,35 +94,6 @@ export default async function middleware(request: NextRequest) {
     // Auth redirect page (with locale and route group)
     (request.nextUrl.pathname.includes('/auth-redirect'));
   
-  // For root or locale-only paths, check if user is logged in and redirect to dashboard
-  if ((request.nextUrl.pathname === '/' || (pathParts.length === 1 && locales.includes(pathParts[0] as any))) && 
-      !request.nextUrl.pathname.includes('/login')) {
-    try {
-      // Correctly retrieve and validate session token
-      const sessionTokenCookie = request.cookies.get('next-auth.session-token') || 
-                                 request.cookies.get('__Secure-next-auth.session-token');
-      
-      const token = await getToken({ 
-        req: request,
-        secret: process.env.NEXTAUTH_SECRET,
-        secureCookie: process.env.NODE_ENV === 'production',
-        cookieName: sessionTokenCookie?.name,
-      });
-      
-      // Only redirect if token is explicitly invalid or missing
-      if (!token || typeof token !== 'object' || !token.id || !token.email) {
-        console.log('Invalid or missing token, redirecting to login');
-        return createLoginRedirect(request, pathParts);
-      }
-      
-      // Continue with the request if token is valid
-      console.log('Valid token detected, continuing request');
-      return NextResponse.next();
-    } catch (error) {
-      console.error('Error checking token for dashboard redirect:', error);
-    }
-  }
-  
   if (isPublicPath) {
     // Special handling for profile API 404 responses
     if (request.nextUrl.pathname.includes('/api/auth/profile')) {
