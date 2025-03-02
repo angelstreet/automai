@@ -32,19 +32,20 @@ export default function HostContainer() {
     password: '',
   });
   const router = useRouter();
+  const [isTestingAll, setIsTestingAll] = useState(false);
 
   const fetchHosts = useCallback(async () => {
     console.log('Fetching hosts...');
     setLoading(true);
     try {
-      // Fetch the hosts without testing connections
       const fetchedHosts = await hostsApi.getHosts(String(locale));
       console.log('Hosts fetched successfully:', fetchedHosts);
-      
-      // Update the hosts state
-      setHosts([...fetchedHosts]);
-      
-      return fetchedHosts;
+
+      // Set initial status to 'pending' for quick UI display
+      const pendingHosts = fetchedHosts.map(host => ({ ...host, status: 'pending' }));
+      setHosts(pendingHosts);
+
+      return pendingHosts;
     } catch (error) {
       console.error('Error fetching hosts:', error);
       toast.error("Failed to fetch hosts");
@@ -127,10 +128,12 @@ export default function HostContainer() {
 
   // Test all connections one by one
   const testAllHostsSequentially = async (hostsToTest?: Host[]) => {
+    setIsTestingAll(true);
     const currentHosts = hostsToTest || [...hosts];
     for (const host of currentHosts) {
       await testHostConnection(host, true);
     }
+    setIsTestingAll(false);
   };
 
   useEffect(() => {
@@ -243,7 +246,7 @@ export default function HostContainer() {
             </Button>
           </div>
           <Button onClick={() => testAllHostsSequentially(hosts)} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isTestingAll ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button onClick={() => setShowAddHost(true)}>

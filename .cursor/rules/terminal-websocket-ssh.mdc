@@ -197,36 +197,16 @@ The terminal connection workflow follows these steps:
 // src/app/api/terminals/init/route.ts
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { connectionId } = body;
-    
-    if (!connectionId) {
-      return NextResponse.json(
-        { success: false, error: 'Connection ID is required' },
-        { status: 400 }
-      );
-    }
-    
-    // Get connection details from database
-    const connection = await getConnectionDetails(connectionId);
-    
-    if (!connection) {
-      return NextResponse.json(
-        { success: false, error: 'Connection not found' },
-        { status: 404 }
-      );
-    }
-    
     // Initialize the WebSocket server (lazy initialization)
     const wss = getWebSocketServer();
-    
+
     if (!wss) {
       return NextResponse.json(
         { success: false, error: 'Failed to initialize WebSocket server' },
         { status: 500 }
       );
     }
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
@@ -236,6 +216,8 @@ export async function POST(request: NextRequest) {
   }
 }
 ```
+
+**Note:** Database connection logic is obsolete and no longer required for terminal initialization.
 
 ## WebSocket Route Handler
 
