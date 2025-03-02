@@ -131,11 +131,44 @@ function initializeWebSocketSupport(server: Server) {
 
   // Handle upgrade requests without removing existing listeners
   server.on('upgrade', (request, socket, head) => {
+    // Check if this request is already being handled
+    if ((request as any).__isHandlingUpgrade) {
+      logger.info('Skipping already handled WebSocket upgrade request');
+      socket.destroy();
+      return;
+    }
+    
     const { pathname } = parse(request.url || '');
+    const pathnameStr = pathname || '';
+    logger.info('Upgrade request received', { pathname: pathnameStr });
 
-    // Handle terminal connections
-    if (pathname && pathname.startsWith('/api/terminals/ws/')) {
-      handleUpgrade(request, socket as Socket, head);
+    // Only handle terminal connections and let Next.js handle its own WebSocket connections
+    if (pathnameStr && pathnameStr.startsWith('/api/terminals/ws/')) {
+      try {
+        // Mark this request as being handled to prevent double handling
+        (request as any).__isHandlingUpgrade = true;
+        
+        // Extract connection ID from URL
+        const connectionId = pathnameStr.split('/').pop();
+        if (connectionId) {
+          logger.info('Handling terminal WebSocket upgrade', { connectionId });
+          (request as any).connectionId = connectionId;
+          handleUpgrade(request, socket as Socket, head);
+        } else {
+          logger.error('Invalid terminal WebSocket URL', { pathname: pathnameStr });
+          socket.destroy();
+        }
+      } catch (error) {
+        // Log error but don't crash server
+        logger.error('Error handling WebSocket upgrade', { 
+          error: error instanceof Error ? error.message : String(error),
+          pathname: pathnameStr 
+        });
+        socket.destroy();
+      }
+    } else {
+      // Let Next.js handle other WebSocket connections
+      logger.info('Letting Next.js handle WebSocket upgrade', { pathname: pathnameStr });
     }
   });
 
