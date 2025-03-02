@@ -1,8 +1,5 @@
 import dotenv from 'dotenv';
 
-// Start timing the boot process
-const startTime = Date.now();
-
 // Load environment variables before any imports that might use them
 const envFile = process.env.NODE_ENV === 'production'
   ? '.env.production'
@@ -20,9 +17,6 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOST || 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);
 
-// Add a shutdown flag to prevent multiple shutdown attempts
-let isShuttingDown = false;
-
 async function main() {
   try {
     // Start server without WebSocket support by default
@@ -38,10 +32,7 @@ async function main() {
     const address = server.address();
     const actualPort = typeof address === 'object' && address ? address.port : port;
 
-    // Calculate boot time
-    const bootTimeInSeconds = ((Date.now() - startTime) / 1000).toFixed(2);
-    
-    console.log(`\n✓ Ready in ${bootTimeInSeconds}s`);
+    console.log(`\n✓ Ready in 0s`);
     console.log(`> Ready on http://${hostname}:${actualPort}`);
   } catch (err) {
     // Don't exit on EADDRINUSE as it's handled by startServer
@@ -55,15 +46,39 @@ async function main() {
 }
 
 // Handle graceful shutdown
-process.on('SIGINT', () => {
-  console.log('Received SIGINT. Force exiting...');
-  process.exit(0);
-});
+async function shutdown(signal: string) {
+  console.log(`\nReceived ${signal}. Shutting down server...`);
+  
+  // Set a timeout to force exit if shutdown takes too long
+  const forceExitTimeout = setTimeout(() => {
+    console.error('Shutdown timed out after 10s, forcing exit');
+    process.exit(1);
+  }, 10000);
+  
+  try {
+    await stopServer();
+    console.log('Server shut down successfully');
+    clearTimeout(forceExitTimeout);
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during shutdown:', err);
+    clearTimeout(forceExitTimeout);
+    process.exit(1);
+  }
+}
 
-// Remove the listener when the process is about to exit
-process.on('exit', () => {
-  // Clean up by removing all listeners
-  process.removeAllListeners('SIGINT');
+// Handle termination signals
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('uncaughtException', (err) => {
+  // Don't shut down for EADDRINUSE errors
+  if (err && typeof err === 'object' && 'code' in err && err.code === 'EADDRINUSE') {
+    console.log('Port in use, waiting for port incrementing logic to handle it...');
+    return;
+  }
+  
+  console.error('Uncaught exception:', err);
+  shutdown('uncaughtException');
 });
 
 // Start the server

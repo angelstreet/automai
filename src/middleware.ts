@@ -83,16 +83,11 @@ export default async function middleware(request: NextRequest) {
   
   // Check if it's a public path more precisely
   const isPublicPath = 
-    // Check exact matches in publicPaths
-    publicPaths.some(path => request.nextUrl.pathname.includes(path)) || 
-    // Root path
+    publicPaths.some(path => request.nextUrl.pathname === path) ||
     request.nextUrl.pathname === '/' ||
-    // Locale root paths like /en or /fr
     (pathParts.length === 1 && locales.includes(pathParts[0] as any)) ||
-    // Public API routes
-    (request.nextUrl.pathname.startsWith('/api/auth/')) ||
-    // Auth redirect page (with locale and route group)
-    (request.nextUrl.pathname.includes('/auth-redirect'));
+    request.nextUrl.pathname.startsWith('/api/auth/') ||
+    request.nextUrl.pathname.includes('/auth-redirect');
   
   if (isPublicPath) {
     // Special handling for profile API 404 responses
