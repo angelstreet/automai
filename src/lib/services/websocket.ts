@@ -115,12 +115,19 @@ export function handleUpgrade(
   const connectionId = (request as any).connectionId;
   if (connectionId) {
     logger.info('WebSocket upgrade with connection ID:', { connectionId });
+    console.log('Found connectionId on request:', connectionId);
+  } else {
+    logger.warn('WebSocket upgrade request missing connectionId');
+    console.log('No connectionId found on WebSocket upgrade request');
   }
   
   wss.handleUpgrade(request, socket, head, (ws) => {
     // Store the connection ID on the WebSocket object if available
     if (connectionId) {
       (ws as any).connectionId = connectionId;
+      console.log('Set connectionId on WebSocket:', connectionId);
+    } else {
+      console.warn('Cannot set connectionId on WebSocket: undefined');
     }
     
     // Set up message handler
@@ -157,12 +164,22 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
         connectionType: data.connectionType,
         username: data.username,
       });
+      
+      console.log('DEBUG: WebSocket connectionId:', (ws as any).connectionId);
+      console.log('DEBUG: Auth data:', JSON.stringify({
+        connectionType: data.connectionType,
+        username: data.username,
+        hasPassword: !!data.password,
+        host: data.host
+      }));
 
       // Handle SSH connection
       if (data.connectionType === 'ssh') {
         handleSshConnection(ws, (ws as any).connectionId, {
           username: data.username,
           password: data.password,
+          host: data.host,
+          port: data.port
         });
       } else {
         logger.error('Unsupported connection type', { type: data.connectionType });
