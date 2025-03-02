@@ -53,6 +53,15 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Explicitly bypass authentication redirects for API routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const response = await NextResponse.next();
+    if (response.headers.get('content-type')?.includes('text/html')) {
+      return NextResponse.json({ error: 'API route returned HTML' }, { status: 500 });
+    }
+    return response;
+  }
+
   // 2. Define public paths that bypass auth checks
   const publicPaths = [
     '/login', 

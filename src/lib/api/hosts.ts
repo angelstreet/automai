@@ -91,4 +91,32 @@ export const hostsApi = {
 
     return response.json();
   },
+
+  /**
+   * Create a new host
+   */
+  createHost: async (locale: string, data: {
+    name: string;
+    description: string;
+    type: string;
+    ip: string;
+    port: number;
+    user: string;
+    password: string;
+    status: string;
+  }) => {
+    const response = await fetch(`${getBaseUrl()}/api/hosts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create host');
+    }
+
+    return response.json();
+  },
 };
