@@ -8,7 +8,6 @@ export function ToasterProvider() {
       position="top-right"
       richColors
       expand={false}
-      closeButton
     />
   );
 }
