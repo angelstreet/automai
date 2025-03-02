@@ -35,15 +35,6 @@ export default function TerminalPage() {
   // Get host name from URL params
   const hostName = params.hostName as string;
 
-  // Log the host name for debugging
-  useEffect(() => {
-    logger.info('Terminal page viewed', {
-      userId: session?.user?.id,
-      action: 'TERMINAL_PAGE_VIEW',
-      data: { hostName },
-    });
-  }, [hostName]);
-
   // Get count from URL if present (for multiple terminals)
   const count =
     typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('count') : null;
@@ -157,12 +148,6 @@ export default function TerminalPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';
       setError(message);
-
-      logger.error(`Error in terminal page: ${message}`, {
-        userId: session?.user?.id,
-        action: 'TERMINAL_PAGE_ERROR',
-        data: { hostName, error: message },
-      });
     } finally {
       setLoading(false);
     }
