@@ -61,7 +61,7 @@ const nextConfig = {
   // Configure server options
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000'],
+      allowedOrigins: ['localhost:3000', 'localhost:3001', 'localhost:3002'],
     },
   },
 

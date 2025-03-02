@@ -26,6 +26,7 @@ interface Connection {
   password: string;
   host?: string;
   user?: string;
+  os_type?: string;
 }
 
 interface TerminalProps {
@@ -41,6 +42,7 @@ export function Terminal({ connection }: TerminalProps) {
   const [isConnecting, setIsConnecting] = useState<boolean>(true);
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
+  const [windowsMode, setWindowsMode] = useState<boolean | null>(null);
 
   useEffect(() => {
     const initializeTerminal = async () => {
@@ -109,6 +111,14 @@ export function Terminal({ connection }: TerminalProps) {
       term.write(
         `\x1B[1;3;33mInitializing terminal for ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})...\x1B[0m\r\n`,
       );
+      
+      // Auto-detect Windows from os_type or allow manual override
+      const autoDetectedWindows = connection.os_type?.toLowerCase()?.includes('windows') || false;
+      const isWindows = windowsMode !== null ? windowsMode : autoDetectedWindows;
+      
+      if (isWindows) {
+        term.write(`\x1B[1;3;36mWindows system detected or selected, will use special connection mode\x1B[0m\r\n`);
+      }
 
       // Initialize WebSocket server first
       try {
@@ -221,6 +231,19 @@ export function Terminal({ connection }: TerminalProps) {
 
           term.write(`\x1B[1;3;33mWebSocket connected, authenticating...\x1B[0m\r\n`);
 
+          // Detect if target is likely Windows
+          const is_windows = windowsMode !== null ? windowsMode : connection.os_type?.toLowerCase()?.includes('windows') || false;
+          
+          // Additional logging for Windows detection
+          if (is_windows) {
+            console.log('[Terminal] Windows OS detected or selected, will use cmd.exe', {
+              os_type: connection.os_type,
+              ip: connection.ip,
+              manuallySelected: windowsMode !== null
+            });
+            term.write(`\x1B[1;3;33mWindows system detected, will connect using cmd.exe...\x1B[0m\r\n`);
+          }
+
           // Send authentication message
           const authMessage = {
             type: 'auth',
@@ -228,7 +251,8 @@ export function Terminal({ connection }: TerminalProps) {
             ssh_username: connection.username || connection.user || 'root',
             ssh_password: connection.password,
             ssh_host: connection.ip,
-            ssh_port: connection.port
+            ssh_port: connection.port,
+            is_windows: is_windows
           };
 
           console.log('[WebSocket] Sending authentication', {
@@ -237,7 +261,8 @@ export function Terminal({ connection }: TerminalProps) {
             ssh_username: connection.username || connection.user || 'root',
             hasPassword: !!connection.password,
             ssh_host: connection.ip,
-            ssh_port: connection.port
+            ssh_port: connection.port,
+            is_windows: is_windows
           });
 
           // Log authentication attempt
@@ -282,8 +307,27 @@ export function Terminal({ connection }: TerminalProps) {
 
             // Handle connection status messages
             if (data.status === 'connected') {
-              console.log('[SSH] Connection established successfully');
+              console.log('[SSH] Connection established successfully', data.details);
               term.write(`\r\n\x1B[1;3;32mSSH connection established successfully.\x1B[0m\r\n`);
+              
+              // Add Windows-specific message if connected to Windows
+              if (data.details?.is_windows) {
+                term.write(`\r\n\x1B[1;3;32mConnected to Windows system. Using cmd.exe shell.\x1B[0m\r\n`);
+              }
+              return;
+            }
+            
+            // Handle retry with Windows mode message
+            if (data.status === 'retry') {
+              console.log('[SSH] Retrying with Windows mode:', data);
+              term.write(`\r\n\x1B[1;3;33m${data.message || 'Trying Windows connection mode...'}\x1B[0m\r\n`);
+              return;
+            }
+            
+            // Handle server banner messages
+            if (data.type === 'banner') {
+              console.log('[SSH] Banner received:', data.message);
+              term.write(`\r\n\x1B[1;3;36mServer message: ${data.message}\x1B[0m\r\n`);
               return;
             }
 
@@ -306,10 +350,13 @@ export function Terminal({ connection }: TerminalProps) {
                 toastDescription = 'Invalid username or password. Please check your credentials.';
               } else if (data.errorType === 'SSH_NETWORK_ERROR') {
                 toastTitle = 'Network Error';
-                toastDescription = `Could not connect to ${data.details?.host}:${data.details?.port}. Server may be unreachable.`;
+                toastDescription = `Could not connect to ${data.details?.ssh_host}:${data.details?.ssh_port}. Server may be unreachable.`;
               } else if (data.errorType === 'SSH_SHELL_ERROR') {
                 toastTitle = 'Shell Error';
                 toastDescription = 'Failed to open shell session on the remote server.';
+              } else if (data.errorType === 'SSH_HANDSHAKE_TIMEOUT') {
+                toastTitle = 'Handshake Timeout';
+                toastDescription = `SSH handshake timed out. Server at ${data.details?.ssh_host}:${data.details?.ssh_port} might be unreachable or incompatible.`;
               }
 
               // Show toast notification for SSH error
@@ -328,11 +375,20 @@ export function Terminal({ connection }: TerminalProps) {
                 );
               } else if (data.errorType === 'SSH_NETWORK_ERROR') {
                 term.write(
-                  `\r\n\x1B[1;3;31mCould not connect to ${data.details?.host}:${data.details?.port}. Server may be unreachable.\x1B[0m\r\n`,
+                  `\r\n\x1B[1;3;31mCould not connect to ${data.details?.ssh_host}:${data.details?.ssh_port}. Server may be unreachable.\x1B[0m\r\n`,
                 );
               } else if (data.errorType === 'SSH_SHELL_ERROR') {
                 term.write(
                   `\r\n\x1B[1;3;31mFailed to open shell session on the remote server.\x1B[0m\r\n`,
+                );
+              } else if (data.errorType === 'SSH_HANDSHAKE_TIMEOUT') {
+                term.write(
+                  `\r\n\x1B[1;3;31mSSH handshake timed out. This could be due to:\x1B[0m\r\n`,
+                );
+                term.write(
+                  `\r\n\x1B[1;3;31m- A firewall blocking the connection\x1B[0m\r\n` +
+                  `\r\n\x1B[1;3;31m- The server not running SSH on port ${data.details?.ssh_port}\x1B[0m\r\n` +
+                  `\r\n\x1B[1;3;31m- Network issues between the server and client\x1B[0m\r\n`
                 );
               } else {
                 term.write(
@@ -445,6 +501,29 @@ export function Terminal({ connection }: TerminalProps) {
           <div className="flex flex-col items-center space-y-4">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             <p className="text-sm text-muted-foreground">Initializing terminal connection...</p>
+            
+            {/* Windows mode toggle - only show during connection */}
+            <div className="flex items-center mt-4 gap-2">
+              <span className="text-sm text-muted-foreground">Windows Mode:</span>
+              <button
+                className={`px-3 py-1 text-xs rounded ${windowsMode === true ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+                onClick={() => setWindowsMode(true)}
+              >
+                ON
+              </button>
+              <button
+                className={`px-3 py-1 text-xs rounded ${windowsMode === false ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+                onClick={() => setWindowsMode(false)}
+              >
+                OFF
+              </button>
+              <button
+                className={`px-3 py-1 text-xs rounded ${windowsMode === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+                onClick={() => setWindowsMode(null)}
+              >
+                Auto
+              </button>
+            </div>
           </div>
         </div>
       )}
