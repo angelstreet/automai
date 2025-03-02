@@ -50,7 +50,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const t = useTranslations('Common');
 
   const getStatusDot = (status: string) => {
-    const baseClasses = 'h-4 w-4 rounded-full';
+    const baseClasses = 'h-4 w-3 rounded-full';
 
     if (!status) {
       return (
@@ -137,7 +137,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
 
   return (
     <>
-      <Card className="relative w-[350px]">
+      <Card className="relative w-[300px]">
         <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
           <div className="flex flex-col space-y-1.5">
             <div className="flex items-center">
@@ -194,10 +194,10 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
             </Button>
             {host.lastConnected && (
               <p className="text-xs mt-1 text-muted-foreground">
-                {t('lastConnected')}: {new Date(host.lastConnected).toLocaleString()}
+                {t('lastConnected')}: {new Date(host.lastConnected).toLocaleDateString()}
               </p>
             )}
-          </div>
+          </div>  
         </CardContent>
       </Card>
 
