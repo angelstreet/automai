@@ -194,10 +194,9 @@ export function handleUpgrade(
 /**
  * Handle messages from client
  */
-export function handleMessage(ws: WebSocketConnection, message: string | Buffer): void {
+export function handleMessage(ws: WebSocketConnection, message: string): void {
   try {
-    const messageStr = typeof message === 'string' ? message : message.toString();
-    const data = JSON.parse(messageStr);
+    const data = JSON.parse(message);
     const ws_connectionId = (ws as any).connectionId;
     
     console.log('handleMessage received data:', {
@@ -209,30 +208,28 @@ export function handleMessage(ws: WebSocketConnection, message: string | Buffer)
     // Handle authentication
     if (data.type === 'auth') {
       logger.info('Received auth request', {
-        connectionId: ws_connectionId,
+        ws_connectionId: ws_connectionId,
         connectionType: data.connectionType,
-        username: data.ssh_username || data.username,
+        ssh_username: data.username || data.ssh_username,
       });
       
       console.log('DEBUG: WebSocket connectionId:', ws_connectionId);
       console.log('DEBUG: Auth data:', JSON.stringify({
         connectionType: data.connectionType,
-        ssh_username: data.ssh_username || data.username,
-        ssh_hasPassword: !!(data.ssh_password || data.password),
-        ssh_host: data.ssh_host || data.host,
-        is_windows: data.is_windows
+        ssh_username: data.username || data.ssh_username,
+        ssh_hasPassword: !!(data.password || data.ssh_password),
+        ssh_host: data.host || data.ssh_host
       }));
 
       // Handle SSH connection
       if (data.connectionType === 'ssh') {
-        const normalizedAuthData = {
-          username: data.ssh_username || data.username,
-          password: data.ssh_password || data.password,
-          host: data.ssh_host || data.host,
-          port: data.ssh_port || data.port,
-          is_windows: data.is_windows
-        };
-        handleSshConnection(ws, ws_connectionId, normalizedAuthData);
+        // Map incoming parameters to ssh_ prefixed parameters
+        handleSshConnection(ws, ws_connectionId, {
+          ssh_username: data.username || data.ssh_username,
+          ssh_password: data.password || data.ssh_password,
+          ssh_host: data.host || data.ssh_host,
+          ssh_port: data.port || data.ssh_port
+        });
       } else {
         logger.error('Unsupported connection type', { type: data.connectionType });
         ws.send(
