@@ -1,10 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
-
-import { useParams } from 'next/navigation';
-
 import { Loader2 } from 'lucide-react';
+import { useParams } from 'next/navigation';
 /* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { useTranslations } from 'next-intl';
+import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/shadcn/button';

@@ -17,15 +17,14 @@
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { compare } from 'bcrypt';
 import NextAuth from 'next-auth';
+import type { Session, User } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import { default as CredentialsProvider } from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 
 import { env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
-
-import type { Session, User } from 'next-auth';
-import type { JWT } from 'next-auth/jwt';
 
 // Ensure environment variables are loaded
 // Next.js automatically loads .env.development in development mode

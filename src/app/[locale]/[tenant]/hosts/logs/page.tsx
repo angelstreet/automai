@@ -64,7 +64,7 @@ export default function HostsLogsPage() {
     }
   }, []);
 
-  const handleDeviceChange = useCallback(
+  const _handleDeviceChange = useCallback(
     (deviceId: string) => {
       const device = machines.find((m) => m.id === deviceId);
       setSelectedDevice(device || null);

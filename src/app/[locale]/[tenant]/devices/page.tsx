@@ -1,5 +1,4 @@
 'use client';
-/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 
 export default function DevicesPage() {
   return (

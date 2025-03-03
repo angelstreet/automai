@@ -11,7 +11,7 @@ import {
 import { GitHubProviderService } from './git-providers/github';
 
 // Factory to get the appropriate provider service
-export function getGitProviderService(
+export async function getGitProviderService(
   providerType: GitProviderType,
   options?: { serverUrl?: string; accessToken?: string },
 ) {
@@ -23,7 +23,7 @@ export function getGitProviderService(
       throw new Error('GitLab provider not implemented yet');
     case 'gitea':
       if (options?.serverUrl) {
-        const { GiteaProviderService } = require('./git-providers/gitea');
+        const { GiteaProviderService } = await import('./git-providers/gitea');
         return new GiteaProviderService(options.serverUrl, options.accessToken);
       }
       throw new Error('Server URL is required for Gitea provider');
@@ -240,7 +240,9 @@ export async function syncRepository(id: string): Promise<Repository> {
       throw new Error('Repository provider not found');
     }
 
-    const providerService = getGitProviderService(repository.provider.name as GitProviderType);
+    const providerService = await getGitProviderService(
+      repository.provider.name as GitProviderType,
+    );
 
     // Sync the repository with the provider
     const syncedData = await providerService.syncRepository(repository);
@@ -295,7 +297,7 @@ export async function importRepositoriesFromProvider(providerId: string): Promis
     throw new Error('Provider not found or not authenticated');
   }
 
-  const providerService = getGitProviderService(provider.name as GitProviderType);
+  const providerService = await getGitProviderService(provider.name as GitProviderType);
 
   // Get repositories from the provider
   const repositories = await providerService.listRepositories(provider);

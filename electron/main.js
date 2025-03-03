@@ -1,12 +1,14 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+
 const path = require('path');
 const isDev = process.env.NODE_ENV !== 'production';
 const PORT = process.env.ELECTRON_PORT || 3000;
 const { exec, spawn } = require('child_process');
-const simpleGit = require('simple-git');
-const http = require('http');
 const fs = require('fs');
+const http = require('http');
 const os = require('os');
+
+const simpleGit = require('simple-git');
 
 let mainWindow;
 let store;

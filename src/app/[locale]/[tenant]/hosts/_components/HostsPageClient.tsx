@@ -1,9 +1,5 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-
-import { useParams } from 'next/navigation';
-
 import {
   useMutation,
   useQueryClient,
@@ -11,7 +7,9 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { RefreshCcw, Plus, Server } from 'lucide-react';
+import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
 import {
@@ -113,8 +111,8 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
             );
           });
         }
-      } catch (error) {
-        console.error(`Background connection test failed for host ${host.name}:`, error);
+      } catch (_error) {
+        console.error(`Background connection test failed for host ${host.name}:`,_error);
         // We don't show toasts for background tests to avoid UI noise
 
         // Update status to failed if there was an error
@@ -171,7 +169,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       setHosts(freshHosts);
       queryClient.setQueryData(['hosts'], freshHosts);
       toast.success('Hosts refreshed');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to refresh hosts');
     } finally {
       setIsRefreshing(false);
@@ -187,7 +185,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       setHostToDelete(null);
       setIsDeleteDialogOpen(false);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to delete host');
     },
   });

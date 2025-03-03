@@ -1,8 +1,7 @@
-import { useState } from 'react';
-
 import { GitProvider } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
 import { RefreshCw, Trash2, Github, GitlabIcon } from 'lucide-react';
+import { useState } from 'react';
 
 import {
   AlertDialog,

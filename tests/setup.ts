@@ -1,5 +1,4 @@
-import { launch } from 'puppeteer';
-import { Browser, Page } from 'puppeteer';
+import { launch, Browser, Page } from 'puppeteer';
 
 let browser: Browser;
 let page: Page;

@@ -1,6 +1,5 @@
-import * as React from 'react';
-
 import { IconEye, IconEyeOff } from '@tabler/icons-react';
+import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { cn } from '@/lib/utils';

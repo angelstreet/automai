@@ -1,7 +1,6 @@
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
-
 import { NextIntlClientProvider } from 'next-intl';
 
 import { RouteGuard } from '@/components/auth/RouteGuard';

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
+/* eslint-disable unused-imports/no-unused-vars */
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 

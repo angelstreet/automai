@@ -1,6 +1,5 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
-
 import { getToken } from 'next-auth/jwt';
 
 import { locales, defaultLocale, pathnames } from './config';

@@ -1,9 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-
-import { useRouter } from 'next/navigation';
-
 import {
   Terminal,
   AlertCircle,
@@ -12,7 +8,9 @@ import {
   XCircle,
   ScrollText,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {

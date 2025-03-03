@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-
 import { useRouter, usePathname, useParams } from 'next/navigation';
-
 import { useSession } from 'next-auth/react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useUser } from '@/context/UserContext';
 

@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-
-import { useParams, useRouter } from 'next/navigation';
-
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/shadcn/button';
@@ -34,7 +32,7 @@ export default function HostContainer() {
     username: '',
     password: '',
   });
-  const router = useRouter();
+  const _router = useRouter();
   const [isTestingAll, setIsTestingAll] = useState(false);
 
   const fetchHosts = useCallback(async () => {
@@ -49,8 +47,8 @@ export default function HostContainer() {
       setHosts(pendingHosts);
 
       return pendingHosts;
-    } catch (error) {
-      console.error('Error fetching hosts:', error);
+    } catch (_error) {
+      console.error('Error fetching hosts:',_error);
       toast.error('Failed to fetch hosts');
       return [];
     } finally {
@@ -102,8 +100,8 @@ export default function HostContainer() {
       setTestingHosts((prev) => ({ ...prev, [host.id]: false }));
 
       return result;
-    } catch (error) {
-      console.error(`Error testing connection for host ${host.name}:`, error);
+    } catch (_error) {
+      console.error(`Error testing connection for host ${host.name}:`,_error);
 
       setHosts((prevHosts) =>
         prevHosts.map((h) =>
@@ -168,7 +166,7 @@ export default function HostContainer() {
       setHosts((currentHosts) => currentHosts.filter((host) => host.id !== id));
 
       toast.success('Host deleted successfully');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete host');
     }
   };
@@ -203,8 +201,8 @@ export default function HostContainer() {
         username: '',
         password: '',
       });
-    } catch (error) {
-      console.error('Error saving host:', error);
+    } catch (_error) {
+      console.error('Error saving host:',_error);
       toast.error('Failed to create host');
     }
   };

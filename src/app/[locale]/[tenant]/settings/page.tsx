@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-
 import { useTranslations } from 'next-intl';
 
 import { LanguageSettings } from '@/components/settings/LanguageSettings';

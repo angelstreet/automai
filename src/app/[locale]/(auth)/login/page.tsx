@@ -1,14 +1,12 @@
 'use client';
 
-import * as React from 'react';
-import { useEffect } from 'react';
-
+import { Chrome, Github } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-
-import { Chrome, Github } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
+import { useEffect } from 'react';
+import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';

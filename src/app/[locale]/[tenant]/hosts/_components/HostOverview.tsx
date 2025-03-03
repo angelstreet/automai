@@ -1,6 +1,5 @@
-import { useState } from 'react';
-
 import { Grid, List } from 'lucide-react';
+import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { useToast } from '@/components/shadcn/use-toast';
@@ -94,7 +93,7 @@ export function HostOverview({
   };
 
   // Handle bulk refresh
-  const handleBulkRefresh = async () => {
+  const _handleBulkRefresh = async () => {
     if (onTestConnection) {
       let successCount = 0;
       for (const host of filteredHosts) {

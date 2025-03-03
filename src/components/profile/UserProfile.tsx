@@ -1,9 +1,7 @@
-import * as React from 'react';
-
-import { useRouter } from 'next/navigation';
-
 import { User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import * as React from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';

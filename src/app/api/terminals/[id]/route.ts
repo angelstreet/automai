@@ -1,5 +1,4 @@
 import { headers } from 'next/headers';
-/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { NextRequest, NextResponse } from 'next/server';
 
 import { logger } from '@/lib/logger';
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Get the raw request object from the Next.js request
     const { socket, response } = await new Promise<{ socket: any; response: Response }>(
       (resolve) => {
-        // @ts-ignore - Access internal properties
+        // @ts-expect-error - Access internal properties
         const socket = request.socket;
 
         // Create a server response

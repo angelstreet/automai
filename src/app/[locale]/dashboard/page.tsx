@@ -1,7 +1,6 @@
 'use client';
 
 import { redirect } from 'next/navigation';
-
 import { useSession } from 'next-auth/react';
 
 import { useUser } from '@/context/UserContext';

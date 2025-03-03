@@ -1,8 +1,7 @@
-import { useState } from 'react';
-
 import { Repository } from '@prisma/client';
 import { formatDistanceToNow } from 'date-fns';
 import { GitBranch, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';

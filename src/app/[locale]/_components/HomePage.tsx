@@ -1,7 +1,6 @@
 'use client';
 
 import { redirect, useParams } from 'next/navigation';
-
 import { useSession } from 'next-auth/react';
 
 import { Footer } from '@/components/layout/Footer';
