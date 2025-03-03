@@ -6,7 +6,6 @@ import { prisma } from '@/lib/prisma';
 import * as repositoryService from '@/lib/services/repositories';
 
 // GET /api/fetch-all-repositories
-// Explicit naming for clear purpose: fetches ALL repositories across providers
 export async function GET(request: Request) {
   try {
     const session = await getServerSession();
