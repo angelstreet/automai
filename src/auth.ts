@@ -1,30 +1,31 @@
 // src/app/lib/auth.ts
 /**
  * ⚠️ CRITICAL WARNING ⚠️
- * 
+ *
  * This file contains sensitive authentication configuration that works with the
  * internationalization middleware. Modifications to this file can break authentication
  * across all locales.
- * 
+ *
  * IMPORTANT RULES:
  * 1. NEVER hardcode locales in page URLs (e.g., '/en/login')
  * 2. ALWAYS use paths without locale prefixes (e.g., '/login')
  * 3. Let the middleware handle locale detection and routing
  * 4. Test any changes with ALL supported locales
- * 
+ *
  * See .cursor/rules/backend.mdc for detailed authentication guidelines.
  */
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { compare } from 'bcrypt';
 import NextAuth from 'next-auth';
-import type { Session, User } from 'next-auth';
-import type { JWT } from 'next-auth/jwt';
 import { default as CredentialsProvider } from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 
 import { env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
+
+import type { Session, User } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 
 // Ensure environment variables are loaded
 // Next.js automatically loads .env.development in development mode
@@ -130,22 +131,22 @@ export const authOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log('SignIn callback:', { 
+      console.log('SignIn callback:', {
         user: { id: user.id, email: user.email },
-        account: account ? { provider: account.provider } : null
+        account: account ? { provider: account.provider } : null,
       });
       return true;
     },
     async redirect({ url, baseUrl }) {
       console.log('Redirect callback:', { url, baseUrl });
-      
+
       // Check if this is a callback from OAuth provider
       if (url.includes('/api/auth/callback/')) {
         console.log('OAuth callback detected, redirecting to auth-redirect');
         // Let the middleware handle locale detection and routing
         return `${baseUrl}/auth-redirect`;
       }
-      
+
       // For routes that might contain route groups, clean them up
       if (url.includes('/(auth)')) {
         // Remove route group notation from URL
@@ -153,17 +154,17 @@ export const authOptions = {
         console.log('Cleaned route group from URL:', { original: url, cleaned: cleanUrl });
         return cleanUrl;
       }
-      
+
       // For other redirects, use the URL as is
       if (url.startsWith(baseUrl)) {
         return url;
       }
-      
+
       // For relative URLs, append to baseUrl
       if (url.startsWith('/')) {
         return `${baseUrl}${url}`;
       }
-      
+
       // Default fallback
       return url;
     },

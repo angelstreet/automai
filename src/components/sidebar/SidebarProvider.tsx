@@ -8,7 +8,7 @@ import {
   SIDEBAR_WIDTH_ICON,
   SIDEBAR_KEYBOARD_SHORTCUT,
 } from '@/constants/sidebar';
-import { SidebarContext, SidebarProvider as ContextSidebarProvider } from '@/context/SidebarContext';
+import { SidebarProvider as ContextSidebarProvider } from '@/context/SidebarContext';
 import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 import { SidebarProviderProps } from '@/types/sidebar';

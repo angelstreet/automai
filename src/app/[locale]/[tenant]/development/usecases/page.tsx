@@ -1,9 +1,11 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 import { useRouter, useParams } from 'next/navigation';
 
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 
 import { PLATFORM_PREFIXES } from '@/app/[locale]/[tenant]/platforms/constants';
 import {
@@ -12,18 +14,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/shadcn/accordion';
-
 import { Button } from '@/components/shadcn/button';
-
 import { Input } from '@/components/shadcn/input';
-
-import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 import { Project, UseCase, NewUseCase } from '@/types/usecase';
 
 import { CreateUseCase } from '../../usecases/_components/CreateUseCase';
 import { UseCaseList } from '../../usecases/_components/UseCaseList';
-import { toast } from 'sonner';
 
 export default function UseCasesPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);

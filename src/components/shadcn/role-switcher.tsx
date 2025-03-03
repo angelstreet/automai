@@ -7,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';
 
 const roles: { value: Role; label: string }[] = [

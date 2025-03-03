@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
+
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
 import * as repositoryService from '@/lib/services/repositories';
-import { GitProviderType } from '@/types/repositories';
 
 // Schema for provider creation
 const GitProviderCreateSchema = z.object({
@@ -96,4 +96,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-} 
+}

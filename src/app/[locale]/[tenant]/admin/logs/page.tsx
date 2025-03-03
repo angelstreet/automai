@@ -1,8 +1,11 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
+import { InfoIcon } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import {
   Card,
   CardContent,
@@ -11,10 +14,7 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
-import { InfoIcon } from 'lucide-react';
-
-// Define a simplified interface for logs (even though we won't use it)
+// Define a simplified interface for logs (_even though we won't use it)
 interface ConnectionLog {
   id: string;
   timestamp: string;
@@ -31,7 +31,7 @@ interface ConnectionLog {
 export default function LogsPage() {
   const { data: session } = useSession();
   const [logs, setLogs] = useState<ConnectionLog[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(_false);
 
   if (!session) {
     return <div className="flex justify-center p-8">Please sign in to access this page</div>;
@@ -49,7 +49,8 @@ export default function LogsPage() {
             <InfoIcon className="h-4 w-4" />
             <AlertTitle>Logs Unavailable</AlertTitle>
             <AlertDescription>
-              Connection logging has been disabled in this version. The ConnectionLog model has been removed from the database schema.
+              Connection logging has been disabled in this version. The ConnectionLog model has been
+              removed from the database schema.
             </AlertDescription>
           </Alert>
         </CardContent>

@@ -1,14 +1,15 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import { useRouter, useParams } from 'next/navigation';
 
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
 
 export default function AuthRedirectPage() {
   const router = useRouter();
   const params = useParams();
-  const locale = params?.locale as string || 'en';
+  const locale = (params?.locale as string) || 'en';
   const [isRedirecting, setIsRedirecting] = useState(false);
   const { data: session, status } = useSession();
 
@@ -18,11 +19,13 @@ export default function AuthRedirectPage() {
     locale,
     sessionStatus: status,
     hasSession: !!session,
-    userData: session?.user ? {
-      id: session.user.id,
-      email: session.user.email,
-      tenant: session.user.tenantName || 'trial',
-    } : null,
+    userData: session?.user
+      ? {
+          id: session.user.id,
+          email: session.user.email,
+          tenant: session.user.tenantName || 'trial',
+        }
+      : null,
     url: typeof window !== 'undefined' ? window.location.href : '',
   });
 
@@ -53,23 +56,23 @@ export default function AuthRedirectPage() {
             tenant,
             accessToken: session.accessToken ? 'present' : 'missing',
           });
-          
+
           // Get the current origin
           const origin = window.location.origin;
           const redirectUrl = `${origin}/${locale}/${tenant}/dashboard`;
           console.log('Redirecting to dashboard:', redirectUrl);
-          
+
           // Use window.location for a hard redirect to avoid Next.js routing issues
           window.location.href = redirectUrl;
         } else {
           // No session means authentication failed
           console.error('No session available');
-          
+
           // Get the current origin
           const origin = window.location.origin;
           const loginUrl = `${origin}/${locale}/login?error=Authentication failed - no session`;
           console.log('Redirecting to login:', loginUrl);
-          
+
           // Use window.location for a hard redirect
           window.location.href = loginUrl;
         }
@@ -103,12 +106,14 @@ export default function AuthRedirectPage() {
         </div>
         <h2 className="text-xl font-semibold">Setting up your workspace...</h2>
         <p className="text-sm text-muted-foreground">
-          {status === 'loading' ? 'Loading session...' : 
-           session ? 'Session found, redirecting...' : 
-           'No session found, redirecting to login...'}
+          {status === 'loading'
+            ? 'Loading session...'
+            : session
+              ? 'Session found, redirecting...'
+              : 'No session found, redirecting to login...'}
         </p>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
       </div>
     </div>
   );
-} 
+}

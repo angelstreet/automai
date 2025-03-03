@@ -1,10 +1,11 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+
 import { useTranslations } from 'next-intl';
 
 export default function ReportsPage() {
-  const params = useParams();
+  const _params = useParams();
   const t = useTranslations('Reports');
 
   return (

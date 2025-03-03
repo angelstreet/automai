@@ -1,7 +1,5 @@
 'use server';
 
-import { prisma } from '@/lib/prisma';
-
 export async function getDashboardStats() {
   // This is a placeholder for actual data fetching
   // In a real implementation, you would fetch data from your database

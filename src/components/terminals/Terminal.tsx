@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 
 import { useEffect, useRef, useState } from 'react';
-import { Terminal as XTerm } from '@xterm/xterm';
+
 import { AttachAddon } from '@xterm/addon-attach';
 // @ts-ignore - Type issues with xterm addons
 import { FitAddon } from '@xterm/addon-fit';
@@ -10,11 +10,11 @@ import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 // @ts-ignore - Type issues with xterm addons
 import { WebLinksAddon } from '@xterm/addon-web-links';
+import { Terminal as XTerm } from '@xterm/xterm';
 // @ts-ignore - Type issues with xterm addons
 
 import '@xterm/xterm/css/xterm.css';
 import { useToast } from '@/components/shadcn/use-toast';
-import { toast } from 'sonner';
 
 interface Connection {
   id: string;
@@ -111,13 +111,15 @@ export function Terminal({ connection }: TerminalProps) {
       term.write(
         `\x1B[1;3;33mInitializing terminal for ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})...\x1B[0m\r\n`,
       );
-      
+
       // Auto-detect Windows from os_type or allow manual override
       const autoDetectedWindows = connection.os_type?.toLowerCase()?.includes('windows') || false;
       const isWindows = windowsMode !== null ? windowsMode : autoDetectedWindows;
-      
+
       if (isWindows) {
-        term.write(`\x1B[1;3;36mWindows system detected or selected, will use special connection mode\x1B[0m\r\n`);
+        term.write(
+          `\x1B[1;3;36mWindows system detected or selected, will use special connection mode\x1B[0m\r\n`,
+        );
       }
 
       // Initialize WebSocket server first
@@ -125,16 +127,16 @@ export function Terminal({ connection }: TerminalProps) {
         // For testing, allow overriding connection ID (this should be removed in production)
         const testConnectionId = 'test-connection-id'; // Hardcoded test connection ID
         const connectionId = connection.id === 'test' ? testConnectionId : connection.id;
-        
+
         console.log('[Terminal] Initializing WebSocket server', {
           connectionId: connectionId,
           originalId: connection.id,
           usingTestId: connection.id === 'test',
           host: connection.ip,
-          port: connection.port
+          port: connection.port,
         });
         term.write(`\x1B[1;3;33mInitializing terminal server...\x1B[0m\r\n`);
-        
+
         const initResponse = await fetch('/api/terminals/init', {
           method: 'POST',
           headers: {
@@ -142,7 +144,7 @@ export function Terminal({ connection }: TerminalProps) {
           },
           body: JSON.stringify({ connectionId: connectionId }),
         });
-        
+
         if (!initResponse.ok) {
           const statusText = initResponse.statusText;
           const responseText = await initResponse.text();
@@ -159,35 +161,42 @@ export function Terminal({ connection }: TerminalProps) {
               errorMsg += ` - ${responseText}`;
             }
           }
-          
+
           console.error('[Terminal] Server returned error:', {
             status: initResponse.status,
             statusText,
-            responseText
+            responseText,
           });
-          
+
           term.write(`\r\n\x1B[1;3;31m${errorMsg}\x1B[0m\r\n`);
           setIsConnecting(false);
           setError(errorMsg);
           return;
         }
-        
+
         const initResult = await initResponse.json();
         console.log('[Terminal] Init response:', initResult);
-        
+
         if (!initResult.success) {
-          console.error('[Terminal] Failed to initialize WebSocket server:', initResult.error || initResult.message);
-          term.write(`\r\n\x1B[1;3;31mFailed to initialize terminal server: ${initResult.error || initResult.message}\x1B[0m\r\n`);
+          console.error(
+            '[Terminal] Failed to initialize WebSocket server:',
+            initResult.error || initResult.message,
+          );
+          term.write(
+            `\r\n\x1B[1;3;31mFailed to initialize terminal server: ${initResult.error || initResult.message}\x1B[0m\r\n`,
+          );
           setIsConnecting(false);
           setError('Failed to initialize terminal server');
           return;
         }
-        
+
         console.log('[Terminal] WebSocket server initialized successfully');
         term.write(`\x1B[1;3;33mTerminal server initialized, connecting...\x1B[0m\r\n`);
       } catch (error) {
         console.error('[Terminal] Error initializing WebSocket server:', error);
-        term.write(`\r\n\x1B[1;3;31mError initializing terminal server: ${error instanceof Error ? error.message : String(error)}\x1B[0m\r\n`);
+        term.write(
+          `\r\n\x1B[1;3;31mError initializing terminal server: ${error instanceof Error ? error.message : String(error)}\x1B[0m\r\n`,
+        );
         setIsConnecting(false);
         setError('Error initializing terminal server');
         return;
@@ -197,11 +206,11 @@ export function Terminal({ connection }: TerminalProps) {
       const websocket_protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       // Use the same port that the page is being served from
       const websocket_port = window.location.port;
-      
+
       // Redefine connectionId for this scope
       const testConnectionId = 'test-connection-id';
       const connectionId = connection.id === 'test' ? testConnectionId : connection.id;
-      
+
       const socketUrl = `${websocket_protocol}//${window.location.hostname}:${websocket_port}/api/terminals/ws/${connectionId}`;
       console.log(`[WebSocket] Connecting to: ${socketUrl}`, {
         connectionId: connectionId,
@@ -213,7 +222,7 @@ export function Terminal({ connection }: TerminalProps) {
         connectionType: connection.type,
         ssh_username: connection.username,
         ssh_host: connection.ip,
-        ssh_port: connection.port
+        ssh_port: connection.port,
       });
 
       try {
@@ -232,16 +241,21 @@ export function Terminal({ connection }: TerminalProps) {
           term.write(`\x1B[1;3;33mWebSocket connected, authenticating...\x1B[0m\r\n`);
 
           // Detect if target is likely Windows
-          const is_windows = windowsMode !== null ? windowsMode : connection.os_type?.toLowerCase()?.includes('windows') || false;
-          
+          const is_windows =
+            windowsMode !== null
+              ? windowsMode
+              : connection.os_type?.toLowerCase()?.includes('windows') || false;
+
           // Additional logging for Windows detection
           if (is_windows) {
             console.log('[Terminal] Windows OS detected or selected, will use cmd.exe', {
               os_type: connection.os_type,
               ip: connection.ip,
-              manuallySelected: windowsMode !== null
+              manuallySelected: windowsMode !== null,
             });
-            term.write(`\x1B[1;3;33mWindows system detected, will connect using cmd.exe...\x1B[0m\r\n`);
+            term.write(
+              `\x1B[1;3;33mWindows system detected, will connect using cmd.exe...\x1B[0m\r\n`,
+            );
           }
 
           // Send authentication message
@@ -252,7 +266,7 @@ export function Terminal({ connection }: TerminalProps) {
             ssh_password: connection.password,
             ssh_host: connection.ip,
             ssh_port: connection.port,
-            is_windows: is_windows
+            is_windows: is_windows,
           };
 
           console.log('[WebSocket] Sending authentication', {
@@ -262,7 +276,7 @@ export function Terminal({ connection }: TerminalProps) {
             hasPassword: !!connection.password,
             ssh_host: connection.ip,
             ssh_port: connection.port,
-            is_windows: is_windows
+            is_windows: is_windows,
           });
 
           // Log authentication attempt
@@ -282,9 +296,13 @@ export function Terminal({ connection }: TerminalProps) {
         socket.onerror = (event) => {
           console.error('[WebSocket] Connection error:', event);
           setError('Connection error');
-          term.write(`\r\n\x1B[1;3;31mWebSocket error: Could not connect to terminal server\x1B[0m\r\n`);
-          term.write(`\r\n\x1B[1;3;31mPlease check your network connection and try again.\x1B[0m\r\n`);
-          
+          term.write(
+            `\r\n\x1B[1;3;31mWebSocket error: Could not connect to terminal server\x1B[0m\r\n`,
+          );
+          term.write(
+            `\r\n\x1B[1;3;31mPlease check your network connection and try again.\x1B[0m\r\n`,
+          );
+
           toast({
             variant: 'destructive',
             title: 'Connection Error',
@@ -309,21 +327,25 @@ export function Terminal({ connection }: TerminalProps) {
             if (data.status === 'connected') {
               console.log('[SSH] Connection established successfully', data.details);
               term.write(`\r\n\x1B[1;3;32mSSH connection established successfully.\x1B[0m\r\n`);
-              
+
               // Add Windows-specific message if connected to Windows
               if (data.details?.is_windows) {
-                term.write(`\r\n\x1B[1;3;32mConnected to Windows system. Using cmd.exe shell.\x1B[0m\r\n`);
+                term.write(
+                  `\r\n\x1B[1;3;32mConnected to Windows system. Using cmd.exe shell.\x1B[0m\r\n`,
+                );
               }
               return;
             }
-            
+
             // Handle retry with Windows mode message
             if (data.status === 'retry') {
               console.log('[SSH] Retrying with Windows mode:', data);
-              term.write(`\r\n\x1B[1;3;33m${data.message || 'Trying Windows connection mode...'}\x1B[0m\r\n`);
+              term.write(
+                `\r\n\x1B[1;3;33m${data.message || 'Trying Windows connection mode...'}\x1B[0m\r\n`,
+              );
               return;
             }
-            
+
             // Handle server banner messages
             if (data.type === 'banner') {
               console.log('[SSH] Banner received:', data.message);
@@ -387,8 +409,8 @@ export function Terminal({ connection }: TerminalProps) {
                 );
                 term.write(
                   `\r\n\x1B[1;3;31m- A firewall blocking the connection\x1B[0m\r\n` +
-                  `\r\n\x1B[1;3;31m- The server not running SSH on port ${data.details?.ssh_port}\x1B[0m\r\n` +
-                  `\r\n\x1B[1;3;31m- Network issues between the server and client\x1B[0m\r\n`
+                    `\r\n\x1B[1;3;31m- The server not running SSH on port ${data.details?.ssh_port}\x1B[0m\r\n` +
+                    `\r\n\x1B[1;3;31m- Network issues between the server and client\x1B[0m\r\n`,
                 );
               } else {
                 term.write(
@@ -480,9 +502,13 @@ export function Terminal({ connection }: TerminalProps) {
       } catch (error) {
         console.error('[WebSocket] Connection error:', error);
         setError('Connection error');
-        term.write(`\r\n\x1B[1;3;31mWebSocket error: Could not connect to terminal server\x1B[0m\r\n`);
-        term.write(`\r\n\x1B[1;3;31mPlease check your network connection and try again.\x1B[0m\r\n`);
-        
+        term.write(
+          `\r\n\x1B[1;3;31mWebSocket error: Could not connect to terminal server\x1B[0m\r\n`,
+        );
+        term.write(
+          `\r\n\x1B[1;3;31mPlease check your network connection and try again.\x1B[0m\r\n`,
+        );
+
         toast({
           variant: 'destructive',
           title: 'Connection Error',
@@ -501,7 +527,7 @@ export function Terminal({ connection }: TerminalProps) {
           <div className="flex flex-col items-center space-y-4">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             <p className="text-sm text-muted-foreground">Initializing terminal connection...</p>
-            
+
             {/* Windows mode toggle - only show during connection */}
             <div className="flex items-center mt-4 gap-2">
               <span className="text-sm text-muted-foreground">Windows Mode:</span>

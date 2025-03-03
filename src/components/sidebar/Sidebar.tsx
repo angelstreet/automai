@@ -1,5 +1,6 @@
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import * as React from 'react';
+
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/shadcn/sheet';
 import { SIDEBAR_WIDTH_MOBILE } from '@/constants/sidebar';
@@ -78,7 +79,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
             'group-data-[collapsible=offcanvas]:w-0',
             'group-data-[side=right]:rotate-180',
             variant === 'floating' || variant === 'inset'
-              ? 'group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.2))]'
+              ? 'group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(_spacing.2))]'
               : 'group-data-[collapsible=icon]:w-[--sidebar-width-icon]',
           )}
         />
@@ -89,7 +90,7 @@ const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
               ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
               : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
             variant === 'floating' || variant === 'inset'
-              ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]'
+              ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(_spacing.4)_+2px)]'
               : 'group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l',
             className,
           )}

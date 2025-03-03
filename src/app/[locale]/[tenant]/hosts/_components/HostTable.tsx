@@ -1,10 +1,17 @@
 'use client';
 
-import { Terminal, RefreshCw, XCircle, ScrollText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+import { Terminal, RefreshCw, XCircle, ScrollText, MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Host } from '@/types/hosts';
+
 import { Button } from '@/components/shadcn/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -13,13 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
+import { Host } from '@/types/hosts';
 
 interface HostTableProps {
   hosts: Host[];
@@ -74,9 +75,7 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
           {hosts.map((host) => (
             <TableRow key={host.id} className="h-10">
               <TableCell className="py-2">
-                <div className="flex justify-center">
-                  {getStatusDot(host.status)}
-                </div>
+                <div className="flex justify-center">{getStatusDot(host.status)}</div>
               </TableCell>
               <TableCell className="font-medium py-2">{host.name}</TableCell>
               <TableCell className="py-2">
@@ -84,9 +83,11 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
                 {host.port ? `:${host.port}` : ''}
               </TableCell>
               <TableCell className="py-2">
-                {host.lastConnected 
-                  ? new Date(host.lastConnected).toLocaleString() 
-                  : (host.status === 'connected' ? new Date().toLocaleString() : t('never'))}
+                {host.lastConnected
+                  ? new Date(host.lastConnected).toLocaleString()
+                  : host.status === 'connected'
+                    ? new Date().toLocaleString()
+                    : t('never')}
               </TableCell>
               <TableCell className="py-2">
                 <div className="flex items-center space-x-1">
@@ -106,7 +107,10 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[140px]">
-                      <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)} className="py-1.5">
+                      <DropdownMenuItem
+                        onClick={() => router.push(`/logs/${host.name}`)}
+                        className="py-1.5"
+                      >
                         <ScrollText className="mr-2 h-3.5 w-3.5" />
                         <span className="text-sm">{t('logs')}</span>
                       </DropdownMenuItem>
@@ -114,7 +118,10 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
                         <RefreshCw className="mr-2 h-3.5 w-3.5" />
                         <span className="text-sm">{t('refresh')}</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive py-1.5">
+                      <DropdownMenuItem
+                        onClick={() => onDelete?.(host.id)}
+                        className="text-destructive py-1.5"
+                      >
                         <XCircle className="mr-2 h-3.5 w-3.5" />
                         <span className="text-sm">{t('delete')}</span>
                       </DropdownMenuItem>

@@ -34,7 +34,8 @@ export function ThemeProvider({
   // Once mounted on client, get the theme from localStorage
   useEffect(() => {
     setMounted(true);
-    const savedTheme = typeof window !== 'undefined' ? localStorage.getItem(storageKey) as Theme : null;
+    const savedTheme =
+      typeof window !== 'undefined' ? (localStorage.getItem(storageKey) as Theme) : null;
     if (savedTheme) {
       _setTheme(savedTheme);
     }
@@ -42,7 +43,7 @@ export function ThemeProvider({
 
   useEffect(() => {
     if (!mounted) return;
-    
+
     const root = window.document.documentElement;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 

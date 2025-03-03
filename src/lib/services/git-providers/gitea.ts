@@ -1,5 +1,6 @@
-import { GitProviderService } from './base';
 import { GitProvider, Repository } from '@/types/repositories';
+
+import { GitProviderService } from './base';
 
 export class GiteaProviderService implements GitProviderService {
   private serverUrl: string | null = null;
@@ -11,12 +12,15 @@ export class GiteaProviderService implements GitProviderService {
   }
 
   // For Gitea, we don't need OAuth flow as we're using direct access token
-  getAuthorizationUrl(redirectUri: string, state: string): string {
+  getAuthorizationUrl(redirectUri: string, _state: string): string {
     return '';
   }
 
   // For Gitea, we use the provided token directly
-  async exchangeCodeForToken(code: string, redirectUri: string): Promise<{
+  async exchangeCodeForToken(
+    code: string,
+    redirectUri: string,
+  ): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresAt?: Date;
@@ -91,8 +95,8 @@ export class GiteaProviderService implements GitProviderService {
       defaultBranch: repo.default_branch || 'main',
       providerId: provider.id,
       syncStatus: 'IDLE',
-      createdAt: new Date(repo.created_at),
-      updatedAt: new Date(repo.updated_at),
+      createdAt: new Date(_repo.created_at),
+      updatedAt: new Date(_repo.updated_at),
     }));
   }
 
@@ -108,16 +112,16 @@ export class GiteaProviderService implements GitProviderService {
         },
       });
       return response.ok;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
 
-  async getRepository(provider: GitProvider, repoName: string): Promise<Repository> {
+  async getRepository(provider: GitProvider, _repoName: string): Promise<Repository> {
     throw new Error('Method not implemented.');
   }
 
-  async syncRepository(repository: Repository): Promise<Repository> {
+  async syncRepository(_repository: Repository): Promise<Repository> {
     throw new Error('Method not implemented.');
   }
 
@@ -128,4 +132,4 @@ export class GiteaProviderService implements GitProviderService {
   }> {
     throw new Error('Method not implemented.');
   }
-} 
+}

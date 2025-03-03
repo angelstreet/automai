@@ -1,7 +1,8 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+
+import { useSession } from 'next-auth/react';
 
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
 
@@ -42,7 +43,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<number>(0);
-  
+
   // Add refs to track fetch state and prevent duplicate requests
   const isFetchingRef = useRef(false);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -54,7 +55,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       console.log('Fetch already in progress, skipping duplicate request');
       return;
     }
-    
+
     // Limit fetch attempts to prevent infinite loops
     if (fetchAttempts.current > 3) {
       console.warn('Too many fetch attempts, stopping to prevent infinite loop');
@@ -62,11 +63,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       return;
     }
-    
+
     try {
       isFetchingRef.current = true;
       fetchAttempts.current += 1;
-      
+
       if (!session?.user) {
         console.log('No active session found in fetchUser');
         setUser(null);
@@ -110,7 +111,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           statusText: response.statusText,
           error: errorData.error,
         });
-        
+
         // If user not found (404), clear session cache and set appropriate error
         if (response.status === 404) {
           if (typeof window !== 'undefined') {
@@ -121,7 +122,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           // Don't throw here, just return to prevent further processing
           return;
         }
-        
+
         throw new Error(errorData.error || `Failed to fetch user profile: ${response.status}`);
       }
 
@@ -154,36 +155,39 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session]);
 
-  const updateProfile = useCallback(async (data: Partial<User>) => {
-    if (!session?.accessToken) {
-      throw new Error('No active session');
-    }
-
-    try {
-      console.log('Updating user profile...');
-      const response = await fetch('/api/auth/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify(data),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to update profile: ${response.status}`);
+  const updateProfile = useCallback(
+    async (data: Partial<User>) => {
+      if (!session?.accessToken) {
+        throw new Error('No active session');
       }
 
-      // Refresh user data after successful update
-      await fetchUser();
-      console.log('Profile updated successfully');
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      throw err;
-    }
-  }, [session, fetchUser]);
+      try {
+        console.log('Updating user profile...');
+        const response = await fetch('/api/auth/profile', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify(data),
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to update profile: ${response.status}`);
+        }
+
+        // Refresh user data after successful update
+        await fetchUser();
+        console.log('Profile updated successfully');
+      } catch (err) {
+        console.error('Error updating profile:', err);
+        throw err;
+      }
+    },
+    [session, fetchUser],
+  );
 
   // Check session only when needed with debounce
   const checkSession = useCallback(() => {
@@ -193,7 +197,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current);
       }
-      
+
       // Debounce the fetch call to prevent multiple rapid calls
       fetchTimeoutRef.current = setTimeout(() => {
         fetchUser();
@@ -214,7 +218,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current);
       }
-      
+
       fetchTimeoutRef.current = setTimeout(() => {
         fetchUser();
         fetchTimeoutRef.current = null;
@@ -227,7 +231,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(SESSION_CACHE_KEY);
       }
     }
-    
+
     // Cleanup timeouts on unmount
     return () => {
       if (fetchTimeoutRef.current) {

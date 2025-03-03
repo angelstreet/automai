@@ -1,5 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
+import { useRouter, useParams } from 'next/navigation';
+
 import {
   ColumnDef,
   flexRender,
@@ -8,14 +12,9 @@ import {
   getSortedRowModel,
   Row,
 } from '@tanstack/react-table';
-
-import { useRouter, useParams } from 'next/navigation';
-
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
 
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
-
 import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
@@ -25,7 +24,6 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/shadcn/dialog';
-
 import { Input } from '@/components/shadcn/input';
 import {
   Table,
@@ -35,9 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-
 import { Textarea } from '@/components/shadcn/textarea';
-
 import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
@@ -149,16 +145,16 @@ export default function ProjectsPage() {
   // Function to check if user can create more of a resource based on plan limits
   const checkCanCreateMore = (limitKey: string, currentCount: number): boolean => {
     if (!user) return false;
-    
+
     // If user is on a paid plan, they can create unlimited resources
     if (user.plan !== 'TRIAL') return true;
-    
+
     // For trial users, check against specific limits
     const limits: Record<string, number> = {
       maxProjects: 3,
       // Add other limits as needed
     };
-    
+
     return currentCount < (limits[limitKey] || 0);
   };
 

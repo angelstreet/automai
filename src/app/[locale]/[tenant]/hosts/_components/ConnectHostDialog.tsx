@@ -1,9 +1,11 @@
-import { Loader2 } from 'lucide-react';
-/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { useState, useCallback, useRef } from 'react';
 
-import { useTranslations } from 'next-intl';
 import { useParams } from 'next/navigation';
+
+import { Loader2 } from 'lucide-react';
+/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -14,12 +16,10 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/shadcn/dialog';
-
-import { Host } from '@/types/hosts';
 import { hostsApi } from '@/lib/api/hosts';
+import { Host } from '@/types/hosts';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
-import { toast } from 'sonner';
 
 interface ConnectHostDialogProps {
   open: boolean;

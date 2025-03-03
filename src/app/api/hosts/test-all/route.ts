@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { getHosts, testHostConnection } from '@/lib/services/hosts';
 
 export async function GET() {
@@ -6,7 +7,7 @@ export async function GET() {
     // Get all hosts
     const hosts = await getHosts();
     console.log(`Testing connections for ${hosts.length} hosts`);
-    
+
     // Test connection for each host
     const results = await Promise.all(
       hosts.map(async (host) => {
@@ -19,7 +20,7 @@ export async function GET() {
             password: host.password,
             hostId: host.id,
           });
-          
+
           return {
             id: host.id,
             name: host.name,
@@ -35,11 +36,11 @@ export async function GET() {
             message: error instanceof Error ? error.message : 'Unknown error',
           };
         }
-      })
+      }),
     );
-    
+
     console.log('All connection tests completed:', results);
-    
+
     return NextResponse.json({
       success: true,
       results,
@@ -47,12 +48,12 @@ export async function GET() {
   } catch (error) {
     console.error('Error in GET /api/hosts/test-all:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: error instanceof Error ? error.message : 'Failed to test connections',
-        results: []
+        results: [],
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

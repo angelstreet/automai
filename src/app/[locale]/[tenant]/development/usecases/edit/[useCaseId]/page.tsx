@@ -1,16 +1,14 @@
 'use client';
 
-import Editor from '@monaco-editor/react';
+import { useState, useEffect } from 'react';
 
 import { useRouter, useParams } from 'next/navigation';
 
+import Editor from '@monaco-editor/react';
 import { useSession } from 'next-auth/react';
-import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-
 import { Card } from '@/components/shadcn/card';
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useUser } from '@/context/UserContext';
 

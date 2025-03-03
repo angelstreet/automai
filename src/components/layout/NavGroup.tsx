@@ -1,11 +1,11 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
+import * as React from 'react';
 
 import Link from 'next/link';
-
 import { usePathname, useParams } from 'next/navigation';
-import * as React from 'react';
+
+import { ChevronDown } from 'lucide-react';
 
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import {
@@ -18,8 +18,6 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
 } from '@/components/Sidebar';
-
-import { Sidebar } from '@/components/Sidebar';
 import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';
 

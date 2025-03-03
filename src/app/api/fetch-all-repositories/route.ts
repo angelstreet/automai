@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+
 import { Prisma } from '@prisma/client';
+import { getServerSession } from 'next-auth';
 
 import { prisma } from '@/lib/prisma';
-import * as repositoryService from '@/lib/services/repositories';
 
 // GET /api/fetch-all-repositories
 // Explicit naming for clear purpose: fetches ALL repositories across providers
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       // Get all git providers for the user
       const providers = await prisma.gitProvider.findMany({
         where: { userId: session.user.id },
-        select: { id: true }
+        select: { id: true },
       });
 
       // If no providers, return empty array with 200 status
@@ -30,8 +30,8 @@ export async function GET(request: Request) {
       const repositories = await prisma.repository.findMany({
         where: {
           providerId: {
-            in: providers.map(p => p.id)
-          }
+            in: providers.map((p) => p.id),
+          },
         },
         include: {
           provider: true,
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         console.log('Repository table does not exist yet, returning empty array');
         return NextResponse.json([], { status: 200 });
       }
-      
+
       // For other database errors, log and return empty array
       console.error('Database error fetching repositories:', dbError);
       return NextResponse.json([], { status: 200 });
@@ -61,4 +61,4 @@ export async function GET(request: Request) {
     // Return empty array instead of error for better UX
     return NextResponse.json([], { status: 200 });
   }
-} 
+}

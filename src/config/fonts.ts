@@ -5,7 +5,7 @@
  *
  * 📝 How to Add a New Font:
  * 1. Add the font name here.
- * 2. Update the `<link>` tag in 'index.html' to include the new font from Google Fonts (or any other source).
+ * 2. Update the `<link>` tag in 'index.html' to include the new font from Google Fonts (_or any other source).
  * 3. Add new fontFamily 'tailwind.config.js'
  *
  * Example:

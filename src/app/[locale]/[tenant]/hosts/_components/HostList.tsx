@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+
 import { useParams, useRouter } from 'next/navigation';
-import { HostCard } from './HostCard';
-import { ConnectForm, FormData } from './ConnectForm';
-import { Host } from '@/types/hosts';
-import { hostsApi } from '@/lib/api/hosts';
-import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import { Button } from '@/components/shadcn/button';
+
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
-import { HostTable } from './HostTable';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/shadcn/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+import { hostsApi } from '@/lib/api/hosts';
+import { Host } from '@/types/hosts';
+
+import { ConnectForm, FormData } from './ConnectForm';
 import { HostGrid } from './HostGrid';
+import { HostTable } from './HostTable';
 
 export default function HostContainer() {
   const { locale = 'en', tenant = 'default' } = useParams();
@@ -42,13 +45,13 @@ export default function HostContainer() {
       console.log('Hosts fetched successfully:', fetchedHosts);
 
       // Set initial status to 'pending' for quick UI display
-      const pendingHosts = fetchedHosts.map(host => ({ ...host, status: 'pending' }));
+      const pendingHosts = fetchedHosts.map((host) => ({ ...host, status: 'pending' }));
       setHosts(pendingHosts);
 
       return pendingHosts;
     } catch (error) {
       console.error('Error fetching hosts:', error);
-      toast.error("Failed to fetch hosts");
+      toast.error('Failed to fetch hosts');
       return [];
     } finally {
       setLoading(false);
@@ -59,12 +62,10 @@ export default function HostContainer() {
   const testHostConnection = async (host: Host, silent: boolean = false) => {
     if (testingHosts[host.id]) return { success: false, message: 'Already testing' };
 
-    setTestingHosts(prev => ({ ...prev, [host.id]: true }));
+    setTestingHosts((prev) => ({ ...prev, [host.id]: true }));
 
-    setHosts(prevHosts => 
-      prevHosts.map(h => 
-        h.id === host.id ? { ...h, status: 'pending' } : h
-      )
+    setHosts((prevHosts) =>
+      prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'pending' } : h)),
     );
 
     try {
@@ -77,17 +78,17 @@ export default function HostContainer() {
         hostId: host.id,
       });
 
-      setHosts(prevHosts => 
-        prevHosts.map(h => 
-          h.id === host.id 
-            ? { 
-                ...h, 
+      setHosts((prevHosts) =>
+        prevHosts.map((h) =>
+          h.id === host.id
+            ? {
+                ...h,
                 status: result.success ? 'connected' : 'failed',
-                errorMessage: result.success ? null : (result.message || 'Unknown error'),
-                lastConnected: result.success ? new Date() : h.lastConnected
-              } 
-            : h
-        )
+                errorMessage: result.success ? null : result.message || 'Unknown error',
+                lastConnected: result.success ? new Date() : h.lastConnected,
+              }
+            : h,
+        ),
       );
 
       if (!silent) {
@@ -98,29 +99,29 @@ export default function HostContainer() {
         }
       }
 
-      setTestingHosts(prev => ({ ...prev, [host.id]: false }));
+      setTestingHosts((prev) => ({ ...prev, [host.id]: false }));
 
       return result;
     } catch (error) {
       console.error(`Error testing connection for host ${host.name}:`, error);
 
-      setHosts(prevHosts => 
-        prevHosts.map(h => 
-          h.id === host.id 
-            ? { 
-                ...h, 
+      setHosts((prevHosts) =>
+        prevHosts.map((h) =>
+          h.id === host.id
+            ? {
+                ...h,
                 status: 'failed',
-                errorMessage: 'Connection test failed'
-              } 
-            : h
-        )
+                errorMessage: 'Connection test failed',
+              }
+            : h,
+        ),
       );
 
       if (!silent) {
         toast.error(`Failed to test connection to ${host.name}`);
       }
 
-      setTestingHosts(prev => ({ ...prev, [host.id]: false }));
+      setTestingHosts((prev) => ({ ...prev, [host.id]: false }));
 
       return { success: false, message: 'Connection test failed' };
     }
@@ -138,21 +139,21 @@ export default function HostContainer() {
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const loadHostsAndTest = async () => {
       const fetchedHosts = await fetchHosts();
-      
+
       // Only proceed if component is still mounted
       if (!isMounted) return;
-      
+
       if (fetchedHosts.length > 0) {
         // Test all fetched hosts
         await testAllHostsSequentially(fetchedHosts);
       }
     };
-    
+
     loadHostsAndTest();
-    
+
     // Cleanup function
     return () => {
       isMounted = false;
@@ -162,13 +163,13 @@ export default function HostContainer() {
   const handleDelete = async (id: string) => {
     try {
       await hostsApi.deleteHost(String(locale), id);
-      
+
       // Update local state directly instead of fetching all hosts again
-      setHosts(currentHosts => currentHosts.filter(host => host.id !== id));
-      
-      toast.success("Host deleted successfully");
+      setHosts((currentHosts) => currentHosts.filter((host) => host.id !== id));
+
+      toast.success('Host deleted successfully');
     } catch (error) {
-      toast.error("Failed to delete host");
+      toast.error('Failed to delete host');
     }
   };
 
@@ -189,10 +190,10 @@ export default function HostContainer() {
         password: formData.password,
         status: 'connected',
       });
-      
+
       setShowAddHost(false);
-      setHosts(currentHosts => [newHost, ...currentHosts]);
-      
+      setHosts((currentHosts) => [newHost, ...currentHosts]);
+
       setFormData({
         name: '',
         description: '',
@@ -204,12 +205,12 @@ export default function HostContainer() {
       });
     } catch (error) {
       console.error('Error saving host:', error);
-      toast.error("Failed to create host");
+      toast.error('Failed to create host');
     }
   };
 
   const handleSelectHost = (id: string) => {
-    setSelectedHosts(prev => {
+    setSelectedHosts((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -255,7 +256,7 @@ export default function HostContainer() {
           </Button>
         </div>
       </div>
-      
+
       {loading ? (
         <div className="text-center py-10">Loading hosts...</div>
       ) : hosts.length === 0 ? (
@@ -275,13 +276,9 @@ export default function HostContainer() {
           onTestConnection={handleTestConnection}
         />
       ) : (
-        <HostTable 
-          hosts={hosts} 
-          onDelete={handleDelete} 
-          onTestConnection={handleTestConnection} 
-        />
+        <HostTable hosts={hosts} onDelete={handleDelete} onTestConnection={handleTestConnection} />
       )}
-      
+
       <Dialog open={showAddHost} onOpenChange={setShowAddHost}>
         <DialogContent>
           <DialogHeader>
@@ -300,4 +297,4 @@ export default function HostContainer() {
       </Dialog>
     </div>
   );
-} 
+}

@@ -1,5 +1,6 @@
-import { IconCheck, IconMoon, IconSun } from '@tabler/icons-react';
 import { useEffect } from 'react';
+
+import { IconCheck, IconMoon, IconSun } from '@tabler/icons-react';
 
 import { Button } from '@/components/shadcn/button';
 import {

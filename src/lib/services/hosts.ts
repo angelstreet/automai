@@ -1,6 +1,7 @@
-import { prisma } from '../prisma';
 import { Client } from 'ssh2';
+
 import { logger } from '../logger';
+import { prisma } from '../prisma';
 
 /**
  * Connection test result interface
@@ -14,11 +15,11 @@ interface ConnectionTestResult {
 
 /**
  * @fileoverview Host Service Layer Implementation
- * 
+ *
  * ⚠️ DO NOT MODIFY THIS FILE ⚠️
  * This file contains the core host service implementations.
  * Any changes should be carefully reviewed and approved.
- * 
+ *
  * Last validated: 2024-03-21
  * Implements:
  * - Proper error handling
@@ -73,10 +74,10 @@ export async function createHost(data: {
 }) {
   try {
     console.log('Calling prisma.host.create with data:', { ...data, password: '***' });
-    
+
     // Use the provided status or default to 'pending'
     const status = data.status || 'pending';
-    
+
     const host = await prisma.host.create({
       data: {
         name: data.name,
@@ -129,7 +130,7 @@ export async function testHostConnection(data: {
     logger.info('Testing host connection', { ...data, password: '***' });
 
     let result: ConnectionTestResult;
-    
+
     if (data.type === 'ssh') {
       result = await new Promise<ConnectionTestResult>((resolve) => {
         const conn = new Client();
@@ -183,7 +184,7 @@ export async function testHostConnection(data: {
     } else {
       result = { success: false, message: 'Unsupported connection type' };
     }
-    
+
     // Update host status in database if hostId is provided
     if (data.hostId) {
       try {
@@ -194,13 +195,17 @@ export async function testHostConnection(data: {
             // Remove errorMessage field as it doesn't exist in the schema
           },
         });
-        logger.info(`Updated host status for ${data.hostId} to ${result.success ? 'connected' : 'failed'}`);
+        logger.info(
+          `Updated host status for ${data.hostId} to ${result.success ? 'connected' : 'failed'}`,
+        );
       } catch (dbError) {
-        logger.error('Failed to update host status in database:', { error: dbError instanceof Error ? dbError.message : String(dbError) });
+        logger.error('Failed to update host status in database:', {
+          error: dbError instanceof Error ? dbError.message : String(dbError),
+        });
         // Don't throw here, we still want to return the connection test result
       }
     }
-    
+
     return result;
   } catch (error) {
     if (error instanceof Error) {

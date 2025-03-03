@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { getServerSession } from 'next-auth';
 
 import { prisma } from '@/lib/prisma';
@@ -14,7 +15,7 @@ async function checkProviderAccess(id: string, userId: string) {
     return { success: false, message: 'Provider not found', status: 404 };
   }
 
-  if (provider.userId !== userId) {
+  if (_provider.userId !== userId) {
     return { success: false, message: 'Not authorized to access this provider', status: 403 };
   }
 
@@ -22,10 +23,7 @@ async function checkProviderAccess(id: string, userId: string) {
 }
 
 // GET /api/git-providers/[id]
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
@@ -34,7 +32,7 @@ export async function GET(
 
     const { success, provider, message, status } = await checkProviderAccess(
       params.id,
-      session.user.id
+      session.user.id,
     );
 
     if (!success) {
@@ -52,20 +50,14 @@ export async function GET(
 }
 
 // DELETE /api/git-providers/[id]
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { success, message, status } = await checkProviderAccess(
-      params.id,
-      session.user.id
-    );
+    const { success, message, status } = await checkProviderAccess(params.id, session.user.id);
 
     if (!success) {
       return NextResponse.json({ success, message }, { status: status });
@@ -81,4 +73,4 @@ export async function DELETE(
       { status: 500 },
     );
   }
-} 
+}

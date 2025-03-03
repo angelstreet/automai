@@ -1,7 +1,7 @@
 // Add the logs link to the sidebar items
 import { ActivityLogIcon } from '@/components/Icons/ActivityLogIcon';
 
-const sidebarItems = [
+const _sidebarItems = [
   // ... existing items ...
   {
     title: 'Logs',

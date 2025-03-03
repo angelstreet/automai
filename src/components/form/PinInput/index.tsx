@@ -2,9 +2,10 @@ import * as React from 'react';
 
 import { PinInputContext } from './context';
 import { PinInputField } from './PinInput.common';
-import type { PinInputProps } from './types';
-import { getValidChildren, getInputFieldCount } from './utils';
 import { usePinInput } from './usePinInput';
+import { getValidChildren, getInputFieldCount } from './utils';
+
+import type { PinInputProps } from './types';
 
 const PinInput = ({ className, children, ref, ...props }: PinInputProps) => {
   const {
@@ -43,24 +44,24 @@ const PinInput = ({ className, children, ref, ...props }: PinInputProps) => {
   }, [onChange, pinValue]);
 
   React.useEffect(() => {
-    if (pinValue.length === length && onComplete) {
+    if (_pinValue.length === length && onComplete) {
       onComplete(pinValue);
     }
-    if (pinValue.length !== length && onIncomplete) {
+    if (_pinValue.length !== length && onIncomplete) {
       onIncomplete(pinValue);
     }
   }, [length, onComplete, onIncomplete, pinValue]);
 
   React.useEffect(() => {
     if (!autoFocus) return;
-    const node = refMap?.get(0);
+    const node = refMap?.get(_0);
     if (node) {
       node.focus();
     }
   }, [autoFocus, refMap]);
 
   const clones = validChildren.map((child, index) => {
-    if (child.type === PinInputField) {
+    if (_child.type === PinInputField) {
       return React.cloneElement(child, {
         name,
         inputKey: `input-${index}`,

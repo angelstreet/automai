@@ -100,7 +100,7 @@ export async function createServer(options: {
             logger.info('Initializing WebSocket server on-demand');
             initializeWebSocketSupport(httpServer!);
           }
-          
+
           // Handle the terminal WebSocket upgrade
           handleUpgrade(request, socket as Socket, head);
         }
@@ -137,7 +137,7 @@ function initializeWebSocketSupport(server: Server) {
       socket.destroy();
       return;
     }
-    
+
     const { pathname } = parse(request.url || '');
     const pathnameStr = pathname || '';
     logger.info('Upgrade request received', { pathname: pathnameStr });
@@ -147,7 +147,7 @@ function initializeWebSocketSupport(server: Server) {
       try {
         // Mark this request as being handled to prevent double handling
         (request as any).__isHandlingUpgrade = true;
-        
+
         // Extract connection ID from URL
         const connectionId = pathnameStr.split('/').pop();
         if (connectionId) {
@@ -160,9 +160,9 @@ function initializeWebSocketSupport(server: Server) {
         }
       } catch (error) {
         // Log error but don't crash server
-        logger.error('Error handling WebSocket upgrade', { 
+        logger.error('Error handling WebSocket upgrade', {
           error: error instanceof Error ? error.message : String(error),
-          pathname: pathnameStr 
+          pathname: pathnameStr,
         });
         socket.destroy();
       }
@@ -261,12 +261,12 @@ export async function stopServer(): Promise<void> {
     // Set a timeout for the entire shutdown process
     const shutdownTimeout = setTimeout(() => {
       logger.warn('Server shutdown timed out after 1 second, forcing exit');
-      
+
       // Remove all listeners to prevent memory leaks
       if (httpServer) {
         httpServer.removeAllListeners();
       }
-      
+
       httpServer = null;
       resolve();
     }, 1000);
@@ -301,13 +301,13 @@ export async function stopServer(): Promise<void> {
     httpServer.close((err) => {
       clearTimeout(serverCloseTimeout);
       clearTimeout(shutdownTimeout);
-      
+
       if (err) {
         logger.error(`Error stopping server: ${err.message}`);
         reject(err);
         return;
       }
-      
+
       httpServer = null;
       logger.info('HTTP server closed successfully');
       resolve();

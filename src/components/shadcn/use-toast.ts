@@ -10,13 +10,13 @@ type ToastProps = {
 
 export const toast = (props: ToastProps) => {
   const { title, description, variant } = props;
-  
+
   if (variant === 'destructive') {
     return sonnerToast.error(title, {
       description,
     });
   }
-  
+
   return sonnerToast.success(title, {
     description,
   });
@@ -26,4 +26,4 @@ export const useToast = () => {
   return {
     toast,
   };
-}; 
+};

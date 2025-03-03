@@ -4,18 +4,17 @@ _Generated on 2/28/2025, 7:52:38 PM_
 
 ## File Size Issues (9)
 
-| File | Lines |
-| ---- | ----- |
-| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/projects/page.tsx | 431 |
-| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/usecases/edit/[useCaseId]/page.tsx | 381 |
-| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/usecases/page.tsx | 326 |
-| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/hosts/page.tsx | 386 |
-| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/ConnectForm.tsx | 364 |
-| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/ConnectionForm.tsx | 373 |
-| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/Terminal.tsx | 367 |
-| /Users/joachimndoye/Documents/automai3/automai/src/components/shadcn/sidebar.tsx | 749 |
-| /Users/joachimndoye/Documents/automai3/automai/src/lib/websocket-server.ts | 407 |
-
+| File                                                                                                                    | Lines |
+| ----------------------------------------------------------------------------------------------------------------------- | ----- |
+| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/projects/page.tsx                  | 431   |
+| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/usecases/edit/[useCaseId]/page.tsx | 381   |
+| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/development/usecases/page.tsx                  | 326   |
+| /Users/joachimndoye/Documents/automai3/automai/src/app/[locale]/[tenant]/hosts/page.tsx                                 | 386   |
+| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/ConnectForm.tsx                                     | 364   |
+| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/ConnectionForm.tsx                                  | 373   |
+| /Users/joachimndoye/Documents/automai3/automai/src/components/hosts/Terminal.tsx                                        | 367   |
+| /Users/joachimndoye/Documents/automai3/automai/src/components/shadcn/sidebar.tsx                                        | 749   |
+| /Users/joachimndoye/Documents/automai3/automai/src/lib/websocket-server.ts                                              | 407   |
 
 ## Refactoring Strategy
 

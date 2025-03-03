@@ -1,9 +1,10 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
+
 import { useRouter, usePathname, useParams } from 'next/navigation';
 
 import { useSession } from 'next-auth/react';
-import { useEffect, useRef, useState } from 'react';
 
 import { useUser } from '@/context/UserContext';
 
@@ -24,7 +25,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Reset redirecting flag when pathname changes
     isRedirecting.current = false;
-    
+
     // Reset user error handled flag when pathname changes
     // But only if we're not on the login page anymore
     if (!pathname.includes('/login')) {
@@ -43,7 +44,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       hasUser: !!user,
       userError,
       isRedirecting: isRedirecting.current,
-      userErrorHandled: userErrorHandled.current
+      userErrorHandled: userErrorHandled.current,
     };
     console.log('RouteGuard state:', info);
     setDebugInfo(info);
@@ -72,7 +73,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         hasUser: !!user,
         currentTenant,
         userError,
-        userErrorHandled: userErrorHandled.current
+        userErrorHandled: userErrorHandled.current,
       });
 
       // Handle OAuth errors
@@ -88,7 +89,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       // DISABLE CLIENT-SIDE REDIRECTS FOR UNAUTHENTICATED USERS
       // Let the middleware handle this instead
       // The middleware will redirect unauthenticated users to login
-      
+
       // For public routes, only redirect if user is authenticated and trying to access auth pages
       if (isPublicRoute) {
         // Only redirect from login/signup to dashboard if we have a valid user and no user error
@@ -141,7 +142,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   if (process.env.NODE_ENV === 'development' && debugInfo && userError) {
     // Log the error but don't show the banner
     console.error('Auth Error:', userError, debugInfo);
-    
+
     // Return children without the error banner
     return <>{children}</>;
   }

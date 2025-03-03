@@ -9,7 +9,7 @@ async function main() {
   let tenant = await prisma.tenant.findUnique({
     where: { id: 'clqnwrfhx0000uqmxl2qn2w01' },
   });
-  
+
   // Create tenant if it doesn't exist
   if (!tenant) {
     tenant = await prisma.tenant.create({
@@ -28,7 +28,7 @@ async function main() {
   let user = await prisma.user.findUnique({
     where: { id: 'clqnwrfhx0001uqmxls3ppkk1' },
   });
-  
+
   // Create user if it doesn't exist
   if (!user) {
     user = await prisma.user.create({
@@ -49,7 +49,7 @@ async function main() {
   let connection = await prisma.connection.findUnique({
     where: { id: 'test-connection-id' },
   });
-  
+
   // Create connection if it doesn't exist
   if (!connection) {
     connection = await prisma.connection.create({

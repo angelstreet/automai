@@ -1,14 +1,13 @@
 'use client';
 
-import { ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
 
 import { useParams, useRouter } from 'next/navigation';
 
+import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
 
@@ -24,7 +23,7 @@ export function ProfileContent() {
 
   const handleUpdateName = async () => {
     try {
-      setIsUpdating(true);
+      setIsUpdating(_true);
       await updateProfile({ name });
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -74,7 +73,7 @@ export function ProfileContent() {
               <div className="flex gap-2 mt-1">
                 <Input
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setName(_e.target.value)}
                   placeholder={t('enterName')}
                   className="max-w-md"
                 />
@@ -115,7 +114,7 @@ export function ProfileContent() {
           </div>
         </div>
 
-        {/* Tenant Information (Enterprise only) */}
+        {/* Tenant Information (_Enterprise only) */}
         {user.plan === 'ENTERPRISE' && tenant && (
           <div className="p-6 bg-card rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">{t('workspaceInfo')}</h2>

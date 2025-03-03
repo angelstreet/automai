@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { getServerSession } from 'next-auth';
 
 import { prisma } from '@/lib/prisma';
@@ -17,7 +18,7 @@ async function checkRepositoryAccess(id: string, userId: string) {
     return { success: false, message: 'Repository not found', status: 404 };
   }
 
-  if (repository.provider.userId !== userId) {
+  if (_repository.provider.userId !== userId) {
     return { success: false, message: 'Not authorized to access this repository', status: 403 };
   }
 
@@ -25,20 +26,14 @@ async function checkRepositoryAccess(id: string, userId: string) {
 }
 
 // POST /api/repositories/sync/[id]
-export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { success, message, status } = await checkRepositoryAccess(
-      params.id,
-      session.user.id
-    );
+    const { success, message, status } = await checkRepositoryAccess(params.id, _session.user.id);
 
     if (!success) {
       return NextResponse.json({ success, message }, { status: status });
@@ -54,4 +49,4 @@ export async function POST(
       { status: 500 },
     );
   }
-} 
+}

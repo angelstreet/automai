@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(_request.url);
     const providerId = searchParams.get('providerId') || undefined;
     const projectId = searchParams.get('projectId') || undefined;
     const syncStatus = searchParams.get('syncStatus') || undefined;
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(repository, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (_error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, message: 'Invalid request data', errors: error.errors },
         { status: 400 },
@@ -98,4 +99,4 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-} 
+}

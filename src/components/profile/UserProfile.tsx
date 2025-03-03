@@ -1,12 +1,11 @@
-import { User } from 'lucide-react';
+import * as React from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { User } from 'lucide-react';
 import { signOut } from 'next-auth/react';
-import * as React from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
-
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -84,4 +83,4 @@ export function UserProfile({ tenant }: UserProfileProps) {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-} 
+}

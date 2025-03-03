@@ -1,4 +1,5 @@
 import { GitProvider, Repository, SyncStatus } from '@/types/repositories';
+
 import { GitProviderService } from './base';
 
 export class GitHubProviderService implements GitProviderService {
@@ -8,7 +9,7 @@ export class GitHubProviderService implements GitProviderService {
   constructor() {
     this.clientId = process.env.GITHUB_CLIENT_ID || '';
     this.clientSecret = process.env.GITHUB_CLIENT_SECRET || '';
-    
+
     if (!this.clientId || !this.clientSecret) {
       console.warn('GitHub OAuth credentials not configured');
     }
@@ -21,11 +22,14 @@ export class GitHubProviderService implements GitProviderService {
       scope: 'repo user',
       state,
     });
-    
+
     return `https://github.com/login/oauth/authorize?${params.toString()}`;
   }
 
-  async exchangeCodeForToken(code: string, redirectUri: string): Promise<{
+  async exchangeCodeForToken(
+    code: string,
+    redirectUri: string,
+  ): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresAt?: Date;
@@ -45,7 +49,7 @@ export class GitHubProviderService implements GitProviderService {
     });
 
     const data = await response.json();
-    
+
     if (data.error) {
       throw new Error(`GitHub OAuth error: ${data.error_description || data.error}`);
     }
@@ -74,7 +78,7 @@ export class GitHubProviderService implements GitProviderService {
     }
 
     const data = await response.json();
-    
+
     return {
       id: data.id.toString(),
       login: data.login,
@@ -96,7 +100,7 @@ export class GitHubProviderService implements GitProviderService {
     }
 
     const data = await response.json();
-    
+
     return data.map((repo: any) => ({
       id: repo.id.toString(),
       name: repo.name,
@@ -114,7 +118,7 @@ export class GitHubProviderService implements GitProviderService {
   async getRepository(provider: GitProvider, repoName: string): Promise<Repository> {
     // Get user info to get the username
     const userInfo = await this.getUserInfo(provider.accessToken || '');
-    
+
     const response = await fetch(`https://api.github.com/repos/${userInfo.login}/${repoName}`, {
       headers: {
         Authorization: `token ${provider.accessToken}`,
@@ -126,7 +130,7 @@ export class GitHubProviderService implements GitProviderService {
     }
 
     const repo = await response.json();
-    
+
     return {
       id: repo.id.toString(),
       name: repo.name,
@@ -143,14 +147,14 @@ export class GitHubProviderService implements GitProviderService {
 
   async syncRepository(repository: Repository): Promise<Repository> {
     const provider = repository.provider;
-    
+
     if (!provider || !provider.accessToken) {
       throw new Error('Provider not available or not authenticated');
     }
-    
+
     // Get updated repository data
     const updatedRepo = await this.getRepository(provider, repository.name);
-    
+
     return {
       ...repository,
       ...updatedRepo,
@@ -166,7 +170,7 @@ export class GitHubProviderService implements GitProviderService {
           Authorization: `token ${accessToken}`,
         },
       });
-      
+
       return response.ok;
     } catch (error) {
       return false;
@@ -181,4 +185,4 @@ export class GitHubProviderService implements GitProviderService {
     // GitHub doesn't support refresh tokens in the standard OAuth flow
     throw new Error('GitHub does not support token refresh in the standard OAuth flow');
   }
-} 
+}

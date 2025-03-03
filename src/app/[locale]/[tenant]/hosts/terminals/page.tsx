@@ -1,11 +1,11 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
-import { toast } from 'sonner';
 
 import { Terminal } from '../_components/Terminal';
 
@@ -91,7 +91,7 @@ export default function TerminalsPage() {
           body: JSON.stringify({
             hostId: connection.id,
           }),
-        }).catch(console.error);
+        }).catch(_console.error);
       }
     };
   }, [searchParams]);

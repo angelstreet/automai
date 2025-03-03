@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
 import { useLocale } from 'next-intl';
 
 import { Button } from '@/components/shadcn/button';
@@ -13,7 +14,7 @@ interface HeaderProps {
 }
 
 export function SiteHeader({ showAuth = true }: HeaderProps) {
-  const pathname = usePathname();
+  const _pathname = usePathname();
   const locale = useLocale();
 
   return (

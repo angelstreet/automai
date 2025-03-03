@@ -1,6 +1,7 @@
 import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
+
 import { NextIntlClientProvider } from 'next-intl';
 
 import { RouteGuard } from '@/components/auth/RouteGuard';
@@ -21,12 +22,12 @@ type Props = {
 async function validateLocale(locale: string) {
   // Simulate async validation
   await Promise.resolve();
-  return locales.includes(locale as any) ? locale : null;
+  return locales.includes(_locale as any) ? locale : null;
 }
 
 export default async function LocaleLayout(props: Props) {
   const { children, params } = props;
-  
+
   // Ensure params is properly awaited if it's a promise
   const resolvedParams = params instanceof Promise ? await params : params;
   const locale = resolvedParams.locale;

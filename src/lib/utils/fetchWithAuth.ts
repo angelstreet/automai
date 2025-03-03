@@ -6,7 +6,7 @@
 export async function fetchWithAuth(
   url: string,
   options: RequestInit = {},
-  retryConfig = { maxRetries: 3, initialDelay: 500, shouldRetry: false }
+  retryConfig = { maxRetries: 3, initialDelay: 500, shouldRetry: false },
 ): Promise<Response> {
   const { maxRetries, initialDelay, shouldRetry } = retryConfig;
   let retries = 0;
@@ -16,7 +16,7 @@ export async function fetchWithAuth(
     try {
       // Get the CSRF token from the cookie
       const csrfToken = getCsrfToken();
-      
+
       // Merge the headers with the Authorization header
       const headers = {
         'Content-Type': 'application/json',
@@ -34,8 +34,10 @@ export async function fetchWithAuth(
       // If shouldRetry is true and we get a 500 error, retry the request
       if (shouldRetry && response.status === 500 && retries < maxRetries) {
         retries++;
-        console.log(`Retrying fetch to ${url} (${retries}/${maxRetries}) after ${delay}ms delay...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.log(
+          `Retrying fetch to ${url} (${retries}/${maxRetries}) after ${delay}ms delay...`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
         delay *= 2; // Exponential backoff
         continue;
       }
@@ -46,11 +48,11 @@ export async function fetchWithAuth(
       if (shouldRetry && retries < maxRetries) {
         retries++;
         console.error(`Error in fetchWithAuth (retry ${retries}/${maxRetries}):`, error);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
         delay *= 2; // Exponential backoff
         continue;
       }
-      
+
       console.error('Error in fetchWithAuth:', error);
       throw error;
     }
@@ -62,11 +64,11 @@ export async function fetchWithAuth(
  */
 function getCsrfToken(): string | null {
   const cookies = document.cookie.split(';');
-  const csrfCookie = cookies.find(cookie => cookie.trim().startsWith('XSRF-TOKEN='));
-  
+  const csrfCookie = cookies.find((cookie) => cookie.trim().startsWith('XSRF-TOKEN='));
+
   if (csrfCookie) {
     return decodeURIComponent(csrfCookie.split('=')[1]);
   }
-  
+
   return null;
-} 
+}

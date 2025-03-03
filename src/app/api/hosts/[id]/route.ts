@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: 'Host not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: host });
+    return NextResponse.json({ success: true, _data: host });
   } catch (error) {
     console.error('Error fetching host:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch host' }, { status: 500 });

@@ -1,4 +1,5 @@
 import { useRouter, useParams } from 'next/navigation';
+
 import { useSession, signOut } from 'next-auth/react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';

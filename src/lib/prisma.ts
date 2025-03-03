@@ -1,7 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 
-import { config } from './config';
-
 // Use a single PrismaClient instance
 // https://www.prisma.io/docs/guides/performance-and-optimization/connection-management#prismaclient-in-long-running-applications
 

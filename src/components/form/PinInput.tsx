@@ -44,7 +44,7 @@ export interface UsePinInputProps {
 // Utilities
 export function getValidChildren(children: React.ReactNode) {
   return React.Children.toArray(children).filter((child) =>
-    React.isValidElement(child)
+    React.isValidElement(child),
   ) as React.ReactElement[];
 }
 
@@ -63,10 +63,7 @@ export const usePinInput = ({
   length,
   readOnly,
 }: UsePinInputProps) => {
-  const pinInputs = React.useMemo(
-    () => Array.from({ length }, (_, i) => i),
-    [length]
-  );
+  const pinInputs = React.useMemo(() => Array.from({ length }, (_, i) => i), [length]);
 
   const [pins, setPins] = React.useState<string[]>(pinInputs.map(() => ''));
   const [focusedIndex, setFocusedIndex] = React.useState<number>(-1);
@@ -88,10 +85,7 @@ export const usePinInput = ({
     }
   }, [defaultValue, pinInputs, value]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    index: number
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     if (readOnly) return;
 
     const newValue = e.target.value;
@@ -127,10 +121,7 @@ export const usePinInput = ({
     }
   };
 
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    index: number
-  ) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (readOnly) return;
 
     if (e.key === 'Backspace' && !pins[index] && index > 0) {
@@ -155,10 +146,7 @@ export const usePinInput = ({
     }
   };
 
-  const handleFocus = (
-    e: React.FocusEvent<HTMLInputElement>,
-    index: number
-  ) => {
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>, index: number) => {
     e.target.select();
     setFocusedIndex(index);
   };
@@ -211,24 +199,24 @@ export const PinInputField = React.forwardRef<HTMLInputElement, PinInputFieldPro
   ({ className, mask, type, inputKey, ...props }, ref) => {
     // Check if PinInputField is used within PinInput
     const isInsidePinInput = React.useContext(PinInputContext);
-    
+
     if (!isInsidePinInput) {
       console.warn('PinInputField must be used within PinInput');
     }
-    
+
     return (
       <input
         ref={ref}
         type={mask ? 'password' : 'text'}
         className={cn(
           'flex h-10 w-10 rounded-md border border-input bg-background px-3 py-2 text-center text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-          className
+          className,
         )}
         maxLength={1}
         {...props}
       />
     );
-  }
+  },
 );
 
 PinInputField.displayName = 'PinInputField';
@@ -326,7 +314,7 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(
         </div>
       </PinInputContext.Provider>
     );
-  }
+  },
 );
 
-PinInput.displayName = 'PinInput'; 
+PinInput.displayName = 'PinInput';

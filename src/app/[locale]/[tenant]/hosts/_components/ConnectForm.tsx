@@ -1,5 +1,6 @@
-import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { useState, useRef } from 'react';
+
+import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { Badge } from '@/components/shadcn/badge';
@@ -51,7 +52,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
   const [requireVerification, setRequireVerification] = useState(false);
 
   const handleTypeChange = (value: string) => {
-    setConnectionType(value as 'ssh' | 'docker' | 'portainer');
+    setConnectionType(_value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');
     onChange({
       ...formData,
       type: value,
@@ -65,7 +66,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
 
   // Handle keydown event to trigger test connection on Enter
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !testing) {
+    if (_e.key === 'Enter' && !testing) {
       e.preventDefault();
       testConnection();
     }
@@ -90,7 +91,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
     try {
       // Get the base URL from the current window location
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      
+
       const response = await fetch(`${baseUrl}/api/hosts/test-connection`, {
         method: 'POST',
         headers: {
@@ -108,7 +109,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
 
       const data = await response.json();
 
-      if (response.status === 428) {
+      if (_response.status === 428) {
         // Fingerprint verification required
         setRequireVerification(true);
         setFingerprint(data.fingerprint);
@@ -150,7 +151,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
     try {
       // Get the base URL from the current window location
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-      
+
       const response = await fetch(`${baseUrl}/api/hosts/verify-fingerprint`, {
         method: 'POST',
         headers: {
@@ -274,7 +275,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
           </Label>
           <Textarea
             id="description"
-            placeholder="Description (optional)"
+            placeholder="Description (_optional)"
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
             className="col-span-10 h-16"

@@ -37,21 +37,24 @@ export const hostsApi = {
   /**
    * Test host connection
    */
-  testConnection: async (locale: string, data: {
-    type: string;
-    ip: string;
-    port?: number;
-    username?: string;
-    password?: string;
-    hostId?: string;
-  }) => {
+  testConnection: async (
+    locale: string,
+    data: {
+      type: string;
+      ip: string;
+      port?: number;
+      username?: string;
+      password?: string;
+      hostId?: string;
+    },
+  ) => {
     const requestData = {
       type: data.type,
       ip: data.ip,
       port: data.port,
       username: data.username,
       hostId: data.hostId,
-      ...(data.password && { password: data.password }),
+      ...(_data.password && { password: data.password }),
     };
 
     const response = await fetch(`${getBaseUrl()}/api/hosts/test-connection`, {
@@ -75,11 +78,14 @@ export const hostsApi = {
     return response.json();
   },
 
-  async verifyFingerprint(locale: string, data: {
-    fingerprint: string;
-    host: string;
-    port?: number;
-  }) {
+  async verifyFingerprint(
+    locale: string,
+    data: {
+      fingerprint: string;
+      host: string;
+      port?: number;
+    },
+  ) {
     const response = await fetch(`${getBaseUrl()}/api/hosts/verify-fingerprint`, {
       method: 'POST',
       headers: {
@@ -104,16 +110,19 @@ export const hostsApi = {
   /**
    * Create a new host
    */
-  createHost: async (locale: string, data: {
-    name: string;
-    description: string;
-    type: string;
-    ip: string;
-    port: number;
-    user: string;
-    password: string;
-    status: string;
-  }) => {
+  createHost: async (
+    locale: string,
+    data: {
+      name: string;
+      description: string;
+      type: string;
+      ip: string;
+      port: number;
+      user: string;
+      password: string;
+      status: string;
+    },
+  ) => {
     const response = await fetch(`${getBaseUrl()}/api/hosts`, {
       method: 'POST',
       headers: {
@@ -143,7 +152,7 @@ export const hostsApi = {
         hostId: host.id,
       });
       results.push({ hostId: host.id, result });
-      await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to avoid overwhelming the server
+      await new Promise((resolve) => setTimeout(resolve, _300)); // Small delay to avoid overwhelming the server
     }
     return results;
   },
