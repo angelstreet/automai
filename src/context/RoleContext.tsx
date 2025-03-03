@@ -19,7 +19,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 
   // Update role when user data is loaded
   useEffect(() => {
-    if (_user && user.role) {
+    if (user && user.role) {
       // Convert role to lowercase and ensure it's a valid Role type
       const userRole = user.role.toLowerCase() as Role;
       if (
@@ -40,7 +40,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 
 export function useRole() {
   const context = useContext(RoleContext);
-  if (_context === undefined) {
+  if (context === undefined) {
     throw new Error('useRole must be used within a RoleProvider');
   }
   return context;

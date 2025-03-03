@@ -28,7 +28,7 @@ export default function TenantLayout({
   // Check session only at intervals to reduce API calls
   React.useEffect(() => {
     const now = Date.now();
-    if (_now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
+    if (now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
       try {
         checkSession();
         lastSessionCheck = now;
