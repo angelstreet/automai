@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Textarea } from '@/components/shadcn/textarea';
-import { VMConfig } from '@/types/hosts';
+import { VMConfig, VMType } from '@/types/hosts';
 
 interface VMSettingsProps {
   config: VMConfig;
@@ -49,7 +49,7 @@ export function VMSettings({ config, onSave }: VMSettingsProps) {
               <Input
                 id="type"
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as VMType })}
                 placeholder="VM type"
               />
             </div>

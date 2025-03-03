@@ -70,7 +70,7 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
             <TableHead className="w-[120px] py-2">Actions</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody key="host-table-body">
           {hosts.map((host) => (
             <TableRow key={host.id} className="h-10">
               <TableCell className="py-2">
@@ -107,17 +107,23 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[140px]">
                       <DropdownMenuItem
+                        key={`logs-${host.id}`}
                         onClick={() => router.push(`/logs/${host.name}`)}
                         className="py-1.5"
                       >
                         <ScrollText className="mr-2 h-3.5 w-3.5" />
                         <span className="text-sm">{t('logs')}</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onTestConnection?.(host)} className="py-1.5">
+                      <DropdownMenuItem 
+                        key={`refresh-${host.id}`}
+                        onClick={() => onTestConnection?.(host)} 
+                        className="py-1.5"
+                      >
                         <RefreshCw className="mr-2 h-3.5 w-3.5" />
                         <span className="text-sm">{t('refresh')}</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem
+                        key={`delete-${host.id}`}
                         onClick={() => onDelete?.(host.id)}
                         className="text-destructive py-1.5"
                       >
