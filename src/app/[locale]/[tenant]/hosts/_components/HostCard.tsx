@@ -43,7 +43,7 @@ interface HostCardProps {
 
 export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
-  const [showError, setShowError] = useState(_false);
+  const [showError, setShowError] = useState(false);
   const t = useTranslations('Common');
 
   const getStatusDot = (status: string) => {
@@ -166,7 +166,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                   <RefreshCw className="mr-2 h-4 w-4" />
                   <span>{t('refresh')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete?.(_host.id)} className="text-destructive">
+                <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
                   <XCircle className="mr-2 h-4 w-4" />
                   <span>{t('delete')}</span>
                 </DropdownMenuItem>

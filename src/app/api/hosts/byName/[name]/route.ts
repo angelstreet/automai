@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/prisma';
 
-export async function GET(_request: NextRequest, context: { params: { name: string } }) {
+export async function GET(request: NextRequest, context: { params: { name: string } }) {
   try {
     console.log('API route called: /api/hosts/byName/[name]');
     const { name } = context.params;

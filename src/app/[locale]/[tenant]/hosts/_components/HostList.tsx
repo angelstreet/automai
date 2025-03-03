@@ -22,7 +22,7 @@ export default function HostContainer() {
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
-  const [selectMode, setSelectMode] = useState(false);
+  const [selectMode] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -32,7 +32,7 @@ export default function HostContainer() {
     username: '',
     password: '',
   });
-  const _router = useRouter();
+  const router = useRouter();
   const [isTestingAll, setIsTestingAll] = useState(false);
 
   const fetchHosts = useCallback(async () => {
@@ -43,12 +43,12 @@ export default function HostContainer() {
       console.log('Hosts fetched successfully:', fetchedHosts);
 
       // Set initial status to 'pending' for quick UI display
-      const pendingHosts = fetchedHosts.map((host) => ({ ...host, status: 'pending' }));
+      const pendingHosts = fetchedHosts.map((host: Host) => ({ host, status: 'pending' }));
       setHosts(pendingHosts);
 
       return pendingHosts;
-    } catch (_error) {
-      console.error('Error fetching hosts:',_error);
+    } catch (error) {
+      console.error('Error fetching hosts:',error);
       toast.error('Failed to fetch hosts');
       return [];
     } finally {
@@ -100,8 +100,8 @@ export default function HostContainer() {
       setTestingHosts((prev) => ({ ...prev, [host.id]: false }));
 
       return result;
-    } catch (_error) {
-      console.error(`Error testing connection for host ${host.name}:`,_error);
+    } catch (error) {
+      console.error(`Error testing connection for host ${host.name}:`,error);
 
       setHosts((prevHosts) =>
         prevHosts.map((h) =>
@@ -166,7 +166,7 @@ export default function HostContainer() {
       setHosts((currentHosts) => currentHosts.filter((host) => host.id !== id));
 
       toast.success('Host deleted successfully');
-    } catch (_error) {
+    } catch (error) {
       toast.error('Failed to delete host');
     }
   };
@@ -201,8 +201,8 @@ export default function HostContainer() {
         username: '',
         password: '',
       });
-    } catch (_error) {
-      console.error('Error saving host:',_error);
+    } catch (error) {
+      console.error('Error saving host:',error);
       toast.error('Failed to create host');
     }
   };

@@ -51,7 +51,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
   const [requireVerification, setRequireVerification] = useState(false);
 
   const handleTypeChange = (value: string) => {
-    setConnectionType(_value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');
+    setConnectionType(value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');
     onChange({
       ...formData,
       type: value,
@@ -65,7 +65,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
 
   // Handle keydown event to trigger test connection on Enter
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (_e.key === 'Enter' && !testing) {
+    if (e.key === 'Enter' && !testing) {
       e.preventDefault();
       testConnection();
     }
@@ -108,7 +108,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
 
       const data = await response.json();
 
-      if (_response.status === 428) {
+      if (response.status === 428) {
         // Fingerprint verification required
         setRequireVerification(true);
         setFingerprint(data.fingerprint);
@@ -274,7 +274,7 @@ export function ConnectForm({ formData, onChange, onSave, onTestSuccess }: Conne
           </Label>
           <Textarea
             id="description"
-            placeholder="Description (_optional)"
+            placeholder="Description (optional)"
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
             className="col-span-10 h-16"

@@ -5,7 +5,7 @@ import { getWebSocketServer } from '@/lib/services/websocket';
 export const dynamic = 'force-dynamic';
 export const _runtime = 'nodejs';
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   console.log('Terminal init API called');
   try {
     console.log('Authentication bypassed for debugging');

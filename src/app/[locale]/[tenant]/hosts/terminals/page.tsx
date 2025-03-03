@@ -73,7 +73,7 @@ export default function TerminalsPage() {
         });
 
         logger.error(`Terminal initialization failed: ${message}`, {
-          action: 'TERMINAL_INIT_ERROR',
+          action: 'TERMINAL_INITerror',
           data: { hostId, error: message },
         });
       }
@@ -117,7 +117,7 @@ export default function TerminalsPage() {
   if (error) {
     logger.error(`Error fetching connections: ${error}`, {
       userId: session?.user?.email || undefined,
-      action: 'CONNECTIONS_FETCH_ERROR',
+      action: 'CONNECTIONS_FETCHerror',
       data: { error },
     });
     return (

@@ -263,7 +263,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
           </Label>
           <Textarea
             id="description"
-            placeholder="Description (_optional)"
+            placeholder="Description (optional)"
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
             className="col-span-10 h-16"

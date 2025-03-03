@@ -37,7 +37,7 @@ export interface GitProviderService {
   /**
    * Get repository details
    */
-  getRepository(provider: GitProvider, _repoName: string): Promise<Repository>;
+  getRepository(provider: GitProvider, repoName: string): Promise<Repository>;
 
   /**
    * Sync repository metadata

@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 
-// Define a simplified interface for logs (_even though we won't use it)
+// Define a simplified interface for logs (even though we won't use it)
 interface ConnectionLog {
   id: string;
   timestamp: string;
@@ -30,7 +30,7 @@ interface ConnectionLog {
 export default function LogsPage() {
   const { data: session } = useSession();
   const [logs, setLogs] = useState<ConnectionLog[]>([]);
-  const [loading, setLoading] = useState(_false);
+  const [loading, setLoading] = useState(false);
 
   if (!session) {
     return <div className="flex justify-center p-8">Please sign in to access this page</div>;

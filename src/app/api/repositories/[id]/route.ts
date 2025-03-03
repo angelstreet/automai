@@ -26,7 +26,7 @@ async function checkRepositoryAccess(id: string, userId: string) {
     return { success: false, message: 'Repository not found', status: 404 };
   }
 
-  if (_repository.provider.userId !== userId) {
+  if (repository.provider.userId !== userId) {
     return { success: false, message: 'Not authorized to access this repository', status: 403 };
   }
 
@@ -95,7 +95,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     return NextResponse.json(repository);
   } catch (error) {
-    if (_error instanceof z.ZodError) {
+    if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, message: 'Invalid request data', errors: error.errors },
         { status: 400 },

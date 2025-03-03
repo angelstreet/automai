@@ -34,7 +34,7 @@ The terminal connection workflow follows these steps:
        connectionType: connection.type,
        ssh_username: connection.username,
        ssh_password: connection.password,
-       ssh_host: connection.ip,
+       sshhost: connection.ip,
        ssh_port: connection.port
      }
      ```
@@ -295,7 +295,7 @@ export async function handleSshConnection(
           // Handle shell error
           clientSocket.send(JSON.stringify({
             error: `SSH shell error: ${err.message}`,
-            errorType: 'SSH_SHELL_ERROR',
+            errorType: 'SSH_SHELLerror',
           }));
           return;
         }
@@ -344,7 +344,7 @@ export async function handleSshConnection(
       try {
         clientSocket.send(JSON.stringify({
           error: `SSH connection error: ${err.message}`,
-          errorType: 'SSH_CONNECTION_ERROR',
+          errorType: 'SSH_CONNECTIONerror',
         }));
       } catch (e) {
         logger.error(`Error sending error to WebSocket: ${e}`);
@@ -364,7 +364,7 @@ export async function handleSshConnection(
       logger.error(`Error connecting to SSH server: ${e}`);
       clientSocket.send(JSON.stringify({
         error: `SSH connection attempt error: ${e}`,
-        errorType: 'SSH_CONNECTION_ATTEMPT_ERROR',
+        errorType: 'SSH_CONNECTION_ATTEMPTerror',
       }));
     }
     
@@ -382,7 +382,7 @@ export async function handleSshConnection(
     try {
       clientSocket.send(JSON.stringify({
         error: `Internal server error: ${error}`,
-        errorType: 'INTERNAL_ERROR',
+        errorType: 'INTERNALerror',
       }));
     } catch (e) {
       // Cannot send error to client
@@ -431,7 +431,7 @@ export function Terminal({ connection }: TerminalProps) {
             connectionType: connection.type,
             ssh_username: connection.username,
             ssh_password: connection.password,
-            ssh_host: connection.ip,
+            sshhost: connection.ip,
             ssh_port: connection.port
           };
           

@@ -54,7 +54,7 @@ export const hostsApi = {
       port: data.port,
       username: data.username,
       hostId: data.hostId,
-      ...(_data.password && { password: data.password }),
+      ...(data.password && { password: data.password }),
     };
 
     const response = await fetch(`${getBaseUrl()}/api/hosts/test-connection`, {
@@ -152,7 +152,7 @@ export const hostsApi = {
         hostId: host.id,
       });
       results.push({ hostId: host.id, result });
-      await new Promise((resolve) => setTimeout(resolve, _300)); // Small delay to avoid overwhelming the server
+      await new Promise((resolve) => setTimeout(resolve, 300)); // Small delay to avoid overwhelming the server
     }
     return results;
   },

@@ -216,7 +216,7 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
           connectionType: data.connectionType,
           ssh_username: data.username || data.ssh_username,
           ssh_hasPassword: !!(data.password || data.ssh_password),
-          ssh_host: data.host || data.ssh_host,
+          sshhost: data.host || data.sshhost,
         }),
       );
 
@@ -226,7 +226,7 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
         handleSshConnection(ws, ws_connectionId, {
           ssh_username: data.username || data.ssh_username,
           ssh_password: data.password || data.ssh_password,
-          ssh_host: data.host || data.ssh_host,
+          sshhost: data.host || data.sshhost,
           ssh_port: data.port || data.ssh_port,
         });
       } else {

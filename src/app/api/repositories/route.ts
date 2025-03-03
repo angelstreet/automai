@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(_request.url);
+    const { searchParams } = new URL(request.url);
     const providerId = searchParams.get('providerId') || undefined;
     const projectId = searchParams.get('projectId') || undefined;
     const syncStatus = searchParams.get('syncStatus') || undefined;

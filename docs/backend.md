@@ -124,7 +124,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 
 async function uploadReportToSupabase(filePath, executionId) {
   const fileBuffer = fs.readFileSync(filePath);
-  const fileName = `${executionId}_report.html`;
+  const fileName = `${executionId}report.html`;
 
   const { data, error } = await supabase.storage.from('test-reports').upload(fileName, fileBuffer);
   if (error) throw error;

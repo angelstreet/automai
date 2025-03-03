@@ -111,8 +111,8 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
             );
           });
         }
-      } catch (_error) {
-        console.error(`Background connection test failed for host ${host.name}:`,_error);
+      } catch (error) {
+        console.error(`Background connection test failed for host ${host.name}:`,error);
         // We don't show toasts for background tests to avoid UI noise
 
         // Update status to failed if there was an error
@@ -169,7 +169,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       setHosts(freshHosts);
       queryClient.setQueryData(['hosts'], freshHosts);
       toast.success('Hosts refreshed');
-    } catch (_error) {
+    } catch (error) {
       toast.error('Failed to refresh hosts');
     } finally {
       setIsRefreshing(false);
@@ -185,7 +185,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       setHostToDelete(null);
       setIsDeleteDialogOpen(false);
     },
-    onError: (_error) => {
+    onError: (error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to delete host');
     },
   });
@@ -206,7 +206,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">{t('hosts')}</h1>
-          <p className="text-muted-foreground">{t('manage_hosts')}</p>
+          <p className="text-muted-foreground">{t('managehosts')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={refreshConnections} disabled={isRefreshing}>
@@ -224,7 +224,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
 
           <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            {t('add_host')}
+            {t('addhost')}
           </Button>
         </div>
       </div>
@@ -232,11 +232,11 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       {hosts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Server className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">{t('no_hosts')}</h3>
-          <p className="text-muted-foreground mb-4">{t('add_host_description')}</p>
+          <h3 className="text-lg font-medium">{t('nohosts')}</h3>
+          <p className="text-muted-foreground mb-4">{t('addhost_description')}</p>
           <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            {t('add_host')}
+            {t('addhost')}
           </Button>
         </div>
       ) : (

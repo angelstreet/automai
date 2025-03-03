@@ -13,7 +13,7 @@ export type WebSocketConnection = WebSocket & {
 // Add a type definition for the connection object
 interface Connection {
   id: string;
-  ssh_host: string;
+  sshhost: string;
   ssh_port: number;
   ssh_username: string;
   ssh_password: string | null;
@@ -44,7 +44,7 @@ export async function handleSshConnection(
     | {
         ssh_username?: string;
         ssh_password?: string;
-        ssh_host?: string;
+        sshhost?: string;
         ssh_port?: number;
         is_windows?: boolean;
       }
@@ -57,7 +57,7 @@ export async function handleSshConnection(
   // For backward compatibility, check both prefixed and non-prefixed parameters
   const ssh_username = (authData as any)?.ssh_username || (authData as any)?.username;
   const ssh_password = (authData as any)?.ssh_password || (authData as any)?.password;
-  const ssh_host = (authData as any)?.ssh_host || (authData as any)?.host;
+  const sshhost = (authData as any)?.sshhost || (authData as any)?.host;
   const ssh_port = (authData as any)?.ssh_port || (authData as any)?.port;
   let is_windows = (authData as any)?.is_windows || false;
 
@@ -70,7 +70,7 @@ export async function handleSshConnection(
       connectionId,
       ssh_username: ssh_username,
       ssh_password: ssh_password ? '[REDACTED]' : 'none',
-      ssh_host: ssh_host,
+      sshhost: sshhost,
       ssh_port: ssh_port || 22,
       is_windows: is_windows,
       isRetry: attemptingWindowsFallback,
@@ -110,7 +110,7 @@ export async function handleSshConnection(
 
       // Connection options with improved algorithm support for different SSH server types
       const connectionOptions: any = {
-        host: ssh_host,
+        host: sshhost,
         port: ssh_port || 22,
         username: ssh_username,
         password: ssh_password,
@@ -128,7 +128,7 @@ export async function handleSshConnection(
           ) {
             logger.info(`SSH DETAIL [${connectionId}]:`, {
               message,
-              ssh_host,
+              sshhost,
               ssh_port: ssh_port || 22,
             });
           }
@@ -167,7 +167,7 @@ export async function handleSshConnection(
 
       // Add Windows/WSL-specific options if needed
       if (is_windows) {
-        logger.info('Using Windows-specific SSH options', { connectionId, ssh_host });
+        logger.info('Using Windows-specific SSH options', { connectionId, sshhost });
         connectionOptions.pty = true; // Force PTY allocation
         connectionOptions.agentForward = false;
       }
@@ -195,7 +195,7 @@ export async function handleSshConnection(
                     error: `SSH connection timed out after 25 seconds`,
                     errorType: 'SSH_CONNECTION_TIMEOUT',
                     details: {
-                      ssh_host: ssh_host,
+                      sshhost: sshhost,
                       ssh_port: ssh_port || 22,
                       is_windows: is_windows,
                     },
@@ -263,7 +263,7 @@ export async function handleSshConnection(
       isConnecting = false;
       logger.info('SSH connection ready', {
         connectionId,
-        ssh_host,
+        sshhost,
         ssh_port: ssh_port || 22,
         is_windows,
       });
@@ -353,7 +353,7 @@ export async function handleSshConnection(
       code: err.code,
       level: err.level,
       connectionId,
-      ssh_host: ssh_host,
+      sshhost: sshhost,
       ssh_port: ssh_port || 22,
       is_windows: is_windows,
     };
@@ -368,10 +368,10 @@ export async function handleSshConnection(
           : err.code === 'ECONNRESET'
             ? 'SSH_CONNECTION_RESET'
             : err.level === 'authentication'
-              ? 'SSH_AUTH_ERROR'
+              ? 'SSH_AUTHerror'
               : err.level === 'client-timeout'
                 ? 'SSH_HANDSHAKE_TIMEOUT'
-                : 'SSH_CONNECTION_ERROR';
+                : 'SSH_CONNECTIONerror';
 
       if (clientSocket.readyState === WebSocket.OPEN) {
         clientSocket.send(
@@ -381,7 +381,7 @@ export async function handleSshConnection(
             details: {
               code: err.code,
               level: err.level,
-              ssh_host: ssh_host,
+              sshhost: sshhost,
               ssh_port: ssh_port || 22,
               is_windows: is_windows,
             },
@@ -403,7 +403,7 @@ export async function handleSshConnection(
 
     logger.error(`Error connecting to SSH server: ${e instanceof Error ? e.message : String(e)}`, {
       connectionId,
-      ssh_host: ssh_host,
+      sshhost: sshhost,
       ssh_port: ssh_port || 22,
       is_windows: is_windows,
     });
@@ -413,9 +413,9 @@ export async function handleSshConnection(
         clientSocket.send(
           JSON.stringify({
             error: `SSH connection attempt error: ${e instanceof Error ? e.message : String(e)}`,
-            errorType: 'SSH_CONNECTION_ATTEMPT_ERROR',
+            errorType: 'SSH_CONNECTION_ATTEMPTerror',
             details: {
-              ssh_host: ssh_host,
+              sshhost: sshhost,
               ssh_port: ssh_port || 22,
               is_windows: is_windows,
             },
@@ -444,14 +444,14 @@ export async function handleSshConnection(
 
     sshClient.shell(shellOptions, (err, stream) => {
       if (err) {
-        logger.error(`SSH shell error: ${err.message}`, { connectionId, ssh_host });
+        logger.error(`SSH shell error: ${err.message}`, { connectionId, sshhost });
         try {
           if (clientSocket.readyState === WebSocket.OPEN) {
             clientSocket.send(
               JSON.stringify({
                 error: `SSH shell error: ${err.message}`,
-                errorType: 'SSH_SHELL_ERROR',
-                details: { ssh_host, ssh_port: ssh_port || 22, is_windows },
+                errorType: 'SSH_SHELLerror',
+                details: { sshhost, ssh_port: ssh_port || 22, is_windows },
               }),
             );
           }
@@ -561,7 +561,7 @@ export async function handleSshConnection(
     JSON.stringify({
       ssh_username: ssh_username,
       ssh_password: ssh_password ? '[REDACTED]' : 'none',
-      ssh_host: ssh_host,
+      sshhost: sshhost,
       ssh_port: ssh_port || 22,
       raw_keys: Object.keys(authData || {}).join(', '),
       is_windows: is_windows,
@@ -573,9 +573,9 @@ export async function handleSshConnection(
     delete clientSocket.authTimeout;
   }
 
-  if (!ssh_host || !ssh_username) {
+  if (!sshhost || !ssh_username) {
     const missingFields = [];
-    if (!ssh_host) missingFields.push('ssh_host');
+    if (!sshhost) missingFields.push('sshhost');
     if (!ssh_username) missingFields.push('ssh_username');
 
     logger.error('Missing SSH credentials', { connectionId, missingFields });

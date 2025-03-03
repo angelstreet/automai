@@ -12,7 +12,7 @@ export default function TerminalsPage() {
   const fetchConnections = async () => {
     try {
       // Logic here
-    } catch (_error) {
+    } catch (error) {
       // Rename unused error parameter
       // Logic here
     }

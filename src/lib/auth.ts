@@ -99,7 +99,7 @@ export async function getAuthOptions() {
             };
           } catch (error) {
             logger.error(`Auth error: ${error instanceof Error ? error.message : String(error)}`, {
-              action: 'AUTH_ERROR',
+              action: 'AUTHerror',
               data: { error: error instanceof Error ? error.message : String(error) },
             });
             return null;

@@ -43,7 +43,7 @@ export async function GET(request: Request, { params }: Props) {
     }
 
     // Check if user has access to this project
-    if (_project.ownerId !== session.user.id) {
+    if (project.ownerId !== session.user.id) {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
@@ -97,7 +97,7 @@ export async function PATCH(request: Request, { params }: Props) {
       data: project,
     });
   } catch (error) {
-    if (_error instanceof z.ZodError) {
+    if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, message: 'Invalid request data', errors: error.errors },
         { status: 400 },

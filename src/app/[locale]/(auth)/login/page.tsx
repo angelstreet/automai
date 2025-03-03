@@ -68,7 +68,7 @@ export default function LoginPage() {
     return null;
   }
 
-  // Show nothing if already authenticated (_will be redirected)
+  // Show nothing if already authenticated (will be redirected)
   if (status === 'authenticated') {
     return null;
   }

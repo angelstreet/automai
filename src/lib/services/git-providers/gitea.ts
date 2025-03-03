@@ -95,8 +95,8 @@ export class GiteaProviderService implements GitProviderService {
       defaultBranch: repo.default_branch || 'main',
       providerId: provider.id,
       syncStatus: 'IDLE',
-      createdAt: new Date(_repo.created_at),
-      updatedAt: new Date(_repo.updated_at),
+      createdAt: new Date(repo.created_at),
+      updatedAt: new Date(repo.updated_at),
     }));
   }
 
@@ -112,16 +112,16 @@ export class GiteaProviderService implements GitProviderService {
         },
       });
       return response.ok;
-    } catch (_error) {
+    } catch (error) {
       return false;
     }
   }
 
-  async getRepository(provider: GitProvider, _repoName: string): Promise<Repository> {
+  async getRepository(provider: GitProvider, repoName: string): Promise<Repository> {
     throw new Error('Method not implemented.');
   }
 
-  async syncRepository(_repository: Repository): Promise<Repository> {
+  async syncRepository(repository: Repository): Promise<Repository> {
     throw new Error('Method not implemented.');
   }
 

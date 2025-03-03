@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     logger.error(`Error fetching logs: ${error instanceof Error ? error.message : String(error)}`, {
-      action: 'LOGS_GET_ERROR',
+      action: 'LOGS_GETerror',
       data: { error: error instanceof Error ? error.message : String(error) },
     });
 

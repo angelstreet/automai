@@ -33,7 +33,7 @@ export type GitProviderType = (typeof GitProviderTypes)[number];
 // Create a schema for the form
 const formSchema = z.object({
   type: z.enum(GitProviderTypes, {
-    required_error: 'Please select a Git provider type.',
+    requirederror: 'Please select a Git provider type.',
   }),
   displayName: z
     .string()
@@ -112,7 +112,7 @@ export function AddGitProviderDialog({
                     <RadioGroup
                       onValueChange={(value) => {
                         field.onChange(value);
-                        setSelectedType(_value as GitProviderType);
+                        setSelectedType(value as GitProviderType);
                       }}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"

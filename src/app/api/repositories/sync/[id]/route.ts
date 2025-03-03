@@ -17,7 +17,7 @@ async function checkRepositoryAccess(id: string, userId: string) {
     return { success: false, message: 'Repository not found', status: 404 };
   }
 
-  if (_repository.provider.userId !== userId) {
+  if (repository.provider.userId !== userId) {
     return { success: false, message: 'Not authorized to access this repository', status: 403 };
   }
 
