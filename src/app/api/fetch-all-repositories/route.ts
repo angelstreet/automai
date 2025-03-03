@@ -5,7 +5,6 @@ import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/fetch-all-repositories
-// Explicit naming for clear purpose: fetches ALL repositories across providers
 export async function GET(request: Request) {
   try {
     const session = await getServerSession();
