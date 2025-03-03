@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 
-import { SettingsHeader } from '@/components/Settings/SettingsHeader';
+import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import {
   Card,
   CardContent,

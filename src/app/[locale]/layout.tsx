@@ -3,9 +3,9 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 
-import { RouteGuard } from '@/components/Auth/RouteGuard';
+import { RouteGuard } from '@/components/auth/RouteGuard';
 import { ToasterProvider } from '@/components/shadcn/toaster';
-import { ThemeProvider } from '@/components/Theme/ThemeProvider';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { locales } from '@/config';
 import { RoleProvider } from '@/context/RoleContext';
 import { UserProvider } from '@/context/UserContext';
