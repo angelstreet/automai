@@ -21,7 +21,7 @@ type Props = {
 async function validateLocale(locale: string) {
   // Simulate async validation
   await Promise.resolve();
-  return locales.includes(_locale as any) ? locale : null;
+  return locales.includes(locale as any) ? locale : null;
 }
 
 export default async function LocaleLayout(props: Props) {

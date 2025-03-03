@@ -1,4 +1,4 @@
-export const _navigation = [
+export const navigation = [
   {
     title: 'Main',
     items: [
