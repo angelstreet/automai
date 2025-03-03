@@ -3,8 +3,8 @@
 import Cookies from 'js-cookie';
 import * as React from 'react';
 
-import { AppSidebar } from '@/components/Layout/AppSidebar';
-import { WorkspaceHeader } from '@/components/Layout/WorkspaceHeader';
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { SidebarProvider } from '@/components/Sidebar';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { useUser } from '@/context/UserContext';
