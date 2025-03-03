@@ -16,7 +16,7 @@ import { Separator } from '@/components/shadcn/separator';
 
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 
-import { UserProfile } from '@/components/shadcn/user-profile';
+import { UserProfile } from '@/components/profile/UserProfile';
 
 import { SidebarTrigger } from '@/components/Sidebar';
 

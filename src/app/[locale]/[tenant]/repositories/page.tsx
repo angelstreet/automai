@@ -7,9 +7,9 @@ import { Repository, GitProvider } from '@prisma/client';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { PageHeader } from '@/components/PageHeader';
-import { EmptyState } from '@/components/EmptyState';
-import { RepositoryCard, GitProviderCard, AddGitProviderDialog, GitProviderType } from '@/components/Repository';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { EmptyState } from '@/components/layout/EmptyState';
+import { RepositoryCard, GitProviderCard, AddGitProviderDialog, GitProviderType } from './_components';
 import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
 
 export default function RepositoriesPage() {
