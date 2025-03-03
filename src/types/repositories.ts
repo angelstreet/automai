@@ -6,8 +6,10 @@ export type SyncStatus = 'IDLE' | 'SYNCING' | 'ERROR' | 'SYNCED';
 
 export interface GitProvider {
   id: string;
-  name: GitProviderType;
+  type: GitProviderType;
   displayName: string;
+  serverUrl?: string;
+  lastSyncedAt?: string;
   userId: string;
   accessToken?: string;
   refreshToken?: string;

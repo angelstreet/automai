@@ -1,7 +1,7 @@
 {
   "Index": {
     "title": "Automatisez votre infrastructure avec l'IA",
-    "description": "Automai est une plateforme d'automatisation d'infrastructure propulsée par l'IA qui vous aide à gérer votre infrastructure facilement. Déployez, surveillez et mettez à l'échelle vos applications en toute confiance.",
+    "description": "Automai est une plateforme d'automatisation d'infrastructure alimentée par l'IA qui vous aide à gérer votre infrastructure facilement. Déployez, surveillez et mettez à l'échelle vos applications en toute confiance.",
     "getStarted": "Commencer",
     "learnMore": "En savoir plus"
   },
@@ -23,12 +23,12 @@
     "loginDescription": "Entrez votre email et mot de passe pour vous connecter",
     "loginButton": "Se connecter",
     "loggingIn": "Connexion en cours...",
-    "loginHeroText": "Automatisez votre flux de test avec des solutions propulsées par l'IA.",
+    "loginHeroText": "Automatisez votre flux de travail de test avec des solutions alimentées par l'IA.",
     "signupTitle": "Créer un compte",
-    "signupDescription": "Entrez vos informations pour créer un compte",
-    "signupButton": "S'inscrire",
-    "signingUp": "Inscription en cours...",
-    "signupHeroText": "Rejoignez des milliers d'équipes qui automatisent leur flux de test.",
+    "signupDescription": "Entrez vos informations pour créer votre compte",
+    "signupButton": "Créer un compte",
+    "signingUp": "Création du compte...",
+    "signupHeroText": "Rejoignez des milliers d'équipes qui automatisent leur flux de travail de test.",
     "emailPlaceholder": "nom@exemple.com",
     "passwordPlaceholder": "Entrez votre mot de passe",
     "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
@@ -43,7 +43,7 @@
       "emailRequired": "L'email est requis",
       "passwordRequired": "Le mot de passe est requis",
       "emailInvalid": "Veuillez entrer un email valide",
-      "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères"
+      "passwordTooShort": "Le mot de passe doit comporter au moins 8 caractères"
     }
   },
   "Common": {
@@ -67,7 +67,7 @@
     "noData": "Aucune donnée disponible",
     "devices": "Appareils",
     "hosts": "Hôtes",
-    "managehosts": "Gérez vos hôtes et conteneurs",
+    "managehosts": "Gérer vos hôtes et conteneurs",
     "refresh": "Actualiser",
     "table_view": "Vue tableau",
     "addhost": "Ajouter un hôte",
@@ -87,7 +87,7 @@
     "connect": "Connecter",
     "disconnect": "Déconnecter",
     "terminal": "Terminal",
-    "analytics": "Analyses",
+    "analytics": "Analytiques",
     "logs": "Journaux",
     "settings": "Paramètres",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet hôte ?",
@@ -100,8 +100,8 @@
     "metrics": "Métriques",
     "form": {
       "name": "Nom",
-      "namePlaceholder": "Nom de l'hôte (lettres minuscules, chiffres et tirets uniquement)",
-      "nameHint": "Seuls les lettres minuscules, les chiffres et les tirets sont autorisés",
+      "namePlaceholder": "Nom de l'hôte (lettres minuscules, chiffres et traits d'union uniquement)",
+      "nameHint": "Seuls les lettres minuscules, les chiffres et les traits d'union sont autorisés",
       "connection": "Connexion",
       "selectType": "Sélectionner le type",
       "ipAddress": "Adresse IP",
@@ -118,10 +118,10 @@
       "connectionFailed": "Échec de la connexion",
       "createFailed": "Échec de la création de la connexion",
       "unknownError": "Une erreur inconnue s'est produite",
-      "timeout": "La connexion a expiré. Veuillez vérifier si l'adresse IP et le port sont corrects et que les pare-feu autorisent la connexion.",
-      "refused": "Connexion refusée. Veuillez vérifier si le service est en cours d'exécution sur l'hôte cible et si le port est correct.",
+      "timeout": "Délai de connexion dépassé. Veuillez vérifier que l'adresse IP et le port sont corrects et que les pare-feu autorisent la connexion.",
+      "refused": "Connexion refusée. Veuillez vérifier que le service est en cours d'exécution sur l'hôte cible et que le port est correct.",
       "authentication": "Échec de l'authentification. Veuillez vérifier votre nom d'utilisateur et votre mot de passe.",
-      "hostConnection": "Impossible de se connecter à l'hôte distant. Veuillez vérifier vos détails de connexion.",
+      "hostConnection": "Échec de la connexion à l'hôte distant. Veuillez vérifier vos détails de connexion.",
       "testFailed": "Le test de connexion a échoué",
       "fingerprintFailed": "Échec de la vérification de l'empreinte digitale"
     },
@@ -132,7 +132,7 @@
   },
   "Dashboard": {
     "title": "Tableau de bord",
-    "overview": "Vue d'ensemble",
+    "overview": "Aperçu",
     "description": "Bienvenue sur votre tableau de bord",
     "welcome": "Bon retour !"
   },
@@ -146,7 +146,7 @@
     "email": "Email",
     "name": "Nom",
     "avatar": "Avatar",
-    "changeAvatar": "Changer l'avatar",
+    "changeAvatar": "Changer d'avatar",
     "removeAvatar": "Supprimer l'avatar",
     "accountSettings": "Paramètres du compte",
     "manageSettings": "Gérer les paramètres",
@@ -179,5 +179,23 @@
     "free": "Gratuit",
     "pro": "Pro",
     "team": "Équipe"
+  },
+  "repositories": {
+    "repositories": "Dépôts",
+    "repositories_description": "Gérer vos dépôts Git",
+    "add_provider": "Ajouter un fournisseur Git",
+    "no_providers": "Aucun fournisseur Git trouvé. Ajoutez un fournisseur pour commencer.",
+    "no_repositories": "Aucun dépôt trouvé. Ajoutez un fournisseur Git pour importer des dépôts.",
+    "provider_type": "Type de fournisseur",
+    "display_name": "Nom d'affichage",
+    "server_url": "URL du serveur",
+    "access_token": "Jeton d'accès",
+    "connect": "Connecter",
+    "connecting": "Connexion en cours...",
+    "refresh": "Actualiser",
+    "sync": "Synchroniser",
+    "delete": "Supprimer",
+    "confirm_delete": "Êtes-vous sûr de vouloir supprimer ce fournisseur Git ?",
+    "delete_warning": "Cela supprimera tous les dépôts associés. Cette action ne peut pas être annulée."
   }
 }

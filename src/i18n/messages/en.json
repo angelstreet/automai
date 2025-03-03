@@ -179,5 +179,23 @@
     "free": "Free",
     "pro": "Pro",
     "team": "Team"
+  },
+  "repositories": {
+    "repositories": "Repositories",
+    "repositories_description": "Manage your Git repositories",
+    "add_provider": "Add Git Provider",
+    "no_providers": "No Git providers found. Add a provider to get started.",
+    "no_repositories": "No repositories found. Add a Git provider to import repositories.",
+    "provider_type": "Provider Type",
+    "display_name": "Display Name",
+    "server_url": "Server URL",
+    "access_token": "Access Token",
+    "connect": "Connect",
+    "connecting": "Connecting...",
+    "refresh": "Refresh",
+    "sync": "Sync",
+    "delete": "Delete",
+    "confirm_delete": "Are you sure you want to delete this Git provider?",
+    "delete_warning": "This will remove all associated repositories. This action cannot be undone."
   }
 }
