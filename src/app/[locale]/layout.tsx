@@ -52,19 +52,15 @@ export default async function LocaleLayout(props: Props) {
   const theme = themeCookie ? themeCookie.value : 'system';
 
   return (
-    <html lang={validLocale} suppressHydrationWarning>
-      <body className={inter.className}>
-        <UserProvider>
-          <RoleProvider>
-            <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
-              <ThemeProvider defaultTheme={theme} storageKey="theme">
-                <RouteGuard>{children}</RouteGuard>
-                <ToasterProvider />
-              </ThemeProvider>
-            </NextIntlClientProvider>
-          </RoleProvider>
-        </UserProvider>
-      </body>
-    </html>
+    <UserProvider>
+      <RoleProvider>
+        <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
+          <ThemeProvider defaultTheme={theme} storageKey="theme">
+            <RouteGuard>{children}</RouteGuard>
+            <ToasterProvider />
+          </ThemeProvider>
+        </NextIntlClientProvider>
+      </RoleProvider>
+    </UserProvider>
   );
 }
