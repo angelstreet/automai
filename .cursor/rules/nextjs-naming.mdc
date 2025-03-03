@@ -1,7 +1,7 @@
 ---
-description: 
-globs: 
-alwaysApply: false
+description: Project naming convention
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
 ---
 # Next.js Naming Conventions
 
