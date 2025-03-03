@@ -8,7 +8,7 @@ import {
   SIDEBAR_WIDTH_ICON,
   SIDEBAR_KEYBOARD_SHORTCUT,
 } from '@/constants/sidebar';
-import { SidebarContext } from '@/context/SidebarContext';
+import { SidebarContext, SidebarProvider as ContextSidebarProvider } from '@/context/SidebarContext';
 import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 import { SidebarProviderProps } from '@/types/sidebar';
@@ -80,7 +80,7 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
     );
 
     return (
-      <SidebarContext.Provider value={contextValue}>
+      <ContextSidebarProvider defaultOpen={defaultOpen}>
         <TooltipProvider delayDuration={0}>
           <div
             style={
@@ -100,7 +100,7 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
             {children}
           </div>
         </TooltipProvider>
-      </SidebarContext.Provider>
+      </ContextSidebarProvider>
     );
   },
 );
