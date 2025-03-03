@@ -49,3 +49,15 @@ const processEnv = {
 
 // Validate and export environment configuration
 export const env = envSchema.parse(processEnv);
+
+export const isCodespace = () => Boolean(process.env.CODESPACE);
+export const isDevelopment = () => process.env.NODE_ENV === 'development';
+export const isProduction = () => process.env.NODE_ENV === 'production';
+export const isTest = () => process.env.NODE_ENV === 'test';
+
+export const getBaseUrl = () => {
+  if (process.env.CODESPACE) {
+    return `https://${process.env.CODESPACE_NAME}-3000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
+  }
+  return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+};

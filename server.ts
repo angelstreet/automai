@@ -1,18 +1,7 @@
 import dotenv from 'dotenv';
 
 // Load environment variables before any imports that might use them
-const envFile = (() => {
-  switch (process.env.NODE_ENV as 'development' | 'production' | 'test' | 'codespace') {
-    case 'production':
-      return '.env.production';
-    case 'test':
-      return '.env.test';
-    case 'codespace':
-      return '.env.codespace';
-    default:
-      return '.env.development';
-  }
-})();
+const envFile = process.env.ENV_FILE || '.env.development';
 
 console.log(`Loading environment from ${envFile}`);
 dotenv.config({ path: envFile });
