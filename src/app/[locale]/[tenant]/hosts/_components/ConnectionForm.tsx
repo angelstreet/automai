@@ -57,7 +57,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
   const [requireVerification, setRequireVerification] = useState(false);
 
   const handleTypeChange = (value: string) => {
-    setConnectionType(_value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');
+    setConnectionType(value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');
     onChange({
       ...formData,
       type: value,
@@ -75,7 +75,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
 
   // Handle keydown event to trigger test connection on Enter
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (_e.key === 'Enter' && !testing) {
+    if (e.key === 'Enter' && !testing) {
       e.preventDefault();
       testConnection();
     }
@@ -107,7 +107,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         hostId: formData.id,
       });
 
-      if (_data.requireVerification) {
+      if (data.requireVerification) {
         setRequireVerification(true);
         setFingerprint(data.fingerprint);
         setTestError(data.message);

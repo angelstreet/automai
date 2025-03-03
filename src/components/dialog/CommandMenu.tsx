@@ -14,7 +14,18 @@ import {
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { useSearch } from '@/context/SearchContext';
 import { useTheme } from '@/context/ThemeContext';
-import { sidebarData } from '@/data/sidebarData';
+import { _sidebarData as sidebarData } from '@/data/sidebarData';
+
+interface NavItem {
+  title: string;
+  url?: string;
+  items?: NavItem[];
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
 
 export function CommandMenu() {
   const navigate = useNavigate();
@@ -35,9 +46,9 @@ export function CommandMenu() {
       <CommandList>
         <ScrollArea type="hover" className="h-72 pr-1">
           <CommandEmpty>No results found.</CommandEmpty>
-          {sidebarData.navGroups.map((group) => (
+          {sidebarData.navGroups.map((group: NavGroup) => (
             <CommandGroup key={group.title} heading={group.title}>
-              {group.items.map((navItem, i) => {
+              {group.items.map((navItem: NavItem, i: number) => {
                 if (navItem.url)
                   return (
                     <CommandItem
@@ -54,7 +65,7 @@ export function CommandMenu() {
                     </CommandItem>
                   );
 
-                return navItem.items?.map((subItem, i) => (
+                return navItem.items?.map((subItem: NavItem, i: number) => (
                   <CommandItem
                     key={`${subItem.url}-${i}`}
                     value={subItem.title}

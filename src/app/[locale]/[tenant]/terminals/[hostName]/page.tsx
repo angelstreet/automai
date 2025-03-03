@@ -7,7 +7,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { useToast } from '@/components/shadcn/use-toast';
 
-import { Terminal } from '../../hosts/_components/Terminal';
+import { Terminal } from '../_components/Terminal';
 
 interface MachineConnection {
   id: string;
@@ -15,8 +15,11 @@ interface MachineConnection {
   ip: string;
   type: string;
   port: number;
-  user: string;
+  username: string;
   password: string;
+  host?: string;
+  user?: string;
+  os_type?: string;
 }
 
 export default function TerminalPage() {

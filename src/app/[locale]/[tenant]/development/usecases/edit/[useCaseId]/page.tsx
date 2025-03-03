@@ -4,11 +4,17 @@ import Editor from '@monaco-editor/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
+import type { Session } from 'next-auth';
 
 import { Button } from '@/components/shadcn/button';
 import { Card } from '@/components/shadcn/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useUser } from '@/context/UserContext';
+
+// Extend Session type
+type CustomSession = Session & {
+  accessToken: string;
+};
 
 type TestCase = {
   id: string;
@@ -34,7 +40,7 @@ export default function UseCaseEditPage() {
   const params = useParams();
   const { useCaseId } = params;
   const { user } = useUser();
-  const { data: session } = useSession();
+  const { data: session } = useSession() as { data: CustomSession | null };
 
   // Fetch use case and project data
   useEffect(() => {

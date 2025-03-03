@@ -24,8 +24,9 @@ export const runPython = async (script: string): Promise<IPCResponse<string>> =>
   try {
     const result = await ipcRenderer.invoke('run-python', script);
     return { success: true, data: result };
-  } catch (error) {
-    return { success: false, message: error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    return { success: false, message };
   }
 };
 
@@ -37,8 +38,9 @@ export const syncGit = async (): Promise<IPCResponse<string>> => {
   try {
     const result = await ipcRenderer.invoke('git-sync');
     return result;
-  } catch (error) {
-    return { success: false, message: error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    return { success: false, message };
   }
 };
 
@@ -50,8 +52,9 @@ export const store = {
     }
     try {
       return await ipcRenderer.invoke('store-set', { key, value });
-    } catch (error) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      return { success: false, message };
     }
   },
 
@@ -63,8 +66,9 @@ export const store = {
     try {
       const value = await ipcRenderer.invoke('store-get', { key });
       return { success: true, data: value };
-    } catch (error) {
-      return { success: false, message: error.message };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      return { success: false, message };
     }
   },
 };

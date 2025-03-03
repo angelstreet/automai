@@ -2,8 +2,16 @@
 
 import { useSession } from 'next-auth/react';
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import type { Session } from 'next-auth';
 
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
+
+type PlanType = keyof typeof getPlanFeatures;
+
+// Extend Session type
+interface CustomSession extends Session {
+  accessToken: string;
+}
 
 type User = {
   id: string;
@@ -12,7 +20,7 @@ type User = {
   role: string;
   tenantId: string | null;
   tenantName: string | null;
-  plan: string;
+  plan: PlanType;
 };
 
 type UserContextType = {
@@ -37,7 +45,7 @@ const SESSION_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession() as { data: CustomSession | null; status: string };
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -241,7 +249,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const checkFeature = (feature: string): boolean => {
     if (!user) return false;
-    return isFeatureEnabled(user.plan, feature as keyof typeof getPlanFeatures);
+    return isFeatureEnabled(user.plan as PlanType, feature as keyof typeof getPlanFeatures);
   };
 
   const checkCanCreateMore = (
@@ -249,7 +257,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     currentCount: number,
   ): boolean => {
     if (!user) return false;
-    return canCreateMore(user.plan, feature, currentCount);
+    return canCreateMore(user.plan as PlanType, feature, currentCount);
   };
 
   const logout = async () => {

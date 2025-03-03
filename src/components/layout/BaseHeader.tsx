@@ -1,15 +1,15 @@
 import React from 'react';
 
 import { Separator } from '@/components/shadcn/separator';
-import { SidebarTrigger } from '@/components/sidebar';
+import { SidebarTrigger } from '@/components/Sidebar/SidebarTrigger';
 import { cn } from '@/lib/utils';
 
-interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
+interface BaseHeaderProps extends React.HTMLAttributes<HTMLElement> {
   fixed?: boolean;
   ref?: React.Ref<HTMLElement>;
 }
 
-export const Header = ({ className, fixed, children, ...props }: HeaderProps) => {
+export const BaseHeader = ({ className, fixed, children, ...props }: BaseHeaderProps) => {
   const [offset, setOffset] = React.useState(0);
 
   React.useEffect(() => {
@@ -41,4 +41,4 @@ export const Header = ({ className, fixed, children, ...props }: HeaderProps) =>
   );
 };
 
-Header.displayName = 'Header';
+BaseHeader.displayName = 'BaseHeader';

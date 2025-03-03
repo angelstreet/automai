@@ -2,9 +2,9 @@
 
 import { useSession } from 'next-auth/react';
 
-import { NavGroup } from '@/components/Layout/NavGroup';
-import { NavUser } from '@/components/Layout/NavUser';
-import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
+import { NavGroup } from '@/components/layout/NavGroup';
+import { NavUser } from '@/components/layout/NavUser';
+import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
 import {
   Sidebar,
   SidebarContent,

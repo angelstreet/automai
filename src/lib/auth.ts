@@ -1,13 +1,35 @@
 import { compare } from 'bcrypt';
-import { NextAuthOptions } from 'next-auth';
+import type { Session, User } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
+import type { DefaultSession } from 'next-auth/core/types';
 
 // Remove direct import of CredentialsProvider
 // import CredentialsProvider from 'next-auth/providers/credentials';
 import { logger } from './logger';
 import { prisma } from './prisma';
 
+// Extend next-auth types
+interface ExtendedUser extends User {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  tenantId: string;
+  tenantName: string;
+}
+
+interface ExtendedSession extends Session {
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    tenantId: string;
+    tenantName: string;
+  } & DefaultSession['user'];
+}
+
 // Create a function to get the auth options with dynamically loaded providers
-export async function getAuthOptions(): Promise<NextAuthOptions> {
+export async function getAuthOptions() {
   // Dynamically import the provider
   const CredentialsProvider = (await import('next-auth/providers/credentials')).default;
 
@@ -42,7 +64,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
               },
             });
 
-            if (!user) {
+            if (!user || !user.password) {
               logger.warn('User not found', {
                 action: 'AUTH_USER_NOT_FOUND',
                 data: { email: credentials.email },
@@ -63,7 +85,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
 
             logger.info('User authenticated successfully', {
               userId: user.id,
-              tenantId: user.tenantId,
+              tenantId: user.tenantId || undefined,
               action: 'AUTH_SUCCESS',
             });
 
@@ -72,7 +94,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
               email: user.email,
               name: user.name,
               role: user.role,
-              tenantId: user.tenantId,
+              tenantId: user.tenantId || '',
               tenantName: user.tenant?.name || 'Unknown Tenant',
             };
           } catch (error) {
@@ -86,7 +108,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
       }),
     ],
     callbacks: {
-      async jwt({ token, user }) {
+      async jwt({ token, user }: { token: JWT; user?: ExtendedUser }) {
         if (user) {
           token.id = user.id;
           token.email = user.email;
@@ -96,7 +118,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
         }
         return token;
       },
-      async session({ session, token }) {
+      async session({ session, token }: { session: ExtendedSession; token: JWT }) {
         if (token) {
           session.user.id = token.id as string;
           session.user.email = token.email as string;
@@ -107,11 +129,11 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
         return session;
       },
     },
-  };
+  } as const;
 }
 
 // For backward compatibility, export a static version
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   session: {
     strategy: 'jwt',
   },
@@ -120,7 +142,7 @@ export const authOptions: NextAuthOptions = {
   },
   providers: [],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user?: ExtendedUser }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -130,7 +152,7 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: ExtendedSession; token: JWT }) {
       if (token) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
@@ -141,4 +163,4 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-};
+} as const;

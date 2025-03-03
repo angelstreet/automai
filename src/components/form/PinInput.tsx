@@ -30,6 +30,7 @@ export interface PinInputProps {
 export interface PinInputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   mask?: boolean;
   inputKey?: string;
+  name?: string;
 }
 
 export interface UsePinInputProps {
@@ -50,7 +51,10 @@ export function getValidChildren(children: React.ReactNode) {
 
 export function getInputFieldCount(children: React.ReactNode) {
   return React.Children.toArray(children).filter((child) => {
-    return React.isValidElement(child) && child.type.name === 'PinInputField';
+    return React.isValidElement(child) && 
+      typeof child.type === 'function' && 
+      'displayName' in child.type && 
+      child.type.displayName === 'PinInputField';
   }).length;
 }
 
@@ -277,7 +281,7 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(
     }, [autoFocus, refMap]);
 
     const clones = validChildren.map((child, index) => {
-      if (child.type === PinInputField) {
+      if (React.isValidElement(child) && child.type === PinInputField) {
         return React.cloneElement(child, {
           name,
           inputKey: `input-${index}`,
@@ -301,7 +305,7 @@ export const PinInput = React.forwardRef<HTMLDivElement, PinInputProps>(
               refMap?.delete(index);
             }
           },
-        });
+        } as React.HTMLAttributes<HTMLInputElement> & PinInputFieldProps);
       }
       return child;
     });

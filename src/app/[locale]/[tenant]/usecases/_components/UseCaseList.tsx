@@ -25,7 +25,7 @@ export function UseCaseList({
   onSort,
 }: UseCaseListProps) {
   const getSortIcon = (key: string) => {
-    if (_sortConfig.key !== key) return '↕️';
+    if (sortConfig.key !== key) return '↕️';
     return sortConfig.direction === 'asc' ? '↑' : '↓';
   };
 
@@ -55,7 +55,7 @@ export function UseCaseList({
           <div>{useCase.shortId}</div>
           <div>{useCase.name}</div>
           <div>{useCase.steps.platform}</div>
-          <div>{new Date(_useCase.createdAt).toLocaleDateString()}</div>
+          <div>{new Date(useCase.createdAt).toLocaleDateString()}</div>
           <div>
             {useCase.lastModified ? new Date(useCase.lastModified).toLocaleDateString() : '-'}
           </div>

@@ -1,5 +1,5 @@
 // Add the logs link to the sidebar items
-import { ActivityLogIcon } from '@/components/Icons/ActivityLogIcon';
+import { ActivityLogIcon } from '@/components/icons/ActivityLogIcon';
 
 const _sidebarItems = [
   // ... existing items ...

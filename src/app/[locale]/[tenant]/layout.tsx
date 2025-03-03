@@ -3,7 +3,7 @@
 import Cookies from 'js-cookie';
 import * as React from 'react';
 
-import { SidebarProvider } from '@/components/Sidebar';
+import { SidebarProvider } from '@/context/SidebarContext';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { ToasterProvider } from '@/components/shadcn/toaster';
