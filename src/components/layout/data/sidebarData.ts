@@ -133,12 +133,6 @@ export const sidebarData: SidebarData = {
           icon: Server,
           roles: ['admin', 'developer', 'tester'],
         },
-        {
-          title: 'Terminals',
-          href: '/terminals',
-          icon: MessageSquare,
-          roles: ['admin', 'developer', 'tester'],
-        },
       ],
     },
     {
