@@ -1,57 +1,40 @@
-import { NextResponse } from 'next/server';
-
-/* eslint-disable unused-imports/no-unused-vars */
-import { getServerSession } from 'next-auth';
-
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
 
 type Props = {
-  params: Promise<{ id: string }>;
+  params: {
+    id: string;
+  };
 };
 
 export async function POST(request: Request, { params }: Props) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const useCase = await prisma.useCase.findUnique({
-      where: { id: id },
-      include: {
-        executions: {
-          where: {
-            status: 'RUNNING',
-          },
-          orderBy: {
-            startedAt: 'desc',
-          },
-          take: 1,
-        },
-      },
+      where: { id },
     });
 
     if (!useCase) {
       return NextResponse.json({ error: 'Use case not found' }, { status: 404 });
     }
 
-    if (!useCase.executions?.[0]) {
-      return NextResponse.json({ error: 'No running execution found' }, { status: 400 });
-    }
-
     // Update the execution status
     const execution = await prisma.useCaseExecution.update({
-      where: { id: useCase.executions[0].id },
+      where: {
+        id: useCase.id,
+      },
       data: {
         status: 'STOPPED',
         endedAt: new Date(),
       },
     });
-
-    // TODO: Implement actual use case stopping logic here
-    // This could involve terminating Playwright scripts, etc.
 
     return NextResponse.json(execution);
   } catch (error) {

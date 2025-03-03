@@ -46,42 +46,38 @@ export function CommandMenu() {
       <CommandList>
         <ScrollArea type="hover" className="h-72 pr-1">
           <CommandEmpty>No results found.</CommandEmpty>
-          {sidebarData.navGroups.map((group: NavGroup) => (
-            <CommandGroup key={group.title} heading={group.title}>
-              {group.items.map((navItem: NavItem, i: number) => {
-                if (navItem.url)
-                  return (
-                    <CommandItem
-                      key={`${navItem.url}-${i}`}
-                      value={navItem.title}
-                      onSelect={() => {
-                        runCommand(() => navigate({ to: navItem.url }));
-                      }}
-                    >
-                      <div className="mr-2 flex h-4 w-4 items-center justify-center">
-                        <IconArrowRightDashed className="size-2 text-muted-foreground/80" />
-                      </div>
-                      {navItem.title}
-                    </CommandItem>
-                  );
+          {sidebarData.items.map((navItem: NavItem, i: number) => {
+            if (navItem.url)
+              return (
+                <CommandItem
+                  key={`${navItem.url}-${i}`}
+                  value={navItem.title}
+                  onSelect={() => {
+                    runCommand(() => navigate({ to: navItem.url }));
+                  }}
+                >
+                  <div className="mr-2 flex h-4 w-4 items-center justify-center">
+                    <IconArrowRightDashed className="size-2 text-muted-foreground/80" />
+                  </div>
+                  {navItem.title}
+                </CommandItem>
+              );
 
-                return navItem.items?.map((subItem: NavItem, i: number) => (
-                  <CommandItem
-                    key={`${subItem.url}-${i}`}
-                    value={subItem.title}
-                    onSelect={() => {
-                      runCommand(() => navigate({ to: subItem.url }));
-                    }}
-                  >
-                    <div className="mr-2 flex h-4 w-4 items-center justify-center">
-                      <IconArrowRightDashed className="size-2 text-muted-foreground/80" />
-                    </div>
-                    {subItem.title}
-                  </CommandItem>
-                ));
-              })}
-            </CommandGroup>
-          ))}
+            return navItem.items?.map((subItem: NavItem, i: number) => (
+              <CommandItem
+                key={`${subItem.url}-${i}`}
+                value={subItem.title}
+                onSelect={() => {
+                  runCommand(() => navigate({ to: subItem.url }));
+                }}
+              >
+                <div className="mr-2 flex h-4 w-4 items-center justify-center">
+                  <IconArrowRightDashed className="size-2 text-muted-foreground/80" />
+                </div>
+                {subItem.title}
+              </CommandItem>
+            ));
+          })}
           <CommandSeparator />
           <CommandGroup heading="Theme">
             <CommandItem onSelect={() => runCommand(() => setTheme('light'))}>

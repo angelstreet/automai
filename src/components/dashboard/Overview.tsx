@@ -23,10 +23,13 @@ const options = {
       },
     },
     y: {
+      type: 'linear' as const,
       beginAtZero: true,
       max: 100,
       ticks: {
-        callback: (value: number) => `${value}%`,
+        callback: function(value: number | string) {
+          return `${value}%`;
+        },
       },
     },
   },

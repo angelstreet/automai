@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
+import type { Session } from 'next-auth';
 
 export default function AuthRedirectFallback() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function AuthRedirectFallback() {
 
     if (session?.user) {
       // Use tenant name or default to trial
-      const tenant = session.user.tenantName || 'trial';
+      const tenant = (session.user as Session['user']).tenantName || 'trial';
       console.log('Session found, redirecting to dashboard');
       window.location.href = `/${locale}/${tenant}/dashboard`;
     } else {
