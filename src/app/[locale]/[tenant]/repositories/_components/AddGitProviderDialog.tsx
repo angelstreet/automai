@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { AlertCircle, CheckCircle2, Loader2, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
-import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
+import { testGitProviderConnection } from '@/lib/services/repositories';
 
 // Create a constant object for use in the form
 export const GitProviderTypes = {
@@ -71,20 +71,11 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
     setTestError(null);
 
     try {
-      const baseUrl = selectedType === 'gitea' ? values.serverUrl : 
-                     selectedType === 'github' ? 'https://api.github.com' :
-                     'https://gitlab.com/api/v4';
-
-      const response = await fetchWithAuth(`${baseUrl}/api/v1/user`, {
-        headers: {
-          'Authorization': `token ${values.token}`,
-        },
+      await testGitProviderConnection({
+        type: values.type,
+        serverUrl: values.serverUrl,
+        token: values.token,
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to connect to the Git provider');
-      }
-
       setTestStatus('success');
     } catch (error) {
       setTestStatus('error');

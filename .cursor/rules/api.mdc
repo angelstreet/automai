@@ -5,6 +5,25 @@ globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
 
 # API Implementation Rules
 
+## Required Server Structure
+```
+src/
+  ├── app/
+  │   └── api/           # All API routes MUST be here
+  │       ├── [endpoint]/
+  │       │   ├── route.ts      # Next.js Route Handler
+  │       │   ├── validation.ts  # Request validation
+  │       │   └── schema.ts      # Data schema
+  │       └── ...
+  └── lib/
+      ├── services/      # Business logic & data access
+      │   ├── hosts.ts
+      │   └── ...
+      └── middleware/    # API middleware
+          ├── auth.ts
+          └── validate.ts
+```
+
 ## Route Structure
 
 1. **Base Path**
@@ -50,10 +69,16 @@ globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
    export async function GET() {
      try {
        // Implementation
-       return NextResponse.json({ data });
+       return NextResponse.json({ 
+         success: true,
+         data 
+       });
      } catch (error) {
        return NextResponse.json(
-         { error: 'Error message' },
+         { 
+           success: false,
+           error: 'Error message'
+         },
          { status: 500 }
        );
      }
@@ -67,26 +92,46 @@ globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
    export async function GET() {
      const session = await getServerSession();
      if (!session) {
-       return NextResponse.json(
-         { error: 'Unauthorized' },
-         { status: 401 }
-       );
+       return NextResponse.json({
+         success: false,
+         error: 'Unauthorized'
+       }, { status: 401 });
      }
    }
    ```
 
-## Error Handling
+3. **Request Validation**
+   ```typescript
+   // schema.ts
+   import { z } from 'zod';
+   export const schema = z.object({...});
 
-1. **Standard Error Response**
+   // route.ts
+   const body = await request.json();
+   const validatedData = schema.parse(body);
+   ```
+
+## Standard Response Format
+
+1. **Success Response**
    ```typescript
    {
-     error: string;
-     status: number;
-     details?: any;
+     success: true,
+     message?: string,
+     data?: any
    }
    ```
 
-2. **Status Codes**
+2. **Error Response**
+   ```typescript
+   {
+     success: false,
+     error: string,
+     details?: any
+   }
+   ```
+
+3. **Status Codes**
    - 200: Success
    - 201: Created
    - 400: Bad Request
@@ -95,15 +140,16 @@ globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
    - 404: Not Found
    - 500: Internal Server Error
 
-## API Client Implementation
+## Service Layer Implementation
 
 1. **Service Layer Pattern**
    ```typescript
    // src/lib/services/auth.ts
    export async function getUserProfile() {
      const response = await fetch('/api/auth/profile');
-     if (!response.ok) throw new Error('Failed to fetch profile');
-     return response.json();
+     const data = await response.json();
+     if (!data.success) throw new Error(data.error);
+     return data.data;
    }
    ```
 
@@ -116,6 +162,37 @@ globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
      // Handle error appropriately
    }
    ```
+
+## Documentation Requirements
+
+1. **API Route Documentation**
+   ```typescript
+   /**
+    * @api {get} /api/auth/profile Get User Profile
+    * @apiDescription Fetches the current user's profile
+    * @apiPermission authenticated
+    * @apiSuccess {Object} user User profile data
+    * @apiError {Object} error Error details
+    */
+   ```
+
+2. **Type Definitions**
+   ```typescript
+   interface ApiResponse<T> {
+     success: boolean;
+     message?: string;
+     error?: string;
+     data?: T;
+   }
+   ```
+
+## Security Guidelines
+
+1. **Authentication**: Always use NextAuth.js for authentication
+2. **Validation**: Always validate request data using Zod
+3. **Error Handling**: Never expose internal errors to clients
+4. **Rate Limiting**: Implement rate limiting for public endpoints
+5. **CORS**: Configure CORS appropriately for your environment
 
 ## WebSocket Connections
 
@@ -138,26 +215,4 @@ globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
    
    // ❌ Incorrect: Multiple instances
    const prisma = new PrismaClient();
-   ```
-
-## Documentation Requirements
-
-1. **API Route Documentation**
-   ```typescript
-   /**
-    * @api {get} /api/auth/profile Get User Profile
-    * @apiDescription Fetches the current user's profile
-    * @apiPermission authenticated
-    * @apiSuccess {Object} user User profile data
-    * @apiError {Object} error Error details
-    */
-   ```
-
-2. **Response Types**
-   ```typescript
-   interface ApiResponse<T> {
-     data?: T;
-     error?: string;
-     status: 'success' | 'error';
-   }
    ``` 

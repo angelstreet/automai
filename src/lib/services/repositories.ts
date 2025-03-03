@@ -341,3 +341,34 @@ export async function importRepositoriesFromProvider(providerId: string): Promis
 
   return createdRepos;
 }
+
+interface TestConnectionParams {
+  type: GitProviderType;
+  serverUrl?: string;
+  token: string;
+}
+
+interface ApiResponse<T = any> {
+  success: boolean;
+  message?: string;
+  error?: string;
+  data?: T;
+}
+
+export async function testGitProviderConnection({ type, serverUrl, token }: TestConnectionParams) {
+  const response = await fetch('/api/repositories/test-connection', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ type, serverUrl, token }),
+  });
+
+  const data: ApiResponse = await response.json();
+  
+  if (!data.success) {
+    throw new Error(data.error || 'Failed to test connection');
+  }
+
+  return data;
+}
