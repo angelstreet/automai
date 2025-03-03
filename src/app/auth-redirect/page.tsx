@@ -1,9 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
 import { useSession } from 'next-auth/react';
+import { useEffect } from 'react';
 
 export default function AuthRedirectFallback() {
   const router = useRouter();
@@ -11,7 +10,7 @@ export default function AuthRedirectFallback() {
 
   useEffect(() => {
     console.log('Root auth-redirect fallback loaded');
-    
+
     // Wait for session to be loaded
     if (status === 'loading') return;
 
@@ -38,4 +37,4 @@ export default function AuthRedirectFallback() {
       </div>
     </div>
   );
-} 
+}

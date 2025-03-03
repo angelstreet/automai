@@ -1,5 +1,5 @@
-import { Skeleton } from '@/components/shadcn/skeleton';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/shadcn/card';
+import { Skeleton } from '@/components/shadcn/skeleton';
 
 export default function RepositoriesLoading() {
   return (
@@ -36,4 +36,4 @@ export default function RepositoriesLoading() {
       </div>
     </div>
   );
-} 
+}

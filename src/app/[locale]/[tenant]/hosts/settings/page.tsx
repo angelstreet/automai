@@ -1,8 +1,6 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-
-import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
@@ -13,9 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-
 import { Input } from '@/components/shadcn/input';
-
 import { Label } from '@/components/shadcn/label';
 import {
   Select,
@@ -24,14 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-
 import { Switch } from '@/components/shadcn/switch';
-
 import { useToast } from '@/components/shadcn/use-toast';
-import { toast } from 'sonner';
 
 export default function HostsSettingsPage() {
-  const params = useParams();
+  const _params = useParams();
   const { toast } = useToast();
 
   const [settings, setSettings] = useState({
@@ -89,7 +82,7 @@ export default function HostsSettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="defaultMemory">Default Memory (MB)</Label>
+              <Label htmlFor="defaultMemory">Default Memory (_MB)</Label>
               <Input
                 id="defaultMemory"
                 type="number"
@@ -100,7 +93,7 @@ export default function HostsSettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="defaultDisk">Default Disk Size (GB)</Label>
+              <Label htmlFor="defaultDisk">Default Disk Size (_GB)</Label>
               <Input
                 id="defaultDisk"
                 type="number"
@@ -170,7 +163,7 @@ export default function HostsSettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="backupInterval">Backup Interval (hours)</Label>
+              <Label htmlFor="backupInterval">Backup Interval (_hours)</Label>
               <Input
                 id="backupInterval"
                 type="number"

@@ -1,4 +1,5 @@
 import { locales } from '@/config';
+
 import { HomePage } from './_components/HomePage';
 
 export const dynamic = 'force-static';

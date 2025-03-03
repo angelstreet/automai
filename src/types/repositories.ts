@@ -69,4 +69,4 @@ export interface GitProviderUpdateInput {
 export interface OAuthState {
   provider: GitProviderType;
   redirectUrl: string;
-} 
+}

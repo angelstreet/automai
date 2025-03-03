@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { prisma } from '@/lib/prisma';
+
 import { getWebSocketServer } from '@/lib/services/websocket';
-import { logger } from '@/lib/logger';
-import { getCompatibleConnection } from '@/lib/services/terminal';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const _runtime = 'nodejs';
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   console.log('Terminal init API called');
   try {
     console.log('Authentication bypassed for debugging');
@@ -20,7 +17,7 @@ export async function POST(request: NextRequest) {
       console.error('Failed to initialize WebSocket server');
       return NextResponse.json(
         { success: false, error: 'Failed to initialize WebSocket server' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -30,7 +27,7 @@ export async function POST(request: NextRequest) {
     console.error('Error initializing terminal:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to initialize terminal' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

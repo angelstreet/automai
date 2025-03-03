@@ -58,7 +58,9 @@ export async function GET(request: Request) {
     }
 
     // Get the appropriate provider service
-    const providerService = repositoryService.getGitProviderService(provider.name as GitProviderType);
+    const providerService = repositoryService.getGitProviderService(
+      provider.name as GitProviderType,
+    );
 
     // Exchange the code for an access token
     const tokenData = await providerService.exchangeCodeForToken(code, redirectUri);
@@ -75,4 +77,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-} 
+}

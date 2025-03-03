@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import * as React from 'react';
 
 import Link from 'next/link';
-import * as React from 'react';
+
+import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
 
 import { ButtonProps, buttonVariants } from '@/components/shadcn/button';
 import { cn } from '@/lib/utils';

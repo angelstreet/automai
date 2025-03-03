@@ -6,10 +6,7 @@ import { useEffect, useState } from 'react';
 // Import chart config
 import '@/lib/chart';
 
-const LineChart = dynamic(
-  () => import('react-chartjs-2').then((mod) => mod.Line),
-  { ssr: false }
-);
+const LineChart = dynamic(() => import('react-chartjs-2').then((mod) => mod.Line), { ssr: false });
 
 const options = {
   responsive: true,
@@ -64,4 +61,4 @@ export function Overview() {
       <LineChart options={options} data={data} />
     </div>
   );
-} 
+}

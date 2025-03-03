@@ -10,16 +10,8 @@ import {
 } from 'chart.js';
 
 // Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-export const chartConfig = {
+export const _chartConfig = {
   // Add any global chart configuration here
-}; 
+};

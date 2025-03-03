@@ -1,15 +1,11 @@
 'use client';
 
 import { AlertCircle } from 'lucide-react';
-
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
-
 import { useToast } from '@/components/shadcn/use-toast';
-import { logger } from '@/lib/logger';
-import { toast } from 'sonner';
 
 import { Terminal } from '../../hosts/_components/Terminal';
 
@@ -60,19 +56,19 @@ export default function TerminalPage() {
       console.log(`Fetching host by name: ${name}`);
       // If not in session storage, fetch from API
       const response = await fetch(`/api/hosts/byName/${name}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error response from API:', errorData);
         throw new Error(errorData.error || 'Failed to fetch host');
       }
-      
+
       const data = await response.json();
       if (!data.success || !data.data) {
         console.error('Invalid host data returned:', data);
         throw new Error('Invalid host data');
       }
-      
+
       console.log('Host data fetched successfully:', data.data.name);
       return data.data;
     } catch (error) {

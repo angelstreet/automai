@@ -1,10 +1,17 @@
 'use client';
 
+import {
+  useMutation,
+  useQueryClient,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
 import { RefreshCcw, Plus, Server } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect, useRef } from 'react';
-import { useMutation, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,12 +24,12 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
 import { Tooltip, TooltipContent, TooltipProvider } from '@/components/shadcn/tooltip';
+import { hostsApi } from '@/lib/api/hosts';
 import { cn } from '@/lib/utils';
 import { Host } from '@/types/hosts';
+
 import { ConnectHostDialog } from './ConnectHostDialog';
 import { HostOverview } from './HostOverview';
-import { toast } from 'sonner';
-import { hostsApi } from '@/lib/api/hosts';
 
 // Create a client with default options
 const queryClient = new QueryClient({
@@ -57,11 +64,11 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
   useEffect(() => {
     // Set up the ref to track component mount state
     isMounted.current = true;
-    
+
     // Function to test connection for a single host
     const testHostConnection = async (host: Host) => {
       if (!isMounted.current) return;
-      
+
       try {
         const data = await hostsApi.testConnection(locale, {
           type: host.type,
@@ -71,78 +78,82 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           password: undefined, // We don't have access to the password in the client
           hostId: host.id,
         });
-        
+
         // Debug the response
         console.log(`Connection test response for ${host.name}:`, data);
-        
+
         // Only update if component is still mounted
         if (isMounted.current) {
           // Update the host status based on the connection test
-          setHosts(prevHosts => 
-            prevHosts.map(h => 
-              h.id === host.id 
-                ? { 
-                    ...h, 
+          setHosts((prevHosts) =>
+            prevHosts.map((h) =>
+              h.id === host.id
+                ? {
+                    ...h,
                     status: data.success ? 'connected' : 'failed',
-                    errorMessage: !data.success ? (data.message || 'Connection failed') : undefined
-                  } 
-                : h
-            )
+                    errorMessage: !data.success ? data.message || 'Connection failed' : undefined,
+                  }
+                : h,
+            ),
           );
-          
+
           // Update the cache in React Query
           queryClient.setQueryData(['hosts'], (oldData: Host[] | undefined) => {
             if (!oldData) return oldData;
-            return oldData.map(h => 
-              h.id === host.id 
-                ? { 
-                    ...h, 
+            return oldData.map((h) =>
+              h.id === host.id
+                ? {
+                    ...h,
                     status: data.success ? 'connected' : 'failed',
-                    errorMessage: !data.success ? (data.message || 'Connection failed') : undefined
-                  } 
-                : h
+                    errorMessage: !data.success ? data.message || 'Connection failed' : undefined,
+                  }
+                : h,
             );
           });
         }
-      } catch (error) {
-        console.error(`Background connection test failed for host ${host.name}:`, error);
+      } catch (_error) {
+        console.error(`Background connection test failed for host ${host.name}:`,_error);
         // We don't show toasts for background tests to avoid UI noise
-        
+
         // Update status to failed if there was an error
         if (isMounted.current) {
-          setHosts(prevHosts => 
-            prevHosts.map(h => 
-              h.id === host.id 
-                ? { ...h, status: 'failed', errorMessage: error instanceof Error ? error.message : 'Connection failed' } 
-                : h
-            )
+          setHosts((prevHosts) =>
+            prevHosts.map((h) =>
+              h.id === host.id
+                ? {
+                    ...h,
+                    status: 'failed',
+                    errorMessage: error instanceof Error ? error.message : 'Connection failed',
+                  }
+                : h,
+            ),
           );
         }
       }
     };
-    
+
     // Test connections in sequence with delays to avoid overwhelming the server
     const testAllConnections = async () => {
       // Wait for initial render to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       if (!isMounted.current) return;
-      
+
       // Use a local copy of the initial hosts to avoid dependency on changing state
       const hostsToTest = [...initialHosts];
-      
+
       // Test each host with a delay between tests
       for (const host of hostsToTest) {
         if (!isMounted.current) break;
         await testHostConnection(host);
         // Add a small delay between tests to avoid overwhelming the server
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     };
-    
+
     // Start the background testing
     testAllConnections();
-    
+
     // Cleanup function
     return () => {
       isMounted.current = false;
@@ -158,7 +169,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       setHosts(freshHosts);
       queryClient.setQueryData(['hosts'], freshHosts);
       toast.success('Hosts refreshed');
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to refresh hosts');
     } finally {
       setIsRefreshing(false);
@@ -174,7 +185,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       setHostToDelete(null);
       setIsDeleteDialogOpen(false);
     },
-    onError: (error) => {
+    onError: (_error) => {
       toast.error(error instanceof Error ? error.message : 'Failed to delete host');
     },
   });
@@ -277,4 +288,4 @@ export function HostsPageClient(props: HostsPageClientProps) {
       <HostsPageContent {...props} />
     </QueryClientProvider>
   );
-} 
+}

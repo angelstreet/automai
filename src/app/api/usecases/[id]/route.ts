@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
+
+/* eslint-disable unused-imports/no-unused-vars */
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
@@ -84,7 +85,7 @@ export async function DELETE(request: Request, { params }: Props) {
       where: { id: id },
     });
 
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(_null, { status: 204 });
   } catch (error) {
     console.error('Error deleting use case:', error);
     return NextResponse.json({ error: 'Failed to delete use case' }, { status: 500 });

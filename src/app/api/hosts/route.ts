@@ -11,10 +11,7 @@ export async function GET() {
     return NextResponse.json(hosts);
   } catch (error) {
     console.error('Error in GET /api/hosts:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch hosts' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch hosts' }, { status: 500 });
   }
 }
 
@@ -62,18 +59,12 @@ export async function DELETE(request: Request) {
   try {
     const id = request.url.split('/').pop();
     if (!id) {
-      return NextResponse.json(
-        { error: 'Host ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Host ID is required' }, { status: 400 });
     }
     await deleteHost(id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error in DELETE /api/hosts:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete host' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to delete host' }, { status: 500 });
   }
 }

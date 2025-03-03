@@ -24,7 +24,7 @@ const languages = [
 ];
 
 export function LanguageSettings() {
-  const router = useRouter();
+  const _router = useRouter();
   const params = useParams();
   const t = useTranslations('Settings');
   const currentLocale = params.locale as string;

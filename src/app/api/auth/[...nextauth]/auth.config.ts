@@ -88,12 +88,12 @@ export async function getProviders() {
     });
 
     // Filter out any providers that failed to load
-    const providers = [googleProvider, githubProvider, credentialsProvider].filter(Boolean);
+    const providers = [googleProvider, githubProvider, credentialsProvider].filter(_Boolean);
 
     console.log(`Successfully loaded ${providers.length} providers`);
 
     // Ensure we have at least one provider
-    if (providers.length === 0) {
+    if (_providers.length === 0) {
       console.warn('No authentication providers loaded, adding fallback credentials provider');
       // Add a simple fallback provider to prevent complete auth failure
       const { default: CredentialsProvider } = await import('next-auth/providers/credentials');

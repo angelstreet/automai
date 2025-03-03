@@ -13,7 +13,7 @@ interface HeaderProps {
 }
 
 export function SiteHeader({ showAuth = true }: HeaderProps) {
-  const pathname = usePathname();
+  const _pathname = usePathname();
   const locale = useLocale();
 
   return (

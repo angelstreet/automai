@@ -35,7 +35,7 @@ async function main() {
       dev,
       hostname,
       port,
-      enableWebSockets: false
+      enableWebSockets: false,
     });
 
     // Get the actual port the server is listening on
@@ -62,12 +62,12 @@ async function shutdown(signal: string) {
     console.log(`Ignoring additional ${signal} signal, shutdown already in progress`);
     return;
   }
-  
+
   // Set flag to prevent multiple shutdown procedures
   isShuttingDown = true;
-  
+
   console.log(`\nReceived ${signal}. Shutting down server...`);
-  
+
   // Force exit immediately on second SIGINT
   if (signal === 'SIGINT') {
     process.on('SIGINT', () => {
@@ -75,13 +75,13 @@ async function shutdown(signal: string) {
       process.exit(0);
     });
   }
-  
+
   // Set a timeout to force exit if shutdown takes too long
   const forceExitTimeout = setTimeout(() => {
     console.error('Shutdown timed out after 1s, forcing exit');
     process.exit(0);
   }, 1000);
-  
+
   try {
     await stopServer();
     console.log('Server shut down successfully');
@@ -103,7 +103,7 @@ process.on('uncaughtException', (err) => {
     console.log('Port in use, waiting for port incrementing logic to handle it...');
     return;
   }
-  
+
   console.error('Uncaught exception:', err);
   shutdown('uncaughtException');
 });

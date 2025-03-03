@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/Sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarTrigger,
-} from '@/components/Sidebar';
 
 interface NavUserProps {
   user: {

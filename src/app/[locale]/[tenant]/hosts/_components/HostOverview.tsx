@@ -10,7 +10,6 @@ import { ConnectHostDialog } from './ConnectHostDialog';
 import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
 import { StatusSummary } from './StatusSummary';
-import { toast } from 'sonner';
 
 interface HostOverviewProps {
   hosts: Host[];
@@ -94,7 +93,7 @@ export function HostOverview({
   };
 
   // Handle bulk refresh
-  const handleBulkRefresh = async () => {
+  const _handleBulkRefresh = async () => {
     if (onTestConnection) {
       let successCount = 0;
       for (const host of filteredHosts) {

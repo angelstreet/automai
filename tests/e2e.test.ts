@@ -1,7 +1,6 @@
 jest.setTimeout(30000);
 
-import { launch } from 'puppeteer';
-import { Browser, Page } from 'puppeteer';
+import { launch, Browser, Page } from 'puppeteer';
 
 describe('Automai Homepage', () => {
   let browser: Browser;

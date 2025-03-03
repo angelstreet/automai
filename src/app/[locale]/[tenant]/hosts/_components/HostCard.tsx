@@ -8,11 +8,9 @@ import {
   XCircle,
   ScrollText,
 } from 'lucide-react';
-
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-
 import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -22,7 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
@@ -46,7 +43,7 @@ interface HostCardProps {
 
 export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
-  const [showError, setShowError] = useState(false);
+  const [showError, setShowError] = useState(_false);
   const t = useTranslations('Common');
 
   const getStatusDot = (status: string) => {
@@ -169,7 +166,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                   <RefreshCw className="mr-2 h-4 w-4" />
                   <span>{t('refresh')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
+                <DropdownMenuItem onClick={() => onDelete?.(_host.id)} className="text-destructive">
                   <XCircle className="mr-2 h-4 w-4" />
                   <span>{t('delete')}</span>
                 </DropdownMenuItem>
@@ -197,7 +194,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 {t('lastConnected')}: {new Date(host.lastConnected).toLocaleDateString()}
               </p>
             )}
-          </div>  
+          </div>
         </CardContent>
       </Card>
 

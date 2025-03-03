@@ -3,6 +3,7 @@
 import { ChevronDown, Code2, Building2, Factory } from 'lucide-react';
 import * as React from 'react';
 
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/Sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,13 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-  SidebarTrigger,
-} from '@/components/Sidebar';
 import { useUser } from '@/context/UserContext';
 
 interface TeamSwitcherProps {

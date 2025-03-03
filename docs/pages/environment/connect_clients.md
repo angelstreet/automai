@@ -47,6 +47,7 @@ The Remote Machine Connection feature allows users to connect to, monitor, and m
 3. **Update Prisma Schema**
 
    - Add a new `Machine` model to store connection information:
+
      ```prisma
      model Machine {
        id            String    @id @default(uuid())
@@ -105,6 +106,7 @@ The Remote Machine Connection feature allows users to connect to, monitor, and m
 1. **Update Machine Type Definitions**
 
    - Create a comprehensive interface for machine connections:
+
      ```typescript
      export interface Machine {
        id: string;

@@ -9,7 +9,7 @@ interface StatusSummaryProps {
     error: number;
     total: number;
   };
-  onStatusFilter?: (status: string | null) => void;
+  onStatusFilter?: (_status: string | null) => void;
   selectedFilters?: Set<string>;
 }
 

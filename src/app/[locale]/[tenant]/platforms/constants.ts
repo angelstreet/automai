@@ -7,4 +7,4 @@ export const PLATFORM_PREFIXES = {
   api: 'API',
 } as const;
 
-export const PLATFORMS = Object.keys(PLATFORM_PREFIXES) as Array<keyof typeof PLATFORM_PREFIXES>;
+export const _PLATFORMS = Object.keys(PLATFORM_PREFIXES) as Array<keyof typeof PLATFORM_PREFIXES>;

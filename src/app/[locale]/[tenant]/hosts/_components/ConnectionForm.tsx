@@ -1,17 +1,12 @@
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
-import { useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { hostsApi } from '@/lib/api/hosts';
+import { useState, useRef } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
-
 import { Badge } from '@/components/shadcn/badge';
-
 import { Button } from '@/components/shadcn/button';
-
 import { Input } from '@/components/shadcn/input';
-
 import { Label } from '@/components/shadcn/label';
 import {
   Select,
@@ -20,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-
 import { Textarea } from '@/components/shadcn/textarea';
+import { hostsApi } from '@/lib/api/hosts';
 
 export interface FormData {
   name: string;
@@ -62,7 +57,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
   const [requireVerification, setRequireVerification] = useState(false);
 
   const handleTypeChange = (value: string) => {
-    setConnectionType(value as 'ssh' | 'docker' | 'portainer');
+    setConnectionType(_value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');
     onChange({
       ...formData,
       type: value,
@@ -80,7 +75,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
 
   // Handle keydown event to trigger test connection on Enter
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !testing) {
+    if (_e.key === 'Enter' && !testing) {
       e.preventDefault();
       testConnection();
     }
@@ -112,7 +107,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         hostId: formData.id,
       });
 
-      if (data.requireVerification) {
+      if (_data.requireVerification) {
         setRequireVerification(true);
         setFingerprint(data.fingerprint);
         setTestError(data.message);
@@ -268,7 +263,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
           </Label>
           <Textarea
             id="description"
-            placeholder="Description (optional)"
+            placeholder="Description (_optional)"
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
             className="col-span-10 h-16"

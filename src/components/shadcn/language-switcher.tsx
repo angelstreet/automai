@@ -1,9 +1,10 @@
 'use client';
 
-import { Globe } from 'lucide-react';
+import * as React from 'react';
 
 import { usePathname, useRouter } from 'next/navigation';
-import * as React from 'react';
+
+import { Globe } from 'lucide-react';
 
 import { Button } from '@/components/shadcn/button';
 import {

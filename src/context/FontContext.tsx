@@ -28,7 +28,7 @@ export const FontProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (!mounted) return;
-    
+
     const applyFont = (font: string) => {
       const root = document.documentElement;
       root.classList.forEach((cls) => {

@@ -1,7 +1,8 @@
-import { Search } from 'lucide-react';
+import React, { useCallback } from 'react';
 
 import { useRouter } from 'next/navigation';
-import React, { useCallback } from 'react';
+
+import { Search } from 'lucide-react';
 
 import {
   CommandDialog,

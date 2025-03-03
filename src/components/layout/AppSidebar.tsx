@@ -5,8 +5,13 @@ import { useSession } from 'next-auth/react';
 import { NavGroup } from '@/components/Layout/NavGroup';
 import { NavUser } from '@/components/Layout/NavUser';
 import { TeamSwitcher } from '@/components/Layout/TeamSwitcher';
-import { Sidebar, SidebarContent } from '@/components/Sidebar';
-import { SidebarFooter, SidebarHeader, SidebarRail } from '@/components/Sidebar';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarRail,
+} from '@/components/Sidebar';
 import { useRole } from '@/context/RoleContext';
 
 import { sidebarData } from './data/sidebarData';

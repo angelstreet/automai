@@ -1,21 +1,28 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { GitBranch, Plus } from 'lucide-react';
 import { Repository, GitProvider } from '@prisma/client';
-import { useToast } from '@/components/shadcn/use-toast';
+import { GitBranch, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+
+import { EmptyState } from '@/components/layout/EmptyState';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { EmptyState } from '@/components/layout/EmptyState';
-import { RepositoryCard, GitProviderCard, AddGitProviderDialog, GitProviderType } from './_components';
+import { useToast } from '@/components/shadcn/use-toast';
 import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
+
+import {
+  RepositoryCard,
+  GitProviderCard,
+  AddGitProviderDialog,
+  GitProviderType,
+} from './_components';
 
 export default function RepositoriesPage() {
   const router = useRouter();
   const { toast } = useToast();
-  
+
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [providers, setProviders] = useState<GitProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -24,7 +31,7 @@ export default function RepositoriesPage() {
   const [refreshingProviderId, setRefreshingProviderId] = useState<string | null>(null);
   const [addProviderOpen, setAddProviderOpen] = useState(false);
   const [isAddingProvider, setIsAddingProvider] = useState(false);
-  
+
   // Add a ref to track if fetching is already in progress
   const isFetchingRef = useRef(false);
 
@@ -32,18 +39,22 @@ export default function RepositoriesPage() {
     const fetchData = async () => {
       // Check if a fetch is already in progress
       if (isFetchingRef.current) return;
-      
+
       isFetchingRef.current = true;
       setIsLoading(true);
-      
+
       try {
         // Fetch providers with retry enabled
-        const providersResponse = await fetchWithAuth('/api/git-providers', {}, { 
-          maxRetries: 3, 
-          initialDelay: 1000, 
-          shouldRetry: true 
-        });
-        
+        const providersResponse = await fetchWithAuth(
+          '/api/git-providers',
+          {},
+          {
+            maxRetries: 3,
+            initialDelay: 1000,
+            shouldRetry: true,
+          },
+        );
+
         if (!providersResponse.ok) {
           if (providersResponse.status === 401) {
             router.push('/login');
@@ -58,18 +69,22 @@ export default function RepositoriesPage() {
         }
 
         // Fetch all repositories in a single call with retry enabled
-        const reposResponse = await fetchWithAuth('/api/fetch-all-repositories', {}, { 
-          maxRetries: 3, 
-          initialDelay: 1000, 
-          shouldRetry: true 
-        });
-        
+        const reposResponse = await fetchWithAuth(
+          '/api/fetch-all-repositories',
+          {},
+          {
+            maxRetries: 3,
+            initialDelay: 1000,
+            shouldRetry: true,
+          },
+        );
+
         if (!reposResponse.ok) {
           if (reposResponse.status === 401) {
             router.push('/login');
             return;
           }
-          
+
           // Don't show error toast for 400 (no repositories found) or 404 (table doesn't exist)
           if (reposResponse.status !== 400 && reposResponse.status !== 404) {
             console.error('Error fetching repositories:', reposResponse.status);
@@ -107,25 +122,29 @@ export default function RepositoriesPage() {
   const handleAddProvider = async (values: { type: GitProviderType; displayName: string }) => {
     // Prevent multiple simultaneous provider additions
     if (isFetchingRef.current || isAddingProvider) return;
-    
+
     setIsAddingProvider(true);
     isFetchingRef.current = true;
-    
+
     try {
-      const response = await fetchWithAuth('/api/git-providers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetchWithAuth(
+        '/api/git-providers',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(values),
         },
-        body: JSON.stringify(values),
-      }, { shouldRetry: true, maxRetries: 2, initialDelay: 500 });
+        { shouldRetry: true, maxRetries: 2, initialDelay: 500 },
+      );
 
       if (!response.ok) {
         throw new Error('Failed to add provider');
       }
 
       const provider = await response.json();
-      
+
       // Redirect to the OAuth flow
       if (provider.authUrl) {
         window.location.href = provider.authUrl;
@@ -153,22 +172,26 @@ export default function RepositoriesPage() {
   const handleDeleteProvider = async (id: string) => {
     // Prevent multiple simultaneous deletions
     if (isFetchingRef.current) return;
-    
+
     isFetchingRef.current = true;
-    
+
     try {
-      const response = await fetchWithAuth(`/api/git-providers/${id}`, {
-        method: 'DELETE',
-      }, { shouldRetry: true, maxRetries: 2, initialDelay: 500 });
+      const response = await fetchWithAuth(
+        `/api/git-providers/${id}`,
+        {
+          method: 'DELETE',
+        },
+        { shouldRetry: true, maxRetries: 2, initialDelay: 500 },
+      );
 
       if (!response.ok) {
         throw new Error('Failed to delete provider');
       }
 
-      setProviders(providers.filter(provider => provider.id !== id));
+      setProviders(providers.filter((provider) => provider.id !== id));
       // Also remove repositories associated with this provider
-      setRepositories(repositories.filter(repo => repo.gitProviderId !== id));
-      
+      setRepositories(repositories.filter((repo) => repo.gitProviderId !== id));
+
       toast({
         title: 'Success',
         description: 'Git provider deleted successfully',
@@ -188,41 +211,46 @@ export default function RepositoriesPage() {
   const handleRefreshProvider = async (id: string) => {
     // Prevent multiple simultaneous refreshes
     if (isFetchingRef.current || refreshingProviderId) return;
-    
+
     setRefreshingProviderId(id);
     isFetchingRef.current = true;
-    
+
     try {
-      const response = await fetchWithAuth(`/api/git-providers/${id}/sync`, {
-        method: 'POST',
-      }, { shouldRetry: true, maxRetries: 2, initialDelay: 500 });
+      const response = await fetchWithAuth(
+        `/api/git-providers/${id}/sync`,
+        {
+          method: 'POST',
+        },
+        { shouldRetry: true, maxRetries: 2, initialDelay: 500 },
+      );
 
       if (!response.ok) {
         throw new Error('Failed to refresh provider');
       }
 
       const { repositories: updatedRepos } = await response.json();
-      
+
       // Update repositories list
-      setRepositories(prev => {
+      setRepositories((prev) => {
         const existingRepoIds = updatedRepos.map((repo: Repository) => repo.id);
-        const filteredRepos = prev.filter(repo => 
-          repo.gitProviderId !== id || existingRepoIds.includes(repo.id)
+        const filteredRepos = prev.filter(
+          (repo) => repo.gitProviderId !== id || existingRepoIds.includes(repo.id),
         );
-        return [...filteredRepos, ...updatedRepos.filter((repo: Repository) => 
-          !filteredRepos.some(r => r.id === repo.id)
-        )];
+        return [
+          ...filteredRepos,
+          ...updatedRepos.filter(
+            (repo: Repository) => !filteredRepos.some((r) => r.id === repo.id),
+          ),
+        ];
       });
-      
+
       // Update provider's lastSyncedAt
-      setProviders(prev => 
-        prev.map(provider => 
-          provider.id === id 
-            ? { ...provider, lastSyncedAt: new Date().toISOString() } 
-            : provider
-        )
+      setProviders((prev) =>
+        prev.map((provider) =>
+          provider.id === id ? { ...provider, lastSyncedAt: new Date().toISOString() } : provider,
+        ),
       );
-      
+
       toast({
         title: 'Success',
         description: 'Repositories synced successfully',
@@ -243,28 +271,28 @@ export default function RepositoriesPage() {
   const handleSyncRepository = async (id: string) => {
     // Prevent multiple simultaneous syncs
     if (isFetchingRef.current || syncingRepoId) return;
-    
+
     setSyncingRepoId(id);
     isFetchingRef.current = true;
-    
+
     try {
-      const response = await fetchWithAuth(`/api/repositories/${id}/sync`, {
-        method: 'POST',
-      }, { shouldRetry: true, maxRetries: 2, initialDelay: 500 });
+      const response = await fetchWithAuth(
+        `/api/repositories/${id}/sync`,
+        {
+          method: 'POST',
+        },
+        { shouldRetry: true, maxRetries: 2, initialDelay: 500 },
+      );
 
       if (!response.ok) {
         throw new Error('Failed to sync repository');
       }
 
       const updatedRepo = await response.json();
-      
+
       // Update repository in the list
-      setRepositories(prev => 
-        prev.map(repo => 
-          repo.id === id ? updatedRepo : repo
-        )
-      );
-      
+      setRepositories((prev) => prev.map((repo) => (repo.id === id ? updatedRepo : repo)));
+
       toast({
         title: 'Success',
         description: 'Repository synced successfully',
@@ -282,13 +310,14 @@ export default function RepositoriesPage() {
     }
   };
 
-  const filteredRepositories = activeTab === 'all' 
-    ? repositories 
-    : repositories.filter(repo => {
-        if (activeTab === 'private') return repo.isPrivate;
-        if (activeTab === 'public') return !repo.isPrivate;
-        return true;
-      });
+  const filteredRepositories =
+    activeTab === 'all'
+      ? repositories
+      : repositories.filter((repo) => {
+          if (activeTab === 'private') return repo.isPrivate;
+          if (activeTab === 'public') return !repo.isPrivate;
+          return true;
+        });
 
   const renderContent = () => {
     if (isLoading) {
@@ -345,7 +374,9 @@ export default function RepositoriesPage() {
             title="No Repositories Found"
             description="Sync your Git provider to import repositories."
             action={
-              <Button onClick={() => providers.length > 0 && handleRefreshProvider(providers[0].id)}>
+              <Button
+                onClick={() => providers.length > 0 && handleRefreshProvider(providers[0].id)}
+              >
                 <GitBranch className="mr-2 h-4 w-4" />
                 Sync Repositories
               </Button>
@@ -368,7 +399,7 @@ export default function RepositoriesPage() {
           </div>
           <TabsContent value={activeTab} className="mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredRepositories.map(repo => (
+              {filteredRepositories.map((repo) => (
                 <RepositoryCard
                   key={repo.id}
                   repository={repo}
@@ -395,9 +426,9 @@ export default function RepositoriesPage() {
           </Button>
         }
       />
-      
+
       {renderContent()}
-      
+
       <AddGitProviderDialog
         open={addProviderOpen}
         onOpenChange={setAddProviderOpen}
@@ -406,4 +437,4 @@ export default function RepositoriesPage() {
       />
     </div>
   );
-} 
+}

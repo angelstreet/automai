@@ -1,11 +1,28 @@
-import { useState } from 'react';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Github, GitlabIcon, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { Button } from '@/components/shadcn/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/shadcn/dialog';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/shadcn/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/shadcn/dialog';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/shadcn/form';
 import { Input } from '@/components/shadcn/input';
 import { RadioGroup, RadioGroupItem } from '@/components/shadcn/radio-group';
 
@@ -18,11 +35,14 @@ const formSchema = z.object({
   type: z.enum(GitProviderTypes, {
     required_error: 'Please select a Git provider type.',
   }),
-  displayName: z.string().min(2, {
-    message: 'Display name must be at least 2 characters.',
-  }).max(50, {
-    message: 'Display name must not exceed 50 characters.',
-  }),
+  displayName: z
+    .string()
+    .min(2, {
+      message: 'Display name must be at least 2 characters.',
+    })
+    .max(50, {
+      message: 'Display name must not exceed 50 characters.',
+    }),
 });
 
 interface AddGitProviderDialogProps {
@@ -32,9 +52,14 @@ interface AddGitProviderDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function AddGitProviderDialog({ onSubmit, isSubmitting, open, onOpenChange }: AddGitProviderDialogProps) {
+export function AddGitProviderDialog({
+  onSubmit,
+  isSubmitting,
+  open,
+  onOpenChange,
+}: AddGitProviderDialogProps) {
   const [selectedType, setSelectedType] = useState<GitProviderType | null>(null);
-  
+
   // Initialize the form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,14 +68,14 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting, open, onOpenChang
       displayName: '',
     },
   });
-  
+
   // Handle form submission
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     await onSubmit(values);
     form.reset();
     setSelectedType(null);
   };
-  
+
   // Reset the form when the dialog is closed
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -59,7 +84,7 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting, open, onOpenChang
     }
     onOpenChange(open);
   };
-  
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -87,7 +112,7 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting, open, onOpenChang
                     <RadioGroup
                       onValueChange={(value) => {
                         field.onChange(value);
-                        setSelectedType(value as GitProviderType);
+                        setSelectedType(_value as GitProviderType);
                       }}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
@@ -112,14 +137,12 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting, open, onOpenChang
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
-                  <FormDescription>
-                    Select the Git provider you want to connect to.
-                  </FormDescription>
+                  <FormDescription>Select the Git provider you want to connect to.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
+
             {selectedType && (
               <FormField
                 control={form.control}
@@ -128,9 +151,9 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting, open, onOpenChang
                   <FormItem>
                     <FormLabel>Display Name</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder={`My ${selectedType === 'GITHUB' ? 'GitHub' : 'GitLab'} Account`} 
-                        {...field} 
+                      <Input
+                        placeholder={`My ${selectedType === 'GITHUB' ? 'GitHub' : 'GitLab'} Account`}
+                        {...field}
                       />
                     </FormControl>
                     <FormDescription>
@@ -141,7 +164,7 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting, open, onOpenChang
                 )}
               />
             )}
-            
+
             <DialogFooter>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Adding...' : 'Add Provider'}
@@ -152,4 +175,4 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting, open, onOpenChang
       </DialogContent>
     </Dialog>
   );
-} 
+}

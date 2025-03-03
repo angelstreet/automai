@@ -14,7 +14,7 @@ import {
 } from '@/components/shadcn/card';
 
 export default function SettingsPage() {
-  const params = useParams();
+  const _params = useParams();
   const t = useTranslations('Settings');
 
   return (

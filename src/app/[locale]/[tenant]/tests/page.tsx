@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 export default function TestsPage() {
-  const params = useParams();
+  const _params = useParams();
   const t = useTranslations('Tests');
 
   return (

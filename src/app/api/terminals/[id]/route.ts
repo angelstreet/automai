@@ -1,9 +1,8 @@
 import { headers } from 'next/headers';
-/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getWebSocketServer, handleUpgrade } from '@/lib/services/websocket';
 import { logger } from '@/lib/logger';
+import { getWebSocketServer, handleUpgrade } from '@/lib/services/websocket';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -28,16 +27,13 @@ export async function GET(request: NextRequest, { params }: Props) {
     const wss = getWebSocketServer();
     if (!wss) {
       logger.error('WebSocket server not initialized', { connectionId });
-      return NextResponse.json(
-        { error: 'WebSocket server not initialized' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'WebSocket server not initialized' }, { status: 500 });
     }
 
     // Get the raw request object from the Next.js request
     const { socket, response } = await new Promise<{ socket: any; response: Response }>(
       (resolve) => {
-        // @ts-ignore - Access internal properties
+        // @ts-expect-error - Access internal properties
         const socket = request.socket;
 
         // Create a server response
@@ -56,7 +52,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Handle the upgrade
     const headersList = await headers();
     const rawHeaders: string[] = [];
-    
+
     // Convert headers to array format
     Array.from(headersList.entries()).forEach(([key, value]: [string, string]) => {
       rawHeaders.push(key, value);

@@ -1,11 +1,29 @@
-import { useState } from 'react';
 import { GitProvider } from '@prisma/client';
-import { RefreshCw, Trash2, Github, GitlabIcon } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { Button } from '@/components/shadcn/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { RefreshCw, Trash2, Github, GitlabIcon } from 'lucide-react';
+import { useState } from 'react';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/shadcn/alert-dialog';
 import { Badge } from '@/components/shadcn/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/shadcn/alert-dialog';
+import { Button } from '@/components/shadcn/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/shadcn/card';
 
 interface GitProviderCardProps {
   provider: GitProvider;
@@ -14,15 +32,20 @@ interface GitProviderCardProps {
   isRefreshing: boolean;
 }
 
-export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }: GitProviderCardProps) {
+export function GitProviderCard({
+  provider,
+  onDelete,
+  onRefresh,
+  isRefreshing,
+}: GitProviderCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
+
   // Format the last synced date
   const lastSyncedText = provider.lastSyncedAt
     ? `Last synced ${formatDistanceToNow(new Date(provider.lastSyncedAt), { addSuffix: true })}`
     : 'Never synced';
-  
+
   // Get the provider icon based on the type
   const getProviderIcon = () => {
     switch (provider.type) {
@@ -34,10 +57,10 @@ export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }:
         return null;
     }
   };
-  
+
   return (
     <>
-      <Card 
+      <Card
         className="overflow-hidden transition-all duration-200 hover:shadow-md"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -63,10 +86,12 @@ export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }:
         </CardContent>
         <CardFooter className="flex justify-between pt-2 text-xs text-muted-foreground">
           <span>{lastSyncedText}</span>
-          <div className={`flex space-x-2 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+          <div
+            className={`flex space-x-2 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
               className="p-0 h-8"
               onClick={() => onRefresh(provider.id)}
               disabled={isRefreshing}
@@ -75,9 +100,9 @@ export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }:
               Sync
             </Button>
             <AlertDialogTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="p-0 h-8 text-destructive hover:text-destructive"
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
@@ -88,18 +113,19 @@ export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }:
           </div>
         </CardFooter>
       </Card>
-      
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete the Git provider and all associated repositories. This action cannot be undone.
+              This will delete the Git provider and all associated repositories. This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={async () => {
                 await onDelete(provider.id);
                 setIsDeleteDialogOpen(false);
@@ -113,4 +139,4 @@ export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }:
       </AlertDialog>
     </>
   );
-} 
+}

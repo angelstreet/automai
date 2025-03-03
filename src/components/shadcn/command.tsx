@@ -1,10 +1,11 @@
 'use client';
 
+import * as React from 'react';
+
 import { DialogProps } from '@radix-ui/react-dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Command as CommandPrimitive } from 'cmdk';
 import { Search } from 'lucide-react';
-import * as React from 'react';
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/shadcn/dialog';
 import { cn } from '@/lib/utils';
@@ -24,8 +25,10 @@ const Command = React.forwardRef<
 ));
 Command.displayName = CommandPrimitive.displayName;
 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 /** @deprecated This interface is intentionally empty for future extensibility */
 export interface CommandDialogProps extends DialogProps {}
+/* eslint-enable @typescript-eslint/no-empty-object-type */
 
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
   return (

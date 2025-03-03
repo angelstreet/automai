@@ -3,12 +3,12 @@
 import Cookies from 'js-cookie';
 import * as React from 'react';
 
+import { SidebarProvider } from '@/components/Sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
-import { SidebarProvider } from '@/components/Sidebar';
+import { ToasterProvider } from '@/components/shadcn/toaster';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { useUser } from '@/context/UserContext';
-import { ToasterProvider } from '@/components/shadcn/toaster';
 
 // Cache session check timestamp to reduce API calls
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -28,7 +28,7 @@ export default function TenantLayout({
   // Check session only at intervals to reduce API calls
   React.useEffect(() => {
     const now = Date.now();
-    if (now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
+    if (_now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
       try {
         checkSession();
         lastSessionCheck = now;
