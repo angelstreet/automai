@@ -1,23 +1,30 @@
 'use client';
 
-import { SessionProvider } from 'next-auth/react';
-import { NextIntlClientProvider } from 'next-intl';
-
-import { ThemeProvider } from '@/components/Theme/ThemeProvider';
-import { RoleProvider } from '@/context/RoleContext';
-import { SearchProvider } from '@/context/SearchContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { UserProvider } from '@/context/UserContext';
+import { RoleProvider } from '@/context/RoleContext';
+import { SidebarProvider } from '@/context/SidebarContext';
+import { FontProvider } from '@/context/FontContext';
+import { SearchProvider } from '@/context/SearchContext';
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <SessionProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <UserProvider>
-          <SearchProvider>
-            <RoleProvider>{children}</RoleProvider>
-          </SearchProvider>
-        </UserProvider>
-      </ThemeProvider>
-    </SessionProvider>
-  );
+interface ProvidersProps {
+  children: React.ReactNode;
 }
+
+export function Providers({ children }: ProvidersProps) {
+  return (
+    <ThemeProvider>
+      <FontProvider>
+        <UserProvider>
+          <RoleProvider>
+            <SidebarProvider>
+              <SearchProvider>
+                {children}
+              </SearchProvider>
+            </SidebarProvider>
+          </RoleProvider>
+        </UserProvider>
+      </FontProvider>
+    </ThemeProvider>
+  );
+} 

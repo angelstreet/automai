@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, useContext, useEffect, useState } from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
@@ -26,11 +28,21 @@ export function ThemeProvider({
   storageKey = 'vite-ui-theme',
   ...props
 }: ThemeProviderProps) {
-  const [theme, _setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
-  );
+  const [theme, _setTheme] = useState<Theme>(defaultTheme);
+  const [mounted, setMounted] = useState(false);
+
+  // Once mounted on client, get the theme from localStorage
+  useEffect(() => {
+    setMounted(true);
+    const savedTheme = typeof window !== 'undefined' ? localStorage.getItem(storageKey) as Theme : null;
+    if (savedTheme) {
+      _setTheme(savedTheme);
+    }
+  }, [storageKey]);
 
   useEffect(() => {
+    if (!mounted) return;
+    
     const root = window.document.documentElement;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -52,10 +64,12 @@ export function ThemeProvider({
     mediaQuery.addEventListener('change', handleChange);
 
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [theme]);
+  }, [theme, mounted]);
 
   const setTheme = (theme: Theme) => {
-    localStorage.setItem(storageKey, theme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(storageKey, theme);
+    }
     _setTheme(theme);
   };
 
@@ -63,6 +77,11 @@ export function ThemeProvider({
     theme,
     setTheme,
   };
+
+  // Prevent flash of incorrect theme
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
