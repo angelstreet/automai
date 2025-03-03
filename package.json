@@ -5,6 +5,7 @@
   "type": "commonjs",
   "scripts": {
     "dev": "NODE_ENV=development ts-node server.ts",
+    "dev:codespace": "NODE_ENV=codespace ts-node server.ts",
     "dev:server": "ts-node server.ts",
     "dev:next": "next dev",
     "dev:all": "node scripts/dev.js",
