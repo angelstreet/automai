@@ -26,60 +26,83 @@ automai/
 ├── src/
 │   ├── app/                  # Next.js App Router
 │   │   ├── [locale]/         # Internationalized routes
+│   │   │   ├── (auth)/       # Authentication routes (login, signup)
+│   │   │   ├── (marketing)/  # Marketing pages with components
+│   │   │   │   └── _components/ # Marketing-specific components
+│   │   │   ├── [tenant]/     # Tenant-specific routes
+│   │   │   │   ├── admin/    # Admin pages
+│   │   │   │   ├── billing/  # Billing pages
+│   │   │   │   ├── dashboard/ # Dashboard pages
+│   │   │   │   │   └── _components/ # Dashboard-specific components
+│   │   │   │   ├── development/ # Development pages (projects, usecases)
+│   │   │   │   ├── devices/  # Devices pages
+│   │   │   │   ├── hosts/    # Hosts management
+│   │   │   │   │   └── _components/ # Host-specific components
+│   │   │   │   ├── platforms/ # Platform management
+│   │   │   │   ├── profile/  # User profile pages
+│   │   │   │   ├── reports/  # Reports pages
+│   │   │   │   ├── repositories/ # Git repositories management
+│   │   │   │   │   └── _components/ # Repository-specific components
+│   │   │   │   ├── scripts/  # Scripts management
+│   │   │   │   ├── settings/ # Settings pages
+│   │   │   │   ├── team/     # Team management
+│   │   │   │   ├── terminals/ # Terminal access
+│   │   │   │   ├── tests/    # Test management
+│   │   │   │   └── usecases/ # Usecases management
+│   │   │   │       └── _components/ # Usecase-specific components
+│   │   │   ├── _components/  # Locale-specific shared components
+│   │   │   ├── auth-redirect/ # Auth redirect handling
+│   │   │   └── dashboard/    # Root dashboard page
 │   │   ├── api/              # API Route Handlers
-│   │   │   ├── terminals/    # Terminal API endpoints
+│   │   │   ├── admin/        # Admin API endpoints
+│   │   │   ├── auth/         # Authentication endpoints
+│   │   │   ├── fetch-all-repositories/ # Repository fetching
+│   │   │   ├── git-providers/ # Git provider endpoints
+│   │   │   ├── health/       # Health check endpoints
 │   │   │   ├── hosts/        # Hosts API endpoints
 │   │   │   ├── projects/     # Projects API endpoints
-│   │   │   ├── auth/         # Authentication endpoints
-│   │   │   ├── usecases/     # Usecases API endpoints
-│   │   │   ├── admin/        # Admin API endpoints
-│   │   │   └── health/       # Health check endpoints
+│   │   │   ├── repositories/ # Repository endpoints
+│   │   │   ├── terminals/    # Terminal API endpoints
+│   │   │   └── usecases/     # Usecases API endpoints
+│   │   ├── auth-redirect/    # Auth redirect page
 │   │   ├── layout.tsx        # Root layout
 │   │   ├── globals.css       # Global styles
 │   │   └── page.tsx          # Root page
 │   ├── components/           # UI components
-│   │   ├── layout/           # Layout components
-│   │   ├── sidebar/          # Sidebar components
-│   │   ├── shadcn/           # Shadcn UI components
-│   │   ├── settings/         # Settings components
-│   │   ├── profile/          # Profile components
-│   │   ├── dashboard/        # Dashboard components
+│   │   ├── auth/             # Authentication components
 │   │   ├── common/           # Common reusable components
+│   │   ├── dashboard/        # Dashboard components
+│   │   ├── dialog/           # Dialog components
+│   │   ├── form/             # Form components
+│   │   │   └── PinInput/     # PIN input component
 │   │   ├── icons/            # Icon components
-│   │   └── [various].tsx     # Individual component files
-│   ├── hooks/                # Custom React hooks
-│   ├── lib/                  # Shared utilities
-│   │   ├── websocketServer.ts # WebSocket server implementation
-│   │   ├── contexts/         # React context providers
-│   │   ├── services/         # Service layer (data access)
-│   │   ├── prisma.ts         # Prisma client singleton (src-level)
-│   │   ├── utils.ts          # General utility functions
-│   │   ├── env.ts            # Environment configuration
-│   │   ├── config.ts         # Application configuration
-│   │   ├── auth.ts           # Authentication utilities
-│   │   ├── features.ts       # Feature flags
-│   │   ├── logger.ts         # Logging utilities
-│   │   └── cache.ts          # Caching utilities
-│   ├── constants/            # Application constants
-│   │   ├── hosts.ts          # Host-related constants
-│   │   ├── platforms.ts      # Platform-related constants
-│   │   └── sidebar.ts        # Sidebar-related constants
-│   ├── types/                # TypeScript type definitions
-│   │   ├── next-auth.d.ts    # NextAuth type extensions
-│   │   ├── usecase.ts        # Usecase-related types
-│   │   ├── sidebar.ts        # Sidebar-related types
-│   │   └── hosts.ts          # Host-related types
-│   ├── utils/                # Utility functions
-│   │   ├── isElectron.ts     # Electron detection utility
-│   │   └── electronApi.ts    # Electron API utilities
-│   ├── context/              # React context providers
+│   │   ├── layout/           # Layout components
+│   │   │   └── data/         # Layout data
+│   │   ├── profile/          # Profile components
+│   │   ├── providers/        # Provider components
+│   │   ├── settings/         # Settings components
+│   │   ├── shadcn/           # Shadcn UI components
+│   │   ├── sidebar/          # Sidebar components
+│   │   ├── theme/            # Theme components
+│   │   └── ui/               # UI utility components
 │   ├── config/               # Configuration files
+│   ├── constants/            # Application constants
+│   ├── context/              # React context providers
+│   ├── data/                 # Data files
+│   ├── hooks/                # Custom React hooks
 │   ├── i18n/                 # Internationalization
+│   │   └── messages/         # Translation messages
+│   ├── lib/                  # Shared utilities
+│   │   ├── api/              # API utilities
+│   │   ├── services/         # Service layer (data access)
+│   │   │   └── git-providers/ # Git provider services
+│   │   └── utils/            # Utility functions
+│   ├── types/                # TypeScript type definitions
+│   ├── utils/                # Utility functions
 │   ├── auth.ts               # Authentication setup
-│   ├── middleware.ts         # Next.js middleware
-│   └── config.ts             # Configuration exports
+│   ├── config.ts             # Configuration exports
+│   └── middleware.ts         # Next.js middleware
 ├── scripts/                  # Utility scripts
-│   └── health-check.js       # Script to check file sizes
 ├── electron/                 # Electron app configuration
 ├── tests/                    # Test files
 ├── docs/                     # Project documentation
@@ -100,19 +123,19 @@ automai/
 - `src/components/layout/`: Layout components like headers, footers
 - `src/components/sidebar/`: Sidebar navigation components
 - `src/components/common/`: Shared reusable components
-- `src/components/ThemeProvider.tsx`: Theme context provider
-- `src/components/RouteGuard.tsx`: Authentication route protection
-- `src/components/ProfileDropdown.tsx`: User profile dropdown menu
-- `src/components/CommandMenu.tsx`: Command palette implementation
+- `src/components/theme/ThemeProvider.tsx`: Theme context provider
+- `src/components/auth/RouteGuard.tsx`: Authentication route protection
+- `src/components/profile/ProfileDropdown.tsx`: User profile dropdown menu
+- `src/components/dialog/CommandMenu.tsx`: Command palette implementation
 
 ### Hooks
 - `src/hooks/use-toast.ts`: Toast notification system
 - `src/hooks/useSidebar.ts`: Sidebar state management
-- `src/hooks/use-dialog-state.tsx`: Dialog/modal state management
-- `src/hooks/use-mobile.tsx`: Mobile device detection
+- `src/hooks/useDialogState.tsx`: Dialog/modal state management
+- `src/hooks/useMobile.tsx`: Mobile device detection
 
 ### Library and Utilities
-- `src/lib/websocketServer.ts`: WebSocket server implementation
+- `src/lib/services/websocket.ts`: WebSocket server implementation
 - `src/lib/prisma.ts`: Prisma client singleton for Next.js
 - `src/lib/env.ts`: Environment configuration with validation
 - `src/lib/auth.ts`: Authentication utilities
@@ -311,38 +334,12 @@ automai/
 
 ## Service Layer Pattern
 
-```typescript
-// ✅ Correct: Service layer in src/lib/services
-// src/lib/services/hosts.ts
-export async function getHosts() {
-  // Implementation
-}
-
-// ✅ Correct: Server component using service
-// src/app/[feature]/page.tsx
-import { getHosts } from '@/lib/services/hosts';
-
-export default async function Page() {
-  const data = await getHosts();
-  return <ClientComponent initialData={data} />;
-}
-
-// ✅ Correct: Client component with mutations
-// src/app/[feature]/_components/ClientComponent.tsx
-'use client';
-import { useMutation } from '@tanstack/react-query';
-import { deleteHost } from '@/lib/services/hosts';
-
-export function ClientComponent({ initialData }) {
-  const mutation = useMutation({ mutationFn: deleteHost });
-  // Implementation
-}
-
-// ❌ Incorrect: Mixing concerns
-export default function Page() {
-  const data = await fetch('/api/hosts');  // Don't fetch directly
-  // Implementation
-}
+```mermaid
+graph TD
+    A[Service Layer] --> B[Server Component]
+    B --> C[Client Component]
+    C --> D[UI State & Mutations]
+    D --> A
 ```
 
 ## Protected Service Files
