@@ -27,6 +27,19 @@ globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
    const response = await fetch('http://localhost:' + port + '/api/auth/profile');
    ```
 
+3. **Explicit API Naming**
+   ```typescript
+   // ✅ Correct - Explicit purpose in the route name
+   const response = await fetch('/api/fetch-all-repositories');
+   
+   // ❌ Incorrect - Generic name that doesn't clearly indicate purpose
+   const response = await fetch('/api/repositories/fetch-all');
+   ```
+   
+   API routes should have explicit, descriptive names that clearly indicate their purpose.
+   Prefer verbose, specific route names over generic, nested routes when the operation
+   is specialized or spans multiple resource types.
+
 ## API Route Implementation
 
 1. **Route Handler Pattern**
