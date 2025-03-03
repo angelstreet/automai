@@ -61,11 +61,19 @@ async function shutdown(signal: string) {
   
   console.log(`\nReceived ${signal}. Shutting down server...`);
   
+  // Force exit immediately on second SIGINT
+  if (signal === 'SIGINT') {
+    process.on('SIGINT', () => {
+      console.log('Forced exit by user');
+      process.exit(0);
+    });
+  }
+  
   // Set a timeout to force exit if shutdown takes too long
   const forceExitTimeout = setTimeout(() => {
-    console.error('Shutdown timed out after 10s, forcing exit');
-    process.exit(1);
-  }, 10000);
+    console.error('Shutdown timed out after 1s, forcing exit');
+    process.exit(0);
+  }, 1000);
   
   try {
     await stopServer();
@@ -75,7 +83,7 @@ async function shutdown(signal: string) {
   } catch (err) {
     console.error('Error during shutdown:', err);
     clearTimeout(forceExitTimeout);
-    process.exit(1);
+    process.exit(0);
   }
 }
 

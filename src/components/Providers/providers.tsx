@@ -1,5 +1,6 @@
 'use client';
 
+import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { UserProvider } from '@/context/UserContext';
 import { RoleProvider } from '@/context/RoleContext';
@@ -13,18 +14,20 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <ThemeProvider>
-      <FontProvider>
-        <UserProvider>
-          <RoleProvider>
-            <SidebarProvider>
-              <SearchProvider>
-                {children}
-              </SearchProvider>
-            </SidebarProvider>
-          </RoleProvider>
-        </UserProvider>
-      </FontProvider>
-    </ThemeProvider>
+    <SessionProvider>
+      <ThemeProvider>
+        <FontProvider>
+          <UserProvider>
+            <RoleProvider>
+              <SidebarProvider>
+                <SearchProvider>
+                  {children}
+                </SearchProvider>
+              </SidebarProvider>
+            </RoleProvider>
+          </UserProvider>
+        </FontProvider>
+      </ThemeProvider>
+    </SessionProvider>
   );
 } 

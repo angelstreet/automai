@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 import { SidebarContext as SidebarContextType } from '@/types/sidebar';
 
-const SidebarContext = createContext<SidebarContextType | null>(null);
+export const SidebarContext = createContext<SidebarContextType | null>(null);
 
 interface SidebarProviderProps {
   children: React.ReactNode;
