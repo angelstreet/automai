@@ -21,13 +21,16 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
 
   useEffect(() => {
     const checkIsMobile = () => {
-      setIsMobile(_window.innerWidth < 768);
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768);
+      }
     };
 
     checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-
-    return () => window.removeEventListener('resize', checkIsMobile);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkIsMobile);
+      return () => window.removeEventListener('resize', checkIsMobile);
+    }
   }, []);
 
   const toggleSidebar = () => {
