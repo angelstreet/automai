@@ -1,7 +1,7 @@
 
   // Auto-fix script for unused variables and imports
   const fs = require('fs');
-  const path = require('path');
+  
   const glob = require('glob');
   
   // Find all TypeScript and JavaScript files in src directory

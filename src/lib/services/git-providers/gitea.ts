@@ -117,15 +117,15 @@ export class GiteaProviderService implements GitProviderService {
     }
   }
 
-  async getRepository(provider: GitProvider, repoName: string): Promise<Repository> {
+  async getRepository(_provider: GitProvider, repoName: string): Promise<Repository> {
     throw new Error('Method not implemented.');
   }
 
-  async syncRepository(repository: Repository): Promise<Repository> {
+  async syncRepository(_repository: Repository): Promise<Repository> {
     throw new Error('Method not implemented.');
   }
 
-  async refreshAccessToken(refreshToken: string): Promise<{
+  async refreshAccessToken(_refreshToken: string): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresAt?: Date;

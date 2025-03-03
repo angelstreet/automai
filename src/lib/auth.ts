@@ -1,10 +1,7 @@
 import { compare } from 'bcrypt';
 import type { Session, User } from 'next-auth';
-import type { JWT } from 'next-auth/jwt';
 import type { DefaultSession } from 'next-auth/core/types';
-
-// Remove direct import of CredentialsProvider
-// import CredentialsProvider from 'next-auth/providers/credentials';
+import type { JWT } from 'next-auth/jwt';
 import { logger } from './logger';
 import { prisma } from './prisma';
 

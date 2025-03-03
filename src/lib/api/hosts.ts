@@ -15,7 +15,7 @@ export const hostsApi = {
   /**
    * Get all hosts
    */
-  getHosts: async (locale: string) => {
+  getHosts: async () => {
     // Add cache-busting parameter to prevent browser caching
     const timestamp = new Date().getTime();
     const response = await fetch(`${getBaseUrl()}/api/hosts?_=${timestamp}`);
@@ -26,7 +26,7 @@ export const hostsApi = {
   /**
    * Delete a host
    */
-  deleteHost: async (locale: string, id: string) => {
+  deleteHost: async (id: string) => {
     const response = await fetch(`${getBaseUrl()}/api/hosts/${id}`, {
       method: 'DELETE',
     });
@@ -38,7 +38,6 @@ export const hostsApi = {
    * Test host connection
    */
   testConnection: async (
-    locale: string,
     data: {
       type: string;
       ip: string;
@@ -79,7 +78,6 @@ export const hostsApi = {
   },
 
   async verifyFingerprint(
-    locale: string,
     data: {
       fingerprint: string;
       host: string;
@@ -111,7 +109,6 @@ export const hostsApi = {
    * Create a new host
    */
   createHost: async (
-    locale: string,
     data: {
       name: string;
       description: string;

@@ -38,7 +38,7 @@ export async function listGitProviders(userId: string): Promise<GitProvider[]> {
       where: { userId },
     });
 
-    return providers.map((provider) => ({
+    return providers.map((provider: any) => ({
       ...provider,
       status: provider.accessToken ? 'connected' : 'disconnected',
     }));
@@ -268,7 +268,7 @@ export async function syncRepository(id: string): Promise<Repository> {
         },
       },
     });
-  } catch (error) {
+  } catch (_error) {
     // If there's an error, mark the repository as having an error
     return prisma.repository.update({
       where: { id },
@@ -308,7 +308,7 @@ export async function importRepositoriesFromProvider(providerId: string): Promis
     select: { name: true },
   });
 
-  const existingRepoNames = new Set(existingRepos.map((repo) => repo.name));
+  const existingRepoNames = new Set(existingRepos.map((repo: any) => repo.name));
 
   // Filter out repositories that already exist
   const newRepositories = repositories.filter((repo) => !existingRepoNames.has(repo.name));
