@@ -78,7 +78,7 @@
     ],
     "react-hooks/exhaustive-deps": "warn"
   },
-  "ignorePatterns": ["src/components/ui/*", "node_modules", ".next", "out"],
+  "ignorePatterns": ["src/components/ui/*", "src/components/shadcn/*", "node_modules", ".next", "out"],
   "settings": {
     "react": {
       "version": "detect"

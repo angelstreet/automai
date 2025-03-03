@@ -1,0 +1,19 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "automai",
+    "shadcn",
+    "tailwindcss",
+    "nextjs"
+  ],
+  "ignorePaths": [
+    "node_modules/**",
+    ".git/**",
+    "src/components/shadcn/**",
+    "dist/**",
+    "build/**",
+    ".next/**",
+    "out/**"
+  ]
+} 
