@@ -22,7 +22,7 @@ export function HostGrid({
   onTestConnection,
 }: HostGridProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {hosts.map((host) => (
         <div
           key={host.id}

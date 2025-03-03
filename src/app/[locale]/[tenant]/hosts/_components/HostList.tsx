@@ -43,7 +43,7 @@ export default function HostContainer() {
       console.log('Hosts fetched successfully:', fetchedHosts);
 
       // Set initial status to 'pending' for quick UI display
-      const pendingHosts = fetchedHosts.map((host: Host) => ({ host, status: 'pending' }));
+      const pendingHosts = fetchedHosts.map((host: Host) => ({ ...host, status: 'pending' }));
       setHosts(pendingHosts);
 
       return pendingHosts;
@@ -159,15 +159,25 @@ export default function HostContainer() {
   }, [locale]); // Only depend on locale
 
   const handleDelete = async (id: string) => {
+    // Store the host being deleted in case we need to restore it
+    const hostToDelete = hosts.find(host => host.id === id);
+    
+    // Optimistically update UI first
+    setHosts((currentHosts) => currentHosts.filter((host) => host.id !== id));
+    
+    // Show optimistic toast
+    toast.success('Host deleted');
+    
     try {
+      // Then perform the actual deletion in the background
       await hostsApi.deleteHost(String(locale), id);
-
-      // Update local state directly instead of fetching all hosts again
-      setHosts((currentHosts) => currentHosts.filter((host) => host.id !== id));
-
-      toast.success('Host deleted successfully');
     } catch (error) {
-      toast.error('Failed to delete host');
+      // If deletion fails, restore the host and show error
+      console.error('Error deleting host:', error);
+      if (hostToDelete) {
+        setHosts(currentHosts => [...currentHosts, hostToDelete]);
+      }
+      toast.error('Failed to delete host. The host has been restored.');
     }
   };
 
@@ -187,6 +197,7 @@ export default function HostContainer() {
         user: formData.username,
         password: formData.password,
         status: 'connected',
+        lastConnected: new Date(),
       });
 
       setShowAddHost(false);

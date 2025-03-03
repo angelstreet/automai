@@ -121,6 +121,7 @@ export const hostsApi = {
       user: string;
       password: string;
       status: string;
+      lastConnected?: Date;
     },
   ) => {
     const response = await fetch(`${getBaseUrl()}/api/hosts`, {

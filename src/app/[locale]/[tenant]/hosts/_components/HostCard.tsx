@@ -175,8 +175,8 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
           </div>
         </CardHeader>
         <CardContent className="p-4 pt-2">
-          <div className="flex flex-col space-y-2">
-            <div className="text-sm text-muted-foreground">
+          <div className="flex flex-col space-y-2 min-h-[120px]">
+            <div className="text-sm text-muted-foreground h-12 overflow-auto">
               {host.description && <p>{host.description}</p>}
             </div>
             <Button
@@ -189,11 +189,11 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               <Terminal className="h-4 w-4 mr-2" />
               {t('terminal')}
             </Button>
-            {host.lastConnected && (
-              <p className="text-xs mt-1 text-muted-foreground">
-                {t('lastConnected')}: {new Date(host.lastConnected).toLocaleDateString()}
-              </p>
-            )}
+            <p className="text-xs mt-1 text-muted-foreground h-4">
+              {host.lastConnected 
+                ? `${t('lastConnected')}: ${new Date(host.lastConnected).toLocaleDateString()}`
+                : `${t('lastConnected')}: ${t('never')}`}
+            </p>
           </div>
         </CardContent>
       </Card>

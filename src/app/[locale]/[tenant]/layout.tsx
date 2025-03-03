@@ -3,12 +3,12 @@
 import Cookies from 'js-cookie';
 import * as React from 'react';
 
-import { SidebarProvider } from '@/context/SidebarContext';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
-import { ToasterProvider } from '@/components/shadcn/toaster';
+import { SidebarProvider } from '@/components/Sidebar';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { useUser } from '@/context/UserContext';
+import { ToasterProvider } from '@/components/shadcn/toaster';
 
 // Cache session check timestamp to reduce API calls
 const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
