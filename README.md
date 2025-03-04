@@ -69,7 +69,11 @@ tcp        0      0 127.0.0.1:5432          0.0.0.0:*               LISTEN      
 tcp6       0      0 ::1:5432                :::*                    LISTEN      31041/postgres  
 sudo nano /etc/postgresql/13/main/postgresql.conf
 listen_addresses = '*'
-
+npm run dev:codespace
+- package.json
+    "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
+    "dev:codespace": "cross-env NODE_ENV=development ENV_FILE=.env.codespace CODESPACE=true ts-node server.ts",
+    
 ## Running the Application
 
 ### Frontend and API
