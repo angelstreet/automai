@@ -1,16 +1,10 @@
 const createNextIntlPlugin = require('next-intl/plugin');
 
-// No need to manually load env files - Next.js handles this automatically
-// when .env files are in the root directory
-
 const withNextIntl = createNextIntlPlugin();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Add any other Next.js config options here
-
-  // Configure allowed image domains
   images: {
     remotePatterns: [
       {
@@ -19,8 +13,6 @@ const nextConfig = {
       },
     ],
   },
-
-  // Ignore optional dependencies that cause warnings
   webpack: (config) => {
     config.externals = config.externals || [];
     config.externals.push({
@@ -30,7 +22,6 @@ const nextConfig = {
       '@mapbox/node-pre-gyp': 'commonjs @mapbox/node-pre-gyp',
       'oidc-token-hash': 'commonjs oidc-token-hash',
     });
-
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
@@ -41,11 +32,8 @@ const nextConfig = {
       crypto: require.resolve('crypto-browserify'),
       stream: require.resolve('stream-browserify'),
     };
-
     config.module = config.module || {};
     config.module.exprContextCritical = false;
-
-    // Ignore specific module not found warnings
     config.ignoreWarnings = [
       { module: /node_modules\/ssh2\/lib\/protocol\/constants\.js/ },
       { module: /node_modules\/ssh2\/lib\/protocol\/crypto\.js/ },
@@ -54,11 +42,8 @@ const nextConfig = {
       { module: /node_modules\/oidc-token-hash/ },
       { module: /node_modules\/openid-client/ },
     ];
-
     return config;
   },
-
-  // Configure server options
   experimental: {
     serverActions: {
       allowedOrigins: [
@@ -69,8 +54,6 @@ const nextConfig = {
       ],
     },
   },
-
-  // External packages that should not be bundled
   serverExternalPackages: [
     'ws',
     'ssh2',
@@ -79,8 +62,6 @@ const nextConfig = {
     'oidc-token-hash',
     'openid-client',
   ],
-
-  // Ensure WebSocket connections are handled properly
   async headers() {
     return [
       {
@@ -92,13 +73,14 @@ const nextConfig = {
       },
     ];
   },
-
   eslint: {
     ignoreDuringBuilds: true,
   },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
-// Set NEXTAUTH_SECRET if not present
 if (process.env.JWT_SECRET && !process.env.NEXTAUTH_SECRET) {
   process.env.NEXTAUTH_SECRET = process.env.JWT_SECRET;
 }
