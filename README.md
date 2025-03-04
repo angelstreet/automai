@@ -8,7 +8,6 @@ Automai is a multi-tenant SaaS platform designed for end-to-end test automation 
 npx eslint . --ext .ts,.tsx --quiet
 # Restart next.js frontend
 npm run dev:all
-sudo service postgresql start
 
 # Restart next.js frontend in debug mode with browser tool and prisma studio
 npm run dev:debug
@@ -46,6 +45,30 @@ npm run prisma:studio
      DATABASE_URL=               # Your Prisma Url
      JWT_SECRET=                # Your JWT secret key
      ```
+4. If runing github codespace
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo service postgresql start 
+psql --version
+ALLOW MD5
+sudo su -
+nano /etc/postgresql/12/main/pg_hba.conf
+local   all             postgres                                trust
+service postgresql restart
+sudo -u postgres psql -c "SHOW hba_file;"
+sudo -u postgres psql 
+CREATE USER automai_user WITH PASSWORD 'automai_password_123';
+CREATE DATABASE automai_db OWNER automai_user;
+ALTER USER automai_user CREATEDB;
+npx prisma migrate dev --name init
+psql -h localhost -U automai_user -d automai_db
+automai_password_123
+\dt
+sudo netstat -plnt | grep 5432
+tcp        0      0 127.0.0.1:5432          0.0.0.0:*               LISTEN      31041/postgres      
+tcp6       0      0 ::1:5432                :::*                    LISTEN      31041/postgres  
+sudo nano /etc/postgresql/13/main/postgresql.conf
+listen_addresses = '*'
 
 ## Running the Application
 
