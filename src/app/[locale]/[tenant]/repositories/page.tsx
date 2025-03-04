@@ -23,6 +23,7 @@ export default function RepositoriesPage() {
   const [providers, setProviders] = useState<GitProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [tabsValue, setTabsValue] = useState('repositories');
   const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
   const [refreshingProviderId, setRefreshingProviderId] = useState<string | null>(null);
   const [addProviderOpen, setAddProviderOpen] = useState(false);
@@ -322,7 +323,12 @@ export default function RepositoriesPage() {
 
     return (
       <div className="space-y-8">
-        <Tabs defaultValue="providers" className="w-full">
+        <Tabs 
+          defaultValue="providers" 
+          className="w-full"
+          value={tabsValue}
+          onValueChange={setTabsValue}
+        >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="repositories">Repositories</TabsTrigger>
             <TabsTrigger value="providers">Git Providers</TabsTrigger>
@@ -332,12 +338,12 @@ export default function RepositoriesPage() {
             {repositories.length === 0 ? (
               <EmptyState
                 title={t('no_repositories')}
-                description={t('add_provider')}
+                description={t('no_repositories_description')}
                 icon={<GitBranch className="h-10 w-10" />}
                 action={
-                  <Button onClick={() => setAddProviderOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t('add_provider')}
+                  <Button onClick={() => setTabsValue('providers')}>
+                    <GitBranch className="mr-2 h-4 w-4" />
+                    {t('view_providers')}
                   </Button>
                 }
               />

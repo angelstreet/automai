@@ -182,10 +182,14 @@
   },
   "repositories": {
     "repositories": "Repositories",
-    "repositories_description": "Manage your Git repositories",
+    "repositories_description": "Manage your git repositories",
+    "no_repositories": "No repositories found",
+    "no_repositories_description": "No repositories are available. Check your Git provider settings.",
+    "view_providers": "View Git Providers",
     "add_provider": "Add Git Provider",
-    "no_providers": "No Git providers found. Add a provider to get started.",
-    "no_repositories": "No repositories found. Add a Git provider to import repositories.",
+    "no_providers": "No Git Providers",
+    "connectGit": "Connect to a Git provider to get started",
+    "connectedProviders": "Connected Providers",
     "provider_type": "Provider Type",
     "display_name": "Display Name",
     "server_url": "Server URL",
@@ -196,8 +200,6 @@
     "sync": "Sync",
     "delete": "Delete",
     "confirm_delete": "Are you sure you want to delete this Git provider?",
-    "delete_warning": "This will remove all associated repositories. This action cannot be undone.",
-    "connectGit": "Connect to your Git providers to import repositories",
-    "connectedProviders": "Connected Providers"
+    "delete_warning": "This will remove all associated repositories. This action cannot be undone."
   }
 }
