@@ -73,7 +73,8 @@ npm run dev:codespace
 - package.json
     "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
     "dev:codespace": "cross-env NODE_ENV=development ENV_FILE=.env.codespace CODESPACE=true ts-node server.ts",
-    
+
+Supabase vercel supabase-emerald-xylophone   
 ## Running the Application
 
 ### Frontend and API
