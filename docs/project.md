@@ -32,7 +32,7 @@ const sampleProjects = [
     lastRun: '2024-12-10 08:30',
     status: 'active',
     scheduleType: 'daily',
-    scheduleConfig: '08:00',
+    scheduleConfig: '08:00'
   },
   { 
     id: 2, 
@@ -41,7 +41,7 @@ const sampleProjects = [
     lastRun: '2024-12-08 01:15',
     status: 'active',
     scheduleType: 'weekly',
-    scheduleConfig: 'Sunday 01:00',
+    scheduleConfig: 'Sunday 01:00'
   },
   { 
     id: 3, 
@@ -50,7 +50,7 @@ const sampleProjects = [
     lastRun: '2024-11-30 23:45',
     status: 'inactive',
     scheduleType: 'monthly',
-    scheduleConfig: 'Last day 23:00',
+    scheduleConfig: 'Last day 23:00'
   }
 ];
 

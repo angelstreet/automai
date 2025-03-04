@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { GitBranch, Plus, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
-import { Repository, GitProvider } from '@/types/repositories';
+import { Repository, GitProvider, GitProviderType } from '@/types/repositories';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
