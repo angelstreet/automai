@@ -10,7 +10,7 @@
     "dev:next": "next dev",
     "dev:all": "node scripts/dev.js",
     "dev:debug": "node scripts/debug.js",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "analyze": "ANALYZE=true next build",
     "start": "next start",
     "start:next": "next start",
