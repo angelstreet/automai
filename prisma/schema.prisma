@@ -17,6 +17,7 @@ model Host {
   user        String?
   password    String?
   status      String   @default("pending")
+  is_windows  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

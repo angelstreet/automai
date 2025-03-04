@@ -2,7 +2,7 @@
 import { Client } from 'ssh2';
 import { WebSocket } from 'ws';
 import { logger } from '../logger';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '../prisma';
 
 // Define WebSocketConnection type
 export type WebSocketConnection = WebSocket & {
@@ -13,7 +13,7 @@ export type WebSocketConnection = WebSocket & {
 // Add a type definition for the connection object
 interface Connection {
   id: string;
-  sshhost: string;
+  ssh_host: string;
   ssh_port: number;
   ssh_username: string;
   ssh_password: string | null;
@@ -44,7 +44,7 @@ export async function handleSshConnection(
     | {
         ssh_username?: string;
         ssh_password?: string;
-        sshhost?: string;
+        ssh_host?: string;
         ssh_port?: number;
         is_windows?: boolean;
       }
@@ -57,9 +57,51 @@ export async function handleSshConnection(
   // For backward compatibility, check both prefixed and non-prefixed parameters
   const ssh_username = (authData as any)?.ssh_username || (authData as any)?.username;
   const ssh_password = (authData as any)?.ssh_password || (authData as any)?.password;
-  const sshhost = (authData as any)?.sshhost || (authData as any)?.host;
+  const ssh_host = (authData as any)?.ssh_host || (authData as any)?.host;
   const ssh_port = (authData as any)?.ssh_port || (authData as any)?.port;
   let is_windows = (authData as any)?.is_windows || false;
+
+  // If we have a host IP, try to get the is_windows flag from the database
+  if (ssh_host && !is_windows) {
+    try {
+      console.log(`[Windows Detection] Checking database for ${ssh_host} Windows status`);
+      
+      // Try to find the host record with a client-side selection to avoid errors on missing fields
+      try {
+        const host = await prisma.host.findFirst({
+          where: { 
+            ip: ssh_host,
+            type: 'ssh'
+          },
+          select: {
+            id: true,
+            name: true,
+            ip: true,
+            // Other fields but not is_windows
+          }
+        });
+        
+        if (host) {
+          console.log(`[Windows Detection] Found host in database: ${host.id}, but is_windows field might not exist yet`);
+          // We can't check is_windows here since the field might not exist in the database yet
+        } else {
+          console.log(`[Windows Detection] No host found in database for ${ssh_host}`);
+        }
+      } catch (e: unknown) {
+        console.log(`[Windows Detection] Error when querying for host: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    } catch (e) {
+      // Ignore database errors, just proceed with the connection
+      console.error(`[Windows Detection] ❌ Database error checking Windows status for ${ssh_host}`, e);
+      logger.warn('Failed to check host Windows status in database', { 
+        connectionId, 
+        ssh_host, 
+        error: e instanceof Error ? e.message : String(e) 
+      });
+    }
+  } else if (is_windows) {
+    console.log(`[Windows Detection] 🪟 Using Windows mode from explicit flag for ${ssh_host}`);
+  }
 
   // Function to attempt SSH connection with specified mode
   const attemptConnection = (useWindowsMode: boolean) => {
@@ -70,7 +112,7 @@ export async function handleSshConnection(
       connectionId,
       ssh_username: ssh_username,
       ssh_password: ssh_password ? '[REDACTED]' : 'none',
-      sshhost: sshhost,
+      ssh_host: ssh_host,
       ssh_port: ssh_port || 22,
       is_windows: is_windows,
       isRetry: attemptingWindowsFallback,
@@ -110,13 +152,16 @@ export async function handleSshConnection(
 
       // Connection options with improved algorithm support for different SSH server types
       const connectionOptions: any = {
-        host: sshhost,
+        host: ssh_host,
         port: ssh_port || 22,
         username: ssh_username,
         password: ssh_password,
         forceIPv4: true, // Force IPv4 to avoid IPv6 issues
         debug: (message: string) => {
           console.log(`SSH DEBUG [${connectionId}]:`, message);
+          if (message.includes('Remote ident') && message.includes('Windows')) {
+            logger.info('Detected Windows SSH server from banner', { connectionId, message });
+          }
           if (
             message.includes('KEX') ||
             message.includes('AUTH') ||
@@ -128,7 +173,7 @@ export async function handleSshConnection(
           ) {
             logger.info(`SSH DETAIL [${connectionId}]:`, {
               message,
-              sshhost,
+              ssh_host,
               ssh_port: ssh_port || 22,
             });
           }
@@ -167,7 +212,7 @@ export async function handleSshConnection(
 
       // Add Windows/WSL-specific options if needed
       if (is_windows) {
-        logger.info('Using Windows-specific SSH options', { connectionId, sshhost });
+        logger.info('Using Windows-specific SSH options', { connectionId, ssh_host });
         connectionOptions.pty = true; // Force PTY allocation
         connectionOptions.agentForward = false;
       }
@@ -195,7 +240,7 @@ export async function handleSshConnection(
                     error: `SSH connection timed out after 25 seconds`,
                     errorType: 'SSH_CONNECTION_TIMEOUT',
                     details: {
-                      sshhost: sshhost,
+                      ssh_host: ssh_host,
                       ssh_port: ssh_port || 22,
                       is_windows: is_windows,
                     },
@@ -259,59 +304,10 @@ export async function handleSshConnection(
   const setupSshClientEvents = () => {
     if (!sshClient) return;
 
-    sshClient.on('ready', () => {
-      isConnecting = false;
-      logger.info('SSH connection ready', {
-        connectionId,
-        sshhost,
-        ssh_port: ssh_port || 22,
-        is_windows,
-      });
-
-      try {
-        if (clientSocket.readyState === WebSocket.OPEN) {
-          clientSocket.send(
-            JSON.stringify({
-              status: 'connected',
-              message: 'SSH connection established successfully',
-              details: { is_windows },
-            }),
-          );
-        }
-      } catch (e) {
-        logger.error(
-          `Failed to send connection success message: ${e instanceof Error ? e.message : String(e)}`,
-          { connectionId },
-        );
-        return;
-      }
-
-      // For Windows hosts, try to use exec with cmd.exe directly
-      if (is_windows && sshClient) {
-        logger.info('Using Windows-specific exec method', { connectionId });
-
-        sshClient.exec('cmd.exe', { pty: true }, (err, stream) => {
-          if (err) {
-            logger.error(`Windows exec error: ${err.message}`, { connectionId });
-            // Fall back to shell if exec fails
-            createShellSession();
-          } else {
-            setupStream(stream);
-          }
-        });
-      } else {
-        // For normal SSH, use regular shell
-        createShellSession();
-      }
-    });
-
-    sshClient.on('error', handleSshError);
-
-    // Add banner event handler to capture connection information
     sshClient.on('banner', (message: string) => {
       logger.info('SSH banner received', { connectionId, message });
       console.log(`SSH BANNER [${connectionId}]:`, message);
-
+      
       // Send banner to client for visibility
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
@@ -330,6 +326,47 @@ export async function handleSshConnection(
       }
     });
 
+    sshClient.on('ready', () => {
+      isConnecting = false;
+      logger.info('SSH connection ready', {
+        connectionId,
+        ssh_host,
+        ssh_port: ssh_port || 22,
+        is_windows: is_windows,
+      });
+
+      try {
+        if (clientSocket.readyState === WebSocket.OPEN) {
+          clientSocket.send(
+            JSON.stringify({
+              status: 'connected',
+              message: 'SSH connection established successfully',
+              details: { is_windows: is_windows },
+            }),
+          );
+        }
+      } catch (e) {
+        logger.error(
+          `Failed to send connection success message: ${e instanceof Error ? e.message : String(e)}`,
+          { connectionId },
+        );
+        return;
+      }
+
+      // For Windows hosts, try to use exec with cmd.exe directly
+      if (is_windows && sshClient) {
+        logger.info('Using Windows-specific exec method', { connectionId });
+        tryWindowsConnection(0);
+      } else {
+        // For normal SSH, use regular shell
+        createShellSession();
+      }
+    });
+
+    sshClient.on('error', (err: SSHError) => {
+      handleSshError(err);
+    });
+
     // Add handshake event handler if available
     sshClient.on('handshake', (negotiated: any) => {
       logger.info('SSH handshake completed', {
@@ -343,6 +380,39 @@ export async function handleSshConnection(
     });
   };
 
+  // Add this function to try different Windows connection methods
+  const tryWindowsConnection = (retryCount = 0) => {
+    if (!sshClient) return;
+
+    const methods = [
+      { cmd: 'cmd.exe', opts: { pty: true, term: 'xterm-256color' } },
+      { cmd: 'cmd.exe /k "cd %USERPROFILE%"', opts: { pty: true, term: 'xterm-256color' } },
+      { cmd: 'powershell.exe', opts: { pty: true, term: 'xterm-256color' } },
+      { cmd: null, opts: { pty: true, term: 'xterm-256color' } } // Regular shell as last resort
+    ];
+
+    if (retryCount >= methods.length) {
+      logger.error('All Windows connection methods failed', { connectionId });
+      return;
+    }
+
+    const method = methods[retryCount];
+    
+    if (method.cmd) {
+      logger.info(`Trying Windows connection method ${retryCount}: ${method.cmd}`, { connectionId });
+      sshClient.exec(method.cmd, method.opts, (err, stream) => {
+        if (err) {
+          logger.warn(`Windows connection method ${retryCount} failed: ${err.message}`, { connectionId });
+          tryWindowsConnection(retryCount + 1);
+        } else {
+          setupStream(stream);
+        }
+      });
+    } else {
+      createShellSession(); // Fall back to regular shell
+    }
+  };
+
   // Error handler for SSH client errors
   const handleSshError = (err: SSHError) => {
     // Skip error handling if we're already attempting fallback
@@ -353,7 +423,7 @@ export async function handleSshConnection(
       code: err.code,
       level: err.level,
       connectionId,
-      sshhost: sshhost,
+      ssh_host: ssh_host,
       ssh_port: ssh_port || 22,
       is_windows: is_windows,
     };
@@ -381,7 +451,7 @@ export async function handleSshConnection(
             details: {
               code: err.code,
               level: err.level,
-              sshhost: sshhost,
+              ssh_host: ssh_host,
               ssh_port: ssh_port || 22,
               is_windows: is_windows,
             },
@@ -403,7 +473,7 @@ export async function handleSshConnection(
 
     logger.error(`Error connecting to SSH server: ${e instanceof Error ? e.message : String(e)}`, {
       connectionId,
-      sshhost: sshhost,
+      ssh_host: ssh_host,
       ssh_port: ssh_port || 22,
       is_windows: is_windows,
     });
@@ -415,7 +485,7 @@ export async function handleSshConnection(
             error: `SSH connection attempt error: ${e instanceof Error ? e.message : String(e)}`,
             errorType: 'SSH_CONNECTION_ATTEMPTerror',
             details: {
-              sshhost: sshhost,
+              ssh_host: ssh_host,
               ssh_port: ssh_port || 22,
               is_windows: is_windows,
             },
@@ -444,14 +514,14 @@ export async function handleSshConnection(
 
     sshClient.shell(shellOptions, (err, stream) => {
       if (err) {
-        logger.error(`SSH shell error: ${err.message}`, { connectionId, sshhost });
+        logger.error(`SSH shell error: ${err.message}`, { connectionId, ssh_host });
         try {
           if (clientSocket.readyState === WebSocket.OPEN) {
             clientSocket.send(
               JSON.stringify({
                 error: `SSH shell error: ${err.message}`,
                 errorType: 'SSH_SHELLerror',
-                details: { sshhost, ssh_port: ssh_port || 22, is_windows },
+                details: { ssh_host, ssh_port: ssh_port || 22, is_windows: is_windows },
               }),
             );
           }
@@ -561,7 +631,7 @@ export async function handleSshConnection(
     JSON.stringify({
       ssh_username: ssh_username,
       ssh_password: ssh_password ? '[REDACTED]' : 'none',
-      sshhost: sshhost,
+      ssh_host: ssh_host,
       ssh_port: ssh_port || 22,
       raw_keys: Object.keys(authData || {}).join(', '),
       is_windows: is_windows,
@@ -573,9 +643,9 @@ export async function handleSshConnection(
     delete clientSocket.authTimeout;
   }
 
-  if (!sshhost || !ssh_username) {
+  if (!ssh_host || !ssh_username) {
     const missingFields = [];
-    if (!sshhost) missingFields.push('sshhost');
+    if (!ssh_host) missingFields.push('ssh_host');
     if (!ssh_username) missingFields.push('ssh_username');
 
     logger.error('Missing SSH credentials', { connectionId, missingFields });
