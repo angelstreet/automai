@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Plus } from 'lucide-react';
+import { GitBranch, Plus, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
 import { Repository, GitProvider } from '@/types/repositories';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Button } from '@/components/shadcn/button';
@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/layout/EmptyState';
 import { RepositoryCard, GitProviderCard, AddGitProviderDialog, RepositoryGrid, GitProviderType } from './_components';
 import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
 import { useTranslations } from 'next-intl';
+import { Badge } from '@/components/shadcn/badge';
 
 export default function RepositoriesPage() {
   const router = useRouter();
@@ -321,7 +322,7 @@ export default function RepositoriesPage() {
 
     return (
       <div className="space-y-8">
-        <Tabs defaultValue="repositories" className="w-full">
+        <Tabs defaultValue="providers" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="repositories">Repositories</TabsTrigger>
             <TabsTrigger value="providers">Git Providers</TabsTrigger>
@@ -364,25 +365,102 @@ export default function RepositoriesPage() {
                 }
               />
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-lg font-semibold">{t('connectedProviders')}</h2>
-                  <Button onClick={() => setAddProviderOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t('add_provider')}
-                  </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {providers.map(provider => (
-                    <GitProviderCard
-                      key={provider.id}
-                      provider={provider}
-                      onDelete={handleDeleteProvider}
-                      onRefresh={handleRefreshProvider}
-                      isRefreshing={refreshingProviderId === provider.id}
-                    />
-                  ))}
-                </div>
+                
+                {providers.map(provider => (
+                  <div key={provider.id} className="border rounded-lg overflow-hidden">
+                    <div className="bg-muted p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2 font-medium">
+                          {provider.displayName}
+                          <Badge variant={provider.status === 'connected' ? 'secondary' : 'outline'}>
+                            {provider.status === 'connected' ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleRefreshProvider(provider.id)}
+                            disabled={refreshingProviderId === provider.id}
+                          >
+                            <RefreshCw className={`h-4 w-4 mr-1 ${refreshingProviderId === provider.id ? 'animate-spin' : ''}`} />
+                            Sync Repositories
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleDeleteProvider(provider.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-md font-medium">Repositories</h3>
+                        {repositories.filter(repo => repo.providerId === provider.id).length > 0 && (
+                          <span className="text-sm text-muted-foreground">
+                            {repositories.filter(repo => repo.providerId === provider.id).length} repositories
+                          </span>
+                        )}
+                      </div>
+                      
+                      {repositories.filter(repo => repo.providerId === provider.id).length === 0 ? (
+                        <div className="text-center p-6 border rounded-lg bg-muted/50">
+                          <p className="text-muted-foreground">
+                            No repositories found. Click Sync Repositories to import from this provider.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {repositories
+                            .filter(repo => repo.providerId === provider.id)
+                            .map(repository => (
+                              <div key={repository.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-muted/30">
+                                <div className="flex flex-col">
+                                  <div className="font-medium">{repository.name}</div>
+                                  {repository.description && (
+                                    <div className="text-sm text-muted-foreground line-clamp-1">{repository.description}</div>
+                                  )}
+                                </div>
+                                <div className="flex gap-2">
+                                  {repository.url && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => window.open(repository.url, '_blank')}
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleSyncRepository(repository.id)}
+                                    disabled={syncingRepoId === repository.id}
+                                  >
+                                    <RefreshCw className={`h-4 w-4 ${syncingRepoId === repository.id ? 'animate-spin' : ''}`} />
+                                  </Button>
+                                  <Badge variant={repository.syncStatus === 'SYNCED' ? 'secondary' : 
+                                                 repository.syncStatus === 'ERROR' ? 'destructive' : 
+                                                 'outline'}>
+                                    {repository.syncStatus}
+                                  </Badge>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </TabsContent>
@@ -394,6 +472,10 @@ export default function RepositoriesPage() {
   return (
     <div className="flex flex-col h-full">
       <PageHeader title={t('repositories')} description={t('repositories_description')}>
+        <Button onClick={() => setAddProviderOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          {t('add_provider')}
+        </Button>
         <AddGitProviderDialog
           onSubmit={handleAddProvider}
           isSubmitting={isAddingProvider}
