@@ -63,10 +63,17 @@ export async function POST(request: Request) {
     const result = await testHostConnection(connectionData);
     console.log(`Test connection result at ${new Date().toISOString()}:`, result);
 
+    // Log Windows detection result 
+    if (result.is_windows) {
+      console.log(`[Windows Detection] 🪟 Host ${host.ip} detected as Windows in API response`);
+    } else {
+      console.log(`[Windows Detection] Host ${host.ip} not detected as Windows in API response`);
+    }
+
     // Log the status that will be set in the database
     if (host.hostId) {
       console.log(
-        `Host ${host.hostId} status updated to: ${result.success ? 'connected' : 'failed'}`,
+        `Host ${host.hostId} status updated to: ${result.success ? 'connected' : 'failed'}, is_windows: ${result.is_windows || false}`,
       );
     }
 

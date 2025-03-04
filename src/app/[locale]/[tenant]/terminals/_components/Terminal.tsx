@@ -215,7 +215,7 @@ export function Terminal({ connection }: TerminalProps) {
         usingTestId: connection.id === 'test',
         connectionType: connection.type,
         ssh_username: connection.username,
-        sshhost: connection.ip,
+        ssh_host: connection.ip,
         ssh_port: connection.port,
       });
 
@@ -258,7 +258,7 @@ export function Terminal({ connection }: TerminalProps) {
             connectionType: connection.type,
             ssh_username: connection.username || connection.user || 'root',
             ssh_password: connection.password,
-            sshhost: connection.ip,
+            ssh_host: connection.ip,
             ssh_port: connection.port,
             is_windows: is_windows,
           };
@@ -268,7 +268,7 @@ export function Terminal({ connection }: TerminalProps) {
             connectionType: connection.type,
             ssh_username: connection.username || connection.user || 'root',
             hasPassword: !!connection.password,
-            sshhost: connection.ip,
+            ssh_host: connection.ip,
             ssh_port: connection.port,
             is_windows: is_windows,
           });
@@ -366,13 +366,13 @@ export function Terminal({ connection }: TerminalProps) {
                 toastDescription = 'Invalid username or password. Please check your credentials.';
               } else if (data.errorType === 'SSH_NETWORKerror') {
                 toastTitle = 'Network Error';
-                toastDescription = `Could not connect to ${data.details?.sshhost}:${data.details?.ssh_port}. Server may be unreachable.`;
+                toastDescription = `Could not connect to ${data.details?.ssh_host}:${data.details?.ssh_port}. Server may be unreachable.`;
               } else if (data.errorType === 'SSH_SHELLerror') {
                 toastTitle = 'Shell Error';
                 toastDescription = 'Failed to open shell session on the remote server.';
               } else if (data.errorType === 'SSH_HANDSHAKE_TIMEOUT') {
                 toastTitle = 'Handshake Timeout';
-                toastDescription = `SSH handshake timed out. Server at ${data.details?.sshhost}:${data.details?.ssh_port} might be unreachable or incompatible.`;
+                toastDescription = `SSH handshake timed out. Server at ${data.details?.ssh_host}:${data.details?.ssh_port} might be unreachable or incompatible.`;
               }
 
               // Show toast notification for SSH error
@@ -391,7 +391,7 @@ export function Terminal({ connection }: TerminalProps) {
                 );
               } else if (data.errorType === 'SSH_NETWORKerror') {
                 term.write(
-                  `\r\n\x1B[1;3;31mCould not connect to ${data.details?.sshhost}:${data.details?.ssh_port}. Server may be unreachable.\x1B[0m\r\n`,
+                  `\r\n\x1B[1;3;31mCould not connect to ${data.details?.ssh_host}:${data.details?.ssh_port}. Server may be unreachable.\x1B[0m\r\n`,
                 );
               } else if (data.errorType === 'SSH_SHELLerror') {
                 term.write(
