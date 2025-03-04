@@ -193,7 +193,6 @@ export default function HostContainer() {
         user: formData.username,
         password: formData.password,
         status: 'connected',
-        lastConnected: new Date(),
       });
 
       setShowAddHost(false);

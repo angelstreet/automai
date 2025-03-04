@@ -77,6 +77,17 @@ export const hostsApi = {
     return response.json();
   },
 
+  /**
+   * Test all host connections at once
+   */
+  testAllHosts: async () => {
+    // Add cache-busting parameter to prevent browser caching
+    const timestamp = new Date().getTime();
+    const response = await fetch(`${getBaseUrl()}/api/hosts/test-all?_=${timestamp}`);
+    if (!response.ok) throw new Error('Failed to test all connections');
+    return response.json();
+  },
+
   async verifyFingerprint(
     data: {
       fingerprint: string;
@@ -118,7 +129,6 @@ export const hostsApi = {
       user: string;
       password: string;
       status: string;
-      lastConnected?: Date;
     },
   ) => {
     const response = await fetch(`${getBaseUrl()}/api/hosts`, {

@@ -69,6 +69,39 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
     // Function to test connection for a single host
     const testHostConnection = async (host: Host) => {
       setTestingHost(host.id);
+      
+      // Validate required fields before testing connection
+      if (!host.ip || (host.type === 'ssh' && !host.user)) {
+        // Update host status to indicate missing fields
+        setHosts((prevHosts) =>
+          prevHosts.map((h) =>
+            h.id === host.id
+              ? {
+                  ...h,
+                  status: 'failed',
+                  errorMessage: 'Missing required connection fields',
+                }
+              : h,
+          ),
+        );
+        
+        // Update the cache in React Query
+        queryClient.setQueryData(['hosts'], (oldData: Host[] | undefined) => {
+          if (!oldData) return oldData;
+          return oldData.map((h) =>
+            h.id === host.id
+              ? {
+                  ...h,
+                  status: 'failed',
+                  errorMessage: 'Missing required connection fields',
+                }
+              : h,
+          );
+        });
+        
+        return;
+      }
+      
       try {
         const data = await hostsApi.testConnection({
           type: host.type,
@@ -167,8 +200,51 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       const freshHosts = await hostsApi.getHosts();
       setHosts(freshHosts);
       queryClient.setQueryData(['hosts'], freshHosts);
+      
+      // Filter out hosts with missing required fields
+      const validHosts = freshHosts.map(host => {
+        if (!host.ip || (host.type === 'ssh' && !host.user)) {
+          return {
+            ...host,
+            status: 'failed',
+            errorMessage: 'Missing required connection fields'
+          };
+        }
+        return host;
+      });
+      
+      // Update hosts with validation results
+      setHosts(validHosts);
+      queryClient.setQueryData(['hosts'], validHosts);
+      
+      // Test all connections for valid hosts
+      const testResults = await hostsApi.testAllHosts();
+      if (testResults.success) {
+        // Update host statuses based on test results
+        const updatedHosts = validHosts.map(host => {
+          // Skip hosts that already failed validation
+          if (host.errorMessage === 'Missing required connection fields') {
+            return host;
+          }
+          
+          const result = testResults.results.find(r => r.id === host.id);
+          if (result) {
+            return {
+              ...host,
+              status: result.success ? 'connected' : 'failed',
+              errorMessage: !result.success ? result.message : undefined
+            };
+          }
+          return host;
+        });
+        
+        setHosts(updatedHosts);
+        queryClient.setQueryData(['hosts'], updatedHosts);
+      }
+      
       toast.success('Hosts refreshed');
     } catch (error) {
+      console.error('Error refreshing hosts:', error);
       toast.error('Failed to refresh hosts');
     } finally {
       setIsRefreshing(false);
@@ -244,6 +320,12 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           onDelete={handleDeleteHost}
           onRefresh={refreshConnections}
           onTestConnection={async (host) => {
+            // Validate required fields before testing connection
+            if (!host.ip || (host.type === 'ssh' && !host.user)) {
+              toast.error('Missing required connection fields');
+              return;
+            }
+            
             const data = await hostsApi.testConnection({
               type: host.type,
               ip: host.ip,

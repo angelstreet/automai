@@ -12,6 +12,25 @@ export async function GET() {
     const results = await Promise.all(
       hosts.map(async (host) => {
         try {
+          // Validate required fields
+          if (!host.ip) {
+            return {
+              id: host.id,
+              name: host.name,
+              success: false,
+              message: 'IP address is required',
+            };
+          }
+
+          if (host.type === 'ssh' && !host.user) {
+            return {
+              id: host.id,
+              name: host.name,
+              success: false,
+              message: 'Username is required for SSH connections',
+            };
+          }
+
           const result = await testHostConnection({
             type: host.type,
             ip: host.ip,

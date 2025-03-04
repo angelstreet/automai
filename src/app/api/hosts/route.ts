@@ -37,7 +37,6 @@ export async function POST(request: Request) {
 
     const host = await createHost({
       ...data,
-      lastConnected: new Date(),
     });
     console.log('Host created successfully:', host);
 
