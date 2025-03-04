@@ -35,9 +35,9 @@ import { HostOverview } from './HostOverview';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60,
+      staleTime: 0,
       gcTime: 1000 * 60 * 5,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       retry: 1,
     },
   },
@@ -201,6 +201,9 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
   const refreshConnections = async () => {
     setIsRefreshing(true);
     try {
+      // Invalidate the hosts query to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ['hosts'] });
+      
       // Fetch fresh hosts data
       const freshHosts = await hostsApi.getHosts();
       

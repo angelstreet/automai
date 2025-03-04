@@ -18,7 +18,13 @@ export const hostsApi = {
   getHosts: async () => {
     // Add cache-busting parameter to prevent browser caching
     const timestamp = new Date().getTime();
-    const response = await fetch(`${getBaseUrl()}/api/hosts?_=${timestamp}`);
+    const response = await fetch(`${getBaseUrl()}/api/hosts?_=${timestamp}`, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     if (!response.ok) throw new Error('Failed to fetch hosts');
     return response.json();
   },
@@ -83,7 +89,13 @@ export const hostsApi = {
   testAllHosts: async () => {
     // Add cache-busting parameter to prevent browser caching
     const timestamp = new Date().getTime();
-    const response = await fetch(`${getBaseUrl()}/api/hosts/test-all?_=${timestamp}`);
+    const response = await fetch(`${getBaseUrl()}/api/hosts/test-all?_=${timestamp}`, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     if (!response.ok) throw new Error('Failed to test all connections');
     return response.json();
   },
