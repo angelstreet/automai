@@ -6,7 +6,13 @@ export async function GET() {
   try {
     // Get all hosts
     const hosts = await getHosts();
-    console.log(`Testing connections for ${hosts.length} hosts`);
+    console.log(`Testing connections for ${hosts.length} hosts at ${new Date().toISOString()}`);
+
+    // Add cache control headers
+    const headers = new Headers();
+    headers.append('Cache-Control', 'no-cache, no-store, must-revalidate');
+    headers.append('Pragma', 'no-cache');
+    headers.append('Expires', '0');
 
     // Test connection for each host
     const results = await Promise.all(
@@ -58,12 +64,13 @@ export async function GET() {
       }),
     );
 
-    console.log('All connection tests completed:', results);
+    console.log(`All connection tests completed: ${results.length} hosts tested at ${new Date().toISOString()}`);
+    console.log(`Results summary: ${results.filter(r => r.success).length} successful, ${results.filter(r => !r.success).length} failed`);
 
     return NextResponse.json({
       success: true,
       results,
-    });
+    }, { headers });
   } catch (error) {
     console.error('Error in GET /api/hosts/test-all:', error);
     return NextResponse.json(

@@ -44,6 +44,7 @@ interface HostCardProps {
 export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
   const [showError, setShowError] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const t = useTranslations('Common');
 
   const getStatusDot = (status: string) => {
@@ -132,6 +133,17 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
     router.push(terminalPath);
   };
 
+  const handleRefreshClick = async () => {
+    if (isRefreshing || !onTestConnection) return;
+    
+    setIsRefreshing(true);
+    try {
+      await onTestConnection(host);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <>
       <Card className="relative w-[300px]">
@@ -162,9 +174,12 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                   <ScrollText className="mr-2 h-4 w-4" />
                   <span>{t('logs')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onTestConnection?.(host)}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  <span>{t('refresh')}</span>
+                <DropdownMenuItem 
+                  onClick={handleRefreshClick}
+                  disabled={isRefreshing}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                  <span>{isRefreshing ? t('refreshing') : t('refresh')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
                   <XCircle className="mr-2 h-4 w-4" />

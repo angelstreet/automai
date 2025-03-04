@@ -108,6 +108,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           ip: host.ip,
           port: host.port,
           username: host.user,
+          password: host.password,
           hostId: host.id,
         });
 
@@ -201,11 +202,12 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
   const refreshConnections = async () => {
     setIsRefreshing(true);
     try {
-      // Invalidate the hosts query to ensure fresh data
+      // Invalidate cache first to ensure we get fresh data
       queryClient.invalidateQueries({ queryKey: ['hosts'] });
-      
-      // Fetch fresh hosts data
+
+      // Fetch fresh hosts data with no caching
       const freshHosts = await hostsApi.getHosts();
+      console.log('Fetched fresh hosts:', freshHosts);
       
       // Process hosts for UI display
       const processedHosts = freshHosts.map((host: Host) => ({ 
@@ -214,52 +216,44 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
         lastConnected: host.lastConnected || host.createdAt
       }));
       
+      // Update local state first with the freshly fetched hosts
       setHosts(processedHosts);
+      
+      // Update React Query cache with the fresh hosts
       queryClient.setQueryData(['hosts'], processedHosts);
       
-      // Filter out hosts with missing required fields
-      const validHosts = processedHosts.map(host => {
-        if (!host.ip || (host.type === 'ssh' && !host.user)) {
-          return {
-            ...host,
-            status: 'failed',
-            errorMessage: 'Missing required connection fields'
-          };
-        }
-        return host;
-      });
-      
-      // Update hosts with validation results
-      setHosts(validHosts);
-      queryClient.setQueryData(['hosts'], validHosts);
-      
-      // Test all connections for valid hosts
-      const testResults = await hostsApi.testAllHosts();
-      if (testResults.success) {
-        // Current date for successful connections
-        const now = new Date();
+      // Test all connections with network cache disabled
+      try {
+        console.log('Testing all host connections...');
+        const testResults = await hostsApi.testAllHosts();
+        console.log('Test results:', testResults);
         
-        // Update host statuses based on test results
-        const updatedHosts = validHosts.map(host => {
-          // Skip hosts that already failed validation
-          if (host.errorMessage === 'Missing required connection fields') {
-            return host;
-          }
+        if (testResults.success) {
+          // Current date for successful connections
+          const now = new Date();
           
-          const result = testResults.results.find(r => r.id === host.id);
-          if (result) {
-            return {
-              ...host,
-              status: result.success ? 'connected' : 'failed',
-              errorMessage: !result.success ? result.message : undefined,
-              lastConnected: result.success ? now : host.lastConnected
-            };
-          }
-          return host;
-        });
-        
-        setHosts(updatedHosts);
-        queryClient.setQueryData(['hosts'], updatedHosts);
+          // Update host statuses based on test results
+          const updatedHosts = processedHosts.map(host => {
+            const result = testResults.results.find(r => r.id === host.id);
+            if (result) {
+              return {
+                ...host,
+                status: result.success ? 'connected' : 'failed',
+                errorMessage: !result.success ? result.message : undefined,
+                lastConnected: result.success ? now : host.lastConnected
+              };
+            }
+            return host;
+          });
+          
+          // Update both local state and React Query cache
+          setHosts(updatedHosts);
+          queryClient.setQueryData(['hosts'], updatedHosts);
+        }
+      } catch (testError) {
+        console.error('Error testing connections:', testError);
+        // Still update the UI with the fetched hosts even if testing fails
+        queryClient.setQueryData(['hosts'], processedHosts);
       }
       
       toast.success('Hosts refreshed');
@@ -340,23 +334,86 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           onDelete={handleDeleteHost}
           onRefresh={refreshConnections}
           onTestConnection={async (host) => {
-            // Validate required fields before testing connection
-            if (!host.ip || (host.type === 'ssh' && !host.user)) {
-              toast.error('Missing required connection fields');
-              return;
-            }
-            
-            const data = await hostsApi.testConnection({
-              type: host.type,
-              ip: host.ip,
-              port: host.port,
-              username: host.user,
-              hostId: host.id,
-            });
-            if (data.success) {
-              toast.success('Connection successful');
-            } else {
-              toast.error(data.message || 'Connection failed');
+            try {
+              console.log('Testing connection for host:', host.name);
+              
+              // Validate required fields before testing connection
+              if (!host.ip || (host.type === 'ssh' && !host.user)) {
+                toast.error('Missing required connection fields');
+                return;
+              }
+              
+              // Update status to pending during test
+              setHosts((prevHosts) =>
+                prevHosts.map((h) =>
+                  h.id === host.id
+                    ? {
+                        ...h,
+                        status: 'pending'
+                      }
+                    : h
+                )
+              );
+              
+              // Call the API to test connection
+              const data = await hostsApi.testConnection({
+                type: host.type,
+                ip: host.ip,
+                port: host.port,
+                username: host.user,
+                password: host.password,
+                hostId: host.id,
+              });
+              
+              console.log('Test connection result:', data);
+              
+              // Update the host status in the local state
+              const now = new Date();
+              const updatedHost = {
+                ...host,
+                status: data.success ? 'connected' : 'failed',
+                errorMessage: !data.success ? data.message || 'Connection failed' : undefined,
+                lastConnected: data.success ? now : host.lastConnected,
+              };
+              
+              setHosts((prevHosts) =>
+                prevHosts.map((h) =>
+                  h.id === host.id ? updatedHost : h
+                )
+              );
+              
+              // Update the cache in React Query
+              queryClient.setQueryData(['hosts'], (oldData: Host[] | undefined) => {
+                if (!oldData) return oldData;
+                return oldData.map((h) =>
+                  h.id === host.id ? updatedHost : h
+                );
+              });
+              
+              // Force a refetch to ensure cache and server are in sync
+              await queryClient.invalidateQueries({ queryKey: ['hosts'] });
+              
+              if (data.success) {
+                toast.success('Connection successful');
+              } else {
+                toast.error(data.message || 'Connection failed');
+              }
+            } catch (error) {
+              console.error('Error testing connection:', error);
+              toast.error('Failed to test connection');
+              
+              // Reset status on error
+              setHosts((prevHosts) =>
+                prevHosts.map((h) =>
+                  h.id === host.id
+                    ? {
+                        ...h,
+                        status: 'failed',
+                        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+                      }
+                    : h
+                )
+              );
             }
           }}
           className="mt-4"

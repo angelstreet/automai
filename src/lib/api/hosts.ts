@@ -19,11 +19,14 @@ export const hostsApi = {
     // Add cache-busting parameter to prevent browser caching
     const timestamp = new Date().getTime();
     const response = await fetch(`${getBaseUrl()}/api/hosts?_=${timestamp}`, {
+      method: 'GET',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0'
-      }
+        'Expires': '0',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      cache: 'no-store'
     });
     if (!response.ok) throw new Error('Failed to fetch hosts');
     return response.json();
@@ -90,11 +93,14 @@ export const hostsApi = {
     // Add cache-busting parameter to prevent browser caching
     const timestamp = new Date().getTime();
     const response = await fetch(`${getBaseUrl()}/api/hosts/test-all?_=${timestamp}`, {
+      method: 'GET',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0'
-      }
+        'Expires': '0',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      cache: 'no-store'
     });
     if (!response.ok) throw new Error('Failed to test all connections');
     return response.json();
@@ -180,6 +186,7 @@ export const hostsApi = {
         ip: host.ip,
         port: host.port,
         username: host.user,
+        password: host.password,
         hostId: host.id,
       });
       results.push({ hostId: host.id, result });

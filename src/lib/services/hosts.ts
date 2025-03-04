@@ -138,7 +138,7 @@ export async function testHostConnection(data: {
   hostId?: string;
 }) {
   try {
-    logger.info('Testing host connection', { ...data, password: '***' });
+    logger.info('Testing host connection', { ip: data.ip });
 
     let result: ConnectionTestResult;
 
@@ -177,7 +177,7 @@ export async function testHostConnection(data: {
           }
         });
 
-        // Try to connect
+        // Try to connect - use username from the request
         conn.connect({
           host: data.ip,
           port: data.port || 22,

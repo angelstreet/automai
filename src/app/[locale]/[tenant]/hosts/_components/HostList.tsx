@@ -76,6 +76,7 @@ export default function HostContainer() {
         ip: host.ip,
         port: host.port,
         username: host.user,
+        password: host.password,
         hostId: host.id,
       });
 
