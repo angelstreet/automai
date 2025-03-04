@@ -1,4 +1,5 @@
 import { User } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import * as React from 'react';
@@ -24,6 +25,7 @@ export function UserProfile({ tenant }: UserProfileProps) {
   const router = useRouter();
   const { logout, user } = useUser();
   const locale = 'en'; // You might want to get this from your i18n system
+  const [imageError, setImageError] = React.useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -45,12 +47,23 @@ export function UserProfile({ tenant }: UserProfileProps) {
       .toUpperCase();
   };
 
+  const avatarSrc = React.useMemo(() => {
+    if (imageError || !user?.image) {
+      return '/avatars/default.svg';
+    }
+    return user.image;
+  }, [user?.image, imageError]);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user?.image || '/avatars/01.svg'} alt={user?.name || 'User'} />
+            <AvatarImage
+              src={avatarSrc}
+              alt={user?.name || 'User'}
+              onError={() => setImageError(true)}
+            />
             <AvatarFallback>
               {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
             </AvatarFallback>

@@ -21,7 +21,7 @@ export function ProfileContent() {
 
   const handleUpdateName = async () => {
     try {
-      setIsUpdating(_true);
+      setIsUpdating(true);
       await updateProfile({ name });
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -71,7 +71,7 @@ export function ProfileContent() {
               <div className="flex gap-2 mt-1">
                 <Input
                   value={name}
-                  onChange={(e) => setName(_e.target.value)}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder={t('enterName')}
                   className="max-w-md"
                 />

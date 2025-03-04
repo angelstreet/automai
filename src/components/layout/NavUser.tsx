@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/Sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,

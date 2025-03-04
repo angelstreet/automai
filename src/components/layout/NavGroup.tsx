@@ -14,7 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuSub,
   SidebarMenuSubButton,
-} from '@/components/Sidebar';
+} from '@/components/sidebar';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';

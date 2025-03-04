@@ -16,6 +16,7 @@ interface CustomSession extends Session {
 type User = {
   id: string;
   email: string;
+  image?: string | null;
   name: string | null;
   role: string;
   tenantId: string | null;

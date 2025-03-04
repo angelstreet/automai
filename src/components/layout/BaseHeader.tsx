@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Separator } from '@/components/shadcn/separator';
-import { SidebarTrigger } from '@/components/Sidebar/SidebarTrigger';
+import { SidebarTrigger } from '@/components/sidebar/SidebarTrigger';
 import { cn } from '@/lib/utils';
 
 interface BaseHeaderProps extends React.HTMLAttributes<HTMLElement> {

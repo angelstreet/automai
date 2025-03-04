@@ -2,10 +2,9 @@
 
 import Cookies from 'js-cookie';
 import * as React from 'react';
-
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
-import { SidebarProvider } from '@/components/Sidebar';
+import { SidebarProvider } from '@/components/sidebar';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { useUser } from '@/context/UserContext';
 import { ToasterProvider } from '@/components/shadcn/toaster';

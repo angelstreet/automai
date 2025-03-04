@@ -3,7 +3,7 @@
 import { ChevronDown, Code2, Building2, Factory } from 'lucide-react';
 import * as React from 'react';
 
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/Sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -5,7 +5,7 @@ import { ChevronUp } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import * as React from 'react';
 
-import { SidebarTrigger } from '@/components/Sidebar';
+import { SidebarTrigger } from '@/components/sidebar';
 import { UserProfile } from '@/components/profile/UserProfile';
 import { Button } from '@/components/shadcn/button';
 import { RoleSwitcher } from '@/components/shadcn/role-switcher';

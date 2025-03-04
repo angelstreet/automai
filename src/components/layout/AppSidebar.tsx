@@ -1,7 +1,6 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
@@ -11,7 +10,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from '@/components/Sidebar';
+} from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
 
 import { sidebarData } from './data/sidebarData';
