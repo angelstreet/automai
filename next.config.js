@@ -46,6 +46,7 @@ const nextConfig = {
       { module: /node_modules\/bcrypt/ },
       { module: /node_modules\/oidc-token-hash/ },
       { module: /node_modules\/openid-client/ },
+      { message: /should not be imported directly/ },
     ];
     return config;
   },

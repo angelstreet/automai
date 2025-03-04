@@ -2,6 +2,8 @@
 import http from 'http';
 import { Server } from 'http';
 import { parse } from 'url';
+// We need to use the direct import here for the custom server
+// This will generate a warning during build but is required for the custom server to work
 import next from 'next';
 import { NextServer } from 'next/dist/server/next';
 import { initializeWebSocketServer, handleUpgrade } from './websocket';

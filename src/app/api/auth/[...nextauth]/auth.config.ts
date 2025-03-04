@@ -1,5 +1,4 @@
 import { PrismaAdapter } from '@auth/prisma-adapter';
-import type { NextAuthOptions } from 'next-auth';
 import type { User } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 
@@ -39,7 +38,7 @@ declare module 'next-auth/jwt' {
   }
 }
 
-export const authConfig: NextAuthOptions = {
+export const authConfig = {
   adapter: PrismaAdapter(prisma),
   providers: [], // Will be dynamically loaded
   pages: {
