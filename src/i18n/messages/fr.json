@@ -199,5 +199,16 @@
     "delete_warning": "Cela supprimera tous les dépôts associés. Cette action ne peut pas être annulée.",
     "connectGit": "Connectez-vous à vos fournisseurs Git pour importer des dépôts",
     "connectedProviders": "Fournisseurs connectés"
+  },
+  "Settings": {
+    "title": "Paramètres",
+    "description": "Gérez les paramètres de votre application",
+    "generalSettings": "Paramètres généraux",
+    "accountSettings": "Paramètres du compte",
+    "securitySettings": "Paramètres de sécurité",
+    "notificationSettings": "Paramètres de notification",
+    "apiSettings": "Paramètres API",
+    "integrationSettings": "Paramètres d'intégration",
+    "advancedSettings": "Paramètres avancés"
   }
 }

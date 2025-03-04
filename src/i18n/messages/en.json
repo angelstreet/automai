@@ -209,5 +209,16 @@
     "search": "Search",
     "clear_all": "Clear all",
     "no_repos_found": "No repositories found matching your criteria."
+  },
+  "Settings": {
+    "title": "Settings",
+    "description": "Manage your application settings",
+    "generalSettings": "General Settings",
+    "accountSettings": "Account Settings",
+    "securitySettings": "Security Settings",
+    "notificationSettings": "Notification Settings",
+    "apiSettings": "API Settings",
+    "integrationSettings": "Integration Settings",
+    "advancedSettings": "Advanced Settings"
   }
 }
