@@ -200,6 +200,14 @@
     "sync": "Sync",
     "delete": "Delete",
     "confirm_delete": "Are you sure you want to delete this Git provider?",
-    "delete_warning": "This will remove all associated repositories. This action cannot be undone."
+    "delete_warning": "This will remove all associated repositories. This action cannot be undone.",
+    "repository": "Repository",
+    "provider": "Provider",
+    "status": "Status",
+    "updatedAt": "Last Updated",
+    "actions": "Actions",
+    "search": "Search",
+    "clear_all": "Clear all",
+    "no_repos_found": "No repositories found matching your criteria."
   }
 }
