@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { GitProvider } from '@/types/repositories';
-import { RefreshCw, Trash2, Github, GitlabIcon } from 'lucide-react';
+import { RefreshCw, Trash2, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Badge } from '@/components/shadcn/badge';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/shadcn/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/shadcn/alert-dialog';
+import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 
 interface GitProviderCardProps {
   provider: GitProvider;
@@ -27,16 +28,16 @@ export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }:
   const getProviderIcon = () => {
     // Handle both string and enum types for compatibility
     const providerType = typeof provider.name === 'string' 
-      ? provider.name.toUpperCase() 
+      ? provider.name.toLowerCase() 
       : provider.name;
       
     switch (providerType) {
       case 'github':
-      case 'GITHUB':
-        return <Github className="h-5 w-5" />;
+        return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':
-      case 'GITLAB':
-        return <GitlabIcon className="h-5 w-5" />;
+        return <GitLabIcon className="h-5 w-5" />;
+      case 'gitea':
+        return <GiteaIcon className="h-5 w-5" />;
       default:
         return null;
     }
@@ -60,6 +61,18 @@ export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }:
         return String(provider.name);
     }
   };
+
+  // Get provider URL for external link
+  const getProviderUrl = () => {
+    if (provider.name === 'gitea' && provider.serverUrl) {
+      return provider.serverUrl;
+    } else if (provider.name === 'github') {
+      return 'https://github.com';
+    } else if (provider.name === 'gitlab') {
+      return 'https://gitlab.com';
+    }
+    return null;
+  };
   
   return (
     <>
@@ -77,20 +90,39 @@ export function GitProviderCard({ provider, onDelete, onRefresh, isRefreshing }:
                 <CardDescription>{getProviderTypeName()}</CardDescription>
               </div>
             </div>
-            <Badge variant={provider.status !== 'error' ? 'secondary' : 'destructive'}>
+            <Badge variant={provider.status === 'connected' ? 'secondary' : provider.status === 'error' ? 'destructive' : 'outline'}>
               {provider.status === 'connected' ? 'Active' : provider.status === 'error' ? 'Error' : 'Inactive'}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="pb-2">
-          <div className="text-sm text-muted-foreground">
-            {/* Display repository count if available */}
-            {provider.repositoryCount || 0} repositories
+          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>Repositories:</span> 
+              <span className="font-medium">{provider.repositoryCount || 0}</span>
+            </div>
+            {provider.serverUrl && (
+              <div className="flex items-center justify-between">
+                <span>Server:</span> 
+                <span className="font-medium truncate max-w-[200px]">{provider.serverUrl}</span>
+              </div>
+            )}
           </div>
         </CardContent>
         <CardFooter className="flex justify-between pt-2 text-xs text-muted-foreground">
           <span>{lastSyncedText}</span>
           <div className={`flex space-x-2 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}>
+            {getProviderUrl() && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="p-0 h-8"
+                onClick={() => window.open(getProviderUrl(), '_blank')}
+              >
+                <ExternalLink className="h-4 w-4 mr-1" />
+                Open
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="sm" 

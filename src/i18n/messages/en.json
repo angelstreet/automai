@@ -196,6 +196,8 @@
     "sync": "Sync",
     "delete": "Delete",
     "confirm_delete": "Are you sure you want to delete this Git provider?",
-    "delete_warning": "This will remove all associated repositories. This action cannot be undone."
+    "delete_warning": "This will remove all associated repositories. This action cannot be undone.",
+    "connectGit": "Connect to your Git providers to import repositories",
+    "connectedProviders": "Connected Providers"
   }
 }

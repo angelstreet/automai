@@ -9,7 +9,7 @@ import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/layout/EmptyState';
-import { RepositoryCard, GitProviderCard, AddGitProviderDialog, GitProviderType } from './_components';
+import { RepositoryCard, GitProviderCard, AddGitProviderDialog, RepositoryGrid, GitProviderType } from './_components';
 import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
 import { useTranslations } from 'next-intl';
 
@@ -320,49 +320,73 @@ export default function RepositoriesPage() {
     }
 
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList>
-              <TabsTrigger value="all">All Repositories</TabsTrigger>
-              <TabsTrigger value="personal">Personal</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {providers.map(provider => (
-            <GitProviderCard
-              key={provider.id}
-              provider={provider}
-              onDelete={handleDeleteProvider}
-              onRefresh={handleRefreshProvider}
-              isRefreshing={refreshingProviderId === provider.id}
-            />
-          ))}
-        </div>
-
-        {filteredRepositories.length > 0 ? (
-          <div>
-            <h3 className="text-lg font-medium mb-4">Repositories</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredRepositories.map(repo => (
-                <RepositoryCard
-                  key={repo.id}
-                  repository={repo}
-                  onSync={handleSyncRepository}
-                  isSyncing={syncingRepoId === repo.id}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <EmptyState
-            title="No Repositories Found"
-            description="Sync your Git provider to import repositories."
-            icon={<GitBranch className="h-10 w-10" />}
-          />
-        )}
+      <div className="space-y-8">
+        <Tabs defaultValue="repositories" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="repositories">Repositories</TabsTrigger>
+            <TabsTrigger value="providers">Git Providers</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="repositories" className="mt-6">
+            {repositories.length === 0 ? (
+              <EmptyState
+                title={t('no_repositories')}
+                description={t('add_provider')}
+                icon={<GitBranch className="h-10 w-10" />}
+                action={
+                  <Button onClick={() => setAddProviderOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('add_provider')}
+                  </Button>
+                }
+              />
+            ) : (
+              <RepositoryGrid
+                repositories={repositories}
+                onSyncRepository={handleSyncRepository}
+                syncingRepoId={syncingRepoId}
+                isLoading={isLoading}
+              />
+            )}
+          </TabsContent>
+          
+          <TabsContent value="providers" className="mt-6">
+            {providers.length === 0 ? (
+              <EmptyState
+                title={t('no_providers')}
+                description={t('connectGit')}
+                icon={<GitBranch className="h-10 w-10" />}
+                action={
+                  <Button onClick={() => setAddProviderOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('add_provider')}
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-semibold">{t('connectedProviders')}</h2>
+                  <Button onClick={() => setAddProviderOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('add_provider')}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {providers.map(provider => (
+                    <GitProviderCard
+                      key={provider.id}
+                      provider={provider}
+                      onDelete={handleDeleteProvider}
+                      onRefresh={handleRefreshProvider}
+                      isRefreshing={refreshingProviderId === provider.id}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
     );
   };

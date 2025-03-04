@@ -85,6 +85,7 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
   
   // Handle form submission
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+    // Only require testing for Gitea
     if (selectedType === 'gitea' && testStatus !== 'success') {
       setTestError('Please test the connection first');
       return;
@@ -110,6 +111,8 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
   };
 
   const isGitea = selectedType === GitProviderTypes.GITEA;
+  const isGithub = selectedType === GitProviderTypes.GITHUB;
+  const isGitlab = selectedType === GitProviderTypes.GITLAB;
   
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -241,6 +244,24 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
               </div>
             )}
 
+            {(isGithub || isGitlab) && (
+              <div className="rounded-md border p-4 bg-muted/50">
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    {isGithub ? <GitHubIcon className="h-5 w-5" /> : <GitLabIcon className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{isGithub ? 'GitHub' : 'GitLab'} OAuth Authentication</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {isGithub 
+                        ? 'You will be redirected to GitHub to authorize the application.'
+                        : 'You will be redirected to GitLab to authorize the application.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {testError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -249,31 +270,28 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
             )}
 
             {testStatus === 'success' && (
-              <Alert variant="success" className="bg-green-50 text-green-600">
+              <Alert variant="success">
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>Connection test successful!</AlertDescription>
               </Alert>
             )}
-            
-            <DialogFooter className="gap-2 sm:gap-0">
+
+            <DialogFooter>
               {isGitea && (
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                   onClick={testConnection}
-                  disabled={testStatus === 'testing' || isSubmitting}
+                  disabled={isSubmitting || testStatus === 'testing'}
+                  className="mr-auto"
                 >
-                  {testStatus === 'testing' && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  {testStatus === 'success' && (
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                  )}
+                  {testStatus === 'testing' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Test Connection
                 </Button>
               )}
-              <Button type="submit" disabled={isSubmitting || (isGitea && testStatus !== 'success')}>
-                {isSubmitting ? 'Adding...' : 'Add Provider'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {(isGithub || isGitlab) ? 'Continue with OAuth' : 'Add Provider'}
               </Button>
             </DialogFooter>
           </form>

@@ -1,4 +1,5 @@
-export { AddGitProviderDialog } from './AddGitProviderDialog';
 export { RepositoryCard } from './RepositoryCard';
 export { GitProviderCard } from './GitProviderCard';
-export type { GitProviderType } from '@/types/repositories'; 
+export { AddGitProviderDialog } from './AddGitProviderDialog';
+export { RepositoryGrid } from './RepositoryGrid';
+export { GitProviderType } from '@/types/repositories'; 
