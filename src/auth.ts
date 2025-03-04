@@ -16,8 +16,9 @@
  */
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { compare } from 'bcrypt';
-import NextAuth from 'next-auth';
+import NextAuth from 'next-auth/next';
 import type { Session, User } from 'next-auth';
+import type { AuthOptions } from 'next-auth/core/types';
 import type { JWT } from 'next-auth/jwt';
 import { default as CredentialsProvider } from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
@@ -27,8 +28,6 @@ import { env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
 
 // Ensure environment variables are loaded
-// Next.js automatically loads .env.development in development mode
-// and .env.production in production mode
 if (!process.env.NEXTAUTH_SECRET) {
   console.warn('Warning: NEXTAUTH_SECRET is not set in your .env.development file');
 }
@@ -54,12 +53,13 @@ interface CustomSession extends Session {
     image?: string | null;
     role?: string;
     tenantId?: string;
-    tenantName?: string;
+    tenantName: string | null;
   };
-  accessToken?: string;
+  accessToken: string;
+  expires: string;
 }
 
-export const authOptions = {
+export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
@@ -136,34 +136,33 @@ export const authOptions = {
       });
       return true;
     },
-    async redirect({ url, baseUrl }) {
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       console.log('Redirect callback:', { url, baseUrl });
-
+  
       // Check if this is a callback from OAuth provider
       if (url.includes('/api/auth/callback/')) {
         console.log('OAuth callback detected, redirecting to auth-redirect');
         // Let the middleware handle locale detection and routing
         return `${baseUrl}/auth-redirect`;
       }
-
-      // For routes that might contain route groups, clean them up
+  
+      // Remove route group notation if present
       if (url.includes('/(auth)')) {
-        // Remove route group notation from URL
         const cleanUrl = url.replace('/(auth)', '');
         console.log('Cleaned route group from URL:', { original: url, cleaned: cleanUrl });
         return cleanUrl;
       }
-
+  
       // For other redirects, use the URL as is
       if (url.startsWith(baseUrl)) {
         return url;
       }
-
+  
       // For relative URLs, append to baseUrl
       if (url.startsWith('/')) {
         return `${baseUrl}${url}`;
       }
-
+  
       // Default fallback
       return url;
     },
@@ -179,21 +178,24 @@ export const authOptions = {
       }
       return token;
     },
-    async session({ session, token }: { session: Session; token: JWT }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.tenantId = token.tenantId as string;
-        session.user.tenantName = token.tenantName as string;
-        session.accessToken = token.accessToken as string;
-      }
-      return session as CustomSession;
+    async session({ session, token, user, trigger, newSession }) {
+      const newSessionData = {
+        ...session,
+        user: {
+          ...session.user,
+          id: token.id as string,
+          role: token.role as string,
+          tenantId: token.tenantId as string,
+          tenantName: token.tenantName as string,
+        },
+        accessToken: token.accessToken as string,
+      };
+      return newSessionData as CustomSession;
     },
   },
   secret: env.NEXTAUTH_SECRET,
   debug: env.NODE_ENV === 'development',
-} as const;
+};
 
-// Export auth utilities
+// Export NextAuth as the default handler
 export default NextAuth(authOptions);
-export const { auth, signIn, signOut } = NextAuth(authOptions);
