@@ -4,7 +4,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import type { Session } from 'next-auth';
 
 import { PLATFORM_PREFIXES } from '@/app/[locale]/[tenant]/platforms/constants';
 import {
@@ -20,20 +19,6 @@ import { Project, UseCase, NewUseCase } from '@/types/usecase';
 
 import { CreateUseCase } from '../../usecases/_components/CreateUseCase';
 import { UseCaseList } from '../../usecases/_components/UseCaseList';
-
-// Add CustomSession interface type
-interface CustomSession extends Session {
-  user: {
-    id: string;
-    email?: string | null;
-    name?: string | null;
-    image?: string | null;
-    role?: string;
-    tenantId?: string;
-    tenantName?: string;
-  };
-  accessToken?: string;
-}
 
 export default function UseCasesPage() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -55,7 +40,7 @@ export default function UseCasesPage() {
   const { user, isLoading: userLoading } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { data: session } = useSession() as { data: CustomSession | null; status: string };
+  const { data: session } = useSession();
 
   // Redirect if not authenticated
   useEffect(() => {

@@ -10,16 +10,7 @@ type PlanType = keyof typeof getPlanFeatures;
 
 // Extend Session type
 interface CustomSession extends Session {
-  accessToken?: string;
-  user: {
-    id: string;
-    email?: string | null;
-    name?: string | null;
-    image?: string | null;
-    role?: string;
-    tenantId?: string;
-    tenantName?: string;
-  };
+  accessToken: string;
 }
 
 type User = {
