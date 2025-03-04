@@ -1,5 +1,6 @@
 node_modules
 .next
+.env
 screenshot/
 src/i18n/.DS_Store
 src/.DS_Store
