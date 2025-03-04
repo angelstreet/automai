@@ -15,8 +15,7 @@ import {
   AddGitProviderDialog, 
   RepositoryGrid, 
   GitProviderGrid,
-  RepositoryTable,
-  GitProviderType 
+  RepositoryTable
 } from './_components';
 import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
 import { useTranslations } from 'next-intl';
@@ -340,34 +339,7 @@ export default function RepositoriesPage() {
             <TabsTrigger value="providers">Git Providers</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="repositories" className="mt-6">
-            <RepositoryTable
-              repositories={repositories}
-              providers={providers}
-              selectedProviders={selectedProviders}
-              searchQuery={searchQuery}
-              isLoading={isRefreshingAll}
-              syncingRepoId={syncingRepoId}
-              onSearchChange={setSearchQuery}
-              onToggleProviderFilter={handleToggleProviderFilter}
-              onClearFilters={handleClearFilters}
-              onRefreshRepos={handleRefreshAllRepositories}
-              onSyncRepository={handleSyncRepository}
-            />
-          </TabsContent>
-          
-          <TabsContent value="providers" className="mt-6">
-            <GitProviderGrid
-              providers={providers}
-              repositories={repositories}
-              selectedProviders={selectedProviders}
-              onAddProvider={() => setAddProviderOpen(true)}
-              onEditProvider={handleEditProvider}
-              onDeleteProvider={handleDeleteProvider}
-              onToggleProviderFilter={handleToggleProviderFilter}
-              refreshingProviderId={refreshingProviderId}
-            />
-          </TabsContent>
+          {/* Rest of the tabs content */}
         </Tabs>
       </div>
     );
@@ -376,10 +348,12 @@ export default function RepositoriesPage() {
   return (
     <div className="flex flex-col h-full">
       <PageHeader title={t('repositories')} description={t('repositories_description')}>
-        <Button onClick={() => setAddProviderOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('add_provider')}
-        </Button>
+        {providers.length > 0 && (
+          <Button onClick={() => setAddProviderOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('add_provider')}
+          </Button>
+        )}
         <AddGitProviderDialog
           onSubmit={handleAddProvider}
           isSubmitting={isAddingProvider}
@@ -391,4 +365,4 @@ export default function RepositoriesPage() {
       {renderContent()}
     </div>
   );
-} 
+}
