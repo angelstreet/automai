@@ -66,6 +66,7 @@ export async function createGitProvider(
   userId: string,
   data: {
     name: GitProviderType;
+    type?: GitProviderType;
     displayName: string;
     accessToken?: string;
     refreshToken?: string;
@@ -73,11 +74,14 @@ export async function createGitProvider(
     serverUrl?: string;
   },
 ): Promise<GitProvider> {
-  const { name, displayName, accessToken, refreshToken, expiresAt, serverUrl } = data;
+  // Use type from input if provided, otherwise fallback to name
+  const { displayName, accessToken, refreshToken, expiresAt, serverUrl } = data;
+  const type = data.type || data.name;
 
   const provider = await prisma.gitProvider.create({
     data: {
-      name,
+      name: type,
+      type,
       displayName,
       accessToken,
       refreshToken,

@@ -1,7 +1,7 @@
 import { Client } from 'ssh2';
 
 import { logger } from '../logger';
-import { prisma } from '../prisma';
+import { prisma } from '@/lib/prisma';
 
 /**
  * Connection test result interface

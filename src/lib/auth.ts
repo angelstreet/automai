@@ -3,7 +3,7 @@ import type { Session, User } from 'next-auth';
 import type { DefaultSession } from 'next-auth/core/types';
 import type { JWT } from 'next-auth/jwt';
 import { logger } from './logger';
-import { prisma } from './prisma';
+import { prisma } from '@/lib/prisma';
 
 // Extend next-auth types
 interface ExtendedUser extends User {

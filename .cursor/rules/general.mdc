@@ -24,6 +24,15 @@ alwaysApply: true
 > - ALWAYS edit rules in `.cursor/rules` directory
 > - ALWAYS verify you're editing the correct file path before making changes
 
+## 🚨 CRITICAL PRISMA USAGE RULE
+
+> **IMPORTANT**: All database access MUST follow these rules:
+> - ALWAYS import the Prisma client from `@/lib/prisma`
+> - NEVER create new PrismaClient instances - use the singleton
+> - ALWAYS use the centralized prisma instance to prevent connection pool exhaustion
+> - All Prisma-related files MUST be in the `/prisma` directory
+> - Follow complete guidelines in `prisma.mdc`
+
 Available rules in `.cursor/rules`:
 - **general.mdc** (this file): Essential project context
 - **code-organization.mdc**: File organization guidelines
@@ -44,7 +53,7 @@ Available rules in `.cursor/rules`:
 ### Project Architecture
 - **Next.js 13+ App Router** application with custom TypeScript server
 - **Custom Server**: TypeScript server with lazy-loaded WebSocket support
-- **Prisma Client**:  Follow  @Prisma Rules 
+- **Prisma Client**: ⚠️ **CRITICAL** - Follow @Prisma Rules - Always use the centralized prisma instance from '@/lib/prisma'
 - **WebSocket Server**: Integrated with HTTP server, follow @WebSocket Rules
 - **HTTP Server**: Custom server on port 3000 with Next.js integration
 - **Authentication**: NextAuth.js
@@ -148,7 +157,7 @@ Available rules in `.cursor/rules`:
 - **WebSocket Server**: Implementation for terminal connections
 
 ## Cross-References
-- <a id="prisma-rules"></a>**Prisma Rules**: See `prisma.mdc` for database access patterns
+- <a id="prisma-rules"></a>**CRITICAL: Prisma Rules**: See `prisma.mdc` for **mandatory** database access patterns - ALWAYS import from `@/lib/prisma`
 - <a id="websocket-rules"></a>**WebSocket Rules**: See `websocket.mdc` for implementation details
 - <a id="code-organization-rules"></a>**Code Organization Rules**: See `code-organization.mdc` for file organization
 - <a id="performance-guidelines"></a>**Performance Guidelines**: See section above for optimization tips

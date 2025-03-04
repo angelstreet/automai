@@ -56,7 +56,9 @@ export interface RepositoryUpdateInput {
 
 export interface GitProviderCreateInput {
   name: GitProviderType;
+  type: GitProviderType;
   displayName: string;
+  serverUrl?: string;
   accessToken?: string;
   refreshToken?: string;
   expiresAt?: Date;

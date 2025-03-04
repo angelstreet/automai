@@ -1,98 +1,118 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { z } from 'zod';
+import { authOptions } from '@/lib/auth';
+import { listGitProviders, createGitProvider } from '@/lib/services/repositories';
+import { GitProviderType } from '@/types/repositories';
+import { createGithubOauthUrl, createGitlabOauthUrl } from '@/lib/services/oauth';
 
-import * as repositoryService from '@/lib/services/repositories';
-
-// Schema for provider creation
+// Schema validation for creating a git provider
 const GitProviderCreateSchema = z.object({
-  name: z.enum(['github', 'gitlab', 'gitea'] as const),
-  displayName: z.string().min(1, 'Display name is required'),
-  serverUrl: z.string().url('Valid URL is required').optional(),
+  type: z.enum(['github', 'gitlab', 'gitea']),
+  displayName: z.string().min(2),
+  serverUrl: z.string().url().optional(),
   token: z.string().optional(),
 });
 
 // GET /api/git-providers
 export async function GET() {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
+    
     if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    try {
-      const providers = await repositoryService.listGitProviders(session.user.id);
-      return NextResponse.json(providers);
-    } catch (error) {
-      console.error('Error in listGitProviders:', error);
-      // Return empty array instead of error when no providers exist
-      return NextResponse.json([]);
-    }
+    
+    const providers = await listGitProviders(session.user.id);
+    
+    return NextResponse.json(providers);
   } catch (error) {
     console.error('Error fetching git providers:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to fetch git providers' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Failed to fetch git providers' }, { status: 500 });
   }
 }
 
 // POST /api/git-providers
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
+    
     if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
+    
     const body = await request.json();
-    const validatedData = GitProviderCreateSchema.parse(body);
-
-    // For Gitea, we need serverUrl and token
-    if (validatedData.name === 'gitea') {
-      if (!validatedData.serverUrl || !validatedData.token) {
-        return NextResponse.json(
-          { success: false, message: 'Server URL and token are required for Gitea' },
-          { status: 400 },
-        );
+    console.log('Received provider data:', JSON.stringify(body));
+    
+    // Validate request body
+    const validation = GitProviderCreateSchema.safeParse(body);
+    
+    if (!validation.success) {
+      console.error('Validation error:', validation.error);
+      return NextResponse.json({ error: 'Invalid request body', details: validation.error.format() }, { status: 400 });
+    }
+    
+    const data = validation.data;
+    
+    try {
+      // For Gitea, require a server URL and token
+      if (data.type === 'gitea') {
+        if (!data.serverUrl || !data.token) {
+          return NextResponse.json({ error: 'Server URL and token are required for Gitea' }, { status: 400 });
+        }
+        
+        // Create the Gitea provider
+        const provider = await createGitProvider(session.user.id, {
+          name: data.type,
+          type: data.type,
+          displayName: data.displayName,
+          serverUrl: data.serverUrl,
+          accessToken: data.token,
+        });
+        
+        return NextResponse.json(provider);
       }
-
-      // Create Gitea provider directly with token
-      const provider = await repositoryService.createGitProvider(session.user.id, {
-        name: validatedData.name,
-        displayName: validatedData.displayName,
-        accessToken: validatedData.token,
-        serverUrl: validatedData.serverUrl,
-      });
-
-      return NextResponse.json(provider);
+      
+      // For GitHub and GitLab, generate an OAuth URL
+      if (data.type === 'github') {
+        // Save the provider without token for now
+        const provider = await createGitProvider(session.user.id, {
+          name: data.type,
+          type: data.type,
+          displayName: data.displayName,
+        });
+        
+        const oauthUrl = createGithubOauthUrl(provider.id);
+        return NextResponse.json({ id: provider.id, authUrl: oauthUrl });
+      }
+      
+      if (data.type === 'gitlab') {
+        // Save the provider without token for now
+        const provider = await createGitProvider(session.user.id, {
+          name: data.type,
+          type: data.type,
+          displayName: data.displayName,
+        });
+        
+        const oauthUrl = createGitlabOauthUrl(provider.id);
+        return NextResponse.json({ id: provider.id, authUrl: oauthUrl });
+      }
+      
+      return NextResponse.json({ error: 'Unsupported provider type' }, { status: 400 });
+    } catch (error) {
+      console.error('Error creating git provider:', error);
+      if (error instanceof Error) {
+        console.error(`Error details: ${error.message}`);
+        console.error(`Error stack: ${error.stack}`);
+      }
+      return NextResponse.json({ error: 'Failed to create git provider', details: error instanceof Error ? error.message : undefined }, { status: 500 });
     }
-
-    // For OAuth providers (GitHub, GitLab)
-    const provider = await repositoryService.createGitProvider(session.user.id, {
-      name: validatedData.name,
-      displayName: validatedData.displayName,
-    });
-
-    // Generate OAuth URL
-    const providerService = repositoryService.getGitProviderService(validatedData.name);
-    const state = provider.id; // Use provider ID as state for callback
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/${validatedData.name}`;
-    const authUrl = providerService.getAuthorizationUrl(redirectUri, state);
-
-    return NextResponse.json({ ...provider, authUrl });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid request data', errors: error.errors },
-        { status: 400 },
-      );
+    console.error('Error processing request:', error);
+    if (error instanceof Error) {
+      console.error(`Error details: ${error.message}`);
+      console.error(`Error stack: ${error.stack}`);
     }
-
-    console.error('Error creating git provider:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to create git provider' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Internal server error', details: error instanceof Error ? error.message : undefined }, { status: 500 });
   }
 }
