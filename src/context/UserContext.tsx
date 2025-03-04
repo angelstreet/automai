@@ -102,7 +102,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             setLastFetch(timestamp);
             return;
           }
-        } catch (_error) {
+        } catch (error) {
           console.warn('Invalid session cache, fetching fresh data');
         }
       }

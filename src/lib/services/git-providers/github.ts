@@ -172,7 +172,7 @@ export class GitHubProviderService implements GitProviderService {
       });
 
       return response.ok;
-    } catch (_error) {
+    } catch (error) {
       return false;
     }
   }

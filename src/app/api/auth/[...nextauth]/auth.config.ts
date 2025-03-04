@@ -1,7 +1,6 @@
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import type { NextAuthOptions } from 'next-auth';
 import type { User } from 'next-auth';
-import type { JWT } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 
 // Define custom types
@@ -21,10 +20,12 @@ declare module 'next-auth' {
       name?: string | null;
       image?: string | null;
       role?: string;
-      tenantId?: string;
-      tenantName?: string;
+      tenantId?: string | null;
+      tenantName: string | null;
+      plan?: string;
+      accessToken?: string;
     };
-    accessToken?: string;
+    accessToken: string;
   }
 }
 
@@ -68,7 +69,7 @@ export const authConfig: NextAuthOptions = {
     },
   },
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account }: { token: any; user: any; account: any }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -80,7 +81,7 @@ export const authConfig: NextAuthOptions = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (token) {
         session.user = {
           ...session.user,
@@ -125,7 +126,7 @@ export async function getProviders() {
           email: { label: 'Email', type: 'email' },
           password: { label: 'Password', type: 'password' },
         },
-        async authorize(credentials) {
+        async authorize(credentials: any) {
           // Add your authorization logic here
           return null;
         },

@@ -23,7 +23,7 @@ export const GitProviderTypes = {
 // Create a schema for the form
 const formSchema = z.object({
   type: z.enum(['github', 'gitlab', 'gitea'] as const, {
-    required_error: 'Please select a Git provider type.',
+    requirederror: 'Please select a Git provider type.',
   }),
   displayName: z.string().min(2, {
     message: 'Display name must be at least 2 characters.',

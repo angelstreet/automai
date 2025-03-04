@@ -272,7 +272,7 @@ export async function syncRepository(id: string): Promise<Repository> {
         },
       },
     });
-  } catch (_error) {
+  } catch (error) {
     // If there's an error, mark the repository as having an error
     return prisma.repository.update({
       where: { id },
