@@ -14,7 +14,7 @@ async function checkProviderAccess(id: string, userId: string) {
     return { success: false, message: 'Provider not found', status: 404 };
   }
 
-  if (_provider.userId !== userId) {
+  if (provider.userId !== userId) {
     return { success: false, message: 'Not authorized to access this provider', status: 403 };
   }
 
@@ -22,8 +22,9 @@ async function checkProviderAccess(id: string, userId: string) {
 }
 
 // GET /api/git-providers/[id]
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, context: { params: { id: string } }) {
   try {
+    const { params } = context;
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
@@ -49,8 +50,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // DELETE /api/git-providers/[id]
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, context: { params: { id: string } }) {
   try {
+    const { params } = context;
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });

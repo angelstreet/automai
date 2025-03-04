@@ -15,7 +15,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 type Props = {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }> | { locale: string };
 };
 
 async function validateLocale(locale: string) {
@@ -24,9 +24,10 @@ async function validateLocale(locale: string) {
   return locales.includes(locale as any) ? locale : null;
 }
 
-export default async function LocaleLayout(props: Props) {
-  const { children, params } = props;
-  const { locale } = params;
+export default async function LocaleLayout({ children, params }: Props) {
+  // Resolve params to handle both Promise and direct object
+  const resolvedParams = await Promise.resolve(params);
+  const { locale } = resolvedParams;
 
   if (!locale) {
     notFound();
