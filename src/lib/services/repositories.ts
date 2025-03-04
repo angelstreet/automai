@@ -371,7 +371,7 @@ export async function testGitProviderConnection({ type, serverUrl, token }: Test
   const data: ApiResponse = await response.json();
   
   if (!data.success) {
-    throw new Error(data.error || 'Failed to test connection');
+    throw new Error(data.error || 'Connection to git provider failed');
   }
 
   return data;
