@@ -116,6 +116,9 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
 
         // Only update if component is still mounted
         if (isMounted.current) {
+          // Set current date as lastConnected if connection was successful
+          const now = data.success ? new Date() : undefined;
+          
           // Update the host status based on the connection test
           setHosts((prevHosts) =>
             prevHosts.map((h) =>
@@ -124,6 +127,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
                     ...h,
                     status: data.success ? 'connected' : 'failed',
                     errorMessage: !data.success ? data.message || 'Connection failed' : undefined,
+                    lastConnected: data.success ? now : h.lastConnected,
                   }
                 : h,
             ),
@@ -138,6 +142,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
                     ...h,
                     status: data.success ? 'connected' : 'failed',
                     errorMessage: !data.success ? data.message || 'Connection failed' : undefined,
+                    lastConnected: data.success ? now : h.lastConnected,
                   }
                 : h,
             );
@@ -198,11 +203,19 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
     try {
       // Fetch fresh hosts data
       const freshHosts = await hostsApi.getHosts();
-      setHosts(freshHosts);
-      queryClient.setQueryData(['hosts'], freshHosts);
+      
+      // Process hosts for UI display
+      const processedHosts = freshHosts.map((host: Host) => ({ 
+        ...host, 
+        status: host.status || 'pending',
+        lastConnected: host.lastConnected || host.createdAt
+      }));
+      
+      setHosts(processedHosts);
+      queryClient.setQueryData(['hosts'], processedHosts);
       
       // Filter out hosts with missing required fields
-      const validHosts = freshHosts.map(host => {
+      const validHosts = processedHosts.map(host => {
         if (!host.ip || (host.type === 'ssh' && !host.user)) {
           return {
             ...host,
@@ -220,6 +233,9 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       // Test all connections for valid hosts
       const testResults = await hostsApi.testAllHosts();
       if (testResults.success) {
+        // Current date for successful connections
+        const now = new Date();
+        
         // Update host statuses based on test results
         const updatedHosts = validHosts.map(host => {
           // Skip hosts that already failed validation
@@ -232,7 +248,8 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
             return {
               ...host,
               status: result.success ? 'connected' : 'failed',
-              errorMessage: !result.success ? result.message : undefined
+              errorMessage: !result.success ? result.message : undefined,
+              lastConnected: result.success ? now : host.lastConnected
             };
           }
           return host;

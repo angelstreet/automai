@@ -42,11 +42,18 @@ export default function HostContainer() {
       const fetchedHosts = await hostsApi.getHosts();
       console.log('Hosts fetched successfully:', fetchedHosts);
 
-      // Set initial status to 'pending' for quick UI display
-      const pendingHosts = fetchedHosts.map((host: Host) => ({ ...host, status: 'pending' }));
-      setHosts(pendingHosts);
+      // Process hosts for UI display
+      const processedHosts = fetchedHosts.map((host: Host) => ({ 
+        ...host, 
+        // Ensure status is set
+        status: host.status || 'pending',
+        // For UI display: use existing lastConnected or set to createdAt date
+        lastConnected: host.lastConnected || host.createdAt
+      }));
+      
+      setHosts(processedHosts);
 
-      return pendingHosts;
+      return processedHosts;
     } catch (error) {
       console.error('Error fetching hosts:',error);
       toast.error('Failed to fetch hosts');
@@ -196,7 +203,14 @@ export default function HostContainer() {
       });
 
       setShowAddHost(false);
-      setHosts((currentHosts) => [newHost, ...currentHosts]);
+      
+      // Add lastConnected field for UI display purposes
+      const hostWithLastConnected = {
+        ...newHost,
+        lastConnected: new Date()
+      };
+      
+      setHosts((currentHosts) => [hostWithLastConnected, ...currentHosts]);
 
       setFormData({
         name: '',
