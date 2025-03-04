@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
-import { authOptions } from '@/lib/auth';
+import { authOptions } from '@/auth';
 import { listGitProviders, createGitProvider } from '@/lib/services/repositories';
 import { GitProviderType } from '@/types/repositories';
 import { createGithubOauthUrl, createGitlabOauthUrl } from '@/lib/services/oauth';

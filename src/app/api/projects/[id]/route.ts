@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 /* eslint-disable unused-imports/no-unused-vars */
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';

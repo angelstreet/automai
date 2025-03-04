@@ -8,7 +8,6 @@ import {
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
-import { cn } from '@/lib/utils';
 
 interface ConfirmDialogProps {
   open: boolean;

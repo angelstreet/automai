@@ -14,11 +14,13 @@ import {
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { useSearch } from '@/context/SearchContext';
 import { useTheme } from '@/context/ThemeContext';
-import { _sidebarData as sidebarData } from '@/data/sidebarData';
+import { sidebarData } from '@/components/layout/data/sidebarData';
 
 interface NavItem {
   title: string;
-  url?: string;
+  href: string;
+  icon: any;
+  roles?: string[];
   items?: NavItem[];
 }
 
@@ -46,14 +48,14 @@ export function CommandMenu() {
       <CommandList>
         <ScrollArea type="hover" className="h-72 pr-1">
           <CommandEmpty>No results found.</CommandEmpty>
-          {sidebarData.items.map((navItem: NavItem, i: number) => {
-            if (navItem.url)
+          {sidebarData.navGroups.flatMap(group => group.items).map((navItem: NavItem, i: number) => {
+            if (navItem.href)
               return (
                 <CommandItem
-                  key={`${navItem.url}-${i}`}
+                  key={`${navItem.href}-${i}`}
                   value={navItem.title}
                   onSelect={() => {
-                    runCommand(() => navigate({ to: navItem.url }));
+                    runCommand(() => navigate({ to: navItem.href }));
                   }}
                 >
                   <div className="mr-2 flex h-4 w-4 items-center justify-center">
@@ -65,10 +67,10 @@ export function CommandMenu() {
 
             return navItem.items?.map((subItem: NavItem, i: number) => (
               <CommandItem
-                key={`${subItem.url}-${i}`}
+                key={`${subItem.href}-${i}`}
                 value={subItem.title}
                 onSelect={() => {
-                  runCommand(() => navigate({ to: subItem.url }));
+                  runCommand(() => navigate({ to: subItem.href }));
                 }}
               >
                 <div className="mr-2 flex h-4 w-4 items-center justify-center">

@@ -7,7 +7,7 @@ import { Providers } from '@/components/providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Automai - AI-Powered Test Automation',
+  title: 'Automai - Awsomation AI tool',
   description: 'Automate your testing workflow with AI',
 };
 

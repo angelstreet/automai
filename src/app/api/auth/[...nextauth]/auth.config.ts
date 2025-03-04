@@ -1,15 +1,46 @@
 import { PrismaAdapter } from '@auth/prisma-adapter';
-import type { AuthOptions } from 'next-auth';
-
+import type { NextAuthOptions } from 'next-auth';
+import type { User } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 import { prisma } from '@/lib/prisma';
 
-// Import provider configurations from separate files
-import { getCredentialsProvider } from './providers/credentials';
-import { getGithubProvider } from './providers/github';
-import { getGoogleProvider } from './providers/google';
+// Define custom types
+interface CustomUser extends User {
+  id: string;
+  role?: string;
+  tenantId?: string;
+  tenantName?: string;
+}
 
-export const authConfig: AuthOptions = {
+// Declare module augmentation
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id: string;
+      email?: string | null;
+      name?: string | null;
+      image?: string | null;
+      role?: string;
+      tenantId?: string;
+      tenantName?: string;
+    };
+    accessToken?: string;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id?: string;
+    role?: string;
+    tenantId?: string;
+    tenantName?: string;
+    accessToken?: string;
+  }
+}
+
+export const authConfig: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
+  providers: [], // Will be dynamically loaded
   pages: {
     signIn: '/login',
     error: '/error',
@@ -22,7 +53,7 @@ export const authConfig: AuthOptions = {
       return 'fallback-secret-do-not-use-in-production';
     })(),
   session: {
-    strategy: 'jwt' as const,
+    strategy: 'jwt',
     maxAge: 24 * 60 * 60, // 24 hours
   },
   cookies: {
@@ -30,7 +61,7 @@ export const authConfig: AuthOptions = {
       name: `__Secure-next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: 'lax' as const,
+        sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
       },
@@ -42,23 +73,25 @@ export const authConfig: AuthOptions = {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
-        token.role = user.role;
-        token.tenantId = user.tenantId;
-        token.tenantName = user.tenantName;
-        token.accessToken = user.accessToken || account?.access_token;
+        token.role = (user as CustomUser).role;
+        token.tenantId = (user as CustomUser).tenantId;
+        token.tenantName = (user as CustomUser).tenantName;
+        token.accessToken = account?.access_token;
       }
       return token;
     },
     async session({ session, token }) {
       if (token) {
-        session.user = session.user || {};
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.name = token.name as string;
-        session.user.role = token.role as string;
-        session.user.tenantId = token.tenantId as string;
-        session.user.tenantName = token.tenantName as string;
-        session.accessToken = token.accessToken as string;
+        session.user = {
+          ...session.user,
+          id: token.id as string,
+          email: token.email as string,
+          name: token.name as string,
+          role: token.role as string,
+          tenantId: token.tenantId as string,
+          tenantName: token.tenantName as string,
+        };
+        session.accessToken = token.accessToken;
       }
       return session;
     },
@@ -71,52 +104,37 @@ export async function getProviders() {
   try {
     console.log('Loading auth providers...');
 
-    // Load each provider with error handling
-    const googleProvider = await getGoogleProvider().catch((err) => {
-      console.error('Error loading Google provider:', err);
-      return null;
-    });
+    // Import providers dynamically
+    const { default: GoogleProvider } = await import('next-auth/providers/google');
+    const { default: GitHubProvider } = await import('next-auth/providers/github');
+    const { default: CredentialsProvider } = await import('next-auth/providers/credentials');
 
-    const githubProvider = await getGithubProvider().catch((err) => {
-      console.error('Error loading GitHub provider:', err);
-      return null;
-    });
-
-    const credentialsProvider = await getCredentialsProvider().catch((err) => {
-      console.error('Error loading Credentials provider:', err);
-      return null;
-    });
-
-    // Filter out any providers that failed to load
-    const providers = [googleProvider, githubProvider, credentialsProvider].filter(Boolean);
-
-    console.log(`Successfully loaded ${providers.length} providers`);
-
-    // Ensure we have at least one provider
-    if (providers.length === 0) {
-      console.warn('No authentication providers loaded, adding fallback credentials provider');
-      // Add a simple fallback provider to prevent complete auth failure
-      const { default: CredentialsProvider } = await import('next-auth/providers/credentials');
-      return [
-        CredentialsProvider({
-          id: 'fallback-credentials',
-          name: 'Fallback Credentials',
-          credentials: {
-            email: { label: 'Email', type: 'email' },
-            password: { label: 'Password', type: 'password' },
-          },
-          async authorize() {
-            console.error('Using fallback provider - authentication will fail');
-            return null; // Always fail auth with fallback
-          },
-        }),
-      ];
-    }
+    // Create provider instances
+    const providers = [
+      GoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID || '',
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+      }),
+      GitHubProvider({
+        clientId: process.env.GITHUB_CLIENT_ID || '',
+        clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+      }),
+      CredentialsProvider({
+        name: 'Credentials',
+        credentials: {
+          email: { label: 'Email', type: 'email' },
+          password: { label: 'Password', type: 'password' },
+        },
+        async authorize(credentials) {
+          // Add your authorization logic here
+          return null;
+        },
+      }),
+    ];
 
     return providers;
   } catch (error) {
     console.error('Error loading providers:', error);
-    // Return empty array instead of throwing to prevent complete auth failure
     return [];
   }
 }

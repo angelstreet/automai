@@ -117,17 +117,17 @@ model GitProvider {
 }
 
 model Repository {
-  id          String     @id @default(cuid())
-  name        String
-  description String?
-  url         String?
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  url           String?
   defaultBranch String?
-  providerId  String
-  provider    GitProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  syncStatus  String     @default("PENDING")
-  lastSyncedAt DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  providerId    String
+  syncStatus    String      @default("PENDING")
+  lastSyncedAt  DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  provider      GitProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
 
   @@map("repositories")
 }

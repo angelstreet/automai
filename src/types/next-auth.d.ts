@@ -25,3 +25,9 @@ declare module 'next-auth' {
     accessToken?: string;
   }
 }
+
+declare module 'next-auth/providers/credentials' {
+  interface CredentialInput {
+    value: string;
+  }
+}

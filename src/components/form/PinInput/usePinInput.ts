@@ -5,7 +5,6 @@ import { UsePinInputProps } from './types';
 export const usePinInput = ({
   value,
   defaultValue,
-  _placeholder,
   type,
   length,
   readOnly,

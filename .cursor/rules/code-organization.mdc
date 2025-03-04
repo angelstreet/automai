@@ -83,10 +83,10 @@ automai/
 │   │   ├── settings/         # Settings components
 │   │   ├── shadcn/           # Shadcn UI components
 │   │   ├── sidebar/          # Sidebar components
+│   │   │   └── constants.ts  # Sidebar-specific constants
 │   │   ├── theme/            # Theme components
 │   │   └── ui/               # UI utility components
 │   ├── config/               # Configuration files
-│   ├── constants/            # Application constants
 │   ├── context/              # React context providers
 │   ├── data/                 # Data files
 │   ├── hooks/                # Custom React hooks
@@ -145,7 +145,7 @@ automai/
 
 ### Types and Constants
 - `src/types/`: TypeScript type definitions
-- `src/constants/`: Application constants
+- `src/components/[feature]/constants.ts`: Feature-specific constants
 
 ### Authentication
 - `src/auth.ts`: NextAuth.js configuration
@@ -167,12 +167,14 @@ automai/
    - Create a directory with the component name
    - Use `index.tsx` as the main component file
    - Place child components in the same directory
+   - Include a `constants.ts` file for component-specific constants
 
    ```
    Button/
    ├── index.tsx         # Main Button component
    ├── ButtonIcon.tsx    # Icon subcomponent
-   └── ButtonLabel.tsx   # Label subcomponent
+   ├── ButtonLabel.tsx   # Label subcomponent
+   └── constants.ts      # Button-specific constants
    ```
 
 2. **Naming Conventions**:
@@ -190,11 +192,13 @@ automai/
 1. **Directory Structure**:
    - Create a `_components` directory for page-specific components
    - Use `actions.ts` or `api.ts` for data fetching logic
+   - Use `constants.ts` for page-specific constants
 
    ```
    dashboard/
    ├── page.tsx              # Main page component
    ├── actions.ts            # Server actions
+   ├── constants.ts          # Dashboard-specific constants
    └── _components/
        ├── DashboardHeader.tsx
        ├── DashboardStats.tsx
@@ -209,15 +213,18 @@ automai/
 ### Constants and Configuration
 
 1. **Directory Structure**:
-   - Group related constants in separate files by domain
-   - Place in a constants directory organized by feature
+   - Co-locate constants with the components or features that use them
+   - Use a `constants.ts` file within each feature directory
 
    ```
-   constants/
-   ├── index.ts       # Re-exports
-   ├── auth.ts        # Authentication constants
-   ├── dashboard.ts   # Dashboard-related constants
-   └── api.ts         # API-related constants
+   components/
+   ├── sidebar/
+   │   ├── index.tsx       # Main sidebar component
+   │   ├── SidebarItem.tsx # Sidebar item component
+   │   └── constants.ts    # Sidebar-specific constants
+   ├── dialog/
+   │   ├── index.tsx       # Main dialog component
+   │   └── constants.ts    # Dialog-specific constants
    ```
 
 2. **Naming Conventions**:
@@ -226,8 +233,8 @@ automai/
    - Enums: `PascalCase`
 
 3. **Implementation Strategy**:
-   - Group constants by domain or feature
-   - Use index.ts to re-export for convenient imports
+   - Group constants by feature or component
+   - Co-locate constants with the code that uses them
    - Document complex constants with comments
 
 ### Utility Functions
