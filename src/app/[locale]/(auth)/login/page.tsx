@@ -7,6 +7,7 @@ import { signIn, useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
 import { useEffect } from 'react';
 import * as React from 'react';
+import { useUser } from '@/context/UserContext';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { locale } = useParams();
   const { data: session, status } = useSession();
+  const { user } = useUser();
   const t = useTranslations('Auth');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -25,11 +27,11 @@ export default function LoginPage() {
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       // User is already logged in, redirect to appropriate dashboard
-      // Get tenant from session, fallback to trial if no tenant
-      const tenant = session.user.tenantName || 'trial';
+      // Get tenant from user context, fallback to trial if no tenant
+      const tenant = user?.tenantName || 'trial';
       router.push(`/${locale}/${tenant}/dashboard`);
     }
-  }, [session, status, router, locale]);
+  }, [session, status, router, locale, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -73,8 +73,8 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
     try {
       await testGitProviderConnection({
         type: values.type,
-        serverUrl: values.serverUrl,
-        token: values.token,
+        serverUrl: values.serverUrl || '',
+        token: values.token || '',
       });
       setTestStatus('success');
     } catch (error) {
