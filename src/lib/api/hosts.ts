@@ -139,10 +139,10 @@ export const hostsApi = {
   /**
    * Check connections for multiple hosts sequentially
    */
-  checkAllConnections: async (locale: string, hosts: Host[]) => {
+  checkAllConnections: async (hosts: Host[]) => {
     const results = [];
     for (const host of hosts) {
-      const result = await hostsApi.testConnection(locale, {
+      const result = await hostsApi.testConnection({
         type: host.type,
         ip: host.ip,
         port: host.port,

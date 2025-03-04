@@ -98,13 +98,12 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
     setFingerprintVerified(false);
 
     try {
-      const data = await hostsApi.testConnection(locale, {
+      const data = await hostsApi.testConnection({
         type: formData.type,
         ip: formData.ip,
-        port: formData.port ? parseInt(formData.port) : undefined,
+        port: parseInt(formData.port),
         username: formData.username,
         password: formData.password,
-        hostId: formData.id,
       });
 
       if (data.requireVerification) {
@@ -143,10 +142,11 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
     setTestError(null);
 
     try {
-      const data = await hostsApi.verifyFingerprint(locale, {
-        fingerprint: fingerprint || '',
+      setVerifyingFingerprint(true);
+      const data = await hostsApi.verifyFingerprint({
+        fingerprint: fingerprint,
         host: formData.ip,
-        port: formData.port ? parseInt(formData.port) : undefined,
+        port: parseInt(formData.port),
       });
 
       if (data.success) {

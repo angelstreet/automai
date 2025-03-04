@@ -59,6 +59,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
   const [hosts, setHosts] = useState<Host[]>(initialHosts);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isMounted = useRef(true);
+  const [testingHost, setTestingHost] = useState<string | null>(null);
 
   // Background connection testing
   useEffect(() => {
@@ -67,15 +68,13 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
 
     // Function to test connection for a single host
     const testHostConnection = async (host: Host) => {
-      if (!isMounted.current) return;
-
+      setTestingHost(host.id);
       try {
-        const data = await hostsApi.testConnection(locale, {
+        const data = await hostsApi.testConnection({
           type: host.type,
           ip: host.ip,
-          port: host.port || undefined,
-          username: host.user || undefined,
-          password: undefined, // We don't have access to the password in the client
+          port: host.port,
+          username: host.user,
           hostId: host.id,
         });
 
@@ -165,7 +164,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
     setIsRefreshing(true);
     try {
       // Fetch fresh hosts data
-      const freshHosts = await hostsApi.getHosts(locale);
+      const freshHosts = await hostsApi.getHosts();
       setHosts(freshHosts);
       queryClient.setQueryData(['hosts'], freshHosts);
       toast.success('Hosts refreshed');
@@ -178,7 +177,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
 
   // Mutations
   const deleteHostMutation = useMutation({
-    mutationFn: (id: string) => hostsApi.deleteHost(locale, id),
+    mutationFn: (id: string) => hostsApi.deleteHost(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hosts'] });
       toast.success('Host deleted successfully');
@@ -245,7 +244,13 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           onDelete={handleDeleteHost}
           onRefresh={refreshConnections}
           onTestConnection={async (host) => {
-            const data = await hostsApi.testConnection(locale, host);
+            const data = await hostsApi.testConnection({
+              type: host.type,
+              ip: host.ip,
+              port: host.port,
+              username: host.user,
+              hostId: host.id,
+            });
             if (data.success) {
               toast.success('Connection successful');
             } else {

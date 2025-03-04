@@ -98,16 +98,15 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
     setIsCreating(true);
     try {
-      const host = await hostsApi.createHost(locale, {
+      const host = await hostsApi.createHost({
         name: formData.name,
-        description: formData.description,
-        type: formData.type,
+        description: formData.description || '',
+        type: 'ssh',
         ip: formData.ip,
-        port: formData.port ? parseInt(formData.port) : undefined,
+        port: parseInt(formData.port),
         user: formData.username,
         password: formData.password,
-        status: testStatus === 'success' ? 'connected' : 'pending',
-        lastConnected: testStatus === 'success' ? new Date().toISOString() : undefined,
+        status: 'pending',
       });
 
       toast.success(t('success.connected', { name: formData.name }));
@@ -165,13 +164,12 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     setTestError(null);
 
     try {
-      const data = await hostsApi.testConnection(locale, {
-        type: formData.type,
+      const data = await hostsApi.testConnection({
+        type: 'ssh',
         ip: formData.ip,
-        port: formData.port ? parseInt(formData.port) : undefined,
+        port: parseInt(formData.port),
         username: formData.username,
         password: formData.password,
-        hostId: formData.id,
       });
 
       if (data.success) {

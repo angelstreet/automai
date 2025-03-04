@@ -36,10 +36,10 @@ export default function HostContainer() {
   const [isTestingAll, setIsTestingAll] = useState(false);
 
   const fetchHosts = useCallback(async () => {
-    console.log('Fetching hosts...');
     setLoading(true);
     try {
-      const fetchedHosts = await hostsApi.getHosts(String(locale));
+      console.log('Fetching hosts...');
+      const fetchedHosts = await hostsApi.getHosts();
       console.log('Hosts fetched successfully:', fetchedHosts);
 
       // Set initial status to 'pending' for quick UI display
@@ -54,25 +54,21 @@ export default function HostContainer() {
     } finally {
       setLoading(false);
     }
-  }, [locale]);
+  }, []);
 
   // Test a single host connection
   const testHostConnection = async (host: Host, silent: boolean = false) => {
-    if (testingHosts[host.id]) return { success: false, message: 'Already testing' };
-
-    setTestingHosts((prev) => ({ ...prev, [host.id]: true }));
-
-    setHosts((prevHosts) =>
-      prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'pending' } : h)),
-    );
+    if (!silent) {
+      setTestingHosts((prev) => ({ ...prev, [host.id]: true }));
+    }
 
     try {
-      const result = await hostsApi.testConnection(String(locale), {
+      console.log(`Testing connection for host ${host.name}...`);
+      const result = await hostsApi.testConnection({
         type: host.type,
         ip: host.ip,
         port: host.port,
         username: host.user,
-        password: formData.password || (host as any).password,
         hostId: host.id,
       });
 
@@ -156,7 +152,7 @@ export default function HostContainer() {
     return () => {
       isMounted = false;
     };
-  }, [locale]); // Only depend on locale
+  }, []); // Only depend on locale
 
   const handleDelete = async (id: string) => {
     // Store the host being deleted in case we need to restore it
@@ -170,7 +166,7 @@ export default function HostContainer() {
     
     try {
       // Then perform the actual deletion in the background
-      await hostsApi.deleteHost(String(locale), id);
+      await hostsApi.deleteHost(id);
     } catch (error) {
       // If deletion fails, restore the host and show error
       console.error('Error deleting host:', error);
@@ -188,7 +184,7 @@ export default function HostContainer() {
 
   const handleSaveHost = async () => {
     try {
-      const newHost = await hostsApi.createHost(String(locale), {
+      const newHost = await hostsApi.createHost({
         name: formData.name,
         description: formData.description,
         type: formData.type,
