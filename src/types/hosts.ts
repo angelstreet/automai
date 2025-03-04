@@ -43,6 +43,8 @@ export interface Host {
 
   // Status fields
   status: 'connected' | 'failed' | 'pending';
+  // NOTE: lastConnected is a frontend-only field and not in the Prisma schema
+  // It's used for UI display purposes only
   lastConnected?: Date;
   errorMessage?: string;
 

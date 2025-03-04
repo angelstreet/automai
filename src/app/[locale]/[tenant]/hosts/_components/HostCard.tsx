@@ -176,9 +176,6 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
         </CardHeader>
         <CardContent className="p-4 pt-2">
           <div className="flex flex-col space-y-2">
-            <div className="text-sm text-muted-foreground">
-              {host.description && <p>{host.description}</p>}
-            </div>
             <Button
               variant="default"
               size="sm"

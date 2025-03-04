@@ -2,16 +2,25 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { GitBranch, Plus } from 'lucide-react';
-import { Repository, GitProvider } from '@/types/repositories';
+import { GitBranch, Plus, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
+import { Repository, GitProvider, GitProviderType } from '@/types/repositories';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/layout/EmptyState';
-import { RepositoryCard, GitProviderCard, AddGitProviderDialog, GitProviderType } from './_components';
+import { 
+  RepositoryCard, 
+  GitProviderCard, 
+  AddGitProviderDialog, 
+  RepositoryGrid, 
+  GitProviderGrid,
+  RepositoryTable,
+  GitProviderType 
+} from './_components';
 import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
 import { useTranslations } from 'next-intl';
+import { Badge } from '@/components/shadcn/badge';
 
 export default function RepositoriesPage() {
   const router = useRouter();
@@ -22,14 +31,20 @@ export default function RepositoriesPage() {
   const [providers, setProviders] = useState<GitProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [tabsValue, setTabsValue] = useState('providers');
   const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
   const [refreshingProviderId, setRefreshingProviderId] = useState<string | null>(null);
   const [addProviderOpen, setAddProviderOpen] = useState(false);
   const [isAddingProvider, setIsAddingProvider] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<GitProvider | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   
   // Add a ref to track if fetching is already in progress
   const isFetchingRef = useRef(false);
 
+  // Fetch data function
   useEffect(() => {
     const fetchData = async () => {
       // Check if a fetch is already in progress
@@ -71,48 +86,31 @@ export default function RepositoriesPage() {
             router.push('/login');
             return;
           }
-          
-          // Don't show error toast for 400 (no repositories found) or 404 (table doesn't exist)
-          if (reposResponse.status !== 400 && reposResponse.status !== 404) {
-            console.error('Error fetching repositories:', reposResponse.status);
-          } else {
-            console.log('No repositories found or table does not exist yet');
-          }
-          // Set empty repositories array for any error
+          console.log('Failed to fetch repositories:', reposResponse.status);
           setRepositories([]);
         } else {
           const reposData = await reposResponse.json();
           setRepositories(reposData);
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
-        // Only show toast for unexpected errors, not for "Failed to fetch" which is common
-        if (!(error instanceof Error && error.message.includes('Failed to fetch'))) {
-          toast({
-            title: 'Error',
-            description: 'Failed to load repositories and providers',
-            variant: 'destructive',
-          });
-        }
-        // Set empty arrays for both
-        setProviders([]);
-        setRepositories([]);
+        console.error("Error fetching data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch data. Please try again later.",
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
         isFetchingRef.current = false;
       }
     };
-
+    
     fetchData();
   }, [router, toast]);
 
+  // Handle adding a provider
   const handleAddProvider = async (values: { type: GitProviderType; displayName: string }) => {
-    // Prevent multiple simultaneous provider additions
-    if (isFetchingRef.current || isAddingProvider) return;
-    
     setIsAddingProvider(true);
-    isFetchingRef.current = true;
-    
     try {
       const response = await fetchWithAuth('/api/git-providers', {
         method: 'POST',
@@ -120,178 +118,190 @@ export default function RepositoriesPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(values),
-      }, { shouldRetry: true, maxRetries: 2, initialDelay: 500 });
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to add provider');
+        throw new Error(`Failed to add provider: ${response.statusText}`);
       }
 
-      const provider = await response.json();
+      const newProvider = await response.json();
+      setProviders([...providers, newProvider]);
       
-      // Redirect to the OAuth flow
-      if (provider.authUrl) {
-        window.location.href = provider.authUrl;
-      } else {
-        setProviders([...providers, provider]);
-        setAddProviderOpen(false);
-        toast({
-          title: 'Success',
-          description: 'Git provider added successfully',
-        });
-      }
-    } catch (error) {
-      console.error('Error adding provider:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to add Git provider',
-        variant: 'destructive',
+        title: "Success",
+        description: "Git provider added successfully",
+      });
+      
+      // Refresh the data to get updated providers and repositories
+      isFetchingRef.current = false;
+      fetchData();
+    } catch (error) {
+      console.error("Error adding provider:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add provider. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsAddingProvider(false);
-      isFetchingRef.current = false;
+      setAddProviderOpen(false);
     }
   };
 
+  // Handle editing a provider
+  const handleEditProvider = (provider: GitProvider) => {
+    setEditingProvider(provider);
+    setAddProviderOpen(true);
+  };
+
+  // Handle deleting a provider
   const handleDeleteProvider = async (id: string) => {
-    // Prevent multiple simultaneous deletions
-    if (isFetchingRef.current) return;
-    
-    isFetchingRef.current = true;
+    if (!confirm(t('confirm_delete'))) return;
     
     try {
-      const response = await fetchWithAuth(`/api/git-providers/${id}`, {
+      const response = await fetchWithAuth(`/api/git-providers?id=${id}`, {
         method: 'DELETE',
-      }, { shouldRetry: true, maxRetries: 2, initialDelay: 500 });
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to delete provider');
+        throw new Error(`Failed to delete provider: ${response.statusText}`);
       }
 
-      setProviders(providers.filter(provider => provider.id !== id));
-      // Also remove repositories associated with this provider
-      setRepositories(repositories.filter(repo => repo.providerId !== id));
+      // Remove provider from state
+      setProviders(providers.filter(p => p.id !== id));
+      // Remove associated repositories
+      setRepositories(repositories.filter(r => r.providerId !== id));
       
       toast({
-        title: 'Success',
-        description: 'Git provider deleted successfully',
+        title: "Success",
+        description: "Git provider deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting provider:', error);
+      console.error("Error deleting provider:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to delete Git provider',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to delete provider. Please try again.",
+        variant: "destructive",
       });
-    } finally {
-      isFetchingRef.current = false;
     }
   };
 
+  // Handle refreshing a provider's repositories
   const handleRefreshProvider = async (id: string) => {
-    // Prevent multiple simultaneous refreshes
-    if (isFetchingRef.current || refreshingProviderId) return;
-    
     setRefreshingProviderId(id);
-    isFetchingRef.current = true;
-    
     try {
-      const response = await fetchWithAuth(`/api/git-providers/${id}/sync`, {
+      const response = await fetchWithAuth(`/api/git-providers/sync?id=${id}`, {
         method: 'POST',
-      }, { shouldRetry: true, maxRetries: 2, initialDelay: 500 });
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to refresh provider');
+        throw new Error(`Failed to refresh provider: ${response.statusText}`);
       }
 
-      const { repositories: updatedRepos } = await response.json();
-      
-      // Update repositories list
-      setRepositories(prev => {
-        const existingRepoIds = updatedRepos.map((repo: Repository) => repo.id);
-        const filteredRepos = prev.filter(repo => 
-          repo.providerId !== id || existingRepoIds.includes(repo.id)
-        );
-        return [...filteredRepos, ...updatedRepos.filter((repo: Repository) => 
-          !filteredRepos.some(r => r.id === repo.id)
-        )];
-      });
-      
-      // Update provider's lastSyncedAt
-      setProviders(prev => 
-        prev.map(provider => 
-          provider.id === id 
-            ? { ...provider, lastSyncedAt: new Date().toISOString() } 
-            : provider
-        )
-      );
+      // Refresh the data to get updated repositories
+      isFetchingRef.current = false;
+      await fetchData();
       
       toast({
-        title: 'Success',
-        description: 'Repositories synced successfully',
+        title: "Success",
+        description: "Provider repositories refreshed successfully",
       });
     } catch (error) {
-      console.error('Error refreshing provider:', error);
+      console.error("Error refreshing provider:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to sync repositories',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to refresh provider repositories. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setRefreshingProviderId(null);
-      isFetchingRef.current = false;
     }
   };
 
+  // Handle syncing a specific repository
   const handleSyncRepository = async (id: string) => {
-    // Prevent multiple simultaneous syncs
-    if (isFetchingRef.current || syncingRepoId) return;
-    
     setSyncingRepoId(id);
-    isFetchingRef.current = true;
-    
     try {
-      const response = await fetchWithAuth(`/api/repositories/sync/${id}`, {
+      const response = await fetchWithAuth(`/api/repositories/sync?id=${id}`, {
         method: 'POST',
-      }, { shouldRetry: true, maxRetries: 2, initialDelay: 500 });
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to sync repository');
+        throw new Error(`Failed to sync repository: ${response.statusText}`);
       }
 
       const updatedRepo = await response.json();
       
-      // Update the repository in the list
-      setRepositories(prev => 
-        prev.map(repo => 
-          repo.id === id ? updatedRepo : repo
-        )
-      );
+      // Update repository in state
+      setRepositories(repositories.map(repo => 
+        repo.id === id ? updatedRepo : repo
+      ));
       
       toast({
-        title: 'Success',
-        description: 'Repository synced successfully',
+        title: "Success",
+        description: "Repository synced successfully",
       });
     } catch (error) {
-      console.error('Error syncing repository:', error);
+      console.error("Error syncing repository:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to sync repository',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to sync repository. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setSyncingRepoId(null);
-      isFetchingRef.current = false;
     }
   };
 
-  // Filter repositories based on the active tab
-  const filteredRepositories = repositories.filter(repo => {
-    if (activeTab === 'all') return true;
-    // Check if the repository has a project property that indicates it's personal
-    if (activeTab === 'personal') return repo.project?.name?.toLowerCase().includes('personal') || false;
-    return false;
-  });
+  // Toggle provider filter
+  const handleToggleProviderFilter = (providerName: string) => {
+    setSelectedProviders(prev => 
+      prev.includes(providerName)
+        ? prev.filter(p => p !== providerName)
+        : [...prev, providerName]
+    );
+  };
 
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSelectedProviders([]);
+    setSearchQuery('');
+  };
+
+  // Refresh all repositories
+  const handleRefreshAllRepositories = async () => {
+    setIsRefreshingAll(true);
+    try {
+      // Call API to refresh all repositories
+      const response = await fetchWithAuth('/api/fetch-all-repositories', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to refresh repositories');
+      }
+      
+      // Refresh data
+      isFetchingRef.current = false;
+      await fetchData();
+      
+      toast({
+        title: "Success",
+        description: "All repositories refreshed successfully",
+      });
+    } catch (error) {
+      console.error("Error refreshing repositories:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh repositories. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshingAll(false);
+    }
+  };
+
+  // Render content based on whether providers exist
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -308,61 +318,57 @@ export default function RepositoriesPage() {
           description="Connect to a Git provider to import your repositories."
           icon={<GitBranch className="h-10 w-10" />}
           action={
-            <AddGitProviderDialog
-              onSubmit={handleAddProvider}
-              isSubmitting={isAddingProvider}
-              open={addProviderOpen}
-              onOpenChange={setAddProviderOpen}
-            />
+            <Button onClick={() => setAddProviderOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('add_provider')}
+            </Button>
           }
         />
       );
     }
 
     return (
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList>
-              <TabsTrigger value="all">All Repositories</TabsTrigger>
-              <TabsTrigger value="personal">Personal</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {providers.map(provider => (
-            <GitProviderCard
-              key={provider.id}
-              provider={provider}
-              onDelete={handleDeleteProvider}
-              onRefresh={handleRefreshProvider}
-              isRefreshing={refreshingProviderId === provider.id}
+      <div className="space-y-8">
+        <Tabs 
+          defaultValue="providers" 
+          className="w-full"
+          value={tabsValue}
+          onValueChange={setTabsValue}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="repositories">Repositories</TabsTrigger>
+            <TabsTrigger value="providers">Git Providers</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="repositories" className="mt-6">
+            <RepositoryTable
+              repositories={repositories}
+              providers={providers}
+              selectedProviders={selectedProviders}
+              searchQuery={searchQuery}
+              isLoading={isRefreshingAll}
+              syncingRepoId={syncingRepoId}
+              onSearchChange={setSearchQuery}
+              onToggleProviderFilter={handleToggleProviderFilter}
+              onClearFilters={handleClearFilters}
+              onRefreshRepos={handleRefreshAllRepositories}
+              onSyncRepository={handleSyncRepository}
             />
-          ))}
-        </div>
-
-        {filteredRepositories.length > 0 ? (
-          <div>
-            <h3 className="text-lg font-medium mb-4">Repositories</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredRepositories.map(repo => (
-                <RepositoryCard
-                  key={repo.id}
-                  repository={repo}
-                  onSync={handleSyncRepository}
-                  isSyncing={syncingRepoId === repo.id}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <EmptyState
-            title="No Repositories Found"
-            description="Sync your Git provider to import repositories."
-            icon={<GitBranch className="h-10 w-10" />}
-          />
-        )}
+          </TabsContent>
+          
+          <TabsContent value="providers" className="mt-6">
+            <GitProviderGrid
+              providers={providers}
+              repositories={repositories}
+              selectedProviders={selectedProviders}
+              onAddProvider={() => setAddProviderOpen(true)}
+              onEditProvider={handleEditProvider}
+              onDeleteProvider={handleDeleteProvider}
+              onToggleProviderFilter={handleToggleProviderFilter}
+              refreshingProviderId={refreshingProviderId}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     );
   };
@@ -370,11 +376,16 @@ export default function RepositoriesPage() {
   return (
     <div className="flex flex-col h-full">
       <PageHeader title={t('repositories')} description={t('repositories_description')}>
+        <Button onClick={() => setAddProviderOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          {t('add_provider')}
+        </Button>
         <AddGitProviderDialog
           onSubmit={handleAddProvider}
           isSubmitting={isAddingProvider}
           open={addProviderOpen}
           onOpenChange={setAddProviderOpen}
+          initialValues={editingProvider}
         />
       </PageHeader>
       {renderContent()}

@@ -2,10 +2,9 @@ import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
-
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { ToasterProvider } from '@/components/shadcn/toaster';
-import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { locales } from '@/config';
 import { RoleProvider } from '@/context/RoleContext';
 import { UserProvider } from '@/context/UserContext';
@@ -13,53 +12,52 @@ import { getMessages } from '@/i18n';
 
 const inter = Inter({ subsets: ['latin'] });
 
+// Define props type
 type Props = {
   children: React.ReactNode;
-  params: { locale: string } | Promise<{ locale: string }>;
+  params: { locale: typeof locales[number] }; // "en" | "fr"
 };
 
-async function validateLocale(locale: string) {
-  // Simulate async validation
-  await Promise.resolve();
+// Validate locale asynchronously
+async function validateLocale(locale: string): Promise<string | null> {
+  await Promise.resolve(); // Simulate async validation
   return locales.includes(locale as any) ? locale : null;
 }
 
-export default async function LocaleLayout(props: Props) {
-  const { children, params } = props;
+export default async function LocaleLayout({ children, params }: Props) {
+  // Resolve params if it's a Promise (for safety in Next.js 15 edge cases)
+  const resolvedParams = 'then' in params ? await params : params;
+  const { locale } = resolvedParams;
 
-  // Ensure params is properly awaited if it's a promise
-  const resolvedParams = params instanceof Promise ? await params : params;
-  const locale = resolvedParams.locale;
-
+  // Early exit if locale is missing
   if (!locale) {
     notFound();
-    return null;
   }
 
+  // Validate locale
   const validLocale = await validateLocale(locale);
-
   if (!validLocale) {
     notFound();
-    return null;
   }
 
+  // Fetch messages for the valid locale
   const messages = await getMessages(validLocale);
 
-  // Get theme from cookie
+  // Get theme from cookies
   const cookieList = await cookies();
   const themeCookie = cookieList.get('theme');
-  const theme = themeCookie ? themeCookie.value : 'system';
+  const theme = themeCookie?.value ?? 'system';
 
   return (
-    <UserProvider>
-      <RoleProvider>
-        <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
-          <ThemeProvider defaultTheme={theme} storageKey="theme">
+    <>
+      <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
+        <UserProvider>
+          <RoleProvider>
             <RouteGuard>{children}</RouteGuard>
             <ToasterProvider />
-          </ThemeProvider>
-        </NextIntlClientProvider>
-      </RoleProvider>
-    </UserProvider>
+          </RoleProvider>
+        </UserProvider>
+      </NextIntlClientProvider>
+    </>
   );
 }

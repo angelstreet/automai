@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { prisma } from '../prisma';
+import { prisma } from '@/lib/prisma';
 import { logger } from '../logger';
 
 // Define a TerminalService class to implement singleton pattern

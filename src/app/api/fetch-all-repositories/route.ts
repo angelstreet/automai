@@ -33,12 +33,6 @@ export async function GET(request: Request) {
         },
         include: {
           provider: true,
-          project: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
         },
       });
 

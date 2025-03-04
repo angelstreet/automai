@@ -98,3 +98,36 @@ model Tenant {
 
   @@map("tenants")
 }
+
+model GitProvider {
+  id           String       @id @default(cuid())
+  name         String
+  displayName  String?
+  type         String
+  serverUrl    String?
+  accessToken  String?
+  refreshToken String?
+  expiresAt    DateTime?
+  userId       String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  repositories Repository[]
+
+  @@map("git_providers")
+}
+
+model Repository {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  url         String?
+  defaultBranch String?
+  providerId  String
+  provider    GitProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  syncStatus  String     @default("PENDING")
+  lastSyncedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("repositories")
+}

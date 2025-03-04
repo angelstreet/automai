@@ -11,6 +11,27 @@ export async function POST(request: Request) {
       username: host.username || 'not provided',
     });
 
+    // Validate required fields
+    if (!host.ip) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'IP address is required',
+        },
+        { status: 400 },
+      );
+    }
+
+    if (host.type === 'ssh' && !host.username) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Username is required for SSH connections',
+        },
+        { status: 400 },
+      );
+    }
+
     // Log the exact parameters being passed to testHostConnection
     console.log('Calling testHostConnection with:', {
       type: host.type,

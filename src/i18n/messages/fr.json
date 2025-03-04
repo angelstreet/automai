@@ -182,7 +182,7 @@
   },
   "repositories": {
     "repositories": "Dépôts",
-    "repositories_description": "Gérer vos dépôts Git",
+    "repositories_description": "Gérez vos dépôts Git",
     "add_provider": "Ajouter un fournisseur Git",
     "no_providers": "Aucun fournisseur Git trouvé. Ajoutez un fournisseur pour commencer.",
     "no_repositories": "Aucun dépôt trouvé. Ajoutez un fournisseur Git pour importer des dépôts.",
@@ -195,7 +195,9 @@
     "refresh": "Actualiser",
     "sync": "Synchroniser",
     "delete": "Supprimer",
-    "confirm_delete": "Êtes-vous sûr de vouloir supprimer ce fournisseur Git ?",
-    "delete_warning": "Cela supprimera tous les dépôts associés. Cette action ne peut pas être annulée."
+    "confirm_delete": "Êtes-vous sûr de vouloir supprimer ce fournisseur Git?",
+    "delete_warning": "Cela supprimera tous les dépôts associés. Cette action ne peut pas être annulée.",
+    "connectGit": "Connectez-vous à vos fournisseurs Git pour importer des dépôts",
+    "connectedProviders": "Fournisseurs connectés"
   }
 }

@@ -2,7 +2,7 @@
 import { Client } from 'ssh2';
 import { WebSocket } from 'ws';
 import { logger } from '../logger';
-import { prisma } from '../prisma';
+import { prisma } from '@/lib/prisma';
 
 // Define WebSocketConnection type
 export type WebSocketConnection = WebSocket & {

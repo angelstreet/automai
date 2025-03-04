@@ -1,18 +1,40 @@
 import { GitProvider, Repository } from '@/types/repositories';
 
+export interface GitProviderConfig {
+  serverUrl?: string;
+  accessToken?: string;
+}
+
 export interface GitProviderService {
   /**
-   * Get the authorization URL for OAuth flow
+   * Get user repositories from the Git provider
    */
-  getAuthorizationUrl(redirectUri: string, _state: string): string;
+  getUserRepositories(): Promise<Repository[]>;
+  
+  /**
+   * Get repository details by name or ID
+   */
+  getRepository(nameOrId: string): Promise<Repository | null>;
 
+  /**
+   * Test the provider connection
+   */
+  testConnection(): Promise<boolean>;
+  
+  /**
+   * Get the provider authorization URL
+   */
+  getAuthorizationUrl?(): string;
+  
+  /**
+   * Get the redirect URL for OAuth callback
+   */
+  getRedirectUrl?(): string;
+  
   /**
    * Exchange authorization code for access token
    */
-  exchangeCodeForToken(
-    code: string,
-    redirectUri: string,
-  ): Promise<{
+  exchangeCodeForToken?(code: string): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresAt?: Date;
@@ -33,11 +55,6 @@ export interface GitProviderService {
    * List repositories for the authenticated user
    */
   listRepositories(provider: GitProvider): Promise<Repository[]>;
-
-  /**
-   * Get repository details
-   */
-  getRepository(provider: GitProvider, repoName: string): Promise<Repository>;
 
   /**
    * Sync repository metadata

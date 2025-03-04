@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,16 +35,24 @@ const formSchema = z.object({
 });
 
 interface AddGitProviderDialogProps {
-  onSubmit: (values: z.infer<typeof formSchema>) => Promise<void>;
-  isSubmitting?: boolean;
+  onSubmit: (values: { type: GitProviderType; displayName: string }) => void;
+  isSubmitting: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialValues?: GitProvider | null;
 }
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
-export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onOpenChange }: AddGitProviderDialogProps) {
-  const [selectedType, setSelectedType] = useState<GitProviderType>('gitea');
+export function AddGitProviderDialog({
+  onSubmit,
+  isSubmitting,
+  open,
+  onOpenChange,
+  initialValues = null,
+}: AddGitProviderDialogProps) {
+  const [providerType, setProviderType] = useState<GitProviderType>(initialValues?.type || 'github');
+  const [displayName, setDisplayName] = useState(initialValues?.displayName || '');
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testError, setTestError] = useState<string | null>(null);
   
@@ -62,7 +70,7 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
   // Test the connection
   const testConnection = async () => {
     const values = form.getValues();
-    if (!values.serverUrl && !values.token && selectedType === 'gitea') {
+    if (!values.serverUrl && !values.token && providerType === 'gitea') {
       setTestError('Please fill in all required fields');
       return;
     }
@@ -73,8 +81,8 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
     try {
       await testGitProviderConnection({
         type: values.type,
-        serverUrl: values.serverUrl,
-        token: values.token,
+        serverUrl: values.serverUrl || '',
+        token: values.token || '',
       });
       setTestStatus('success');
     } catch (error) {
@@ -85,14 +93,15 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
   
   // Handle form submission
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (selectedType === 'gitea' && testStatus !== 'success') {
+    // Only require testing for Gitea
+    if (providerType === 'gitea' && testStatus !== 'success') {
       setTestError('Please test the connection first');
       return;
     }
     await onSubmit(values);
     if (!isSubmitting) {
       form.reset({ type: 'gitea', displayName: '', serverUrl: '', token: '' });
-      setSelectedType('gitea');
+      setProviderType('gitea');
       setTestStatus('idle');
       setTestError(null);
     }
@@ -102,15 +111,29 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       form.reset({ type: 'gitea', displayName: '', serverUrl: '', token: '' });
-      setSelectedType('gitea');
+      setProviderType('gitea');
       setTestStatus('idle');
       setTestError(null);
     }
     onOpenChange(open);
   };
 
-  const isGitea = selectedType === GitProviderTypes.GITEA;
+  const isGitea = providerType === GitProviderTypes.GITEA;
+  const isGithub = providerType === GitProviderTypes.GITHUB;
+  const isGitlab = providerType === GitProviderTypes.GITLAB;
   
+  useEffect(() => {
+    if (open) {
+      if (initialValues) {
+        setProviderType(initialValues.type);
+        setDisplayName(initialValues.displayName);
+      } else {
+        setProviderType('github');
+        setDisplayName('');
+      }
+    }
+  }, [open, initialValues]);
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -138,7 +161,7 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
                     <Select
                       onValueChange={(value) => {
                         field.onChange(value);
-                        setSelectedType(value as GitProviderType);
+                        setProviderType(value as GitProviderType);
                         setTestStatus('idle');
                         setTestError(null);
                       }}
@@ -185,9 +208,9 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
                     <FormControl>
                       <Input 
                         placeholder={`My ${
-                          selectedType === 'github' 
+                          providerType === 'github' 
                             ? 'GitHub' 
-                            : selectedType === 'gitlab' 
+                            : providerType === 'gitlab' 
                               ? 'GitLab' 
                               : 'Gitea'
                         } Account`} 
@@ -241,6 +264,24 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
               </div>
             )}
 
+            {(isGithub || isGitlab) && (
+              <div className="rounded-md border p-4 bg-muted/50">
+                <div className="flex items-start gap-3">
+                  <div className="bg-primary/10 p-2 rounded-full">
+                    {isGithub ? <GitHubIcon className="h-5 w-5" /> : <GitLabIcon className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <h3 className="font-medium">{isGithub ? 'GitHub' : 'GitLab'} OAuth Authentication</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {isGithub 
+                        ? 'You will be redirected to GitHub to authorize the application.'
+                        : 'You will be redirected to GitLab to authorize the application.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {testError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -249,31 +290,28 @@ export function AddGitProviderDialog({ onSubmit, isSubmitting = false, open, onO
             )}
 
             {testStatus === 'success' && (
-              <Alert variant="success" className="bg-green-50 text-green-600">
+              <Alert variant="success">
                 <CheckCircle2 className="h-4 w-4" />
                 <AlertDescription>Connection test successful!</AlertDescription>
               </Alert>
             )}
-            
-            <DialogFooter className="gap-2 sm:gap-0">
+
+            <DialogFooter>
               {isGitea && (
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                   onClick={testConnection}
-                  disabled={testStatus === 'testing' || isSubmitting}
+                  disabled={isSubmitting || testStatus === 'testing'}
+                  className="mr-auto"
                 >
-                  {testStatus === 'testing' && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  {testStatus === 'success' && (
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                  )}
+                  {testStatus === 'testing' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Test Connection
                 </Button>
               )}
-              <Button type="submit" disabled={isSubmitting || (isGitea && testStatus !== 'success')}>
-                {isSubmitting ? 'Adding...' : 'Add Provider'}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {(isGithub || isGitlab) ? 'Continue with OAuth' : 'Add Provider'}
               </Button>
             </DialogFooter>
           </form>

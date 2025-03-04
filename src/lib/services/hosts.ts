@@ -1,7 +1,7 @@
 import { Client } from 'ssh2';
 
 import { logger } from '../logger';
-import { prisma } from '../prisma';
+import { prisma } from '@/lib/prisma';
 
 /**
  * Connection test result interface
@@ -61,6 +61,17 @@ export async function getHostById(id: string) {
 
 /**
  * Create a new host
+ * 
+ * @param {Object} data - Host data
+ * @param {string} data.name - Required: Host name
+ * @param {string} data.description - Optional: Host description
+ * @param {string} data.type - Required: Host type (ssh, docker, portainer)
+ * @param {string} data.ip - Required: Host IP address
+ * @param {number} data.port - Optional: Host port (defaults to 22 for SSH)
+ * @param {string} data.user - Required for SSH: Username
+ * @param {string} data.password - Required for SSH: Password
+ * @param {string} data.status - Optional: Initial status (defaults to 'pending')
+ * @returns {Promise<Host>} Created host
  */
 export async function createHost(data: {
   name: string;

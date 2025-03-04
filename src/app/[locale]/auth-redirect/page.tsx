@@ -3,6 +3,7 @@
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { useUser } from '@/context/UserContext';
 
 export default function AuthRedirectPage() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export default function AuthRedirectPage() {
   const locale = (params?.locale as string) || 'en';
   const [isRedirecting, setIsRedirecting] = useState(false);
   const { data: session, status } = useSession();
+  const { user } = useUser();
 
   // Debug logging on initial render
   console.log('Auth redirect page loaded (without route group):', {
@@ -21,7 +23,7 @@ export default function AuthRedirectPage() {
       ? {
           id: session.user.id,
           email: session.user.email,
-          tenant: session.user.tenantName || 'trial',
+          tenant: user?.tenantName || 'trial',
         }
       : null,
     url: typeof window !== 'undefined' ? window.location.href : '',
@@ -46,8 +48,8 @@ export default function AuthRedirectPage() {
       try {
         // If we have a session, redirect to the appropriate dashboard
         if (session?.user) {
-          // Use tenant name or default to plan-based name
-          const tenant = session.user.tenantName || 'trial';
+          // Use tenant name from user context or default to trial
+          const tenant = user?.tenantName || 'trial';
           console.log('Session data:', {
             userId: session.user.id,
             email: session.user.email,
@@ -82,7 +84,7 @@ export default function AuthRedirectPage() {
     };
 
     handleRedirect();
-  }, [locale, router, isRedirecting, session, status]);
+  }, [locale, router, isRedirecting, session, status, user]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

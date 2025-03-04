@@ -1,8 +1,8 @@
 'use client';
-
+import type { Session } from 'next-auth';
 import { useSession } from 'next-auth/react';
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import type { Session } from 'next-auth';
+
 
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
 
@@ -101,7 +101,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             setLastFetch(timestamp);
             return;
           }
-        } catch (e) {
+        } catch (_error) {
           console.warn('Invalid session cache, fetching fresh data');
         }
       }

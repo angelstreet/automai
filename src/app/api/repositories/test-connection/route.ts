@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     if (!response.ok) {
       return NextResponse.json({
         success: false,
-        error: 'Failed to connect to the Git provider',
+        error: 'Connection to git provider failed',
       }, { status: 400 });
     }
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: false,
-      error: 'Failed to test connection'
+      error: 'Connection to git provider failed'
     }, { status: 500 });
   }
 } 

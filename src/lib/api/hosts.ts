@@ -15,7 +15,7 @@ export const hostsApi = {
   /**
    * Get all hosts
    */
-  getHosts: async (locale: string) => {
+  getHosts: async () => {
     // Add cache-busting parameter to prevent browser caching
     const timestamp = new Date().getTime();
     const response = await fetch(`${getBaseUrl()}/api/hosts?_=${timestamp}`);
@@ -26,7 +26,7 @@ export const hostsApi = {
   /**
    * Delete a host
    */
-  deleteHost: async (locale: string, id: string) => {
+  deleteHost: async (id: string) => {
     const response = await fetch(`${getBaseUrl()}/api/hosts/${id}`, {
       method: 'DELETE',
     });
@@ -38,7 +38,6 @@ export const hostsApi = {
    * Test host connection
    */
   testConnection: async (
-    locale: string,
     data: {
       type: string;
       ip: string;
@@ -78,8 +77,18 @@ export const hostsApi = {
     return response.json();
   },
 
+  /**
+   * Test all host connections at once
+   */
+  testAllHosts: async () => {
+    // Add cache-busting parameter to prevent browser caching
+    const timestamp = new Date().getTime();
+    const response = await fetch(`${getBaseUrl()}/api/hosts/test-all?_=${timestamp}`);
+    if (!response.ok) throw new Error('Failed to test all connections');
+    return response.json();
+  },
+
   async verifyFingerprint(
-    locale: string,
     data: {
       fingerprint: string;
       host: string;
@@ -109,9 +118,19 @@ export const hostsApi = {
 
   /**
    * Create a new host
+   * 
+   * @param {Object} data - Host data
+   * @param {string} data.name - Required: Host name
+   * @param {string} data.description - Optional: Host description
+   * @param {string} data.type - Required: Host type (ssh, docker, portainer)
+   * @param {string} data.ip - Required: Host IP address
+   * @param {number} data.port - Optional: Host port (defaults to 22 for SSH)
+   * @param {string} data.user - Required for SSH: Username
+   * @param {string} data.password - Required for SSH: Password
+   * @param {string} data.status - Optional: Initial status (defaults to 'pending')
+   * @returns {Promise<Host>} Created host
    */
   createHost: async (
-    locale: string,
     data: {
       name: string;
       description: string;
@@ -121,7 +140,6 @@ export const hostsApi = {
       user: string;
       password: string;
       status: string;
-      lastConnected?: Date;
     },
   ) => {
     const response = await fetch(`${getBaseUrl()}/api/hosts`, {
@@ -142,10 +160,10 @@ export const hostsApi = {
   /**
    * Check connections for multiple hosts sequentially
    */
-  checkAllConnections: async (locale: string, hosts: Host[]) => {
+  checkAllConnections: async (hosts: Host[]) => {
     const results = [];
     for (const host of hosts) {
-      const result = await hostsApi.testConnection(locale, {
+      const result = await hostsApi.testConnection({
         type: host.type,
         ip: host.ip,
         port: host.port,

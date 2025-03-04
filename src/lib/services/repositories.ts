@@ -38,7 +38,7 @@ export async function listGitProviders(userId: string): Promise<GitProvider[]> {
       where: { userId },
     });
 
-    return providers.map((provider) => ({
+    return providers.map((provider: any) => ({
       ...provider,
       status: provider.accessToken ? 'connected' : 'disconnected',
     }));
@@ -66,6 +66,7 @@ export async function createGitProvider(
   userId: string,
   data: {
     name: GitProviderType;
+    type?: GitProviderType;
     displayName: string;
     accessToken?: string;
     refreshToken?: string;
@@ -73,11 +74,14 @@ export async function createGitProvider(
     serverUrl?: string;
   },
 ): Promise<GitProvider> {
-  const { name, displayName, accessToken, refreshToken, expiresAt, serverUrl } = data;
+  // Use type from input if provided, otherwise fallback to name
+  const { displayName, accessToken, refreshToken, expiresAt, serverUrl } = data;
+  const type = data.type || data.name;
 
   const provider = await prisma.gitProvider.create({
     data: {
-      name,
+      name: type,
+      type,
       displayName,
       accessToken,
       refreshToken,
@@ -268,7 +272,7 @@ export async function syncRepository(id: string): Promise<Repository> {
         },
       },
     });
-  } catch (error) {
+  } catch (_error) {
     // If there's an error, mark the repository as having an error
     return prisma.repository.update({
       where: { id },
@@ -308,7 +312,7 @@ export async function importRepositoriesFromProvider(providerId: string): Promis
     select: { name: true },
   });
 
-  const existingRepoNames = new Set(existingRepos.map((repo) => repo.name));
+  const existingRepoNames = new Set(existingRepos.map((repo: any) => repo.name));
 
   // Filter out repositories that already exist
   const newRepositories = repositories.filter((repo) => !existingRepoNames.has(repo.name));
@@ -367,7 +371,7 @@ export async function testGitProviderConnection({ type, serverUrl, token }: Test
   const data: ApiResponse = await response.json();
   
   if (!data.success) {
-    throw new Error(data.error || 'Failed to test connection');
+    throw new Error(data.error || 'Connection to git provider failed');
   }
 
   return data;

@@ -15,6 +15,26 @@ export async function GET() {
   }
 }
 
+/**
+ * POST /api/hosts
+ * Creates a new host
+ * 
+ * Required fields:
+ * - name: string - Host name
+ * - type: string - Host type (ssh, docker, portainer)
+ * - ip: string - Host IP address
+ * 
+ * For SSH connections, also required:
+ * - user: string - SSH username
+ * - password: string - SSH password
+ * 
+ * Optional fields:
+ * - description: string - Host description
+ * - port: number - Host port (defaults to 22 for SSH)
+ * - status: string - Initial status (defaults to 'pending')
+ * 
+ * @returns The created host
+ */
 export async function POST(request: Request) {
   try {
     const data = await request.json();
@@ -37,7 +57,6 @@ export async function POST(request: Request) {
 
     const host = await createHost({
       ...data,
-      lastConnected: new Date(),
     });
     console.log('Host created successfully:', host);
 
