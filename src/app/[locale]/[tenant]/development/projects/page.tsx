@@ -11,6 +11,7 @@ import {
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
+import type { Session } from 'next-auth';
 
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
@@ -36,6 +37,20 @@ import { useToast } from '@/components/shadcn/use-toast';
 import { useUser } from '@/context/UserContext';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
 
+// Add CustomSession interface type
+interface CustomSession extends Session {
+  user: {
+    id: string;
+    email?: string | null;
+    name?: string | null;
+    image?: string | null;
+    role?: string;
+    tenantId?: string;
+    tenantName?: string;
+  };
+  accessToken?: string;
+}
+
 // Type matching Prisma Project model
 type Project = {
   id: string;
@@ -59,7 +74,7 @@ export default function ProjectsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
   const params = useParams();
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession() as { data: CustomSession | null; status: string };
   const { toast } = useToast();
   const { user } = useUser();
 

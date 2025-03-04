@@ -15,7 +15,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 type Props = {
   children: React.ReactNode;
-  params: Promise<{ locale: string }> | { locale: string };
+  params: { locale: string };
 };
 
 async function validateLocale(locale: string) {
@@ -25,9 +25,8 @@ async function validateLocale(locale: string) {
 }
 
 export default async function LocaleLayout({ children, params }: Props) {
-  // Resolve params to handle both Promise and direct object
-  const resolvedParams = await Promise.resolve(params);
-  const { locale } = resolvedParams;
+  // No need to resolve params anymore, Next.js 15 guarantees it's not a Promise
+  const { locale } = params;
 
   if (!locale) {
     notFound();
