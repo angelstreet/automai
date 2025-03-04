@@ -61,7 +61,12 @@ const nextConfig = {
   // Configure server options
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'localhost:3001', 'localhost:3002'],
+      allowedOrigins: [
+        'localhost:3000',
+        'localhost:3001', 
+        'localhost:3002',
+        `${process.env.CODESPACE_NAME}-3000.app.github.dev`
+      ],
     },
   },
 
