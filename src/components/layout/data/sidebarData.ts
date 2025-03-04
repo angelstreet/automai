@@ -124,6 +124,12 @@ export const sidebarData: SidebarData = {
           icon: Server,
           roles: ['admin', 'developer', 'tester'],
         },
+        {
+          title: 'Deployment',
+          href: '/deployment',
+          icon: Rocket,
+          roles: ['admin', 'developer', 'tester'],
+        },
       ],
     },
     {
