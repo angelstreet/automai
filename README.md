@@ -8,6 +8,7 @@ Automai is a multi-tenant SaaS platform designed for end-to-end test automation 
 npx eslint . --ext .ts,.tsx --quiet
 # Restart next.js frontend
 npm run dev:all
+sudo service postgresql start
 
 # Restart next.js frontend in debug mode with browser tool and prisma studio
 npm run dev:debug
