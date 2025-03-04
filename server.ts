@@ -29,6 +29,8 @@ let isShuttingDown = false;
 
 async function main() {
   try {
+    const startTime = Date.now();
+    
     // Start server without WebSocket support by default
     // WebSockets will be lazily initialized when needed
     const server = await startServer({
@@ -41,8 +43,10 @@ async function main() {
     // Get the actual port the server is listening on
     const address = server.address();
     const actualPort = typeof address === 'object' && address ? address.port : port;
+    
+    const launchTime = ((Date.now() - startTime) / 1000).toFixed(1);
 
-    console.log(`\n✓ Ready in 0s`);
+    console.log(`\n✓ Ready in ${launchTime}s`);
     console.log(`> Ready on http://${hostname}:${actualPort}`);
   } catch (err) {
     // Don't exit on EADDRINUSE as it's handled by startServer
