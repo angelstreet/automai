@@ -1,18 +1,17 @@
 import * as React from 'react';
 
 import { TooltipProvider } from '@/components/shadcn/tooltip';
-import {
-  SIDEBAR_COOKIE_NAME,
-  SIDEBAR_COOKIE_MAX_AGE,
-  SIDEBAR_WIDTH,
-  SIDEBAR_WIDTH_ICON,
-  SIDEBAR_KEYBOARD_SHORTCUT,
-} from '@/constants/sidebar';
 import { SidebarProvider as ContextSidebarProvider } from '@/context/SidebarContext';
 import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 import { SidebarProviderProps } from '@/types/sidebar';
 
+export const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+export const SIDEBAR_WIDTH = '16rem';
+export const SIDEBAR_WIDTH_MOBILE = '18rem';
+export const SIDEBAR_WIDTH_ICON = '3rem';
+export const SIDEBAR_KEYBOARD_SHORTCUT = 'b'; 
+export const SIDEBAR_COOKIE_NAME = 'automai_sidebar_state';
 const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
   (
     {

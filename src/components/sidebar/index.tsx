@@ -15,7 +15,6 @@ export { SidebarGroupContent } from './SidebarGroupContent';
 export { SidebarMenu } from './SidebarMenu';
 export { SidebarMenuItem } from './SidebarMenuItem';
 export { SidebarMenuButton } from './SidebarMenuButton';
-export { SidebarMenuAction } from './SidebarMenuAction';
 export { SidebarMenuSub } from './SidebarMenuSub';
 export { SidebarMenuSubButton } from './SidebarMenuSubButton';
 export { useSidebar } from '@/hooks/useSidebar';
