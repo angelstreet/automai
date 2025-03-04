@@ -9,8 +9,11 @@ export async function GET() {
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
+      console.error('[PROFILE_GET] No session or user found');
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
+
+    console.log('[PROFILE_GET] Session found, user ID:', session.user.id);
 
     // Get full user data from database
     const user = await prisma.user.findUnique({
@@ -19,7 +22,18 @@ export async function GET() {
     });
 
     if (!user) {
-      return new NextResponse(JSON.stringify({ error: 'User not found' }), { status: 404 });
+      console.error('[PROFILE_GET] User not found in database for ID:', session.user.id);
+      
+      // Return the session user data as fallback instead of 404
+      return NextResponse.json({
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        role: session.user.role || 'user',
+        tenantId: session.user.tenantId || null,
+        tenantName: null,
+        plan: 'free',
+      });
     }
 
     return NextResponse.json({
