@@ -40,6 +40,7 @@ export const supabaseAuth = {
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth-redirect`,
+        scopes: provider === 'github' ? 'repo,user' : 'email profile',
       },
     });
 

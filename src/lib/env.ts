@@ -69,10 +69,32 @@ const processEnv = {
   ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL,
 };
 
-// Validate and export environment configuration
-export const env = envSchema.parse(processEnv);
+// Detect if we're in a browser environment
+const isBrowser = typeof window !== 'undefined';
 
-export const isCodespace = () => Boolean(process.env.CODESPACE);
+// For client-side, only validate public env vars
+const clientEnvSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+});
+
+// Validate and export environment configuration based on environment
+export const env = isBrowser 
+  ? clientEnvSchema.parse({
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+      NODE_ENV: process.env.NODE_ENV,
+    })
+  : envSchema.parse(processEnv);
+
+// Safe helper functions that work in both browser and server
+export const isCodespace = () => {
+  if (isBrowser) return false;
+  return Boolean(process.env.CODESPACE);
+};
 export const isDevelopment = () => process.env.NODE_ENV === 'development';
 export const isProduction = () => process.env.NODE_ENV === 'production';
 export const isTest = () => process.env.NODE_ENV === 'test';
@@ -86,6 +108,10 @@ export const isUsingSupabase = () => {
 };
 
 export const getBaseUrl = () => {
+  if (isBrowser) {
+    return window.location.origin;
+  }
+  
   if (process.env.CODESPACE) {
     return `https://${process.env.CODESPACE_NAME}-3000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
   }
