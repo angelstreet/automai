@@ -43,67 +43,68 @@ export default function RepositoriesPage() {
   // Add a ref to track if fetching is already in progress
   const isFetchingRef = useRef(false);
 
-  // Fetch data function
-  useEffect(() => {
-    const fetchData = async () => {
-      // Check if a fetch is already in progress
-      if (isFetchingRef.current) return;
-      
-      isFetchingRef.current = true;
-      setIsLoading(true);
-      
-      try {
-        // Fetch providers with retry enabled
-        const providersResponse = await fetchWithAuth('/api/git-providers', {}, { 
-          maxRetries: 3, 
-          initialDelay: 1000, 
-          shouldRetry: true 
-        });
-        
-        if (!providersResponse.ok) {
-          if (providersResponse.status === 401) {
-            router.push('/login');
-            return;
-          }
-          // For non-401 errors, just set empty providers array
-          console.log('Failed to fetch providers:', providersResponse.status);
-          setProviders([]);
-        } else {
-          const providersData = await providersResponse.json();
-          setProviders(providersData);
-        }
-
-        // Fetch all repositories in a single call with retry enabled
-        const reposResponse = await fetchWithAuth('/api/fetch-all-repositories', {}, { 
-          maxRetries: 3, 
-          initialDelay: 1000, 
-          shouldRetry: true 
-        });
-        
-        if (!reposResponse.ok) {
-          if (reposResponse.status === 401) {
-            router.push('/login');
-            return;
-          }
-          console.log('Failed to fetch repositories:', reposResponse.status);
-          setRepositories([]);
-        } else {
-          const reposData = await reposResponse.json();
-          setRepositories(reposData);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch data. Please try again later.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-        isFetchingRef.current = false;
-      }
-    };
+  // Define fetchData outside of useEffect so it can be called from other places
+  const fetchData = async () => {
+    // Check if a fetch is already in progress
+    if (isFetchingRef.current) return;
     
+    isFetchingRef.current = true;
+    setIsLoading(true);
+    
+    try {
+      // Fetch providers with retry enabled
+      const providersResponse = await fetchWithAuth('/api/git-providers', {}, { 
+        maxRetries: 3, 
+        initialDelay: 1000, 
+        shouldRetry: true 
+      });
+      
+      if (!providersResponse.ok) {
+        if (providersResponse.status === 401) {
+          router.push('/login');
+          return;
+        }
+        // For non-401 errors, just set empty providers array
+        console.log('Failed to fetch providers:', providersResponse.status);
+        setProviders([]);
+      } else {
+        const providersData = await providersResponse.json();
+        setProviders(providersData);
+      }
+
+      // Fetch all repositories in a single call with retry enabled
+      const reposResponse = await fetchWithAuth('/api/fetch-all-repositories', {}, { 
+        maxRetries: 3, 
+        initialDelay: 1000, 
+        shouldRetry: true 
+      });
+      
+      if (!reposResponse.ok) {
+        if (reposResponse.status === 401) {
+          router.push('/login');
+          return;
+        }
+        console.log('Failed to fetch repositories:', reposResponse.status);
+        setRepositories([]);
+      } else {
+        const reposData = await reposResponse.json();
+        setRepositories(reposData);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch data. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+      isFetchingRef.current = false;
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
     fetchData();
   }, [router, toast]);
 
@@ -316,12 +317,6 @@ export default function RepositoriesPage() {
           title="No Git Providers Connected"
           description="Connect to a Git provider to import your repositories."
           icon={<GitBranch className="h-10 w-10" />}
-          action={
-            <Button onClick={() => setAddProviderOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('add_provider')}
-            </Button>
-          }
         />
       );
     }

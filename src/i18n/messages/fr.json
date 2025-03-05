@@ -209,6 +209,12 @@
     "notificationSettings": "Paramètres de notification",
     "apiSettings": "Paramètres API",
     "integrationSettings": "Paramètres d'intégration",
-    "advancedSettings": "Paramètres avancés"
+    "advancedSettings": "Paramètres avancés",
+    "languageSettings": "Paramètres de langue",
+    "languageDescription": "Changer la langue d'affichage de l'application",
+    "currentLanguage": "Langue actuelle",
+    "selectLanguage": "Sélectionner une langue",
+    "english": "Anglais",
+    "french": "Français"
   }
 }

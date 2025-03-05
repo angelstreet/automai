@@ -219,6 +219,12 @@
     "notificationSettings": "Notification Settings",
     "apiSettings": "API Settings",
     "integrationSettings": "Integration Settings",
-    "advancedSettings": "Advanced Settings"
+    "advancedSettings": "Advanced Settings",
+    "languageSettings": "Language Settings",
+    "languageDescription": "Change the display language of the application",
+    "currentLanguage": "Current Language",
+    "selectLanguage": "Select Language",
+    "english": "English",
+    "french": "French"
   }
 }
