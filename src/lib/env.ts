@@ -9,6 +9,11 @@ const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().url(),
 
+  // Supabase - only required in production
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+
   // Authentication
   JWT_SECRET: z.string().min(1),
   NEXTAUTH_URL: z.string().url(),
@@ -27,13 +32,29 @@ const envSchema = z.object({
 
   // Elasticsearch
   ELASTICSEARCH_URL: z.string().url().optional(),
-});
+}).refine(
+  // Supabase credentials are required in production environment
+  (data) => {
+    if (data.NODE_ENV === 'production') {
+      return !!data.NEXT_PUBLIC_SUPABASE_URL && 
+             !!data.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    }
+    return true;
+  },
+  {
+    message: 'Supabase credentials are required in production environment',
+    path: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
+  }
+);
 
 // Process environment variables
 const processEnv = {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
   DATABASE_URL: process.env.DATABASE_URL,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   JWT_SECRET: process.env.JWT_SECRET,
   NEXTAUTH_URL: process.env.NEXTAUTH_URL,
   NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET,
@@ -54,6 +75,13 @@ export const isCodespace = () => Boolean(process.env.CODESPACE);
 export const isDevelopment = () => process.env.NODE_ENV === 'development';
 export const isProduction = () => process.env.NODE_ENV === 'production';
 export const isTest = () => process.env.NODE_ENV === 'test';
+
+// Helper to check if we're using Supabase
+export const isUsingSupabase = () => {
+  return isProduction() && 
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && 
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+};
 
 export const getBaseUrl = () => {
   if (process.env.CODESPACE) {

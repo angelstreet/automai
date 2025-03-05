@@ -40,9 +40,16 @@ npm run prisma:studio
    ```
 3. Set up environment variables:
    - Copy `.env.example` to `.env.development`,`.env.production`,`.env.test`
-   - Update the following variables:
+   - Update the following variables in `.env.development`:
      ```env
-     DATABASE_URL=               # Your Prisma Url
+     DATABASE_URL=               # Your local PostgreSQL database URL
+     JWT_SECRET=                # Your JWT secret key
+     ```
+   - For production with Supabase, update `.env.production`:
+     ```env
+     DATABASE_URL=               # Your Supabase PostgreSQL connection URL
+     NEXT_PUBLIC_SUPABASE_URL=   # Your Supabase project URL
+     NEXT_PUBLIC_SUPABASE_ANON_KEY= # Your Supabase anon key
      JWT_SECRET=                # Your JWT secret key
      ```
 4. If runing github codespace
@@ -76,7 +83,19 @@ npm run dev:codespace
 
 Supabase vercel supabase-emerald-xylophone   
 ## Running the Application
-DFxy3FnyMvYOIHeC
+
+### Environment Mode Selection
+
+You can run the application in different modes:
+
+```bash
+# Development mode (local PostgreSQL)
+npm run dev
+
+# Production mode (Supabase)
+cross-env ENV_FILE=.env.production npm run dev
+```
+
 ### Frontend and API
 
 Start the Next.js development server:

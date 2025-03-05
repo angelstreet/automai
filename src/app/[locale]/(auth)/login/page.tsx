@@ -39,12 +39,27 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const result = await signIn('credentials', {
+      // Always try with standard credentials first as it's more reliable in all environments
+      let result = await signIn('credentials', {
         email,
         password,
         redirect: false,
         callbackUrl: `/${locale}/trial/dashboard`,
       });
+
+      // Only try Supabase in production with Supabase available and if standard login failed
+      if (!result?.ok && window.location.hostname !== 'localhost' && process.env.NODE_ENV === 'production') {
+        try {
+          result = await signIn('supabase', {
+            email,
+            password,
+            redirect: false,
+            callbackUrl: `/${locale}/trial/dashboard`,
+          });
+        } catch (error) {
+          console.error('Supabase login failed, using standard credentials:', error);
+        }
+      }
 
       if (result?.error) {
         setError(result.error);

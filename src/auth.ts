@@ -24,8 +24,18 @@ import { default as CredentialsProvider } from 'next-auth/providers/credentials'
 import GitHubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 
-import { env } from '@/lib/env';
+import { env, isUsingSupabase } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
+
+// Dynamically import SupabaseProvider to prevent errors when Supabase isn't available
+let SupabaseProvider: any;
+try {
+  const supabaseProviderModule = require('./app/api/auth/[...nextauth]/providers/supabase');
+  SupabaseProvider = supabaseProviderModule.SupabaseProvider;
+} catch (error) {
+  console.warn('Supabase provider not available');
+  SupabaseProvider = () => null;
+}
 
 // Ensure environment variables are loaded
 if (!process.env.NEXTAUTH_SECRET) {
@@ -75,7 +85,9 @@ export const authOptions: AuthOptions = {
       clientId: env.GITHUB_CLIENT_ID,
       clientSecret: env.GITHUB_CLIENT_SECRET,
     }),
+    // Standard Credentials Provider (uses Prisma directly)
     CredentialsProvider({
+      id: 'credentials',
       name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -117,6 +129,8 @@ export const authOptions: AuthOptions = {
         }
       },
     }),
+    // Conditionally add Supabase provider only in production with Supabase enabled
+    ...(isUsingSupabase() && SupabaseProvider ? [SupabaseProvider()] : []),
   ],
   pages: {
     signIn: '/login',
