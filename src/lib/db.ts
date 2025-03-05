@@ -1,7 +1,19 @@
 import { createServerSupabase } from './supabase';
+import { GitProviderType } from '@/types/repositories';
 
 // Create a supabase client
 const supabase = createServerSupabase();
+
+// Helper function to safely create Date objects
+const safeDate = (value: unknown): Date => {
+  if (!value) return safeDate(new Date());
+  try {
+    return new Date(value as string | number | Date);
+  } catch (e) {
+    console.error('Error creating date:', e);
+    return safeDate(new Date());
+  }
+};
 
 // Define database models here
 export const db = {
@@ -393,9 +405,9 @@ export const db = {
           isPrivate: Boolean(data.isPrivate),
           description: data.description as string | undefined,
           syncStatus: data.syncStatus as "SYNCED" | "PENDING" | "ERROR",
-          createdAt: new Date(data.createdAt),
-          updatedAt: new Date(data.updatedAt),
-          lastSyncedAt: data.lastSyncedAt ? new Date(data.lastSyncedAt) : undefined,
+          createdAt: safeDate(data.createdAt),
+          updatedAt: safeDate(data.updatedAt),
+          lastSyncedAt: data.lastSyncedAt ? safeDate(data.lastSyncedAt) : undefined,
           error: data.error as string | undefined,
           provider: include?.provider ? { 
             id: '',
@@ -404,8 +416,8 @@ export const db = {
             type: 'github' as GitProviderType,
             displayName: '',
             status: 'connected' as "connected" | "disconnected",
-            createdAt: new Date(),
-            updatedAt: new Date(),
+            createdAt: safeDate(safeDate(new Date())),
+            updatedAt: safeDate(safeDate(new Date())),
             name: 'github' as GitProviderType
           } : undefined,
           project: include?.project ? { id: '', name: '' } : undefined
@@ -460,9 +472,9 @@ export const db = {
         isPrivate: Boolean(repo.isPrivate),
         description: repo.description as string | undefined,
         syncStatus: repo.syncStatus as "SYNCED" | "PENDING" | "ERROR",
-        createdAt: new Date(repo.createdAt),
-        updatedAt: new Date(repo.updatedAt),
-        lastSyncedAt: repo.lastSyncedAt ? new Date(repo.lastSyncedAt) : undefined,
+        createdAt: safeDate(repo.createdAt),
+        updatedAt: safeDate(repo.updatedAt),
+        lastSyncedAt: repo.lastSyncedAt ? safeDate(repo.lastSyncedAt) : undefined,
         error: repo.error as string | undefined,
         provider: include?.provider ? { 
           id: '',
@@ -471,8 +483,8 @@ export const db = {
           type: 'github' as GitProviderType,
           displayName: '',
           status: 'connected' as "connected" | "disconnected",
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: safeDate(new Date()),
+          updatedAt: safeDate(new Date()),
           name: 'github' as GitProviderType
         } : undefined,
         project: include?.project ? { id: '', name: '' } : undefined
@@ -503,9 +515,9 @@ export const db = {
         isPrivate: Boolean(result.isPrivate),
         description: result.description as string | undefined,
         syncStatus: result.syncStatus as "SYNCED" | "PENDING" | "ERROR",
-        createdAt: new Date(result.createdAt),
-        updatedAt: new Date(result.updatedAt),
-        lastSyncedAt: result.lastSyncedAt ? new Date(result.lastSyncedAt) : undefined,
+        createdAt: safeDate(result.createdAt),
+        updatedAt: safeDate(result.updatedAt),
+        lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
         error: result.error as string | undefined,
         provider: include?.provider ? { 
           id: '',
@@ -514,8 +526,8 @@ export const db = {
           type: 'github' as GitProviderType,
           displayName: '',
           status: 'connected' as "connected" | "disconnected",
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: safeDate(new Date()),
+          updatedAt: safeDate(new Date()),
           name: 'github' as GitProviderType
         } : undefined,
         project: include?.project ? { id: '', name: '' } : undefined
@@ -547,9 +559,9 @@ export const db = {
         isPrivate: Boolean(result.isPrivate),
         description: result.description as string | undefined,
         syncStatus: result.syncStatus as "SYNCED" | "PENDING" | "ERROR",
-        createdAt: new Date(result.createdAt),
-        updatedAt: new Date(result.updatedAt),
-        lastSyncedAt: result.lastSyncedAt ? new Date(result.lastSyncedAt) : undefined,
+        createdAt: safeDate(result.createdAt),
+        updatedAt: safeDate(result.updatedAt),
+        lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
         error: result.error as string | undefined,
         provider: include?.provider ? { 
           id: '',
@@ -558,8 +570,8 @@ export const db = {
           type: 'github' as GitProviderType,
           displayName: '',
           status: 'connected' as "connected" | "disconnected",
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: safeDate(new Date()),
+          updatedAt: safeDate(new Date()),
           name: 'github' as GitProviderType
         } : undefined,
         project: include?.project ? { id: '', name: '' } : undefined
@@ -608,10 +620,10 @@ export const db = {
           serverUrl: data.serverUrl as string | undefined,
           accessToken: data.accessToken as string | undefined,
           refreshToken: data.refreshToken as string | undefined,
-          createdAt: new Date(data.createdAt),
-          updatedAt: new Date(data.updatedAt),
-          lastSyncedAt: data.lastSyncedAt ? new Date(data.lastSyncedAt) : undefined,
-          expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+          createdAt: safeDate(data.createdAt),
+          updatedAt: safeDate(data.updatedAt),
+          lastSyncedAt: data.lastSyncedAt ? safeDate(data.lastSyncedAt) : undefined,
+          expiresAt: data.expiresAt ? safeDate(data.expiresAt) : undefined,
           name: data.type as GitProviderType
         };
       }
@@ -663,10 +675,10 @@ export const db = {
         serverUrl: provider.serverUrl as string | undefined,
         accessToken: provider.accessToken as string | undefined,
         refreshToken: provider.refreshToken as string | undefined,
-        createdAt: new Date(provider.createdAt),
-        updatedAt: new Date(provider.updatedAt),
-        lastSyncedAt: provider.lastSyncedAt ? new Date(provider.lastSyncedAt) : undefined,
-        expiresAt: provider.expiresAt ? new Date(provider.expiresAt) : undefined,
+        createdAt: safeDate(provider.createdAt),
+        updatedAt: safeDate(provider.updatedAt),
+        lastSyncedAt: provider.lastSyncedAt ? safeDate(provider.lastSyncedAt) : undefined,
+        expiresAt: provider.expiresAt ? safeDate(provider.expiresAt) : undefined,
         name: provider.type as GitProviderType
       }));
     },
@@ -694,10 +706,10 @@ export const db = {
         serverUrl: result.serverUrl as string | undefined,
         accessToken: result.accessToken as string | undefined,
         refreshToken: result.refreshToken as string | undefined,
-        createdAt: new Date(result.createdAt),
-        updatedAt: new Date(result.updatedAt),
-        lastSyncedAt: result.lastSyncedAt ? new Date(result.lastSyncedAt) : undefined,
-        expiresAt: result.expiresAt ? new Date(result.expiresAt) : undefined,
+        createdAt: safeDate(result.createdAt),
+        updatedAt: safeDate(result.updatedAt),
+        lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
+        expiresAt: result.expiresAt ? safeDate(result.expiresAt) : undefined,
         name: result.type as GitProviderType
       };
     },
@@ -726,10 +738,10 @@ export const db = {
         serverUrl: result.serverUrl as string | undefined,
         accessToken: result.accessToken as string | undefined,
         refreshToken: result.refreshToken as string | undefined,
-        createdAt: new Date(result.createdAt),
-        updatedAt: new Date(result.updatedAt),
-        lastSyncedAt: result.lastSyncedAt ? new Date(result.lastSyncedAt) : undefined,
-        expiresAt: result.expiresAt ? new Date(result.expiresAt) : undefined,
+        createdAt: safeDate(result.createdAt),
+        updatedAt: safeDate(result.updatedAt),
+        lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
+        expiresAt: result.expiresAt ? safeDate(result.expiresAt) : undefined,
         name: result.type as GitProviderType
       };
     },
@@ -758,10 +770,10 @@ export const db = {
         serverUrl: result.serverUrl as string | undefined,
         accessToken: result.accessToken as string | undefined,
         refreshToken: result.refreshToken as string | undefined,
-        createdAt: new Date(result.createdAt),
-        updatedAt: new Date(result.updatedAt),
-        lastSyncedAt: result.lastSyncedAt ? new Date(result.lastSyncedAt) : undefined,
-        expiresAt: result.expiresAt ? new Date(result.expiresAt) : undefined,
+        createdAt: safeDate(result.createdAt),
+        updatedAt: safeDate(result.updatedAt),
+        lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
+        expiresAt: result.expiresAt ? safeDate(result.expiresAt) : undefined,
         name: result.type as GitProviderType
       };
     },
