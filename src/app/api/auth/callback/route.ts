@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 
 /**
  * This route handles OAuth callback requests from Supabase Auth.
@@ -16,7 +16,17 @@ export async function GET(request: NextRequest) {
   }
 
   // Create a Supabase client for handling the callback
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name) => cookies().get(name)?.value,
+        set: (name, value, options) => cookies().set({ name, value, ...options }),
+        remove: (name, options) => cookies().set({ name, value: '', ...options }),
+      },
+    }
+  );
   
   // Exchange the code for a session
   await supabase.auth.exchangeCodeForSession(code);

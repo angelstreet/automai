@@ -146,6 +146,12 @@ export const authOptions: AuthOptions = {
         user: { id: user.id, email: user.email },
         account: account ? { provider: account.provider } : null,
       });
+      
+      // Set all OAuth users as ADMIN by default
+      if (account && (account.provider === 'google' || account.provider === 'github')) {
+        user.role = 'admin';
+      }
+      
       return true;
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {

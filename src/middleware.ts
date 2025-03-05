@@ -1,6 +1,6 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 
 import { locales, defaultLocale, pathnames } from './config';
 
@@ -148,7 +148,21 @@ export default async function middleware(request: NextRequest) {
     try {
       // Create Supabase client for auth
       const res = NextResponse.next();
-      const supabase = createMiddlewareClient({ req: request, res });
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get: (name) => request.cookies.get(name)?.value,
+            set: (name, value, options) => {
+              res.cookies.set({ name, value, ...options });
+            },
+            remove: (name, options) => {
+              res.cookies.set({ name, value: '', ...options });
+            },
+          },
+        }
+      );
       
       // Get current session
       const { data: { session } } = await supabase.auth.getSession();

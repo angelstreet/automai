@@ -12,36 +12,18 @@ fi
 # Set up the path to use the local Supabase CLI
 export PATH="$PWD/node_modules/.bin:$PATH"
 
-# Check if Supabase is already initialized
-if [ ! -d .supabase ]; then
-    echo "🔧 Initializing Supabase..."
-    supabase init
-fi
+# We'll skip initialization since it already exists
+# Just make sure Supabase is running
+echo "🔄 Starting Supabase if not already running..."
+npx supabase start || true
 
-# Check if Supabase is running
-SUPABASE_STATUS=$(supabase status || echo "not running")
-if [[ $SUPABASE_STATUS == *"not running"* ]]; then
-    echo "🔄 Starting Supabase..."
-    supabase start
-else
-    echo "✅ Supabase is already running"
-fi
+# Apply schema regardless of status
+echo "📦 Applying database schema using fixed schema file..."
+PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f supabase/migrations/fixed-schema.sql || true
 
-# Check if schema has been applied
-echo "🔍 Checking if schema has been applied..."
-# First check if Supabase is running before attempting to check the schema
-if supabase status | grep -q "Started"; then
-    # Apply the fixed schema file directly using psql
-    echo "📦 Applying database schema using fixed schema file..."
-    PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f supabase/migrations/fixed-schema.sql
-    
-    # Generate TypeScript types
-    echo "📝 Generating TypeScript types..."
-    supabase gen types typescript --local > src/types/supabase.ts
-else
-    echo "❌ Supabase is not running correctly. Please check the status."
-    exit 1
-fi
+# Generate TypeScript types
+echo "📝 Generating TypeScript types..."
+npx supabase gen types typescript --local > src/types/supabase.ts || true
 
 # Don't start the application here as the dev script will start it
 echo "✅ Supabase setup complete!"

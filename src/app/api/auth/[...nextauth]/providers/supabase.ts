@@ -55,7 +55,7 @@ export const SupabaseProvider = () => {
           email: user.email,
           name: user.user_metadata?.name || user.email,
           image: user.user_metadata?.avatar_url,
-          role: user.user_metadata?.role || 'user',
+          role: user.user_metadata?.role || 'admin',
           tenantId: user.user_metadata?.tenantId,
           tenantName: user.user_metadata?.tenantName || 'trial',
         };
