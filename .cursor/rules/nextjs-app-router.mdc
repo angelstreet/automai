@@ -1,0 +1,136 @@
+---
+description: Next.js App Router Development Rules
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# Next.js App Router Development Rules
+
+## Project Structure
+
+Follow this structure for Next.js App Router applications:
+
+```
+src/
+  ├── app/                  # Next.js App Router
+  │   ├── [locale]/         # Internationalized routes
+  │   │   ├── (auth)/       # Auth route group
+  │   │   ├── (marketing)/  # Marketing route group
+  │   │   │   └── _components/ # Page-specific components
+  │   │   └── [tenant]/     # Dynamic tenant routes
+  │   │       └── _components/ # Feature-specific components
+  │   ├── api/              # API Route Handlers
+  │   │   └── [resource]/   # Resource-specific endpoints
+  │   ├── layout.tsx        # Root layout
+  │   └── page.tsx          # Root page
+  ├── components/           # Shared components
+  ├── lib/                  # Shared utilities
+  │   └── services/         # Service layer
+  ├── hooks/                # Custom React hooks
+  └── context/              # React Context providers
+```
+
+## File & Directory Naming Conventions
+
+### Pages & Routes
+- Use `kebab-case` for page files and directories
+  - ✅ `about-us.tsx`, `privacy-policy.tsx`
+  - ❌ `aboutUs.tsx`, `PrivacyPolicy.tsx`
+
+### Route Groups & Dynamic Routes
+- Use parentheses for route groups: `(auth)`, `(marketing)`
+- Use kebab-case with square brackets for dynamic routes:
+  - ✅ `[post-id].tsx`, `[user-name]/settings.tsx`
+  - ❌ `[postId].tsx`, `[userName]/settings.tsx`
+
+### Components
+- Use `lowercase` for component directories
+  - ✅ `components/dialog/`, `components/form/`
+  - ❌ `components/Dialog/`, `components/Form/`
+- Use `PascalCase` for component files
+  - ✅ `Button.tsx`, `NavBar.tsx`
+  - ❌ `button.tsx`, `nav-bar.tsx`
+
+### Page-Specific Components
+- Place in `_components` folder within page directory
+- Use `PascalCase` for component files
+  - ✅ `_components/DashboardHeader.tsx`
+  - ❌ `_components/dashboardHeader.tsx`
+
+### Utilities & Hooks
+- Use `camelCase` for utility and hook files
+  - ✅ `useAuth.ts`, `formatDate.ts`
+  - ❌ `UseAuth.ts`, `FormatDate.ts`
+
+### Type Files
+- Use `camelCase` for type files
+  - ✅ `types.ts`, `userTypes.ts`
+- Use `PascalCase` for type and interface definitions inside files
+
+## File Organization Rules
+
+### Component Structure
+- Limit component files to 300 lines maximum
+- Extract complex UI sections into separate components
+- Keep the main component focused on composition
+- Shadcn components are exempt from naming conventions
+
+### Page Structure
+- Keep page components lightweight
+- Use server components for data fetching
+- Extract UI to client components for interactivity
+- Split large pages into smaller components
+
+### Import Organization
+```typescript
+// External dependencies first
+import { useState } from 'react';
+import { z } from 'zod';
+
+// Internal modules next
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+
+// Types next
+import type { User } from '@/types';
+
+// Styles last if any
+import './styles.css';
+```
+
+## Server/Client Component Usage
+
+### Server Components
+- Use Server Components by default for:
+  - Data fetching
+  - Access to backend resources
+  - SEO-critical content
+  - Static or rarely changing UI
+
+### Client Components
+- Use 'use client' directive only when needed:
+  - Interactive UI elements
+  - useState/useEffect hooks
+  - Browser-only APIs
+  - Event handlers
+
+### Data Fetching Pattern
+- Prefer Server Components for data fetching
+- Pass data down as props to Client Components
+- Use React Query or SWR for client-side data fetching
+
+## Performance Optimization
+
+- Use appropriate image optimization with Next.js Image
+- Implement proper code splitting with dynamic imports
+- Leverage Server Components to reduce client JavaScript
+- Implement proper caching strategies
+
+## Best Practices
+
+- Use TypeScript for type safety
+- Implement robust error handling
+- Follow accessibility guidelines
+- Test components and pages thoroughly
+- Keep dependencies updated
+- Use environment variables appropriately

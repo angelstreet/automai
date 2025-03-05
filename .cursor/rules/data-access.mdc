@@ -1,0 +1,492 @@
+---
+description: Data Access and Service Layer Rules
+globs: src/lib/**/*.ts, src/app/api/**/*.ts
+alwaysApply: true
+---
+
+# Data Access and Service Layer Rules
+
+## Database Connection Management
+
+### Prisma Client Singleton
+
+Use the singleton pattern for Prisma Client to prevent connection pool exhaustion:
+
+```typescript
+// src/lib/prisma.ts
+import { PrismaClient } from '@prisma/client';
+
+// PrismaClient is attached to the `global` object in development to prevent
+// exhausting your database connection limit.
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
+// Initialize the Prisma client with appropriate logging
+const prismaOptions = {
+  log: process.env.NODE_ENV === 'development' 
+    ? ['query', 'error', 'warn'] 
+    : ['error'],
+};
+
+// Create a singleton instance of PrismaClient
+export const prisma = global.prisma || new PrismaClient(prismaOptions);
+
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}
+
+export default prisma;
+```
+
+### Environment-based Configuration
+
+```typescript
+// Different database connection based on environment
+// In .env.development: Points to local PostgreSQL
+// In .env.production: Points to Supabase PostgreSQL
+const useSupabase = process.env.NODE_ENV === 'production';
+
+console.log(`Using database provider: ${useSupabase ? 'Supabase' : 'Local PostgreSQL'}`);
+```
+
+## Service Layer Pattern
+
+### Service Layer Organization
+
+```
+src/lib/services/
+├── index.ts                # Re-exports all services
+├── [resource].ts           # Resource-specific operations
+└── [feature]/              # Feature-specific services
+    └── index.ts            # Feature service exports
+```
+
+### Service Implementation Pattern
+
+```typescript
+// src/lib/services/projects.ts
+import { prisma } from '@/lib/prisma';
+import type { Project, Prisma } from '@prisma/client';
+
+/**
+ * Creates a new project
+ */
+export async function createProject(
+  data: Prisma.ProjectCreateInput,
+  userId: string,
+  tenantId: string
+): Promise<Project> {
+  return prisma.project.create({
+    data: {
+      ...data,
+      userId,
+      tenantId,
+    },
+  });
+}
+
+/**
+ * Gets projects with optional filtering
+ */
+export async function getProjects(
+  tenantId: string,
+  options?: {
+    where?: Prisma.ProjectWhereInput;
+    orderBy?: Prisma.ProjectOrderByWithRelationInput;
+    skip?: number;
+    take?: number;
+  }
+): Promise<{
+  projects: Project[];
+  total: number;
+}> {
+  const { where = {}, orderBy = { createdAt: 'desc' }, skip = 0, take = 10 } = options || {};
+
+  // Always apply tenant isolation
+  const tenantFilter = {
+    tenantId,
+    ...where,
+  };
+
+  const [projects, total] = await Promise.all([
+    prisma.project.findMany({
+      where: tenantFilter,
+      orderBy,
+      skip,
+      take,
+    }),
+    prisma.project.count({
+      where: tenantFilter,
+    }),
+  ]);
+
+  return {
+    projects,
+    total,
+  };
+}
+
+/**
+ * Gets a project by ID with tenant isolation
+ */
+export async function getProjectById(
+  id: string,
+  tenantId: string
+): Promise<Project | null> {
+  return prisma.project.findFirst({
+    where: {
+      id,
+      tenantId,
+    },
+  });
+}
+
+/**
+ * Updates a project with tenant isolation
+ */
+export async function updateProject(
+  id: string,
+  tenantId: string,
+  data: Prisma.ProjectUpdateInput
+): Promise<Project | null> {
+  // First verify the project exists and belongs to the tenant
+  const project = await prisma.project.findFirst({
+    where: {
+      id,
+      tenantId,
+    },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  return prisma.project.update({
+    where: { id },
+    data,
+  });
+}
+
+/**
+ * Deletes a project with tenant isolation
+ */
+export async function deleteProject(
+  id: string,
+  tenantId: string
+): Promise<Project | null> {
+  // First verify the project exists and belongs to the tenant
+  const project = await prisma.project.findFirst({
+    where: {
+      id,
+      tenantId,
+    },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  return prisma.project.delete({
+    where: { id },
+  });
+}
+```
+
+## Multi-tenant Data Access
+
+### Tenant Isolation
+
+All data access must include tenant isolation:
+
+```typescript
+// ✅ CORRECT - Includes tenant filtering
+const projects = await prisma.project.findMany({
+  where: { tenantId: user.tenantId },
+});
+
+// ❌ INCORRECT - Missing tenant isolation
+const projects = await prisma.project.findMany();
+```
+
+### Data Creation with Tenant
+
+Always include tenant ID when creating data:
+
+```typescript
+// ✅ CORRECT - Includes tenant ID
+const project = await prisma.project.create({
+  data: {
+    name: 'New Project',
+    tenantId: user.tenantId,
+    userId: user.id,
+  },
+});
+
+// ❌ INCORRECT - Missing tenant ID
+const project = await prisma.project.create({
+  data: {
+    name: 'New Project',
+    userId: user.id,
+  },
+});
+```
+
+## Transactions
+
+Use transactions for operations that affect multiple records:
+
+```typescript
+// ✅ CORRECT - Using transaction for multiple operations
+const result = await prisma.$transaction(async (tx) => {
+  // Create project
+  const project = await tx.project.create({
+    data: {
+      name: 'New Project',
+      tenantId: user.tenantId,
+      userId: user.id,
+    },
+  });
+  
+  // Create initial task
+  const task = await tx.task.create({
+    data: {
+      name: 'Initial Task',
+      projectId: project.id,
+      tenantId: user.tenantId,
+      userId: user.id,
+    },
+  });
+  
+  return { project, task };
+});
+
+// ❌ INCORRECT - Separate operations without transaction
+const project = await prisma.project.create({
+  data: {
+    name: 'New Project',
+    tenantId: user.tenantId,
+    userId: user.id,
+  },
+});
+
+const task = await prisma.task.create({
+  data: {
+    name: 'Initial Task',
+    projectId: project.id,
+    tenantId: user.tenantId,
+    userId: user.id,
+  },
+});
+```
+
+## Error Handling
+
+### Service Layer Error Handling
+
+```typescript
+export async function getProject(id: string, tenantId: string) {
+  try {
+    // Attempt to find project with tenant isolation
+    const project = await prisma.project.findFirst({
+      where: {
+        id,
+        tenantId,
+      },
+    });
+    
+    if (!project) {
+      // Return null if not found (calling code will handle this)
+      return null;
+    }
+    
+    return project;
+  } catch (error) {
+    // Log error but don't expose internals
+    console.error('Error fetching project:', error);
+    
+    // Re-throw with clear message
+    throw new Error('Failed to fetch project');
+  }
+}
+```
+
+### Error Types
+
+```typescript
+// src/lib/errors.ts
+export class NotFoundError extends Error {
+  constructor(resource: string, id: string) {
+    super(`${resource} with ID ${id} not found`);
+    this.name = 'NotFoundError';
+  }
+}
+
+export class AccessDeniedError extends Error {
+  constructor(resource: string, id: string) {
+    super(`Access denied to ${resource} with ID ${id}`);
+    this.name = 'AccessDeniedError';
+  }
+}
+
+// Usage
+import { NotFoundError } from '@/lib/errors';
+
+export async function getProject(id: string, tenantId: string) {
+  const project = await prisma.project.findFirst({
+    where: {
+      id,
+      tenantId,
+    },
+  });
+  
+  if (!project) {
+    throw new NotFoundError('Project', id);
+  }
+  
+  return project;
+}
+```
+
+## Query Optimization
+
+### Select Only Needed Fields
+
+```typescript
+// ✅ CORRECT - Select only needed fields
+const users = await prisma.user.findMany({
+  select: {
+    id: true,
+    name: true,
+    email: true,
+  },
+});
+
+// ❌ INCORRECT - Fetching all fields
+const users = await prisma.user.findMany();
+```
+
+### Pagination
+
+Always use pagination for list queries:
+
+```typescript
+// ✅ CORRECT - Paginated query
+const { skip, take } = getPaginationParams(page, limit);
+const projects = await prisma.project.findMany({
+  where: { tenantId },
+  skip,
+  take,
+  orderBy: { createdAt: 'desc' },
+});
+
+// ❌ INCORRECT - No pagination
+const projects = await prisma.project.findMany({
+  where: { tenantId },
+});
+```
+
+### Eager Loading Relationships
+
+Use `include` for eager loading:
+
+```typescript
+// ✅ CORRECT - Eager loading related data
+const project = await prisma.project.findUnique({
+  where: { id },
+  include: {
+    tasks: true,
+    owner: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
+    },
+  },
+});
+
+// ❌ INCORRECT - N+1 query problem
+const project = await prisma.project.findUnique({
+  where: { id },
+});
+const tasks = await prisma.task.findMany({
+  where: { projectId: id },
+});
+```
+
+## Data Validation
+
+Validate data before database operations:
+
+```typescript
+import { z } from 'zod';
+
+// Validation schema
+const projectSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'DRAFT']),
+});
+
+export async function createProject(data: unknown, userId: string, tenantId: string) {
+  // Validate data
+  const validatedData = projectSchema.parse(data);
+  
+  // Create project with validated data
+  return prisma.project.create({
+    data: {
+      ...validatedData,
+      userId,
+      tenantId,
+    },
+  });
+}
+```
+
+## Data Access in Route Handlers
+
+Use service layer in route handlers:
+
+```typescript
+// src/app/api/projects/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { getProjects, createProject } from '@/lib/services/projects';
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const page = Number(searchParams.get('page') || '1');
+    const limit = Number(searchParams.get('limit') || '10');
+
+    // Use service layer for data access
+    const { projects, total } = await getProjects(
+      session.user.tenantId,
+      {
+        skip: (page - 1) * limit,
+        take: limit,
+      }
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: { projects, total, page, limit },
+    });
+  } catch (error) {
+    console.error('Error in GET /api/projects:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to fetch projects',
+    }, { status: 500 });
+  }
+}
+```

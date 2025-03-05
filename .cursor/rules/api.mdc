@@ -1,218 +1,337 @@
 ---
-description: API Implementation Guidelines
-globs: ["src/app/api/**/*", "src/**/api/*.{ts,tsx}"]
+description: API Development Rules
+globs: src/app/api/**/*.ts
+alwaysApply: true
 ---
 
-# API Implementation Rules
+# API Development Rules
 
-## Required Server Structure
+## API Structure and Organization
+
+### Directory Structure
+
 ```
-src/
-  ├── app/
-  │   └── api/           # All API routes MUST be here
-  │       ├── [endpoint]/
-  │       │   ├── route.ts      # Next.js Route Handler
-  │       │   ├── validation.ts  # Request validation
-  │       │   └── schema.ts      # Data schema
-  │       └── ...
-  └── lib/
-      ├── services/      # Business logic & data access
-      │   ├── hosts.ts
-      │   └── ...
-      └── middleware/    # API middleware
-          ├── auth.ts
-          └── validate.ts
+src/app/api/
+├── [resource]/            # Resource endpoint (e.g., projects)
+│   ├── route.ts           # Handles GET (list) and POST (create)
+│   ├── [id]/
+│   │   └── route.ts       # Handles GET, PUT, PATCH, DELETE for single resource
+│   ├── schema.ts          # Validation schemas
+│   └── types.ts           # Type definitions
 ```
 
-## Route Structure
+### URL Structure
 
-1. **Base Path**
+- Use RESTful URL patterns
+- Use resources, not actions, in URLs
+- Use kebab-case for multi-word paths
+
+```
+✅ CORRECT:
+GET    /api/projects                # List projects
+POST   /api/projects                # Create project
+GET    /api/projects/123            # Get project
+PUT    /api/projects/123            # Update project
+DELETE /api/projects/123            # Delete project
+POST   /api/projects/123/publish    # Resource action
+
+❌ INCORRECT:
+GET    /api/getProjects             # Uses verb
+POST   /api/createProject           # Uses verb
+GET    /api/getProject/123          # Uses verb
+```
+
+## Route Handler Implementation
+
+### Route Handler Pattern
+
+```typescript
+// src/app/api/[resource]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { z } from 'zod';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { prisma } from '@/lib/prisma';
+
+// Validation schema
+const createResourceSchema = z.object({
+  name: z.string().min(1).max(100),
+  description: z.string().optional(),
+});
+
+export async function GET(request: NextRequest) {
+  try {
+    // Authentication check
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      }, { status: 401 });
+    }
+
+    // Get query parameters
+    const { searchParams } = new URL(request.url);
+    const limit = Number(searchParams.get('limit') || '10');
+    const page = Number(searchParams.get('page') || '1');
+
+    // Tenant isolation
+    const tenantId = session.user.tenantId;
+    
+    // Fetch data with pagination
+    const resources = await prisma.resource.findMany({
+      where: { tenantId },
+      take: limit,
+      skip: (page - 1) * limit,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // Return standardized response
+    return NextResponse.json({
+      success: true,
+      data: {
+        resources,
+        pagination: {
+          page,
+          limit,
+          totalCount: await prisma.resource.count({ where: { tenantId } }),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('API error:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'An error occurred while processing your request',
+    }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Authentication check
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      }, { status: 401 });
+    }
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validationResult = createResourceSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Validation failed',
+        details: validationResult.error.format(),
+      }, { status: 400 });
+    }
+
+    // Tenant isolation
+    const tenantId = session.user.tenantId;
+    
+    // Create resource
+    const resource = await prisma.resource.create({
+      data: {
+        ...validationResult.data,
+        tenantId,
+        userId: session.user.id,
+      },
+    });
+
+    // Return standardized response
+    return NextResponse.json({
+      success: true,
+      data: resource,
+    }, { status: 201 });
+  } catch (error) {
+    console.error('API error:', error);
+    return NextResponse.json({
+      success: false,
+      error: 'An error occurred while processing your request',
+    }, { status: 500 });
+  }
+}
+```
+
+## Response Format
+
+All API responses must follow this standard format:
+
+### Success Response
+```json
+{
+  "success": true,
+  "data": {...},
+  "message": "Optional success message"
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "error": "Error message",
+  "details": {...}  // Optional validation details
+}
+```
+
+## HTTP Status Codes
+
+Use appropriate HTTP status codes:
+
+| Code | Description                |
+|------|----------------------------|
+| 200  | Success                    |
+| 201  | Created                    |
+| 400  | Bad Request                |
+| 401  | Unauthorized               |
+| 403  | Forbidden                  |
+| 404  | Not Found                  |
+| 500  | Internal Server Error      |
+
+## Authentication & Authorization
+
+1. **Authentication Check**
+   - Always check session in route handlers
+   - Use `getServerSession(authOptions)` from NextAuth.js
+
+2. **Tenant Isolation**
+   - Always filter resources by tenant ID
+   - Include tenant ID in queries and mutations
+
+3. **Permission Checks**
+   - Check user role for privileged operations
+   - Implement fine-grained access control
+
+```typescript
+// Role-based access control
+if (session.user.role !== 'admin' && resourceOwnerId !== session.user.id) {
+  return NextResponse.json({
+    success: false,
+    error: 'Permission denied',
+  }, { status: 403 });
+}
+```
+
+## Validation
+
+Use Zod for request validation:
+
+```typescript
+// src/app/api/[resource]/schema.ts
+import { z } from 'zod';
+
+export const createResourceSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  description: z.string().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'DRAFT']),
+  priority: z.number().int().min(1).max(5).optional(),
+});
+
+export const updateResourceSchema = createResourceSchema.partial();
+```
+
+## Error Handling
+
+Implement consistent error handling:
+
+```typescript
+try {
+  // API logic
+} catch (error) {
+  console.error('API error:', error);
+  
+  // Handle known errors
+  if (error instanceof PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+      return NextResponse.json({
+        success: false,
+        error: 'A resource with this name already exists',
+      }, { status: 409 });
+    }
+  }
+  
+  // Generic error response
+  return NextResponse.json({
+    success: false,
+    error: 'An error occurred while processing your request',
+  }, { status: 500 });
+}
+```
+
+## API Testing
+
+Every API endpoint should have corresponding tests:
+
+```typescript
+// tests/api/resources.test.ts
+import { createMocks } from 'node-mocks-http';
+import { GET, POST } from '@/app/api/resources/route';
+
+// Mock sessions and database
+jest.mock('next-auth/next', () => ({
+  getServerSession: jest.fn(() => ({
+    user: {
+      id: 'user-id',
+      tenantId: 'tenant-id',
+      role: 'admin',
+    },
+  })),
+}));
+
+describe('Resources API', () => {
+  describe('GET /api/resources', () => {
+    it('should return a list of resources', async () => {
+      const { req } = createMocks({
+        method: 'GET',
+      });
+
+      const res = await GET(req);
+      const data = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.data.resources)).toBe(true);
+    });
+  });
+});
+```
+
+## Best Practices
+
+1. **Keep Route Handlers Thin**
+   - Move business logic to service layer
+   - Keep route handlers focused on:
+     - Request parsing and validation
+     - Response formatting
+     - Error handling
+
+2. **Use Transactions for Multi-Step Operations**
    ```typescript
-   // ✅ Correct
-   const response = await fetch('/api/auth/profile');
-   
-   // ❌ Incorrect
-   const response = await fetch('http://localhost:5001/api/auth/profile');
-   const response = await fetch('http://localhost:3000/api/auth/profile');
+   await prisma.$transaction(async (tx) => {
+     // Multiple database operations
+   });
    ```
 
-2. **Environment Variables**
-   ```typescript
-   // ✅ Correct
-   const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-   const response = await fetch(`${baseUrl}/api/auth/profile`);
-   
-   // ❌ Incorrect
-   const response = await fetch('http://localhost:' + port + '/api/auth/profile');
-   ```
+3. **Implement Rate Limiting**
+   - Protect public endpoints with rate limiting
+   - Use appropriate headers for rate limit info
 
-3. **Explicit API Naming**
-   ```typescript
-   // ✅ Correct - Explicit purpose in the route name
-   const response = await fetch('/api/fetch-all-repositories');
-   
-   // ❌ Incorrect - Generic name that doesn't clearly indicate purpose
-   const response = await fetch('/api/repositories/fetch-all');
-   ```
-   
-   API routes should have explicit, descriptive names that clearly indicate their purpose.
-   Prefer verbose, specific route names over generic, nested routes when the operation
-   is specialized or spans multiple resource types.
+4. **Add Logging for Debugging**
+   - Log important operations with context
+   - Include request IDs for traceability
+   - Don't log sensitive information
 
-## API Route Implementation
+5. **Use Query Params for Filtering and Pagination**
+   - Implement consistent pagination
+   - Use query parameters for filtering
+   - Document query parameters
 
-1. **Route Handler Pattern**
-   ```typescript
-   // src/app/api/[endpoint]/route.ts
-   import { NextResponse } from 'next/server';
-   
-   export async function GET() {
-     try {
-       // Implementation
-       return NextResponse.json({ 
-         success: true,
-         data 
-       });
-     } catch (error) {
-       return NextResponse.json(
-         { 
-           success: false,
-           error: 'Error message'
-         },
-         { status: 500 }
-       );
-     }
-   }
-   ```
-
-2. **Authentication Check**
-   ```typescript
-   import { getServerSession } from 'next-auth';
-   
-   export async function GET() {
-     const session = await getServerSession();
-     if (!session) {
-       return NextResponse.json({
-         success: false,
-         error: 'Unauthorized'
-       }, { status: 401 });
-     }
-   }
-   ```
-
-3. **Request Validation**
-   ```typescript
-   // schema.ts
-   import { z } from 'zod';
-   export const schema = z.object({...});
-
-   // route.ts
-   const body = await request.json();
-   const validatedData = schema.parse(body);
-   ```
-
-## Standard Response Format
-
-1. **Success Response**
-   ```typescript
-   {
-     success: true,
-     message?: string,
-     data?: any
-   }
-   ```
-
-2. **Error Response**
-   ```typescript
-   {
-     success: false,
-     error: string,
-     details?: any
-   }
-   ```
-
-3. **Status Codes**
-   - 200: Success
-   - 201: Created
-   - 400: Bad Request
-   - 401: Unauthorized
-   - 403: Forbidden
-   - 404: Not Found
-   - 500: Internal Server Error
-
-## Service Layer Implementation
-
-1. **Service Layer Pattern**
-   ```typescript
-   // src/lib/services/auth.ts
-   export async function getUserProfile() {
-     const response = await fetch('/api/auth/profile');
-     const data = await response.json();
-     if (!data.success) throw new Error(data.error);
-     return data.data;
-   }
-   ```
-
-2. **Error Handling**
-   ```typescript
-   try {
-     const data = await getUserProfile();
-   } catch (error) {
-     console.error('Failed to fetch profile:', error);
-     // Handle error appropriately
-   }
-   ```
-
-## Documentation Requirements
-
-1. **API Route Documentation**
-   ```typescript
-   /**
-    * @api {get} /api/auth/profile Get User Profile
-    * @apiDescription Fetches the current user's profile
-    * @apiPermission authenticated
-    * @apiSuccess {Object} user User profile data
-    * @apiError {Object} error Error details
-    */
-   ```
-
-2. **Type Definitions**
-   ```typescript
-   interface ApiResponse<T> {
-     success: boolean;
-     message?: string;
-     error?: string;
-     data?: T;
-   }
-   ```
-
-## Security Guidelines
-
-1. **Authentication**: Always use NextAuth.js for authentication
-2. **Validation**: Always validate request data using Zod
-3. **Error Handling**: Never expose internal errors to clients
-4. **Rate Limiting**: Implement rate limiting for public endpoints
-5. **CORS**: Configure CORS appropriately for your environment
-
-## WebSocket Connections
-
-1. **Connection Setup**
-   ```typescript
-   // ✅ Correct
-   const ws = new WebSocket(`ws://localhost:5001/api/ws`);
-   
-   // ❌ Incorrect
-   const ws = new WebSocket('ws://localhost:3000/api/ws');
-   ```
-
-## Database Access
-
-1. **Prisma Client Usage**
-   ```typescript
-   // ✅ Correct: Single instance pattern
-   const globalForPrisma = global as unknown as { prisma: PrismaClient };
-   export const prisma = globalForPrisma.prisma || new PrismaClient();
-   
-   // ❌ Incorrect: Multiple instances
-   const prisma = new PrismaClient();
-   ``` 
+6. **Document APIs**
+   - Add JSDoc comments to describe endpoints
+   - Include sample requests and responses
+   - Document error scenarios

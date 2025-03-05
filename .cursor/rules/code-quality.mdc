@@ -1,0 +1,525 @@
+---
+description: Code Quality and Organization Rules
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# Code Quality and Organization Rules
+
+## File Size Limits
+
+- All files should be under 300 lines of code
+- Exceptions are allowed for:
+  - shadcn UI components
+  - Generated code or migrations
+  - Complex forms that cannot be split logically
+
+## Code Organization Within Files
+
+### Import Organization
+
+```typescript
+// External dependencies
+import { useState, useEffect } from 'react';
+import { z } from 'zod';
+
+// Internal modules
+import { Button } from '@/components/shadcn/button';
+import { useAuth } from '@/hooks/useAuth';
+
+// Types
+import type { User } from '@/types';
+
+// Styles
+import './styles.css';
+```
+
+### Component Structure
+
+```typescript
+// Types
+interface ButtonProps {
+  variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+  children: React.ReactNode;
+  onClick?: () => void;
+}
+
+// Helpers and utilities
+const getVariantClasses = (variant: string) => {
+  switch (variant) {
+    case 'primary':
+      return 'bg-primary text-white';
+    case 'secondary':
+      return 'bg-secondary text-white';
+    default:
+      return 'bg-gray-200 text-gray-800';
+  }
+};
+
+// Component definition
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  children,
+  onClick,
+}: ButtonProps) {
+  // Component implementation
+}
+```
+
+### Hook Structure
+
+```typescript
+export function useComponentState() {
+  // State declarations
+  const [isLoading, setIsLoading] = useState(false);
+  const [data, setData] = useState<Data | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  
+  // Derived state
+  const isDisabled = isLoading || !!error;
+  
+  // Event handlers
+  const handleClick = () => {
+    // Implementation
+  };
+  
+  // Effects
+  useEffect(() => {
+    // Implementation
+  }, []);
+  
+  // Return value
+  return {
+    isLoading,
+    data,
+    error,
+    isDisabled,
+    handleClick,
+  };
+}
+```
+
+## TypeScript Usage
+
+### Type Definitions
+
+```typescript
+// Use interfaces for objects with methods or when you need to extend
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  getFullName(): string;
+}
+
+// Use type aliases for simple object shapes, unions, and intersections
+type Status = 'idle' | 'loading' | 'success' | 'error';
+
+type UserRole = 'admin' | 'user' | 'guest';
+
+type UserWithRole = User & {
+  role: UserRole;
+};
+```
+
+### Function Types
+
+```typescript
+// Function type definitions
+type FetchUserFn = (id: string) => Promise<User>;
+
+// Function with explicit return type
+function getUser(id: string): Promise<User> {
+  // Implementation
+}
+
+// Arrow function with explicit return type
+const getUsers = async (): Promise<User[]> => {
+  // Implementation
+};
+```
+
+### Type Narrowing
+
+```typescript
+// User-defined type guard
+function isErrorResponse(response: any): response is ErrorResponse {
+  return 'error' in response && typeof response.error === 'string';
+}
+
+// Usage
+if (isErrorResponse(response)) {
+  // TypeScript knows response has error property
+  console.error(response.error);
+} else {
+  // TypeScript knows response doesn't have error property
+  console.log(response.data);
+}
+```
+
+### Generics
+
+```typescript
+// Generic function
+function getFirst<T>(items: T[]): T | undefined {
+  return items[0];
+}
+
+// Generic component
+interface ListProps<T> {
+  items: T[];
+  renderItem: (item: T) => React.ReactNode;
+}
+
+function List<T>({ items, renderItem }: ListProps<T>) {
+  return (
+    <ul>
+      {items.map((item, index) => (
+        <li key={index}>{renderItem(item)}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Error Handling
+
+### Try-Catch Pattern
+
+```typescript
+try {
+  // Code that might throw
+  const data = await fetchData();
+  return data;
+} catch (error) {
+  // Handle the error appropriately
+  console.error('Error fetching data:', error);
+  
+  // Rethrow with more context if needed
+  throw new Error(`Failed to fetch data: ${error.message}`);
+}
+```
+
+### Async/Await with Error Handling
+
+```typescript
+async function fetchUserData(userId: string) {
+  try {
+    const response = await fetch(`/api/users/${userId}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    throw error; // Rethrow for caller to handle
+  }
+}
+```
+
+### Error Boundaries for React Components
+
+```typescript
+import { ErrorBoundary } from 'react-error-boundary';
+
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div role="alert" className="p-4 border border-red-500 rounded-md bg-red-50">
+      <p className="text-red-500 font-medium">Something went wrong:</p>
+      <pre className="mt-2 text-sm">{error.message}</pre>
+      <button 
+        onClick={resetErrorBoundary}
+        className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md"
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
+// Usage
+<ErrorBoundary FallbackComponent={ErrorFallback}>
+  <UserProfile userId={userId} />
+</ErrorBoundary>
+```
+
+## Component Patterns
+
+### Controlled Components
+
+```typescript
+interface InputProps {
+  value: string;
+  onChange: (value: string) => void;
+  label?: string;
+  error?: string;
+}
+
+function Input({ value, onChange, label, error }: InputProps) {
+  return (
+    <div className="space-y-1">
+      {label && <label className="text-sm font-medium">{label}</label>}
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`px-3 py-2 border rounded-md ${error ? 'border-red-500' : 'border-gray-300'}`}
+      />
+      {error && <p className="text-sm text-red-500">{error}</p>}
+    </div>
+  );
+}
+
+// Usage
+function Form() {
+  const [name, setName] = useState('');
+  
+  return (
+    <Input
+      label="Name"
+      value={name}
+      onChange={setName}
+      error={name ? '' : 'Name is required'}
+    />
+  );
+}
+```
+
+### Compound Components
+
+```typescript
+interface CardProps {
+  children: React.ReactNode;
+}
+
+function Card({ children }: CardProps) {
+  return <div className="border rounded-lg overflow-hidden">{children}</div>;
+}
+
+interface CardHeaderProps {
+  children: React.ReactNode;
+}
+
+Card.Header = function CardHeader({ children }: CardHeaderProps) {
+  return <div className="px-4 py-3 bg-gray-50 border-b">{children}</div>;
+};
+
+interface CardBodyProps {
+  children: React.ReactNode;
+}
+
+Card.Body = function CardBody({ children }: CardBodyProps) {
+  return <div className="p-4">{children}</div>;
+};
+
+// Usage
+<Card>
+  <Card.Header>Card Title</Card.Header>
+  <Card.Body>Card content</Card.Body>
+</Card>
+```
+
+## Testing Patterns
+
+### Component Tests
+
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react';
+import { Button } from './Button';
+
+describe('Button', () => {
+  it('renders correctly', () => {
+    render(<Button>Click me</Button>);
+    expect(screen.getByRole('button')).toHaveTextContent('Click me');
+  });
+
+  it('calls onClick when clicked', () => {
+    const handleClick = jest.fn();
+    render(<Button onClick={handleClick}>Click me</Button>);
+    fireEvent.click(screen.getByRole('button'));
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+### Hook Tests
+
+```typescript
+import { renderHook, act } from '@testing-library/react-hooks';
+import { useCounter } from './useCounter';
+
+describe('useCounter', () => {
+  it('initializes with default value', () => {
+    const { result } = renderHook(() => useCounter());
+    expect(result.current.count).toBe(0);
+  });
+
+  it('increments the counter', () => {
+    const { result } = renderHook(() => useCounter());
+    act(() => {
+      result.current.increment();
+    });
+    expect(result.current.count).toBe(1);
+  });
+});
+```
+
+## Performance Optimization
+
+### Memoization
+
+```typescript
+// Memoize expensive computation
+const memoizedValue = useMemo(() => {
+  return computeExpensiveValue(a, b);
+}, [a, b]);
+
+// Memoize callback functions
+const memoizedCallback = useCallback(() => {
+  doSomething(a, b);
+}, [a, b]);
+
+// Memoize component to prevent unnecessary re-renders
+const MemoizedComponent = React.memo(function MyComponent(props) {
+  // Your component logic
+});
+```
+
+### Code Splitting
+
+```typescript
+// Dynamic import for code splitting
+import dynamic from 'next/dynamic';
+
+const DynamicComponent = dynamic(() => import('./DynamicComponent'), {
+  loading: () => <p>Loading...</p>,
+  ssr: false, // Disable server-side rendering if needed
+});
+
+// Usage
+function MyComponent() {
+  return (
+    <div>
+      <h1>My Page</h1>
+      <DynamicComponent />
+    </div>
+  );
+}
+```
+
+## Comments and Documentation
+
+### Component Documentation
+
+```typescript
+/**
+ * Button component with variants and sizes
+ * 
+ * @example
+ * ```tsx
+ * <Button variant="primary" size="lg" onClick={handleClick}>
+ *   Click me
+ * </Button>
+ * ```
+ */
+interface ButtonProps {
+  /** The visual style of the button */
+  variant?: 'primary' | 'secondary' | 'danger';
+  /** The size of the button */
+  size?: 'sm' | 'md' | 'lg';
+  /** Content to display inside the button */
+  children: React.ReactNode;
+  /** Function called when the button is clicked */
+  onClick?: () => void;
+  /** Disables the button */
+  disabled?: boolean;
+}
+```
+
+### Function Documentation
+
+```typescript
+/**
+ * Fetches user data from the API
+ * 
+ * @param userId - The ID of the user to fetch
+ * @returns A promise that resolves to the user data
+ * @throws Will throw an error if the fetch fails
+ * 
+ * @example
+ * ```ts
+ * const user = await fetchUserData('123');
+ * console.log(user.name);
+ * ```
+ */
+async function fetchUserData(userId: string): Promise<User> {
+  // Implementation
+}
+```
+
+## Naming Conventions
+
+### Variables and Functions
+
+```typescript
+// Boolean variables should use is/has/should prefix
+const isLoading = true;
+const hasError = false;
+const shouldRefetch = true;
+
+// Functions should use verb prefixes
+function getUserData() { /* ... */ }
+function updateUserProfile() { /* ... */ }
+function handleSubmit() { /* ... */ }
+
+// Event handlers should use handle prefix
+const handleClick = () => { /* ... */ };
+const handleChange = (e) => { /* ... */ };
+const handleSubmit = (e) => { /* ... */ };
+```
+
+### Types and Interfaces
+
+```typescript
+// Use PascalCase for type names
+type UserRole = 'admin' | 'user' | 'guest';
+
+// Use PascalCase and descriptive names for interfaces
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+}
+
+// Use Suffix conventions for related types
+interface UserInputProps { /* ... */ }
+interface UserInputState { /* ... */ }
+type UserInputEvent = /* ... */;
+```
+
+## Best Practices
+
+1. **Keep functions small and focused**
+   - Each function should do one thing well
+   - Extract complex logic into helper functions
+
+2. **Use meaningful variable names**
+   - Avoid single-letter variables except in loops
+   - Use descriptive names that convey purpose
+
+3. **Avoid nested conditionals**
+   - Extract complex conditions into helper functions
+   - Use early returns to reduce nesting
+
+4. **Use constants for magic values**
+   - Avoid hardcoded strings and numbers
+   - Define constants with meaningful names
+
+5. **Write testable code**
+   - Pure functions are easier to test
+   - Avoid side effects when possible
+   - Dependency injection makes testing easier

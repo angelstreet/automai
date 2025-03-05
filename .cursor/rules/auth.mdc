@@ -1,0 +1,234 @@
+---
+description: Authentication Implementation Rules
+globs: src/auth.ts, src/middleware.ts, src/app/api/auth/**/*.ts, src/app/[locale]/(auth)/**/*.tsx
+alwaysApply: true
+---
+
+# Authentication Implementation Rules
+
+## Authentication Architecture
+
+The application uses NextAuth.js with a JWT strategy and supports multiple providers:
+- OAuth providers (Google, GitHub)
+- Credentials provider (email/password)
+- Supabase authentication (in production)
+
+## NextAuth Configuration
+
+### Core Setup in src/auth.ts
+
+```typescript
+export const authOptions: AuthOptions = {
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    GoogleProvider({
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    }),
+    GitHubProvider({
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+    }),
+    CredentialsProvider({
+      // Credentials configuration...
+    }),
+  ],
+  pages: {
+    signIn: '/login',
+    error: '/error',
+    signOut: '/login',
+    newUser: '/auth-redirect',
+  },
+  session: {
+    strategy: 'jwt',
+    maxAge: 24 * 60 * 60, // 24 hours
+  },
+  callbacks: {
+    // JWT and session callbacks...
+  },
+};
+```
+
+### ⚠️ CRITICAL AUTH RULES
+
+1. **NEVER hardcode locales in NextAuth configuration**
+   - ❌ `signIn: '/en/login'`
+   - ✅ `signIn: '/login'`
+
+2. **NEVER include route groups in page URLs**
+   - ❌ `newUser: '/(auth)/auth-redirect'`
+   - ✅ `newUser: '/auth-redirect'`
+
+3. **Auth file modifications require extreme caution**
+   - Changes to redirect logic can break internationalization
+   - Always test with all supported locales
+   - Require peer review for auth changes
+
+## Authentication Middleware
+
+### Path-Based Authentication
+
+1. **Precise Path Matching**: Never use loose string matching 
+   ```typescript
+   // ❌ INCORRECT - Too loose
+   const isProtectedRoute = request.nextUrl.pathname.includes('/dashboard');
+   
+   // ✅ CORRECT - Parse path parts for exact matching
+   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+   const isProtectedRoute = pathParts.some(part => part === 'dashboard');
+   ```
+
+2. **Middleware is the Single Auth Authority**
+   ```typescript
+   // ✅ CORRECT - Server middleware handles unauthenticated users
+   if (!token && isProtectedRoute) {
+     return NextResponse.redirect(loginUrl);
+   }
+   ```
+
+3. **Proper Path Structure With i18n**
+   ```typescript
+   // ✅ CORRECT - Handle i18n paths properly
+   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+   const locale = pathParts[0];
+   const validLocale = locales.includes(locale) ? locale : defaultLocale;
+   ```
+
+4. **Comprehensive Logging**
+   ```typescript
+   // ✅ CORRECT - Log auth decisions 
+   console.log('Auth token check:', { 
+     path: request.nextUrl.pathname, 
+     hasToken: !!token,
+     isProtectedRoute
+   });
+   ```
+
+5. **Clear Redirect Logic**
+   ```typescript
+   // ✅ CORRECT - Include callbackUrl for post-login redirect
+   const loginUrl = new URL(`/${validLocale}/login`, request.url);
+   loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+   return NextResponse.redirect(loginUrl);
+   ```
+
+### Middleware Implementation Pattern
+
+```typescript
+export default async function middleware(request: NextRequest) {
+  // Log middleware processing
+  console.log('Middleware processing:', request.nextUrl.pathname);
+  
+  // Extract path parts for accurate matching
+  const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+  
+  // Define protected paths
+  const protectedPaths = ['dashboard', 'admin', 'repositories', 'settings'];
+  
+  // Check if path is protected
+  const isProtectedRoute = protectedPaths.some(protectedPath => 
+    pathParts.some(part => part === protectedPath)
+  );
+  
+  // Log protection check
+  console.log('Route protection check:', {
+    path: request.nextUrl.pathname,
+    isProtectedRoute,
+    pathParts
+  });
+  
+  if (isProtectedRoute) {
+    // Get authentication token
+    const token = await getToken({ req: request });
+    
+    // Log token presence
+    console.log('Auth token check:', {
+      hasToken: !!token,
+      tokenExp: token?.exp,
+      now: new Date().toISOString()
+    });
+    
+    if (!token) {
+      // Extract locale from URL for redirect
+      const locale = pathParts[0];
+      const validLocale = locales.includes(locale) ? locale : defaultLocale;
+      
+      // Redirect to login with the current URL as the callbackUrl
+      const loginUrl = new URL(`/${validLocale}/login`, request.url);
+      loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+  
+  return NextResponse.next();
+}
+```
+
+## Client-Side Authentication
+
+For client components, focus only on:
+1. Redirecting authenticated users away from login pages
+2. Handling tenant mismatches for authenticated users
+3. Showing loading states during authentication checks
+
+```typescript
+// Client component auth handling
+useEffect(() => {
+  // Only redirect if user is authenticated and on login page
+  if (session?.user && pathname.includes('/login')) {
+    router.replace(`/${locale}/${user.tenantName || 'trial'}/dashboard`);
+  }
+}, [session, pathname]);
+```
+
+## Authentication Flow
+
+1. **User initiates login** via Google, GitHub, or credentials
+2. **Auth provider callback** is processed by NextAuth
+3. **Server middleware** validates token and authorizes access
+4. **Auth-redirect page** processes successful login and redirects to dashboard
+5. **UserContext** manages session state across the application
+
+## JWT & Session Structure
+
+```typescript
+// JWT structure
+interface CustomJWT extends JWT {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  tenantId: string;
+  tenantName: string;
+  accessToken: string;
+}
+
+// Session structure
+interface CustomSession extends Session {
+  user: {
+    id: string;
+    email?: string | null;
+    name?: string | null;
+    image?: string | null;
+    role?: string;
+    tenantId?: string;
+    tenantName: string | null;
+  };
+  accessToken: string;
+}
+```
+
+## Multi-Tenant Authentication
+
+1. The tenant ID and name are stored in the JWT token
+2. After login, users are redirected to their tenant's dashboard
+3. Middleware validates tenant access 
+4. API routes enforce tenant-based access control
+
+## Debugging Auth Issues
+
+Common auth problems and solutions:
+1. **404 on Redirect**: Check for route groups in URLs, verify page exists
+2. **Missing Cookies**: Ensure secure and httpOnly settings match environment
+3. **Token Validation**: Add detailed logging for token validity checks
+4. **Locale Issues**: Ensure NextAuth is not hardcoding locales in redirects
