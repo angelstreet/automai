@@ -7,8 +7,8 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.string().transform(Number).default('3000'),
 
-    // Database
-    DATABASE_URL: z.string().url(),
+    // Database - optional when using Supabase
+    DATABASE_URL: z.string().url().optional(),
 
     // Supabase - only required in production
     NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
@@ -24,12 +24,12 @@ const envSchema = z
     // OAuth - Google
     GOOGLE_CLIENT_ID: z.string(),
     GOOGLE_CLIENT_SECRET: z.string(),
-    GOOGLE_CALLBACK_URL: z.string().url(),
+    GOOGLE_CALLBACK_URL: z.string().url().optional(),
 
     // OAuth - GitHub
     GITHUB_CLIENT_ID: z.string(),
     GITHUB_CLIENT_SECRET: z.string(),
-    GITHUB_CALLBACK_URL: z.string().url(),
+    GITHUB_CALLBACK_URL: z.string().url().optional(),
 
     // Elasticsearch
     ELASTICSEARCH_URL: z.string().url().optional(),
