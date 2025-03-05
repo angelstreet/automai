@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 import { logger } from '../logger';
 
 // Define a TerminalService class to implement singleton pattern
@@ -17,7 +17,7 @@ class TerminalService {
 
     try {
       // Get host information
-      const host = await prisma.host.findUnique({
+      const host = await db.host.findUnique({
         where: { id: data.hostId },
       });
 
@@ -27,7 +27,7 @@ class TerminalService {
       }
 
       // Create connection record
-      const connection = await prisma.connection.create({
+      const connection = await db.connection.create({
         data: {
           type: data.type,
           status: 'pending',
@@ -56,7 +56,7 @@ class TerminalService {
     logger.info('Getting terminal connection', { connectionId: id });
 
     try {
-      const connection = await prisma.connection.findUnique({
+      const connection = await db.connection.findUnique({
         where: { id },
         include: {
           host: true,
@@ -83,7 +83,7 @@ class TerminalService {
     logger.info('Updating terminal connection status', { connectionId: id, status });
 
     try {
-      const connection = await prisma.connection.update({
+      const connection = await db.connection.update({
         where: { id },
         data: {
           status,
@@ -111,7 +111,7 @@ class TerminalService {
     logger.info('Closing terminal connection', { connectionId: id });
 
     try {
-      const connection = await prisma.connection.update({
+      const connection = await db.connection.update({
         where: { id },
         data: {
           status: 'closed',
@@ -136,7 +136,7 @@ class TerminalService {
     logger.info('Getting all terminal connections');
 
     try {
-      const connections = await prisma.connection.findMany({
+      const connections = await db.connection.findMany({
         include: {
           host: true,
         },
@@ -180,7 +180,7 @@ export async function getCompatibleConnection(connectionId: string) {
   try {
     logger.info('Getting compatible connection', { connectionId });
 
-    const connection = await prisma.connection.findUnique({
+    const connection = await db.connection.findUnique({
       where: { id: connectionId },
     });
 

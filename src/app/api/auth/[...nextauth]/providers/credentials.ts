@@ -1,10 +1,14 @@
 // Dynamically import the provider to reduce initial load time
-import { prisma } from '@/lib/prisma';
-import type { User as PrismaUser, Tenant } from '@prisma/client';
+import db from '@/lib/db';
 import type { AdapterUser } from 'next-auth/adapters';
 
-// Extend the User type to match what we return from authorize
-interface AuthUser extends Pick<PrismaUser, 'id' | 'email' | 'name' | 'role' | 'tenantId'> {
+// Define user type
+interface AuthUser {
+  id: string;
+  email: string | null;
+  name: string | null;
+  role: string;
+  tenantId: string | null;
   tenantName: string;
   plan: string;
   accessToken: string;
@@ -34,12 +38,12 @@ export async function getCredentialsProvider() {
       
       try {
         // Find user by email with type safety
-        const user = await prisma.user.findUnique({
+        const user = await db.user.findUnique({
           where: { email: credentials.email },
           include: {
             tenant: true,
           },
-        }) as (PrismaUser & { tenant: Tenant | null }) | null;
+        });
 
         // Check if user exists
         if (!user) {

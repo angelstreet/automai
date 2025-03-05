@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 
 // Helper to check if user has access to the repository
 async function checkRepositoryAccess(id: string, userId: string) {
-  const repository = await prisma.repository.findUnique({
+  const repository = await db.repository.findUnique({
     where: { id },
     include: {
       provider: true,

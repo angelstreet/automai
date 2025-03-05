@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -24,7 +24,7 @@ export async function GET(request: Request, { params }: Props) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const project = await prisma.project.findUnique({
+    const project = await db.project.findUnique({
       where: { id: id },
       include: {
         owner: {
@@ -74,7 +74,7 @@ export async function PATCH(request: Request, { params }: Props) {
     const validatedData = ProjectSchema.parse(body);
 
     // Check if project exists and user has access
-    const existingProject = await prisma.project.findUnique({
+    const existingProject = await db.project.findUnique({
       where: { id: id },
     });
 
@@ -86,7 +86,7 @@ export async function PATCH(request: Request, { params }: Props) {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
-    const project = await prisma.project.update({
+    const project = await db.project.update({
       where: { id: id },
       data: validatedData,
     });
@@ -122,7 +122,7 @@ export async function DELETE(request: Request, { params }: Props) {
     }
 
     // Check if project exists and user has access
-    const existingProject = await prisma.project.findUnique({
+    const existingProject = await db.project.findUnique({
       where: { id: id },
     });
 
@@ -134,7 +134,7 @@ export async function DELETE(request: Request, { params }: Props) {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
-    await prisma.project.delete({
+    await db.project.delete({
       where: { id: id },
     });
 

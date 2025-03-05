@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 import {
   Repository,
   RepositoryCreateInput,
@@ -34,7 +34,7 @@ export async function getGitProviderService(
 
 export async function listGitProviders(userId: string): Promise<GitProvider[]> {
   try {
-    const providers = await prisma.gitProvider.findMany({
+    const providers = await db.gitProvider.findMany({
       where: { userId },
     });
 
@@ -50,7 +50,7 @@ export async function listGitProviders(userId: string): Promise<GitProvider[]> {
 }
 
 export async function getGitProvider(id: string): Promise<GitProvider | null> {
-  const provider = await prisma.gitProvider.findUnique({
+  const provider = await db.gitProvider.findUnique({
     where: { id },
   });
 
@@ -78,7 +78,7 @@ export async function createGitProvider(
   const { displayName, accessToken, refreshToken, expiresAt, serverUrl } = data;
   const type = data.type || data.name;
 
-  const provider = await prisma.gitProvider.create({
+  const provider = await db.gitProvider.create({
     data: {
       name: type,
       type,
@@ -101,7 +101,7 @@ export async function updateGitProvider(
   id: string,
   data: { accessToken?: string; refreshToken?: string; expiresAt?: Date },
 ): Promise<GitProvider> {
-  const provider = await prisma.gitProvider.update({
+  const provider = await db.gitProvider.update({
     where: { id },
     data,
   });
@@ -113,7 +113,7 @@ export async function updateGitProvider(
 }
 
 export async function deleteGitProvider(id: string): Promise<void> {
-  await prisma.gitProvider.delete({
+  await db.gitProvider.delete({
     where: { id },
   });
 }
@@ -145,7 +145,7 @@ export async function listRepositories(
       where.syncStatus = filters.syncStatus;
     }
 
-    return await prisma.repository.findMany({
+    return await db.repository.findMany({
       where,
       include: {
         provider: true,
@@ -165,7 +165,7 @@ export async function listRepositories(
 }
 
 export async function getRepository(id: string): Promise<Repository | null> {
-  return prisma.repository.findUnique({
+  return db.repository.findUnique({
     where: { id },
     include: {
       provider: true,
@@ -180,7 +180,7 @@ export async function getRepository(id: string): Promise<Repository | null> {
 }
 
 export async function createRepository(data: RepositoryCreateInput): Promise<Repository> {
-  return prisma.repository.create({
+  return db.repository.create({
     data: {
       name: data.name,
       description: data.description,
@@ -206,7 +206,7 @@ export async function updateRepository(
   id: string,
   data: RepositoryUpdateInput,
 ): Promise<Repository> {
-  return prisma.repository.update({
+  return db.repository.update({
     where: { id },
     data,
     include: {
@@ -222,14 +222,14 @@ export async function updateRepository(
 }
 
 export async function deleteRepository(id: string): Promise<void> {
-  await prisma.repository.delete({
+  await db.repository.delete({
     where: { id },
   });
 }
 
 export async function syncRepository(id: string): Promise<Repository> {
   // First, mark the repository as syncing
-  const repository = await prisma.repository.update({
+  const repository = await db.repository.update({
     where: { id },
     data: {
       syncStatus: 'SYNCING',
@@ -252,7 +252,7 @@ export async function syncRepository(id: string): Promise<Repository> {
     const syncedData = await providerService.syncRepository(repository);
 
     // Update the repository with the synced data
-    return prisma.repository.update({
+    return db.repository.update({
       where: { id },
       data: {
         name: syncedData.name,
@@ -274,7 +274,7 @@ export async function syncRepository(id: string): Promise<Repository> {
     });
   } catch (error) {
     // If there's an error, mark the repository as having an error
-    return prisma.repository.update({
+    return db.repository.update({
       where: { id },
       data: {
         syncStatus: 'ERROR',
@@ -293,7 +293,7 @@ export async function syncRepository(id: string): Promise<Repository> {
 }
 
 export async function importRepositoriesFromProvider(providerId: string): Promise<Repository[]> {
-  const provider = await prisma.gitProvider.findUnique({
+  const provider = await db.gitProvider.findUnique({
     where: { id: providerId },
   });
 
@@ -307,7 +307,7 @@ export async function importRepositoriesFromProvider(providerId: string): Promis
   const repositories = await providerService.listRepositories(provider);
 
   // Get existing repositories to avoid duplicates
-  const existingRepos = await prisma.repository.findMany({
+  const existingRepos = await db.repository.findMany({
     where: { providerId },
     select: { name: true },
   });
@@ -320,7 +320,7 @@ export async function importRepositoriesFromProvider(providerId: string): Promis
   // Create the new repositories
   const createdRepos = await Promise.all(
     newRepositories.map((repo) =>
-      prisma.repository.create({
+      db.repository.create({
         data: {
           name: repo.name,
           description: repo.description,

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 import { GitProviderType } from '@/types/repositories';
 
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
     const { providerId, redirectUri } = stateData;
 
     // Get the provider
-    const provider = await prisma.gitProvider.findUnique({
+    const provider = await db.gitProvider.findUnique({
       where: { id: providerId },
     });
 

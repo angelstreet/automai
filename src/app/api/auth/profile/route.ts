@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
 import { authOptions } from '@/auth';
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 export async function GET() {
   try {
@@ -16,7 +16,7 @@ export async function GET() {
     console.log('[PROFILE_GET] Session found, user ID:', session.user.id);
 
     // Get full user data from database
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: session.user.id },
       include: { tenant: true },
     });
@@ -66,7 +66,7 @@ export async function PATCH(req: Request) {
       return new NextResponse(JSON.stringify({ error: 'Name is required' }), { status: 400 });
     }
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await db.user.update({
       where: { id: session.user.id },
       data: { name },
     });

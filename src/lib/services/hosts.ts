@@ -1,7 +1,7 @@
 import { Client } from 'ssh2';
 
 import { logger } from '../logger';
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 /**
  * Connection test result interface
@@ -34,26 +34,12 @@ interface ConnectionTestResult {
 export async function getHosts() {
   try {
     console.log('Fetching hosts from database...');
-    console.log('Calling prisma.host.findMany...');
+    console.log('Calling db.host.findMany...');
     // Use a client-side projection to avoid requesting the is_windows field directly
-    const hosts = await prisma.host.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        type: true,
-        ip: true,
-        port: true,
-        user: true,
-        password: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-        // is_windows is not selected to avoid the database error
-      }
+    const hosts = await db.host.findMany({
+      orderBy: { createdAt: 'desc' }
     });
-    console.log('Prisma returned hosts successfully');
+    console.log('Supabase returned hosts successfully');
     
     // Add the is_windows field with a default value
     return hosts.map(host => ({
@@ -71,7 +57,7 @@ export async function getHosts() {
  */
 export async function getHostById(id: string) {
   try {
-    return await prisma.host.findUnique({
+    return await db.host.findUnique({
       where: { id },
     });
   } catch (error) {
@@ -130,9 +116,9 @@ export async function createHost(data: {
       }
     }
     
-    console.log(`Calling prisma.host.create with data: ${JSON.stringify({ ...data, password: data.password ? '***' : undefined })}`);
+    console.log(`Calling db.host.create with data: ${JSON.stringify({ ...data, password: data.password ? '***' : undefined })}`);
     
-    const host = await prisma.host.create({
+    const host = await db.host.create({
       data: {
         name: data.name,
         description: data.description || '',
@@ -146,7 +132,7 @@ export async function createHost(data: {
       },
     });
     
-    console.log(`Prisma created host successfully`);
+    console.log(`Supabase created host successfully`);
     console.log(`Host created successfully: ${JSON.stringify({ ...host, password: host.password ? '***' : undefined })}`);
     return host;
   } catch (error) {
@@ -162,7 +148,7 @@ export async function createHost(data: {
  */
 export async function deleteHost(id: string) {
   try {
-    return await prisma.host.delete({
+    return await db.host.delete({
       where: { id },
     });
   } catch (error) {
@@ -282,7 +268,7 @@ export async function testHostConnection(data: {
         
         try {
           // Try to update with is_windows field
-          await prisma.host.update({
+          await db.host.update({
             where: { id: data.hostId },
             data: {
               status: result.success ? 'connected' : 'failed',
@@ -293,7 +279,7 @@ export async function testHostConnection(data: {
           // If the update fails due to missing is_windows field, update without it
           if ((schemaError as Error).message && (schemaError as Error).message.includes("Unknown field `is_windows`")) {
             console.log(`[Windows Detection] is_windows field not in database schema, updating without it`);
-            await prisma.host.update({
+            await db.host.update({
               where: { id: data.hostId },
               data: {
                 status: result.success ? 'connected' : 'failed',

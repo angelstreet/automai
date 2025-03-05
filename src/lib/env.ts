@@ -78,8 +78,7 @@ export const isTest = () => process.env.NODE_ENV === 'test';
 
 // Helper to check if we're using Supabase
 export const isUsingSupabase = () => {
-  return isProduction() && 
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && 
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && 
     Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 };
 

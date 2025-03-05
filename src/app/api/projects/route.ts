@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 // Schema for project creation/update
 const ProjectSchema = z.object({
@@ -18,7 +18,7 @@ export async function GET() {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const projects = await prisma.project.findMany({
+    const projects = await db.project.findMany({
       where: { ownerId: session.user.id },
       include: {
         owner: {
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const validatedData = ProjectSchema.parse(body);
 
-    const project = await prisma.project.create({
+    const project = await db.project.create({
       data: {
         ...validatedData,
         ownerId: session.user.id,
@@ -99,7 +99,7 @@ export async function PATCH(request: Request) {
     const id = request.url.split('/').pop(); // Get the project ID from the URL
 
     // Check if project exists and user has access
-    const existingProject = await prisma.project.findUnique({
+    const existingProject = await db.project.findUnique({
       where: { id },
     });
 
@@ -111,7 +111,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
-    const updatedProject = await prisma.project.update({
+    const updatedProject = await db.project.update({
       where: { id },
       data: body,
     });
@@ -141,7 +141,7 @@ export async function DELETE(request: Request) {
     const id = request.url.split('/').pop(); // Get the project ID from the URL
 
     // Check if project exists and user has access
-    const existingProject = await prisma.project.findUnique({
+    const existingProject = await db.project.findUnique({
       where: { id },
     });
 
@@ -153,7 +153,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
-    await prisma.project.delete({
+    await db.project.delete({
       where: { id },
     });
 

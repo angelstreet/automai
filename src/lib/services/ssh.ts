@@ -2,7 +2,7 @@
 import { Client } from 'ssh2';
 import { WebSocket } from 'ws';
 import { logger } from '../logger';
-import { prisma } from '../prisma';
+import db from '../db';
 
 // Define WebSocketConnection type
 export type WebSocketConnection = WebSocket & {
@@ -67,21 +67,17 @@ export async function handleSshConnection(
       
       // Try to find the host record with a client-side selection to avoid errors on missing fields
       try {
-        const host = await prisma.host.findFirst({
+        const host = await db.host.findMany({
           where: { 
             ip: ssh_host,
             type: 'ssh'
-          },
-          select: {
-            id: true,
-            name: true,
-            ip: true,
-            // Other fields but not is_windows
           }
         });
         
-        if (host) {
-          console.log(`[Windows Detection] Found host in database: ${host.id}, but is_windows field might not exist yet`);
+        const firstHost = host && host.length > 0 ? host[0] : null;
+        
+        if (firstHost) {
+          console.log(`[Windows Detection] Found host in database: ${firstHost.id}, but is_windows field might not exist yet`);
           // We can't check is_windows here since the field might not exist in the database yet
         } else {
           console.log(`[Windows Detection] No host found in database for ${ssh_host}`);

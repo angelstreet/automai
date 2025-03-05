@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 
 // Schema for repository update
@@ -15,7 +15,7 @@ const RepositoryUpdateSchema = z.object({
 
 // Helper to check if user has access to the repository
 async function checkRepositoryAccess(id: string, userId: string) {
-  const repository = await prisma.repository.findUnique({
+  const repository = await db.repository.findUnique({
     where: { id },
     include: {
       provider: true,
@@ -79,7 +79,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     // If projectId is provided, verify that the project belongs to the user
     if (validatedData.projectId) {
-      const project = await prisma.project.findUnique({
+      const project = await db.project.findUnique({
         where: { id: validatedData.projectId },
       });
 

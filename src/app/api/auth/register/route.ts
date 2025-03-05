@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { isUsingSupabase } from '@/lib/env';
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 // Dynamically import supabaseAuthService to prevent errors when Supabase isn't available
 let supabaseAuthService: any;
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { name, email, password } = validationResult.data;
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await db.user.findUnique({
       where: { email },
     });
 
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await hash(password, 10);
 
     // Create default tenant for the user (trial)
-    const tenant = await prisma.tenant.create({
+    const tenant = await db.tenant.create({
       data: {
         name: 'Trial Tenant',
         domain: `trial-${Date.now()}`,
@@ -118,8 +118,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create user in Prisma database
-    const user = await prisma.user.create({
+    // Create user in the database
+    const user = await db.user.create({
       data: {
         name,
         email,

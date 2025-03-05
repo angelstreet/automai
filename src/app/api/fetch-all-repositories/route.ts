@@ -1,8 +1,7 @@
-import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 // GET /api/fetch-all-repositories
 export async function GET(request: Request) {
@@ -14,7 +13,7 @@ export async function GET(request: Request) {
 
     try {
       // Get all git providers for the user
-      const providers = await prisma.gitProvider.findMany({
+      const providers = await db.gitProvider.findMany({
         where: { userId: session.user.id },
         select: { id: true },
       });
@@ -25,7 +24,7 @@ export async function GET(request: Request) {
       }
 
       // Fetch all repositories for all providers
-      const repositories = await prisma.repository.findMany({
+      const repositories = await db.repository.findMany({
         where: {
           providerId: {
             in: providers.map((p) => p.id),
@@ -38,11 +37,8 @@ export async function GET(request: Request) {
 
       return NextResponse.json(repositories);
     } catch (dbError) {
-      // Check if this is a PrismaClientKnownRequestError with code P2021 (table does not exist)
-      if (dbError instanceof Prisma.PrismaClientKnownRequestError && dbError.code === 'P2021') {
-        console.log('Repository table does not exist yet, returning empty array');
-        return NextResponse.json([], { status: 200 });
-      }
+      // Handle any database errors
+      console.log('Database error, returning empty array:', dbError);
 
       // For other database errors, log and return empty array
       console.error('Database error fetching repositories:', dbError);

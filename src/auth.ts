@@ -14,7 +14,6 @@
  *
  * See .cursor/rules/backend.mdc for detailed authentication guidelines.
  */
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import { compare } from 'bcrypt';
 import NextAuth from 'next-auth/next';
 import type { Session, User } from 'next-auth';
@@ -25,7 +24,7 @@ import GitHubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 
 import { env, isUsingSupabase } from '@/lib/env';
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 // Dynamically import SupabaseProvider to prevent errors when Supabase isn't available
 let SupabaseProvider: any;
@@ -70,7 +69,6 @@ interface CustomSession extends Session {
 }
 
 export const authOptions: AuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: env.GOOGLE_CLIENT_ID,
@@ -99,7 +97,7 @@ export const authOptions: AuthOptions = {
         }
 
         try {
-          const user = (await prisma.user.findUnique({
+          const user = (await db.user.findUnique({
             where: { email: credentials.email },
             include: {
               tenant: true,

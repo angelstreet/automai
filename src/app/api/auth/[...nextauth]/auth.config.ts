@@ -1,6 +1,5 @@
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import type { User } from 'next-auth';
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 // Define custom types
 interface CustomUser extends User {
@@ -39,7 +38,6 @@ declare module 'next-auth/jwt' {
 }
 
 export const authConfig = {
-  adapter: PrismaAdapter(prisma),
   providers: [], // Will be dynamically loaded
   pages: {
     signIn: '/login',

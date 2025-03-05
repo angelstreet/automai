@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 // Find the next available number for a prefix
 async function findNextNumber(prefix: string) {
-  const useCases = await prisma.useCase.findMany({
+  const useCases = await db.useCase.findMany({
     where: {
       shortId: {
         startsWith: `${prefix}-`,
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
 
-    const useCases = await prisma.useCase.findMany({
+    const useCases = await db.useCase.findMany({
       where: {
         projectId: String(projectId),
       },
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
     const shortId = await generateShortId(shortIdPrefix);
 
-    const useCase = await prisma.useCase.create({
+    const useCase = await db.useCase.create({
       data: {
         name,
         projectId,

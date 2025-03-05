@@ -3,7 +3,7 @@ import type { Session, User } from 'next-auth';
 import type { DefaultSession } from 'next-auth/core/types';
 import type { JWT } from 'next-auth/jwt';
 import { logger } from './logger';
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 // Extend next-auth types
 interface ExtendedUser extends User {
@@ -54,7 +54,7 @@ export async function getAuthOptions() {
 
           try {
             // Find user by email
-            const user = await prisma.user.findUnique({
+            const user = await db.user.findUnique({
               where: { email: credentials.email },
               include: {
                 tenant: true,

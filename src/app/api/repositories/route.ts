@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
 
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 
 // Schema for repository creation
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const validatedData = RepositoryCreateSchema.parse(body);
 
     // Verify that the provider belongs to the user
-    const provider = await prisma.gitProvider.findUnique({
+    const provider = await db.gitProvider.findUnique({
       where: { id: validatedData.providerId },
     });
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     // If projectId is provided, verify that the project belongs to the user
     if (validatedData.projectId) {
-      const project = await prisma.project.findUnique({
+      const project = await db.project.findUnique({
         where: { id: validatedData.projectId },
       });
 

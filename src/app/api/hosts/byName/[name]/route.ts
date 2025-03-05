@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { prisma } from '@/lib/prisma';
+import db from '@/lib/db';
 
 export async function GET(request: NextRequest, context: { params: { name: string } }) {
   try {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, context: { params: { name: strin
     console.log(`Looking up host by name: ${name}`);
 
     // Try to find the host with case-insensitive search
-    const host = await prisma.host.findFirst({
+    const host = await db.host.findFirst({
       where: {
         name: {
           equals: name,
