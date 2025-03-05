@@ -200,12 +200,28 @@ export async function testHostConnection(data: {
       try {
         // Create debug handler for connection monitoring
         const debugHandler = (message: string) => {
+          console.log(`[Windows Detection] Debug message: ${message}`);
+          
           // Look for OpenSSH for Windows in the remote ident
-          if (message.includes('Remote ident:') && message.toLowerCase().includes('windows')) {
+          if (message.includes('Remote ident:') && message.includes('OpenSSH_for_Windows')) {
             console.log(`[Windows Detection] Remote ident from ${data.ip}: ${message}`);
             console.log(`[Windows Detection] 🪟 WINDOWS DETECTED from remote ident from ${data.ip}`);
             detectedWindows = true;
             logger.info('Windows detected from remote ident', { ip: data.ip });
+          }
+          // Also check for Windows in the message
+          else if (message.toLowerCase().includes('windows') && !detectedWindows) {
+            console.log(`[Windows Detection] Windows string detected from ${data.ip}: ${message}`);
+            console.log(`[Windows Detection] 🪟 WINDOWS DETECTED from string match from ${data.ip}`);
+            detectedWindows = true;
+            logger.info('Windows detected from debug message', { ip: data.ip });
+          }
+          // Also check for OpenSSH which often indicates Windows
+          else if (message.includes('OpenSSH') && !detectedWindows) {
+            console.log(`[Windows Detection] OpenSSH detected from ${data.ip}: ${message}`);
+            console.log(`[Windows Detection] 🪟 WINDOWS LIKELY from OpenSSH detection from ${data.ip}`);
+            detectedWindows = true;
+            logger.info('Windows likely detected from OpenSSH', { ip: data.ip });
           }
         };
         
@@ -230,12 +246,15 @@ export async function testHostConnection(data: {
             username: data.username,
             password: data.password,
             readyTimeout: 10000, // 10 seconds timeout
-            debug: (message: string) => console.log(`SSH Debug: ${message}`) // Fix debug type
+            debug: (message: string) => {
+              console.log(`SSH Debug: ${message}`);
+              debugHandler(message); // Pass message to our debug handler for Windows detection
+            }
           });
         });
         
         // Add a small delay to ensure Windows detection can complete
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         console.log(`[Windows Detection] Connection successful to ${data.ip}, Windows detected: ${detectedWindows}`);
         
