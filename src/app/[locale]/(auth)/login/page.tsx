@@ -3,11 +3,10 @@
 import { Chrome, Github } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
 import { useTranslations } from 'next-intl';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import * as React from 'react';
-import { useUser } from '@/context/UserContext';
+import supabaseAuth from '@/lib/supabase-auth';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -15,23 +14,28 @@ import { Input } from '@/components/shadcn/input';
 export default function LoginPage() {
   const router = useRouter();
   const { locale } = useParams();
-  const { data: session, status } = useSession();
-  const { user } = useUser();
   const t = useTranslations('Auth');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check if user is already authenticated
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      // User is already logged in, redirect to appropriate dashboard
-      // Get tenant from user context, fallback to trial if no tenant
-      const tenant = user?.tenantName || 'trial';
-      router.push(`/${locale}/${tenant}/dashboard`);
+    // Check for existing Supabase session
+    async function checkSession() {
+      const { data } = await supabaseAuth.getSession();
+      if (data.session) {
+        // User is already logged in, redirect to dashboard
+        router.push(`/${locale}/trial/dashboard`);
+      } else {
+        setIsLoading(false);
+      }
     }
-  }, [session, status, router, locale, user]);
+    
+    checkSession();
+  }, [router, locale]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,55 +43,49 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      // Always try with standard credentials first as it's more reliable in all environments
-      let result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-        callbackUrl: `/${locale}/trial/dashboard`,
-      });
-
-      // Only try Supabase in production with Supabase available and if standard login failed
-      if (!result?.ok && window.location.hostname !== 'localhost' && process.env.NODE_ENV === 'production') {
-        try {
-          result = await signIn('supabase', {
-            email,
-            password,
-            redirect: false,
-            callbackUrl: `/${locale}/trial/dashboard`,
-          });
-        } catch (error) {
-          console.error('Supabase login failed, using standard credentials:', error);
-        }
-      }
-
-      if (result?.error) {
-        setError(result.error);
+      // Use Supabase authentication
+      const { data, error } = await supabaseAuth.signInWithPassword(email, password);
+      
+      if (error) {
+        setError(error.message);
         return;
       }
-
-      if (result?.ok) {
+      
+      if (data?.session) {
+        // Login successful, redirect to dashboard
         router.push(`/${locale}/trial/dashboard`);
       }
     } catch (err: any) {
+      console.error("Login error:", err);
       setError(err.message || 'An error occurred during login');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleOAuthLogin = (provider: 'google' | 'github') => {
-    signIn(provider, { callbackUrl: `/${locale}/(auth)/auth-redirect` });
+  const handleOAuthLogin = async (provider: 'google' | 'github') => {
+    try {
+      // Use Supabase OAuth
+      const { error } = await supabaseAuth.signInWithOAuth(provider);
+      
+      if (error) {
+        console.error('OAuth error:', error);
+        setError(error.message);
+      }
+      // If successful, Supabase will handle the redirect automatically
+    } catch (err: any) {
+      console.error('OAuth error:', err);
+      setError(err.message || 'An error occurred with OAuth sign in');
+    }
   };
 
-  // Show nothing while checking initial auth state
-  if (status === 'loading') {
-    return null;
-  }
-
-  // Show nothing if already authenticated (will be redirected)
-  if (status === 'authenticated') {
-    return null;
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (

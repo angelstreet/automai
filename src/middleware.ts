@@ -1,6 +1,6 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 import { locales, defaultLocale, pathnames } from './config';
 
@@ -146,43 +146,28 @@ export default async function middleware(request: NextRequest) {
     }
 
     try {
-      // Check for all possible session token cookie names and log their presence
-      const sessionCookies = [
-        request.cookies.get('next-auth.session-token'),
-        request.cookies.get('__Secure-next-auth.session-token'),
-      ].filter(Boolean);
-
-      console.log(
-        'Session cookies present:',
-        sessionCookies.map((c) => c?.name),
-      );
-
-      // Get and validate token - use strict validation
-      const token = await getToken({
-        req: request,
-        secret: process.env.NEXTAUTH_SECRET,
-        secureCookie: process.env.NODE_ENV === 'production',
-        // Use specific cookie name if available
-        cookieName: sessionCookies[0]?.name || 'next-auth.session-token',
-      });
-
-      // Log token details for debugging (safely)
-      console.log('Auth token check:', {
+      // Create Supabase client for auth
+      const res = NextResponse.next();
+      const supabase = createMiddlewareClient({ req: request, res });
+      
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      console.log('Auth session check:', {
         path: request.nextUrl.pathname,
-        hasToken: !!token,
-        hasValidData: token ? !!token.email && !!token.id : false,
-        tokenExp: token?.exp ? new Date(Number(token.exp) * 1000).toISOString() : null,
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        hasValidEmail: !!session?.user?.email,
+        sessionExpiry: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
         now: new Date().toISOString(),
-        tokenFields: token ? Object.keys(token) : [],
       });
-
-      // Validate that the token exists and has required fields
-      const isValidToken =
-        !!token &&
-        typeof token === 'object' &&
-        typeof token.id === 'string' &&
-        typeof token.email === 'string' &&
-        (!token.exp || (typeof token.exp === 'number' && token.exp * 1000 > Date.now()));
+      
+      // Validate that session exists and has required user data
+      const isValidToken = 
+        !!session && 
+        !!session.user && 
+        !!session.user.email &&
+        (!session.expires_at || (session.expires_at * 1000 > Date.now()));
 
       // Only check token validity in middleware - UserContext will handle 404s for deleted users
       if (!isValidToken) {
@@ -195,52 +180,26 @@ export default async function middleware(request: NextRequest) {
         return createLoginRedirect(request, pathParts);
       }
 
-      // For protected UI routes, check if user exists in database via profile API
-      // But only for non-API routes and only if we're not in development mode
-      if (!isApiRoute && process.env.NODE_ENV === 'production') {
+      // For protected UI routes, verify user record in database
+      if (!isApiRoute && session?.user?.id) {
         try {
-          // Make a request to the profile API to check if user exists
-          // Use the same host as the current request to avoid CORS issues
-          const host = request.headers.get('host') || 'localhost:3000';
-          const protocol = host.includes('localhost') ? 'http' : 'https';
-          const profileUrl = `${protocol}://${host}/api/auth/profile`;
-
-          console.log('Checking user profile at:', profileUrl);
-
-          // Use a longer timeout to prevent issues during server startup
-          const timeoutMs = 10000; // 10 seconds
-
-          const profileResponse = await fetch(profileUrl, {
-            headers: {
-              cookie: request.headers.get('cookie') || '',
-              'Content-Type': 'application/json',
-            },
-            // Add a timeout to prevent hanging
-            signal: AbortSignal.timeout(timeoutMs),
-          });
-
-          // If profile API returns 404, user doesn't exist in database
-          if (profileResponse.status === 404) {
+          // Check if user exists in Supabase database
+          const { data: user, error } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (error || !user) {
             console.log('User not found in database, redirecting to login');
             return createLoginRedirect(request, pathParts);
           }
-
-          // If we get any other error status, log it but allow the request to continue
-          if (!profileResponse.ok) {
-            console.log(
-              `Profile API returned ${profileResponse.status}, but allowing request to continue`,
-            );
-          } else {
-            console.log('User profile validated successfully');
-          }
-        } catch (fetchError) {
-          // If fetch fails, log the error but don't block the request
-          // This prevents issues with the middleware blocking all requests if the profile API is down
-          console.error('Error checking user profile:', fetchError);
-
-          // Allow the request to continue even if profile check fails
-          // This prevents users from being logged out after server restart
-          console.log('Allowing request despite profile check failure');
+          
+          console.log('User record validated successfully');
+        } catch (error) {
+          // Log error but allow request to continue
+          console.error('Error checking user record:', error);
+          console.log('Allowing request despite database check failure');
         }
       }
     } catch (error) {

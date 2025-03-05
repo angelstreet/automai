@@ -1,33 +1,58 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { useEffect } from 'react';
-import type { Session } from 'next-auth';
+import { useEffect, useState } from 'react';
+import supabaseAuth from '@/lib/supabase-auth';
 
 export default function AuthRedirectFallback() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    console.log('Root auth-redirect fallback loaded');
+    console.log('Auth-redirect page loaded');
 
-    // Wait for session to be loaded
-    if (status === 'loading') return;
+    // Function to check Supabase session and redirect
+    async function checkSessionAndRedirect() {
+      try {
+        // Get current session from Supabase
+        const { data, error } = await supabaseAuth.getSession();
+        
+        // Default locale
+        const locale = 'en';
 
-    // Default locale
-    const locale = 'en';
+        if (error) {
+          console.error('Session error:', error);
+          setError('Failed to get session');
+          window.location.href = `/${locale}/login?error=Authentication failed - ${error.message}`;
+          return;
+        }
 
-    if (session?.user) {
-      // Use tenant name or default to trial
-      const tenant = (session.user as Session['user']).tenantName || 'trial';
-      console.log('Session found, redirecting to dashboard');
-      window.location.href = `/${locale}/${tenant}/dashboard`;
-    } else {
-      console.log('No session found, redirecting to login');
-      window.location.href = `/${locale}/login?error=Authentication failed - no session`;
+        if (data?.session) {
+          // Try to get user data from database to determine tenant
+          try {
+            // For now, use default tenant
+            const tenant = 'trial';
+            console.log('Session found, redirecting to dashboard');
+            window.location.href = `/${locale}/${tenant}/dashboard`;
+          } catch (dbError) {
+            console.error('Database error:', dbError);
+            // Still redirect to default dashboard on DB error
+            window.location.href = `/${locale}/trial/dashboard`;
+          }
+        } else {
+          console.log('No session found, redirecting to login');
+          window.location.href = `/${locale}/login?error=Authentication failed - no session`;
+        }
+      } catch (e) {
+        console.error('Auth redirect error:', e);
+        setError('Authentication error');
+        setIsLoading(false);
+      }
     }
-  }, [router, session, status]);
+    
+    checkSessionAndRedirect();
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">

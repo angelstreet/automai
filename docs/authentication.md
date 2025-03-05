@@ -4,12 +4,13 @@ This document provides comprehensive information about the authentication system
 
 ## Overview
 
-The application implements a multi-provider authentication system using NextAuth.js. It supports:
+The application implements a multi-provider authentication system using Supabase Auth. It supports:
 - OAuth providers (Google, GitHub)
-- Traditional email/password authentication (using Prisma + database)
-- Supabase authentication in production environments
+- Email/password authentication
+- Password reset via email
+- Email verification
 
-The system automatically selects the appropriate authentication method based on the environment and available configurations.
+The system provides a seamless authentication experience across different environments.
 
 ## Authentication Methods
 
@@ -17,152 +18,187 @@ The system automatically selects the appropriate authentication method based on 
 - **Google**: Users can sign in with their Google accounts
 - **GitHub**: Users can sign in with their GitHub accounts
 
-### Credentials-Based Authentication
-- **Standard**: Email and password stored in PostgreSQL database (via Prisma)
-- **Supabase**: Email and password using Supabase Auth (in production only)
+### Email Authentication
+- **Email/Password**: Traditional email and password authentication
+- **Password Reset**: Email-based password recovery flow
+- **Email Verification**: Verification of email addresses during signup
 
-## NextAuth Implementation
+## Supabase Auth Implementation
 
-The authentication system is built using NextAuth.js and is configured in `src/auth.ts`. Key features include:
+The authentication system is built using Supabase Auth and is implemented in:
 
-- JSON Web Token (JWT) based sessions
-- Custom session and user type definitions
-- PrismaAdapter for database integration
-- Customized callbacks for sign-in, redirect, JWT, and session handling
+- `src/lib/supabase-auth.ts`: Main authentication utilities
+- `src/utils/supabase/middleware.ts`: Auth middleware for protected routes
+- `src/middleware.ts`: Main middleware with authentication checks
+
+Key features include:
+- JWT-based authentication with automatic token refresh
+- Secure session management via HTTP-only cookies
+- Stateless authentication with PostgreSQL user storage
+- Cross-platform authentication with the same tokens
 - i18n support with proper locale handling
 
 ## Authentication Flow
 
 1. **Initial Login**
    - User logs in via email/password or OAuth (Google/GitHub)
-   - Backend validates credentials and checks tenant information
-   - JWT token is generated containing user info, tenant, and role
+   - Supabase validates credentials and creates a session
+   - JWT token is generated and stored in HTTP-only cookies
 
 2. **Auth Redirect Process**
    - After successful authentication, user is redirected to `/auth-redirect`
-   - Auth-redirect page attempts to sign in with the token
+   - Auth-redirect page checks the session and user information
    - On success, redirects to appropriate dashboard based on tenant
    - On any failure, redirects to login with error
 
 3. **Session Management**
-   - JWT token contains user details, role, and tenant information
-   - Session expires after 24 hours
-   - UserContext manages session state across the application
+   - Supabase manages the session with automatic token refresh
+   - JWT token contains user details that can be accessed client and server-side
+   - Sessions expire after 24 hours by default
+   - Session verification happens via middleware for protected routes
 
 ## Google OAuth Integration
 
-Google authentication is set up with the following features:
+Google authentication is set up through Supabase Auth:
 
 ```typescript
-GoogleProvider({
-  clientId: env.GOOGLE_CLIENT_ID,
-  clientSecret: env.GOOGLE_CLIENT_SECRET,
-  authorization: {
-    params: {
-      prompt: 'select_account', // Forces account selection each time
-    },
-  },
-})
+// In Supabase dashboard, you configure Google OAuth
+// In code, we trigger it with:
+supabaseAuth.signInWithOAuth('google', {
+  redirectTo: `${window.location.origin}/auth-redirect`,
+});
 ```
 
 ### Required Environment Variables
 - `GOOGLE_CLIENT_ID`: Your Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET`: Your Google OAuth client secret
-- `GOOGLE_CALLBACK_URL`: OAuth callback URL (usually `http://localhost:3000/api/auth/callback/google` in development)
+
+### Callback URL Configuration
+- Supabase Auth callback URL is `https://YOUR_PROJECT_ID.supabase.co/auth/v1/callback`
+- For local development: `http://localhost:54321/auth/v1/callback`
+- You must add these URLs to your authorized redirect URIs in Google Cloud Console
 
 ### Google Auth Setup Steps
 1. Create a project in the Google Cloud Console
 2. Enable the Google OAuth API
 3. Create OAuth credentials (Web application type)
-4. Add authorized redirect URIs for your application
-5. Copy the client ID and secret to your environment variables
+4. Add authorized redirect URIs for both development and production:
+   - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+   - `http://localhost:54321/auth/v1/callback`
+5. Copy the client ID and secret to your Supabase dashboard Auth > Providers > Google
 
 ## GitHub OAuth Integration
 
-GitHub authentication uses the standard OAuth flow:
+GitHub authentication is configured through Supabase Auth:
 
 ```typescript
-GitHubProvider({
-  clientId: env.GITHUB_CLIENT_ID,
-  clientSecret: env.GITHUB_CLIENT_SECRET,
-})
+// In Supabase dashboard, you configure GitHub OAuth
+// In code, we trigger it with:
+supabaseAuth.signInWithOAuth('github', {
+  redirectTo: `${window.location.origin}/auth-redirect`,
+});
 ```
 
 ### Required Environment Variables
 - `GITHUB_CLIENT_ID`: Your GitHub OAuth App client ID
 - `GITHUB_CLIENT_SECRET`: Your GitHub OAuth App client secret
-- `GITHUB_CALLBACK_URL`: OAuth callback URL
+
+### Callback URL Configuration
+- Supabase Auth callback URL is `https://YOUR_PROJECT_ID.supabase.co/auth/v1/callback`
+- For local development: `http://localhost:54321/auth/v1/callback`
+- You must add these URLs to your authorized callback URLs in GitHub OAuth App settings
+
+### GitHub Auth Setup Steps
+1. Go to GitHub Developer Settings > OAuth Apps > New OAuth App
+2. Set homepage URL to your application URL
+3. Set callback URLs for both development and production:
+   - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+   - `http://localhost:54321/auth/v1/callback`
+4. Copy the client ID and secret to your Supabase dashboard Auth > Providers > GitHub
 
 ## Email/Password Authentication
 
-The standard email/password authentication uses bcrypt for password hashing and the Prisma client to access the database:
+Email and password authentication is handled by Supabase Auth, which provides secure password hashing, email verification, and other security features:
 
 ```typescript
-CredentialsProvider({
-  id: 'credentials',
-  name: 'Credentials',
-  credentials: {
-    email: { label: 'Email', type: 'email' },
-    password: { label: 'Password', type: 'password' },
-  },
-  async authorize(credentials, req) {
-    // Verify credentials against database
-    // ...
-  }
-})
+// Sign in with email and password
+const { data, error } = await supabaseAuth.signInWithPassword(email, password);
+
+// Sign up with email and password
+const { data, error } = await supabaseAuth.signUp(email, password);
+
+// Reset password (password recovery)
+const { data, error } = await supabaseAuth.resetPassword(email);
 ```
 
 Key features:
-- Secure password comparison using bcrypt
-- Tenant and role information included in user object
-- User record retrieved from PostgreSQL via Prisma
+- Secure password hashing with industry-standard algorithms
+- Automatic email verification flows
+- Password recovery and reset functionality
+- User data stored in Supabase PostgreSQL database
 
-## Supabase Authentication
+## Password Reset Flow
 
-Supabase authentication is implemented as an alternative provider for production environments. It's conditionally loaded and only active when:
-1. Running in production (`NODE_ENV === 'production'`)
-2. Supabase environment variables are configured
+Supabase Auth provides a complete password reset flow:
+
+1. **Forgot Password**
+   - User enters email on forgot password page
+   - System sends password reset email with magic link
+   - Email contains a link to reset password page with token
+
+2. **Reset Password**
+   - User clicks link in email and arrives at reset password page
+   - Token is validated automatically by Supabase Auth
+   - User enters and confirms new password
+   - Password is updated and user is redirected to login
 
 ### Implementation Files
-- `src/utils/supabase/*.ts`: Core Supabase client utilities
-- `src/lib/services/supabase-auth.ts`: Authentication service
-- `src/app/api/auth/[...nextauth]/providers/supabase.ts`: NextAuth Supabase provider
-
-### Key Features
-- Dynamic imports to prevent errors in development
-- Error-resilient implementation for graceful fallbacks
-- Full feature parity with standard credentials provider
+- `src/lib/supabase-auth.ts`: Main authentication utilities
+- `src/app/[locale]/(auth)/forgot-password/page.tsx`: Forgot password page
+- `src/app/[locale]/(auth)/reset-password/page.tsx`: Reset password page
 
 ### Required Environment Variables
 - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY`: (Optional) For admin operations
+- `SUPABASE_SERVICE_ROLE_KEY`: For admin operations
 
 ## Environment-Based Configuration
 
-The authentication system behaves differently based on the environment:
+The authentication system is configured differently based on the environment:
 
 ### Development Environment
-- Uses local PostgreSQL database
-- Credentials provider uses Prisma directly
-- Supabase authentication is disabled
+- Uses local Supabase instance running via Docker
+- Authentication services run on localhost
+- OAuth providers use localhost callbacks
 - Detailed logging and debugging
 
 ### Production Environment
-- Can use Supabase for both authentication and database
-- Conditional Supabase provider activation
+- Uses Supabase cloud instance
+- OAuth providers use production callbacks
 - Reduced logging for better performance
 - Additional security measures
 
-Configuration is managed through the `isUsingSupabase()` helper in `src/lib/env.ts`:
+Configuration is managed through environment variables:
 
 ```typescript
-export const isUsingSupabase = () => {
-  return isProduction() && 
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && 
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-};
+// Development
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6...
+
+// Production
+NEXT_PUBLIC_SUPABASE_URL=https://wexkgcszrwxqsthahfyq.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
 ```
+
+## Callback URL Configuration
+
+Proper OAuth callback URL configuration is critical for authentication to work:
+
+### Production Callback URLs
+- Add to your OAuth providers (Google, GitHub): `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+
+### Development Callback URLs
+- Add to your OAuth providers: `http://localhost:54321/auth/v1/callback`
 
 ## Plan and Tenant Management
 
@@ -214,16 +250,27 @@ The authentication system implements several security best practices:
 If you encounter errors related to missing Supabase packages, install them:
 
 ```bash
-npm install @supabase/supabase-js @supabase/ssr --save
+npm install @supabase/supabase-js @supabase/auth-helpers-nextjs --save
 ```
 
-### Authentication Fallback Behavior
-- The login page first tries the standard credentials provider
-- If that fails and in production, it attempts Supabase login
-- If both fail, appropriate error messages are displayed
+### OAuth Configuration Issues
+- If OAuth login fails, verify callback URLs in your provider's developer console
+- Check for callback URL mismatch between your app configuration and Supabase Auth settings
+- Verify your provider credentials are correctly configured in Supabase dashboard
+
+### Authentication Behavior
+- Authentication is handled entirely by Supabase Auth
+- Sessions are managed via secure HTTP-only cookies
+- Session information can be accessed client and server-side
 
 ### Common Issues
-- **"Supabase client not initialized"**: Check environment variables and verify installation
-- **"Email and password are required"**: Form validation error
-- **OAuth errors**: Check redirect URIs and provider configurations 
-- **Session issues**: Verify NEXTAUTH_SECRET is properly set
+- **"Invalid login credentials"**: Check email/password combination
+- **"Email not confirmed"**: User needs to verify their email
+- **OAuth errors**: Check redirect URIs in both Supabase dashboard and provider settings
+- **"Invalid redirect URL"**: Your OAuth redirect setting doesn't match Supabase configuration
+- **Password reset issues**: Verify SMTP settings in Supabase dashboard
+
+### Testing Authentication
+- Use the Supabase dashboard to verify user accounts
+- Check the Authentication > Users section to see registered users
+- Use the SQL editor to inspect the auth schema directly

@@ -4,7 +4,7 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "dev": "./start-supabase-dev.sh && cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
+    "dev": "./scripts/start-supabase-dev.sh && cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
     "prod": "cross-env NODE_ENV=production ENV_FILE=.env.production ts-node server.ts",
     "dev:next": "next dev",
     "build": "next build",
@@ -21,7 +21,7 @@
     "supabase:start": "npx supabase start",
     "supabase:stop": "npx supabase stop",
     "supabase:gen-types": "npx supabase gen types typescript --local > src/types/supabase.ts",
-    "supabase:migrate": "bash -c 'npx supabase link --project-ref \"$1\" && npx supabase db push' --",
+    "supabase:migrate": "npx supabase link --project-ref wexkgcszrwxqsthahfyq && npx supabase db push",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:prod": "prisma migrate deploy --schema=prisma/schema.prisma",

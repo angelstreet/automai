@@ -80,8 +80,10 @@ Main tables:
 
 3. Migrate your schema:
    ```bash
-   npm run supabase:migrate -- your-project-ref
+   npm run supabase:migrate
    ```
+
+   This will migrate to the project with reference ID `wexkgcszrwxqsthahfyq` which is hardcoded in the configuration.
 
 4. Update environment variables in `.env.production`:
    ```
@@ -176,8 +178,10 @@ const { data, error } = await supabase
    ```
 3. To apply to production:
    ```bash
-   npm run supabase:migrate -- your-project-ref
+   npm run supabase:migrate
    ```
+
+   This uses the hardcoded project reference ID `wexkgcszrwxqsthahfyq`.
 
 ## Row Level Security (RLS)
 
