@@ -64,6 +64,7 @@
     "createdAt": "Created At",
     "updatedAt": "Updated At",
     "loading": "Loading...",
+    "refreshing": "Refreshing...",
     "noData": "No data available",
     "devices": "Devices",
     "hosts": "Hosts",
