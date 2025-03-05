@@ -52,8 +52,7 @@ export async function handleSshConnection(
 ) {
   let isConnecting = true;
   let sshClient: Client | null = null;
-  let attemptingWindowsFallback = false;
-
+  
   // For backward compatibility, check both prefixed and non-prefixed parameters
   const ssh_username = (authData as any)?.ssh_username || (authData as any)?.username;
   const ssh_password = (authData as any)?.ssh_password || (authData as any)?.password;
@@ -106,8 +105,7 @@ export async function handleSshConnection(
   // Function to attempt SSH connection with specified mode
   const attemptConnection = (useWindowsMode: boolean) => {
     is_windows = useWindowsMode;
-    attemptingWindowsFallback = useWindowsMode && !(authData as any)?.is_windows;
-
+    
     logger.info('Attempting SSH connection', {
       connectionId,
       ssh_username: ssh_username,
@@ -115,27 +113,7 @@ export async function handleSshConnection(
       ssh_host: ssh_host,
       ssh_port: ssh_port || 22,
       is_windows: is_windows,
-      isRetry: attemptingWindowsFallback,
     });
-
-    if (attemptingWindowsFallback) {
-      try {
-        if (clientSocket.readyState === WebSocket.OPEN) {
-          clientSocket.send(
-            JSON.stringify({
-              status: 'retry',
-              message: 'Linux connection failed, trying Windows mode...',
-              details: { is_windows: true },
-            }),
-          );
-        }
-      } catch (e) {
-        logger.error(
-          `Failed to send retry message: ${e instanceof Error ? e.message : String(e)}`,
-          { connectionId },
-        );
-      }
-    }
 
     try {
       // Create new SSH client for retry
@@ -201,100 +179,21 @@ export async function handleSshConnection(
           ],
           serverHostKey: [
             'ssh-rsa',
-            'ssh-dss',
             'ecdsa-sha2-nistp256',
             'ecdsa-sha2-nistp384',
             'ecdsa-sha2-nistp521',
+            'ssh-ed25519',
           ],
-          hmac: ['hmac-sha2-256', 'hmac-sha2-512', 'hmac-sha1'],
+          hmac: [
+            'hmac-sha2-256',
+            'hmac-sha2-512',
+            'hmac-sha1',
+          ],
         },
       };
 
-      // Add Windows/WSL-specific options if needed
-      if (is_windows) {
-        logger.info('Using Windows-specific SSH options', { connectionId, ssh_host });
-        connectionOptions.pty = true; // Force PTY allocation
-        connectionOptions.agentForward = false;
-      }
-
-      // Connect with appropriate options
-      if (sshClient) {
-        sshClient.connect(connectionOptions);
-      }
-
-      // Set a connection timeout to detect and handle hanging connections
-      const connectTimeout = setTimeout(() => {
-        if (isConnecting && sshClient) {
-          if (!attemptingWindowsFallback && !is_windows) {
-            // If normal mode timed out, try Windows mode
-            logger.info('Linux connection timed out, trying Windows mode', { connectionId });
-            attemptConnection(true);
-          } else {
-            // If this is already a Windows attempt or explicit Windows mode, give up
-            logger.error('SSH connection timed out', { connectionId });
-
-            try {
-              if (clientSocket.readyState === WebSocket.OPEN) {
-                clientSocket.send(
-                  JSON.stringify({
-                    error: `SSH connection timed out after 25 seconds`,
-                    errorType: 'SSH_CONNECTION_TIMEOUT',
-                    details: {
-                      ssh_host: ssh_host,
-                      ssh_port: ssh_port || 22,
-                      is_windows: is_windows,
-                    },
-                  }),
-                );
-              }
-            } catch (e) {
-              logger.error(
-                `Error sending timeout error to WebSocket: ${e instanceof Error ? e.message : String(e)}`,
-                { connectionId },
-              );
-            }
-
-            if (sshClient) {
-              sshClient.end();
-            }
-          }
-        }
-      }, 25000);
-
-      // Clear timeout when connect is called
-      if (sshClient) {
-        sshClient.once('ready', () => {
-          clearTimeout(connectTimeout);
-        });
-
-        sshClient.once('error', (err) => {
-          clearTimeout(connectTimeout);
-
-          // If this was a normal mode attempt and certain errors occurred, try Windows mode
-          if (!attemptingWindowsFallback && !is_windows) {
-            // Key errors that might indicate we should try Windows mode
-            const shouldTryWindows =
-              err.level === 'authentication' ||
-              err.message?.includes('Authentication failed') ||
-              err.message?.includes('All configured authentication methods failed') ||
-              (err as SSHError).code === 'ECONNRESET';
-
-            if (shouldTryWindows) {
-              logger.info('Linux connection failed, trying Windows mode', {
-                connectionId,
-                error: err.message,
-                code: (err as SSHError).code,
-                level: err.level,
-              });
-              attemptConnection(true);
-              return;
-            }
-          }
-
-          // Otherwise, handle the error normally
-          handleSshError(err);
-        });
-      }
+      // Connect to SSH server
+      sshClient.connect(connectionOptions);
     } catch (e) {
       handleConnectionError(e);
     }
@@ -350,34 +249,17 @@ export async function handleSshConnection(
           `Failed to send connection success message: ${e instanceof Error ? e.message : String(e)}`,
           { connectionId },
         );
-        return;
       }
 
-      // For Windows hosts, try to use exec with cmd.exe directly
-      if (is_windows && sshClient) {
-        logger.info('Using Windows-specific exec method', { connectionId });
+      // Create shell session based on whether it's Windows or not
+      if (is_windows) {
         tryWindowsConnection(0);
       } else {
-        // For normal SSH, use regular shell
         createShellSession();
       }
     });
 
-    sshClient.on('error', (err: SSHError) => {
-      handleSshError(err);
-    });
-
-    // Add handshake event handler if available
-    sshClient.on('handshake', (negotiated: any) => {
-      logger.info('SSH handshake completed', {
-        connectionId,
-        kex: negotiated?.kex,
-        serverHostKey: negotiated?.serverHostKey,
-        cs: negotiated?.cs,
-        sc: negotiated?.sc,
-      });
-      console.log(`SSH HANDSHAKE [${connectionId}]:`, negotiated);
-    });
+    sshClient.on('error', handleSshError);
   };
 
   // Add this function to try different Windows connection methods
@@ -415,9 +297,6 @@ export async function handleSshConnection(
 
   // Error handler for SSH client errors
   const handleSshError = (err: SSHError) => {
-    // Skip error handling if we're already attempting fallback
-    if (attemptingWindowsFallback) return;
-
     const errorInfo = {
       error: err.message,
       code: err.code,
@@ -468,9 +347,6 @@ export async function handleSshConnection(
 
   // Error handler for connection attempt errors
   const handleConnectionError = (e: unknown) => {
-    // Skip error handling if we're already attempting fallback
-    if (attemptingWindowsFallback) return;
-
     logger.error(`Error connecting to SSH server: ${e instanceof Error ? e.message : String(e)}`, {
       connectionId,
       ssh_host: ssh_host,
@@ -514,20 +390,19 @@ export async function handleSshConnection(
 
     sshClient.shell(shellOptions, (err, stream) => {
       if (err) {
-        logger.error(`SSH shell error: ${err.message}`, { connectionId, ssh_host });
+        logger.error(`SSH shell error: ${err.message}`, { connectionId });
         try {
           if (clientSocket.readyState === WebSocket.OPEN) {
             clientSocket.send(
               JSON.stringify({
                 error: `SSH shell error: ${err.message}`,
                 errorType: 'SSH_SHELLerror',
-                details: { ssh_host, ssh_port: ssh_port || 22, is_windows: is_windows },
               }),
             );
           }
         } catch (e) {
           logger.error(
-            `Failed to send shell error message: ${e instanceof Error ? e.message : String(e)}`,
+            `Error sending shell error to WebSocket: ${e instanceof Error ? e.message : String(e)}`,
             { connectionId },
           );
         }
@@ -535,28 +410,15 @@ export async function handleSshConnection(
       }
 
       setupStream(stream);
-
-      // If this is a Windows connection using shell, send cmd.exe command explicitly
-      if (is_windows) {
-        // Small delay to ensure the shell is ready
-        setTimeout(() => {
-          if (stream && !stream.destroyed) {
-            logger.info('Launching Windows cmd.exe via shell', { connectionId });
-            stream.write('cmd.exe\r\n');
-          }
-        }, 500);
-      }
     });
   }
 
-  // Common stream setup function to avoid code duplication
   function setupStream(stream: any) {
+    // Pipe data from SSH to WebSocket
     stream.on('data', (data: Buffer) => {
       try {
         if (clientSocket.readyState === WebSocket.OPEN) {
           clientSocket.send(data);
-        } else {
-          logger.warn('Cannot send data, WebSocket is not open', { connectionId });
         }
       } catch (e) {
         logger.error(
@@ -566,38 +428,24 @@ export async function handleSshConnection(
       }
     });
 
-    clientSocket.on('message', (message) => {
+    // Handle WebSocket messages
+    clientSocket.on('message', (message: any) => {
       try {
-        // Only process messages if we have a stream
-        if (!stream || stream.destroyed) {
-          logger.warn('Cannot process message, SSH stream is closed', { connectionId });
-          return;
-        }
-
-        try {
-          const data = JSON.parse(message.toString());
-          if (data.type === 'disconnect') {
-            logger.info('Client requested disconnect', { connectionId });
-            if (sshClient) {
-              sshClient.end();
-            }
-            clientSocket.close();
-            return;
-          }
-          // If it's a JSON message but not a disconnect, fall through to handle as data
-        } catch (e) {
-          // Not a JSON message, ignore (probably terminal data)
-        }
-
-        // Handle terminal data (keystrokes, etc.)
-        if (stream && !stream.destroyed) {
-          stream.write(message);
+        // Try parsing as JSON for commands
+        const data = JSON.parse(message.toString());
+        if (data.type === 'resize') {
+          stream.setWindow(data.rows, data.cols, 0, 0);
         }
       } catch (e) {
-        logger.error(
-          `Error processing WebSocket message: ${e instanceof Error ? e.message : String(e)}`,
-          { connectionId },
-        );
+        // Not JSON, treat as terminal input
+        try {
+          stream.write(message);
+        } catch (err) {
+          logger.error(
+            `Error writing to SSH stream: ${err instanceof Error ? err.message : String(err)}`,
+            { connectionId },
+          );
+        }
       }
     });
 
@@ -668,7 +516,6 @@ export async function handleSshConnection(
     return;
   }
 
-  // Start connection process - first with default mode (Linux or explicit Windows)
-  // Will automatically try Windows mode as fallback if needed
+  // Start connection process with the detected Windows mode from test-connection
   attemptConnection(is_windows);
 }

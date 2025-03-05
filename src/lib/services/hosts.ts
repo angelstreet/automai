@@ -210,7 +210,7 @@ export async function testHostConnection(data: {
         };
         
         // Add debug handler for connection information
-        ssh.on('debug', debugHandler);
+        (ssh as any).on('debug', debugHandler);
         
         // Wait for connection to establish or fail
         await new Promise<void>((resolve, reject) => {
@@ -227,15 +227,15 @@ export async function testHostConnection(data: {
           ssh.connect({
             host: data.ip,
             port: data.port || 22,
-            username: data.username || 'root',
+            username: data.username,
             password: data.password,
             readyTimeout: 10000, // 10 seconds timeout
-            debug: true // Enable debug for Windows detection
+            debug: (message: string) => console.log(`SSH Debug: ${message}`) // Fix debug type
           });
         });
         
         // Add a small delay to ensure Windows detection can complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
         
         console.log(`[Windows Detection] Connection successful to ${data.ip}, Windows detected: ${detectedWindows}`);
         
@@ -272,7 +272,7 @@ export async function testHostConnection(data: {
           });
         } catch (schemaError) {
           // If the update fails due to missing is_windows field, update without it
-          if (schemaError.message && schemaError.message.includes("Unknown field `is_windows`")) {
+          if ((schemaError as Error).message && (schemaError as Error).message.includes("Unknown field `is_windows`")) {
             console.log(`[Windows Detection] is_windows field not in database schema, updating without it`);
             await prisma.host.update({
               where: { id: data.hostId },
