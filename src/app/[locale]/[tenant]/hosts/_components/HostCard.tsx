@@ -135,7 +135,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
 
   const handleRefreshClick = async () => {
     if (isRefreshing || !onTestConnection) return;
-    
+
     setIsRefreshing(true);
     try {
       await onTestConnection(host);
@@ -174,11 +174,8 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                   <ScrollText className="mr-2 h-4 w-4" />
                   <span>{t('logs')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleRefreshClick}
-                  disabled={isRefreshing}
-                >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                <DropdownMenuItem onClick={handleRefreshClick} disabled={isRefreshing}>
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <span>{isRefreshing ? t('refreshing') : t('refresh')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
@@ -202,7 +199,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               {t('terminal')}
             </Button>
             <p className="text-xs mt-1 text-muted-foreground">
-              {host.lastConnected 
+              {host.lastConnected
                 ? `${t('lastConnected')}: ${new Date(host.lastConnected).toLocaleDateString()}`
                 : `${t('lastConnected')}: ${t('never')}`}
             </p>

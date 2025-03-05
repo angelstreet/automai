@@ -23,13 +23,13 @@ const DeploymentView = () => {
     selectedHosts: string[];
   }) => {
     // Find the selected project for reference
-    const selectedProject = sampleProjects.find(p => p.id.toString() === formData.projectId);
-    
+    const selectedProject = sampleProjects.find((p) => p.id.toString() === formData.projectId);
+
     if (!selectedProject) {
       console.error('Selected project not found');
       return;
     }
-    
+
     // Create a new deployment object
     const newDeployment: Deployment = {
       id: Date.now(),
@@ -42,18 +42,16 @@ const DeploymentView = () => {
       scheduledTime: formData.scheduledTime,
       startTime: formData.scheduledTime ? null : new Date().toISOString(),
       endTime: null,
-      scripts: selectedProject.scripts.filter(script => 
-        formData.selectedScripts.includes(script.id.toString())
+      scripts: selectedProject.scripts.filter((script) =>
+        formData.selectedScripts.includes(script.id.toString()),
       ),
-      hosts: sampleHosts.filter(host => 
-        formData.selectedHosts.includes(host.id.toString())
-      ),
-      logs: []
+      hosts: sampleHosts.filter((host) => formData.selectedHosts.includes(host.id.toString())),
+      logs: [],
     };
-    
+
     // Add the new deployment to the list
-    setDeployments(prev => [newDeployment, ...prev]);
-    
+    setDeployments((prev) => [newDeployment, ...prev]);
+
     // Switch back to list view
     setView('list');
   };
@@ -72,8 +70,8 @@ const DeploymentView = () => {
           <button
             onClick={() => setView('list')}
             className={`px-4 py-2 flex items-center rounded-md ${
-              view === 'list' 
-                ? 'bg-blue-600 text-white' 
+              view === 'list'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200'
             }`}
           >
@@ -83,8 +81,8 @@ const DeploymentView = () => {
           <button
             onClick={() => setView('form')}
             className={`px-4 py-2 flex items-center rounded-md ${
-              view === 'form' 
-                ? 'bg-blue-600 text-white' 
+              view === 'form'
+                ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200'
             }`}
           >
@@ -93,23 +91,20 @@ const DeploymentView = () => {
           </button>
         </div>
       </div>
-      
+
       {/* Main content area */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         {view === 'list' ? (
-          <DeploymentList 
-            deployments={deployments} 
-            onDeploymentSelect={handleDeploymentSelect} 
-          />
+          <DeploymentList deployments={deployments} onDeploymentSelect={handleDeploymentSelect} />
         ) : (
-          <DeploymentForm 
+          <DeploymentForm
             projects={sampleProjects}
             allHosts={sampleHosts}
             onSubmit={handleDeploymentSubmit}
           />
         )}
       </div>
-      
+
       {/* Details modal */}
       {selectedDeployment && (
         <DeploymentDetailsModal
@@ -121,4 +116,4 @@ const DeploymentView = () => {
   );
 };
 
-export default DeploymentView; 
+export default DeploymentView;

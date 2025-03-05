@@ -1,10 +1,10 @@
-import { isUsingSupabase } from "@/lib/env";
-import { cookies } from "next/headers";
+import { isUsingSupabase } from '@/lib/env';
+import { cookies } from 'next/headers';
 
 // Dynamically import createClient to prevent errors when Supabase isn't available
 let createClient: any;
 try {
-  const supabaseServer = require("@/utils/supabase/server");
+  const supabaseServer = require('@/utils/supabase/server');
   createClient = supabaseServer.createClient;
 } catch (error) {
   console.warn('Supabase server client not available, using mock client');
@@ -29,42 +29,42 @@ export const supabaseAuthService = {
     if (!isUsingSupabase()) {
       return {
         success: false,
-        error: "Supabase auth not available in this environment"
+        error: 'Supabase auth not available in this environment',
       };
     }
 
     try {
       const cookieStore = cookies();
       const supabase = createClient(cookieStore);
-      
+
       if (!supabase) {
         return {
           success: false,
-          error: "Supabase client not initialized"
+          error: 'Supabase client not initialized',
         };
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
       });
 
       if (error) {
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
 
       return {
         success: true,
-        data
+        data,
       };
     } catch (error: any) {
-      console.error("Supabase auth error:", error);
+      console.error('Supabase auth error:', error);
       return {
         success: false,
-        error: error.message || "An unexpected error occurred"
+        error: error.message || 'An unexpected error occurred',
       };
     }
   },
@@ -76,42 +76,42 @@ export const supabaseAuthService = {
     if (!isUsingSupabase()) {
       return {
         success: false,
-        error: "Supabase auth not available in this environment"
+        error: 'Supabase auth not available in this environment',
       };
     }
 
     try {
       const cookieStore = cookies();
       const supabase = createClient(cookieStore);
-      
+
       if (!supabase) {
         return {
           success: false,
-          error: "Supabase client not initialized"
+          error: 'Supabase client not initialized',
         };
       }
 
       const { data, error } = await supabase.auth.signUp({
         email,
-        password
+        password,
       });
 
       if (error) {
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
 
       return {
         success: true,
-        data
+        data,
       };
     } catch (error: any) {
-      console.error("Supabase auth error:", error);
+      console.error('Supabase auth error:', error);
       return {
         success: false,
-        error: error.message || "An unexpected error occurred"
+        error: error.message || 'An unexpected error occurred',
       };
     }
   },
@@ -123,18 +123,18 @@ export const supabaseAuthService = {
     if (!isUsingSupabase()) {
       return {
         success: false,
-        error: "Supabase auth not available in this environment"
+        error: 'Supabase auth not available in this environment',
       };
     }
 
     try {
       const cookieStore = cookies();
       const supabase = createClient(cookieStore);
-      
+
       if (!supabase) {
         return {
           success: false,
-          error: "Supabase client not initialized"
+          error: 'Supabase client not initialized',
         };
       }
 
@@ -143,18 +143,18 @@ export const supabaseAuthService = {
       if (error) {
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
 
       return {
-        success: true
+        success: true,
       };
     } catch (error: any) {
-      console.error("Supabase auth error:", error);
+      console.error('Supabase auth error:', error);
       return {
         success: false,
-        error: error.message || "An unexpected error occurred"
+        error: error.message || 'An unexpected error occurred',
       };
     }
   },
@@ -166,40 +166,40 @@ export const supabaseAuthService = {
     if (!isUsingSupabase()) {
       return {
         success: false,
-        error: "Supabase auth not available in this environment"
+        error: 'Supabase auth not available in this environment',
       };
     }
 
     try {
       const cookieStore = cookies();
       const supabase = createClient(cookieStore);
-      
+
       if (!supabase) {
         return {
           success: false,
-          error: "Supabase client not initialized"
+          error: 'Supabase client not initialized',
         };
       }
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
       });
 
       if (error) {
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
 
       return {
-        success: true
+        success: true,
       };
     } catch (error: any) {
-      console.error("Supabase auth error:", error);
+      console.error('Supabase auth error:', error);
       return {
         success: false,
-        error: error.message || "An unexpected error occurred"
+        error: error.message || 'An unexpected error occurred',
       };
     }
   },
@@ -211,18 +211,18 @@ export const supabaseAuthService = {
     if (!isUsingSupabase()) {
       return {
         success: false,
-        error: "Supabase auth not available in this environment"
+        error: 'Supabase auth not available in this environment',
       };
     }
 
     try {
       const cookieStore = cookies();
       const supabase = createClient(cookieStore);
-      
+
       if (!supabase) {
         return {
           success: false,
-          error: "Supabase client not initialized"
+          error: 'Supabase client not initialized',
         };
       }
 
@@ -231,20 +231,20 @@ export const supabaseAuthService = {
       if (error) {
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
 
       return {
         success: true,
-        data
+        data,
       };
     } catch (error: any) {
-      console.error("Supabase auth error:", error);
+      console.error('Supabase auth error:', error);
       return {
         success: false,
-        error: error.message || "An unexpected error occurred"
+        error: error.message || 'An unexpected error occurred',
       };
     }
-  }
+  },
 };

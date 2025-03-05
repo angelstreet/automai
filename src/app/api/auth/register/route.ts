@@ -13,7 +13,7 @@ try {
 } catch (error) {
   console.warn('Supabase auth service not available');
   supabaseAuthService = {
-    signUpWithEmail: () => ({ success: false, error: 'Supabase auth service not available' })
+    signUpWithEmail: () => ({ success: false, error: 'Supabase auth service not available' }),
   };
 }
 
@@ -27,7 +27,7 @@ const userSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Check if we should forward to another backend server (original behavior)
     // This is just for backward compatibility
     if (process.env.USE_EXTERNAL_BACKEND === 'true') {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
           error: 'Validation error',
           issues: validationResult.error.issues,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -85,23 +85,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
     }
 
     // If using Supabase in production, register with Supabase first
     if (isUsingSupabase()) {
       const supabaseResult = await supabaseAuthService.signUpWithEmail(email, password);
-      
+
       if (!supabaseResult.success) {
         return NextResponse.json(
           { error: supabaseResult.error || 'Failed to register with Supabase' },
-          { status: 500 }
+          { status: 500 },
         );
       }
-      
+
       // Successfully registered with Supabase
       console.log('User registered with Supabase:', supabaseResult.data?.user?.id);
     }
@@ -137,13 +134,13 @@ export async function POST(request: NextRequest) {
         message: 'User registered successfully',
         user: userWithoutPassword,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: any) {
     console.error('Registration error:', error);
     return NextResponse.json(
       { error: error.message || 'An unexpected error occurred' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

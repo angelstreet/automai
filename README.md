@@ -53,35 +53,37 @@ npm run prisma:studio
      JWT_SECRET=                # Your JWT secret key
      ```
 4. If runing github codespace
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-sudo service postgresql start 
-psql --version
-ALLOW MD5
-sudo su -
-nano /etc/postgresql/12/main/pg_hba.conf
-local   all             postgres                                trust
-service postgresql restart
-sudo -u postgres psql -c "SHOW hba_file;"
-sudo -u postgres psql 
-CREATE USER automai_user WITH PASSWORD 'automai_password_123';
-CREATE DATABASE automai_db OWNER automai_user;
-ALTER USER automai_user CREATEDB;
-npx prisma migrate dev --name init
-psql -h localhost -U automai_user -d automai_db
-automai_password_123
-\dt
-sudo netstat -plnt | grep 5432
-tcp        0      0 127.0.0.1:5432          0.0.0.0:*               LISTEN      31041/postgres      
-tcp6       0      0 ::1:5432                :::*                    LISTEN      31041/postgres  
-sudo nano /etc/postgresql/13/main/postgresql.conf
-listen_addresses = '*'
-npm run dev:codespace
-- package.json
-    "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
-    "dev:codespace": "cross-env NODE_ENV=development ENV_FILE=.env.codespace CODESPACE=true ts-node server.ts",
+   sudo apt update
+   sudo apt install postgresql postgresql-contrib
+   sudo service postgresql start
+   psql --version
+   ALLOW MD5
+   sudo su -
+   nano /etc/postgresql/12/main/pg_hba.conf
+   local all postgres trust
+   service postgresql restart
+   sudo -u postgres psql -c "SHOW hba_file;"
+   sudo -u postgres psql
+   CREATE USER automai_user WITH PASSWORD 'automai_password_123';
+   CREATE DATABASE automai_db OWNER automai_user;
+   ALTER USER automai_user CREATEDB;
+   npx prisma migrate dev --name init
+   psql -h localhost -U automai_user -d automai_db
+   automai_password_123
+   \dt
+   sudo netstat -plnt | grep 5432
+   tcp 0 0 127.0.0.1:5432 0.0.0.0:_ LISTEN 31041/postgres  
+   tcp6 0 0 ::1:5432 :::_ LISTEN 31041/postgres  
+   sudo nano /etc/postgresql/13/main/postgresql.conf
+   listen_addresses = '\*'
+   npm run dev:codespace
 
-Supabase vercel supabase-emerald-xylophone   
+- package.json
+  "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
+  "dev:codespace": "cross-env NODE_ENV=development ENV_FILE=.env.codespace CODESPACE=true ts-node server.ts",
+
+Supabase vercel supabase-emerald-xylophone
+
 ## Running the Application
 
 ### Environment Mode Selection

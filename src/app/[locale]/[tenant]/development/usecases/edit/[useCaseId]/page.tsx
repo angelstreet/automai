@@ -33,7 +33,7 @@ export default function UseCaseEditPage() {
         </Button>
         <h1 className="text-2xl font-bold">Use Case Editor</h1>
       </div>
-      
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
         <h2 className="text-xl font-semibold mb-4">Use Case Editor Coming Soon</h2>
         <p className="text-gray-600 dark:text-gray-400 mb-6">

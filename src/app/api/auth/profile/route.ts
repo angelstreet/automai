@@ -23,7 +23,7 @@ export async function GET() {
 
     if (!user) {
       console.error('[PROFILE_GET] User not found in database for ID:', session.user.id);
-      
+
       // Return the session user data as fallback instead of 404
       return NextResponse.json({
         id: session.user.id,

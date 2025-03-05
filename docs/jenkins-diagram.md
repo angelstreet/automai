@@ -5,50 +5,57 @@ Below is the fully revised version of your "Final Jenkins Full Guide (Google Clo
 # **Final Jenkins Full Guide (Google Cloud Deployment)**
 
 ## **1️⃣ Overview**
+
 Jenkins is an open-source **CI/CD automation server** designed for **multi-tenancy, multi-user access, and multi-environment deployments**. This guide details deploying a centralized Jenkins instance on Google Cloud, leveraging free-tier resources where possible.
 
 **What You’ll Get:**
-- ✅ Centralized Jenkins architecture on Google Cloud  
-- ✅ Key features and tech stack  
-- ✅ Infrastructure setup with Terraform and Helm  
-- ✅ Installation and configuration steps  
-- ✅ Auto-scaling Jenkins agents using Google Kubernetes Engine (GKE)  
-- ✅ Pre-configured Jenkinsfiles for SSH, Portainer, and Rancher deployments  
-- ✅ Simplified ASCII workflow and architecture diagrams  
+
+- ✅ Centralized Jenkins architecture on Google Cloud
+- ✅ Key features and tech stack
+- ✅ Infrastructure setup with Terraform and Helm
+- ✅ Installation and configuration steps
+- ✅ Auto-scaling Jenkins agents using Google Kubernetes Engine (GKE)
+- ✅ Pre-configured Jenkinsfiles for SSH, Portainer, and Rancher deployments
+- ✅ Simplified ASCII workflow and architecture diagrams
 
 ---
 
 ## **2️⃣ Features of Centralized Jenkins**
-| **Feature**          | **Description**                                      |
-|----------------------|-----------------------------------------------------|
-| **Multi-Tenant**     | Isolated projects via **folders and RBAC**          |
-| **Multi-User**       | RBAC for **Admins, Developers, Testers, Viewers**   |
-| **Multi-Project**    | Supports **monorepo and multi-repo pipelines**      |
-| **Multi-Environment**| Deployments to **dev, staging, prod**              |
-| **Auto-Scaling**     | On-demand Jenkins agents in **Kubernetes (GKE)**    |
-| **Monitoring**       | **Prometheus + Grafana** for real-time insights     |
+
+| **Feature**           | **Description**                                   |
+| --------------------- | ------------------------------------------------- |
+| **Multi-Tenant**      | Isolated projects via **folders and RBAC**        |
+| **Multi-User**        | RBAC for **Admins, Developers, Testers, Viewers** |
+| **Multi-Project**     | Supports **monorepo and multi-repo pipelines**    |
+| **Multi-Environment** | Deployments to **dev, staging, prod**             |
+| **Auto-Scaling**      | On-demand Jenkins agents in **Kubernetes (GKE)**  |
+| **Monitoring**        | **Prometheus + Grafana** for real-time insights   |
 
 ---
 
 ## **3️⃣ Tech Stack**
-- ✅ **Jenkins**: Core CI/CD pipeline management  
-- ✅ **Google Cloud Compute Engine (E2-Micro Free Tier)**: Jenkins Master  
-- ✅ **Google Kubernetes Engine (GKE Free Tier)**: Auto-scaling agents  
-- ✅ **Terraform**: Infrastructure as Code (IaC)  
-- ✅ **Helm**: Simplified Jenkins deployment on Kubernetes  
-- ✅ **Prometheus + Grafana**: Monitoring and visualization  
-- ✅ **GitHub/GitLab/Gitea**: Source code repositories  
-- ✅ **Vault/Google Secret Manager**: Secure credential storage  
+
+- ✅ **Jenkins**: Core CI/CD pipeline management
+- ✅ **Google Cloud Compute Engine (E2-Micro Free Tier)**: Jenkins Master
+- ✅ **Google Kubernetes Engine (GKE Free Tier)**: Auto-scaling agents
+- ✅ **Terraform**: Infrastructure as Code (IaC)
+- ✅ **Helm**: Simplified Jenkins deployment on Kubernetes
+- ✅ **Prometheus + Grafana**: Monitoring and visualization
+- ✅ **GitHub/GitLab/Gitea**: Source code repositories
+- ✅ **Vault/Google Secret Manager**: Secure credential storage
 
 ---
 
 ## **4️⃣ Infrastructure Overview**
+
 ### **High-Level Flow**
+
 ```
 [Git Repository] --> [Jenkins Master (GCE)] --> [Jenkins Agents (GKE)] --> [Deployment Targets: SSH / Portainer / Rancher]
 ```
 
 ### **🔹 Simplified ASCII Architecture Diagram**
+
 ```
 [Git Repo] --> [Jenkins Master (GCE)] --> [Jenkins Agents (GKE)]
     |                 |                        |
@@ -60,7 +67,9 @@ Jenkins is an open-source **CI/CD automation server** designed for **multi-tenan
     |                                    |
     +----> [Vault / Google Secret Manager]
 ```
-**Notes**: 
+
+**Notes**:
+
 - Arrows (`-->`) show the workflow direction.
 - Branches (`+---->`) indicate deployment options and monitoring/secrets integration.
 
@@ -69,16 +78,19 @@ Jenkins is an open-source **CI/CD automation server** designed for **multi-tenan
 ## **5️⃣ Infrastructure Setup with Terraform**
 
 ### **🔹 Step 1: Initialize Terraform**
+
 ```sh
 terraform init
 ```
 
 ### **🔹 Step 2: Deploy Infrastructure**
+
 ```sh
 terraform apply -auto-approve
 ```
 
 ### **🔹 Terraform Configuration (main.tf)**
+
 ```hcl
 provider "google" {
   project = "your-gcp-project-id"
@@ -135,13 +147,16 @@ resource "google_container_node_pool" "jenkins_node_pool" {
 ---
 
 ## **6️⃣ Install Jenkins on GKE with Helm**
+
 ### **🔹 Add Jenkins Helm Repo**
+
 ```sh
 helm repo add jenkins https://charts.jenkins.io
 helm repo update
 ```
 
 ### **🔹 Install Jenkins**
+
 ```sh
 helm install jenkins jenkins/jenkins \
   --namespace jenkins \
@@ -153,11 +168,13 @@ helm install jenkins jenkins/jenkins \
 ```
 
 ### **🔹 Enable Auto-Scaling for Agents**
+
 ```sh
 kubectl autoscale deployment jenkins-agent --cpu-percent=50 --min=1 --max=5 -n jenkins
 ```
 
 ### **🔹 Access Jenkins**
+
 ```sh
 # Get admin password
 kubectl get secret --namespace jenkins jenkins \
@@ -170,12 +187,15 @@ kubectl get svc -n jenkins jenkins --output jsonpath='{.status.loadBalancer.ingr
 ---
 
 ## **7️⃣ Configuration for Multi-Tenancy**
+
 ### **🔹 RBAC Workflow**
+
 - **Folders**: `/Tenants/Tenant-1`, `/Teams/Backend`
 - **Roles**: `Admin` (full control), `Developer` (build/run), `Tester` (view/test), `Viewer` (read-only)
 - **Credentials**: Scoped per folder/project via **Google Secret Manager** or **Jenkins Credentials Plugin**.
 
 ### **🔹 Multi-Environment Pipeline**
+
 ```groovy
 pipeline {
     agent any
@@ -195,7 +215,9 @@ pipeline {
 ---
 
 ## **8️⃣ Pre-Configured Jenkinsfiles**
+
 ### **🔹 Simplified ASCII Deployment Workflow Diagram**
+
 ```
 [Pipeline Trigger] --> [Build Stage] --> [Deploy Stage]
                                     |
@@ -203,10 +225,13 @@ pipeline {
                                     +----> [Portainer Deployment]
                                     +----> [Rancher Deployment]
 ```
-**Notes**: 
+
+**Notes**:
+
 - Shows the pipeline flow from trigger to deployment options.
 
 ### **🔹 Deploy via SSH**
+
 ```groovy
 pipeline {
     agent any
@@ -226,6 +251,7 @@ pipeline {
 ```
 
 ### **🔹 Deploy via Portainer**
+
 ```groovy
 pipeline {
     agent any
@@ -248,6 +274,7 @@ pipeline {
 ```
 
 ### **🔹 Deploy via Rancher**
+
 ```groovy
 pipeline {
     agent any
@@ -274,6 +301,7 @@ pipeline {
 ---
 
 ## **9️⃣ Next Steps**
+
 - **GitOps with ArgoCD**: Integrate for automated deployments.
 - **Enhanced Monitoring**: Add logging with Loki or ELK stack.
 - **Cost Optimization**: Use Spot VMs or additional free-tier tweaks.
@@ -283,6 +311,7 @@ Let me know how you’d like to proceed or if you want further refinements! 🚀
 ---
 
 ### **Key Improvements**
+
 1. **ASCII Diagrams**: Added under **4️⃣ Infrastructure Overview** and **8️⃣ Pre-Configured Jenkinsfiles** to replace image references with text-based visuals.
 2. **Consistency**: Standardized formatting and terminology across sections.
 3. **Clarity**: Enhanced explanations and added minor tweaks (e.g., credential binding, SSH options).

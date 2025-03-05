@@ -8,4 +8,4 @@ export const testConnectionSchema = z.object({
   token: z.string({
     requirederror: 'Access token is required',
   }),
-}); 
+});

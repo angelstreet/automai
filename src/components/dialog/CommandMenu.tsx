@@ -48,38 +48,40 @@ export function CommandMenu() {
       <CommandList>
         <ScrollArea type="hover" className="h-72 pr-1">
           <CommandEmpty>No results found.</CommandEmpty>
-          {sidebarData.navGroups.flatMap(group => group.items).map((navItem: NavItem, i: number) => {
-            if (navItem.href)
-              return (
+          {sidebarData.navGroups
+            .flatMap((group) => group.items)
+            .map((navItem: NavItem, i: number) => {
+              if (navItem.href)
+                return (
+                  <CommandItem
+                    key={`${navItem.href}-${i}`}
+                    value={navItem.title}
+                    onSelect={() => {
+                      runCommand(() => navigate({ to: navItem.href }));
+                    }}
+                  >
+                    <div className="mr-2 flex h-4 w-4 items-center justify-center">
+                      <IconArrowRightDashed className="size-2 text-muted-foreground/80" />
+                    </div>
+                    {navItem.title}
+                  </CommandItem>
+                );
+
+              return navItem.items?.map((subItem: NavItem, i: number) => (
                 <CommandItem
-                  key={`${navItem.href}-${i}`}
-                  value={navItem.title}
+                  key={`${subItem.href}-${i}`}
+                  value={subItem.title}
                   onSelect={() => {
-                    runCommand(() => navigate({ to: navItem.href }));
+                    runCommand(() => navigate({ to: subItem.href }));
                   }}
                 >
                   <div className="mr-2 flex h-4 w-4 items-center justify-center">
                     <IconArrowRightDashed className="size-2 text-muted-foreground/80" />
                   </div>
-                  {navItem.title}
+                  {subItem.title}
                 </CommandItem>
-              );
-
-            return navItem.items?.map((subItem: NavItem, i: number) => (
-              <CommandItem
-                key={`${subItem.href}-${i}`}
-                value={subItem.title}
-                onSelect={() => {
-                  runCommand(() => navigate({ to: subItem.href }));
-                }}
-              >
-                <div className="mr-2 flex h-4 w-4 items-center justify-center">
-                  <IconArrowRightDashed className="size-2 text-muted-foreground/80" />
-                </div>
-                {subItem.title}
-              </CommandItem>
-            ));
-          })}
+              ));
+            })}
           <CommandSeparator />
           <CommandGroup heading="Theme">
             <CommandItem onSelect={() => runCommand(() => setTheme('light'))}>

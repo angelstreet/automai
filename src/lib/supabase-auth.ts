@@ -11,7 +11,7 @@ export const supabaseAuth = {
       email,
       password,
     });
-    
+
     return { data, error };
   },
 
@@ -27,7 +27,7 @@ export const supabaseAuth = {
         emailRedirectTo: `${window.location.origin}/auth-redirect`,
       },
     });
-    
+
     return { data, error };
   },
 
@@ -42,7 +42,7 @@ export const supabaseAuth = {
         redirectTo: `${window.location.origin}/auth-redirect`,
       },
     });
-    
+
     return { data, error };
   },
 
@@ -63,7 +63,7 @@ export const supabaseAuth = {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    
+
     return { data, error };
   },
 
@@ -92,7 +92,7 @@ export const supabaseAuth = {
     const supabase = createBrowserSupabase();
     const { data, error } = await supabase.auth.updateUser(attributes);
     return { data, error };
-  }
+  },
 };
 
 export default supabaseAuth;

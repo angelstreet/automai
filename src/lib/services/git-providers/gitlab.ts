@@ -16,19 +16,22 @@ export class GitLabProviderService implements GitProviderService {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}/projects?owned=true&membership=true&per_page=100`, {
-        headers: {
-          'Authorization': `Bearer ${this.token}`,
-          'Accept': 'application/json',
+      const response = await fetch(
+        `${this.baseUrl}/projects?owned=true&membership=true&per_page=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+            Accept: 'application/json',
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch repositories: ${response.statusText}`);
       }
 
       const data = await response.json();
-      
+
       return data.map((repo: any) => ({
         name: repo.name,
         description: repo.description,
@@ -52,8 +55,8 @@ export class GitLabProviderService implements GitProviderService {
     try {
       const response = await fetch(`${this.baseUrl}/projects/${encodeURIComponent(nameOrId)}`, {
         headers: {
-          'Authorization': `Bearer ${this.token}`,
-          'Accept': 'application/json',
+          Authorization: `Bearer ${this.token}`,
+          Accept: 'application/json',
         },
       });
 
@@ -65,7 +68,7 @@ export class GitLabProviderService implements GitProviderService {
       }
 
       const repo = await response.json();
-      
+
       return {
         name: repo.name,
         description: repo.description,
@@ -89,8 +92,8 @@ export class GitLabProviderService implements GitProviderService {
     try {
       const response = await fetch(`${this.baseUrl}/user`, {
         headers: {
-          'Authorization': `Bearer ${this.token}`,
-          'Accept': 'application/json',
+          Authorization: `Bearer ${this.token}`,
+          Accept: 'application/json',
         },
       });
 
@@ -113,7 +116,7 @@ export class GitLabProviderService implements GitProviderService {
 
     const redirectUri = this.getRedirectUrl();
     const scope = 'api read_api read_user read_repository';
-    
+
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -132,18 +135,18 @@ export class GitLabProviderService implements GitProviderService {
   }> {
     const clientId = process.env.GITLAB_CLIENT_ID;
     const clientSecret = process.env.GITLAB_CLIENT_SECRET;
-    
+
     if (!clientId || !clientSecret) {
       throw new Error('GitLab OAuth credentials are not configured');
     }
 
     const redirectUri = this.getRedirectUrl();
-    
+
     const response = await fetch('https://gitlab.com/oauth/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify({
         client_id: clientId,
@@ -159,7 +162,7 @@ export class GitLabProviderService implements GitProviderService {
     }
 
     const data = await response.json();
-    
+
     // Calculate expiry date
     const expiresIn = data.expires_in || 7200; // Default to 2 hours
     const expiresAt = new Date();
@@ -171,4 +174,4 @@ export class GitLabProviderService implements GitProviderService {
       expiresAt,
     };
   }
-} 
+}

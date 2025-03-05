@@ -5,13 +5,13 @@ import { SidebarProvider as ContextSidebarProvider } from '@/context/SidebarCont
 import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 import { SidebarProviderProps } from '@/types/sidebar';
-import { 
+import {
   SIDEBAR_COOKIE_MAX_AGE,
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_MOBILE,
   SIDEBAR_WIDTH_ICON,
   SIDEBAR_KEYBOARD_SHORTCUT,
-  SIDEBAR_COOKIE_NAME
+  SIDEBAR_COOKIE_NAME,
 } from './constants';
 
 const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(

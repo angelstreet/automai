@@ -1,6 +1,7 @@
 # AutomAI Project Guidelines
 
 ## Build/Test/Lint Commands
+
 ```bash
 # Development
 npm run dev               # Run full dev server with custom server
@@ -15,10 +16,11 @@ npm test -- -t "test name" # Run specific test
 ```
 
 ## Code Style Guidelines
+
 - **TypeScript**: Use strict types, prefer interfaces over types
 - **Imports**: Follow order: external, internal, types, styles with newlines between groups
 - **Components**: Use functional components, keep under 300 lines
-- **Organization**: 
+- **Organization**:
   - Client components in `[feature]/_components/`
   - Shared components in `src/components/`
   - Follow App Router directory structure

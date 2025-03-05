@@ -9,4 +9,4 @@ const DeploymentPage = () => {
   );
 };
 
-export default DeploymentPage; 
+export default DeploymentPage;

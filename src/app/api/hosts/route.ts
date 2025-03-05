@@ -5,20 +5,20 @@ import { getHosts, createHost, deleteHost } from '@/lib/services/hosts';
 export async function GET() {
   try {
     console.log('Fetching hosts from database...');
-    
+
     // Add a cache-control header to the response
     const headers = new Headers();
     headers.append('Cache-Control', 'no-cache, no-store, must-revalidate');
     headers.append('Pragma', 'no-cache');
     headers.append('Expires', '0');
-    
+
     const hosts = await getHosts();
     console.log(`Hosts fetched successfully: ${hosts.length} hosts found`);
-    
+
     // Add timestamps to help with debugging
     const response = NextResponse.json(hosts, { headers });
     console.log(`GET /api/hosts returning ${hosts.length} hosts at ${new Date().toISOString()}`);
-    
+
     return response;
   } catch (error) {
     console.error('Error in GET /api/hosts:', error);
@@ -29,21 +29,21 @@ export async function GET() {
 /**
  * POST /api/hosts
  * Creates a new host
- * 
+ *
  * Required fields:
  * - name: string - Host name
  * - type: string - Host type (ssh, docker, portainer)
  * - ip: string - Host IP address
- * 
+ *
  * For SSH connections, also required:
  * - user: string - SSH username
  * - password: string - SSH password
- * 
+ *
  * Optional fields:
  * - description: string - Host description
  * - port: number - Host port (defaults to 22 for SSH)
  * - status: string - Initial status (defaults to 'pending')
- * 
+ *
  * @returns The created host
  */
 export async function POST(request: Request) {

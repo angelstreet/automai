@@ -9,7 +9,7 @@ try {
 } catch (error) {
   console.warn('Supabase auth service not available');
   supabaseAuthService = {
-    signInWithEmail: () => ({ success: false, error: 'Supabase auth service not available' })
+    signInWithEmail: () => ({ success: false, error: 'Supabase auth service not available' }),
   };
 }
 
@@ -23,7 +23,7 @@ export const SupabaseProvider = () => {
     name: 'Supabase',
     credentials: {
       email: { label: 'Email', type: 'email' },
-      password: { label: 'Password', type: 'password' }
+      password: { label: 'Password', type: 'password' },
     },
     async authorize(credentials) {
       if (!credentials?.email || !credentials?.password) {
@@ -39,7 +39,7 @@ export const SupabaseProvider = () => {
         // Attempt to sign in with Supabase
         const result = await supabaseAuthService.signInWithEmail(
           credentials.email,
-          credentials.password
+          credentials.password,
         );
 
         if (!result.success || !result.data?.user) {
@@ -63,6 +63,6 @@ export const SupabaseProvider = () => {
         console.error('Error in Supabase auth provider:', error);
         return null;
       }
-    }
+    },
   });
 };

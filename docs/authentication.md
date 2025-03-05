@@ -5,6 +5,7 @@ This document provides comprehensive information about the authentication system
 ## Overview
 
 The application implements a multi-provider authentication system using Supabase Auth. It supports:
+
 - OAuth providers (Google, GitHub)
 - Email/password authentication
 - Password reset via email
@@ -15,10 +16,12 @@ The system provides a seamless authentication experience across different enviro
 ## Authentication Methods
 
 ### OAuth Providers
+
 - **Google**: Users can sign in with their Google accounts
 - **GitHub**: Users can sign in with their GitHub accounts
 
 ### Email Authentication
+
 - **Email/Password**: Traditional email and password authentication
 - **Password Reset**: Email-based password recovery flow
 - **Email Verification**: Verification of email addresses during signup
@@ -32,6 +35,7 @@ The authentication system is built using Supabase Auth and is implemented in:
 - `src/middleware.ts`: Main middleware with authentication checks
 
 Key features include:
+
 - JWT-based authentication with automatic token refresh
 - Secure session management via HTTP-only cookies
 - Stateless authentication with PostgreSQL user storage
@@ -41,11 +45,13 @@ Key features include:
 ## Authentication Flow
 
 1. **Initial Login**
+
    - User logs in via email/password or OAuth (Google/GitHub)
    - Supabase validates credentials and creates a session
    - JWT token is generated and stored in HTTP-only cookies
 
 2. **Auth Redirect Process**
+
    - After successful authentication, user is redirected to `/auth-redirect`
    - Auth-redirect page checks the session and user information
    - On success, redirects to appropriate dashboard based on tenant
@@ -70,15 +76,18 @@ supabaseAuth.signInWithOAuth('google', {
 ```
 
 ### Required Environment Variables
+
 - `GOOGLE_CLIENT_ID`: Your Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET`: Your Google OAuth client secret
 
 ### Callback URL Configuration
+
 - Supabase Auth callback URL is `https://YOUR_PROJECT_ID.supabase.co/auth/v1/callback`
 - For local development: `http://localhost:54321/auth/v1/callback`
 - You must add these URLs to your authorized redirect URIs in Google Cloud Console
 
 ### Google Auth Setup Steps
+
 1. Create a project in the Google Cloud Console
 2. Enable the Google OAuth API
 3. Create OAuth credentials (Web application type)
@@ -100,15 +109,18 @@ supabaseAuth.signInWithOAuth('github', {
 ```
 
 ### Required Environment Variables
+
 - `GITHUB_CLIENT_ID`: Your GitHub OAuth App client ID
 - `GITHUB_CLIENT_SECRET`: Your GitHub OAuth App client secret
 
 ### Callback URL Configuration
+
 - Supabase Auth callback URL is `https://YOUR_PROJECT_ID.supabase.co/auth/v1/callback`
 - For local development: `http://localhost:54321/auth/v1/callback`
 - You must add these URLs to your authorized callback URLs in GitHub OAuth App settings
 
 ### GitHub Auth Setup Steps
+
 1. Go to GitHub Developer Settings > OAuth Apps > New OAuth App
 2. Set homepage URL to your application URL
 3. Set callback URLs for both development and production:
@@ -132,6 +144,7 @@ const { data, error } = await supabaseAuth.resetPassword(email);
 ```
 
 Key features:
+
 - Secure password hashing with industry-standard algorithms
 - Automatic email verification flows
 - Password recovery and reset functionality
@@ -142,6 +155,7 @@ Key features:
 Supabase Auth provides a complete password reset flow:
 
 1. **Forgot Password**
+
    - User enters email on forgot password page
    - System sends password reset email with magic link
    - Email contains a link to reset password page with token
@@ -153,11 +167,13 @@ Supabase Auth provides a complete password reset flow:
    - Password is updated and user is redirected to login
 
 ### Implementation Files
+
 - `src/lib/supabase-auth.ts`: Main authentication utilities
 - `src/app/[locale]/(auth)/forgot-password/page.tsx`: Forgot password page
 - `src/app/[locale]/(auth)/reset-password/page.tsx`: Reset password page
 
 ### Required Environment Variables
+
 - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
 - `SUPABASE_SERVICE_ROLE_KEY`: For admin operations
@@ -167,12 +183,14 @@ Supabase Auth provides a complete password reset flow:
 The authentication system is configured differently based on the environment:
 
 ### Development Environment
+
 - Uses local Supabase instance running via Docker
 - Authentication services run on localhost
 - OAuth providers use localhost callbacks
 - Detailed logging and debugging
 
 ### Production Environment
+
 - Uses Supabase cloud instance
 - OAuth providers use production callbacks
 - Reduced logging for better performance
@@ -195,9 +213,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key
 Proper OAuth callback URL configuration is critical for authentication to work:
 
 ### Production Callback URLs
+
 - Add to your OAuth providers (Google, GitHub): `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
 
 ### Development Callback URLs
+
 - Add to your OAuth providers: `http://localhost:54321/auth/v1/callback`
 
 ## Plan and Tenant Management
@@ -205,12 +225,15 @@ Proper OAuth callback URL configuration is critical for authentication to work:
 The application implements a multi-tenant system with different plan types:
 
 ### Plan Types
+
 1. **TRIAL**
+
    - Default plan for new users
    - No tenant assigned or uses a default "trial" tenant
    - Redirects to `/{locale}/trial/dashboard`
 
 2. **PRO**
+
    - Users who subscribed to pro plan
    - Has tenant with name 'pro'
    - Redirects to `/{locale}/pro/dashboard`
@@ -247,6 +270,7 @@ The authentication system implements several security best practices:
 ## Troubleshooting
 
 ### Missing Supabase Packages
+
 If you encounter errors related to missing Supabase packages, install them:
 
 ```bash
@@ -254,16 +278,19 @@ npm install @supabase/supabase-js @supabase/auth-helpers-nextjs --save
 ```
 
 ### OAuth Configuration Issues
+
 - If OAuth login fails, verify callback URLs in your provider's developer console
 - Check for callback URL mismatch between your app configuration and Supabase Auth settings
 - Verify your provider credentials are correctly configured in Supabase dashboard
 
 ### Authentication Behavior
+
 - Authentication is handled entirely by Supabase Auth
 - Sessions are managed via secure HTTP-only cookies
 - Session information can be accessed client and server-side
 
 ### Common Issues
+
 - **"Invalid login credentials"**: Check email/password combination
 - **"Email not confirmed"**: User needs to verify their email
 - **OAuth errors**: Check redirect URIs in both Supabase dashboard and provider settings
@@ -271,6 +298,7 @@ npm install @supabase/supabase-js @supabase/auth-helpers-nextjs --save
 - **Password reset issues**: Verify SMTP settings in Supabase dashboard
 
 ### Testing Authentication
+
 - Use the Supabase dashboard to verify user accounts
 - Check the Authentication > Users section to see registered users
 - Use the SQL editor to inspect the auth schema directly

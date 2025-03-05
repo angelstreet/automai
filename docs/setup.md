@@ -225,9 +225,11 @@ In production, the application can use Supabase for both database and authentica
 ```typescript
 // src/lib/env.ts
 export const isUsingSupabase = () => {
-  return isProduction() && 
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && 
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return (
+    isProduction() &&
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  );
 };
 ```
 
@@ -238,11 +240,13 @@ export const isUsingSupabase = () => {
 If you encounter database connection problems:
 
 1. Check that PostgreSQL is running:
+
    ```bash
    sudo service postgresql status
    ```
 
 2. Verify your connection string in the `.env` file:
+
    ```
    DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
    ```
@@ -257,6 +261,7 @@ If you encounter database connection problems:
 For NextAuth.js issues:
 
 1. Verify your OAuth credentials:
+
    - Check that redirect URLs match exactly what's configured in OAuth providers
    - Ensure all required environment variables are set
 
@@ -295,6 +300,7 @@ If the desktop app fails to start:
 ### Docker Deployment
 
 1. Build the Docker image:
+
    ```bash
    docker build -t automai .
    ```

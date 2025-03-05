@@ -19,13 +19,13 @@ import {
 } from '@/components/shadcn/tooltip';
 import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
-import { 
+import {
   SIDEBAR_COOKIE_NAME,
   SIDEBAR_COOKIE_MAX_AGE,
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_MOBILE,
   SIDEBAR_WIDTH_ICON,
-  SIDEBAR_KEYBOARD_SHORTCUT
+  SIDEBAR_KEYBOARD_SHORTCUT,
 } from '@/components/sidebar/constants';
 
 import type { VariantProps } from 'class-variance-authority';

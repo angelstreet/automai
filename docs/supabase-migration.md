@@ -28,7 +28,7 @@ The current implementation in `src/lib/prisma.ts` provides a stub client that al
 
 To complete the migration:
 
-1. Implement each model's operations in `src/lib/services/supabase-data.ts` 
+1. Implement each model's operations in `src/lib/services/supabase-data.ts`
 2. Update the stub client in `src/lib/prisma.ts` to use these implementations
 3. Test each operation to ensure it works correctly
 
@@ -36,26 +36,25 @@ To complete the migration:
 
 ### Prisma vs Supabase Data API
 
-| Prisma Operation | Supabase Equivalent |
-|------------------|---------------------|
-| `findMany` | `supabase.from('table').select('*')` |
-| `findUnique` | `supabase.from('table').select('*').match({ id }).single()` |
-| `create` | `supabase.from('table').insert(data).select().single()` |
-| `update` | `supabase.from('table').update(data).match(where).select().single()` |
-| `delete` | `supabase.from('table').delete().match(where).select().single()` |
+| Prisma Operation | Supabase Equivalent                                                  |
+| ---------------- | -------------------------------------------------------------------- |
+| `findMany`       | `supabase.from('table').select('*')`                                 |
+| `findUnique`     | `supabase.from('table').select('*').match({ id }).single()`          |
+| `create`         | `supabase.from('table').insert(data).select().single()`              |
+| `update`         | `supabase.from('table').update(data).match(where).select().single()` |
+| `delete`         | `supabase.from('table').delete().match(where).select().single()`     |
 
 ### Special Considerations
 
 1. **Relationships**: Prisma automatically handles relationships, while in Supabase you need to use `.select()` with the appropriate syntax:
+
    ```js
    // Getting related data in Supabase
-   const { data } = await supabase
-     .from('users')
-     .select(`
+   const { data } = await supabase.from('users').select(`
        id, 
        name,
        posts (id, title, content)
-     `)
+     `);
    ```
 
 2. **Transactions**: Prisma's transaction API needs to be replaced with RPC functions in Supabase

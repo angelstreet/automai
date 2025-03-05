@@ -4,10 +4,31 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { GitProviderType } from '@/types/repositories';
 import { Button } from '@/components/shadcn/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/shadcn/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/shadcn/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/shadcn/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/shadcn/form';
 import { Input } from '@/components/shadcn/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shadcn/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/shadcn/select';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { AlertCircle, CheckCircle2, Loader2, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
@@ -17,7 +38,7 @@ import { testGitProviderConnection } from '@/lib/services/repositories';
 export const GitProviderTypes = {
   GITHUB: 'github' as GitProviderType,
   GITLAB: 'gitlab' as GitProviderType,
-  GITEA: 'gitea' as GitProviderType
+  GITEA: 'gitea' as GitProviderType,
 };
 
 // Create a schema for the form
@@ -25,11 +46,14 @@ const formSchema = z.object({
   type: z.enum(['github', 'gitlab', 'gitea'] as const, {
     requirederror: 'Please select a Git provider type.',
   }),
-  displayName: z.string().min(2, {
-    message: 'Display name must be at least 2 characters.',
-  }).max(50, {
-    message: 'Display name must not exceed 50 characters.',
-  }),
+  displayName: z
+    .string()
+    .min(2, {
+      message: 'Display name must be at least 2 characters.',
+    })
+    .max(50, {
+      message: 'Display name must not exceed 50 characters.',
+    }),
   serverUrl: z.string().url('Invalid URL').optional(),
   token: z.string().optional(),
 });
@@ -51,11 +75,13 @@ export function AddGitProviderDialog({
   onOpenChange,
   initialValues = null,
 }: AddGitProviderDialogProps) {
-  const [providerType, setProviderType] = useState<GitProviderType>(initialValues?.type || 'github');
+  const [providerType, setProviderType] = useState<GitProviderType>(
+    initialValues?.type || 'github',
+  );
   const [displayName, setDisplayName] = useState(initialValues?.displayName || '');
   const [testStatus, setTestStatus] = useState<TestStatus>('idle');
   const [testError, setTestError] = useState<string | null>(null);
-  
+
   // Initialize the form
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,7 +92,7 @@ export function AddGitProviderDialog({
       token: '',
     },
   });
-  
+
   // Test the connection
   const testConnection = async () => {
     const values = form.getValues();
@@ -90,7 +116,7 @@ export function AddGitProviderDialog({
       setTestError(error instanceof Error ? error.message : 'Failed to test connection');
     }
   };
-  
+
   // Handle form submission
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     // Only require testing for Gitea
@@ -106,7 +132,7 @@ export function AddGitProviderDialog({
       setTestError(null);
     }
   };
-  
+
   // Reset the form when the dialog is closed
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -121,7 +147,7 @@ export function AddGitProviderDialog({
   const isGitea = providerType === GitProviderTypes.GITEA;
   const isGithub = providerType === GitProviderTypes.GITHUB;
   const isGitlab = providerType === GitProviderTypes.GITLAB;
-  
+
   useEffect(() => {
     if (open) {
       if (initialValues) {
@@ -198,7 +224,7 @@ export function AddGitProviderDialog({
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="displayName"
@@ -206,15 +232,15 @@ export function AddGitProviderDialog({
                   <FormItem>
                     <FormLabel>Display Name</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         placeholder={`My ${
-                          providerType === 'github' 
-                            ? 'GitHub' 
-                            : providerType === 'gitlab' 
-                              ? 'GitLab' 
+                          providerType === 'github'
+                            ? 'GitHub'
+                            : providerType === 'gitlab'
+                              ? 'GitLab'
                               : 'Gitea'
-                        } Account`} 
-                        {...field} 
+                        } Account`}
+                        {...field}
                         disabled={isSubmitting}
                       />
                     </FormControl>
@@ -233,9 +259,9 @@ export function AddGitProviderDialog({
                     <FormItem>
                       <FormLabel>Server URL</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="https://gitea.example.com" 
-                          {...field} 
+                        <Input
+                          placeholder="https://gitea.example.com"
+                          {...field}
                           disabled={isSubmitting}
                         />
                       </FormControl>
@@ -250,10 +276,10 @@ export function AddGitProviderDialog({
                     <FormItem>
                       <FormLabel>Access Token</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Enter your Gitea access token" 
+                        <Input
+                          placeholder="Enter your Gitea access token"
                           type="password"
-                          {...field} 
+                          {...field}
                           disabled={isSubmitting}
                         />
                       </FormControl>
@@ -268,12 +294,18 @@ export function AddGitProviderDialog({
               <div className="rounded-md border p-4 bg-muted/50">
                 <div className="flex items-start gap-3">
                   <div className="bg-primary/10 p-2 rounded-full">
-                    {isGithub ? <GitHubIcon className="h-5 w-5" /> : <GitLabIcon className="h-5 w-5" />}
+                    {isGithub ? (
+                      <GitHubIcon className="h-5 w-5" />
+                    ) : (
+                      <GitLabIcon className="h-5 w-5" />
+                    )}
                   </div>
                   <div>
-                    <h3 className="font-medium">{isGithub ? 'GitHub' : 'GitLab'} OAuth Authentication</h3>
+                    <h3 className="font-medium">
+                      {isGithub ? 'GitHub' : 'GitLab'} OAuth Authentication
+                    </h3>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {isGithub 
+                      {isGithub
                         ? 'You will be redirected to GitHub to authorize the application.'
                         : 'You will be redirected to GitLab to authorize the application.'}
                     </p>
@@ -311,7 +343,7 @@ export function AddGitProviderDialog({
               )}
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {(isGithub || isGitlab) ? 'Continue with OAuth' : 'Add Provider'}
+                {isGithub || isGitlab ? 'Continue with OAuth' : 'Add Provider'}
               </Button>
             </DialogFooter>
           </form>
@@ -319,4 +351,4 @@ export function AddGitProviderDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}

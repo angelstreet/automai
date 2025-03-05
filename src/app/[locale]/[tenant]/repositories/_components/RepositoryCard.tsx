@@ -4,7 +4,14 @@ import { Repository } from '@/types/repositories';
 import { GitBranch, RefreshCw, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/shadcn/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/shadcn/card';
 import { Badge } from '@/components/shadcn/badge';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 
@@ -16,12 +23,12 @@ interface RepositoryCardProps {
 
 export function RepositoryCard({ repository, onSync, isSyncing }: RepositoryCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  
+
   // Format the last synced date
   const lastSyncedText = repository.lastSyncedAt
     ? `Last synced ${formatDistanceToNow(new Date(repository.lastSyncedAt), { addSuffix: true })}`
     : 'Never synced';
-  
+
   // Determine the badge color based on the repository status
   const getBadgeVariant = () => {
     if (repository.syncStatus === 'ERROR') return 'destructive';
@@ -29,7 +36,7 @@ export function RepositoryCard({ repository, onSync, isSyncing }: RepositoryCard
     if (repository.syncStatus === 'SYNCED') return 'secondary';
     return 'outline';
   };
-  
+
   // Get the badge text based on the repository status
   const getBadgeText = () => {
     switch (repository.syncStatus) {
@@ -48,11 +55,12 @@ export function RepositoryCard({ repository, onSync, isSyncing }: RepositoryCard
   // Get provider icon based on provider type
   const getProviderIcon = () => {
     if (!repository.provider) return null;
-    
-    const providerType = typeof repository.provider.name === 'string' 
-      ? repository.provider.name.toLowerCase() 
-      : repository.provider.name;
-      
+
+    const providerType =
+      typeof repository.provider.name === 'string'
+        ? repository.provider.name.toLowerCase()
+        : repository.provider.name;
+
     switch (providerType) {
       case 'github':
         return <GitHubIcon className="h-4 w-4" />;
@@ -64,9 +72,9 @@ export function RepositoryCard({ repository, onSync, isSyncing }: RepositoryCard
         return null;
     }
   };
-  
+
   return (
-    <Card 
+    <Card
       className="overflow-hidden transition-all duration-200 hover:shadow-md"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -76,9 +84,13 @@ export function RepositoryCard({ repository, onSync, isSyncing }: RepositoryCard
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
               {getProviderIcon()}
-              <CardTitle className="text-lg font-semibold line-clamp-1">{repository.name}</CardTitle>
+              <CardTitle className="text-lg font-semibold line-clamp-1">
+                {repository.name}
+              </CardTitle>
             </div>
-            <CardDescription className="line-clamp-1">{repository.description || 'No description'}</CardDescription>
+            <CardDescription className="line-clamp-1">
+              {repository.description || 'No description'}
+            </CardDescription>
           </div>
           <Badge variant={getBadgeVariant()}>{getBadgeText()}</Badge>
         </div>
@@ -93,9 +105,9 @@ export function RepositoryCard({ repository, onSync, isSyncing }: RepositoryCard
         <span>{lastSyncedText}</span>
         <div className="flex gap-2">
           {repository.url && (
-            <Link 
-              href={repository.url} 
-              target="_blank" 
+            <Link
+              href={repository.url}
+              target="_blank"
               rel="noopener noreferrer"
               className={`inline-flex items-center text-xs ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}
             >
@@ -105,9 +117,9 @@ export function RepositoryCard({ repository, onSync, isSyncing }: RepositoryCard
               </Button>
             </Link>
           )}
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className={`p-0 h-8 ${isHovered ? 'opacity-100' : 'opacity-0'} transition-opacity`}
             onClick={() => onSync(repository.id)}
             disabled={isSyncing}
@@ -119,4 +131,4 @@ export function RepositoryCard({ repository, onSync, isSyncing }: RepositoryCard
       </CardFooter>
     </Card>
   );
-} 
+}

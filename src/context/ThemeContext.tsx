@@ -52,7 +52,7 @@ export function ThemeProvider({
       const systemTheme = mediaQuery.matches ? 'dark' : 'light';
       const effectiveTheme = theme === 'system' ? systemTheme : theme;
       root.classList.add(effectiveTheme); // Add the new theme class
-      
+
       // Update theme-color meta tag
       const themeColor = effectiveTheme === 'dark' ? '#020817' : '#ffffff';
       const metaThemeColor = document.querySelector("meta[name='theme-color']");

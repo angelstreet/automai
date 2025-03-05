@@ -17,7 +17,7 @@ export default function AuthRedirectFallback() {
       try {
         // Get current session from Supabase
         const { data, error } = await supabaseAuth.getSession();
-        
+
         // Default locale
         const locale = 'en';
 
@@ -50,7 +50,7 @@ export default function AuthRedirectFallback() {
         setIsLoading(false);
       }
     }
-    
+
     checkSessionAndRedirect();
   }, [router]);
 

@@ -114,9 +114,9 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
                         <ScrollText className="mr-2 h-3.5 w-3.5" />
                         <span className="text-sm">{t('logs')}</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         key={`refresh-${host.id}`}
-                        onClick={() => onTestConnection?.(host)} 
+                        onClick={() => onTestConnection?.(host)}
                         className="py-1.5"
                       >
                         <RefreshCw className="mr-2 h-3.5 w-3.5" />

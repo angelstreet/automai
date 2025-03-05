@@ -9,13 +9,13 @@ import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/layout/EmptyState';
-import { 
-  RepositoryCard, 
-  GitProviderCard, 
-  AddGitProviderDialog, 
-  RepositoryGrid, 
+import {
+  RepositoryCard,
+  GitProviderCard,
+  AddGitProviderDialog,
+  RepositoryGrid,
   GitProviderGrid,
-  RepositoryTable
+  RepositoryTable,
 } from './_components';
 import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
 import { useTranslations } from 'next-intl';
@@ -25,7 +25,7 @@ export default function RepositoriesPage() {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations('repositories');
-  
+
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [providers, setProviders] = useState<GitProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +39,7 @@ export default function RepositoriesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
-  
+
   // Add a ref to track if fetching is already in progress
   const isFetchingRef = useRef(false);
 
@@ -47,18 +47,22 @@ export default function RepositoriesPage() {
   const fetchData = async () => {
     // Check if a fetch is already in progress
     if (isFetchingRef.current) return;
-    
+
     isFetchingRef.current = true;
     setIsLoading(true);
-    
+
     try {
       // Fetch providers with retry enabled
-      const providersResponse = await fetchWithAuth('/api/git-providers', {}, { 
-        maxRetries: 3, 
-        initialDelay: 1000, 
-        shouldRetry: true 
-      });
-      
+      const providersResponse = await fetchWithAuth(
+        '/api/git-providers',
+        {},
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          shouldRetry: true,
+        },
+      );
+
       if (!providersResponse.ok) {
         if (providersResponse.status === 401) {
           router.push('/login');
@@ -73,12 +77,16 @@ export default function RepositoriesPage() {
       }
 
       // Fetch all repositories in a single call with retry enabled
-      const reposResponse = await fetchWithAuth('/api/fetch-all-repositories', {}, { 
-        maxRetries: 3, 
-        initialDelay: 1000, 
-        shouldRetry: true 
-      });
-      
+      const reposResponse = await fetchWithAuth(
+        '/api/fetch-all-repositories',
+        {},
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          shouldRetry: true,
+        },
+      );
+
       if (!reposResponse.ok) {
         if (reposResponse.status === 401) {
           router.push('/login');
@@ -91,11 +99,11 @@ export default function RepositoriesPage() {
         setRepositories(reposData);
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error('Error fetching data:', error);
       toast({
-        title: "Error",
-        description: "Failed to fetch data. Please try again later.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to fetch data. Please try again later.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -126,21 +134,21 @@ export default function RepositoriesPage() {
 
       const newProvider = await response.json();
       setProviders([...providers, newProvider]);
-      
+
       toast({
-        title: "Success",
-        description: "Git provider added successfully",
+        title: 'Success',
+        description: 'Git provider added successfully',
       });
-      
+
       // Refresh the data to get updated providers and repositories
       isFetchingRef.current = false;
       fetchData();
     } catch (error) {
-      console.error("Error adding provider:", error);
+      console.error('Error adding provider:', error);
       toast({
-        title: "Error",
-        description: "Failed to add provider. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to add provider. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsAddingProvider(false);
@@ -157,7 +165,7 @@ export default function RepositoriesPage() {
   // Handle deleting a provider
   const handleDeleteProvider = async (id: string) => {
     if (!confirm(t('confirm_delete'))) return;
-    
+
     try {
       const response = await fetchWithAuth(`/api/git-providers?id=${id}`, {
         method: 'DELETE',
@@ -168,20 +176,20 @@ export default function RepositoriesPage() {
       }
 
       // Remove provider from state
-      setProviders(providers.filter(p => p.id !== id));
+      setProviders(providers.filter((p) => p.id !== id));
       // Remove associated repositories
-      setRepositories(repositories.filter(r => r.providerId !== id));
-      
+      setRepositories(repositories.filter((r) => r.providerId !== id));
+
       toast({
-        title: "Success",
-        description: "Git provider deleted successfully",
+        title: 'Success',
+        description: 'Git provider deleted successfully',
       });
     } catch (error) {
-      console.error("Error deleting provider:", error);
+      console.error('Error deleting provider:', error);
       toast({
-        title: "Error",
-        description: "Failed to delete provider. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to delete provider. Please try again.',
+        variant: 'destructive',
       });
     }
   };
@@ -201,17 +209,17 @@ export default function RepositoriesPage() {
       // Refresh the data to get updated repositories
       isFetchingRef.current = false;
       await fetchData();
-      
+
       toast({
-        title: "Success",
-        description: "Provider repositories refreshed successfully",
+        title: 'Success',
+        description: 'Provider repositories refreshed successfully',
       });
     } catch (error) {
-      console.error("Error refreshing provider:", error);
+      console.error('Error refreshing provider:', error);
       toast({
-        title: "Error",
-        description: "Failed to refresh provider repositories. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to refresh provider repositories. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setRefreshingProviderId(null);
@@ -231,22 +239,20 @@ export default function RepositoriesPage() {
       }
 
       const updatedRepo = await response.json();
-      
+
       // Update repository in state
-      setRepositories(repositories.map(repo => 
-        repo.id === id ? updatedRepo : repo
-      ));
-      
+      setRepositories(repositories.map((repo) => (repo.id === id ? updatedRepo : repo)));
+
       toast({
-        title: "Success",
-        description: "Repository synced successfully",
+        title: 'Success',
+        description: 'Repository synced successfully',
       });
     } catch (error) {
-      console.error("Error syncing repository:", error);
+      console.error('Error syncing repository:', error);
       toast({
-        title: "Error",
-        description: "Failed to sync repository. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to sync repository. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setSyncingRepoId(null);
@@ -255,10 +261,10 @@ export default function RepositoriesPage() {
 
   // Toggle provider filter
   const handleToggleProviderFilter = (providerName: string) => {
-    setSelectedProviders(prev => 
+    setSelectedProviders((prev) =>
       prev.includes(providerName)
-        ? prev.filter(p => p !== providerName)
-        : [...prev, providerName]
+        ? prev.filter((p) => p !== providerName)
+        : [...prev, providerName],
     );
   };
 
@@ -276,25 +282,25 @@ export default function RepositoriesPage() {
       const response = await fetchWithAuth('/api/fetch-all-repositories', {
         method: 'POST',
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to refresh repositories');
       }
-      
+
       // Refresh data
       isFetchingRef.current = false;
       await fetchData();
-      
+
       toast({
-        title: "Success",
-        description: "All repositories refreshed successfully",
+        title: 'Success',
+        description: 'All repositories refreshed successfully',
       });
     } catch (error) {
-      console.error("Error refreshing repositories:", error);
+      console.error('Error refreshing repositories:', error);
       toast({
-        title: "Error",
-        description: "Failed to refresh repositories. Please try again.",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to refresh repositories. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsRefreshingAll(false);
@@ -323,8 +329,8 @@ export default function RepositoriesPage() {
 
     return (
       <div className="space-y-8">
-        <Tabs 
-          defaultValue="providers" 
+        <Tabs
+          defaultValue="providers"
           className="w-full"
           value={tabsValue}
           onValueChange={setTabsValue}
@@ -333,7 +339,7 @@ export default function RepositoriesPage() {
             <TabsTrigger value="repositories">Repositories</TabsTrigger>
             <TabsTrigger value="providers">Git Providers</TabsTrigger>
           </TabsList>
-          
+
           {/* Rest of the tabs content */}
         </Tabs>
       </div>

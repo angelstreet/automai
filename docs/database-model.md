@@ -190,10 +190,12 @@ model VerificationToken {
 The application uses a multi-tenant architecture with tenant isolation:
 
 1. **Tenant Identification**:
+
    - Each user is associated with a tenant via `tenantId`
    - The tenant determines the user's plan and access level
 
 2. **Data Isolation**:
+
    - All queries should include tenant filtering
    - Middleware ensures users can only access their tenant's data
 
@@ -260,18 +262,22 @@ const newHost = await prisma.host.create({
 ## Best Practices
 
 1. **Always Filter by Tenant**:
+
    - All queries should include tenant filtering
    - API routes should validate tenant access
 
 2. **Use Transactions**:
+
    - Use transactions for operations that modify multiple tables
    - Ensures data consistency
 
 3. **Secure Credentials**:
+
    - Encrypt sensitive data (passwords, private keys)
    - Use environment variables for database credentials
 
 4. **Migrations**:
+
    - Use Prisma migrations for schema changes
    - Test migrations before applying to production
 
@@ -291,9 +297,11 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const prisma = globalForPrisma.prisma || new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 ```

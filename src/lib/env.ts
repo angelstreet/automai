@@ -1,51 +1,52 @@
 import { z } from 'zod';
 
 // Define environment schema
-const envSchema = z.object({
-  // Server
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('3000'),
+const envSchema = z
+  .object({
+    // Server
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: z.string().transform(Number).default('3000'),
 
-  // Database
-  DATABASE_URL: z.string().url(),
+    // Database
+    DATABASE_URL: z.string().url(),
 
-  // Supabase - only required in production
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+    // Supabase - only required in production
+    NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 
-  // Authentication
-  JWT_SECRET: z.string().min(1),
-  NEXTAUTH_URL: z.string().url(),
-  NEXTAUTH_SECRET: z.string(),
-  NEXT_PUBLIC_APP_URL: z.string().url(),
+    // Authentication
+    JWT_SECRET: z.string().min(1),
+    NEXTAUTH_URL: z.string().url(),
+    NEXTAUTH_SECRET: z.string(),
+    NEXT_PUBLIC_APP_URL: z.string().url(),
 
-  // OAuth - Google
-  GOOGLE_CLIENT_ID: z.string(),
-  GOOGLE_CLIENT_SECRET: z.string(),
-  GOOGLE_CALLBACK_URL: z.string().url(),
+    // OAuth - Google
+    GOOGLE_CLIENT_ID: z.string(),
+    GOOGLE_CLIENT_SECRET: z.string(),
+    GOOGLE_CALLBACK_URL: z.string().url(),
 
-  // OAuth - GitHub
-  GITHUB_CLIENT_ID: z.string(),
-  GITHUB_CLIENT_SECRET: z.string(),
-  GITHUB_CALLBACK_URL: z.string().url(),
+    // OAuth - GitHub
+    GITHUB_CLIENT_ID: z.string(),
+    GITHUB_CLIENT_SECRET: z.string(),
+    GITHUB_CALLBACK_URL: z.string().url(),
 
-  // Elasticsearch
-  ELASTICSEARCH_URL: z.string().url().optional(),
-}).refine(
-  // Supabase credentials are required in production environment
-  (data) => {
-    if (data.NODE_ENV === 'production') {
-      return !!data.NEXT_PUBLIC_SUPABASE_URL && 
-             !!data.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    }
-    return true;
-  },
-  {
-    message: 'Supabase credentials are required in production environment',
-    path: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
-  }
-);
+    // Elasticsearch
+    ELASTICSEARCH_URL: z.string().url().optional(),
+  })
+  .refine(
+    // Supabase credentials are required in production environment
+    (data) => {
+      if (data.NODE_ENV === 'production') {
+        return !!data.NEXT_PUBLIC_SUPABASE_URL && !!data.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      }
+      return true;
+    },
+    {
+      message: 'Supabase credentials are required in production environment',
+      path: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
+    },
+  );
 
 // Process environment variables
 const processEnv = {
@@ -78,8 +79,10 @@ export const isTest = () => process.env.NODE_ENV === 'test';
 
 // Helper to check if we're using Supabase
 export const isUsingSupabase = () => {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) && 
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return (
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  );
 };
 
 export const getBaseUrl = () => {

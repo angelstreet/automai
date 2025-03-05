@@ -22,9 +22,11 @@ const DeploymentListItem = ({ deployment, onClick }: DeploymentListItemProps) =>
           <div className="flex items-center">
             <h3 className="font-medium text-md text-gray-900 dark:text-white">{deployment.name}</h3>
             <span className="mx-2 text-gray-300 dark:text-gray-600">•</span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">{deployment.projectName}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {deployment.projectName}
+            </span>
           </div>
-          
+
           <div className="mt-2 flex items-center text-sm text-gray-500 dark:text-gray-400">
             <Clock size={14} className="mr-1" />
             <span className="mr-4">
@@ -37,7 +39,7 @@ const DeploymentListItem = ({ deployment, onClick }: DeploymentListItemProps) =>
               </span>
             )}
           </div>
-          
+
           <div className="mt-2 text-sm">
             <div className="flex gap-2 flex-wrap">
               <StatusBadge status={deployment.status} />
@@ -50,7 +52,7 @@ const DeploymentListItem = ({ deployment, onClick }: DeploymentListItemProps) =>
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center">
           <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">
             {deployment.createdBy}
@@ -62,4 +64,4 @@ const DeploymentListItem = ({ deployment, onClick }: DeploymentListItemProps) =>
   );
 };
 
-export default DeploymentListItem; 
+export default DeploymentListItem;

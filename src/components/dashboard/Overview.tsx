@@ -27,7 +27,7 @@ const options = {
       beginAtZero: true,
       max: 100,
       ticks: {
-        callback: function(value: number | string) {
+        callback: function (value: number | string) {
           return `${value}%`;
         },
       },

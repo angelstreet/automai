@@ -27,17 +27,17 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
   const [selectedScripts, setSelectedScripts] = useState<string[]>([]);
   const [selectedHosts, setSelectedHosts] = useState<string[]>([]);
   const [scheduleType, setScheduleType] = useState<'now' | 'later'>('now');
-  
+
   // Get selected project
-  const selectedProject = projects.find(p => p.id.toString() === projectId);
-  
+  const selectedProject = projects.find((p) => p.id.toString() === projectId);
+
   // Get scripts for selected project
   const availableScripts: Script[] = selectedProject?.scripts || [];
-  
+
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     onSubmit({
       name,
       projectId,
@@ -47,37 +47,36 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
       selectedHosts,
     });
   };
-  
+
   // Handle script selection/deselection
   const handleScriptToggle = (scriptId: string) => {
-    setSelectedScripts(prev => 
-      prev.includes(scriptId)
-        ? prev.filter(id => id !== scriptId)
-        : [...prev, scriptId]
+    setSelectedScripts((prev) =>
+      prev.includes(scriptId) ? prev.filter((id) => id !== scriptId) : [...prev, scriptId],
     );
   };
-  
+
   // Handle host selection/deselection
   const handleHostToggle = (hostId: string) => {
-    setSelectedHosts(prev => 
-      prev.includes(hostId)
-        ? prev.filter(id => id !== hostId)
-        : [...prev, hostId]
+    setSelectedHosts((prev) =>
+      prev.includes(hostId) ? prev.filter((id) => id !== hostId) : [...prev, hostId],
     );
   };
-  
+
   // Validation
-  const isFormValid = 
-    name.trim() !== '' && 
-    projectId !== '' && 
-    selectedScripts.length > 0 && 
+  const isFormValid =
+    name.trim() !== '' &&
+    projectId !== '' &&
+    selectedScripts.length > 0 &&
     selectedHosts.length > 0 &&
     (scheduleType === 'now' || (scheduledTime && new Date(scheduledTime) > new Date()));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+        <label
+          htmlFor="name"
+          className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
+        >
           Deployment Name
         </label>
         <input
@@ -90,9 +89,12 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
           required
         />
       </div>
-      
+
       <div>
-        <label htmlFor="project" className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+        <label
+          htmlFor="project"
+          className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300"
+        >
           Project
         </label>
         <select
@@ -106,16 +108,19 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
           required
         >
           <option value="">Select a project</option>
-          {projects.map(project => (
+          {projects.map((project) => (
             <option key={project.id} value={project.id.toString()}>
               {project.name}
             </option>
           ))}
         </select>
       </div>
-      
+
       <div>
-        <label htmlFor="description" className="block text-sm font-medium mb-1 flex items-center text-gray-700 dark:text-gray-300">
+        <label
+          htmlFor="description"
+          className="block text-sm font-medium mb-1 flex items-center text-gray-700 dark:text-gray-300"
+        >
           <FileText size={16} className="mr-1" />
           Description
         </label>
@@ -128,7 +133,7 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
           rows={3}
         />
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ScriptSelector
           availableScripts={availableScripts}
@@ -136,14 +141,14 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
           onScriptToggle={handleScriptToggle}
           isProjectSelected={!!selectedProject}
         />
-        
+
         <HostSelector
           availableHosts={allHosts}
           selectedHosts={selectedHosts}
           onHostToggle={handleHostToggle}
         />
       </div>
-      
+
       <div>
         <div className="block text-sm font-medium mb-2 flex items-center text-gray-700 dark:text-gray-300">
           <Calendar size={16} className="mr-1" />
@@ -169,11 +174,14 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
             <span className="ml-2">Schedule for later</span>
           </label>
         </div>
-        
+
         {scheduleType === 'later' && (
           <div className="flex items-center">
             <div className="relative flex-1">
-              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
+              <Clock
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                size={16}
+              />
               <input
                 type="datetime-local"
                 className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -186,7 +194,7 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
           </div>
         )}
       </div>
-      
+
       <div className="mt-4">
         <button
           type="submit"
@@ -205,4 +213,4 @@ const DeploymentForm = ({ projects, allHosts, onSubmit }: DeploymentFormProps) =
   );
 };
 
-export default DeploymentForm; 
+export default DeploymentForm;

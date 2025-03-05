@@ -15,7 +15,7 @@ const inter = Inter({ subsets: ['latin'] });
 // Define props type
 type Props = {
   children: React.ReactNode;
-  params: { locale: typeof locales[number] }; // "en" | "fr"
+  params: { locale: (typeof locales)[number] }; // "en" | "fr"
 };
 
 // Validate locale asynchronously

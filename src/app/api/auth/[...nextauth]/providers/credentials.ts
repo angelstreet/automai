@@ -31,11 +31,13 @@ export async function getCredentialsProvider() {
       email: { label: 'Email', type: 'email' },
       password: { label: 'Password', type: 'password' },
     },
-    async authorize(credentials: Record<keyof Credentials, string> | undefined): Promise<AuthUser | null> {
+    async authorize(
+      credentials: Record<keyof Credentials, string> | undefined,
+    ): Promise<AuthUser | null> {
       if (!credentials?.email || !credentials?.password) {
         throw new Error('Email and password are required');
       }
-      
+
       try {
         // Find user by email with type safety
         const user = await db.user.findUnique({

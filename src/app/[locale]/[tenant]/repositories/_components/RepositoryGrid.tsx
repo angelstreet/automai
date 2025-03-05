@@ -11,37 +11,41 @@ interface RepositoryGridProps {
   isLoading?: boolean;
 }
 
-export function RepositoryGrid({ 
-  repositories, 
-  onSyncRepository, 
-  syncingRepoId, 
-  isLoading = false 
+export function RepositoryGrid({
+  repositories,
+  onSyncRepository,
+  syncingRepoId,
+  isLoading = false,
 }: RepositoryGridProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [providerFilter, setProviderFilter] = useState<string | null>(null);
-  
+
   // Filter repositories based on search term
-  const filteredRepositories = repositories.filter(repo => {
-    const matchesSearch = !searchTerm || 
-      repo.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+  const filteredRepositories = repositories.filter((repo) => {
+    const matchesSearch =
+      !searchTerm ||
+      repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (repo.description && repo.description.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+
     const matchesProvider = !providerFilter || repo.providerId === providerFilter;
-    
+
     return matchesSearch && matchesProvider;
   });
-  
+
   // Get unique providers for filtering
-  const providers = repositories.reduce((acc, repo) => {
-    if (repo.provider && !acc.some(p => p.id === repo.providerId)) {
-      acc.push({
-        id: repo.providerId,
-        name: repo.provider.displayName || repo.provider.name
-      });
-    }
-    return acc;
-  }, [] as { id: string, name: string | any }[]);
-  
+  const providers = repositories.reduce(
+    (acc, repo) => {
+      if (repo.provider && !acc.some((p) => p.id === repo.providerId)) {
+        acc.push({
+          id: repo.providerId,
+          name: repo.provider.displayName || repo.provider.name,
+        });
+      }
+      return acc;
+    },
+    [] as { id: string; name: string | any }[],
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-2">
@@ -63,7 +67,7 @@ export function RepositoryGrid({
               onChange={(e) => setProviderFilter(e.target.value || null)}
             >
               <option value="">All</option>
-              {providers.map(provider => (
+              {providers.map((provider) => (
                 <option key={provider.id} value={provider.id}>
                   {provider.name}
                 </option>
@@ -72,7 +76,7 @@ export function RepositoryGrid({
           </div>
         )}
       </div>
-      
+
       {filteredRepositories.length === 0 ? (
         <div className="text-center p-8 border rounded-lg bg-muted/50">
           <p className="text-muted-foreground">
@@ -83,7 +87,7 @@ export function RepositoryGrid({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredRepositories.map(repository => (
+          {filteredRepositories.map((repository) => (
             <RepositoryCard
               key={repository.id}
               repository={repository}
@@ -95,4 +99,4 @@ export function RepositoryGrid({
       )}
     </div>
   );
-} 
+}

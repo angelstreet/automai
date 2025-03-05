@@ -43,19 +43,19 @@ export default function HostContainer() {
       console.log('Hosts fetched successfully:', fetchedHosts);
 
       // Process hosts for UI display
-      const processedHosts = fetchedHosts.map((host: Host) => ({ 
-        ...host, 
+      const processedHosts = fetchedHosts.map((host: Host) => ({
+        ...host,
         // Ensure status is set
         status: host.status || 'pending',
         // For UI display: use existing lastConnected or set to createdAt date
-        lastConnected: host.lastConnected || host.createdAt
+        lastConnected: host.lastConnected || host.createdAt,
       }));
-      
+
       setHosts(processedHosts);
 
       return processedHosts;
     } catch (error) {
-      console.error('Error fetching hosts:',error);
+      console.error('Error fetching hosts:', error);
       toast.error('Failed to fetch hosts');
       return [];
     } finally {
@@ -105,7 +105,7 @@ export default function HostContainer() {
 
       return result;
     } catch (error) {
-      console.error(`Error testing connection for host ${host.name}:`,error);
+      console.error(`Error testing connection for host ${host.name}:`, error);
 
       setHosts((prevHosts) =>
         prevHosts.map((h) =>
@@ -164,14 +164,14 @@ export default function HostContainer() {
 
   const handleDelete = async (id: string) => {
     // Store the host being deleted in case we need to restore it
-    const hostToDelete = hosts.find(host => host.id === id);
-    
+    const hostToDelete = hosts.find((host) => host.id === id);
+
     // Optimistically update UI first
     setHosts((currentHosts) => currentHosts.filter((host) => host.id !== id));
-    
+
     // Show optimistic toast
     toast.success('Host deleted');
-    
+
     try {
       // Then perform the actual deletion in the background
       await hostsApi.deleteHost(id);
@@ -179,7 +179,7 @@ export default function HostContainer() {
       // If deletion fails, restore the host and show error
       console.error('Error deleting host:', error);
       if (hostToDelete) {
-        setHosts(currentHosts => [...currentHosts, hostToDelete]);
+        setHosts((currentHosts) => [...currentHosts, hostToDelete]);
       }
       toast.error('Failed to delete host. The host has been restored.');
     }
@@ -204,13 +204,13 @@ export default function HostContainer() {
       });
 
       setShowAddHost(false);
-      
+
       // Add lastConnected field for UI display purposes
       const hostWithLastConnected = {
         ...newHost,
-        lastConnected: new Date()
+        lastConnected: new Date(),
       };
-      
+
       setHosts((currentHosts) => [hostWithLastConnected, ...currentHosts]);
 
       setFormData({
@@ -223,7 +223,7 @@ export default function HostContainer() {
         password: '',
       });
     } catch (error) {
-      console.error('Error saving host:',error);
+      console.error('Error saving host:', error);
       toast.error('Failed to create host');
     }
   };

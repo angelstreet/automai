@@ -1,13 +1,7 @@
 'use client';
 
 import React from 'react';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  AlertTriangle, 
-  Loader2
-} from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 
 interface StatusBadgeProps {
   status: string;
@@ -56,11 +50,13 @@ const StatusBadge = ({ status }: StatusBadgeProps) => {
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm ${bgColor} ${textColor}`}>
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm ${bgColor} ${textColor}`}
+    >
       <Icon className="w-3.5 h-3.5 mr-1" />
       {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
     </span>
   );
 };
 
-export default StatusBadge; 
+export default StatusBadge;

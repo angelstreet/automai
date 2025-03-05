@@ -10,7 +10,7 @@ export interface GitProviderService {
    * Get user repositories from the Git provider
    */
   getUserRepositories(): Promise<Repository[]>;
-  
+
   /**
    * Get repository details by name or ID
    */
@@ -20,17 +20,17 @@ export interface GitProviderService {
    * Test the provider connection
    */
   testConnection(): Promise<boolean>;
-  
+
   /**
    * Get the provider authorization URL
    */
   getAuthorizationUrl?(): string;
-  
+
   /**
    * Get the redirect URL for OAuth callback
    */
   getRedirectUrl?(): string;
-  
+
   /**
    * Exchange authorization code for access token
    */

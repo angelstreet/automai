@@ -22,11 +22,11 @@ export const hostsApi = {
       method: 'GET',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Requested-With': 'XMLHttpRequest'
+        Pragma: 'no-cache',
+        Expires: '0',
+        'X-Requested-With': 'XMLHttpRequest',
       },
-      cache: 'no-store'
+      cache: 'no-store',
     });
     if (!response.ok) throw new Error('Failed to fetch hosts');
     return response.json();
@@ -46,16 +46,14 @@ export const hostsApi = {
   /**
    * Test host connection
    */
-  testConnection: async (
-    data: {
-      type: string;
-      ip: string;
-      port?: number;
-      username?: string;
-      password?: string;
-      hostId?: string;
-    },
-  ) => {
+  testConnection: async (data: {
+    type: string;
+    ip: string;
+    port?: number;
+    username?: string;
+    password?: string;
+    hostId?: string;
+  }) => {
     const requestData = {
       type: data.type,
       ip: data.ip,
@@ -96,23 +94,17 @@ export const hostsApi = {
       method: 'GET',
       headers: {
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Requested-With': 'XMLHttpRequest'
+        Pragma: 'no-cache',
+        Expires: '0',
+        'X-Requested-With': 'XMLHttpRequest',
       },
-      cache: 'no-store'
+      cache: 'no-store',
     });
     if (!response.ok) throw new Error('Failed to test all connections');
     return response.json();
   },
 
-  async verifyFingerprint(
-    data: {
-      fingerprint: string;
-      host: string;
-      port?: number;
-    },
-  ) {
+  async verifyFingerprint(data: { fingerprint: string; host: string; port?: number }) {
     const response = await fetch(`${getBaseUrl()}/api/hosts/verify-fingerprint`, {
       method: 'POST',
       headers: {
@@ -136,7 +128,7 @@ export const hostsApi = {
 
   /**
    * Create a new host
-   * 
+   *
    * @param {Object} data - Host data
    * @param {string} data.name - Required: Host name
    * @param {string} data.description - Optional: Host description
@@ -148,18 +140,16 @@ export const hostsApi = {
    * @param {string} data.status - Optional: Initial status (defaults to 'pending')
    * @returns {Promise<Host>} Created host
    */
-  createHost: async (
-    data: {
-      name: string;
-      description: string;
-      type: string;
-      ip: string;
-      port: number;
-      user: string;
-      password: string;
-      status: string;
-    },
-  ) => {
+  createHost: async (data: {
+    name: string;
+    description: string;
+    type: string;
+    ip: string;
+    port: number;
+    user: string;
+    password: string;
+    status: string;
+  }) => {
     const response = await fetch(`${getBaseUrl()}/api/hosts`, {
       method: 'POST',
       headers: {

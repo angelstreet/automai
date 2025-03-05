@@ -1,17 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import { createBrowserSupabase } from '@/lib/supabase';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
+import { createBrowserSupabase } from '@/lib/supabase';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { locale } = useParams();
   const t = useTranslations('Auth');
   const [password, setPassword] = React.useState('');
@@ -34,15 +33,15 @@ export default function ResetPasswordPage() {
 
     try {
       const supabase = createBrowserSupabase();
-      
+
       // Update the user's password
       const { error } = await supabase.auth.updateUser({ password });
-      
+
       if (error) {
         setError(error.message);
         return;
       }
-      
+
       setSuccess(true);
       setTimeout(() => {
         router.push(`/${locale}/login`);
@@ -76,7 +75,9 @@ export default function ResetPasswordPage() {
 
       <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{t('resetPassword') || 'Reset Password'}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {t('resetPassword') || 'Reset Password'}
+          </h1>
           <p className="text-sm text-muted-foreground">
             {t('resetPasswordDescription') || 'Enter your new password below.'}
           </p>
@@ -85,7 +86,8 @@ export default function ResetPasswordPage() {
         {success ? (
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md text-center">
             <p className="text-green-700 dark:text-green-300">
-              {t('passwordResetSuccess') || 'Your password has been reset successfully. You will be redirected to login.'}
+              {t('passwordResetSuccess') ||
+                'Your password has been reset successfully. You will be redirected to login.'}
             </p>
           </div>
         ) : (
@@ -123,9 +125,9 @@ export default function ResetPasswordPage() {
             </div>
 
             <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
-              {isSubmitting ? 
-                (t('resetting') || 'Resetting...') : 
-                (t('resetPasswordButton') || 'Reset Password')}
+              {isSubmitting
+                ? t('resetting') || 'Resetting...'
+                : t('resetPasswordButton') || 'Reset Password'}
             </Button>
           </form>
         )}

@@ -2,13 +2,7 @@ import * as React from 'react';
 
 import { UsePinInputProps } from './types';
 
-export const usePinInput = ({
-  value,
-  defaultValue,
-  type,
-  length,
-  readOnly,
-}: UsePinInputProps) => {
+export const usePinInput = ({ value, defaultValue, type, length, readOnly }: UsePinInputProps) => {
   const pinInputs = React.useMemo(
     () =>
       Array.from({ length }, (_, index) =>

@@ -28,6 +28,7 @@ npm run dev
 ```
 
 This automatically:
+
 1. Starts Supabase services
 2. Applies the database schema
 3. Generates TypeScript types
@@ -51,6 +52,7 @@ http://localhost:54323
 ```
 
 This provides access to:
+
 - Database tables and data
 - Authentication settings
 - Storage buckets
@@ -65,6 +67,7 @@ The schema is defined in SQL at:
 ```
 
 Main tables:
+
 - `hosts` - Connected machines
 - `tenants` - Organizations
 - `users` - User accounts
@@ -79,6 +82,7 @@ Main tables:
 2. Get your project reference ID from the URL
 
 3. Migrate your schema:
+
    ```bash
    npm run supabase:migrate
    ```
@@ -105,28 +109,28 @@ import db from '@/lib/db';
 
 // Query examples
 const users = await db.user.findMany({
-  where: { role: 'admin' }
+  where: { role: 'admin' },
 });
 
 const user = await db.user.findUnique({
-  where: { email: 'user@example.com' }
+  where: { email: 'user@example.com' },
 });
 
 const newUser = await db.user.create({
   data: {
     name: 'John Doe',
     email: 'john@example.com',
-    role: 'user'
-  }
+    role: 'user',
+  },
 });
 
 await db.user.update({
   where: { id: '123' },
-  data: { role: 'admin' }
+  data: { role: 'admin' },
 });
 
 await db.user.delete({
-  where: { id: '123' }
+  where: { id: '123' },
 });
 ```
 
@@ -140,12 +144,14 @@ import supabase from '@/lib/supabase';
 // Select with joins
 const { data, error } = await supabase
   .from('users')
-  .select(`
+  .select(
+    `
     id, 
     name, 
     email, 
     tenant:tenantId (id, name)
-  `)
+  `,
+  )
   .eq('role', 'admin');
 
 // Insert with returning
@@ -154,7 +160,7 @@ const { data, error } = await supabase
   .insert({
     name: 'Jane Smith',
     email: 'jane@example.com',
-    role: 'user'
+    role: 'user',
   })
   .select()
   .single();
@@ -166,6 +172,7 @@ const { data, error } = await supabase
 
 1. Edit the SQL schema at `/supabase/migrations/fixed-schema.sql`
 2. Apply changes locally:
+
    ```bash
    # First, ensure Supabase is running
    npm run supabase:start
@@ -176,7 +183,9 @@ const { data, error } = await supabase
    # Regenerate types
    npm run supabase:gen-types
    ```
+
 3. To apply to production:
+
    ```bash
    npm run supabase:migrate
    ```
@@ -204,10 +213,12 @@ For authentication setup:
 ### Common Issues
 
 1. **Docker Issues**
+
    - Ensure Docker Desktop is running
    - Try restarting Docker if services won't start
 
 2. **Database Errors**
+
    - If tables are missing: Apply schema manually
    - Connection issues: Check environment variables
 

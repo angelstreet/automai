@@ -161,27 +161,31 @@ export default async function middleware(request: NextRequest) {
               res.cookies.set({ name, value: '', ...options });
             },
           },
-        }
+        },
       );
-      
+
       // Get current session
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       console.log('Auth session check:', {
         path: request.nextUrl.pathname,
         hasSession: !!session,
         hasUser: !!session?.user,
         hasValidEmail: !!session?.user?.email,
-        sessionExpiry: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
+        sessionExpiry: session?.expires_at
+          ? new Date(session.expires_at * 1000).toISOString()
+          : null,
         now: new Date().toISOString(),
       });
-      
+
       // Validate that session exists and has required user data
-      const isValidToken = 
-        !!session && 
-        !!session.user && 
+      const isValidToken =
+        !!session &&
+        !!session.user &&
         !!session.user.email &&
-        (!session.expires_at || (session.expires_at * 1000 > Date.now()));
+        (!session.expires_at || session.expires_at * 1000 > Date.now());
 
       // Only check token validity in middleware - UserContext will handle 404s for deleted users
       if (!isValidToken) {
@@ -203,12 +207,12 @@ export default async function middleware(request: NextRequest) {
             .select('id')
             .eq('id', session.user.id)
             .single();
-            
+
           if (error || !user) {
             console.log('User not found in database, redirecting to login');
             return createLoginRedirect(request, pathParts);
           }
-          
+
           console.log('User record validated successfully');
         } catch (error) {
           // Log error but allow request to continue

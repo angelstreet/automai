@@ -1,10 +1,6 @@
 {
   "parser": "@typescript-eslint/parser",
-  "extends": [
-    "next/core-web-vitals",
-    "plugin:@typescript-eslint/recommended",
-    "prettier"
-  ],
+  "extends": ["next/core-web-vitals", "plugin:@typescript-eslint/recommended", "prettier"],
   "parserOptions": {
     "ecmaVersion": 2022,
     "sourceType": "module"
@@ -78,7 +74,13 @@
     ],
     "react-hooks/exhaustive-deps": "warn"
   },
-  "ignorePatterns": ["src/components/ui/*", "src/components/shadcn/*", "node_modules", ".next", "out"],
+  "ignorePatterns": [
+    "src/components/ui/*",
+    "src/components/shadcn/*",
+    "node_modules",
+    ".next",
+    "out"
+  ],
   "settings": {
     "react": {
       "version": "detect"

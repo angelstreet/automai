@@ -64,13 +64,20 @@ export async function GET() {
       }),
     );
 
-    console.log(`All connection tests completed: ${results.length} hosts tested at ${new Date().toISOString()}`);
-    console.log(`Results summary: ${results.filter(r => r.success).length} successful, ${results.filter(r => !r.success).length} failed`);
+    console.log(
+      `All connection tests completed: ${results.length} hosts tested at ${new Date().toISOString()}`,
+    );
+    console.log(
+      `Results summary: ${results.filter((r) => r.success).length} successful, ${results.filter((r) => !r.success).length} failed`,
+    );
 
-    return NextResponse.json({
-      success: true,
-      results,
-    }, { headers });
+    return NextResponse.json(
+      {
+        success: true,
+        results,
+      },
+      { headers },
+    );
   } catch (error) {
     console.error('Error in GET /api/hosts/test-all:', error);
     return NextResponse.json(

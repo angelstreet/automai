@@ -56,10 +56,7 @@ export async function getGitProvider(id: string): Promise<GitProvider | null> {
 
   if (!provider) return null;
 
-  return {
-    ...provider,
-    status: provider.accessToken ? 'connected' : 'disconnected',
-  };
+  return provider;
 }
 
 export async function createGitProvider(
@@ -68,48 +65,46 @@ export async function createGitProvider(
     name: GitProviderType;
     type?: GitProviderType;
     displayName: string;
+    serverUrl?: string;
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: Date;
-    serverUrl?: string;
   },
 ): Promise<GitProvider> {
-  // Use type from input if provided, otherwise fallback to name
-  const { displayName, accessToken, refreshToken, expiresAt, serverUrl } = data;
-  const type = data.type || data.name;
-
   const provider = await db.gitProvider.create({
     data: {
-      name: type,
-      type,
-      displayName,
-      accessToken,
-      refreshToken,
-      expiresAt,
-      serverUrl,
       userId,
+      tenantId: userId, // For now, tenantId is the same as userId
+      type: data.type || data.name,
+      displayName: data.displayName,
+      serverUrl: data.serverUrl,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      expiresAt: data.expiresAt,
+      status: data.accessToken ? 'connected' : 'disconnected',
     },
   });
 
-  return {
-    ...provider,
-    status: provider.accessToken ? 'connected' : 'disconnected',
-  };
+  return provider;
 }
 
 export async function updateGitProvider(
   id: string,
-  data: { accessToken?: string; refreshToken?: string; expiresAt?: Date },
+  data: {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: Date;
+  },
 ): Promise<GitProvider> {
   const provider = await db.gitProvider.update({
     where: { id },
-    data,
+    data: {
+      ...data,
+      status: data.accessToken ? 'connected' : 'disconnected',
+    },
   });
 
-  return {
-    ...provider,
-    status: provider.accessToken ? 'connected' : 'disconnected',
-  };
+  return provider;
 }
 
 export async function deleteGitProvider(id: string): Promise<void> {
@@ -272,7 +267,7 @@ export async function syncRepository(id: string): Promise<Repository> {
         },
       },
     });
-  } catch (error) {
+  } catch (_error) {
     // If there's an error, mark the repository as having an error
     return db.repository.update({
       where: { id },
@@ -369,7 +364,7 @@ export async function testGitProviderConnection({ type, serverUrl, token }: Test
   });
 
   const data: ApiResponse = await response.json();
-  
+
   if (!data.success) {
     throw new Error(data.error || 'Connection to git provider failed');
   }

@@ -37,14 +37,14 @@ export async function getHosts() {
     console.log('Calling db.host.findMany...');
     // Use a client-side projection to avoid requesting the is_windows field directly
     const hosts = await db.host.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
     console.log('Supabase returned hosts successfully');
-    
+
     // Add the is_windows field with a default value
-    return hosts.map(host => ({
+    return hosts.map((host) => ({
       ...host,
-      is_windows: false // Default value until the database is updated
+      is_windows: false, // Default value until the database is updated
     }));
   } catch (error) {
     console.error('Error in getHosts service:', error);
@@ -68,7 +68,7 @@ export async function getHostById(id: string) {
 
 /**
  * Create a new host
- * 
+ *
  * @param {Object} data - Host data
  * @param {string} data.name - Required: Host name
  * @param {string} data.description - Optional: Host description
@@ -91,8 +91,10 @@ export async function createHost(data: {
   status?: string; // Allow status to be passed in
 }) {
   try {
-    console.log(`Creating host with data: ${JSON.stringify({ ...data, password: data.password ? '***' : undefined })}`);
-    
+    console.log(
+      `Creating host with data: ${JSON.stringify({ ...data, password: data.password ? '***' : undefined })}`,
+    );
+
     // Test connection first to detect Windows
     if (data.type === 'ssh' && data.user && data.password) {
       try {
@@ -102,22 +104,26 @@ export async function createHost(data: {
           ip: data.ip,
           port: data.port,
           username: data.user,
-          password: data.password
+          password: data.password,
         });
-        
+
         if (testResult.is_windows) {
           console.log(`Windows detected for ${data.ip}, setting is_windows=true`);
           // Set is_windows in the data
           (data as any).is_windows = true;
         }
       } catch (e) {
-        console.error(`Error testing connection for Windows detection: ${e instanceof Error ? e.message : String(e)}`);
+        console.error(
+          `Error testing connection for Windows detection: ${e instanceof Error ? e.message : String(e)}`,
+        );
         // Continue with host creation even if test fails
       }
     }
-    
-    console.log(`Calling db.host.create with data: ${JSON.stringify({ ...data, password: data.password ? '***' : undefined })}`);
-    
+
+    console.log(
+      `Calling db.host.create with data: ${JSON.stringify({ ...data, password: data.password ? '***' : undefined })}`,
+    );
+
     const host = await db.host.create({
       data: {
         name: data.name,
@@ -128,12 +134,14 @@ export async function createHost(data: {
         user: data.user,
         password: data.password,
         status: data.status || 'pending',
-        is_windows: (data as any).is_windows || false
+        is_windows: (data as any).is_windows || false,
       },
     });
-    
+
     console.log(`Supabase created host successfully`);
-    console.log(`Host created successfully: ${JSON.stringify({ ...host, password: host.password ? '***' : undefined })}`);
+    console.log(
+      `Host created successfully: ${JSON.stringify({ ...host, password: host.password ? '***' : undefined })}`,
+    );
     return host;
   } catch (error) {
     if (error instanceof Error) {
@@ -169,62 +177,68 @@ export async function testHostConnection(data: {
   hostId?: string;
 }): Promise<ConnectionTestResult & { is_windows?: boolean }> {
   logger.info('Testing host connection', { ip: data.ip });
-  
+
   let result: ConnectionTestResult & { is_windows?: boolean } = {
-    success: false
+    success: false,
   };
-  
+
   // Default Windows detection to false
   let detectedWindows = false;
-  
+
   try {
     // Test SSH connection
     if (data.type === 'ssh') {
       // Implement SSH connection test
       const ssh = new Client();
-      
+
       try {
         // Create debug handler for connection monitoring
         const debugHandler = (message: string) => {
           console.log(`[Windows Detection] Debug message: ${message}`);
-          
+
           // Look for OpenSSH for Windows in the remote ident
           if (message.includes('Remote ident:') && message.includes('OpenSSH_for_Windows')) {
             console.log(`[Windows Detection] Remote ident from ${data.ip}: ${message}`);
-            console.log(`[Windows Detection] 🪟 WINDOWS DETECTED from remote ident from ${data.ip}`);
+            console.log(
+              `[Windows Detection] 🪟 WINDOWS DETECTED from remote ident from ${data.ip}`,
+            );
             detectedWindows = true;
             logger.info('Windows detected from remote ident', { ip: data.ip });
           }
           // Also check for Windows in the message
           else if (message.toLowerCase().includes('windows') && !detectedWindows) {
             console.log(`[Windows Detection] Windows string detected from ${data.ip}: ${message}`);
-            console.log(`[Windows Detection] 🪟 WINDOWS DETECTED from string match from ${data.ip}`);
+            console.log(
+              `[Windows Detection] 🪟 WINDOWS DETECTED from string match from ${data.ip}`,
+            );
             detectedWindows = true;
             logger.info('Windows detected from debug message', { ip: data.ip });
           }
           // Also check for OpenSSH which often indicates Windows
           else if (message.includes('OpenSSH') && !detectedWindows) {
             console.log(`[Windows Detection] OpenSSH detected from ${data.ip}: ${message}`);
-            console.log(`[Windows Detection] 🪟 WINDOWS LIKELY from OpenSSH detection from ${data.ip}`);
+            console.log(
+              `[Windows Detection] 🪟 WINDOWS LIKELY from OpenSSH detection from ${data.ip}`,
+            );
             detectedWindows = true;
             logger.info('Windows likely detected from OpenSSH', { ip: data.ip });
           }
         };
-        
+
         // Add debug handler for connection information
         (ssh as any).on('debug', debugHandler);
-        
+
         // Wait for connection to establish or fail
         await new Promise<void>((resolve, reject) => {
           ssh.on('ready', () => {
             result.success = true;
             resolve();
           });
-          
+
           ssh.on('error', (err) => {
             reject(err);
           });
-          
+
           // Connect with a timeout
           ssh.connect({
             host: data.ip,
@@ -235,37 +249,40 @@ export async function testHostConnection(data: {
             debug: (message: string) => {
               console.log(`SSH Debug: ${message}`);
               debugHandler(message); // Pass message to our debug handler for Windows detection
-            }
+            },
           });
         });
-        
+
         // Add a small delay to ensure Windows detection can complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        console.log(`[Windows Detection] Connection successful to ${data.ip}, Windows detected: ${detectedWindows}`);
-        
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        console.log(
+          `[Windows Detection] Connection successful to ${data.ip}, Windows detected: ${detectedWindows}`,
+        );
+
         // Ensure connection is closed
         ssh.end();
-        
       } catch (error) {
         // Handle connection error
         result.success = false;
         result.message = error instanceof Error ? error.message : String(error);
         logger.error('SSH connection test failed', {
           error: result.message,
-          ip: data.ip
+          ip: data.ip,
         });
       }
     }
-    
+
     // Add Windows detection result
     result.is_windows = detectedWindows;
-    
+
     // Update host status in database if hostId is provided
     if (data.hostId) {
       try {
-        console.log(`[Windows Detection] Updating host ${data.hostId} with is_windows=${detectedWindows}`);
-        
+        console.log(
+          `[Windows Detection] Updating host ${data.hostId} with is_windows=${detectedWindows}`,
+        );
+
         try {
           // Try to update with is_windows field
           await db.host.update({
@@ -277,8 +294,13 @@ export async function testHostConnection(data: {
           });
         } catch (schemaError) {
           // If the update fails due to missing is_windows field, update without it
-          if ((schemaError as Error).message && (schemaError as Error).message.includes("Unknown field `is_windows`")) {
-            console.log(`[Windows Detection] is_windows field not in database schema, updating without it`);
+          if (
+            (schemaError as Error).message &&
+            (schemaError as Error).message.includes('Unknown field `is_windows`')
+          ) {
+            console.log(
+              `[Windows Detection] is_windows field not in database schema, updating without it`,
+            );
             await db.host.update({
               where: { id: data.hostId },
               data: {
@@ -291,8 +313,10 @@ export async function testHostConnection(data: {
             throw schemaError;
           }
         }
-        
-        console.log(`[Windows Detection] ✅ Host ${data.hostId} updated with status=${result.success ? 'connected' : 'failed'}`);
+
+        console.log(
+          `[Windows Detection] ✅ Host ${data.hostId} updated with status=${result.success ? 'connected' : 'failed'}`,
+        );
         logger.info(
           `Updated host status for ${data.hostId} to ${result.success ? 'connected' : 'failed'}, attempted to set is_windows: ${detectedWindows}`,
         );
@@ -304,20 +328,23 @@ export async function testHostConnection(data: {
         // Don't throw here, we still want to return the connection test result
       }
     } else {
-      console.log(`[Windows Detection] No hostId provided, is_windows=${detectedWindows} not saved to database`);
+      console.log(
+        `[Windows Detection] No hostId provided, is_windows=${detectedWindows} not saved to database`,
+      );
     }
-    
-    console.log(`[Windows Detection] Final result for ${data.ip}: is_windows=${detectedWindows}, success=${result.success}`);
+
+    console.log(
+      `[Windows Detection] Final result for ${data.ip}: is_windows=${detectedWindows}, success=${result.success}`,
+    );
     console.log(`Test connection result at ${new Date().toISOString()}: ${JSON.stringify(result)}`);
     return result;
-    
   } catch (error) {
     // Handle other errors
     result.success = false;
     result.message = error instanceof Error ? error.message : String(error);
     logger.error('Connection test failed', {
       error: result.message,
-      ip: data.ip
+      ip: data.ip,
     });
     return result;
   }

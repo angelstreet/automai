@@ -7,6 +7,7 @@ This document outlines the standards and patterns for API development in the Aut
 The AutomAI project follows RESTful API design principles with consistent patterns:
 
 1. **Use HTTP Methods Properly**
+
    - GET: Retrieve resources
    - POST: Create resources
    - PUT: Update resources (full update)
@@ -14,11 +15,13 @@ The AutomAI project follows RESTful API design principles with consistent patter
    - DELETE: Remove resources
 
 2. **Resource-Oriented URLs**
+
    - Use nouns, not verbs (e.g., `/api/users`, not `/api/getUsers`)
    - Use plural nouns for collections (e.g., `/api/projects`, not `/api/project`)
    - Use nested resources where appropriate (e.g., `/api/projects/{id}/tasks`)
 
 3. **Consistent Response Format**
+
    ```json
    {
      "success": true,
@@ -28,6 +31,7 @@ The AutomAI project follows RESTful API design principles with consistent patter
    ```
 
    Error format:
+
    ```json
    {
      "success": false,
@@ -82,10 +86,13 @@ export async function GET(request: NextRequest) {
     // Authentication check
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Unauthorized',
+        },
+        { status: 401 },
+      );
     }
 
     // Get query parameters
@@ -126,10 +133,13 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching projects:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch projects',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch projects',
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -138,10 +148,13 @@ export async function POST(request: NextRequest) {
     // Authentication check
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Unauthorized',
+        },
+        { status: 401 },
+      );
     }
 
     // Parse and validate request body
@@ -149,11 +162,14 @@ export async function POST(request: NextRequest) {
     const validatedData = createProjectSchema.safeParse(body);
 
     if (!validatedData.success) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid request data',
-        details: validatedData.error.format(),
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid request data',
+          details: validatedData.error.format(),
+        },
+        { status: 400 },
+      );
     }
 
     // Create the resource
@@ -165,17 +181,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: project,
-      message: 'Project created successfully',
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: project,
+        message: 'Project created successfully',
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error('Error creating project:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to create project',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to create project',
+      },
+      { status: 500 },
+    );
   }
 }
 ```
@@ -196,18 +218,18 @@ const updateProjectSchema = z.object({
   description: z.string().optional(),
 });
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Authentication check
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Unauthorized',
+        },
+        { status: 401 },
+      );
     }
 
     // Fetch the resource
@@ -219,10 +241,13 @@ export async function GET(
     });
 
     if (!project) {
-      return NextResponse.json({
-        success: false,
-        error: 'Project not found',
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Project not found',
+        },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({
@@ -231,25 +256,28 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching project:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to fetch project',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to fetch project',
+      },
+      { status: 500 },
+    );
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Authentication check
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Unauthorized',
+        },
+        { status: 401 },
+      );
     }
 
     // Parse and validate request body
@@ -257,11 +285,14 @@ export async function PATCH(
     const validatedData = updateProjectSchema.safeParse(body);
 
     if (!validatedData.success) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid request data',
-        details: validatedData.error.format(),
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid request data',
+          details: validatedData.error.format(),
+        },
+        { status: 400 },
+      );
     }
 
     // Check if resource exists
@@ -273,10 +304,13 @@ export async function PATCH(
     });
 
     if (!existingProject) {
-      return NextResponse.json({
-        success: false,
-        error: 'Project not found',
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Project not found',
+        },
+        { status: 404 },
+      );
     }
 
     // Update the resource
@@ -294,25 +328,28 @@ export async function PATCH(
     });
   } catch (error) {
     console.error('Error updating project:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to update project',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to update project',
+      },
+      { status: 500 },
+    );
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Authentication check
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Unauthorized' 
-      }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Unauthorized',
+        },
+        { status: 401 },
+      );
     }
 
     // Check if resource exists
@@ -324,10 +361,13 @@ export async function DELETE(
     });
 
     if (!existingProject) {
-      return NextResponse.json({
-        success: false,
-        error: 'Project not found',
-      }, { status: 404 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Project not found',
+        },
+        { status: 404 },
+      );
     }
 
     // Delete the resource
@@ -343,10 +383,13 @@ export async function DELETE(
     });
   } catch (error) {
     console.error('Error deleting project:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Failed to delete project',
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Failed to delete project',
+      },
+      { status: 500 },
+    );
   }
 }
 ```
@@ -430,7 +473,7 @@ API endpoints should be well-documented using TSDoc comments in the route files:
 ```typescript
 /**
  * Get a list of projects
- * 
+ *
  * @route GET /api/projects
  * @query limit - Number of projects to return (default: 10)
  * @query page - Page number (default: 1)

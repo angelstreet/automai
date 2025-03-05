@@ -48,16 +48,19 @@ The frontend is built with **Next.js + TypeScript**, designed to handle:
 ### Component Types
 
 1. **Page Components**
+
    - Defined in `page.tsx` files
    - Responsible for data fetching and layout
    - Act as containers for other components
 
 2. **Layout Components**
+
    - Defined in `layout.tsx` files
    - Provide structure for pages
    - Include navigation, sidebars, and other persistent UI elements
 
 3. **Page-Specific Components**
+
    - Located in `_components` folders
    - Used only within specific page(s)
    - Not intended for reuse across different sections
@@ -96,12 +99,8 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
-  
-  return (
-    <UserContext.Provider value={{ user, setUser }}>
-      {children}
-    </UserContext.Provider>
-  );
+
+  return <UserContext.Provider value={{ user, setUser }}>{children}</UserContext.Provider>;
 }
 
 export function useUser() {
@@ -138,13 +137,8 @@ import { Input } from '@/components/shadcn/input';
 function LoginForm() {
   return (
     <form>
-      <Input 
-        type="email" 
-        placeholder="Email" 
-      />
-      <Button type="submit">
-        Login
-      </Button>
+      <Input type="email" placeholder="Email" />
+      <Button type="submit">Login</Button>
     </form>
   );
 }
@@ -155,9 +149,7 @@ function LoginForm() {
 All components should be responsive using Tailwind's responsive modifiers:
 
 ```tsx
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-  {/* Content */}
-</div>
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{/* Content */}</div>
 ```
 
 ## Data Fetching
@@ -195,7 +187,7 @@ function ProjectList() {
 
   return (
     <ul>
-      {data.projects.map(project => (
+      {data.projects.map((project) => (
         <li key={project.id}>{project.name}</li>
       ))}
     </ul>
@@ -243,7 +235,11 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 function ContactForm() {
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
@@ -255,10 +251,10 @@ function ContactForm() {
     <form onSubmit={handleSubmit(onSubmit)}>
       <Input {...register('name')} />
       {errors.name && <span>{errors.name.message}</span>}
-      
+
       <Input {...register('email')} />
       {errors.email && <span>{errors.email.message}</span>}
-      
+
       <Button type="submit">Submit</Button>
     </form>
   );
@@ -329,13 +325,7 @@ Create error pages for different error types:
 
 import { useEffect } from 'react';
 
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error;
-  reset: () => void;
-}) {
+export default function Error({ error, reset }: { error: Error; reset: () => void }) {
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -418,20 +408,23 @@ import { useMemo, useCallback } from 'react';
 function ExpensiveComponent({ data, onItemClick }) {
   // Memoize expensive calculations
   const processedData = useMemo(() => {
-    return data.map(item => ({
+    return data.map((item) => ({
       ...item,
       processed: doExpensiveOperation(item),
     }));
   }, [data]);
 
   // Memoize callback functions
-  const handleItemClick = useCallback((id) => {
-    onItemClick(id);
-  }, [onItemClick]);
+  const handleItemClick = useCallback(
+    (id) => {
+      onItemClick(id);
+    },
+    [onItemClick],
+  );
 
   return (
     <ul>
-      {processedData.map(item => (
+      {processedData.map((item) => (
         <li key={item.id} onClick={() => handleItemClick(item.id)}>
           {item.name}
         </li>
@@ -488,21 +481,25 @@ function Accordion({ items }) {
 ## Best Practices
 
 1. **Code Organization**
+
    - Keep components small and focused
    - Use consistent naming conventions
    - Follow the project's directory structure
 
 2. **Performance**
+
    - Minimize component re-renders
    - Use appropriate data fetching strategies
    - Optimize images and assets
 
 3. **Accessibility**
+
    - Ensure all components are accessible
    - Test with keyboard navigation
    - Use semantic HTML
 
 4. **Testing**
+
    - Write unit tests for components
    - Test important user flows
    - Ensure good test coverage

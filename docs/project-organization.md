@@ -67,11 +67,13 @@ The AutomAI project follows a standard Next.js App Router structure with organiz
 
 ### Component Organization
 
-1. **Page-specific components**: 
+1. **Page-specific components**:
+
    - Located in `_components` folder within the page directory
    - Only used within that specific page or its children
 
 2. **Shared components**:
+
    - Located in `/src/components`
    - Categorized by purpose (auth, layout, ui, etc.)
    - Should be reusable across multiple pages

@@ -25,7 +25,7 @@ export function GitProviderGrid({
   onEditProvider,
   onDeleteProvider,
   onToggleProviderFilter,
-  refreshingProviderId
+  refreshingProviderId,
 }: GitProviderGridProps) {
   const t = useTranslations('repositories');
 
@@ -41,11 +41,16 @@ export function GitProviderGrid({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {providers.map((provider) => {
-          const repoCount = repositories.filter(repo => repo.providerId === provider.id).length;
-          const providerColor = provider.type === 'github' ? '#24292e' : 
-                               provider.type === 'gitlab' ? '#fc6d26' : 
-                               provider.type === 'gitea' ? '#609926' : '#4285f4';
-          
+          const repoCount = repositories.filter((repo) => repo.providerId === provider.id).length;
+          const providerColor =
+            provider.type === 'github'
+              ? '#24292e'
+              : provider.type === 'gitlab'
+                ? '#fc6d26'
+                : provider.type === 'gitea'
+                  ? '#609926'
+                  : '#4285f4';
+
           return (
             <div
               key={provider.id}
@@ -56,15 +61,13 @@ export function GitProviderGrid({
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-semibold text-lg">{provider.displayName}</h3>
-                    <p className="text-sm text-muted-foreground truncate mt-1">
-                      {provider.type}
-                    </p>
+                    <p className="text-sm text-muted-foreground truncate mt-1">{provider.type}</p>
                   </div>
                   <Badge variant={provider.status === 'connected' ? 'secondary' : 'outline'}>
                     {provider.status === 'connected' ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
-                
+
                 <div className="mt-3 flex justify-between items-center">
                   <span className="text-xs bg-muted px-2 py-1 rounded">
                     {repoCount} repositories
@@ -86,4 +89,4 @@ export function GitProviderGrid({
       </div>
     </div>
   );
-} 
+}

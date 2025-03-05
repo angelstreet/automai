@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import supabaseAuth from '@/lib/supabase-auth';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
+import supabaseAuth from '@/lib/supabase-auth';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -37,27 +37,21 @@ export default function SignUpPage() {
     try {
       // Create user with Supabase
       const { data, error: signUpError } = await supabaseAuth.signUp(email, password);
-      
+
       if (signUpError) {
         setError(signUpError.message);
         return;
       }
-      
+
       // Check if email confirmation is required
       if (data?.user && data.session) {
         // Email confirmation not required, user is signed in
         setSuccess(true);
-        
+
         // Also create a record in our database with additional metadata
         try {
-          // Use db to create a user record
-          const userData = {
-            id: data.user.id,
-            name,
-            email,
-            role: 'user',
-          };
-          
+          // User is created in the database via Supabase webhook/trigger
+
           // For now, we'll just show success and redirect
           setTimeout(() => {
             router.push(`/${locale}/auth-redirect`);
@@ -82,7 +76,7 @@ export default function SignUpPage() {
     try {
       // Use Supabase OAuth
       const { error } = await supabaseAuth.signInWithOAuth(provider);
-      
+
       if (error) {
         console.error('OAuth error:', error);
         setError(error.message);
@@ -117,18 +111,18 @@ export default function SignUpPage() {
       <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
         <div className="flex flex-col space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">{t('signupTitle') || 'Sign Up'}</h1>
-          <p className="text-sm text-muted-foreground">{t('signupDescription') || 'Create an account to get started'}</p>
+          <p className="text-sm text-muted-foreground">
+            {t('signupDescription') || 'Create an account to get started'}
+          </p>
         </div>
 
         {success ? (
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md text-center">
             <p className="text-green-700 dark:text-green-300">
-              {t('signupSuccess') || 'Account created successfully! Please check your email to verify your account.'}
+              {t('signupSuccess') ||
+                'Account created successfully! Please check your email to verify your account.'}
             </p>
-            <Button
-              className="mt-4 w-full"
-              onClick={() => router.push(`/${locale}/login`)}
-            >
+            <Button className="mt-4 w-full" onClick={() => router.push(`/${locale}/login`)}>
               {t('backToLogin')}
             </Button>
           </div>
@@ -194,7 +188,9 @@ export default function SignUpPage() {
               </div>
 
               <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
-                {isSubmitting ? t('signingUp') || 'Signing up...' : t('signupButton') || 'Create Account'}
+                {isSubmitting
+                  ? t('signingUp') || 'Signing up...'
+                  : t('signupButton') || 'Create Account'}
               </Button>
             </form>
 
@@ -210,11 +206,19 @@ export default function SignUpPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" onClick={() => handleOAuthSignUp('google')} className="h-11">
+              <Button
+                variant="outline"
+                onClick={() => handleOAuthSignUp('google')}
+                className="h-11"
+              >
                 <Chrome className="mr-2 h-5 w-5" />
                 Google
               </Button>
-              <Button variant="outline" onClick={() => handleOAuthSignUp('github')} className="h-11">
+              <Button
+                variant="outline"
+                onClick={() => handleOAuthSignUp('github')}
+                className="h-11"
+              >
                 <Github className="mr-2 h-5 w-5" />
                 GitHub
               </Button>

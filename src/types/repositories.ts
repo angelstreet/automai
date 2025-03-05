@@ -1,6 +1,6 @@
-import { z } from "zod";
+import { z } from 'zod';
 
-export type GitProviderType = "github" | "gitlab" | "gitea";
+export type GitProviderType = 'github' | 'gitlab' | 'gitea';
 
 export type GitProviderStatus = 'connected' | 'disconnected' | 'error';
 
@@ -12,7 +12,7 @@ export interface GitProvider {
   tenantId: string;
   type: GitProviderType;
   displayName: string;
-  status: "connected" | "disconnected";
+  status: 'connected' | 'disconnected';
   serverUrl?: string;
   accessToken?: string;
   refreshToken?: string;
@@ -29,9 +29,10 @@ export interface Repository {
   owner: string;
   url?: string;
   branch?: string;
+  defaultBranch?: string;
   isPrivate: boolean;
   description?: string;
-  syncStatus: "SYNCED" | "PENDING" | "ERROR";
+  syncStatus: 'SYNCED' | 'PENDING' | 'ERROR';
   createdAt: Date;
   updatedAt: Date;
   lastSyncedAt?: Date;
@@ -79,9 +80,9 @@ export const GitProviderSchema = z.object({
   id: z.string(),
   userId: z.string(),
   tenantId: z.string(),
-  type: z.enum(["github", "gitlab", "gitea"]),
+  type: z.enum(['github', 'gitlab', 'gitea']),
   displayName: z.string(),
-  status: z.enum(["connected", "disconnected"]),
+  status: z.enum(['connected', 'disconnected']),
   serverUrl: z.string().optional(),
   accessToken: z.string().optional(),
   refreshToken: z.string().optional(),
@@ -100,7 +101,7 @@ export const RepositorySchema = z.object({
   branch: z.string().optional(),
   isPrivate: z.boolean(),
   description: z.string().optional(),
-  syncStatus: z.enum(["SYNCED", "PENDING", "ERROR"]),
+  syncStatus: z.enum(['SYNCED', 'PENDING', 'ERROR']),
   createdAt: z.date(),
   updatedAt: z.date(),
   lastSyncedAt: z.date().optional(),

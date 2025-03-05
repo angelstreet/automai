@@ -146,41 +146,41 @@ export const authOptions: AuthOptions = {
         user: { id: user.id, email: user.email },
         account: account ? { provider: account.provider } : null,
       });
-      
+
       // Set all OAuth users as ADMIN by default
       if (account && (account.provider === 'google' || account.provider === 'github')) {
         user.role = 'admin';
       }
-      
+
       return true;
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
       console.log('Redirect callback:', { url, baseUrl });
-  
+
       // Check if this is a callback from OAuth provider
       if (url.includes('/api/auth/callback/')) {
         console.log('OAuth callback detected, redirecting to auth-redirect');
         // Let the middleware handle locale detection and routing
         return `${baseUrl}/auth-redirect`;
       }
-  
+
       // Remove route group notation if present
       if (url.includes('/(auth)')) {
         const cleanUrl = url.replace('/(auth)', '');
         console.log('Cleaned route group from URL:', { original: url, cleaned: cleanUrl });
         return cleanUrl;
       }
-  
+
       // For other redirects, use the URL as is
       if (url.startsWith(baseUrl)) {
         return url;
       }
-  
+
       // For relative URLs, append to baseUrl
       if (url.startsWith('/')) {
         return `${baseUrl}${url}`;
       }
-  
+
       // Default fallback
       return url;
     },

@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     const result = await testHostConnection(connectionData);
     console.log(`Test connection result at ${new Date().toISOString()}:`, result);
 
-    // Log Windows detection result 
+    // Log Windows detection result
     if (result.is_windows) {
       console.log(`[Windows Detection] 🪟 Host ${host.ip} detected as Windows in API response`);
     } else {
@@ -79,7 +79,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { headers });
   } catch (error) {
-    console.error(`Error in POST /api/hosts/test-connection at ${new Date().toISOString()}:`, error);
+    console.error(
+      `Error in POST /api/hosts/test-connection at ${new Date().toISOString()}:`,
+      error,
+    );
     return NextResponse.json(
       {
         success: false,

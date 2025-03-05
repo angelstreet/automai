@@ -40,7 +40,12 @@ export function HostGrid({
                 />
               </div>
             )}
-            <HostCard host={host} onDelete={onDelete} onTestConnection={onTestConnection} key={`card-${host.id}`} />
+            <HostCard
+              host={host}
+              onDelete={onDelete}
+              onTestConnection={onTestConnection}
+              key={`card-${host.id}`}
+            />
           </div>
         </div>
       ))}

@@ -69,7 +69,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
     // Function to test connection for a single host
     const testHostConnection = async (host: Host) => {
       setTestingHost(host.id);
-      
+
       // Validate required fields before testing connection
       if (!host.ip || (host.type === 'ssh' && !host.user)) {
         // Update host status to indicate missing fields
@@ -84,7 +84,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
               : h,
           ),
         );
-        
+
         // Update the cache in React Query
         queryClient.setQueryData(['hosts'], (oldData: Host[] | undefined) => {
           if (!oldData) return oldData;
@@ -98,10 +98,10 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
               : h,
           );
         });
-        
+
         return;
       }
-      
+
       try {
         const data = await hostsApi.testConnection({
           type: host.type,
@@ -119,7 +119,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
         if (isMounted.current) {
           // Set current date as lastConnected if connection was successful
           const now = data.success ? new Date() : undefined;
-          
+
           // Update the host status based on the connection test
           setHosts((prevHosts) =>
             prevHosts.map((h) =>
@@ -150,7 +150,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           });
         }
       } catch (error) {
-        console.error(`Background connection test failed for host ${host.name}:`,error);
+        console.error(`Background connection test failed for host ${host.name}:`, error);
         // We don't show toasts for background tests to avoid UI noise
 
         // Update status to failed if there was an error
@@ -208,44 +208,44 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       // Fetch fresh hosts data with no caching
       const freshHosts = await hostsApi.getHosts();
       console.log('Fetched fresh hosts:', freshHosts);
-      
+
       // Process hosts for UI display
-      const processedHosts = freshHosts.map((host: Host) => ({ 
-        ...host, 
+      const processedHosts = freshHosts.map((host: Host) => ({
+        ...host,
         status: host.status || 'pending',
-        lastConnected: host.lastConnected || host.createdAt
+        lastConnected: host.lastConnected || host.createdAt,
       }));
-      
+
       // Update local state first with the freshly fetched hosts
       setHosts(processedHosts);
-      
+
       // Update React Query cache with the fresh hosts
       queryClient.setQueryData(['hosts'], processedHosts);
-      
+
       // Test all connections with network cache disabled
       try {
         console.log('Testing all host connections...');
         const testResults = await hostsApi.testAllHosts();
         console.log('Test results:', testResults);
-        
+
         if (testResults.success) {
           // Current date for successful connections
           const now = new Date();
-          
+
           // Update host statuses based on test results
-          const updatedHosts = processedHosts.map(host => {
-            const result = testResults.results.find(r => r.id === host.id);
+          const updatedHosts = processedHosts.map((host) => {
+            const result = testResults.results.find((r) => r.id === host.id);
             if (result) {
               return {
                 ...host,
                 status: result.success ? 'connected' : 'failed',
                 errorMessage: !result.success ? result.message : undefined,
-                lastConnected: result.success ? now : host.lastConnected
+                lastConnected: result.success ? now : host.lastConnected,
               };
             }
             return host;
           });
-          
+
           // Update both local state and React Query cache
           setHosts(updatedHosts);
           queryClient.setQueryData(['hosts'], updatedHosts);
@@ -255,7 +255,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
         // Still update the UI with the fetched hosts even if testing fails
         queryClient.setQueryData(['hosts'], processedHosts);
       }
-      
+
       toast.success('Hosts refreshed');
     } catch (error) {
       console.error('Error refreshing hosts:', error);
@@ -336,25 +336,25 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           onTestConnection={async (host) => {
             try {
               console.log('Testing connection for host:', host.name);
-              
+
               // Validate required fields before testing connection
               if (!host.ip || (host.type === 'ssh' && !host.user)) {
                 toast.error('Missing required connection fields');
                 return;
               }
-              
+
               // Update status to pending during test
               setHosts((prevHosts) =>
                 prevHosts.map((h) =>
                   h.id === host.id
                     ? {
                         ...h,
-                        status: 'pending'
+                        status: 'pending',
                       }
-                    : h
-                )
+                    : h,
+                ),
               );
-              
+
               // Call the API to test connection
               const data = await hostsApi.testConnection({
                 type: host.type,
@@ -364,9 +364,9 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
                 password: host.password,
                 hostId: host.id,
               });
-              
+
               console.log('Test connection result:', data);
-              
+
               // Update the host status in the local state
               const now = new Date();
               const updatedHost = {
@@ -375,24 +375,18 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
                 errorMessage: !data.success ? data.message || 'Connection failed' : undefined,
                 lastConnected: data.success ? now : host.lastConnected,
               };
-              
-              setHosts((prevHosts) =>
-                prevHosts.map((h) =>
-                  h.id === host.id ? updatedHost : h
-                )
-              );
-              
+
+              setHosts((prevHosts) => prevHosts.map((h) => (h.id === host.id ? updatedHost : h)));
+
               // Update the cache in React Query
               queryClient.setQueryData(['hosts'], (oldData: Host[] | undefined) => {
                 if (!oldData) return oldData;
-                return oldData.map((h) =>
-                  h.id === host.id ? updatedHost : h
-                );
+                return oldData.map((h) => (h.id === host.id ? updatedHost : h));
               });
-              
+
               // Force a refetch to ensure cache and server are in sync
               await queryClient.invalidateQueries({ queryKey: ['hosts'] });
-              
+
               if (data.success) {
                 toast.success('Connection successful');
               } else {
@@ -401,7 +395,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
             } catch (error) {
               console.error('Error testing connection:', error);
               toast.error('Failed to test connection');
-              
+
               // Reset status on error
               setHosts((prevHosts) =>
                 prevHosts.map((h) =>
@@ -409,10 +403,10 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
                     ? {
                         ...h,
                         status: 'failed',
-                        errorMessage: error instanceof Error ? error.message : 'Unknown error'
+                        errorMessage: error instanceof Error ? error.message : 'Unknown error',
                       }
-                    : h
-                )
+                    : h,
+                ),
               );
             }
           }}
