@@ -58,7 +58,7 @@ export function NavUser({ user }: NavUserProps) {
                     className="h-8 w-8 rounded-full"
                   />
                 ) : (
-                  <User className="h-4 w-4" />
+                  <User className="h-4 w-4 text-foreground" />
                 )}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">

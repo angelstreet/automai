@@ -216,5 +216,21 @@
     "selectLanguage": "Sélectionner une langue",
     "english": "Anglais",
     "french": "Français"
+  },
+  "Team": {
+    "title": "Gestion d'équipe",
+    "teamMembers": "Membres de l'équipe",
+    "description": "Gérez les membres de votre équipe et leurs permissions",
+    "inviteMembers": "Inviter des membres",
+    "memberName": "Nom",
+    "memberEmail": "Email",
+    "memberRole": "Rôle",
+    "memberStatus": "Statut",
+    "memberActions": "Actions",
+    "invitePending": "En attente",
+    "inviteAccepted": "Accepté",
+    "removeUser": "Supprimer",
+    "confirmRemove": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
+    "noMembers": "Aucun membre d'équipe trouvé"
   }
 }

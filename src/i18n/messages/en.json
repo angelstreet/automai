@@ -226,5 +226,21 @@
     "selectLanguage": "Select Language",
     "english": "English",
     "french": "French"
+  },
+  "Team": {
+    "title": "Team Management",
+    "teamMembers": "Team Members",
+    "description": "Manage your team members and their permissions",
+    "inviteMembers": "Invite Members",
+    "memberName": "Name",
+    "memberEmail": "Email",
+    "memberRole": "Role",
+    "memberStatus": "Status",
+    "memberActions": "Actions",
+    "invitePending": "Pending",
+    "inviteAccepted": "Accepted",
+    "removeUser": "Remove",
+    "confirmRemove": "Are you sure you want to remove this user?",
+    "noMembers": "No team members found"
   }
 }
