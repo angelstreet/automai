@@ -76,7 +76,7 @@ npm run dev:codespace
 
 Supabase vercel supabase-emerald-xylophone   
 ## Running the Application
-
+DFxy3FnyMvYOIHeC
 ### Frontend and API
 
 Start the Next.js development server:
