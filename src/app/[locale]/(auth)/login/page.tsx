@@ -6,10 +6,10 @@ import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import * as React from 'react';
-import supabaseAuth from '@/lib/supabase-auth';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
+import supabaseAuth from '@/lib/supabase-auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -33,7 +33,6 @@ export default function LoginPage() {
         setIsLoading(false);
       }
     }
-    
     checkSession();
   }, [router, locale]);
 
@@ -45,18 +44,16 @@ export default function LoginPage() {
     try {
       // Use Supabase authentication
       const { data, error } = await supabaseAuth.signInWithPassword(email, password);
-      
       if (error) {
         setError(error.message);
         return;
       }
-      
       if (data?.session) {
         // Login successful, redirect to dashboard
         router.push(`/${locale}/trial/dashboard`);
       }
     } catch (err: any) {
-      console.error("Login error:", err);
+      console.error('Login error:', err);
       setError(err.message || 'An error occurred during login');
     } finally {
       setIsSubmitting(false);
@@ -67,7 +64,6 @@ export default function LoginPage() {
     try {
       // Use Supabase OAuth
       const { error } = await supabaseAuth.signInWithOAuth(provider);
-      
       if (error) {
         console.error('OAuth error:', error);
         setError(error.message);
@@ -200,3 +196,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+

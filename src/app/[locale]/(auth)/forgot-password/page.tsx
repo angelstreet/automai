@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import supabaseAuth from '@/lib/supabase-auth';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
+import supabaseAuth from '@/lib/supabase-auth';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -26,12 +26,10 @@ export default function ForgotPasswordPage() {
 
     try {
       const { error } = await supabaseAuth.resetPassword(email);
-      
       if (error) {
         setError(error.message);
         return;
       }
-      
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -63,16 +61,18 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
         <div className="flex flex-col space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">{t('forgotPassword')}</h1>
-          <p className="text-sm text-muted-foreground">{t('resetPasswordDescription') || 'Enter your email address and we will send you a link to reset your password.'}</p>
+          <p className="text-sm text-muted-foreground">
+            {t('resetPasswordDescription') ||
+              'Enter your email address and we will send you a link to reset your password.'}
+          </p>
         </div>
 
         {success ? (
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md text-center">
-            <p className="text-green-700 dark:text-green-300">{t('resetPasswordSuccess') || 'Password reset link has been sent to your email.'}</p>
-            <Button
-              className="mt-4 w-full"
-              onClick={() => router.push(`/${locale}/login`)}
-            >
+            <p className="text-green-700 dark:text-green-300">
+              {t('resetPasswordSuccess') || 'Password reset link has been sent to your email.'}
+            </p>
+            <Button className="mt-4 w-full" onClick={() => router.push(`/${locale}/login`)}>
               {t('backToLogin')}
             </Button>
           </div>
@@ -118,3 +118,4 @@ export default function ForgotPasswordPage() {
     </div>
   );
 }
+
