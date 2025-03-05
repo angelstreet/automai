@@ -10,4 +10,4 @@ shadcn-admin/
 src/server/prisma/dev.db-journal
 prisma/migrations/
 .vscode/settings.json
-docs/jenkins-infrastructure/docs/jenkins-infrastructure/
+docs/jenkins-infrastructure/
