@@ -105,9 +105,14 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/auth-redirect",
+  "http://localhost:3000/api/auth/callback/github",
+  "http://localhost:3000/api/auth/callback/google"
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # If disabled, the refresh token will never expire.
@@ -225,6 +230,21 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `slack`, `spotify`, `workos`, `zoom`.
+
+[auth.external.github]
+enabled = true
+client_id = "Ov23liU8RbuaR7WRZzJa"
+secret = "d29766f74cfcc5c7e12a00e68b92c617da2cd8bd"
+redirect_uri = "http://localhost:3000/auth-redirect"
+skip_nonce_check = false
+
+[auth.external.google]
+enabled = true
+client_id = "1004866229182-p6ribbdkmmblb0k44o5h1g5hoaddi05s.apps.googleusercontent.com"
+secret = "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"
+redirect_uri = "http://localhost:3000/auth-redirect"
+skip_nonce_check = true
+
 [auth.external.apple]
 enabled = false
 client_id = ""
