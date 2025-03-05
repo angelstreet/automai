@@ -5,13 +5,9 @@
   "type": "commonjs",
   "scripts": {
     "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
-    "dev:codespace": "cross-env NODE_ENV=development ENV_FILE=.env.codespace CODESPACE=true ts-node server.ts",
-    "dev:server": "ts-node server.ts",
     "dev:next": "next dev",
-    "dev:all": "node scripts/dev.js",
     "dev:debug": "node scripts/debug.js",
     "build": "prisma generate && next build",
-    "build:dev": "next build",
     "analyze": "ANALYZE=true next build",
     "start": "next start",
     "start:next": "next start",
