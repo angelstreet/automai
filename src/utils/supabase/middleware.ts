@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { isUsingSupabase } from '@/lib/env';
+import { CookieOptions } from '@supabase/ssr';
 
 // Optional import to handle when the package isn't installed in development
 let createServerClient: any;
@@ -9,6 +10,12 @@ try {
 } catch (error) {
   console.warn('Supabase SSR package not available, using mock client');
   createServerClient = null;
+}
+
+interface Cookie {
+  name: string;
+  value: string;
+  options?: CookieOptions;
 }
 
 export const createClient = (request: NextRequest) => {
@@ -40,14 +47,11 @@ export const createClient = (request: NextRequest) => {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({
-            request,
+        setAll(cookiesToSet: Cookie[]) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value);
+            supabaseResponse.cookies.set(name, value, options);
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
         },
       },
     },
