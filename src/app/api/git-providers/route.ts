@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { z } from 'zod';
-import { authOptions } from '@/auth';
+import { getSession } from '@/auth';
 import { listGitProviders, createGitProvider } from '@/lib/services/repositories';
 import { GitProviderType } from '@/types/repositories';
 import { createGithubOauthUrl, createGitlabOauthUrl } from '@/lib/services/oauth';
@@ -17,7 +16,7 @@ const GitProviderCreateSchema = z.object({
 // GET /api/git-providers
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -35,7 +34,7 @@ export async function GET() {
 // POST /api/git-providers
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

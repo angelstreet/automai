@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-
-import { authOptions } from '@/auth';
+import { getSession } from '@/auth';
 import db from '@/lib/db';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       console.error('[PROFILE_GET] No session or user found');
@@ -53,7 +51,7 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getSession();
 
     if (!session?.user) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
