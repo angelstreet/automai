@@ -7,7 +7,24 @@ import { createServerClient } from '@supabase/ssr';
  * It is needed for processing OAuth provider redirects.
  */
 export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url);
+  // Fix the request URL if it's localhost in a GitHub Codespace
+  let fixedUrl = request.url;
+  
+  // Check if we're in a GitHub Codespace and the URL contains localhost
+  if (
+    process.env.CODESPACE && 
+    process.env.NEXT_PUBLIC_SITE_URL && 
+    (request.url.includes('localhost:') || request.url.includes('127.0.0.1:'))
+  ) {
+    // Replace localhost with the actual GitHub Codespace URL
+    fixedUrl = request.url.replace(
+      /https?:\/\/(localhost|127\.0\.0\.1):[0-9]+/,
+      process.env.NEXT_PUBLIC_SITE_URL
+    );
+    console.log('Fixed request URL for GitHub Codespace:', fixedUrl);
+  }
+  
+  const requestUrl = new URL(fixedUrl);
   const code = requestUrl.searchParams.get('code');
   
   // Get response to work with cookies
@@ -15,7 +32,8 @@ export async function GET(request: NextRequest) {
   
   // Log information about the request for debugging
   console.log('Auth callback received:', {
-    url: request.url,
+    originalUrl: request.url,
+    fixedUrl: fixedUrl,
     hasCode: !!code,
     env: {
       NODE_ENV: process.env.NODE_ENV,
@@ -30,9 +48,17 @@ export async function GET(request: NextRequest) {
   }
 
   // Create a Supabase client for handling the callback
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  
+  console.log('Creating Supabase client with:', { 
+    url: supabaseUrl,
+    keyFirstChars: supabaseKey.substring(0, 10) + '...'
+  });
+  
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         get: (name) => {
@@ -49,17 +75,11 @@ export async function GET(request: NextRequest) {
   );
 
   try {
-    // Debug information about URL and environment
-    // Extract host from NEXT_PUBLIC_SITE_URL to normalize URLs
-    const siteUrlHost = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace('https://', '');
-    
-    // Create normalized URL that replaces localhost:3000 with the actual site URL host
-    const normalizedUrl = request.url.replace(/localhost:3000|127\.0\.0\.1:3000/, siteUrlHost);
-    
+    // Use the fixed URL throughout instead of the original request.url
     console.log('Supabase environment:', {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       originalUrl: request.url,
-      normalizedUrl: normalizedUrl
+      fixedUrl: fixedUrl
     });
 
     // Test Supabase connection before exchanging the code
@@ -124,27 +144,60 @@ export async function GET(request: NextRequest) {
       
       // Try another approach with direct fetch to debug
       try {
-        const tokenResponse = await fetch(`${tokenEndpoint}?grant_type=authorization_code&code=${code}`, {
+        // Add detailed logging for all relevant parameters
+        console.log('Attempting direct token exchange with:', {
+          tokenEndpoint,
+          codeLength: code?.length,
+          origin,
+          apiKeyAvailable: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          isCodespace: !!process.env.CODESPACE,
+          siteUrl: process.env.NEXT_PUBLIC_SITE_URL
+        });
+        
+        // Create a more detailed request with full set of headers
+        const tokenUrl = `${tokenEndpoint}?grant_type=authorization_code&code=${code}`;
+        console.log('Full token URL:', tokenUrl);
+        
+        const tokenResponse = await fetch(tokenUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''}`,
             'Origin': origin,
-            'Referer': origin
+            'Referer': origin,
+            'X-Client-Info': 'supabase-js/2.31.0',
+            'X-Auth-Token': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            'Accept': 'application/json'
           },
         });
         
         if (tokenResponse.ok) {
           console.log('Manual token exchange was successful!');
+          const tokenData = await tokenResponse.json();
+          console.log('Token data received:', {
+            hasSession: !!tokenData.session,
+            hasUser: !!tokenData.user,
+            expiresIn: tokenData.expires_in
+          });
         } else {
           console.log('Manual token exchange response:', {
             status: tokenResponse.status,
             ok: tokenResponse.ok,
-            statusText: tokenResponse.statusText
+            statusText: tokenResponse.statusText,
+            headers: Object.fromEntries([...tokenResponse.headers.entries()])
           });
           try {
             const errorText = await tokenResponse.text();
-            console.log('Error response text:', errorText);
+            console.log('Error response text:', errorText.substring(0, 500));
+            
+            // Try to parse as JSON if possible
+            try {
+              const errorJson = JSON.parse(errorText);
+              console.log('Error JSON:', errorJson);
+            } catch (e) {
+              // Not valid JSON
+            }
           } catch (e) {
             console.log('Could not read error response');
           }
@@ -156,30 +209,84 @@ export async function GET(request: NextRequest) {
       // Try to exchange the code using Supabase client
       console.log('Trying exchange with Supabase client...');
       
-      // First modify request.url to match expected domain if it's localhost
-      if (request.url.includes('localhost:3000') && process.env.NEXT_PUBLIC_SITE_URL) {
+      // Fix headers to match the expected domain
+      if (process.env.CODESPACE && process.env.NEXT_PUBLIC_SITE_URL) {
         // This is important for GitHub Codespaces environment
-        console.log('Running in GitHub Codespace, fixing request URL');
+        console.log('Running in GitHub Codespace, fixing request headers');
         const siteUrlHost = process.env.NEXT_PUBLIC_SITE_URL.replace('https://', '');
+        
+        // Set headers to match the expected domain
         request.headers.set('host', siteUrlHost);
         request.headers.set('origin', process.env.NEXT_PUBLIC_SITE_URL);
         request.headers.set('referer', process.env.NEXT_PUBLIC_SITE_URL);
+        
+        // Create a modified request with fixed URL for exchangeCodeForSession
+        const modifiedRequest = new Request(fixedUrl, {
+          headers: request.headers,
+          method: request.method,
+          body: request.body,
+          cache: request.cache,
+          credentials: request.credentials,
+          integrity: request.integrity,
+          keepalive: request.keepalive,
+          mode: request.mode,
+          redirect: request.redirect,
+          referrer: process.env.NEXT_PUBLIC_SITE_URL,
+          referrerPolicy: request.referrerPolicy,
+          signal: request.signal,
+        });
+        
+        // Use this modified request with exchangeCodeForSession
+        request = modifiedRequest;
       }
       
       let error, data;
       try {
         // Exchange the code using the Supabase client
+        console.log('Using Supabase client to exchange code with length:', code?.length);
+        
+        // Get the cookies before exchange attempt
+        const cookiesBefore = request.cookies.getAll().map(c => ({ 
+          name: c.name, 
+          value: c.name.includes('token') ? '***' : c.value.substring(0, 10) + '...' 
+        }));
+        console.log('Cookies before exchange:', cookiesBefore);
+        
+        // Attempt the exchange
         const result = await supabase.auth.exchangeCodeForSession(code);
         error = result.error;
         data = result.data;
         
+        // Log detailed result information
         console.log('Exchange code result:', { 
           hasError: !!error,
+          errorMessage: error?.message,
+          errorName: error?.name,
           hasData: !!data,
-          sessionExists: !!data?.session
+          dataKeys: data ? Object.keys(data) : null,
+          sessionExists: !!data?.session,
+          userEmail: data?.session?.user?.email ? '***' : null
         });
+        
+        // Log all cookies after the exchange attempt
+        const cookiesAfter = response.cookies.getAll().map(c => ({ 
+          name: c.name, 
+          value: c.name.includes('token') ? '***' : c.value.substring(0, 10) + '...' 
+        }));
+        console.log('Cookies after exchange:', cookiesAfter);
       } catch (exchangeError) {
         console.error('Exception during code exchange:', exchangeError);
+        console.log('Exchange error details:', {
+          name: exchangeError.name,
+          message: exchangeError.message,
+          stack: exchangeError.stack?.split('\n').slice(0, 3),
+          originalError: exchangeError.originalError 
+            ? { 
+                name: exchangeError.originalError.name,
+                message: exchangeError.originalError.message
+              } 
+            : null
+        });
         return NextResponse.redirect(new URL(`/en/login?error=${encodeURIComponent('Error during code exchange')}`, process.env.NEXT_PUBLIC_SITE_URL));
       }
     
