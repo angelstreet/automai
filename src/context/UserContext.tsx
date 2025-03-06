@@ -214,12 +214,27 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Session found, fetching user data');
 
+      // Check for X-Auth-Session-Fallback header which indicates we're using a fallback session
+      // This would be set by the middleware when using the user-session cookie
+      const checkForFallbackHeader = () => {
+        if (typeof window !== 'undefined') {
+          // We can't directly access response headers from fetch, but we can check a custom meta tag
+          // that would be set by the middleware via Next.js addBasePath
+          const fallbackMeta = document.querySelector('meta[name="x-auth-session-fallback"]');
+          return fallbackMeta && fallbackMeta.getAttribute('content') === 'true';
+        }
+        return false;
+      };
+      
+      // If using a fallback session, don't use the cache
+      const isFallbackSession = checkForFallbackHeader();
+      
       // Check if we have a cached user and it's still valid
       const now = Date.now();
       const cachedData =
-        typeof window !== 'undefined' ? localStorage.getItem(SESSION_CACHE_KEY) : null;
+        !isFallbackSession && typeof window !== 'undefined' ? localStorage.getItem(SESSION_CACHE_KEY) : null;
 
-      if (cachedData) {
+      if (cachedData && !isFallbackSession) {
         try {
           const { user: cachedUser, timestamp } = JSON.parse(cachedData);
           if (now - timestamp < SESSION_CACHE_EXPIRY) {
@@ -233,6 +248,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
           console.warn('Invalid session cache, fetching fresh data');
         }
+      }
+      
+      // If we're using a fallback session, we should always fetch fresh data
+      if (isFallbackSession) {
+        console.log('Using fallback session, fetching fresh user data');
       }
 
       console.log('Fetching fresh user data from API');
@@ -455,6 +475,37 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return () => clearTimeout(retryTimeout);
     }
   }, [error, session, isLoading, user, fetchUser]);
+  
+  // Expose session state to parent components via a custom event
+  // This allows Server Components to potentially react to auth state
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Dispatch a custom event with the authentication state
+      // This is useful for server components to detect auth state changes
+      const authState = {
+        isAuthenticated: !!user,
+        isLoading,
+        hasError: !!error
+      };
+      
+      const event = new CustomEvent('authStateChange', { 
+        detail: authState,
+        bubbles: true
+      });
+      
+      window.dispatchEvent(event);
+      
+      // Also store minimal auth state in localStorage for potential SSR hydration hints
+      try {
+        localStorage.setItem('auth_state', JSON.stringify({
+          isAuthenticated: !!user,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.warn('Failed to store auth state in localStorage:', e);
+      }
+    }
+  }, [user, isLoading, error]);
 
   useEffect(() => {
     if (sessionStatus === 'loading') {

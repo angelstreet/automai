@@ -19,11 +19,26 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const locale = (params?.locale as string) || 'en';
   const currentTenant = params?.tenant as string;
 
-  // Use the UserContext session instead of loading our own
+  // Add a listener for auth state changes from UserContext
   useEffect(() => {
-    console.log('RouteGuard - Using session from UserContext');
-    // We'll rely on UserContext for session management
-    setIsSessionLoading(false);
+    console.log('RouteGuard - Using auth state from UserContext');
+    
+    // Listen for auth state change events from UserContext
+    const handleAuthStateChange = (event: any) => {
+      const { isAuthenticated, isLoading, hasError } = event.detail;
+      console.log('RouteGuard received auth state change:', { isAuthenticated, isLoading, hasError });
+      
+      // We could implement additional logic here based on auth state changes
+      // but we're using UserContext directly so this is mostly for logging/debugging
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('authStateChange', handleAuthStateChange);
+      
+      return () => {
+        window.removeEventListener('authStateChange', handleAuthStateChange);
+      };
+    }
   }, []);
 
   useEffect(() => {

@@ -413,6 +413,10 @@ export default async function middleware(request: NextRequest) {
                 expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour temporary validity
                 access_token: 'temporary-from-user-session-cookie'
               };
+              
+              // Add a header to indicate this is a fallback session
+              // This can be used by the client to know it should refresh the session
+              res.headers.set('X-Auth-Session-Fallback', 'true');
             } else {
               console.log('Middleware: Invalid user-session cookie or user not in database:', error?.message);
             }
