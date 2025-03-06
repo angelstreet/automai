@@ -5,8 +5,11 @@
   "type": "commonjs",
   "scripts": {
     "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts", 
-    "dev:codespace": "./scripts/configure-codespace-supabase.sh && npx supabase stop && npx supabase start && cross-env NODE_ENV=development ENV_FILE=.env.codespace ts-node server.ts",
+    "dev:codespace": "cross-env NODE_ENV=development ENV_FILE=.env.codespace ts-node server.ts",
     "dev:supabase": "./scripts/start-supabase-dev.sh && cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
+    "supabase:config:local": "./scripts/switch-supabase-config.sh local",
+    "supabase:config:codespace": "./scripts/switch-supabase-config.sh codespace",
+    "codespace:setup": "./scripts/setup-codespace.sh",
     "prod": "npm run build && cross-env NODE_ENV=production ENV_FILE=.env.production ts-node server.ts",
     "dev:next": "next dev",
     "build": "next build",

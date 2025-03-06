@@ -3,6 +3,17 @@
 
 echo "🚀 Starting Supabase development environment"
 
+# Check if running in a Codespace
+if [ -n "$CODESPACE_NAME" ]; then
+  echo "🌐 Detected GitHub Codespace environment"
+  # Switch to Codespace configuration
+  ./scripts/switch-supabase-config.sh codespace
+else
+  echo "💻 Detected local development environment"
+  # Switch to local configuration
+  ./scripts/switch-supabase-config.sh local
+fi
+
 # Check if supabase directory exists
 if [ ! -d "node_modules/supabase" ]; then
     echo "❌ Supabase CLI not found. Installing locally..."
