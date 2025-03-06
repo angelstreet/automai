@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { isProduction, isDevelopment } from './env';
 
+// Declare global type extension for the Supabase client singleton
+declare global {
+  var __supabaseBrowserClient: ReturnType<typeof createClient> | undefined;
+}
+
 // Environment variables
 const getSupabaseUrl = () => {
   if (isDevelopment()) {
