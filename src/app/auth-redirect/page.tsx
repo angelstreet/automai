@@ -12,12 +12,21 @@ export default function RootAuthRedirect() {
     const search = window.location.search;
     const origin = window.location.origin;
     
-    console.log('ROOT AUTH-REDIRECT: Handling request');
+    console.log('ROOT AUTH-REDIRECT: Handling OAuth callback');
     console.log('ROOT AUTH-REDIRECT: URL:', window.location.href);
+    
+    // If we have an explicit code parameter, we're using authorization code flow
+    // Supabase needs to see this at the right URL
+    if (search && search.includes('code=')) {
+      console.log('ROOT AUTH-REDIRECT: Authorization code detected!');
+      console.log('ROOT AUTH-REDIRECT: Redirecting to localized version with code parameter');
+      window.location.replace(`${origin}/${locale}/auth-redirect${search}`);
+      return;
+    }
     
     // Log information about the token without exposing sensitive data
     if (hash && hash.includes('access_token=')) {
-      console.log('ROOT AUTH-REDIRECT: Found access token, analyzing...');
+      console.log('ROOT AUTH-REDIRECT: Found access token in hash fragment');
       
       try {
         // Parse the hash to extract token information
@@ -61,11 +70,12 @@ export default function RootAuthRedirect() {
       }
     }
     
-    // Ensure we preserve the exact hash format when redirecting
-    console.log('ROOT AUTH-REDIRECT: Redirecting to /' + locale + '/auth-redirect with preserved tokens');
+    // Create a direct URL to the localized auth-redirect page
+    const redirectUrl = `${origin}/${locale}/auth-redirect${search}${hash}`;
+    console.log('ROOT AUTH-REDIRECT: Redirecting to:', redirectUrl);
     
-    // Redirect to the localized version, preserving the exact URL parameters
-    window.location.replace(`${origin}/${locale}/auth-redirect${search}${hash}`);
+    // Perform a hard redirect to the localized version
+    window.location.replace(redirectUrl);
   }, []);
 
   return (

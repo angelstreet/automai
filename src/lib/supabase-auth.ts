@@ -30,8 +30,16 @@ const getRedirectUrl = (path: string = '/auth-redirect'): string => {
   
   // Modify path to include locale if it doesn't start with a locale
   if (!path.startsWith('/en/') && !path.startsWith('/fr/')) {
-    path = `/${locale}${path}`;
+    // For auth-redirect, always use the localized version
+    if (path === '/auth-redirect') {
+      console.log(`Using localized auth-redirect: /${locale}/auth-redirect`);
+      path = `/${locale}/auth-redirect`;
+    } else {
+      path = `/${locale}${path}`;
+    }
   }
+  
+  console.log('Final redirect URL path:', path);
   
   // Detect if we're in a GitHub Codespace from client-side
   const isClientCodespace = 

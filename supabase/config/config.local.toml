@@ -108,28 +108,45 @@ enabled = true
 site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
+  # Base localhost URLs
   "http://localhost:3000",
+  "http://localhost:3001",
+  # Root auth redirect paths
   "http://localhost:3000/auth-redirect",
+  "http://localhost:3001/auth-redirect",
+  # Localized auth redirect paths
+  "http://localhost:3000/en/auth-redirect",
+  "http://localhost:3000/fr/auth-redirect",
+  "http://localhost:3001/en/auth-redirect",
+  "http://localhost:3001/fr/auth-redirect",
+  # API callback paths
   "http://localhost:3000/api/auth/callback",
   "http://localhost:3000/api/auth/callback/github",
   "http://localhost:3000/api/auth/callback/google",
-  "http://localhost:3001",
-  "http://localhost:3001/auth-redirect",
   "http://localhost:3001/api/auth/callback",
   "http://localhost:3001/api/auth/callback/github",
   "http://localhost:3001/api/auth/callback/google",
+  # GitHub dev URLs
   "https://vigilant-spork-q667vwj94c9x55.github.dev",
   "https://vigilant-spork-q667vwj94c9x55.github.dev/auth-redirect",
+  "https://vigilant-spork-q667vwj94c9x55.github.dev/en/auth-redirect",
+  "https://vigilant-spork-q667vwj94c9x55.github.dev/fr/auth-redirect",
   "https://vigilant-spork-q667vwj94c9x55.github.dev/api/auth/callback",
   "https://vigilant-spork-q667vwj94c9x55.github.dev/api/auth/callback/github",
   "https://vigilant-spork-q667vwj94c9x55.github.dev/api/auth/callback/google",
+  # GitHub Codespace port 3000
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev",
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/auth-redirect",
+  "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/en/auth-redirect",
+  "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/fr/auth-redirect",
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback",
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback/github",
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback/google",
+  # GitHub Codespace port 3001
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/auth-redirect",
+  "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/en/auth-redirect",
+  "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/fr/auth-redirect",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback/github",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback/google"
