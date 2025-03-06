@@ -3,26 +3,12 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
 import supabaseAuth from '@/lib/supabase-auth';
+import { Session } from '@supabase/supabase-js';
+import { AuthUser, CustomSupabaseUser } from '@/types/auth';
 
 type PlanType = keyof typeof getPlanFeatures;
 
-type SupabaseSession = {
-  user: {
-    id: string;
-    email: string;
-    user_metadata: any;
-  };
-  access_token: string;
-};
-
-type User = {
-  id: string;
-  email: string;
-  image?: string | null;
-  name: string | null;
-  role: string;
-  tenantId: string | null;
-  tenantName: string | null;
+type User = AuthUser & {
   plan: PlanType;
 };
 
@@ -48,7 +34,7 @@ const SESSION_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<SupabaseSession | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [sessionStatus, setSessionStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
