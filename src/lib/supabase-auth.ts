@@ -16,6 +16,11 @@ const getBrowserSupabase = () => {
 const getRedirectUrl = (path: string = '/api/auth/callback'): string => {
   // In production, use the environment variable
   if (process.env.NODE_ENV === 'production') {
+    // If SUPABASE_AUTH_CALLBACK_URL is set, use that directly
+    if (process.env.SUPABASE_AUTH_CALLBACK_URL) {
+      console.log('Using configured SUPABASE_AUTH_CALLBACK_URL:', process.env.SUPABASE_AUTH_CALLBACK_URL);
+      return process.env.SUPABASE_AUTH_CALLBACK_URL;
+    }
     return `${process.env.NEXT_PUBLIC_SITE_URL}${path}`;
   }
 

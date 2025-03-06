@@ -15,6 +15,11 @@ export async function GET(request: NextRequest) {
     url: request.url,
     hasCode: !!code,
     cookies: cookies().getAll().map(c => c.name),
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+      SUPABASE_AUTH_CALLBACK_URL: process.env.SUPABASE_AUTH_CALLBACK_URL
+    }
   });
 
   // If there's no code, redirect to login

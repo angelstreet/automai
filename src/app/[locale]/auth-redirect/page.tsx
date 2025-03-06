@@ -72,12 +72,15 @@ export default function AuthRedirectPage() {
       try {
         // If we have a session, redirect to the appropriate dashboard
         if (session?.user) {
-          // Use tenant name from user context or default to trial
-          const tenant = user?.tenantName || 'trial';
+          // Extract tenant from user metadata or context, or default to trial
+          const tenantId = session.user.user_metadata?.tenantId || user?.tenantId || 'trial';
+          const tenantName = session.user.user_metadata?.tenantName || user?.tenantName || 'Trial';
+          
           console.log('Session data:', {
             userId: session.user.id,
             email: session.user.email,
-            tenant,
+            tenantId,
+            tenantName,
             accessToken: session.access_token ? 'present' : 'missing',
             userMetadata: session.user.user_metadata || {},
           });
@@ -104,7 +107,7 @@ export default function AuthRedirectPage() {
 
           // Get the current origin
           const origin = window.location.origin;
-          const redirectUrl = `${origin}/${locale}/${tenant}/dashboard`;
+          const redirectUrl = `${origin}/${locale}/${tenantId}/dashboard`;
           console.log('Redirecting to dashboard:', redirectUrl);
 
           // Use window.location for a hard redirect to avoid Next.js routing issues
