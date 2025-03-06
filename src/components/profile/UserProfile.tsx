@@ -1,7 +1,6 @@
 import { User } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
 import * as React from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
@@ -29,8 +28,7 @@ export function UserProfile({ tenant }: UserProfileProps) {
 
   const handleSignOut = async () => {
     try {
-      await signOut({ redirect: false });
-      logout();
+      await logout();
       router.push(`/${locale}/login`);
     } catch (error) {
       console.error('Error during sign out:', error);

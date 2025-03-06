@@ -1,17 +1,40 @@
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useUser } from '@/context/UserContext';
+import supabaseAuth from '@/lib/supabase-auth';
 
 export default function AuthRedirectPage() {
   const router = useRouter();
   const params = useParams();
   const locale = (params?.locale as string) || 'en';
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const { data: session, status } = useSession();
+  const [session, setSession] = useState<any>(null);
+  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   const { user } = useUser();
+
+  // Load Supabase session
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const { data, error } = await supabaseAuth.getSession();
+        if (error || !data.session) {
+          setSession(null);
+          setStatus('unauthenticated');
+        } else {
+          setSession(data.session);
+          setStatus('authenticated');
+        }
+      } catch (error) {
+        console.error('Error loading session:', error);
+        setSession(null);
+        setStatus('unauthenticated');
+      }
+    }
+    
+    loadSession();
+  }, []);
 
   // Debug logging on initial render
   console.log('Auth redirect page loaded (without route group):', {
@@ -108,7 +131,7 @@ export default function AuthRedirectPage() {
         <p className="text-sm text-muted-foreground">
           {status === 'loading'
             ? 'Loading session...'
-            : session
+            : status === 'authenticated'
               ? 'Session found, redirecting...'
               : 'No session found, redirecting to login...'}
         </p>

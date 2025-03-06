@@ -1,6 +1,5 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
@@ -12,14 +11,15 @@ import {
   SidebarRail,
 } from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
+import { useUser } from '@/context/UserContext';
 
 import { sidebarData } from './data/sidebarData';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { data: session } = useSession();
+  const { user } = useUser();
   const { currentRole } = useRole();
 
-  if (!session?.user) return null;
+  if (!user) return null;
 
   // Filter out empty sections based on user role
   const filteredNavGroups = sidebarData.navGroups.filter((group) => {
@@ -46,9 +46,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser
           user={{
-            name: session.user.name || 'User',
-            email: session.user.email || '',
-            avatar: session.user.image || undefined,
+            name: user.name || 'User',
+            email: user.email || '',
+            avatar: user.image || undefined,
           }}
         />
       </SidebarFooter>

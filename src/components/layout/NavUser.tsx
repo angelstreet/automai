@@ -3,7 +3,6 @@
 import { User } from 'lucide-react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
 import {
@@ -14,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import { useUser } from '@/context/UserContext';
 
 interface NavUserProps {
   user: {
@@ -29,9 +29,11 @@ export function NavUser({ user }: NavUserProps) {
   const locale = params.locale as string;
   const tenant = params.tenant as string;
 
+  const { logout } = useUser();
+  
   const handleSignOut = async () => {
     try {
-      await signOut({ redirect: false });
+      await logout();
       router.push(`/${locale}/login`);
     } catch (error) {
       console.error('Error during sign out:', error);

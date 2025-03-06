@@ -9,8 +9,8 @@ import {
   Row,
 } from '@tanstack/react-table';
 import { useRouter, useParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
+import supabaseAuth from '@/lib/supabase-auth';
 
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
@@ -57,25 +57,50 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>(
+    'loading'
+  );
   const router = useRouter();
   const params = useParams();
-  const { data: session, status } = useSession();
   const { toast } = useToast();
   const { user } = useUser();
+  
+  // Load Supabase session
+  useEffect(() => {
+    async function loadSession() {
+      try {
+        const { data, error } = await supabaseAuth.getSession();
+        if (error || !data.session) {
+          setSession(null);
+          setAuthStatus('unauthenticated');
+        } else {
+          setSession(data.session);
+          setAuthStatus('authenticated');
+        }
+      } catch (error) {
+        console.error('Error loading Supabase session:', error);
+        setSession(null);
+        setAuthStatus('unauthenticated');
+      }
+    }
+    
+    loadSession();
+  }, []);
 
   // Fetch projects on mount
   useEffect(() => {
     const fetchProjects = async () => {
       setIsLoading(true);
       try {
-        if (!session?.accessToken) {
+        if (!session?.access_token) {
           throw new Error('Not authenticated');
         }
 
         const response = await fetch('/api/projects', {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.accessToken}`,
+            Authorization: `Bearer ${session?.access_token}`,
           },
         });
         if (response.ok) {
@@ -95,8 +120,8 @@ export default function ProjectsPage() {
         setIsLoading(false);
       }
     };
-    if (status === 'authenticated') fetchProjects();
-  }, [session, status, toast]);
+    if (authStatus === 'authenticated') fetchProjects();
+  }, [session, authStatus, toast]);
 
   // Define table columns
   const columns: ColumnDef<Project>[] = [
@@ -158,7 +183,7 @@ export default function ProjectsPage() {
 
   // CRUD handlers
   const handleCreate = async () => {
-    if (!session?.accessToken || !user?.id || !newProject.name.trim()) {
+    if (!session?.access_token || !user?.id || !newProject.name.trim()) {
       toast({
         title: 'Error',
         description: 'Please make sure you are logged in and have entered a project name.',
@@ -201,7 +226,7 @@ export default function ProjectsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           name: newProject.name.trim(),
@@ -237,13 +262,13 @@ export default function ProjectsPage() {
   };
 
   const handleEdit = async () => {
-    if (!editingProject || !session?.accessToken) return;
+    if (!editingProject || !session?.access_token) return;
     try {
       const res = await fetch(`/api/projects/${editingProject.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           name: editingProject.name,
@@ -273,7 +298,7 @@ export default function ProjectsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!session?.accessToken) return;
+    if (!session?.access_token) return;
     if (!confirm('Are you sure you want to delete this project?')) return;
 
     try {
@@ -281,7 +306,7 @@ export default function ProjectsPage() {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.accessToken}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
       if (res.ok) {
