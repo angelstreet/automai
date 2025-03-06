@@ -58,6 +58,7 @@ export default function AuthRedirectPage() {
       isRedirecting,
       sessionStatus: status,
       hasSession: !!session,
+      userFromContext: user ? { id: user.id, tenantName: user.tenantName } : null,
     });
 
     // Prevent multiple redirects
@@ -77,8 +78,29 @@ export default function AuthRedirectPage() {
             userId: session.user.id,
             email: session.user.email,
             tenant,
-            accessToken: session.accessToken ? 'present' : 'missing',
+            accessToken: session.access_token ? 'present' : 'missing',
+            userMetadata: session.user.user_metadata || {},
           });
+
+          // Check if this is a fresh user login that needs additional setup
+          const needsSetup = !session.user.user_metadata?.tenantId;
+          if (needsSetup) {
+            console.log('New user detected, updating user metadata');
+            try {
+              // Add default tenant information to user metadata
+              await supabaseAuth.updateUser({
+                data: {
+                  tenantId: 'trial',
+                  tenantName: 'Trial',
+                  role: 'user',
+                }
+              });
+              console.log('User metadata updated successfully');
+            } catch (err) {
+              console.error('Failed to update user metadata:', err);
+              // Continue with redirect anyway
+            }
+          }
 
           // Get the current origin
           const origin = window.location.origin;

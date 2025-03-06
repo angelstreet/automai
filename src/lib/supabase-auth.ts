@@ -11,9 +11,9 @@ const getBrowserSupabase = () => {
 
 /**
  * Helper function to determine production environment and get the appropriate redirect URL
- * Dynamically handles locales based on current URL path
+ * Handles all OAuth redirects consistently across environments
  */
-const getRedirectUrl = (path: string = '/auth/callback'): string => {
+const getRedirectUrl = (path: string = '/api/auth/callback'): string => {
   // In production, use the environment variable
   if (process.env.NODE_ENV === 'production') {
     return `${process.env.NEXT_PUBLIC_SITE_URL}${path}`;
@@ -21,17 +21,17 @@ const getRedirectUrl = (path: string = '/auth/callback'): string => {
 
   // For development
   if (typeof window === 'undefined') {
-    return path;
+    return `http://localhost:3000${path}`;
   }
 
   const baseUrl = window.location.origin;
-  const currentPath = window.location.pathname;
-  const pathSegments = currentPath.split('/').filter(Boolean);
-  const locale = pathSegments.length > 0 ? pathSegments[0] : 'en';
-  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-  
-  return `${baseUrl}/${locale}/${cleanPath}`;
+  return `${baseUrl}${path}`;
 };
+
+// Log the redirect URL on client-side initialization
+if (typeof window !== 'undefined') {
+  console.log('OAuth redirect URL configured as:', getRedirectUrl());
+}
 
 // Convenience functions for Supabase Auth
 export const supabaseAuth = {
@@ -69,13 +69,21 @@ export const supabaseAuth = {
    */
   signInWithOAuth: async (provider: 'google' | 'github') => {
     const supabase = getBrowserSupabase();
-    return supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: getRedirectUrl('/auth/callback'),
-        scopes: provider === 'github' ? 'repo,user' : 'email profile',
-      },
-    });
+    
+    console.log(`Initiating ${provider} OAuth login with redirect to:`, getRedirectUrl());
+    
+    try {
+      return await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: getRedirectUrl(),
+          scopes: provider === 'github' ? 'repo,user' : 'email profile',
+        },
+      });
+    } catch (error) {
+      console.error(`Error during ${provider} OAuth:`, error);
+      throw error;
+    }
   },
 
   /**
@@ -93,7 +101,7 @@ export const supabaseAuth = {
   resetPassword: async (email: string) => {
     const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: getRedirectUrl('/reset-password'),
+      redirectTo: getRedirectUrl('/api/auth/callback?type=recovery'),
     });
 
     return { data, error };

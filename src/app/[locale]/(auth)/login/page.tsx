@@ -61,17 +61,33 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = async (provider: 'google' | 'github') => {
+    setError('');
+    setIsSubmitting(true);
+    
     try {
       // Use Supabase OAuth
-      const { error } = await supabaseAuth.signInWithOAuth(provider);
+      console.log(`Starting ${provider} OAuth login flow`);
+      const { data, error } = await supabaseAuth.signInWithOAuth(provider);
+      
       if (error) {
-        console.error('OAuth error:', error);
-        setError(error.message);
+        console.error(`${provider} OAuth error:`, error);
+        setError(error.message || `Failed to authenticate with ${provider}`);
+        setIsSubmitting(false);
+        return;
       }
-      // If successful, Supabase will handle the redirect automatically
+      
+      // If we reach here, it means the OAuth popup was successfully launched
+      console.log(`${provider} OAuth flow initiated:`, { 
+        provider,
+        url: data?.url,
+        hasUrl: !!data?.url 
+      });
+      
+      // No need to set isSubmitting to false as we're redirecting to provider
     } catch (err: any) {
-      console.error('OAuth error:', err);
-      setError(err.message || 'An error occurred with OAuth sign in');
+      console.error(`${provider} OAuth error:`, err);
+      setError(err.message || `An unexpected error occurred with ${provider} sign in`);
+      setIsSubmitting(false);
     }
   };
 
