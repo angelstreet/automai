@@ -139,12 +139,22 @@ export const supabaseAuth = {
         }
       }
       
-      // Always include locale in the redirect URL
-      const redirectUrl = `${origin}/${locale}/auth-redirect`;
+      // For Codespace environment, ensure the redirect URL is one of the allowed URLs
+      // specified in the Supabase config
+      let redirectUrl;
+      if (isCodespace) {
+        // Use the root auth-redirect path for Codespace
+        // This is specifically included in additional_redirect_urls in config.codespace.toml
+        redirectUrl = `${origin}/auth-redirect`;
+        console.log(`Using Codespace-specific redirect URL: ${redirectUrl}`);
+      } else {
+        // For non-Codespace environments, use the localized path
+        redirectUrl = `${origin}/${locale}/auth-redirect`;
+      }
+      
       console.log(`Initiating ${provider} OAuth login with redirect to:`, redirectUrl);
       
-      // For Codespaces, we need to use implicit flow for the redirect
-      // Always explicitly set redirectTo to include the locale
+      // Configure OAuth sign-in
       return await supabase.auth.signInWithOAuth({
         provider,
         options: {
