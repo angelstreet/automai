@@ -63,70 +63,105 @@ Key features include:
    - Sessions expire after 24 hours by default
    - Session verification happens via middleware for protected routes
 
-## Google OAuth Integration
+## OAuth Provider Integration
 
-Google authentication is set up through Supabase Auth:
+AutomAI uses Supabase Auth to handle authentication with OAuth providers like Google and GitHub. Here's how it works in both development and production environments:
+
+### Authentication Flow for OAuth (Google, GitHub)
+
+1. **User initiates OAuth login** by clicking a provider button
+2. **Supabase redirects to provider** (Google or GitHub)
+3. **User authenticates with provider**
+4. **Provider redirects back to Supabase callback URL**:
+   - Production: `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+   - Development: `http://localhost:54321/auth/v1/callback`
+5. **Supabase processes authentication** and creates a session
+6. **Supabase redirects to application** at the `/auth-redirect` URL
+7. **Application validates the session** and redirects to the appropriate dashboard
+
+### Code Implementation
 
 ```typescript
-// In Supabase dashboard, you configure Google OAuth
-// In code, we trigger it with:
-supabaseAuth.signInWithOAuth('google', {
-  redirectTo: `${window.location.origin}/auth-redirect`,
-});
+// In src/lib/supabase-auth.ts
+signInWithOAuth: async (provider: 'google' | 'github') => {
+  const supabase = createBrowserSupabase();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${window.location.origin}/auth-redirect`,
+      scopes: provider === 'github' ? 'repo,user' : 'email profile',
+    },
+  });
+
+  return { data, error };
+},
 ```
+
+## Google OAuth Integration
 
 ### Required Environment Variables
 
 - `GOOGLE_CLIENT_ID`: Your Google OAuth client ID
 - `GOOGLE_CLIENT_SECRET`: Your Google OAuth client secret
 
-### Callback URL Configuration
+### Google Auth Setup
 
-- Supabase Auth callback URL is `https://YOUR_PROJECT_ID.supabase.co/auth/v1/callback`
-- For local development: `http://localhost:54321/auth/v1/callback`
-- You must add these URLs to your authorized redirect URIs in Google Cloud Console
-
-### Google Auth Setup Steps
+#### Production Setup
 
 1. Create a project in the Google Cloud Console
 2. Enable the Google OAuth API
 3. Create OAuth credentials (Web application type)
-4. Add authorized redirect URIs for both development and production:
+4. Add the production redirect URI:
    - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+5. Configure in Supabase dashboard: Auth > Providers > Google
+
+#### Development Setup
+
+Google OAuth allows multiple redirect URIs in the same OAuth app, so you can:
+
+1. In the same Google OAuth app, add the development redirect URI:
    - `http://localhost:54321/auth/v1/callback`
-5. Copy the client ID and secret to your Supabase dashboard Auth > Providers > Google
+2. This allows the same OAuth app to work in both environments
+3. No code changes needed between environments
 
 ## GitHub OAuth Integration
-
-GitHub authentication is configured through Supabase Auth:
-
-```typescript
-// In Supabase dashboard, you configure GitHub OAuth
-// In code, we trigger it with:
-supabaseAuth.signInWithOAuth('github', {
-  redirectTo: `${window.location.origin}/auth-redirect`,
-});
-```
 
 ### Required Environment Variables
 
 - `GITHUB_CLIENT_ID`: Your GitHub OAuth App client ID
 - `GITHUB_CLIENT_SECRET`: Your GitHub OAuth App client secret
 
-### Callback URL Configuration
+### GitHub Auth Setup
 
-- Supabase Auth callback URL is `https://YOUR_PROJECT_ID.supabase.co/auth/v1/callback`
-- For local development: `http://localhost:54321/auth/v1/callback`
-- You must add these URLs to your authorized callback URLs in GitHub OAuth App settings
+GitHub OAuth is more restrictive than Google and only allows a single callback URL per OAuth app.
 
-### GitHub Auth Setup Steps
+#### Production Setup
 
-1. Go to GitHub Developer Settings > OAuth Apps > New OAuth App
-2. Set homepage URL to your application URL
-3. Set callback URLs for both development and production:
-   - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
-   - `http://localhost:54321/auth/v1/callback`
-4. Copy the client ID and secret to your Supabase dashboard Auth > Providers > GitHub
+1. Create a production GitHub OAuth App:
+   - Go to GitHub Developer Settings > OAuth Apps > New OAuth App
+   - Set homepage URL to your production URL
+   - Set callback URL to: `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+   - Copy client ID and secret to Supabase dashboard Auth > Providers > GitHub
+
+#### Development Setup
+
+Since GitHub only allows one callback URL per OAuth app, you need a separate OAuth app for development:
+
+1. Create a development GitHub OAuth App:
+   - Go to GitHub Developer Settings > OAuth Apps > New OAuth App
+   - Set homepage URL to `http://localhost:3000`
+   - Set callback URL to: `http://localhost:54321/auth/v1/callback`
+   - Get the development client ID and secret
+
+2. When running in development mode, set these environment variables in your `.env.development`:
+   ```
+   GITHUB_CLIENT_ID=your_development_client_id
+   GITHUB_CLIENT_SECRET=your_development_client_secret
+   ```
+
+3. When deploying to production, use the production client ID and secret in your `.env.production`
+
+This approach requires maintaining two separate GitHub OAuth apps, but it's the simplest solution given GitHub's limitation of one callback URL per OAuth app.
 
 ## Email/Password Authentication
 
