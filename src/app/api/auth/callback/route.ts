@@ -9,12 +9,15 @@ import { createServerClient } from '@supabase/ssr';
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  
+  // Get cookieStore
+  const cookieStore = cookies();
 
   // Log information about the request for debugging
   console.log('Auth callback received:', {
     url: request.url,
     hasCode: !!code,
-    cookies: cookies().getAll().map(c => c.name),
+    cookies: (await cookieStore.getAll()).map(c => c.name),
     env: {
       NODE_ENV: process.env.NODE_ENV,
       NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
@@ -33,20 +36,40 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => cookies().get(name)?.value,
-        set: (name, value, options) => cookies().set({ name, value, ...options }),
-        remove: (name, options) => cookies().set({ name, value: '', ...options }),
+        get: async (name) => {
+          const cookie = await cookieStore.get(name);
+          return cookie?.value;
+        },
+        set: async (name, value, options) => {
+          await cookieStore.set({ name, value, ...options });
+        },
+        remove: async (name, options) => {
+          await cookieStore.set({ name, value: '', ...options });
+        },
       },
     },
   );
 
   try {
+    // Debug information about URL and environment
+    console.log('Supabase environment:', {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      originalUrl: request.url,
+      normalizedUrl: request.url.replace('localhost:3000', process.env.NEXT_PUBLIC_SITE_URL?.replace('https://', ''))
+    });
+
     // Exchange the code for a session
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (error) {
       console.error('Error exchanging code for session:', error);
-      return NextResponse.redirect(new URL('/en/login?error=' + encodeURIComponent(error.message), request.url));
+      console.log('Error details:', {
+        message: error.message,
+        name: error.name,
+        status: (error as any).status,
+        originalError: (error as any).originalError
+      });
+      return NextResponse.redirect(new URL(`/en/login?error=${encodeURIComponent(error.message)}`, process.env.NEXT_PUBLIC_SITE_URL));
     }
 
     // Get session to verify success
@@ -54,7 +77,7 @@ export async function GET(request: NextRequest) {
     
     if (!session) {
       console.error('No session after code exchange');
-      return NextResponse.redirect(new URL('/en/login?error=Authentication failed', request.url));
+      return NextResponse.redirect(new URL('/en/login?error=Authentication+failed', process.env.NEXT_PUBLIC_SITE_URL));
     }
 
     console.log('Successfully authenticated user:', {
@@ -63,9 +86,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Always redirect to the auth-redirect page with 'en' locale as fallback
-    return NextResponse.redirect(new URL('/en/auth-redirect', request.url));
+    return NextResponse.redirect(new URL('/en/auth-redirect', process.env.NEXT_PUBLIC_SITE_URL));
   } catch (error) {
     console.error('Exception during auth callback:', error);
-    return NextResponse.redirect(new URL('/en/login?error=Server error', request.url));
+    console.log('Detailed error:', {
+      error,
+      message: (error as any)?.message,
+      stack: (error as any)?.stack,
+    });
+    return NextResponse.redirect(new URL('/en/login?error=Server+error', process.env.NEXT_PUBLIC_SITE_URL));
   }
 }

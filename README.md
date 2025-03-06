@@ -94,8 +94,53 @@ You can run the application in different modes:
 # Development mode (local PostgreSQL)
 npm run dev
 
+# Codespace mode (Supabase)
+npm run dev:codespace
+
 # Production mode (Supabase)
 cross-env ENV_FILE=.env.production npm run dev
+```
+
+### Setting Up GitHub Codespaces with Supabase
+
+When using GitHub Codespaces with Supabase authentication, follow these steps to set up properly:
+
+1. Setup your Codespace environment for Supabase:
+   ```bash
+   npm run codespace:setup
+   ```
+   This automatically configures URLs and OAuth settings for your Codespace.
+
+2. Restart Supabase to apply changes:
+   ```bash
+   npx supabase stop
+   npx supabase start
+   ```
+
+3. Start the application:
+   ```bash
+   npm run dev:codespace
+   ```
+
+### Managing Supabase Configurations
+
+The project supports separate Supabase configurations for different environments:
+
+```bash
+# Switch to local development configuration
+npm run supabase:config:local
+
+# Switch to Codespace configuration
+npm run supabase:config:codespace
+```
+
+Configuration files are stored in:
+- `supabase/config/config.local.toml` - Local development
+- `supabase/config/config.codespace.toml` - GitHub Codespaces
+
+After switching configurations, restart Supabase to apply changes:
+```bash
+npx supabase stop && npx supabase start
 ```
 
 ### Frontend and API
