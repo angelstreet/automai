@@ -1,24 +1,33 @@
 import { createBrowserSupabase } from './supabase';
 
+let browserSupabase: any = null;
+
+const getBrowserSupabase = () => {
+  if (!browserSupabase) {
+    browserSupabase = createBrowserSupabase();
+  }
+  return browserSupabase;
+};
+
 /**
  * Helper function to determine production environment and get the appropriate redirect URL
  * Dynamically handles locales based on current URL path
  */
 const getRedirectUrl = (path: string = '/auth/callback'): string => {
-  // Only run on client side
+  // In production, use the environment variable
+  if (process.env.NODE_ENV === 'production') {
+    return `${process.env.NEXT_PUBLIC_SITE_URL}${path}`;
+  }
+
+  // For development
   if (typeof window === 'undefined') {
     return path;
   }
 
-  // Get base URL from current location
   const baseUrl = window.location.origin;
-  
-  // Extract locale from current path if it exists
   const currentPath = window.location.pathname;
   const pathSegments = currentPath.split('/').filter(Boolean);
   const locale = pathSegments.length > 0 ? pathSegments[0] : 'en';
-
-  // Clean up path to avoid double slashes
   const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   
   return `${baseUrl}/${locale}/${cleanPath}`;
@@ -30,7 +39,7 @@ export const supabaseAuth = {
    * Sign in with email and password
    */
   signInWithPassword: async (email: string, password: string) => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -43,7 +52,7 @@ export const supabaseAuth = {
    * Sign up a new user
    */
   signUp: async (email: string, password: string) => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -59,7 +68,7 @@ export const supabaseAuth = {
    * Sign in with OAuth provider
    */
   signInWithOAuth: async (provider: 'google' | 'github') => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     return supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -73,7 +82,7 @@ export const supabaseAuth = {
    * Sign out the current user
    */
   signOut: async () => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     const { error } = await supabase.auth.signOut();
     return { error };
   },
@@ -82,7 +91,7 @@ export const supabaseAuth = {
    * Reset password with a recovery email
    */
   resetPassword: async (email: string) => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: getRedirectUrl('/reset-password'),
     });
@@ -94,7 +103,7 @@ export const supabaseAuth = {
    * Get the current session
    */
   getSession: async () => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.getSession();
     return { data, error };
   },
@@ -103,7 +112,7 @@ export const supabaseAuth = {
    * Get the current user
    */
   getUser: async () => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.getUser();
     return { data, error };
   },
@@ -112,7 +121,7 @@ export const supabaseAuth = {
    * Update user data
    */
   updateUser: async (attributes: { email?: string; password?: string; data?: any }) => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.updateUser(attributes);
     return { data, error };
   },
@@ -121,7 +130,7 @@ export const supabaseAuth = {
    * Subscribe to auth state changes
    */
   onAuthStateChange: (callback: (event: string, session: any) => void) => {
-    const supabase = createBrowserSupabase();
+    const supabase = getBrowserSupabase();
     return supabase.auth.onAuthStateChange(callback);
   },
 };
