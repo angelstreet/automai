@@ -1,5 +1,19 @@
 import { createBrowserSupabase } from './supabase';
 
+/**
+ * Helper function to determine production environment and get the appropriate redirect URL
+ */
+const getRedirectUrl = (path: string = '/auth-redirect'): string => {
+  const isProd = typeof window !== 'undefined' && 
+    !window.location.hostname.includes('localhost') && 
+    !window.location.hostname.includes('127.0.0.1');
+  
+  // In production, use the Vercel deployment URL regardless of current origin
+  return isProd 
+    ? `https://automai-eta.vercel.app${path}`
+    : `${window.location.origin}${path}`;
+};
+
 // Convenience functions for Supabase Auth
 export const supabaseAuth = {
   /**
@@ -24,7 +38,7 @@ export const supabaseAuth = {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth-redirect`,
+        emailRedirectTo: getRedirectUrl(),
       },
     });
 
@@ -39,7 +53,7 @@ export const supabaseAuth = {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth-redirect`,
+        redirectTo: getRedirectUrl(),
         scopes: provider === 'github' ? 'repo,user' : 'email profile',
       },
     });
@@ -62,7 +76,7 @@ export const supabaseAuth = {
   resetPassword: async (email: string) => {
     const supabase = createBrowserSupabase();
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: getRedirectUrl('/reset-password'),
     });
 
     return { data, error };
