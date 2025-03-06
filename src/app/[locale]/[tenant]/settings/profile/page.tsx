@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useUser } from '@/context/UserContext';
 
 import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/components/shadcn/card';
 
 export default function ProfileSettingsPage() {
-  const { data: session } = useSession();
+  const { user } = useUser();
 
   return (
     <div className="container mx-auto py-6 space-y-8">
@@ -30,16 +30,16 @@ export default function ProfileSettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Name</label>
-              <p className="text-sm text-muted-foreground">{session?.user?.name}</p>
+              <p className="text-sm text-muted-foreground">{user?.name}</p>
             </div>
             <div>
               <label className="text-sm font-medium">Email</label>
-              <p className="text-sm text-muted-foreground">{session?.user?.email}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
             <div>
               <label className="text-sm font-medium">Role</label>
               <p className="text-sm text-muted-foreground capitalize">
-                {(session?.user as any)?.role?.toLowerCase() || 'User'}
+                {user?.role?.toLowerCase() || 'User'}
               </p>
             </div>
           </div>

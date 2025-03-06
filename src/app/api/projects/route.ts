@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@/utils/supabase/server';
 import { z } from 'zod';
 
 import db from '@/lib/db';
@@ -13,7 +14,10 @@ const ProjectSchema = z.object({
 // GET /api/projects
 export async function GET() {
   try {
-    const session = await getServerSession();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -48,7 +52,10 @@ export async function GET() {
 // POST /api/projects
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -90,7 +97,10 @@ export async function POST(request: Request) {
 // PATCH /api/projects/[id]
 export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -133,7 +143,10 @@ export async function PATCH(request: Request) {
 // DELETE /api/projects/[id]
 export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }

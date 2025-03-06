@@ -23,8 +23,9 @@ npm test -- -t "test name" # Run specific test
 - **Organization**:
   - Client components in `[feature]/_components/`
   - Shared components in `src/components/`
+  - Page-specific components go in `_components/` folders
+  - Group related components in feature directories
   - Follow App Router directory structure
 - **Naming**: PascalCase for components, camelCase for functions/variables
 - **Error Handling**: Use try/catch with proper error messages
 - **Server Components**: Default to React Server Components unless client functionality needed
-- **Prisma**: Always import from `@/lib/prisma`, never create new instances

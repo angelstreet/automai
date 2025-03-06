@@ -1,7 +1,6 @@
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
@@ -11,7 +10,6 @@ export default function UseCaseEditPage() {
   const router = useRouter();
   const params = useParams();
   const { user, isLoading: userLoading } = useUser();
-  const { data: session } = useSession();
 
   // Redirect if not authenticated
   useEffect(() => {

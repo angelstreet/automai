@@ -1,7 +1,6 @@
 'use client';
 
 import { InfoIcon } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
@@ -12,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
+import { useUser } from '@/context/UserContext';
 
 // Define a simplified interface for logs (even though we won't use it)
 interface ConnectionLog {
@@ -28,11 +28,11 @@ interface ConnectionLog {
 }
 
 export default function LogsPage() {
-  const { data: session } = useSession();
+  const { user } = useUser();
   const [logs, setLogs] = useState<ConnectionLog[]>([]);
   const [loading, setLoading] = useState(false);
 
-  if (!session) {
+  if (!user) {
     return <div className="flex justify-center p-8">Please sign in to access this page</div>;
   }
 

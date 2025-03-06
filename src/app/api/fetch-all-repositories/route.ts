@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-
+import { cookies } from 'next/headers';
+import { createServerClient } from '@/utils/supabase/server';
 import db from '@/lib/db';
 
 // GET /api/fetch-all-repositories
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }

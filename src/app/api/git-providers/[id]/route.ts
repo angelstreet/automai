@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@/utils/supabase/server';
 
 import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
@@ -25,7 +26,10 @@ async function checkProviderAccess(id: string, userId: string) {
 export async function GET(request: Request, context: { params: { id: string } }) {
   try {
     const { params } = context;
-    const session = await getServerSession();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -53,7 +57,10 @@ export async function GET(request: Request, context: { params: { id: string } })
 export async function DELETE(request: Request, context: { params: { id: string } }) {
   try {
     const { params } = context;
-    const session = await getServerSession();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }

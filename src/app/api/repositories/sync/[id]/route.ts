@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@/utils/supabase/server';
 
 import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
@@ -27,12 +28,15 @@ async function checkRepositoryAccess(id: string, userId: string) {
 // POST /api/repositories/sync/[id]
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
-    const session = await getServerSession();
+    const cookieStore = cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { success, message, status } = await checkRepositoryAccess(params.id, _session.user.id);
+    const { success, message, status } = await checkRepositoryAccess(params.id, session.user.id);
 
     if (!success) {
       return NextResponse.json({ success, message }, { status: status });

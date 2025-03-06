@@ -2,10 +2,10 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 
 import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
+import { useUser } from '@/context/UserContext';
 
 import { Terminal } from '../../terminals/_components/Terminal';
 
@@ -13,7 +13,7 @@ export default function TerminalsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { data: session } = useSession();
+  const { user } = useUser();
   const [connection, setConnection] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,13 +110,13 @@ export default function TerminalsPage() {
   }, [connection, toast]);
 
   logger.info('User viewed terminals page', {
-    userId: session?.user?.email || undefined,
+    userId: user?.email || undefined,
     action: 'TERMINALS_PAGE_VIEW',
   });
 
   if (error) {
     logger.error(`Error fetching connections: ${error}`, {
-      userId: session?.user?.email || undefined,
+      userId: user?.email || undefined,
       action: 'CONNECTIONS_FETCHerror',
       data: { error },
     });

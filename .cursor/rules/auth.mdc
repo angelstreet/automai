@@ -1,5 +1,5 @@
 ---
-description: Authentication Implementation Rules
+description: Authentication Implementation
 globs: src/auth.ts, src/middleware.ts, src/app/api/auth/**/*.ts, src/app/[locale]/(auth)/**/*.tsx
 alwaysApply: true
 ---
@@ -8,7 +8,7 @@ alwaysApply: true
 
 ## Authentication Architecture
 
-The application uses NextAuth.js with a JWT strategy and supports multiple providers:
+The application uses Supabase with a JWT strategy and supports multiple providers:
 - OAuth providers (Google, GitHub)
 - Credentials provider (email/password)
 - Supabase authentication (in production)
