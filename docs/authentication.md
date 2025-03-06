@@ -165,24 +165,94 @@ This approach requires maintaining two separate GitHub OAuth apps, but it's the 
 
 ## Email/Password Authentication
 
-Email and password authentication is handled by Supabase Auth, which provides secure password hashing, email verification, and other security features:
+Email and password authentication is handled by Supabase Auth. Here's the complete workflow for both environments:
+
+### Authentication Flow for Email/Password
+
+1. **Registration Flow**:
+   - User submits email and password on the signup form
+   - Supabase hashes the password and creates the user account
+   - Supabase sends a verification email with a confirmation link
+   - User clicks the link to verify their email address
+   - Supabase redirects to `/auth-redirect` after successful verification
+   - Application creates the user session and redirects to the dashboard
+
+2. **Login Flow**:
+   - User enters email and password on the login form
+   - Supabase validates credentials against stored hash
+   - On success, Supabase creates a session and sets secure cookies
+   - Application redirects to the appropriate dashboard based on the user's tenant
+
+### Code Implementation
 
 ```typescript
 // Sign in with email and password
-const { data, error } = await supabaseAuth.signInWithPassword(email, password);
+signInWithPassword: async (email: string, password: string) => {
+  const supabase = createBrowserSupabase();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  return { data, error };
+},
 
 // Sign up with email and password
-const { data, error } = await supabaseAuth.signUp(email, password);
+signUp: async (email: string, password: string) => {
+  const supabase = createBrowserSupabase();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth-redirect`,
+    },
+  });
+  return { data, error };
+},
 
-// Reset password (password recovery)
-const { data, error } = await supabaseAuth.resetPassword(email);
+// Reset password
+resetPassword: async (email: string) => {
+  const supabase = createBrowserSupabase();
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  return { data, error };
+},
 ```
 
-Key features:
+### Email Authentication Setup
 
-- Secure password hashing with industry-standard algorithms
-- Automatic email verification flows
-- Password recovery and reset functionality
+#### Production Setup
+
+1. Configure Supabase Email Auth in the dashboard:
+   - Go to Authentication > Email Templates
+   - Customize verification and password reset templates
+   - Configure SMTP settings for sending emails
+
+2. Set environment variables in `.env.production`:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://wexkgcszrwxqsthahfyq.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_production_anon_key
+   ```
+
+#### Development Setup
+
+1. In development, use the local Supabase instance:
+   - Email verification and password reset emails appear in the Supabase Dashboard's "Logs" tab
+   - You can click the verification links directly from the log viewer
+
+2. Set environment variables in `.env.development`:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_local_anon_key
+   ```
+
+### Key Security Features
+
+- Secure password hashing with bcrypt
+- Rate limiting for login attempts
+- Automatic email verification workflows
+- Password complexity requirements
+- Secure session management via HTTP-only cookies
 - User data stored in Supabase PostgreSQL database
 
 ## Password Reset Flow
@@ -302,6 +372,46 @@ The authentication system implements several security best practices:
 - Secure redirect handling
 - Environment variable validation
 
+## Environment-Specific Configuration
+
+Here's a clear summary of what you need to configure for each authentication method in both development and production environments:
+
+### Development Environment
+
+1. **Email/Password Authentication**:
+   - Uses local Supabase instance (http://localhost:54321)
+   - Emails are available in the Supabase Dashboard's Logs section
+   - No additional configuration needed
+
+2. **Google OAuth**:
+   - Use the same Google OAuth app as production
+   - Add `http://localhost:54321/auth/v1/callback` as an additional authorized redirect URI
+   - Use the same client ID and secret in both environments
+
+3. **GitHub OAuth**:
+   - Create a separate GitHub OAuth app for development
+   - Set homepage URL to `http://localhost:3000`
+   - Set callback URL to `http://localhost:54321/auth/v1/callback`
+   - Use development-specific client ID and secret in `.env.development`
+
+### Production Environment
+
+1. **Email/Password Authentication**:
+   - Uses Supabase cloud instance (https://wexkgcszrwxqsthahfyq.supabase.co)
+   - Configure SMTP settings in Supabase dashboard for sending emails
+   - Set appropriate environment variables
+
+2. **Google OAuth**:
+   - Configure Google OAuth app with production URLs
+   - Set callback URL to `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+   - Set appropriate client ID and secret in `.env.production`
+
+3. **GitHub OAuth**:
+   - Use production GitHub OAuth app
+   - Set homepage URL to your production domain
+   - Set callback URL to `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+   - Set appropriate client ID and secret in `.env.production`
+
 ## Troubleshooting
 
 ### Missing Supabase Packages
@@ -317,6 +427,25 @@ npm install @supabase/supabase-js @supabase/auth-helpers-nextjs --save
 - If OAuth login fails, verify callback URLs in your provider's developer console
 - Check for callback URL mismatch between your app configuration and Supabase Auth settings
 - Verify your provider credentials are correctly configured in Supabase dashboard
+
+### GitHub-Specific Issues
+
+Since GitHub only allows one callback URL per OAuth app, you must:
+
+1. Have separate OAuth apps for development and production
+2. Switch between the appropriate client ID and secret based on environment
+
+If you see a "The redirect_uri is not associated with this application" error:
+- You're likely using the production GitHub OAuth app in development (or vice versa)
+- Ensure you're using the correct client ID for your current environment
+- Double-check that the callback URL in your GitHub OAuth app matches the Supabase URL for your environment
+
+### Google-Specific Issues
+
+If Google OAuth is working but GitHub is not:
+- Google allows multiple redirect URIs in the same OAuth app
+- GitHub only allows one redirect URI per OAuth app
+- Ensure you're using the proper GitHub OAuth app for your environment
 
 ### Authentication Behavior
 
