@@ -14,21 +14,30 @@ const getBrowserSupabase = () => {
  * Handles all OAuth redirects consistently across environments
  */
 const getRedirectUrl = (path: string = '/api/auth/callback'): string => {
-  // In production, use the environment variable
+  // First, check if SUPABASE_AUTH_CALLBACK_URL is explicitly set in any environment
+  if (process.env.SUPABASE_AUTH_CALLBACK_URL) {
+    console.log('Using configured SUPABASE_AUTH_CALLBACK_URL:', process.env.SUPABASE_AUTH_CALLBACK_URL);
+    return process.env.SUPABASE_AUTH_CALLBACK_URL;
+  }
+
+  // Check for Codespace environment
+  if (process.env.CODESPACE && process.env.CODESPACE_NAME && process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
+    const codespaceUrl = `https://${process.env.CODESPACE_NAME}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
+    console.log('Using Codespace URL for redirect:', `${codespaceUrl}${path}`);
+    return `${codespaceUrl}${path}`;
+  }
+  
+  // In production, use the site URL
   if (process.env.NODE_ENV === 'production') {
-    // If SUPABASE_AUTH_CALLBACK_URL is set, use that directly
-    if (process.env.SUPABASE_AUTH_CALLBACK_URL) {
-      console.log('Using configured SUPABASE_AUTH_CALLBACK_URL:', process.env.SUPABASE_AUTH_CALLBACK_URL);
-      return process.env.SUPABASE_AUTH_CALLBACK_URL;
-    }
     return `${process.env.NEXT_PUBLIC_SITE_URL}${path}`;
   }
 
-  // For development
+  // For development on server side
   if (typeof window === 'undefined') {
     return `http://localhost:3000${path}`;
   }
 
+  // For development on client side, use the current origin
   const baseUrl = window.location.origin;
   return `${baseUrl}${path}`;
 };
