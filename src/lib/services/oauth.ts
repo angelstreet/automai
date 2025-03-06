@@ -14,7 +14,8 @@ export function createGithubOauthUrl(providerId: string): string {
     : process.env.GITHUB_CLIENT_ID;
     
   // Always use the current origin for the redirect URI
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/git-providers/callback`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const redirectUri = `${baseUrl}/api/git-providers/callback`;
   const scope = 'repo,read:user,user:email';
   
   // Create state with providerId and redirectUri for callback handling
@@ -40,7 +41,8 @@ export function createGithubOauthUrl(providerId: string): string {
  */
 export function createGitlabOauthUrl(providerId: string): string {
   const clientId = process.env.GITLAB_CLIENT_ID;
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/gitlab`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const redirectUri = `${baseUrl}/api/auth/callback/gitlab`;
   const scope = 'api read_api read_user read_repository';
   const params = new URLSearchParams({
     client_id: clientId || '',

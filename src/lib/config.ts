@@ -15,9 +15,8 @@ export const config = {
   },
 
   auth: {
-    nextAuth: {
-      url: process.env.NEXTAUTH_URL,
-      secret: process.env.NEXTAUTH_SECRET,
+    jwt: {
+      secret: process.env.JWT_SECRET,
     },
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -30,7 +29,7 @@ export const config = {
   },
 
   api: {
-    baseUrl: process.env.NEXTAUTH_URL,
+    baseUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
   },
 } as const;
 

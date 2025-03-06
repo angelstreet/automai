@@ -105,7 +105,8 @@ export class GitLabProviderService implements GitProviderService {
   }
 
   getRedirectUrl(): string {
-    return `${process.env.NEXT_PUBLIC_APP_URL}/api/git-providers/callback/gitlab`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    return `${baseUrl}/api/git-providers/callback/gitlab`;
   }
 
   getAuthorizationUrl(state: string): string {

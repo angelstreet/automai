@@ -17,9 +17,6 @@ const envSchema = z
 
     // Authentication
     JWT_SECRET: z.string().min(1),
-    NEXTAUTH_URL: z.string().url(),
-    NEXTAUTH_SECRET: z.string(),
-    NEXT_PUBLIC_APP_URL: z.string().url(),
 
     // OAuth - Google
     GOOGLE_CLIENT_ID: z.string(),
@@ -57,9 +54,6 @@ const processEnv = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   JWT_SECRET: process.env.JWT_SECRET,
-  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
   GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL,
@@ -76,7 +70,7 @@ const isBrowser = typeof window !== 'undefined';
 const clientEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional().default('http://localhost:54321'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional().default('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'),
-  NEXT_PUBLIC_APP_URL: z.string().url().optional().default('http://localhost:3000'),
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
@@ -85,7 +79,7 @@ export const env = isBrowser
   ? clientEnvSchema.parse({
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
       NODE_ENV: process.env.NODE_ENV,
     })
   : envSchema.parse(processEnv);
@@ -115,5 +109,7 @@ export const getBaseUrl = () => {
   if (process.env.CODESPACE) {
     return `https://${process.env.CODESPACE_NAME}-3000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
   }
-  return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  
+  // Use NEXT_PUBLIC_SITE_URL for Supabase
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 };

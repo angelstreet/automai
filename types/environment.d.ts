@@ -13,8 +13,8 @@ declare global {
       NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
       SUPABASE_SERVICE_ROLE_KEY?: string;
       // Auth
-      NEXTAUTH_URL?: string;
-      NEXTAUTH_SECRET?: string;
+      JWT_SECRET?: string;
+      NEXT_PUBLIC_SITE_URL?: string;
     }
   }
 }
