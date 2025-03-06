@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     console.log('Supabase environment:', {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       originalUrl: request.url,
-      normalizedUrl: request.url.replace('localhost:3000', process.env.NEXT_PUBLIC_SITE_URL?.replace('https://', ''))
+      normalizedUrl: request.url.replace('localhost:3000', (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace('https://', ''))
     });
 
     // Test Supabase connection before exchanging the code
@@ -170,10 +170,14 @@ export async function GET(request: NextRequest) {
         });
         return NextResponse.redirect(new URL(`/en/login?error=${encodeURIComponent(error.message)}`, process.env.NEXT_PUBLIC_SITE_URL));
       }
+    } catch (error) {
+      console.error('Error during token exchange process:', error);
+      return NextResponse.redirect(new URL('/en/login?error=Token+exchange+failed', process.env.NEXT_PUBLIC_SITE_URL));
     }
 
     // Get session to verify success
-    const { data: { session } } = await supabase.auth.getSession();
+    const sessionResult = await supabase.auth.getSession();
+    const session = sessionResult.data.session;
     
     if (!session) {
       console.error('No session after code exchange');
