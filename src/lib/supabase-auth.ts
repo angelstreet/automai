@@ -2,25 +2,26 @@ import { createBrowserSupabase } from './supabase';
 
 /**
  * Helper function to determine production environment and get the appropriate redirect URL
- * Adds locale to the redirect path for proper routing
+ * Dynamically handles locales based on current URL path
  */
 const getRedirectUrl = (path: string = '/auth/callback'): string => {
-  const isProd = typeof window !== 'undefined' && 
-    !window.location.hostname.includes('localhost') && 
-    !window.location.hostname.includes('127.0.0.1');
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    return path;
+  }
+
+  // Get base URL from current location
+  const baseUrl = window.location.origin;
   
-  // Get the current locale from the URL path
-  const pathParts = typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean) : [];
-  const locale = pathParts.length > 0 ? pathParts[0] : 'en';
+  // Extract locale from current path if it exists
+  const currentPath = window.location.pathname;
+  const pathSegments = currentPath.split('/').filter(Boolean);
+  const locale = pathSegments.length > 0 ? pathSegments[0] : 'en';
+
+  // Clean up path to avoid double slashes
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
   
-  // Add locale to the path
-  const localizedPath = path.startsWith('/') ? `/${locale}${path}` : `/${locale}/${path}`;
-  
-  const baseUrl = isProd 
-    ? 'https://automai-eta.vercel.app'
-    : 'http://localhost:3000';
-    
-  return `${baseUrl}${localizedPath}`;
+  return `${baseUrl}/${locale}/${cleanPath}`;
 };
 
 // Convenience functions for Supabase Auth
@@ -59,15 +60,13 @@ export const supabaseAuth = {
    */
   signInWithOAuth: async (provider: 'google' | 'github') => {
     const supabase = createBrowserSupabase();
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    return supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: getRedirectUrl(),
+        redirectTo: getRedirectUrl('/auth/callback'),
         scopes: provider === 'github' ? 'repo,user' : 'email profile',
       },
     });
-
-    return { data, error };
   },
 
   /**
