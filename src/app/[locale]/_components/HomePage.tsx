@@ -61,6 +61,8 @@ export function HomePage() {
     redirect(`/${locale}/${tenant}/dashboard`);
   }
 
+  // If we're not loading, there's no error and we're not redirecting,
+  // then render the landing page
   return (
     <div className="relative flex min-h-screen flex-col">
       <SiteHeader />

@@ -43,6 +43,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+  const router = useRouter();
+  const pathname = usePathname();
 
   // Initialize refs to track state between renders
   const isFetchingUser = useRef(false);
@@ -227,6 +230,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         console.error('UserContext - Session error:', error);
         setError(error.message);
         setUser(null);
+        setSessionStatus('unauthenticated');
         setIsLoading(false);
         isFetchingUser.current = false;
         return;
@@ -255,6 +259,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           currentUser: user ? 'loaded' : 'not loaded yet',
         });
 
+        setSession(data.session);
+        setSessionStatus('authenticated');
+
         // If we already have user data for this user, don't fetch again
         if (user && user.id === data.session.user.id) {
           console.log('UserContext - Already have user data, skipping fetch');
@@ -281,12 +288,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       } else {
         console.log('UserContext - No session found, clearing user state');
         setUser(null);
-        setIsLoading(false);
+        setSessionStatus('unauthenticated');
       }
     } catch (err: any) {
       console.error('UserContext - Error loading session:', err);
       setError(err.message);
       setUser(null);
+      setSessionStatus('unauthenticated');
       setIsLoading(false);
     } finally {
       // We'll still set loading to false, but the debouncedFetchUser might still be running
@@ -555,7 +563,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         path: typeof window !== 'undefined' ? window.location.pathname : 'server-side',
       });
       setUser(null);
-      setIsLoading(false);
+      setSessionStatus('unauthenticated');
       if (typeof window !== 'undefined') {
         localStorage.removeItem(SESSION_CACHE_KEY);
       }

@@ -50,10 +50,12 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <>
       <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
-        <RoleProvider>
-          <RouteGuard>{children}</RouteGuard>
-          <ToasterProvider />
-        </RoleProvider>
+        <ThemeProvider defaultTheme={theme}>
+          <RoleProvider>
+            <RouteGuard>{children}</RouteGuard>
+            <ToasterProvider />
+          </RoleProvider>
+        </ThemeProvider>
       </NextIntlClientProvider>
     </>
   );
