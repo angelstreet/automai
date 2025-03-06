@@ -50,10 +50,16 @@ export async function GET(request: NextRequest) {
 
   try {
     // Debug information about URL and environment
+    // Extract host from NEXT_PUBLIC_SITE_URL to normalize URLs
+    const siteUrlHost = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace('https://', '');
+    
+    // Create normalized URL that replaces localhost:3000 with the actual site URL host
+    const normalizedUrl = request.url.replace(/localhost:3000|127\.0\.0\.1:3000/, siteUrlHost);
+    
     console.log('Supabase environment:', {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       originalUrl: request.url,
-      normalizedUrl: request.url.replace('localhost:3000', (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace('https://', ''))
+      normalizedUrl: normalizedUrl
     });
 
     // Test Supabase connection before exchanging the code
@@ -113,6 +119,9 @@ export async function GET(request: NextRequest) {
       const tokenEndpoint = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token`;
       console.log(`Testing token endpoint: ${tokenEndpoint}`);
       
+      // Get the origin URL for request headers
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      
       // Try another approach with direct fetch to debug
       try {
         const tokenResponse = await fetch(`${tokenEndpoint}?grant_type=authorization_code&code=${code}`, {
@@ -120,6 +129,8 @@ export async function GET(request: NextRequest) {
           headers: {
             'Content-Type': 'application/json',
             'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            'Origin': origin,
+            'Referer': origin
           },
         });
         
@@ -144,8 +155,20 @@ export async function GET(request: NextRequest) {
       
       // Try to exchange the code using Supabase client
       console.log('Trying exchange with Supabase client...');
+      
+      // First modify request.url to match expected domain if it's localhost
+      if (request.url.includes('localhost:3000') && process.env.NEXT_PUBLIC_SITE_URL) {
+        // This is important for GitHub Codespaces environment
+        console.log('Running in GitHub Codespace, fixing request URL');
+        const siteUrlHost = process.env.NEXT_PUBLIC_SITE_URL.replace('https://', '');
+        request.headers.set('host', siteUrlHost);
+        request.headers.set('origin', process.env.NEXT_PUBLIC_SITE_URL);
+        request.headers.set('referer', process.env.NEXT_PUBLIC_SITE_URL);
+      }
+      
       let error, data;
       try {
+        // Exchange the code using the Supabase client
         const result = await supabase.auth.exchangeCodeForSession(code);
         error = result.error;
         data = result.data;
