@@ -10,7 +10,6 @@ import {
 } from '@tanstack/react-table';
 import { useRouter, useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import supabaseAuth from '@/lib/supabase-auth';
 
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
@@ -57,51 +56,21 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
-  const [session, setSession] = useState<any>(null);
-  const [authStatus, setAuthStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>(
-    'loading'
-  );
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
   const { user } = useUser();
-  
-  // Load Supabase session
-  useEffect(() => {
-    async function loadSession() {
-      try {
-        const { data, error } = await supabaseAuth.getSession();
-        if (error || !data.session) {
-          setSession(null);
-          setAuthStatus('unauthenticated');
-        } else {
-          setSession(data.session);
-          setAuthStatus('authenticated');
-        }
-      } catch (error) {
-        console.error('Error loading Supabase session:', error);
-        setSession(null);
-        setAuthStatus('unauthenticated');
-      }
-    }
-    
-    loadSession();
-  }, []);
 
   // Fetch projects on mount
   useEffect(() => {
     const fetchProjects = async () => {
       setIsLoading(true);
       try {
-        if (!session?.access_token) {
-          throw new Error('Not authenticated');
-        }
-
         const response = await fetch('/api/projects', {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session?.access_token}`,
           },
+          credentials: 'include', // Use cookies for authentication
         });
         if (response.ok) {
           const data = await response.json();
@@ -120,8 +89,9 @@ export default function ProjectsPage() {
         setIsLoading(false);
       }
     };
-    if (authStatus === 'authenticated') fetchProjects();
-  }, [session, authStatus, toast]);
+
+    fetchProjects();
+  }, [toast]);
 
   // Define table columns
   const columns: ColumnDef<Project>[] = [
@@ -183,10 +153,10 @@ export default function ProjectsPage() {
 
   // CRUD handlers
   const handleCreate = async () => {
-    if (!session?.access_token || !user?.id || !newProject.name.trim()) {
+    if (!newProject.name.trim()) {
       toast({
         title: 'Error',
-        description: 'Please make sure you are logged in and have entered a project name.',
+        description: 'Please enter a project name.',
         variant: 'destructive',
       });
       return;
@@ -211,7 +181,7 @@ export default function ProjectsPage() {
     }
 
     // Check trial limitations
-    if (!checkCanCreateMore('maxProjects', projects.length)) {
+    if (user && !checkCanCreateMore('maxProjects', projects.length)) {
       toast({
         title: 'Trial Limit Reached',
         description: getUpgradeMessage(user?.plan as PlanType, 'maxProjects'),
@@ -226,12 +196,11 @@ export default function ProjectsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
+        credentials: 'include', // Use cookies for authentication
         body: JSON.stringify({
           name: newProject.name.trim(),
           description: newProject.description?.trim(),
-          ownerId: user.id,
         }),
       });
 
@@ -262,14 +231,14 @@ export default function ProjectsPage() {
   };
 
   const handleEdit = async () => {
-    if (!editingProject || !session?.access_token) return;
+    if (!editingProject) return;
     try {
       const res = await fetch(`/api/projects/${editingProject.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
+        credentials: 'include', // Use cookies for authentication
         body: JSON.stringify({
           name: editingProject.name,
           description: editingProject.description,
@@ -298,7 +267,6 @@ export default function ProjectsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!session?.access_token) return;
     if (!confirm('Are you sure you want to delete this project?')) return;
 
     try {
@@ -306,8 +274,8 @@ export default function ProjectsPage() {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
         },
+        credentials: 'include', // Use cookies for authentication
       });
       if (res.ok) {
         setProjects(projects.filter((p) => p.id !== id));

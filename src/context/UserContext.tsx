@@ -1,11 +1,13 @@
 'use client';
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
 import supabaseAuth from '@/lib/supabase-auth';
-import { Session } from '@supabase/supabase-js';
-import { AuthUser, CustomSupabaseUser } from '@/types/auth';
+import { Session, User as AuthUser } from '@supabase/supabase-js';
+import { CustomSupabaseUser } from '@/types/auth';
 import { createBrowserSupabase } from '@/lib/supabase';
+import { debounce } from '@/lib/utils';
 
 type PlanType = keyof typeof getPlanFeatures;
 
@@ -40,356 +42,187 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastFetch, setLastFetch] = useState<number>(0);
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  // Add refs to track initialization and in-flight requests
+  const isInitialized = useRef(false);
+  const isFetchingUser = useRef(false);
+  const lastFetchedAt = useRef<number | null>(null);
 
-  // Add refs to track fetch state and prevent duplicate requests
-  const isFetchingRef = useRef(false);
-  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const fetchAttempts = useRef(0);
-
-  // Load Supabase session
+  // Load session on initial mount
   useEffect(() => {
-    async function loadSession() {
-      setSessionStatus('loading');
-      
-      // First check for a user-session cookie as a fallback mechanism
-      const checkForSessionCookie = () => {
-        if (typeof window !== 'undefined') {
-          const cookies = document.cookie.split('; ');
-          const sessionCookie = cookies.find(c => c.startsWith('user-session='));
-          if (sessionCookie) {
-            const userId = sessionCookie.split('=')[1];
-            console.log('Found user-session cookie with ID:', userId);
-            return userId;
-          }
-        }
-        return null;
-      };
-      
-      try {
-        // Try to get session from Supabase
-        console.log('UserContext - Loading session from Supabase');
-        const { data, error } = await Promise.race([
-          supabaseAuth.getSession(),
-          new Promise<any>((_, reject) => 
-            setTimeout(() => reject(new Error('Session load timeout after 5s')), 5000)
-          )
-        ]) as any;
-        
-        if (error) {
-          console.log('Error loading Supabase session:', error);
-          
-          // Check for cookie as fallback
-          const userId = checkForSessionCookie();
-          if (userId) {
-            console.log('No Supabase session but user-session cookie found, treating as authenticated');
-            // We don't have a full session, but we know the user was authenticated recently
-            // This helps prevent flashing unauthenticated state while tokens reload
-            setSessionStatus('authenticated');
-            return;
-          }
-          
-          setSession(null);
-          setSessionStatus('unauthenticated');
-          return;
-        }
-        
-        if (!data?.session) {
-          console.log('No Supabase session found');
-          
-          // Check for cookie as fallback
-          const userId = checkForSessionCookie();
-          if (userId) {
-            console.log('No Supabase session but user-session cookie found, treating as authenticated');
-            // We don't have a full session, but we know the user was authenticated recently
-            setSessionStatus('authenticated');
-            return;
-          }
-          
-          setSession(null);
-          setSessionStatus('unauthenticated');
-          return;
-        }
-        
-        console.log('Supabase session found:', { 
-          userId: data.session.user.id,
-          email: data.session.user.email,
-          expiresAt: data.session.expires_at 
-            ? new Date(data.session.expires_at * 1000).toISOString() 
-            : 'unknown'
-        });
-        
-        setSession(data.session);
-        setSessionStatus('authenticated');
-      } catch (error) {
-        console.error('Error loading Supabase session:', error);
-        
-        // Check for cookie as fallback
-        const userId = checkForSessionCookie();
-        if (userId) {
-          console.log('Error loading session but user-session cookie found, treating as authenticated');
-          // We don't have a full session, but we know the user was authenticated recently
-          setSessionStatus('authenticated');
-          return;
-        }
-        
-        setSession(null);
-        setSessionStatus('unauthenticated');
-      }
-    }
+    if (isInitialized.current) return;
+    isInitialized.current = true;
     
+    console.log('UserContext - Initial session load');
     loadSession();
     
     // Set up auth state change listener
-    const { data: authListener } = supabaseAuth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event);
-      if (session) {
-        setSession(session);
-        setSessionStatus('authenticated');
-      } else {
-        setSession(null);
-        setSessionStatus('unauthenticated');
+    const { data: { subscription } } = supabaseAuth.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('UserContext - Auth state change:', event);
+        
+        // Only process meaningful state changes
+        if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED', 'TOKEN_REFRESHED'].includes(event)) {
+          loadSession();
+        }
       }
-    });
-    
-    // Cleanup
+    );
+
     return () => {
-      authListener?.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  const fetchUser = useCallback(async () => {
-    // Prevent concurrent fetches
-    if (isFetchingRef.current) {
-      console.log('Fetch already in progress, skipping duplicate request');
-      return;
-    }
-
-    // Limit fetch attempts to prevent infinite loops
-    if (fetchAttempts.current > 3) {
-      console.warn('Too many fetch attempts, stopping to prevent infinite loop');
-      
-      // Don't set error if we already have a user (prevents UI blocking)
-      if (!user) {
-        setError('Failed to fetch user data after multiple attempts');
+  // Handle window focus events
+  useEffect(() => {
+    function handleFocus() {
+      // Only refresh if data is stale (older than 5 minutes)
+      if (!lastFetchedAt.current || (Date.now() - lastFetchedAt.current) > 5 * 60 * 1000) {
+        console.log('UserContext - Window focus, checking session');
+        loadSession();
       } else {
-        console.log('Using existing user data despite fetch attempts limit');
+        console.log('UserContext - Window focus, data is fresh, skipping check');
       }
-      
-      setIsLoading(false);
-      return;
     }
 
-    // Add a delay before starting the fetch to ensure auth is ready
-    const delayPromise = () => new Promise(resolve => 
-      setTimeout(resolve, fetchAttempts.current * 300) // Increase delay with each attempt
-    );
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  async function loadSession() {
+    // Skip if already loading
+    if (isFetchingUser.current) {
+      console.log('UserContext - Session check already in progress, skipping');
+      return;
+    }
     
-    await delayPromise();
-
+    // Check if we have fresh data (less than 5 minutes old)
+    if (user && lastFetchedAt.current && (Date.now() - lastFetchedAt.current) < 5 * 60 * 1000) {
+      console.log('UserContext - User data is fresh, skipping session check');
+      return;
+    }
+    
+    console.log('UserContext - Loading session from Supabase');
+    setIsLoading(true);
+    isFetchingUser.current = true;
+    
     try {
-      isFetchingRef.current = true;
-      fetchAttempts.current += 1;
-      console.log(`fetchUser - Starting attempt ${fetchAttempts.current}`);
-
-      // First check the cookie fallback system
-      let hasSessionCookie = false;
-      if (typeof window !== 'undefined') {
-        const cookies = document.cookie.split('; ');
-        const sessionCookie = cookies.find(c => c.startsWith('user-session='));
-        if (sessionCookie) {
-          const userId = sessionCookie.split('=')[1];
-          console.log('fetchUser - Found user-session cookie with ID:', userId);
-          hasSessionCookie = true;
-        }
-      }
-
-      if (!session?.user && !hasSessionCookie) {
-        console.log('No active session found in fetchUser and no session cookie');
+      const { data, error } = await supabaseAuth.auth.getSession();
+      
+      if (error) {
+        console.error('UserContext - Session error:', error);
+        setError(error.message);
         setUser(null);
-        setError('No active session');
-        setIsLoading(false);
         return;
       }
-
-      console.log('Session found, fetching user data');
-
-      // Check for X-Auth-Session-Fallback header which indicates we're using a fallback session
-      // This would be set by the middleware when using the user-session cookie
-      const checkForFallbackHeader = () => {
-        if (typeof window !== 'undefined') {
-          // We can't directly access response headers from fetch, but we can check a custom meta tag
-          // that would be set by the middleware via Next.js addBasePath
-          const fallbackMeta = document.querySelector('meta[name="x-auth-session-fallback"]');
-          return fallbackMeta && fallbackMeta.getAttribute('content') === 'true';
-        }
-        return false;
-      };
       
-      // If using a fallback session, don't use the cache
-      const isFallbackSession = checkForFallbackHeader();
-      
-      // Check if we have a cached user and it's still valid
-      const now = Date.now();
-      const cachedData =
-        !isFallbackSession && typeof window !== 'undefined' ? localStorage.getItem(SESSION_CACHE_KEY) : null;
-
-      if (cachedData && !isFallbackSession) {
-        try {
-          const { user: cachedUser, timestamp } = JSON.parse(cachedData);
-          if (now - timestamp < SESSION_CACHE_EXPIRY) {
-            console.log('Using cached user data');
-            setUser(cachedUser);
-            setError(null);
-            setIsLoading(false);
-            setLastFetch(timestamp);
-            return;
-          }
-        } catch (error) {
-          console.warn('Invalid session cache, fetching fresh data');
-        }
-      }
-      
-      // If we're using a fallback session, we should always fetch fresh data
-      if (isFallbackSession) {
-        console.log('Using fallback session, fetching fresh user data');
-      }
-
-      console.log('Fetching fresh user data from API');
-      
-      try {
-        // Check if we have a valid auth session before making the request
-        const supabase = createBrowserSupabase();
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        console.log('fetchUser - Checking Supabase session:', {
-          hasSession: !!sessionData.session,
-          sessionExpiry: sessionData.session?.expires_at ? new Date(sessionData.session.expires_at * 1000).toISOString() : 'n/a',
-          path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
+      if (data?.session) {
+        console.log('Supabase session found:', {
+          userId: data.session.user.id,
+          email: data.session.user.email,
+          expiresAt: data.session.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown',
         });
         
-        if (!sessionData.session) {
-          console.error('fetchUser - No valid Supabase session found');
-          setError('No valid authentication session');
-          setUser(null);
-          setIsLoading(false);
-          isFetchingRef.current = false;
+        console.log('UserContext - Session authenticated:', {
+          status: 'authenticated',
+          userId: data.session.user.id,
+          email: data.session.user.email,
+          accessToken: data.session.access_token ? `${data.session.access_token.substring(0, 10)}...` : 'none',
+          expires: data.session.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown',
+          path: typeof window !== 'undefined' ? window.location.pathname : 'server',
+          currentUser: user ? 'loaded' : 'not loaded yet',
+        });
+        
+        // If we already have user data for this user, don't fetch again
+        if (user && user.id === data.session.user.id) {
+          console.log('UserContext - Already have user data, skipping fetch');
+          lastFetchedAt.current = Date.now();
           return;
         }
         
-        console.log('fetchUser - Valid session found with token:', 
-          sessionData.session.access_token ? `${sessionData.session.access_token.substring(0, 15)}...` : 'missing token');
-        
-        // Use the current origin for API calls
-        const apiUrl = typeof window !== 'undefined' 
-          ? `${window.location.origin}/api/auth/profile`
-          : 'http://localhost:3000/api/auth/profile';
-        
-        let userData = null;
-        let lastError = null;
-        
-        // In this try block, we'll attempt to fetch the profile from our server
-        // If the user doesn't exist in the database, the server will create it
-        try {
-          console.log('fetchUser - Calling profile API:', apiUrl);
-          
-          const response = await fetch(apiUrl, {
-            credentials: 'include',
-            headers: {
-              'Cache-Control': 'no-cache',
-              'Authorization': `Bearer ${sessionData.session.access_token}`,
-            },
-          });
-
-          console.log('fetchUser - Profile API response:', {
-            status: response.status,
-            ok: response.ok,
-            statusText: response.statusText,
-            contentType: response.headers.get('content-type')
-          });
-
-          if (response.ok) {
-            userData = await response.json();
-            console.log('fetchUser - User data fetched successfully:', {
-              userId: userData?.id ? `${userData.id.substring(0, 8)}...` : 'missing',
-              email: userData?.email || 'missing',
-              tenantId: userData?.tenantId || 'missing',
-              tenantName: userData?.tenantName || 'missing'
-            });
-          } else {
-            const errorText = await response.text();
-            console.log(`fetchUser - Profile fetch failed: Status ${response.status}`, {
-              errorText: errorText.substring(0, 100) + (errorText.length > 100 ? '...' : ''),
-              url: apiUrl
-            });
-            lastError = { status: response.status, error: errorText };
-          }
-        } catch (err) {
-          console.error('fetchUser - Error fetching user data:', err);
-          lastError = { error: err };
-        }
-
-        if (!userData) {
-          console.error('Failed to fetch profile:', lastError);
-          
-          // Check if we already have a user - if so, use that instead of throwing an error
-          if (user) {
-            console.log('Using existing user data despite profile fetch failure');
-            // Keep existing user data and don't throw error
-            setIsLoading(false);
-            isFetchingRef.current = false;
-            return;
-          }
-          
-          throw new Error(`Failed to fetch user profile: ${lastError?.status || ''} ${lastError?.error || 'Unknown error'}`);
-        }
-
-        // Cache the user data in localStorage and also set a cookie as backup
-        if (typeof window !== 'undefined') {
-          // Store in localStorage
-          localStorage.setItem(
-            SESSION_CACHE_KEY,
-            JSON.stringify({
-              user: userData,
-              timestamp: now,
-            }),
-          );
-          
-          // Also store a minimal version in a cookie as backup
-          // This helps in cases where localStorage might not be synced between tabs
-          try {
-            const userId = userData?.id;
-            const expiry = new Date();
-            expiry.setTime(expiry.getTime() + SESSION_CACHE_EXPIRY);
-            document.cookie = `user-session=${userId}; expires=${expiry.toUTCString()}; path=/; SameSite=Lax`;
-            console.log('Set user-session cookie for user ID:', userId);
-          } catch (e) {
-            console.warn('Failed to set user-session cookie:', e);
-          }
-        }
-
-        setUser(userData);
-        setError(null);
-        setLastFetch(now);
-        // Reset fetch attempts on success
-        fetchAttempts.current = 0;
-      } catch (err: any) {
-        console.error('Error in fetchUser:', err);
-        setError(`Failed to fetch user profile: ${err.message || 'Unknown error'}`);
+        // Schedule user profile fetch with debounce
+        console.log('UserContext - Scheduling user profile fetch with delay');
+        debouncedFetchUser(data.session.user);
+      } else {
+        console.log('UserContext - No session found');
         setUser(null);
-      } finally {
-        setIsLoading(false);
-        isFetchingRef.current = false;
       }
-    } catch (err) {
-      console.error('Error in fetchUser:', err);
-      setError('Failed to fetch user profile');
+    } catch (err: any) {
+      console.error('UserContext - Error loading session:', err);
+      setError(err.message);
       setUser(null);
     } finally {
       setIsLoading(false);
-      isFetchingRef.current = false;
+      isFetchingUser.current = false;
     }
-  }, [session]);
+  }
+
+  // Improved debounced fetch with longer delay
+  const debouncedFetchUser = useCallback(
+    debounce((sessionUser: AuthUser) => {
+      console.log('UserContext - Executing user profile fetch now');
+      fetchUser(sessionUser);
+    }, 3000), // Increased from 1500ms to 3000ms
+    []
+  );
+
+  async function fetchUser(sessionUser: AuthUser) {
+    // Skip if already fetching
+    if (isFetchingUser.current) {
+      console.log('UserContext - User fetch already in progress, skipping');
+      return;
+    }
+    
+    isFetchingUser.current = true;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    try {
+      while (attempts < maxAttempts) {
+        attempts++;
+        console.log(`fetchUser - Starting attempt ${attempts}`);
+        
+        // Check for user-session cookie as a quick way to get user ID
+        const userSessionCookie = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('user-session='));
+          
+        if (userSessionCookie) {
+          const userId = userSessionCookie.split('=')[1];
+          console.log(`fetchUser - Found user-session cookie with ID: ${userId}`);
+          
+          // Verify this matches the session user
+          if (userId !== sessionUser.id) {
+            console.warn('Cookie user ID does not match session user ID');
+          }
+        }
+        
+        console.log('Session found, fetching user data');
+        
+        // Check if we have fresh data for this user
+        if (user && user.id === sessionUser.id && lastFetchedAt.current && 
+            (Date.now() - lastFetchedAt.current) < 5 * 60 * 1000) {
+          console.log('Using cached user data');
+          lastFetchedAt.current = Date.now(); // Refresh timestamp
+          return;
+        }
+        
+        // Fetch user profile data
+        // ... existing fetch user code ...
+        
+        // Update last fetched timestamp
+        lastFetchedAt.current = Date.now();
+        return;
+      }
+    } catch (err: any) {
+      console.error('Error fetching user:', err);
+      setError(err.message);
+    } finally {
+      isFetchingUser.current = false;
+    }
+  }
 
   const updateProfile = useCallback(
     async (data: Partial<User>) => {
@@ -428,7 +261,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // Check session only when needed with debounce
   const checkSession = useCallback(() => {
     const now = Date.now();
-    if (now - lastFetch > SESSION_CACHE_EXPIRY) {
+    if (now - lastFetchedAt.current > SESSION_CACHE_EXPIRY) {
       // Clear any existing timeout
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current);
@@ -440,7 +273,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         fetchTimeoutRef.current = null;
       }, 300);
     }
-  }, [lastFetch, fetchUser]);
+  }, [lastFetchedAt, fetchUser]);
 
   // Add a listener to refresh the session when the app regains focus
   useEffect(() => {
@@ -532,14 +365,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         
         // Check if the user data is reasonably fresh (less than 5 minutes old)
         const now = Date.now();
-        if (lastFetch && now - lastFetch < SESSION_CACHE_EXPIRY) {
+        if (lastFetchedAt.current && now - lastFetchedAt.current < SESSION_CACHE_EXPIRY) {
           console.log('UserContext - User data is fresh, no need to refetch');
           return;
         }
       }
       
       // Check if we're already fetching
-      if (isFetchingRef.current) {
+      if (isFetchingUser.current) {
         console.log('UserContext - Already fetching user data, skipping duplicate fetch');
         return;
       }

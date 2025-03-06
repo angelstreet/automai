@@ -129,7 +129,9 @@ export default function LoginPage() {
       
       if (session) {
         // User signed in, redirect to dashboard or callback URL
-        const redirectPath = normalizedCallbackUrl || `/${locale}/trial/dashboard`;
+        let redirectPath = normalizedCallbackUrl || `/${locale}/trial/dashboard`;
+        // Ensure path is lowercase
+        redirectPath = redirectPath.toLowerCase();
         console.log('Auth state changed, redirecting to:', redirectPath);
         router.replace(redirectPath);
       }
@@ -195,8 +197,8 @@ export default function LoginPage() {
           // Use replace to avoid having login in history
           let redirectPath = normalizedCallbackUrl || `/${locale}/trial/dashboard`;
           
-          // Make sure tenant name is lowercase to avoid case sensitivity issues
-          redirectPath = redirectPath.replace('/Trial/', '/trial/');
+          // Always normalize the entire path to lowercase
+          redirectPath = redirectPath.toLowerCase();
           
           console.log('Login successful, redirecting to:', redirectPath);
           router.replace(redirectPath);

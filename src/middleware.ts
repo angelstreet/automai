@@ -23,7 +23,7 @@ async function getIntlMiddleware() {
 // Helper function to create login redirect response
 function createLoginRedirect(request: NextRequest, pathParts: string[]) {
   // Extract locale from URL for redirect
-  const locale = pathParts[0];
+  const locale = pathParts[0]?.toLowerCase() || defaultLocale;
   // Fix type error by asserting locale is a valid locale type
   const validLocale = locales.includes(locale as any)
     ? (locale as (typeof locales)[number])
@@ -42,7 +42,7 @@ function createLoginRedirect(request: NextRequest, pathParts: string[]) {
   // Redirect to login with the current URL as the callbackUrl
   const loginUrl = new URL(`/${validLocale}/login`, request.url);
   
-  // Normalize the pathname to lowercase for consistent callback URLs
+  // Always use lowercase for URLs
   const normalizedPathname = request.nextUrl.pathname.toLowerCase();
   loginUrl.searchParams.set('callbackUrl', normalizedPathname);
   
@@ -74,19 +74,16 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
   
-  // Force lowercase for tenant paths to avoid case sensitivity issues
+  // Force lowercase for all parts of the URL to avoid case sensitivity issues
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+  const originalPath = request.nextUrl.pathname;
+  let lowercasePath = originalPath.toLowerCase();
   
-  // Check if this is potentially a tenant path (locale/tenant/*) and normalize case
-  if (pathParts.length >= 2) {
-    // Check if the second part (potential tenant name) contains any uppercase letters
-    const potentialTenant = pathParts[1];
-    const lowercaseTenant = potentialTenant.toLowerCase();
-    
-    if (potentialTenant !== lowercaseTenant) {
-      // Tenant name has uppercase letters, redirect to lowercase version
-      const lowercasePath = request.nextUrl.pathname.replace(`/${potentialTenant}/`, `/${lowercaseTenant}/`);
-      console.log('Normalizing tenant path case:', request.nextUrl.pathname, 'to', lowercasePath);
+  // Check if the path would be different when converted to lowercase
+  if (lowercasePath !== originalPath) {
+    // Special handling for tenant paths (locale/tenant/*)
+    if (pathParts.length >= 2) {
+      console.log('Normalizing URL case:', originalPath, 'to', lowercasePath);
       return NextResponse.redirect(new URL(lowercasePath, request.url));
     }
   }
@@ -189,16 +186,21 @@ export default async function middleware(request: NextRequest) {
     locales.includes(pathParts[0] as any) && 
     pathParts[1] === 'login';
     
-  if (isLoginPage && !isPublicPath) {
+  // Use a mutable variable for public path checks
+  let mutableIsPublicPath = isPublicPath;
+  if (isLoginPage && !mutableIsPublicPath) {
     console.log('Middleware - Login page detected, forcing public path status');
-    isPublicPath = true;
+    mutableIsPublicPath = true;
   }
+  
+  // Update the immutable variable after all checks
+  const isPublicPathFinal = mutableIsPublicPath;
   
   // Add debug logging for public path detection
   console.log('Middleware - Public path check:', {
     pathname: request.nextUrl.pathname,
     pathParts,
-    isPublicPath,
+    isPublicPath: isPublicPathFinal,
     matchedExplicitPath: publicPaths.some((path) => request.nextUrl.pathname === path),
     isRootPath: request.nextUrl.pathname === '/',
     isRootLocalePath,
@@ -209,7 +211,7 @@ export default async function middleware(request: NextRequest) {
     normPathname: request.nextUrl.pathname.replace(/\/+$/, '') // Path with trailing slashes removed
   });
 
-  if (isPublicPath) {
+  if (isPublicPathFinal) {
     console.log('Public path detected, bypassing auth:', request.nextUrl.pathname);
     return NextResponse.next();
   }
@@ -447,7 +449,7 @@ export default async function middleware(request: NextRequest) {
                 res.cookies.set({ name, value: '', ...options });
               },
             },
-          },
+          }
         );
 
         // Get current session from cookies
@@ -574,8 +576,28 @@ export default async function middleware(request: NextRequest) {
       // For protected UI routes, verify user record in database
       if (!isApiRoute && session?.user?.id) {
         try {
+          // Create a database client for user verification
+          const dbClient = createServerClient(
+            supabaseUrl,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+              cookies: {
+                get: (name) => {
+                  const cookie = request.cookies.get(name);
+                  return cookie?.value;
+                },
+                set: (name, value, options) => {
+                  res.cookies.set({ name, value, ...options });
+                },
+                remove: (name, options) => {
+                  res.cookies.set({ name, value: '', ...options });
+                },
+              },
+            }
+          );
+          
           // Check if user exists in Supabase database
-          const { data: user, error } = await supabase
+          const { data: user, error } = await dbClient
             .from('users')
             .select('id')
             .eq('id', session.user.id)

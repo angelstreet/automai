@@ -1,5 +1,5 @@
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
@@ -14,35 +14,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/context/UserContext';
-import supabaseAuth from '@/lib/supabase-auth';
-
-type UserData = {
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-};
 
 export function ProfileDropdown() {
   const { user, logout } = useUser();
-  const [userData, setUserData] = useState<UserData | null>(null);
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
-
-  useEffect(() => {
-    async function getUserData() {
-      const { data } = await supabaseAuth.getUser();
-      if (data?.user) {
-        setUserData({
-          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-          email: data.user.email,
-          image: data.user.user_metadata?.avatar_url || '/avatars/01.svg'
-        });
-      }
-    }
-    
-    getUserData();
-  }, []);
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
@@ -58,7 +35,12 @@ export function ProfileDropdown() {
     router.push(`/${locale}/login`);
   };
 
-  if (!userData) return null;
+  if (!user) return null;
+
+  // Get user avatar image
+  const userImage = user.avatarUrl || user.user_metadata?.avatar_url || '/avatars/01.svg';
+  // Get user display name
+  const userName = user.name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
 
   return (
     <DropdownMenu modal={false}>
@@ -66,18 +48,18 @@ export function ProfileDropdown() {
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarImage
-              src={userData.image || '/avatars/01.svg'}
-              alt={userData.name || 'User'}
+              src={userImage}
+              alt={userName}
             />
-            <AvatarFallback>{getInitials(userData.name || 'U')}</AvatarFallback>
+            <AvatarFallback>{getInitials(userName)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{userData.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">{userData.email}</p>
+            <p className="text-sm font-medium leading-none">{userName}</p>
+            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

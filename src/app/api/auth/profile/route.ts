@@ -63,7 +63,7 @@ export async function GET(request: Request) {
             email: session.user.email,
             name: session.user.name || session.user.email?.split('@')[0] || 'User',
             role: session.user.role || 'admin', // Default to admin role
-            tenantId: session.user.tenantId || 'trial',
+            tenantId: (session.user.tenantId || 'trial').toLowerCase(),
           }
         });
         
@@ -87,8 +87,8 @@ export async function GET(request: Request) {
           name: session.user.name,
           email: session.user.email,
           role: session.user.role || 'admin', // Default to admin role
-          tenantId: session.user.tenantId || 'trial',
-          tenantName: session.user.tenantName || 'trial',
+          tenantId: (session.user.tenantId || 'trial').toLowerCase(),
+          tenantName: (session.user.tenantName || 'trial').toLowerCase(),
           plan: 'free',
         });
       }
