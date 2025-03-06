@@ -1,17 +1,18 @@
 'use client';
 
 import { useRouter, usePathname, useParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useUser } from '@/context/UserContext';
+import supabaseAuth from '@/lib/supabase-auth';
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
-  const { data: session, status } = useSession();
   const { user, isLoading: isUserLoading, error: userError } = useUser();
+  const [session, setSession] = useState<any>(null);
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
   const isRedirecting = useRef(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const userErrorHandled = useRef(false);
@@ -19,6 +20,23 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   // Properly handle params
   const locale = (params?.locale as string) || 'en';
   const currentTenant = params?.tenant as string;
+
+  // Load Supabase session
+  useEffect(() => {
+    async function loadSession() {
+      setIsSessionLoading(true);
+      try {
+        const { data } = await supabaseAuth.getSession();
+        setSession(data.session);
+      } catch (error) {
+        console.error('Error loading session:', error);
+      } finally {
+        setIsSessionLoading(false);
+      }
+    }
+    
+    loadSession();
+  }, []);
 
   useEffect(() => {
     // Reset redirecting flag when pathname changes
@@ -37,7 +55,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       pathname,
       locale,
       currentTenant,
-      sessionStatus: status,
+      sessionStatus: isSessionLoading ? 'loading' : session ? 'authenticated' : 'unauthenticated',
       isUserLoading,
       hasUser: !!user,
       userError,
@@ -46,11 +64,11 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     };
     console.log('RouteGuard state:', info);
     setDebugInfo(info);
-  }, [pathname, locale, currentTenant, status, isUserLoading, user, userError]);
+  }, [pathname, locale, currentTenant, isSessionLoading, session, isUserLoading, user, userError]);
 
   useEffect(() => {
     // Don't do anything while loading session or user data
-    if (status === 'loading' || isUserLoading) return;
+    if (isSessionLoading || isUserLoading) return;
 
     // Prevent multiple redirects
     if (isRedirecting.current) return;
@@ -67,7 +85,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       console.log('Handling routing:', {
         isPublicRoute,
         pathname,
-        status,
+        hasSession: !!session,
         hasUser: !!user,
         currentTenant,
         userError,
@@ -125,10 +143,10 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     };
 
     handleRouting();
-  }, [pathname, locale, currentTenant, status, isUserLoading, user, userError, router, session]);
+  }, [pathname, locale, currentTenant, isSessionLoading, session, isUserLoading, user, userError, router]);
 
   // Show loading state while checking auth
-  if (isUserLoading || status === 'loading') {
+  if (isUserLoading || isSessionLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

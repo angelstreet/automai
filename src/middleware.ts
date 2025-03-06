@@ -71,9 +71,10 @@ export default async function middleware(request: NextRequest) {
     '/login',
     '/register',
     '/signup',
+    '/forgot-password',
+    '/reset-password',
     '/auth-redirect',
     '/error',
-    '/api/auth',
     '/_next',
     '/favicon.ico',
     '/api/hosts/byName',
@@ -89,31 +90,9 @@ export default async function middleware(request: NextRequest) {
     publicPaths.some((path) => request.nextUrl.pathname === path) ||
     request.nextUrl.pathname === '/' ||
     (pathParts.length === 1 && locales.includes(pathParts[0] as any)) ||
-    request.nextUrl.pathname.startsWith('/api/auth/') ||
     request.nextUrl.pathname.includes('/auth-redirect');
 
   if (isPublicPath) {
-    // Special handling for profile API 404 responses
-    if (request.nextUrl.pathname.includes('/api/auth/profile')) {
-      // Store original response to check status later
-      const response = await NextResponse.next();
-
-      // If profile API returns 404, clear session and redirect to login for non-API requests
-      if (response.status === 404) {
-        console.log('Profile API returned 404, user not found in database');
-
-        // For API requests, just return the 404
-        if (request.headers.get('accept')?.includes('application/json')) {
-          return response;
-        }
-
-        // For browser requests, redirect to login
-        return createLoginRedirect(request, pathParts);
-      }
-
-      return response;
-    }
-
     console.log('Public path detected, bypassing auth:', request.nextUrl.pathname);
     return NextResponse.next();
   }
@@ -187,7 +166,7 @@ export default async function middleware(request: NextRequest) {
         !!session.user.email &&
         (!session.expires_at || session.expires_at * 1000 > Date.now());
 
-      // Only check token validity in middleware - UserContext will handle 404s for deleted users
+      // Only check token validity in middleware
       if (!isValidToken) {
         console.log('Invalid token for protected route:', request.nextUrl.pathname);
 
@@ -220,6 +199,9 @@ export default async function middleware(request: NextRequest) {
           console.log('Allowing request despite database check failure');
         }
       }
+
+      // Attach the Supabase session to the response so it can be used by the app
+      return res;
     } catch (error) {
       // Log any errors in token validation
       console.error('Error validating token:', error);

@@ -29,8 +29,8 @@ export default function AuthRedirectFallback() {
         }
 
         if (data?.session) {
-          // Try to get user data from database to determine tenant
           try {
+            // Get user profile data from Supabase to determine tenant
             // For now, use default tenant
             const tenant = 'trial';
             console.log('Session found, redirecting to dashboard');

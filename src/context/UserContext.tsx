@@ -1,16 +1,19 @@
 'use client';
-import type { Session } from 'next-auth';
-import { useSession } from 'next-auth/react';
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
+import supabaseAuth from '@/lib/supabase-auth';
 
 type PlanType = keyof typeof getPlanFeatures;
 
-// Extend Session type
-interface CustomSession extends Session {
-  accessToken: string;
-}
+type SupabaseSession = {
+  user: {
+    id: string;
+    email: string;
+    user_metadata: any;
+  };
+  access_token: string;
+};
 
 type User = {
   id: string;
@@ -32,7 +35,7 @@ type UserContextType = {
     feature: 'maxProjects' | 'maxUseCases' | 'maxCampaigns',
     currentCount: number,
   ) => boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   checkSession: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -45,7 +48,8 @@ const SESSION_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession() as { data: CustomSession | null; status: string };
+  const [session, setSession] = useState<SupabaseSession | null>(null);
+  const [sessionStatus, setSessionStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +59,48 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const isFetchingRef = useRef(false);
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fetchAttempts = useRef(0);
+
+  // Load Supabase session
+  useEffect(() => {
+    async function loadSession() {
+      setSessionStatus('loading');
+      try {
+        const { data, error } = await supabaseAuth.getSession();
+        if (error || !data.session) {
+          console.log('No Supabase session found or error:', error);
+          setSession(null);
+          setSessionStatus('unauthenticated');
+          return;
+        }
+        
+        setSession(data.session);
+        setSessionStatus('authenticated');
+      } catch (error) {
+        console.error('Error loading Supabase session:', error);
+        setSession(null);
+        setSessionStatus('unauthenticated');
+      }
+    }
+    
+    loadSession();
+    
+    // Set up auth state change listener
+    const { data: authListener } = supabaseAuth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event);
+      if (session) {
+        setSession(session);
+        setSessionStatus('authenticated');
+      } else {
+        setSession(null);
+        setSessionStatus('unauthenticated');
+      }
+    });
+    
+    // Cleanup
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
 
   const fetchUser = useCallback(async () => {
     // Prevent concurrent fetches
@@ -164,7 +210,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = useCallback(
     async (data: Partial<User>) => {
-      if (!session?.accessToken) {
+      if (!session?.access_token) {
         throw new Error('No active session');
       }
 
@@ -174,7 +220,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify(data),
           credentials: 'include',
@@ -214,12 +260,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [lastFetch, fetchUser]);
 
   useEffect(() => {
-    if (status === 'loading') {
+    if (sessionStatus === 'loading') {
       setIsLoading(true);
       return;
     }
 
-    if (status === 'authenticated' && session?.user) {
+    if (sessionStatus === 'authenticated' && session?.user) {
       console.log('Session authenticated, fetching user data');
       // Debounce the initial fetch
       if (fetchTimeoutRef.current) {
@@ -230,7 +276,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         fetchUser();
         fetchTimeoutRef.current = null;
       }, 300);
-    } else if (status === 'unauthenticated') {
+    } else if (sessionStatus === 'unauthenticated') {
       console.log('Session unauthenticated, clearing user data');
       setUser(null);
       setIsLoading(false);
@@ -245,7 +291,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(fetchTimeoutRef.current);
       }
     };
-  }, [status, session, fetchUser]);
+  }, [sessionStatus, session, fetchUser]);
 
   const checkFeature = (feature: string): boolean => {
     if (!user) return false;
@@ -264,12 +310,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(SESSION_CACHE_KEY);
     }
+    
+    // Sign out from Supabase
+    await supabaseAuth.signOut();
+    
     setUser(null);
+    setSession(null);
+    setSessionStatus('unauthenticated');
   };
 
   const value = {
     user,
-    isLoading: isLoading || status === 'loading',
+    isLoading: isLoading || sessionStatus === 'loading',
     error,
     isFeatureEnabled: checkFeature,
     canCreateMore: checkCanCreateMore,

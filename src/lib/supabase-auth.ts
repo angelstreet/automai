@@ -108,6 +108,14 @@ export const supabaseAuth = {
     const { data, error } = await supabase.auth.updateUser(attributes);
     return { data, error };
   },
+  
+  /**
+   * Subscribe to auth state changes
+   */
+  onAuthStateChange: (callback: (event: string, session: any) => void) => {
+    const supabase = createBrowserSupabase();
+    return supabase.auth.onAuthStateChange(callback);
+  },
 };
 
 export default supabaseAuth;
