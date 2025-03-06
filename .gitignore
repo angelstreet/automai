@@ -13,3 +13,6 @@ src/server/prisma/dev.db-journal
 prisma/migrations/
 .vscode/settings.json
 docs/jenkins-infrastructure/
+
+# Auth test files with sensitive information
+public/test-auth.html
