@@ -1,41 +1,41 @@
 #!/bin/bash
-# Switch Supabase configuration based on environment
 
-# Default to local if no argument is provided
-ENV=${1:-local}
+# Script to switch between different Supabase configurations
+# Usage: ./switch-supabase-config.sh [local|codespace|production]
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+CONFIG_TYPE=$1
 
-CONFIG_PATH="$PROJECT_ROOT/supabase/config"
-TARGET_CONFIG="$CONFIG_PATH/config.$ENV.toml"
-CURRENT_CONFIG="$PROJECT_ROOT/supabase/config.toml"
-
-# Check if target config exists
-if [ ! -f "$TARGET_CONFIG" ]; then
-  echo "❌ Configuration file for environment '$ENV' not found at: $TARGET_CONFIG"
-  echo "Available configurations:"
-  ls -1 "$CONFIG_PATH" | grep "config\." | sed 's/config\.\(.*\)\.toml/  \1/'
+if [ -z "$CONFIG_TYPE" ]; then
+  echo "Error: Configuration type not specified"
+  echo "Usage: ./switch-supabase-config.sh [local|codespace|production]"
   exit 1
 fi
 
-# Backup current configuration if it's different
-if [ -f "$CURRENT_CONFIG" ] && ! cmp -s "$CURRENT_CONFIG" "$TARGET_CONFIG"; then
-  ENV_DETECT=$(grep -E "site_url.*github\.dev" "$CURRENT_CONFIG" > /dev/null && echo "codespace" || echo "local")
-  cp "$CURRENT_CONFIG" "$CONFIG_PATH/config.$ENV_DETECT.toml"
-  echo "💾 Backed up current configuration to: $CONFIG_PATH/config.$ENV_DETECT.toml"
+if [ "$CONFIG_TYPE" != "local" ] && [ "$CONFIG_TYPE" != "codespace" ] && [ "$CONFIG_TYPE" != "production" ]; then
+  echo "Error: Invalid configuration type. Must be 'local', 'codespace', or 'production'"
+  exit 1
 fi
 
-# Apply new configuration
-cp "$TARGET_CONFIG" "$CURRENT_CONFIG"
-echo "✅ Switched to $ENV Supabase configuration"
+# Path to the Supabase config files
+CONFIG_DIR="./supabase/config"
+SOURCE_CONFIG="${CONFIG_DIR}/config.${CONFIG_TYPE}.toml"
+TARGET_CONFIG="./supabase/config.toml"
 
-# Show configuration details
-if [ "$ENV" = "codespace" ]; then
-  SITE_URL=$(grep "site_url" "$CURRENT_CONFIG" | head -1 | sed 's/.*= "\(.*\)".*/\1/')
-  GITHUB_CLIENT_ID=$(grep -A 3 "\[auth.external.github\]" "$CURRENT_CONFIG" | grep "client_id" | sed 's/.*= "\(.*\)".*/\1/')
-  echo "🔍 Codespace Site URL: $SITE_URL"
-  echo "🔑 GitHub Client ID: $GITHUB_CLIENT_ID"
+# Check if source config exists
+if [ ! -f "$SOURCE_CONFIG" ]; then
+  echo "Error: Source configuration file not found: $SOURCE_CONFIG"
+  exit 1
 fi
 
-echo "To apply changes, restart Supabase with: npx supabase stop && npx supabase start"
+# Copy the configuration file
+echo "Switching to $CONFIG_TYPE Supabase configuration..."
+cp "$SOURCE_CONFIG" "$TARGET_CONFIG"
+
+if [ $? -eq 0 ]; then
+  echo "Successfully switched to $CONFIG_TYPE configuration"
+else
+  echo "Error: Failed to switch configuration"
+  exit 1
+fi
+
+exit 0

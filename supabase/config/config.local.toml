@@ -271,8 +271,8 @@ max_frequency = "5s"
 
 [auth.external.github]
 enabled = true
-client_id = "Ov23liaMpBie6bYgkSwX"
-secret = "724246a35c225201be32a43256bebb026a4e7827"
+client_id = "Ov23li9Mgk9UsSftpKW3"
+secret = "511e1370dedef47c803b62e1354530d8453797ae"
 # Use the Supabase auth endpoint as redirect target for local development
 redirect_uri = "http://localhost:54321/auth/v1/callback"
 
