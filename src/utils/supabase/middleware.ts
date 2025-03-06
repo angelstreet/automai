@@ -12,6 +12,11 @@ try {
 }
 
 export const createClient = (request: NextRequest) => {
+  // Don't handle Supabase auth callbacks with the middleware
+  if (request.nextUrl.pathname.startsWith('/auth/callback')) {
+    return NextResponse.next();
+  }
+
   // Create an unmodified response
   let supabaseResponse = NextResponse.next({
     request: {

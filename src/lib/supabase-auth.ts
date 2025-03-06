@@ -4,7 +4,7 @@ import { createBrowserSupabase } from './supabase';
  * Helper function to determine production environment and get the appropriate redirect URL
  * Adds locale to the redirect path for proper routing
  */
-const getRedirectUrl = (path: string = '/auth-redirect'): string => {
+const getRedirectUrl = (path: string = '/auth/callback'): string => {
   const isProd = typeof window !== 'undefined' && 
     !window.location.hostname.includes('localhost') && 
     !window.location.hostname.includes('127.0.0.1');
@@ -16,10 +16,11 @@ const getRedirectUrl = (path: string = '/auth-redirect'): string => {
   // Add locale to the path
   const localizedPath = path.startsWith('/') ? `/${locale}${path}` : `/${locale}/${path}`;
   
-  // In production, use the Vercel deployment URL regardless of current origin
-  return isProd 
-    ? `https://automai-eta.vercel.app${localizedPath}`
-    : `${window.location.origin}${localizedPath}`;
+  const baseUrl = isProd 
+    ? 'https://automai-eta.vercel.app'
+    : 'http://localhost:3000';
+    
+  return `${baseUrl}${localizedPath}`;
 };
 
 // Convenience functions for Supabase Auth
