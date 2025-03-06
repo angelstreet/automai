@@ -8,14 +8,25 @@
  * @returns The authorization URL
  */
 export function createGithubOauthUrl(providerId: string): string {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback/github`;
+  // Use either development or production GitHub client ID based on environment
+  const clientId = process.env.NODE_ENV === 'development' 
+    ? process.env.GITHUB_DEV_CLIENT_ID || process.env.GITHUB_CLIENT_ID
+    : process.env.GITHUB_CLIENT_ID;
+    
+  // Always use the current origin for the redirect URI
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/git-providers/callback`;
   const scope = 'repo,read:user,user:email';
+  
+  // Create state with providerId and redirectUri for callback handling
+  const stateData = Buffer.from(
+    JSON.stringify({ providerId, redirectUri })
+  ).toString('base64');
+  
   const params = new URLSearchParams({
     client_id: clientId || '',
     redirect_uri: redirectUri,
     scope,
-    state: providerId,
+    state: stateData,
     response_type: 'code',
   });
 
