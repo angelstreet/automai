@@ -32,5 +32,7 @@ export async function GET(request: NextRequest) {
   await supabase.auth.exchangeCodeForSession(code);
 
   // Redirect to the auth-redirect page which will handle session validation
-  return NextResponse.redirect(new URL('/auth-redirect', request.url));
+  // Get locale from request or use default 'en'
+  const locale = requestUrl.pathname.split('/')[1] || 'en';
+  return NextResponse.redirect(new URL(`/${locale}/auth-redirect`, request.url));
 }
