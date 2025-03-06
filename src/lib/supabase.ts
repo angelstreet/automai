@@ -81,10 +81,7 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
 
   if (browserClient) return browserClient as ExtendedSupabaseClient;
 
-  // IMPORTANT FIX: For GitHub Codespaces, we need to use 127.0.0.1 as the URL
-  // This is because Supabase tokens are issued with 'iss' set to http://127.0.0.1:54321/auth/v1
-  // When running in GitHub Codespaces, this causes token validation errors
-  let supabaseUrl = getSupabaseUrl();
+   let supabaseUrl = getSupabaseUrl();
   
   // Explicitly check for Codespace environment to ensure consistency
   const isCodespaceEnvironment = typeof window !== 'undefined' && 

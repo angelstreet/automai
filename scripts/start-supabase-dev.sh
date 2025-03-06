@@ -30,7 +30,7 @@ npx supabase start || true
 
 # Apply schema regardless of status
 echo "📦 Applying database schema using fixed schema file..."
-PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -f supabase/migrations/fixed-schema.sql || true
+PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -f supabase/migrations/fixed-schema.sql || true
 
 # Generate TypeScript types
 echo "📝 Generating TypeScript types..."

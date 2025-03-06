@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (
     process.env.CODESPACE && 
     process.env.NEXT_PUBLIC_SITE_URL && 
-    (request.url.includes('localhost:') || request.url.includes('127.0.0.1:'))
+    request.url.includes('localhost:')
   ) {
     // Replace localhost with the actual GitHub Codespace URL
     fixedUrl = request.url.replace(
