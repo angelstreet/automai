@@ -15,215 +15,103 @@ export default function AuthRedirectPage() {
   const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   const { user } = useUser();
 
-  // Handle authentication and token processing
+  // Handle authentication from URL parameters
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     console.log('=== AUTH REDIRECT PAGE LOADED ===');
     console.log('URL:', window.location.href);
     console.log('Hash present:', !!window.location.hash);
+    console.log('Has access token:', window.location.hash && window.location.hash.includes('access_token='));
     console.log('Search params:', window.location.search);
     
     const handleAuth = async () => {
       try {
-        // Create a single Supabase client for all auth operations
+        // Create Supabase client with special configuration for GitHub Codespaces
         const supabase = createBrowserSupabase();
         
-        // 1. First check if we already have a session
-        console.log('Checking for existing session...');
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Error getting session:', sessionError);
-        }
-        
-        if (sessionData?.session) {
-          console.log('Session already exists!');
-          setSession(sessionData.session);
-          setStatus('authenticated');
-          return;
-        }
-        
-        // 2. Check for code parameter (authorization code flow)
-        if (window.location.search.includes('code=')) {
-          console.log('Authorization code detected in URL params');
+        // Try to extract and use the token directly from the URL
+        if (window.location.hash && window.location.hash.includes('access_token=')) {
+          console.log('Access token found in URL hash, using it directly');
           
-          // Let Supabase process the authorization code
-          try {
-            // Wait briefly for any background processes to complete
-            await new Promise(resolve => setTimeout(resolve, 500));
+          // Use the special helper method to create a session from the URL
+          // Type assertion needed since we added this method dynamically
+          const { data, error } = await (supabase.auth as any).createSessionFromUrl(window.location.href);
+          
+          if (error) {
+            console.error('Error creating session from URL:', {
+              errorMessage: error.message,
+              errorName: error.name,
+              errorType: typeof error,
+              errorStack: error.stack ? error.stack.split('\n')[0] : 'No stack',
+              timestamp: new Date().toISOString()
+            });
             
-            // Check if the session was established
-            const { data, error } = await supabase.auth.getSession();
+            // Try to recover with existing session
+            console.log('Trying to recover with existing session...');
+            const { data: existingData, error: existingError } = await supabase.auth.getSession();
             
-            if (error) {
-              console.error('Error after code processing:', error);
-            }
-            
-            if (data?.session) {
-              console.log('Session established after code processing!');
-              setSession(data.session);
+            if (!existingError && existingData?.session) {
+              console.log('Recovered using existing session:', existingData.session.user.email);
+              setSession(existingData.session);
               setStatus('authenticated');
               return;
+            } else {
+              console.error('No existing session found for recovery');
+              setStatus('unauthenticated');
             }
-          } catch (e) {
-            console.error('Error handling authorization code:', e);
+          } else if (data?.session) {
+            console.log('Session successfully created from URL!');
+            console.log('User:', data.session.user.email);
+            setSession(data.session);
+            setStatus('authenticated');
+            return;
           }
+        } else {
+          console.log('No access token in URL hash, checking existing session');
         }
         
-        // 3. Check for access token in URL hash (implicit flow)
-        if (window.location.hash && window.location.hash.includes('access_token=')) {
-          console.log('Access token detected in URL hash');
-          
-          // Parse the hash
-          const params = Object.fromEntries(
-            window.location.hash.substring(1).split('&').map(param => {
-              const [key, value] = param.split('=');
-              return [key, decodeURIComponent(value)];
-            })
-          );
-          
-          console.log('Token info:', {
-            token_type: params.token_type,
-            has_access_token: !!params.access_token,
-            has_refresh_token: !!params.refresh_token,
-            provider_token_prefix: params.provider_token ? params.provider_token.substring(0, 5) : 'none'
+        // No hash token or failed to create session from it
+        // Try to get existing session
+        console.log('Checking for existing session...');
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', {
+            errorMessage: error.message,
+            errorType: typeof error
           });
+          setStatus('unauthenticated');
+        } else if (data?.session) {
+          console.log('Existing session found:', data.session.user.email);
+          setSession(data.session);
+          setStatus('authenticated');
+        } else {
+          console.log('No session found');
           
-          // Try to exchange the token directly
-          if (params.access_token) {
-            try {
-              console.log('Attempting to exchange token for session...');
-              const { data, error } = await supabase.auth.setSession({
-                access_token: params.access_token,
-                refresh_token: params.refresh_token || '',
-              });
-              
-              if (error) {
-                console.error('Error setting session:', error);
-              } else if (data?.session) {
-                console.log('Successfully established session from token!');
-                setSession(data.session);
-                setStatus('authenticated');
-                return;
-              }
-            } catch (e) {
-              console.error('Error during token exchange:', e);
-            }
-          }
-          
-          // Try provider token if available
-          if (params.provider_token) {
-            // Determine provider type based on token format
-            const providerType = params.provider_token.startsWith('gho_') ? 
-              'github' : 
-              params.provider_token.startsWith('ya29.') ? 
-                'google' : 
-                'unknown';
-                
-            console.log(`Provider token detected for ${providerType}`);
+          // One last attempt - try processSessionFromUrl method
+          try {
+            console.log('Trying processSessionFromUrl as last resort');
+            const { data: processData, error: processError } = await supabaseAuth.processSessionFromUrl();
             
-            // Handle GitHub token
-            if (providerType === 'github') {
-              try {
-                console.log('Verifying GitHub provider token...');
-                const githubResponse = await fetch('https://api.github.com/user', {
-                  headers: {
-                    'Authorization': `token ${params.provider_token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                  }
-                });
-                
-                if (githubResponse.ok) {
-                  const userData = await githubResponse.json();
-                  console.log('GitHub user verified:', userData.login);
-                  
-                  // Store verified user info
-                  if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('github_verified_user', JSON.stringify({
-                      login: userData.login,
-                      id: userData.id,
-                      email: userData.email,
-                    }));
-                  }
-                  
-                  // Try one more session check
-                  const { data } = await supabase.auth.getSession();
-                  if (data?.session) {
-                    console.log('Session found after GitHub verification!');
-                    setSession(data.session);
-                    setStatus('authenticated');
-                    return;
-                  }
-                } else {
-                  console.error('GitHub API error:', await githubResponse.text());
-                }
-              } catch (e) {
-                console.error('Error verifying GitHub token:', e);
-              }
+            if (processError) {
+              console.error('Process session error:', processError);
+              setStatus('unauthenticated');
+            } else if (processData?.session) {
+              console.log('Process session succeeded:', processData.session.user.email);
+              setSession(processData.session);
+              setStatus('authenticated');
+            } else {
+              console.log('Process session found no session');
+              setStatus('unauthenticated');
             }
-            
-            // Handle Google token
-            if (providerType === 'google') {
-              try {
-                console.log('Verifying Google provider token...');
-                const googleResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: {
-                    'Authorization': `Bearer ${params.provider_token}`
-                  }
-                });
-                
-                if (googleResponse.ok) {
-                  const userData = await googleResponse.json();
-                  console.log('Google user verified:', userData.email);
-                  
-                  // Store verified user info
-                  if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('google_verified_user', JSON.stringify({
-                      email: userData.email,
-                      name: userData.name,
-                      picture: userData.picture,
-                    }));
-                  }
-                  
-                  // Try one more session check
-                  const { data } = await supabase.auth.getSession();
-                  if (data?.session) {
-                    console.log('Session found after Google verification!');
-                    setSession(data.session);
-                    setStatus('authenticated');
-                    return;
-                  }
-                } else {
-                  console.error('Google API error:', await googleResponse.text());
-                }
-              } catch (e) {
-                console.error('Error verifying Google token:', e);
-              }
-            }
-            
-            // Generic provider handling if token type wasn't recognized
-            if (providerType === 'unknown') {
-              console.log('Unknown provider token type, attempting generic session check');
-              
-              // Try a session check anyway
-              const { data } = await supabase.auth.getSession();
-              if (data?.session) {
-                console.log('Session found with unknown provider token!');
-                setSession(data.session);
-                setStatus('authenticated');
-                return;
-              }
-            }
+          } catch (processE) {
+            console.error('Process session unexpected error:', processE);
+            setStatus('unauthenticated');
           }
         }
-        
-        // 4. No session established, set status accordingly
-        console.log('Authentication unsuccessful');
-        setStatus('unauthenticated');
-        
-      } catch (error) {
-        console.error('Authentication error:', error);
+      } catch (e) {
+        console.error('Authentication error:', e);
         setStatus('unauthenticated');
       }
     };
@@ -231,17 +119,15 @@ export default function AuthRedirectPage() {
     handleAuth();
   }, []);
 
-  // Handle redirect based on authentication status
+  // Handle redirection based on auth status
   useEffect(() => {
-    // Debug logging
     console.log('Auth status:', status);
     console.log('Session exists:', !!session);
-    console.log('User context:', user ? { id: user.id, email: user.email } : 'no user');
     
     // Prevent multiple redirects
     if (isRedirecting) return;
     
-    // Wait for authentication to complete
+    // Wait for session to be loaded
     if (status === 'loading') return;
     
     const handleRedirect = async () => {
@@ -250,7 +136,7 @@ export default function AuthRedirectPage() {
       try {
         // If authenticated, redirect to dashboard
         if (session?.user) {
-          // Extract tenant info
+          // Extract tenant from user metadata or default to 'trial'
           const tenantId = session.user.user_metadata?.tenantId || user?.tenantId || 'trial';
           
           console.log('Redirecting to dashboard with tenant:', tenantId);
@@ -276,10 +162,24 @@ export default function AuthRedirectPage() {
           const origin = window.location.origin;
           const dashboardUrl = `${origin}/${locale}/${tenantId}/dashboard`;
           
-          console.log('Redirecting to:', dashboardUrl);
-          window.location.href = dashboardUrl;
+          // Make sure we persist the token to localStorage for additional safety
+          try {
+            // Store a local marker of successful authentication
+            localStorage.setItem('supabase.auth.token', JSON.stringify({
+              timestamp: new Date().toISOString(),
+              userId: session.user.id,
+              email: session.user.email
+            }));
+            console.log('Stored token info in localStorage');
+          } catch (e) {
+            console.error('Failed to write to localStorage:', e);
+          }
+          
+          console.log('Redirecting to dashboard:', dashboardUrl);
+          // Use window.location.replace to preserve history state
+          window.location.replace(dashboardUrl);
         } else {
-          // If not authenticated, redirect to login
+          // Not authenticated, redirect to login
           console.error('Authentication failed - no session');
           
           const origin = window.location.origin;
@@ -290,11 +190,8 @@ export default function AuthRedirectPage() {
         }
       } catch (error) {
         console.error('Error during redirect:', error);
-        
         const origin = window.location.origin;
-        const errorUrl = `${origin}/${locale}/login?error=${encodeURIComponent('Redirect error: ' + error)}`;
-        
-        window.location.href = errorUrl;
+        window.location.href = `${origin}/${locale}/login?error=${encodeURIComponent('Failed to authenticate: ' + error)}`;
       }
     };
     
@@ -303,7 +200,7 @@ export default function AuthRedirectPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center space-y-4">
+      <div className="text-center space-y-4 text-foreground">
         <div className="flex items-center justify-center space-x-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -317,9 +214,9 @@ export default function AuthRedirectPage() {
           >
             <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
           </svg>
-          <span className="text-2xl font-bold">Automai</span>
+          <span className="text-2xl font-bold text-foreground">Automai</span>
         </div>
-        <h2 className="text-xl font-semibold">Setting up your workspace...</h2>
+        <h2 className="text-xl font-semibold text-foreground">Setting up your workspace...</h2>
         <p className="text-sm text-muted-foreground">
           {status === 'loading'
             ? 'Loading session...'

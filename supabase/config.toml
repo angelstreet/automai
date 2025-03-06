@@ -22,7 +22,7 @@ max_rows = 1000
 enabled = false
 
 [db]
-# Port to use for the local database URL.
+# Port to use for the locodespace doesn ot recal database URL.
 port = 54322
 # Port used by db diff command to initialize the shadow database.
 shadow_port = 54320

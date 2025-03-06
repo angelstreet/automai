@@ -145,8 +145,16 @@ export const supabaseAuth = {
       if (isCodespace) {
         // Use the root auth-redirect path for Codespace
         // This is specifically included in additional_redirect_urls in config.codespace.toml
-        redirectUrl = `${origin}/auth-redirect`;
-        console.log(`Using Codespace-specific redirect URL: ${redirectUrl}`);
+        // We'll add both formats for maximum compatibility
+        const useRoot = true; // Set to true to use root path, false to use localized path
+        
+        if (useRoot) {
+          redirectUrl = `${origin}/auth-redirect`;
+          console.log(`Using Codespace-specific root redirect URL: ${redirectUrl}`);
+        } else {
+          redirectUrl = `${origin}/${locale}/auth-redirect`;
+          console.log(`Using Codespace-specific localized redirect URL: ${redirectUrl}`);
+        }
       } else {
         // For non-Codespace environments, use the localized path
         redirectUrl = `${origin}/${locale}/auth-redirect`;

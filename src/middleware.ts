@@ -76,6 +76,7 @@ export default async function middleware(request: NextRequest) {
     '/auth-redirect',  // Root auth redirect path
     '/en/auth-redirect',  // Localized auth redirect paths
     '/fr/auth-redirect',
+    '/test-auth',        // Test auth page for debugging
     '/error',
     '/_next',
     '/favicon.ico',
@@ -136,8 +137,24 @@ export default async function middleware(request: NextRequest) {
     try {
       // Create Supabase client for auth
       const res = NextResponse.next();
+      
+      // Determine if we need to use the Codespace URL
+      let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const isCodespace = 
+        process.env.CODESPACE && 
+        process.env.CODESPACE_NAME && 
+        process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
+      
+      if (isCodespace) {
+        // Construct the Supabase URL to match what's in the browser
+        const codespaceHost = process.env.CODESPACE_NAME;
+        const codespaceDomain = process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
+        supabaseUrl = `https://${codespaceHost}-54321.${codespaceDomain}`;
+        console.log('Middleware using Codespace Supabase URL:', supabaseUrl);
+      }
+      
       const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        supabaseUrl,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
           cookies: {
