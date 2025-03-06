@@ -1,5 +1,7 @@
 node_modules
 .next
+.env.development
+.env.production
 screenshot/
 src/i18n/.DS_Store
 src/.DS_Store
