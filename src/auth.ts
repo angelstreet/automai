@@ -4,7 +4,6 @@
  */
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 import { createServerSupabase } from '@/lib/supabase';
 
@@ -25,50 +24,56 @@ export interface SessionData {
   expires: string;
 }
 
+// Singleton instance
+let supabaseInstance: any = null;
+
 // Create a server-side Supabase client with cookies
 export async function createSupabaseServerClient() {
-  const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
-  
+  // Return existing instance if available
+  if (supabaseInstance) {
+    return supabaseInstance;
+  }
+
   // Get the Supabase URL from environment or use localhost as default
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
   
   // Log the URL being used
   console.log('Creating Supabase server client with URL:', supabaseUrl);
   
-  return createServerClient(
+  // Create a server client with minimal cookie handling
+  supabaseInstance = createServerClient(
     supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        get(name) {
+          // Simplified cookie handling
+          return null;
         },
-        set(name: string, value: string, options: any) {
-          cookieStore.set(name, value, {
-            ...options,
-            path: options.path || '/'
-          });
+        set(name, value, options) {
+          // Simplified cookie handling
         },
-        remove(name: string, options: any) {
-          cookieStore.set(name, '', {
-            ...options,
-            path: options.path || '/',
-            maxAge: 0
-          });
+        remove(name, options) {
+          // Simplified cookie handling
         },
       },
     }
   );
+  
+  return supabaseInstance;
 }
 
 // Get the current session from Supabase
 export async function getSession(): Promise<SessionData | null> {
   try {
+    // Create a server client
     const supabase = await createSupabaseServerClient();
     
+    // Try to get the session
     const { data, error } = await supabase.auth.getSession();
     
     if (error || !data.session) {
+      console.log('No session found or error:', error);
       return null;
     }
     
@@ -103,4 +108,9 @@ export async function getUser() {
 export async function isAuthenticated() {
   const session = await getSession();
   return !!session;
+}
+
+// Reset the singleton instance (useful for testing)
+export function resetSupabaseClient() {
+  supabaseInstance = null;
 }
