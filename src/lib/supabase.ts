@@ -8,9 +8,21 @@ const getSupabaseUrl = () => {
     // When in Codespaces, the token's 'iss' is based on the public URL
     if (typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev')) {
       const hostname = window.location.hostname;
-      // Extract the codespace name from the hostname
-      const codespacePart = hostname.split('.')[0];
+      // Extract just the codespace project name without any port numbers
+      // For example, from "vigilant-spork-q667vwj94c9x55-3001" we want just "vigilant-spork-q667vwj94c9x55"
+      const hostnameBase = hostname.split('.')[0]; // e.g., "vigilant-spork-q667vwj94c9x55-3001"
+      
+      // Find where the codespace ID ends and any port begins
+      let codespacePart = hostnameBase;
+      // Look for the last hyphen followed by just numbers (port indicator)
+      const portMatch = hostnameBase.match(/(.*?)(-\d+)$/);
+      if (portMatch && portMatch[1]) {
+        codespacePart = portMatch[1]; // Just the base name without port
+        console.log(`Detected Codespace base name: ${codespacePart} (removed port from ${hostnameBase})`);
+      }
+      
       // Construct the Supabase URL to match the public one used in redirects
+      // Always use the -54321 suffix for Supabase
       return `https://${codespacePart}-54321.app.github.dev`;
     }
     return process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
@@ -82,9 +94,21 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
     // For Codespaces, we need to use the public URL for authentication
     // It should match the URL used in the Supabase redirect configuration
     const hostname = window.location.hostname;
-    // Extract the codespace name from the hostname
-    const codespacePart = hostname.split('.')[0];
+    // Extract just the codespace project name without any port numbers
+    // For example, from "vigilant-spork-q667vwj94c9x55-3001" we want just "vigilant-spork-q667vwj94c9x55"
+    const hostnameBase = hostname.split('.')[0]; // e.g., "vigilant-spork-q667vwj94c9x55-3001"
+    
+    // Find where the codespace ID ends and any port begins
+    let codespacePart = hostnameBase;
+    // Look for the last hyphen followed by just numbers (port indicator)
+    const portMatch = hostnameBase.match(/(.*?)(-\d+)$/);
+    if (portMatch && portMatch[1]) {
+      codespacePart = portMatch[1]; // Just the base name without port
+      console.log(`Detected Codespace base name: ${codespacePart} (removed port from ${hostnameBase})`);
+    }
+    
     // Construct the Supabase URL to match what's in the Supabase redirect config
+    // NOTE: Always use -54321 suffix for Supabase service, regardless of app port
     supabaseUrl = `https://${codespacePart}-54321.app.github.dev`;
     console.log('Codespace environment detected, using public URL:', supabaseUrl);
   }

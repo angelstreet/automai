@@ -149,7 +149,18 @@ export default async function middleware(request: NextRequest) {
         // Construct the Supabase URL to match what's in the browser
         const codespaceHost = process.env.CODESPACE_NAME;
         const codespaceDomain = process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
-        supabaseUrl = `https://${codespaceHost}-54321.${codespaceDomain}`;
+        
+        // Make sure we don't include any app port in the Supabase URL
+        // Extract just the codespace project name without any port numbers
+        let codespaceBase = codespaceHost || '';
+        const portMatch = codespaceBase.match(/(.*?)(-\d+)$/);
+        if (portMatch && portMatch[1]) {
+          codespaceBase = portMatch[1]; // Just the base name without port
+          console.log(`Middleware: Detected Codespace base name: ${codespaceBase} (removed port from ${codespaceHost})`);
+        }
+        
+        // Always use -54321 suffix for Supabase
+        supabaseUrl = `https://${codespaceBase}-54321.${codespaceDomain}`;
         console.log('Middleware using Codespace Supabase URL:', supabaseUrl);
       }
       
