@@ -22,19 +22,23 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   // Add a listener for auth state changes from UserContext
   useEffect(() => {
     console.log('RouteGuard - Using auth state from UserContext');
-    
+
     // Listen for auth state change events from UserContext
     const handleAuthStateChange = (event: any) => {
       const { isAuthenticated, isLoading, hasError } = event.detail;
-      console.log('RouteGuard received auth state change:', { isAuthenticated, isLoading, hasError });
-      
+      console.log('RouteGuard received auth state change:', {
+        isAuthenticated,
+        isLoading,
+        hasError,
+      });
+
       // We could implement additional logic here based on auth state changes
       // but we're using UserContext directly so this is mostly for logging/debugging
     };
-    
+
     if (typeof window !== 'undefined') {
       window.addEventListener('authStateChange', handleAuthStateChange);
-      
+
       return () => {
         window.removeEventListener('authStateChange', handleAuthStateChange);
       };
@@ -70,10 +74,16 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Don't do anything while loading user data
-    if (isUserLoading) return;
+    if (isUserLoading) {
+      console.log('RouteGuard - User is loading, waiting...');
+      return;
+    }
 
     // Prevent multiple redirects
-    if (isRedirecting.current) return;
+    if (isRedirecting.current) {
+      console.log('RouteGuard - Already redirecting, skipping...');
+      return;
+    }
 
     const handleRouting = async () => {
       // Public routes don't need tenant
@@ -82,12 +92,14 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         pathname.includes('/signup') ||
         pathname.includes('/(auth)/auth-redirect') ||
         pathname.includes('/error') ||
-        pathname === `/${locale}`;
+        pathname === `/${locale}` ||
+        pathname === `/${locale}/`;
 
-      console.log('Handling routing:', {
+      console.log('RouteGuard - Handling routing:', {
         isPublicRoute,
         pathname,
         hasUser: !!user,
+        userEmail: user?.email,
         currentTenant,
         userError,
         userErrorHandled: userErrorHandled.current,
@@ -110,16 +122,13 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       // For public routes, only redirect if user is authenticated and trying to access auth pages
       if (isPublicRoute) {
         // Only redirect from login/signup to dashboard if we have a valid user
-        if (
-          user &&
-          (pathname.includes('/login') || pathname.includes('/signup'))
-        ) {
+        if (user && (pathname.includes('/login') || pathname.includes('/signup') || pathname === `/${locale}` || pathname === `/${locale}/`)) {
           // The tenant comes from the user object, with a fallback to 'trial'
           const tenant = user.tenantName || 'trial';
-            
+
           if (tenant && !isRedirecting.current) {
             console.log(
-              `RouteGuard - Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`
+              `RouteGuard - Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`,
             );
             isRedirecting.current = true;
             router.replace(`/${locale}/${tenant}/dashboard`);
@@ -159,28 +168,28 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   if (userError) {
     console.log('Auth warning (non-blocking):', userError, {
       hasUser: !!user,
-      pathname
+      pathname,
     });
-    
+
     // If UserContext has an error but we have some user data,
     // we'll still render the app to prevent blocking the UI
     if (user) {
       return <>{children}</>;
     }
   }
-  
+
   // Show debug info only in development and if there's a critical error
   if (process.env.NODE_ENV === 'development' && debugInfo && userError && !user) {
     // Log the error but don't show the banner
     console.error('Critical Auth Error:', userError, debugInfo);
-    
+
     // In development, display the error for debugging
     return (
       <>
         {/* Display the error only in development */}
         <div className="fixed bottom-0 left-0 right-0 bg-yellow-100 p-2 text-sm z-50">
           <p>Auth error (dev only): {userError}</p>
-          <button 
+          <button
             className="underline text-blue-500"
             onClick={() => {
               // Force reload the page to try again

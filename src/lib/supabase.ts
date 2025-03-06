@@ -16,16 +16,18 @@ const getSupabaseUrl = () => {
       // Extract just the codespace project name without any port numbers
       // For example, from "vigilant-spork-q667vwj94c9x55-3001" we want just "vigilant-spork-q667vwj94c9x55"
       const hostnameBase = hostname.split('.')[0]; // e.g., "vigilant-spork-q667vwj94c9x55-3001"
-      
+
       // Find where the codespace ID ends and any port begins
       let codespacePart = hostnameBase;
       // Look for the last hyphen followed by just numbers (port indicator)
       const portMatch = hostnameBase.match(/(.*?)(-\d+)$/);
       if (portMatch && portMatch[1]) {
         codespacePart = portMatch[1]; // Just the base name without port
-        console.log(`Detected Codespace base name: ${codespacePart} (removed port from ${hostnameBase})`);
+        console.log(
+          `Detected Codespace base name: ${codespacePart} (removed port from ${hostnameBase})`,
+        );
       }
-      
+
       // Construct the Supabase URL to match the public one used in redirects
       // Always use the -54321 suffix for Supabase
       return `https://${codespacePart}-54321.app.github.dev`;
@@ -64,10 +66,10 @@ if (typeof window !== 'undefined' && !globalThis.__supabaseBrowserClient) {
 type ExtendedSupabaseClient = ReturnType<typeof createClient> & {
   auth: ReturnType<typeof createClient>['auth'] & {
     createSessionFromUrl: (url: string) => Promise<{
-      data: { session: any },
-      error: any
-    }>
-  }
+      data: { session: any };
+      error: any;
+    }>;
+  };
 };
 
 // Server-side client with service role when available
@@ -100,11 +102,11 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
   }
 
   let supabaseUrl = getSupabaseUrl();
-  
+
   // Explicitly check for Codespace environment to ensure consistency
-  const isCodespaceEnvironment = typeof window !== 'undefined' && 
-    window.location.hostname.includes('.app.github.dev');
-    
+  const isCodespaceEnvironment =
+    typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+
   if (isCodespaceEnvironment) {
     // For Codespaces, we need to use the public URL for authentication
     // It should match the URL used in the Supabase redirect configuration
@@ -112,37 +114,39 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
     // Extract just the codespace project name without any port numbers
     // For example, from "vigilant-spork-q667vwj94c9x55-3001" we want just "vigilant-spork-q667vwj94c9x55"
     const hostnameBase = hostname.split('.')[0]; // e.g., "vigilant-spork-q667vwj94c9x55-3001"
-    
+
     // Find where the codespace ID ends and any port begins
     let codespacePart = hostnameBase;
     // Look for the last hyphen followed by just numbers (port indicator)
     const portMatch = hostnameBase.match(/(.*?)(-\d+)$/);
     if (portMatch && portMatch[1]) {
       codespacePart = portMatch[1]; // Just the base name without port
-      console.log(`Detected Codespace base name: ${codespacePart} (removed port from ${hostnameBase})`);
+      console.log(
+        `Detected Codespace base name: ${codespacePart} (removed port from ${hostnameBase})`,
+      );
     }
-    
+
     // Construct the Supabase URL to match what's in the Supabase redirect config
     // NOTE: Always use -54321 suffix for Supabase service, regardless of app port
     supabaseUrl = `https://${codespacePart}-54321.app.github.dev`;
     console.log('Codespace environment detected, using public URL:', supabaseUrl);
   }
-  
+
   // Log the URL being used
   console.log(`Creating Supabase browser client for ${supabaseUrl}`);
-  
+
   const supabaseAnonKey = getSupabaseAnonKey();
-  
+
   // Create client with options configured for the environment
   const baseUrl = window.location.origin;
-  
+
   // For debugging purposes, add an onAuthStateChange callback
   const handleAuthStateChange = (event: string, session: any): void => {
-    console.log('Supabase Auth State Change:', { 
-      event, 
+    console.log('Supabase Auth State Change:', {
+      event,
       hasSession: !!session,
       sessionUser: session?.user?.email || 'none',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   };
 
@@ -185,11 +189,11 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
       }),
     },
   });
-  
+
   // Assign the new client to our global cached variable instead of the local one
   // @ts-ignore - global types
   globalThis.__supabaseBrowserClient = newClient;
-  
+
   // Add auth state change listener to help debug
   // @ts-ignore - global types
   globalThis.__supabaseBrowserClient.auth.onAuthStateChange(handleAuthStateChange);
@@ -197,34 +201,37 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
   // Add a special helper method to create a session from token parameters
   // This is useful for handling GitHub auth redirects with tokens in the URL
   // Add our custom method to the auth client
-  (globalThis.__supabaseBrowserClient as ExtendedSupabaseClient).auth.createSessionFromUrl = async (url: string) => {
+  (globalThis.__supabaseBrowserClient as ExtendedSupabaseClient).auth.createSessionFromUrl = async (
+    url: string,
+  ) => {
     try {
       // Parse URL to extract hash parameters
-      const hashParams = new URLSearchParams(
-        url.includes('#') ? url.split('#')[1] : ''
-      );
-      
+      const hashParams = new URLSearchParams(url.includes('#') ? url.split('#')[1] : '');
+
       // Get the tokens
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
-      
+
       if (!accessToken) {
         return { data: { session: null }, error: new Error('No access token found in URL') };
       }
-      
-      console.log('Setting session with token (first few chars):', accessToken.substring(0, 10) + '...');
-      
+
+      console.log(
+        'Setting session with token (first few chars):',
+        accessToken.substring(0, 10) + '...',
+      );
+
       // Set the session with enhanced error handling
       try {
         const response = await globalThis.__supabaseBrowserClient?.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken || '',
         });
-        
+
         if (!response) {
           return { data: { session: null }, error: new Error('Supabase client not initialized') };
         }
-        
+
         console.log('Session set successfully:', !!response.data.session);
         return response;
       } catch (sessionError: any) {
@@ -234,18 +241,18 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
           errorStack: sessionError.stack ? sessionError.stack.split('\n')[0] : 'No stack trace',
           errorType: typeof sessionError,
           url: window.location.href,
-          hasHash: !!window.location.hash
+          hasHash: !!window.location.hash,
         });
-        
+
         // Try to get an existing session as fallback
         console.log('Trying to get existing session as fallback...');
         const existingSession = await globalThis.__supabaseBrowserClient?.auth.getSession();
-        
+
         if (existingSession?.data.session) {
           console.log('Found existing valid session, using that instead');
           return existingSession;
         }
-        
+
         return { data: { session: null }, error: sessionError };
       }
     } catch (error: any) {
@@ -261,7 +268,7 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
     // This should never happen, but TypeScript doesn't know that
     throw new Error('Failed to create Supabase client');
   }
-  
+
   // Force the client to initialize properly before returning
   globalThis.__supabaseBrowserClient.auth.getSession().catch((err: any) => {
     console.error('Error initializing Supabase client:', err);

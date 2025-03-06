@@ -26,14 +26,14 @@ export default function LoginPage() {
   // Normalize the callback URL to handle case sensitivity issues
   const normalizeUrl = (url: string | null): string | null => {
     if (!url) return url;
-    
+
     // Convert to lowercase to handle case sensitivity issues
     return url.toLowerCase();
   };
-  
+
   // Normalize the callback URL
   const normalizedCallbackUrl = normalizeUrl(callbackUrl);
-  
+
   // Log callback URL for debugging
   useEffect(() => {
     console.log('Login page - Callback URL:', callbackUrl);
@@ -46,50 +46,50 @@ export default function LoginPage() {
   const callWithRetry = async (apiCall: () => Promise<any>, maxRetries = 3): Promise<any> => {
     let attempt = 0;
     let lastError: any;
-    
+
     while (attempt < maxRetries) {
       try {
         return await apiCall();
       } catch (error) {
         lastError = error;
         console.error(`API call failed (attempt ${attempt + 1}/${maxRetries}):`, error);
-        
+
         // Exponential backoff
         const delay = Math.pow(2, attempt) * 1000;
         console.log(`Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
         attempt++;
       }
     }
-    
+
     console.error(`All ${maxRetries} retry attempts failed`);
     throw lastError;
   };
-  
+
   // Check if user is already authenticated
   useEffect(() => {
     // Check for existing Supabase session with retry logic
     let checkAttempts = 0;
     const maxAttempts = 3;
-    
+
     async function checkSession() {
       try {
         console.log('Login page - Checking for existing session...');
-        
+
         // Use retry logic for API calls
         const { data } = await callWithRetry(() => supabaseAuth.getSession());
-        
+
         if (data.session) {
           console.log('Login page - Session found, redirecting:', {
             userId: data.session.user.id,
             email: data.session.user.email,
-            tokenExpiry: data.session.expires_at 
-              ? new Date(data.session.expires_at * 1000).toISOString() 
+            tokenExpiry: data.session.expires_at
+              ? new Date(data.session.expires_at * 1000).toISOString()
               : 'unknown',
-            callbackUrl
+            callbackUrl,
           });
-          
+
           // User is already logged in, redirect to dashboard or callback URL
           setTimeout(() => {
             // If there's a callback URL, use it, otherwise go to dashboard
@@ -100,33 +100,37 @@ export default function LoginPage() {
         } else {
           console.log('Login page - No session found, showing login form');
           setIsLoading(false);
-          
+
           if (checkAttempts < maxAttempts) {
             // Retry after a delay with exponential backoff
             checkAttempts++;
             const delay = 1000 * Math.pow(2, checkAttempts);
-            console.log(`Login page - Will retry session check in ${delay}ms (attempt ${checkAttempts})`);
-            
+            console.log(
+              `Login page - Will retry session check in ${delay}ms (attempt ${checkAttempts})`,
+            );
+
             setTimeout(checkSession, delay);
           }
         }
       } catch (error) {
         console.error('Login page - Error checking session:', error);
         setIsLoading(false);
-        
+
         // Show a more specific error message for network issues
         if (error instanceof Error && error.message.includes('fetch failed')) {
-          setError('Network error: Unable to connect to authentication service. Please check your internet connection.');
+          setError(
+            'Network error: Unable to connect to authentication service. Please check your internet connection.',
+          );
         }
       }
     }
-    
+
     checkSession();
-    
+
     // Also listen for auth state changes
     const { data: authListener } = supabaseAuth.onAuthStateChange((event, session) => {
       console.log('Login page - Auth state changed:', { event, hasSession: !!session });
-      
+
       if (session) {
         // User signed in, redirect to dashboard or callback URL
         let redirectPath = normalizedCallbackUrl || `/${locale}/trial/dashboard`;
@@ -136,7 +140,7 @@ export default function LoginPage() {
         router.replace(redirectPath);
       }
     });
-    
+
     return () => {
       // Cleanup listener on unmount
       authListener?.subscription.unsubscribe();
@@ -150,38 +154,38 @@ export default function LoginPage() {
 
     try {
       console.log('Login page - Attempting sign in with password...');
-      
+
       // Use retry logic for API calls
-      const { data, error } = await callWithRetry(() => 
-        supabaseAuth.signInWithPassword(email, password)
+      const { data, error } = await callWithRetry(() =>
+        supabaseAuth.signInWithPassword(email, password),
       );
-      
+
       if (error) {
         console.error('Login page - Sign in error:', error);
         setError(error.message);
         setIsSubmitting(false);
         return;
       }
-      
+
       if (data?.session) {
         console.log('Login page - Sign in successful:', {
           userId: data.session.user.id,
           email: data.session.user.email,
           tokenLength: data.session.access_token?.length || 0,
-          callbackUrl
+          callbackUrl,
         });
-        
+
         // Manually set a cookie with the token to ensure it's available
         // This is a backup in case the Supabase cookie handling isn't working
         try {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
-          
+
           if (data.session.access_token) {
             // Set a backup cookie with the token
             document.cookie = `sb-manual-token=${data.session.access_token}; path=/; expires=${tomorrow.toUTCString()}; SameSite=Lax`;
             console.log('Login page - Manually set backup token cookie');
-            
+
             // Also try localStorage as another backup
             localStorage.setItem('sb-manual-token', data.session.access_token);
             localStorage.setItem('sb-user-email', data.session.user.email || '');
@@ -191,15 +195,15 @@ export default function LoginPage() {
         } catch (err) {
           console.error('Login page - Error setting manual cookies:', err);
         }
-        
+
         // Login successful, redirect to callback URL or dashboard
         setTimeout(() => {
           // Use replace to avoid having login in history
           let redirectPath = normalizedCallbackUrl || `/${locale}/trial/dashboard`;
-          
+
           // Always normalize the entire path to lowercase
           redirectPath = redirectPath.toLowerCase();
-          
+
           console.log('Login successful, redirecting to:', redirectPath);
           router.replace(redirectPath);
         }, 1500); // Even longer delay to ensure cookies are set
@@ -210,14 +214,16 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       console.error('Login page - Error during login:', err);
-      
+
       // Show a more specific error message for network issues
       if (err.message && err.message.includes('fetch failed')) {
-        setError('Network error: Unable to connect to authentication service. Please check your internet connection.');
+        setError(
+          'Network error: Unable to connect to authentication service. Please check your internet connection.',
+        );
       } else {
         setError(err.message || 'An error occurred during login');
       }
-      
+
       setIsSubmitting(false);
     }
   };
@@ -225,26 +231,26 @@ export default function LoginPage() {
   const handleOAuthLogin = async (provider: 'google' | 'github') => {
     setError('');
     setIsSubmitting(true);
-    
+
     try {
       // Use Supabase OAuth
       console.log(`Starting ${provider} OAuth login flow`);
       const { data, error } = await supabaseAuth.signInWithOAuth(provider);
-      
+
       if (error) {
         console.error(`${provider} OAuth error:`, error);
         setError(error.message || `Failed to authenticate with ${provider}`);
         setIsSubmitting(false);
         return;
       }
-      
+
       // If we reach here, it means the OAuth popup was successfully launched
-      console.log(`${provider} OAuth flow initiated:`, { 
+      console.log(`${provider} OAuth flow initiated:`, {
         provider,
         url: data?.url,
-        hasUrl: !!data?.url 
+        hasUrl: !!data?.url,
       });
-      
+
       // No need to set isSubmitting to false as we're redirecting to provider
     } catch (err: any) {
       console.error(`${provider} OAuth error:`, err);

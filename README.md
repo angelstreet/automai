@@ -59,7 +59,7 @@ https://vigilant-spork-q667vwj94c9x55-54323.app.github.dev
    psql --version
    ALLOW MD5
    sudo su -
-   nano /etc/postgresql/12/main/pg_hba.conf
+   nano /etc/postgresql/12/main/pg*hba.conf
    local all postgres trust
    service postgresql restart
    sudo -u postgres psql -c "SHOW hba_file;"
@@ -72,8 +72,8 @@ https://vigilant-spork-q667vwj94c9x55-54323.app.github.dev
    automai_password_123
    \dt
    sudo netstat -plnt | grep 5432
-   tcp 0 0 127.0.0.1:5432 0.0.0.0:_ LISTEN 31041/postgres  
-   tcp6 0 0 ::1:5432 :::_ LISTEN 31041/postgres  
+   tcp 0 0 127.0.0.1:5432 0.0.0.0:* LISTEN 31041/postgres  
+   tcp6 0 0 ::1:5432 :::\_ LISTEN 31041/postgres  
    sudo nano /etc/postgresql/13/main/postgresql.conf
    listen_addresses = '\*'
    npm run dev:codespace
@@ -106,12 +106,15 @@ cross-env ENV_FILE=.env.production npm run dev
 When using GitHub Codespaces with Supabase authentication, follow these steps to set up properly:
 
 1. Setup your Codespace environment for Supabase:
+
    ```bash
    npm run codespace:setup
    ```
+
    This automatically configures URLs and OAuth settings for your Codespace.
 
 2. Restart Supabase to apply changes:
+
    ```bash
    npx supabase stop
    npx supabase start
@@ -135,10 +138,12 @@ npm run supabase:config:codespace
 ```
 
 Configuration files are stored in:
+
 - `supabase/config/config.local.toml` - Local development
 - `supabase/config/config.codespace.toml` - GitHub Codespaces
 
 After switching configurations, restart Supabase to apply changes:
+
 ```bash
 npx supabase stop && npx supabase start
 ```

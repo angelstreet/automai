@@ -10,17 +10,54 @@ import { Features } from '../(marketing)/_components/Features';
 import { Hero } from '../(marketing)/_components/Hero';
 
 export function HomePage() {
-  const { user } = useUser();
+  const { user, isLoading, error } = useUser();
   const params = useParams();
   const locale = params.locale as string;
-  
+
+  // Debug logs to see what's happening
+  console.log('HomePage rendering:', { 
+    user: user ? 'exists' : 'null', 
+    isLoading, 
+    hasError: !!error,
+    errorMsg: error,
+    locale, 
+    path: typeof window !== 'undefined' ? window.location.pathname : 'unknown'
+  });
+
   // Only redirect if authenticated and not on root locale path
   // Don't redirect from paths like /en/ or /fr/
-  const isRootLocalePath = window.location.pathname === `/${locale}` || window.location.pathname === `/${locale}/`;
-  
+  const isRootLocalePath =
+    typeof window !== 'undefined' && 
+    (window.location.pathname === `/${locale}` || window.location.pathname === `/${locale}/`);
+
+  // Add loading state to show we're attempting to render
+  if (isLoading) {
+    return (
+      <div className="relative flex min-h-screen flex-col items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold">Loading...</h2>
+          <p className="text-muted-foreground">Initializing application</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if any
+  if (error) {
+    return (
+      <div className="relative flex min-h-screen flex-col items-center justify-center">
+        <div className="text-center text-red-500">
+          <h2 className="text-xl font-semibold">Error initializing application</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   if (user && !isRootLocalePath) {
     // Always use lowercase for tenant name
     const tenant = (user.tenantName || 'trial').toLowerCase();
+    console.log(`Redirecting authenticated user to: /${locale}/${tenant}/dashboard`);
     redirect(`/${locale}/${tenant}/dashboard`);
   }
 

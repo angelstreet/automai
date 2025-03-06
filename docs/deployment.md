@@ -230,6 +230,7 @@ else if (log.level === 'INFO') textColor = 'text-blue-600';
 };
 
 return (
+
 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
 <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
 {/_ Modal Header _/}
@@ -834,6 +835,7 @@ const selectedDeployment = selectedDeploymentId
 : null;
 
 return (
+
 <div className="bg-gray-100 min-h-screen pb-10">
 {/_ Header _/}
 <div className="bg-white shadow-sm border-b">

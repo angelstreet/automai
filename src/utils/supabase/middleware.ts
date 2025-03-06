@@ -47,11 +47,16 @@ export const createClient = (request: NextRequest) => {
         getAll() {
           // Log all cookies in middleware for debugging
           const allCookies = request.cookies.getAll();
-          console.log('Middleware - All cookies:', allCookies.map(c => ({
-            name: c.name,
-            value: c.name.includes('token') || c.name.includes('supabase') ? 
-              `${c.value.substring(0, 10)}...` : c.value.substring(0, 10)
-          })));
+          console.log(
+            'Middleware - All cookies:',
+            allCookies.map((c) => ({
+              name: c.name,
+              value:
+                c.name.includes('token') || c.name.includes('supabase')
+                  ? `${c.value.substring(0, 10)}...`
+                  : c.value.substring(0, 10),
+            })),
+          );
           return allCookies;
         },
         setAll(cookiesToSet: Cookie[]) {
@@ -64,10 +69,10 @@ export const createClient = (request: NextRequest) => {
               secure: process.env.NODE_ENV === 'production',
               sameSite: 'lax' as const,
             };
-            
+
             // Log cookie operations
             console.log(`Middleware - Setting cookie: ${name} with options:`, enhancedOptions);
-            
+
             request.cookies.set(name, value);
             supabaseResponse.cookies.set(name, value, enhancedOptions);
           });

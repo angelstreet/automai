@@ -39,8 +39,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -69,8 +72,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -122,8 +128,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }

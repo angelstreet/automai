@@ -11,7 +11,7 @@
     "supabase:restart": "npx supabase stop && npx supabase start",
     "supabase:gen-types": "npx supabase gen types typescript --local > src/types/supabase.ts",
     "supabase:migrate": "npx supabase link --project-ref wexkgcszrwxqsthahfyq && npx supabase db push",
-    "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts", 
+    "dev": "cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
     "dev:codespace": "cross-env NODE_ENV=development ENV_FILE=.env.codespace ts-node server.ts",
     "dev:supabase": "./scripts/start-supabase-dev.sh && cross-env NODE_ENV=development ENV_FILE=.env.development ts-node server.ts",
     "prod": "npm run supabase:config:production && npm run build && cross-env NODE_ENV=production ENV_FILE=.env.production ts-node server.ts",

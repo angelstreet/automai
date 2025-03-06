@@ -16,19 +16,22 @@ export async function GET() {
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    
+
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication not available",
+          error: 'Authentication not available',
         },
         { status: 401 },
       );
     }
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -65,19 +68,22 @@ export async function POST(request: Request) {
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    
+
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication not available",
+          error: 'Authentication not available',
         },
         { status: 401 },
       );
     }
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -121,19 +127,22 @@ export async function PATCH(request: Request) {
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    
+
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication not available",
+          error: 'Authentication not available',
         },
         { status: 401 },
       );
     }
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -178,19 +187,22 @@ export async function DELETE(request: Request) {
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    
+
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
       return NextResponse.json(
         {
           success: false,
-          error: "Authentication not available",
+          error: 'Authentication not available',
         },
         { status: 401 },
       );
     }
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }

@@ -380,18 +380,14 @@ export const db = {
   // Repository operations
   repository: {
     findUnique: async ({ where, include }: { where: any; include?: any }) => {
-      let query = supabase
-        .from('repositories')
-        .select('*')
-        .match(where)
-        .single();
-        
+      let query = supabase.from('repositories').select('*').match(where).single();
+
       const { data, error } = await query;
-        
+
       if (error && error.code !== 'PGRST116') {
         console.error('Error finding repository:', error);
       }
-      
+
       // Transform the data to match the Repository type
       if (data) {
         return {
@@ -404,32 +400,46 @@ export const db = {
           defaultBranch: data.defaultBranch as string | undefined,
           isPrivate: Boolean(data.isPrivate),
           description: data.description as string | undefined,
-          syncStatus: data.syncStatus as "SYNCED" | "PENDING" | "ERROR",
+          syncStatus: data.syncStatus as 'SYNCED' | 'PENDING' | 'ERROR',
           createdAt: safeDate(data.createdAt),
           updatedAt: safeDate(data.updatedAt),
           lastSyncedAt: data.lastSyncedAt ? safeDate(data.lastSyncedAt) : undefined,
           error: data.error as string | undefined,
-          provider: include?.provider ? { 
-            id: '',
-            userId: '',
-            tenantId: '',
-            type: 'github' as GitProviderType,
-            displayName: '',
-            status: 'connected' as "connected" | "disconnected",
-            createdAt: safeDate(safeDate(new Date())),
-            updatedAt: safeDate(safeDate(new Date())),
-            name: 'github' as GitProviderType
-          } : undefined,
-          project: include?.project ? { id: '', name: '' } : undefined
+          provider: include?.provider
+            ? {
+                id: '',
+                userId: '',
+                tenantId: '',
+                type: 'github' as GitProviderType,
+                displayName: '',
+                status: 'connected' as 'connected' | 'disconnected',
+                createdAt: safeDate(safeDate(new Date())),
+                updatedAt: safeDate(safeDate(new Date())),
+                name: 'github' as GitProviderType,
+              }
+            : undefined,
+          project: include?.project ? { id: '', name: '' } : undefined,
         };
       }
-      
+
       return data;
     },
-    
-    findMany: async ({ where, include, take, skip, orderBy }: { where?: any; include?: any; take?: number; skip?: number; orderBy?: any }) => {
+
+    findMany: async ({
+      where,
+      include,
+      take,
+      skip,
+      orderBy,
+    }: {
+      where?: any;
+      include?: any;
+      take?: number;
+      skip?: number;
+      orderBy?: any;
+    }) => {
       let query = supabase.from('repositories').select('*');
-      
+
       // Apply where conditions
       if (where) {
         Object.entries(where).forEach(([key, value]) => {
@@ -437,31 +447,31 @@ export const db = {
           query = query.eq(key, value);
         });
       }
-      
+
       // Apply pagination
       if (take) {
         query = query.limit(take);
       }
-      
+
       if (skip) {
         query = query.range(skip, skip + (take || 10) - 1);
       }
-      
+
       // Apply ordering
       if (orderBy) {
         const [field, direction] = Object.entries(orderBy)[0];
         query = query.order(field as string, { ascending: direction === 'asc' });
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) {
         console.error('Error finding repositories:', error);
         return [];
       }
-      
+
       // Transform the data to match the Repository type
-      return (data || []).map(repo => ({
+      return (data || []).map((repo) => ({
         id: repo.id as string,
         providerId: repo.providerId as string,
         name: repo.name as string,
@@ -471,38 +481,40 @@ export const db = {
         defaultBranch: repo.defaultBranch as string | undefined,
         isPrivate: Boolean(repo.isPrivate),
         description: repo.description as string | undefined,
-        syncStatus: repo.syncStatus as "SYNCED" | "PENDING" | "ERROR",
+        syncStatus: repo.syncStatus as 'SYNCED' | 'PENDING' | 'ERROR',
         createdAt: safeDate(repo.createdAt),
         updatedAt: safeDate(repo.updatedAt),
         lastSyncedAt: repo.lastSyncedAt ? safeDate(repo.lastSyncedAt) : undefined,
         error: repo.error as string | undefined,
-        provider: include?.provider ? { 
-          id: '',
-          userId: '',
-          tenantId: '',
-          type: 'github' as GitProviderType,
-          displayName: '',
-          status: 'connected' as "connected" | "disconnected",
-          createdAt: safeDate(new Date()),
-          updatedAt: safeDate(new Date()),
-          name: 'github' as GitProviderType
-        } : undefined,
-        project: include?.project ? { id: '', name: '' } : undefined
+        provider: include?.provider
+          ? {
+              id: '',
+              userId: '',
+              tenantId: '',
+              type: 'github' as GitProviderType,
+              displayName: '',
+              status: 'connected' as 'connected' | 'disconnected',
+              createdAt: safeDate(new Date()),
+              updatedAt: safeDate(new Date()),
+              name: 'github' as GitProviderType,
+            }
+          : undefined,
+        project: include?.project ? { id: '', name: '' } : undefined,
       }));
     },
-    
+
     create: async ({ data, include }: { data: any; include?: any }) => {
       const { data: result, error } = await supabase
         .from('repositories')
         .insert(data)
         .select()
         .single();
-        
+
       if (error) {
         console.error('Error creating repository:', error);
         throw error;
       }
-      
+
       // Transform the data to match the Repository type
       return {
         id: result.id as string,
@@ -514,26 +526,28 @@ export const db = {
         defaultBranch: result.defaultBranch as string | undefined,
         isPrivate: Boolean(result.isPrivate),
         description: result.description as string | undefined,
-        syncStatus: result.syncStatus as "SYNCED" | "PENDING" | "ERROR",
+        syncStatus: result.syncStatus as 'SYNCED' | 'PENDING' | 'ERROR',
         createdAt: safeDate(result.createdAt),
         updatedAt: safeDate(result.updatedAt),
         lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
         error: result.error as string | undefined,
-        provider: include?.provider ? { 
-          id: '',
-          userId: '',
-          tenantId: '',
-          type: 'github' as GitProviderType,
-          displayName: '',
-          status: 'connected' as "connected" | "disconnected",
-          createdAt: safeDate(new Date()),
-          updatedAt: safeDate(new Date()),
-          name: 'github' as GitProviderType
-        } : undefined,
-        project: include?.project ? { id: '', name: '' } : undefined
+        provider: include?.provider
+          ? {
+              id: '',
+              userId: '',
+              tenantId: '',
+              type: 'github' as GitProviderType,
+              displayName: '',
+              status: 'connected' as 'connected' | 'disconnected',
+              createdAt: safeDate(new Date()),
+              updatedAt: safeDate(new Date()),
+              name: 'github' as GitProviderType,
+            }
+          : undefined,
+        project: include?.project ? { id: '', name: '' } : undefined,
       };
     },
-    
+
     update: async ({ where, data, include }: { where: any; data: any; include?: any }) => {
       const { data: result, error } = await supabase
         .from('repositories')
@@ -541,12 +555,12 @@ export const db = {
         .match(where)
         .select()
         .single();
-        
+
       if (error) {
         console.error('Error updating repository:', error);
         throw error;
       }
-      
+
       // Transform the data to match the Repository type
       return {
         id: result.id as string,
@@ -558,26 +572,28 @@ export const db = {
         defaultBranch: result.defaultBranch as string | undefined,
         isPrivate: Boolean(result.isPrivate),
         description: result.description as string | undefined,
-        syncStatus: result.syncStatus as "SYNCED" | "PENDING" | "ERROR",
+        syncStatus: result.syncStatus as 'SYNCED' | 'PENDING' | 'ERROR',
         createdAt: safeDate(result.createdAt),
         updatedAt: safeDate(result.updatedAt),
         lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
         error: result.error as string | undefined,
-        provider: include?.provider ? { 
-          id: '',
-          userId: '',
-          tenantId: '',
-          type: 'github' as GitProviderType,
-          displayName: '',
-          status: 'connected' as "connected" | "disconnected",
-          createdAt: safeDate(new Date()),
-          updatedAt: safeDate(new Date()),
-          name: 'github' as GitProviderType
-        } : undefined,
-        project: include?.project ? { id: '', name: '' } : undefined
+        provider: include?.provider
+          ? {
+              id: '',
+              userId: '',
+              tenantId: '',
+              type: 'github' as GitProviderType,
+              displayName: '',
+              status: 'connected' as 'connected' | 'disconnected',
+              createdAt: safeDate(new Date()),
+              updatedAt: safeDate(new Date()),
+              name: 'github' as GitProviderType,
+            }
+          : undefined,
+        project: include?.project ? { id: '', name: '' } : undefined,
       };
     },
-    
+
     delete: async ({ where }: { where: any }) => {
       const { data: result, error } = await supabase
         .from('repositories')
@@ -585,12 +601,12 @@ export const db = {
         .match(where)
         .select()
         .single();
-        
+
       if (error) {
         console.error('Error deleting repository:', error);
         throw error;
       }
-      
+
       return result;
     },
   },
@@ -603,11 +619,11 @@ export const db = {
         .select('*')
         .match(where)
         .single();
-        
+
       if (error && error.code !== 'PGRST116') {
         console.error('Error finding git provider:', error);
       }
-      
+
       // Transform the data to match the GitProvider type
       if (data) {
         return {
@@ -616,7 +632,7 @@ export const db = {
           tenantId: data.tenantId as string,
           type: data.type as GitProviderType,
           displayName: data.displayName as string,
-          status: data.status as "connected" | "disconnected",
+          status: data.status as 'connected' | 'disconnected',
           serverUrl: data.serverUrl as string | undefined,
           accessToken: data.accessToken as string | undefined,
           refreshToken: data.refreshToken as string | undefined,
@@ -624,16 +640,26 @@ export const db = {
           updatedAt: safeDate(data.updatedAt),
           lastSyncedAt: data.lastSyncedAt ? safeDate(data.lastSyncedAt) : undefined,
           expiresAt: data.expiresAt ? safeDate(data.expiresAt) : undefined,
-          name: data.type as GitProviderType
+          name: data.type as GitProviderType,
         };
       }
-      
+
       return data;
     },
 
-    findMany: async ({ where, take, skip, orderBy }: { where?: any; take?: number; skip?: number; orderBy?: any }) => {
+    findMany: async ({
+      where,
+      take,
+      skip,
+      orderBy,
+    }: {
+      where?: any;
+      take?: number;
+      skip?: number;
+      orderBy?: any;
+    }) => {
       let query = supabase.from('git_providers').select('*');
-      
+
       // Apply where conditions
       if (where) {
         Object.entries(where).forEach(([key, value]) => {
@@ -641,37 +667,37 @@ export const db = {
           query = query.eq(key, value);
         });
       }
-      
+
       // Apply pagination
       if (take) {
         query = query.limit(take);
       }
-      
+
       if (skip) {
         query = query.range(skip, skip + (take || 10) - 1);
       }
-      
+
       // Apply ordering
       if (orderBy) {
         const [field, direction] = Object.entries(orderBy)[0];
         query = query.order(field as string, { ascending: direction === 'asc' });
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) {
         console.error('Error finding git providers:', error);
         return [];
       }
-      
+
       // Transform the data to match the GitProvider type
-      return (data || []).map(provider => ({
+      return (data || []).map((provider) => ({
         id: provider.id as string,
         userId: provider.userId as string,
         tenantId: provider.tenantId as string,
         type: provider.type as GitProviderType,
         displayName: provider.displayName as string,
-        status: provider.status as "connected" | "disconnected",
+        status: provider.status as 'connected' | 'disconnected',
         serverUrl: provider.serverUrl as string | undefined,
         accessToken: provider.accessToken as string | undefined,
         refreshToken: provider.refreshToken as string | undefined,
@@ -679,22 +705,22 @@ export const db = {
         updatedAt: safeDate(provider.updatedAt),
         lastSyncedAt: provider.lastSyncedAt ? safeDate(provider.lastSyncedAt) : undefined,
         expiresAt: provider.expiresAt ? safeDate(provider.expiresAt) : undefined,
-        name: provider.type as GitProviderType
+        name: provider.type as GitProviderType,
       }));
     },
-    
+
     create: async ({ data }: { data: any }) => {
       const { data: result, error } = await supabase
         .from('git_providers')
         .insert(data)
         .select()
         .single();
-        
+
       if (error) {
         console.error('Error creating git provider:', error);
         throw error;
       }
-      
+
       // Transform the data to match the GitProvider type
       return {
         id: result.id as string,
@@ -702,7 +728,7 @@ export const db = {
         tenantId: result.tenantId as string,
         type: result.type as GitProviderType,
         displayName: result.displayName as string,
-        status: result.status as "connected" | "disconnected",
+        status: result.status as 'connected' | 'disconnected',
         serverUrl: result.serverUrl as string | undefined,
         accessToken: result.accessToken as string | undefined,
         refreshToken: result.refreshToken as string | undefined,
@@ -710,10 +736,10 @@ export const db = {
         updatedAt: safeDate(result.updatedAt),
         lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
         expiresAt: result.expiresAt ? safeDate(result.expiresAt) : undefined,
-        name: result.type as GitProviderType
+        name: result.type as GitProviderType,
       };
     },
-    
+
     update: async ({ where, data }: { where: any; data: any }) => {
       const { data: result, error } = await supabase
         .from('git_providers')
@@ -721,12 +747,12 @@ export const db = {
         .match(where)
         .select()
         .single();
-        
+
       if (error) {
         console.error('Error updating git provider:', error);
         throw error;
       }
-      
+
       // Transform the data to match the GitProvider type
       return {
         id: result.id as string,
@@ -734,7 +760,7 @@ export const db = {
         tenantId: result.tenantId as string,
         type: result.type as GitProviderType,
         displayName: result.displayName as string,
-        status: result.status as "connected" | "disconnected",
+        status: result.status as 'connected' | 'disconnected',
         serverUrl: result.serverUrl as string | undefined,
         accessToken: result.accessToken as string | undefined,
         refreshToken: result.refreshToken as string | undefined,
@@ -742,10 +768,10 @@ export const db = {
         updatedAt: safeDate(result.updatedAt),
         lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
         expiresAt: result.expiresAt ? safeDate(result.expiresAt) : undefined,
-        name: result.type as GitProviderType
+        name: result.type as GitProviderType,
       };
     },
-    
+
     delete: async ({ where }: { where: any }) => {
       const { data: result, error } = await supabase
         .from('git_providers')
@@ -753,12 +779,12 @@ export const db = {
         .match(where)
         .select()
         .single();
-        
+
       if (error) {
         console.error('Error deleting git provider:', error);
         throw error;
       }
-      
+
       // Transform the data to match the GitProvider type
       return {
         id: result.id as string,
@@ -766,7 +792,7 @@ export const db = {
         tenantId: result.tenantId as string,
         type: result.type as GitProviderType,
         displayName: result.displayName as string,
-        status: result.status as "connected" | "disconnected",
+        status: result.status as 'connected' | 'disconnected',
         serverUrl: result.serverUrl as string | undefined,
         accessToken: result.accessToken as string | undefined,
         refreshToken: result.refreshToken as string | undefined,
@@ -774,7 +800,7 @@ export const db = {
         updatedAt: safeDate(result.updatedAt),
         lastSyncedAt: result.lastSyncedAt ? safeDate(result.lastSyncedAt) : undefined,
         expiresAt: result.expiresAt ? safeDate(result.expiresAt) : undefined,
-        name: result.type as GitProviderType
+        name: result.type as GitProviderType,
       };
     },
   },

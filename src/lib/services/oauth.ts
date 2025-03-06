@@ -9,20 +9,19 @@
  */
 export function createGithubOauthUrl(providerId: string): string {
   // Use either development or production GitHub client ID based on environment
-  const clientId = process.env.NODE_ENV === 'development' 
-    ? process.env.GITHUB_DEV_CLIENT_ID || process.env.GITHUB_CLIENT_ID
-    : process.env.GITHUB_CLIENT_ID;
-    
+  const clientId =
+    process.env.NODE_ENV === 'development'
+      ? process.env.GITHUB_DEV_CLIENT_ID || process.env.GITHUB_CLIENT_ID
+      : process.env.GITHUB_CLIENT_ID;
+
   // Always use the current origin for the redirect URI
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
   const redirectUri = `${baseUrl}/api/git-providers/callback`;
   const scope = 'repo,read:user,user:email';
-  
+
   // Create state with providerId and redirectUri for callback handling
-  const stateData = Buffer.from(
-    JSON.stringify({ providerId, redirectUri })
-  ).toString('base64');
-  
+  const stateData = Buffer.from(JSON.stringify({ providerId, redirectUri })).toString('base64');
+
   const params = new URLSearchParams({
     client_id: clientId || '',
     redirect_uri: redirectUri,

@@ -374,6 +374,7 @@ if (!projectToDuplicate) return;
 // Project Modal Component
 const ProjectModal = () => {
 return (
+
 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
 <div className="bg-white p-6 rounded-lg w-full max-w-md">
 <h2 className="text-xl font-bold mb-4">
@@ -492,6 +493,7 @@ return (
 // Script Modal Component
 const ScriptModal = () => {
 return (
+
 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
 <div className="bg-white p-6 rounded-lg w-full max-w-md max-h-screen overflow-y-auto">
 <h2 className="text-xl font-bold mb-4">
@@ -640,6 +642,7 @@ className={`flex items-center justify-between w-full p-3 text-left ${
           : 'hover:bg-gray-50'
       }`}
 onClick={() => setExpandedSection(expandedSection === section ? null : section)} >
+
 <div className="flex items-center">
 <Icon size={18} className="mr-2" />
 <span className="font-medium">{title}</span>
@@ -649,6 +652,7 @@ onClick={() => setExpandedSection(expandedSection === section ? null : section)}
 );
 
 return (
+
 <div className="container mx-auto p-4 max-w-6xl">
 <h1 className="text-2xl font-bold mb-6">Project & Campaign Management</h1>
 

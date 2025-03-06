@@ -19,44 +19,45 @@ export function ThemeToggle() {
   const nextThemes = useNextThemes();
   const customTheme = useCustomTheme();
   const [mounted, setMounted] = useState(false);
-  
+
   // Determine which theme API to use (prefer next-themes)
   const theme = nextThemes.theme || customTheme.theme;
-  
+
   // Function to set theme in both providers for maximum compatibility
   const setTheme = (newTheme: string) => {
     // Set theme in next-themes provider
     if (nextThemes.setTheme) {
       nextThemes.setTheme(newTheme);
     }
-    
+
     // Also set theme in custom provider if available
     if (customTheme.setTheme) {
       customTheme.setTheme(newTheme as any);
     }
-    
+
     // Optionally, manually set the theme class on html element as a fallback
     if (typeof window !== 'undefined') {
       const root = window.document.documentElement;
-      const isDark = newTheme === 'dark' || 
-                    (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      
+      const isDark =
+        newTheme === 'dark' ||
+        (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
       if (isDark) {
         root.classList.add('dark');
       } else {
         root.classList.remove('dark');
       }
-      
+
       // Save theme in localStorage for persistence
       localStorage.setItem('theme', newTheme);
     }
   };
-  
+
   // Wait for client-side hydration to prevent SSR issues
   useEffect(() => {
     setMounted(true);
   }, []);
-  
+
   // Don't render anything until mounted to prevent hydration mismatch
   if (!mounted) {
     return <div className="h-8 w-8" />;

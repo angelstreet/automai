@@ -53,13 +53,18 @@ const isBrowser = typeof window !== 'undefined';
 // For client-side, only validate public env vars
 const clientEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional().default('http://localhost:54321'),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional().default('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
+    .string()
+    .optional()
+    .default(
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
+    ),
   NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
 // Validate and export environment configuration based on environment
-export const env = isBrowser 
+export const env = isBrowser
   ? clientEnvSchema.parse({
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -89,11 +94,11 @@ export const getBaseUrl = () => {
   if (isBrowser) {
     return window.location.origin;
   }
-  
+
   if (process.env.CODESPACE) {
     return `https://${process.env.CODESPACE_NAME}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
   }
-  
+
   // Use NEXT_PUBLIC_SITE_URL for Supabase
   return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 };

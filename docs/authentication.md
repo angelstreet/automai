@@ -151,6 +151,7 @@ GitHub OAuth is more restrictive than Google and only allows a single callback U
 Since GitHub only allows one callback URL per OAuth app, you need a separate OAuth app for development:
 
 1. Create a development GitHub OAuth App:
+
    - Go to GitHub Developer Settings > OAuth Apps > New OAuth App
    - Set homepage URL to `http://localhost:3000`
    - Set callback URL to: `http://localhost:54321/auth/v1/callback`
@@ -158,6 +159,7 @@ Since GitHub only allows one callback URL per OAuth app, you need a separate OAu
    - Get the development client ID and secret
 
 2. When running in development mode, set these environment variables in your `.env.development`:
+
    ```
    GITHUB_CLIENT_ID=your_development_client_id
    GITHUB_CLIENT_SECRET=your_development_client_secret
@@ -174,6 +176,7 @@ Email and password authentication is handled by Supabase Auth. Here's the comple
 ### Authentication Flow for Email/Password
 
 1. **Registration Flow**:
+
    - User submits email and password on the signup form
    - Supabase hashes the password and creates the user account
    - Supabase sends a verification email with a confirmation link
@@ -228,6 +231,7 @@ resetPassword: async (email: string) => {
 #### Production Setup
 
 1. Configure Supabase Email Auth in the dashboard:
+
    - Go to Authentication > Email Templates
    - Customize verification and password reset templates
    - Configure SMTP settings for sending emails
@@ -241,6 +245,7 @@ resetPassword: async (email: string) => {
 #### Development Setup
 
 1. In development, use the local Supabase instance:
+
    - Email verification and password reset emails appear in the Supabase Dashboard's Logs tab
    - You can click the verification links directly from the log viewer
 
@@ -264,16 +269,19 @@ resetPassword: async (email: string) => {
 Supabase Auth provides robust session management capabilities:
 
 1. **Session Creation**
+
    - When a user logs in, Supabase creates a session
    - Session data is stored securely in HTTP-only cookies
    - Supabase handles all token generation and validation
 
 2. **Session Access**
+
    - Client-side: Access via `supabaseAuth.getSession()`
    - Server-side: Access via `createSupabaseServerClient()`
    - Middleware: Uses createServerClient for route protection
 
 3. **Session Expiration**
+
    - Default expiration is 24 hours
    - Configurable in Supabase dashboard
    - Automatic token refresh when needed
@@ -350,9 +358,11 @@ Proper OAuth callback URL configuration is critical for authentication to work:
 When configuring OAuth providers, you only need to register a single callback URL in the provider's developer console:
 
 #### Production
+
 - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
 
 #### Development
+
 - `http://localhost:54321/auth/v1/callback`
 
 The application redirect URL (`/auth-redirect`) is handled internally by Supabase and should not be registered with the OAuth provider. This URL is specified in the `redirectTo` option when calling `signInWithOAuth`.
@@ -415,11 +425,13 @@ Here's a clear summary of what you need to configure for each authentication met
 ### Development Environment
 
 1. **Email/Password Authentication**:
+
    - Uses local Supabase instance (http://localhost:54321)
    - Emails are available in the Supabase Dashboard's Logs section
    - No additional configuration needed
 
 2. **Google OAuth**:
+
    - Use the same Google OAuth app as production
    - Add only this authorized redirect URI:
      - `http://localhost:54321/auth/v1/callback`
@@ -434,11 +446,13 @@ Here's a clear summary of what you need to configure for each authentication met
 ### Production Environment
 
 1. **Email/Password Authentication**:
+
    - Uses Supabase cloud instance (https://wexkgcszrwxqsthahfyq.supabase.co)
    - Configure SMTP settings in Supabase dashboard for sending emails
    - Set appropriate environment variables
 
 2. **Google OAuth**:
+
    - Configure Google OAuth app with production URLs
    - Set callback URL to only:
      - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
@@ -470,6 +484,7 @@ npm install @supabase/supabase-js @supabase/ssr --save
 ### Common OAuth Errors
 
 1. **"The redirect_uri is not associated with this application"**
+
    - The redirect URI in your OAuth configuration doesn't match the one in the request
    - Solution: Make sure `http://localhost:54321/auth/v1/callback` (for development) or `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback` (for production) is registered in your OAuth provider settings
 
@@ -485,6 +500,7 @@ Since GitHub only allows one callback URL per OAuth app, you must:
 2. Switch between the appropriate client ID and secret based on environment
 
 If GitHub authentication isn't working:
+
 - Make sure you have only the Supabase callback URL registered in your GitHub OAuth app settings
 - Verify that you're using the correct client ID and secret for your environment
 

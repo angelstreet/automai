@@ -62,19 +62,7 @@ export default function HostsLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const _handleDeviceChange = useCallback(
-    (deviceId: string) => {
-      const device = machines.find((m) => m.id === deviceId);
-      setSelectedDevice(deviceId);
-      toast({
-        title: device ? 'Device selected' : 'Device selection cleared',
-        description: device ? `Selected ${device.name}` : 'No device selected',
-      });
-    },
-    [machines, selectedDevice, toast],
-  );
+  }, [toast, machines, selectedDevice]);
 
   useEffect(() => {
     fetchMachines();

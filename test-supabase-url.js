@@ -11,4 +11,6 @@ console.log('Constructed Supabase URL:', supabaseUrl);
 
 // This is the URL that should be used in supabase-auth.ts and supabase.ts
 console.log('This URL should match the one used in your Supabase configuration');
-console.log('Make sure GitHub OAuth redirect URL in Supabase config.codespace.toml also uses this pattern');
+console.log(
+  'Make sure GitHub OAuth redirect URL in Supabase config.codespace.toml also uses this pattern',
+);

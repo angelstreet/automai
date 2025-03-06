@@ -37,48 +37,46 @@ export async function createSupabaseServerClient() {
 
   // Get the Supabase URL from environment or use localhost as default
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
-  
+
   // Log the URL being used
   console.log('Creating new Supabase server client with URL:', supabaseUrl);
-  
+
   // Create a cookie handler that doesn't rely on the cookies() API
   const cookieStore = cookies();
-  
+
   // Create a server client with simplified cookie handling
-  supabaseInstance = createServerClient(
-    supabaseUrl,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name) {
-          // Simple cookie getter
-          return cookieStore.get(name)?.value || '';
-        },
-        set(name, value, options) {
-          // Simple cookie setter
-          cookieStore.set(name, value, options);
-        },
-        remove(name, options) {
-          // Simple cookie remover
-          cookieStore.set(name, '', { ...options, maxAge: 0 });
-        },
+  supabaseInstance = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    cookies: {
+      get(name) {
+        // Simple cookie getter
+        return cookieStore.get(name)?.value || '';
       },
-    }
-  );
-  
+      set(name, value, options) {
+        // Simple cookie setter
+        cookieStore.set(name, value, options);
+      },
+      remove(name, options) {
+        // Simple cookie remover
+        cookieStore.set(name, '', { ...options, maxAge: 0 });
+      },
+    },
+  });
+
   return supabaseInstance;
 }
 
 // Function to extract session from request headers
-export async function extractSessionFromHeader(authHeader: string | null): Promise<SessionData | null> {
+export async function extractSessionFromHeader(
+  authHeader: string | null,
+): Promise<SessionData | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null;
   }
-  
+
   try {
     const token = authHeader.substring(7);
     console.log('Extracting session from header token');
-    
+
     // Create a Supabase client with no cookie handling
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321',
@@ -89,17 +87,17 @@ export async function extractSessionFromHeader(authHeader: string | null): Promi
           set: () => {},
           remove: () => {},
         },
-      }
+      },
     );
-    
+
     // Get the user from the token
     const { data, error } = await supabase.auth.getUser(token);
-    
+
     if (error || !data.user) {
       console.error('Error getting user from token:', error?.message);
       return null;
     }
-    
+
     // Return the session data
     return {
       user: {
@@ -125,24 +123,24 @@ export async function getSession(): Promise<SessionData | null> {
   try {
     // Create a server client
     const supabase = await createSupabaseServerClient();
-    
+
     // Try to get the session
     const { data, error } = await supabase.auth.getSession();
-    
+
     if (error) {
       console.error('Error getting session:', error);
       return null;
     }
-    
+
     if (!data.session) {
       console.log('No session found');
       return null;
     }
-    
+
     const { user, access_token, expires_at } = data.session;
-    
+
     console.log('Session found for user:', user.id);
-    
+
     return {
       user: {
         id: user.id,

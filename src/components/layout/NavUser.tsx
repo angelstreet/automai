@@ -30,7 +30,7 @@ export function NavUser({ user }: NavUserProps) {
   const tenant = params.tenant as string;
 
   const { logout } = useUser();
-  
+
   const handleSignOut = async () => {
     try {
       await logout();

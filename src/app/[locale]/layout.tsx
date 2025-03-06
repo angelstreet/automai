@@ -7,7 +7,6 @@ import { ToasterProvider } from '@/components/shadcn/toaster';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { locales } from '@/config';
 import { RoleProvider } from '@/context/RoleContext';
-import { UserProvider } from '@/context/UserContext';
 import { getMessages } from '@/i18n';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -51,12 +50,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <>
       <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
-        <UserProvider>
-          <RoleProvider>
-            <RouteGuard>{children}</RouteGuard>
-            <ToasterProvider />
-          </RoleProvider>
-        </UserProvider>
+        <RoleProvider>
+          <RouteGuard>{children}</RouteGuard>
+          <ToasterProvider />
+        </RoleProvider>
       </NextIntlClientProvider>
     </>
   );

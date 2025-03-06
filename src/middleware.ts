@@ -32,20 +32,20 @@ function createLoginRedirect(request: NextRequest, pathParts: string[]) {
   // Check if we should prevent redirect loops
   const hasDebugCookie = request.cookies.get('debug-bypass');
   const redirectParam = request.nextUrl.searchParams.get('redirect');
-  
+
   // If we have a debug-bypass cookie or redirect param, skip the redirect
   if (hasDebugCookie?.value === 'true' || redirectParam === 'true') {
     console.log('Debug bypass detected, skipping login redirect');
     return NextResponse.next();
   }
-  
+
   // Redirect to login with the current URL as the callbackUrl
   const loginUrl = new URL(`/${validLocale}/login`, request.url);
-  
+
   // Always use lowercase for URLs
   const normalizedPathname = request.nextUrl.pathname.toLowerCase();
   loginUrl.searchParams.set('callbackUrl', normalizedPathname);
-  
+
   console.log('Redirecting to:', loginUrl.toString());
 
   // Create the redirect response without deleting any session cookies
@@ -63,24 +63,28 @@ export default async function middleware(request: NextRequest) {
     'Cookies present:',
     request.cookies.getAll().map((c) => `${c.name}: ${c.value.substring(0, 10)}...`),
   );
-  
+
   // TEMPORARY BYPASS: Allow direct access to certain routes for testing
   // This lets us test the app without middleware redirects
   const bypassRoutes = ['/dashboard', '/login-debug', '/bypass', '/trial/', '/Trial/'];
-  const shouldBypass = bypassRoutes.some(route => request.nextUrl.pathname.includes(route));
-  
+  const shouldBypass = bypassRoutes.some((route) => request.nextUrl.pathname.includes(route));
+
   if (shouldBypass) {
     console.log('TEMPORARY: Bypassing auth checks for dashboard testing');
     return NextResponse.next();
   }
-  
+
   // Force lowercase for all parts of the URL to avoid case sensitivity issues
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
   const originalPath = request.nextUrl.pathname;
   let lowercasePath = originalPath.toLowerCase();
+
+  // Handle locale paths with and without trailing slashes
+  // Prevent unnecessary redirects between /en and /en/
+  const isLocaleRootPath = pathParts.length === 1 && locales.includes(pathParts[0] as any);
   
-  // Check if the path would be different when converted to lowercase
-  if (lowercasePath !== originalPath) {
+  // Skip case normalization for locale root paths to prevent redirect loops
+  if (!isLocaleRootPath && lowercasePath !== originalPath) {
     // Special handling for tenant paths (locale/tenant/*)
     if (pathParts.length >= 2) {
       console.log('Normalizing URL case:', originalPath, 'to', lowercasePath);
@@ -114,9 +118,9 @@ export default async function middleware(request: NextRequest) {
     console.log('API route or RSC request detected, bypassing authentication redirects:', {
       path: request.nextUrl.pathname,
       search: request.nextUrl.search,
-      isRsc: request.nextUrl.search.includes('_rsc=')
+      isRsc: request.nextUrl.search.includes('_rsc='),
     });
-    
+
     const response = await NextResponse.next();
     if (response.headers.get('content-type')?.includes('text/html')) {
       return NextResponse.json({ error: 'API route returned HTML' }, { status: 500 });
@@ -132,10 +136,10 @@ export default async function middleware(request: NextRequest) {
     '/signup',
     '/forgot-password',
     '/reset-password',
-    '/auth-redirect',  // Root auth redirect path
-    '/en/auth-redirect',  // Localized auth redirect paths
+    '/auth-redirect', // Root auth redirect path
+    '/en/auth-redirect', // Localized auth redirect paths
     '/fr/auth-redirect',
-    '/test-auth',        // Test auth page for debugging
+    '/test-auth', // Test auth page for debugging
     '/error',
     '/_next',
     '/favicon.ico',
@@ -143,13 +147,13 @@ export default async function middleware(request: NextRequest) {
     '/api/terminals/init',
     '/api/terminals/ws',
   ];
-  
+
   // Add locale-based home paths and auth pages to public paths
-  locales.forEach(locale => {
+  locales.forEach((locale) => {
     // Root locale paths
     publicPaths.push(`/${locale}`);
     publicPaths.push(`/${locale}/`);
-    
+
     // Auth-related paths for each locale
     publicPaths.push(`/${locale}/login`);
     publicPaths.push(`/${locale}/signup`);
@@ -157,19 +161,21 @@ export default async function middleware(request: NextRequest) {
     publicPaths.push(`/${locale}/reset-password`);
     publicPaths.push(`/${locale}/auth-redirect`);
   });
-  
+
   // VERY IMPORTANT: Explicitly ensure that certain paths are considered public
   const isRootLocalePath = pathParts.length === 1 && locales.includes(pathParts[0] as any);
-  const isExplicitLocalePath = locales.some(locale => 
-    request.nextUrl.pathname === `/${locale}` || 
-    request.nextUrl.pathname === `/${locale}/`
+  const isExplicitLocalePath = locales.some(
+    (locale) =>
+      request.nextUrl.pathname === `/${locale}` || request.nextUrl.pathname === `/${locale}/`,
   );
-  
+
   // Check for auth-related pages explicitly
-  const isAuthPage = (pathParts.length >= 2 && 
-    locales.includes(pathParts[0] as any) && 
-    ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(pathParts[1])
-  );
+  const isAuthPage =
+    pathParts.length >= 2 &&
+    locales.includes(pathParts[0] as any) &&
+    ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(
+      pathParts[1],
+    );
 
   // Check if it's a public path more precisely
   const isPublicPath =
@@ -180,22 +186,21 @@ export default async function middleware(request: NextRequest) {
     isExplicitLocalePath ||
     isAuthPage ||
     request.nextUrl.pathname.includes('/auth-redirect');
-    
+
   // Special handling for login path - ALWAYS consider it public
-  const isLoginPage = pathParts.length >= 2 && 
-    locales.includes(pathParts[0] as any) && 
-    pathParts[1] === 'login';
-    
+  const isLoginPage =
+    pathParts.length >= 2 && locales.includes(pathParts[0] as any) && pathParts[1] === 'login';
+
   // Use a mutable variable for public path checks
   let mutableIsPublicPath = isPublicPath;
   if (isLoginPage && !mutableIsPublicPath) {
     console.log('Middleware - Login page detected, forcing public path status');
     mutableIsPublicPath = true;
   }
-  
+
   // Update the immutable variable after all checks
   const isPublicPathFinal = mutableIsPublicPath;
-  
+
   // Add debug logging for public path detection
   console.log('Middleware - Public path check:', {
     pathname: request.nextUrl.pathname,
@@ -207,8 +212,8 @@ export default async function middleware(request: NextRequest) {
     isExplicitLocalePath,
     isLoginPage,
     isAuthPage,
-    localeMatches: locales.filter(locale => request.nextUrl.pathname.startsWith(`/${locale}`)),
-    normPathname: request.nextUrl.pathname.replace(/\/+$/, '') // Path with trailing slashes removed
+    localeMatches: locales.filter((locale) => request.nextUrl.pathname.startsWith(`/${locale}`)),
+    normPathname: request.nextUrl.pathname.replace(/\/+$/, ''), // Path with trailing slashes removed
   });
 
   if (isPublicPathFinal) {
@@ -252,48 +257,53 @@ export default async function middleware(request: NextRequest) {
 
     // Check for RSC requests and bypass auth check if needed
     if (request.nextUrl.search.includes('_rsc=')) {
-      console.log('Middleware - RSC request detected in protected route, allowing:', request.nextUrl.pathname + request.nextUrl.search);
+      console.log(
+        'Middleware - RSC request detected in protected route, allowing:',
+        request.nextUrl.pathname + request.nextUrl.search,
+      );
       return NextResponse.next();
     }
-      
+
     try {
       // Create Supabase client for auth
       const res = NextResponse.next();
-      
+
       // Determine if we need to use the Codespace URL
       let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const isCodespace = 
-        process.env.CODESPACE && 
-        process.env.CODESPACE_NAME && 
+      const isCodespace =
+        process.env.CODESPACE &&
+        process.env.CODESPACE_NAME &&
         process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
-      
+
       if (isCodespace) {
         // Construct the Supabase URL to match what's in the browser
         const codespaceHost = process.env.CODESPACE_NAME;
         const codespaceDomain = process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
-        
+
         // Make sure we don't include any app port in the Supabase URL
         // Extract just the codespace project name without any port numbers
         let codespaceBase = codespaceHost || '';
         const portMatch = codespaceBase.match(/(.*?)(-\d+)$/);
         if (portMatch && portMatch[1]) {
           codespaceBase = portMatch[1]; // Just the base name without port
-          console.log(`Middleware: Detected Codespace base name: ${codespaceBase} (removed port from ${codespaceHost})`);
+          console.log(
+            `Middleware: Detected Codespace base name: ${codespaceBase} (removed port from ${codespaceHost})`,
+          );
         }
-        
+
         // Always use -54321 suffix for Supabase
         supabaseUrl = `https://${codespaceBase}-54321.${codespaceDomain}`;
         console.log('Middleware using Codespace Supabase URL:', supabaseUrl);
       }
-      
+
       // First, try to extract token from Authorization header if present
       const authHeader = request.headers.get('Authorization');
       let session = null;
-      
+
       if (authHeader && authHeader.startsWith('Bearer ')) {
         console.log('Middleware: Authorization header found, using token');
         const token = authHeader.substring(7);
-        
+
         try {
           // Create a one-time client to verify the token
           const verifyClient = createServerClient(
@@ -305,19 +315,19 @@ export default async function middleware(request: NextRequest) {
                 set: () => {},
                 remove: () => {},
               },
-            }
+            },
           );
-          
+
           // Verify the token
           const { data, error } = await verifyClient.auth.getUser(token);
-          
+
           if (data?.user && !error) {
             console.log('Middleware: Valid token in Authorization header');
             // Create a session object
             session = {
               user: data.user,
               expires_at: Math.floor(Date.now() / 1000) + 3600, // Approximate 1 hour validity
-              access_token: token
+              access_token: token,
             };
           } else {
             console.log('Middleware: Invalid token in Authorization header:', error?.message);
@@ -326,7 +336,7 @@ export default async function middleware(request: NextRequest) {
           console.error('Middleware: Error verifying token from header:', error);
         }
       }
-      
+
       // Check for manual token cookie if no session yet
       if (!session) {
         const manualTokenCookie = request.cookies.get('sb-manual-token');
@@ -343,19 +353,19 @@ export default async function middleware(request: NextRequest) {
                   set: () => {},
                   remove: () => {},
                 },
-              }
+              },
             );
-            
+
             // Verify the token from manual cookie
             const { data, error } = await verifyClient.auth.getUser(manualTokenCookie.value);
-            
+
             if (data?.user && !error) {
               console.log('Middleware: Valid manual token cookie');
               // Create a session object
               session = {
                 user: data.user,
                 expires_at: Math.floor(Date.now() / 1000) + 3600, // Approximate 1 hour validity
-                access_token: manualTokenCookie.value
+                access_token: manualTokenCookie.value,
               };
             } else {
               console.log('Middleware: Invalid manual token cookie:', error?.message);
@@ -365,17 +375,17 @@ export default async function middleware(request: NextRequest) {
           }
         }
       }
-      
+
       // Check for user-session cookie as a last resort
       if (!session) {
         const userSessionCookie = request.cookies.get('user-session');
         if (userSessionCookie?.value) {
           console.log('Middleware: Found user-session cookie, attempting to use it');
-          
+
           try {
             // We can't fully validate this cookie since it only contains user ID
             // But we can check if the user exists in the database
-            
+
             // Create a client for database queries
             const supabase = createServerClient(
               supabaseUrl,
@@ -389,16 +399,16 @@ export default async function middleware(request: NextRequest) {
                   set: () => {},
                   remove: () => {},
                 },
-              }
+              },
             );
-            
+
             // Check if the user ID exists in the database
             const { data: user, error } = await supabase
               .from('users')
               .select('id, email')
               .eq('id', userSessionCookie.value)
               .single();
-            
+
             if (user && !error) {
               console.log('Middleware: Valid user-session cookie, user exists in database');
               // Create a minimal session object
@@ -413,25 +423,30 @@ export default async function middleware(request: NextRequest) {
                   created_at: '',
                 },
                 expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour temporary validity
-                access_token: 'temporary-from-user-session-cookie'
+                access_token: 'temporary-from-user-session-cookie',
               };
-              
+
               // Add a header to indicate this is a fallback session
               // This can be used by the client to know it should refresh the session
               res.headers.set('X-Auth-Session-Fallback', 'true');
             } else {
-              console.log('Middleware: Invalid user-session cookie or user not in database:', error?.message);
+              console.log(
+                'Middleware: Invalid user-session cookie or user not in database:',
+                error?.message,
+              );
             }
           } catch (error) {
             console.error('Middleware: Error verifying user-session cookie:', error);
           }
         }
       }
-      
+
       // If no valid session from header or manual cookie, try cookies
       if (!session) {
-        console.log('Middleware: No valid token in header or manual cookie, checking Supabase cookies');
-        
+        console.log(
+          'Middleware: No valid token in header or manual cookie, checking Supabase cookies',
+        );
+
         // Create a client for cookie-based auth
         const supabase = createServerClient(
           supabaseUrl,
@@ -449,7 +464,7 @@ export default async function middleware(request: NextRequest) {
                 res.cookies.set({ name, value: '', ...options });
               },
             },
-          }
+          },
         );
 
         // Get current session from cookies
@@ -476,11 +491,13 @@ export default async function middleware(request: NextRequest) {
         hasUser: !!session?.user,
         userEmail: session?.user?.email ? `${session.user.email.substring(0, 5)}...` : null,
         expiryTimestamp: session?.expires_at,
-        expiryFormatted: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'n/a',
+        expiryFormatted: session?.expires_at
+          ? new Date(session.expires_at * 1000).toISOString()
+          : 'n/a',
         currentTime: new Date().toISOString(),
         isExpired: session?.expires_at ? session.expires_at * 1000 <= Date.now() : false,
         tokenLength: session?.access_token ? session.access_token.length : 0,
-        cookieCount: request.cookies.getAll().length
+        cookieCount: request.cookies.getAll().length,
       });
 
       // Validate that session exists and has required user data
@@ -497,9 +514,11 @@ export default async function middleware(request: NextRequest) {
           hasUser: !!session?.user,
           hasEmail: !!session?.user?.email,
           isExpired: session?.expires_at ? session.expires_at * 1000 <= Date.now() : false,
-          expiryTime: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'n/a',
+          expiryTime: session?.expires_at
+            ? new Date(session.expires_at * 1000).toISOString()
+            : 'n/a',
           currentTime: new Date().toISOString(),
-          route: request.nextUrl.pathname
+          route: request.nextUrl.pathname,
         });
       }
 
@@ -511,7 +530,7 @@ export default async function middleware(request: NextRequest) {
         if (session && session.user) {
           try {
             console.log('Attempting to refresh session for user:', session.user.id);
-            
+
             // Create a fresh client for refresh attempt
             const refreshClient = createServerClient(
               supabaseUrl,
@@ -529,23 +548,23 @@ export default async function middleware(request: NextRequest) {
                     res.cookies.set({ name, value: '', ...options });
                   },
                 },
-              }
+              },
             );
-            
+
             // Try to refresh the session
             const { data, error } = await refreshClient.auth.refreshSession();
-            
+
             if (data?.session && !error) {
               console.log('Session refreshed successfully');
               session = data.session;
-              
+
               // Check if the refreshed token is valid
               const isRefreshedTokenValid =
                 !!session &&
                 !!session.user &&
                 !!session.user.email &&
                 (!session.expires_at || session.expires_at * 1000 > Date.now());
-              
+
               if (isRefreshedTokenValid) {
                 console.log('Refreshed token is valid, continuing with request');
                 // Continue with the request using the refreshed token
@@ -565,12 +584,14 @@ export default async function middleware(request: NextRequest) {
 
         // Normalize the pathname to lowercase before creating the redirect
         const normalizedPathname = request.nextUrl.pathname.toLowerCase();
-        const normalizedRequest = new NextRequest(
-          new URL(normalizedPathname, request.url),
-          { headers: request.headers }
+        const normalizedRequest = new NextRequest(new URL(normalizedPathname, request.url), {
+          headers: request.headers,
+        });
+
+        return createLoginRedirect(
+          normalizedRequest,
+          normalizedPathname.split('/').filter(Boolean),
         );
-        
-        return createLoginRedirect(normalizedRequest, normalizedPathname.split('/').filter(Boolean));
       }
 
       // For protected UI routes, verify user record in database
@@ -593,9 +614,9 @@ export default async function middleware(request: NextRequest) {
                   res.cookies.set({ name, value: '', ...options });
                 },
               },
-            }
+            },
           );
-          
+
           // Check if user exists in Supabase database
           const { data: user, error } = await dbClient
             .from('users')

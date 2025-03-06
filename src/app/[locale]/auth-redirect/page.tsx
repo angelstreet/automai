@@ -18,38 +18,41 @@ export default function AuthRedirectPage() {
   // Handle authentication from URL parameters
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     console.log('=== AUTH REDIRECT PAGE LOADED ===');
     console.log('URL:', window.location.href);
     console.log('Hash present:', !!window.location.hash);
-    console.log('Has access token:', window.location.hash && window.location.hash.includes('access_token='));
+    console.log(
+      'Has access token:',
+      window.location.hash && window.location.hash.includes('access_token='),
+    );
     console.log('Search params:', window.location.search);
-    
+
     const handleAuth = async () => {
       try {
         // Create Supabase client with special configuration for GitHub Codespaces
         const supabase = createBrowserSupabase();
-        
+
         // Try to extract and use the token directly from the URL
         if (window.location.hash && window.location.hash.includes('access_token=')) {
           console.log('Access token found in URL hash, using it directly');
-          
+
           // Use the special helper method to create a session from the URL
           const { data, error } = await supabase.auth.createSessionFromUrl(window.location.href);
-          
+
           if (error) {
             console.error('Error creating session from URL:', {
               errorMessage: error.message,
               errorName: error.name,
               errorType: typeof error,
               errorStack: error.stack ? error.stack.split('\n')[0] : 'No stack',
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
             });
-            
+
             // Try to recover with existing session
             console.log('Trying to recover with existing session...');
             const { data: existingData, error: existingError } = await supabase.auth.getSession();
-            
+
             if (!existingError && existingData?.session) {
               console.log('Recovered using existing session:', existingData.session.user.email);
               setSession(existingData.session);
@@ -69,16 +72,16 @@ export default function AuthRedirectPage() {
         } else {
           console.log('No access token in URL hash, checking existing session');
         }
-        
+
         // No hash token or failed to create session from it
         // Try to get existing session
         console.log('Checking for existing session...');
         const { data, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('Error getting session:', {
             errorMessage: error.message,
-            errorType: typeof error
+            errorType: typeof error,
           });
           setStatus('unauthenticated');
         } else if (data?.session) {
@@ -87,12 +90,13 @@ export default function AuthRedirectPage() {
           setStatus('authenticated');
         } else {
           console.log('No session found');
-          
+
           // One last attempt - try processSessionFromUrl method
           try {
             console.log('Trying processSessionFromUrl as last resort');
-            const { data: processData, error: processError } = await supabaseAuth.processSessionFromUrl();
-            
+            const { data: processData, error: processError } =
+              await supabaseAuth.processSessionFromUrl();
+
             if (processError) {
               console.error('Process session error:', processError);
               setStatus('unauthenticated');
@@ -114,7 +118,7 @@ export default function AuthRedirectPage() {
         setStatus('unauthenticated');
       }
     };
-    
+
     handleAuth();
   }, []);
 
@@ -122,24 +126,24 @@ export default function AuthRedirectPage() {
   useEffect(() => {
     console.log('Auth status:', status);
     console.log('Session exists:', !!session);
-    
+
     // Prevent multiple redirects
     if (isRedirecting) return;
-    
+
     // Wait for session to be loaded
     if (status === 'loading') return;
-    
+
     const handleRedirect = async () => {
       setIsRedirecting(true);
-      
+
       try {
         // If authenticated, redirect to dashboard
         if (session?.user) {
           // Extract tenant from user metadata or default to 'trial'
           const tenantId = session.user.user_metadata?.tenantId || user?.tenantId || 'trial';
-          
+
           console.log('Redirecting to dashboard with tenant:', tenantId);
-          
+
           // Add default tenant info if needed
           if (!session.user.user_metadata?.tenantId) {
             console.log('Setting up default tenant info...');
@@ -150,41 +154,44 @@ export default function AuthRedirectPage() {
                   accessToken: session.user.access_token || '',
                   tenantId: 'trial',
                   tenantName: 'trial',
-                }
+                },
               });
               console.log('User metadata updated');
             } catch (e) {
               console.error('Error updating user metadata:', e);
             }
           }
-          
+
           // Redirect to dashboard
           const origin = window.location.origin;
           const dashboardUrl = `${origin}/${locale}/${tenantId}/dashboard`;
-          
+
           // Make sure we persist the token to localStorage for additional safety
           try {
             // Store a local marker of successful authentication
-            localStorage.setItem('supabase.auth.token', JSON.stringify({
-              timestamp: new Date().toISOString(),
-              userId: session.user.id,
-              email: session.user.email
-            }));
+            localStorage.setItem(
+              'supabase.auth.token',
+              JSON.stringify({
+                timestamp: new Date().toISOString(),
+                userId: session.user.id,
+                email: session.user.email,
+              }),
+            );
             console.log('Stored token info in localStorage');
           } catch (e) {
             console.error('Failed to write to localStorage:', e);
           }
-          
+
           console.log('Redirecting to dashboard:', dashboardUrl);
           // Use window.location.replace to preserve history state
           window.location.replace(dashboardUrl);
         } else {
           // Not authenticated, redirect to login
           console.error('Authentication failed - no session');
-          
+
           const origin = window.location.origin;
           const loginUrl = `${origin}/${locale}/login?error=Authentication failed - no session`;
-          
+
           console.log('Redirecting to login:', loginUrl);
           window.location.href = loginUrl;
         }
@@ -194,7 +201,7 @@ export default function AuthRedirectPage() {
         window.location.href = `${origin}/${locale}/login?error=${encodeURIComponent('Failed to authenticate: ' + error)}`;
       }
     };
-    
+
     handleRedirect();
   }, [locale, router, isRedirecting, session, status, user]);
 

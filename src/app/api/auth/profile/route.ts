@@ -5,22 +5,22 @@ import db from '@/lib/db';
 export async function GET(request: Request) {
   try {
     console.log('[PROFILE_GET] Fetching user profile');
-    
+
     // Try to get session from Authorization header first
     const authHeader = request.headers.get('Authorization');
     let session = null;
-    
+
     if (authHeader) {
       console.log('[PROFILE_GET] Authorization header present, extracting session');
       session = await extractSessionFromHeader(authHeader);
     }
-    
+
     // Fall back to cookie-based session if header auth fails
     if (!session) {
       console.log('[PROFILE_GET] No session from header, trying cookie-based session');
       session = await getSession();
     }
-    
+
     // Check if we have a valid session
     if (!session?.user) {
       console.log('[PROFILE_GET] No valid session found');
@@ -32,30 +32,30 @@ export async function GET(request: Request) {
 
     // Get user data from database
     const user = await db.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     });
 
     if (!user) {
       console.log('[PROFILE_GET] User not found in database, creating user');
-      
+
       // Try to create the user
       try {
         // Check if tenant exists, create if not
         let tenant = await db.tenant.findUnique({
-          where: { id: 'trial' }
+          where: { id: 'trial' },
         });
-        
+
         if (!tenant) {
           console.log('[PROFILE_GET] Creating trial tenant');
           tenant = await db.tenant.create({
             data: {
               id: 'trial',
               name: 'trial',
-              plan: 'free'
-            }
+              plan: 'free',
+            },
           });
         }
-        
+
         // Create user with admin role by default
         const newUser = await db.user.create({
           data: {
@@ -64,11 +64,11 @@ export async function GET(request: Request) {
             name: session.user.name || session.user.email?.split('@')[0] || 'User',
             role: session.user.role || 'admin', // Default to admin role
             tenantId: (session.user.tenantId || 'trial').toLowerCase(),
-          }
+          },
         });
-        
+
         console.log('[PROFILE_GET] User created:', newUser.id);
-        
+
         // Return the newly created user
         return NextResponse.json({
           id: newUser.id,
@@ -95,9 +95,11 @@ export async function GET(request: Request) {
     }
 
     // Get tenant data separately
-    const tenant = user.tenantId ? await db.tenant.findUnique({
-      where: { id: user.tenantId }
-    }) : null;
+    const tenant = user.tenantId
+      ? await db.tenant.findUnique({
+          where: { id: user.tenantId },
+        })
+      : null;
 
     const response = {
       id: user.id,
@@ -108,7 +110,7 @@ export async function GET(request: Request) {
       tenantName: tenant?.name || null,
       plan: tenant?.plan || 'free',
     };
-    
+
     console.log('[PROFILE_GET] Returning user data:', response);
     return NextResponse.json(response);
   } catch (error) {

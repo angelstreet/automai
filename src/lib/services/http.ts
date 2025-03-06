@@ -33,9 +33,9 @@ export async function initializeNextApp(options: {
   // Create new Next.js app
   logger.info('Initializing Next.js app');
   try {
-    nextApp = next({ 
-      dev, 
-      hostname, 
+    nextApp = next({
+      dev,
+      hostname,
       port,
       // Add 'dir' option to make sure Next.js looks in the right directory
       dir: process.cwd(),
@@ -43,7 +43,9 @@ export async function initializeNextApp(options: {
     await nextApp.prepare();
     logger.info('Next.js app prepared successfully');
   } catch (error) {
-    logger.error('Failed to prepare Next.js app: ' + (error instanceof Error ? error.message : String(error)));
+    logger.error(
+      'Failed to prepare Next.js app: ' + (error instanceof Error ? error.message : String(error)),
+    );
     throw error;
   }
 
@@ -93,15 +95,17 @@ export async function createServer(options: {
     httpServer = http.createServer((req, res) => {
       try {
         const parsedUrl = parse(req.url || '', true);
-        
+
         // Special handling for common Next.js system pages
-        if (req.url?.startsWith('/_next/') || 
-            req.url === '/_document' || 
-            req.url === '/_app' || 
-            req.url === '/_error') {
+        if (
+          req.url?.startsWith('/_next/') ||
+          req.url === '/_document' ||
+          req.url === '/_app' ||
+          req.url === '/_error'
+        ) {
           console.log(`Handling Next.js system page: ${req.url}`);
         }
-        
+
         // Let the Next.js request handler manage the request
         handle(req, res, parsedUrl);
       } catch (error) {
