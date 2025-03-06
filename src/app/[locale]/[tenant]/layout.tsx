@@ -75,10 +75,12 @@ export default function TenantLayout({
     );
   }
 
-  // If no user, let RouteGuard handle the redirect
+  // Even if no user yet, we can still render the layout
+  // This prevents the layout from being null during SSR or when user data is still loading
+  // RouteGuard will handle redirections appropriately
   if (!user) {
-    console.log('No user found in TenantLayout, returning null');
-    return null;
+    console.log('No user found in TenantLayout, continuing to render with fallback data');
+    // Continue rendering instead of returning null
   }
 
   const sidebarState = Cookies.get('sidebar:state') !== 'false';

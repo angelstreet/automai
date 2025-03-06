@@ -31,7 +31,11 @@ function createLoginRedirect(request: NextRequest, pathParts: string[]) {
 
   // Redirect to login with the current URL as the callbackUrl
   const loginUrl = new URL(`/${validLocale}/login`, request.url);
-  loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
+  
+  // Normalize the pathname to lowercase for consistent callback URLs
+  const normalizedPathname = request.nextUrl.pathname.toLowerCase();
+  loginUrl.searchParams.set('callbackUrl', normalizedPathname);
+  
   console.log('Redirecting to:', loginUrl.toString());
 
   // Create the redirect response without deleting any session cookies
@@ -50,6 +54,20 @@ export default async function middleware(request: NextRequest) {
     request.cookies.getAll().map((c) => `${c.name}: ${c.value.substring(0, 10)}...`),
   );
 
+  // Check if this is a callback from login
+  const callbackUrl = request.nextUrl.searchParams.get('callbackUrl');
+  if (callbackUrl) {
+    // Normalize the callback URL to lowercase
+    const normalizedCallback = callbackUrl.toLowerCase();
+    if (normalizedCallback !== callbackUrl) {
+      // If the callback URL has uppercase letters, normalize it
+      const newUrl = new URL(request.nextUrl.href);
+      newUrl.searchParams.set('callbackUrl', normalizedCallback);
+      console.log('Normalizing callback URL:', callbackUrl, 'to', normalizedCallback);
+      return NextResponse.redirect(newUrl);
+    }
+  }
+
   // 1. WebSocket handling
   if (request.headers.get('upgrade')?.includes('websocket')) {
     console.log('WebSocket request detected, bypassing middleware');
@@ -57,7 +75,14 @@ export default async function middleware(request: NextRequest) {
   }
 
   // Explicitly bypass authentication redirects for API routes
-  if (request.nextUrl.pathname.startsWith('/api/')) {
+  // Explicitly bypass authentication redirects for API routes and RSC requests
+  if (request.nextUrl.pathname.startsWith('/api/') || request.nextUrl.search.includes('_rsc=')) {
+    console.log('API route or RSC request detected, bypassing authentication redirects:', {
+      path: request.nextUrl.pathname,
+      search: request.nextUrl.search,
+      isRsc: request.nextUrl.search.includes('_rsc=')
+    });
+    
     const response = await NextResponse.next();
     if (response.headers.get('content-type')?.includes('text/html')) {
       return NextResponse.json({ error: 'API route returned HTML' }, { status: 500 });
@@ -88,47 +113,70 @@ export default async function middleware(request: NextRequest) {
   // Extract path parts for better matching
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
   
-  // Add locale-based home paths to public paths
+  // Add locale-based home paths and auth pages to public paths
   locales.forEach(locale => {
+    // Root locale paths
     publicPaths.push(`/${locale}`);
     publicPaths.push(`/${locale}/`);
+    
+    // Auth-related paths for each locale
+    publicPaths.push(`/${locale}/login`);
+    publicPaths.push(`/${locale}/signup`);
+    publicPaths.push(`/${locale}/forgot-password`);
+    publicPaths.push(`/${locale}/reset-password`);
+    publicPaths.push(`/${locale}/auth-redirect`);
   });
+  
+  // VERY IMPORTANT: Explicitly ensure that certain paths are considered public
+  const isRootLocalePath = pathParts.length === 1 && locales.includes(pathParts[0] as any);
+  const isExplicitLocalePath = locales.some(locale => 
+    request.nextUrl.pathname === `/${locale}` || 
+    request.nextUrl.pathname === `/${locale}/`
+  );
+  
+  // Check for auth-related pages explicitly
+  const isAuthPage = (pathParts.length >= 2 && 
+    locales.includes(pathParts[0] as any) && 
+    ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(pathParts[1])
+  );
 
   // Check if it's a public path more precisely
   const isPublicPath =
     publicPaths.some((path) => request.nextUrl.pathname === path) ||
     request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname === '//' ||
-    (pathParts.length === 1 && locales.includes(pathParts[0] as any)) ||
+    isRootLocalePath ||
+    isExplicitLocalePath ||
+    isAuthPage ||
     request.nextUrl.pathname.includes('/auth-redirect');
     
+  // Special handling for login path - ALWAYS consider it public
+  const isLoginPage = pathParts.length >= 2 && 
+    locales.includes(pathParts[0] as any) && 
+    pathParts[1] === 'login';
+    
+  if (isLoginPage && !isPublicPath) {
+    console.log('Middleware - Login page detected, forcing public path status');
+    isPublicPath = true;
+  }
+  
   // Add debug logging for public path detection
-  console.log('Public path check:', {
+  console.log('Middleware - Public path check:', {
     pathname: request.nextUrl.pathname,
     pathParts,
     isPublicPath,
     matchedExplicitPath: publicPaths.some((path) => request.nextUrl.pathname === path),
     isRootPath: request.nextUrl.pathname === '/',
-    isLocaleRoot: pathParts.length === 1 && locales.includes(pathParts[0] as any),
+    isRootLocalePath,
+    isExplicitLocalePath,
+    isLoginPage,
+    isAuthPage,
+    localeMatches: locales.filter(locale => request.nextUrl.pathname.startsWith(`/${locale}`)),
     normPathname: request.nextUrl.pathname.replace(/\/+$/, '') // Path with trailing slashes removed
   });
 
   if (isPublicPath) {
     console.log('Public path detected, bypassing auth:', request.nextUrl.pathname);
-    return NextResponse.next();
-  }
-  
-  // Additional check for root paths with or without locales
-  // This ensures URLs like /en/ are treated as public
-  if (
-    request.nextUrl.pathname === '/' || 
-    request.nextUrl.pathname === '//' ||
-    locales.some(locale => 
-      request.nextUrl.pathname === `/${locale}` || 
-      request.nextUrl.pathname === `/${locale}/`
-    )
-  ) {
-    console.log('Root path detected, bypassing auth:', request.nextUrl.pathname);
     return NextResponse.next();
   }
 
@@ -149,8 +197,8 @@ export default async function middleware(request: NextRequest) {
   const isProtectedRoute =
     isApiRoute ||
     protectedPaths.some((protectedPath) => {
-      // For each path part, check if it matches a protected path
-      return pathParts.some((part) => part === protectedPath);
+      // For each path part, check if it matches a protected path (case insensitive)
+      return pathParts.some((part) => part.toLowerCase() === protectedPath.toLowerCase());
     });
 
   console.log('Route protection check:', {
@@ -166,6 +214,12 @@ export default async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
+    // Check for RSC requests and bypass auth check if needed
+    if (request.nextUrl.search.includes('_rsc=')) {
+      console.log('Middleware - RSC request detected in protected route, allowing:', request.nextUrl.pathname + request.nextUrl.search);
+      return NextResponse.next();
+    }
+      
     try {
       // Create Supabase client for auth
       const res = NextResponse.next();
@@ -277,6 +331,21 @@ export default async function middleware(request: NextRequest) {
         now: new Date().toISOString(),
       });
 
+      // Enhanced validation with more detailed debugging
+      // Always log token details for protected routes
+      console.log('Middleware - Token validation details:', {
+        path: request.nextUrl.pathname,
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        userEmail: session?.user?.email ? `${session.user.email.substring(0, 5)}...` : null,
+        expiryTimestamp: session?.expires_at,
+        expiryFormatted: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'n/a',
+        currentTime: new Date().toISOString(),
+        isExpired: session?.expires_at ? session.expires_at * 1000 <= Date.now() : false,
+        tokenLength: session?.access_token ? session.access_token.length : 0,
+        cookieCount: request.cookies.getAll().length
+      });
+
       // Validate that session exists and has required user data
       const isValidToken =
         !!session &&
@@ -286,13 +355,14 @@ export default async function middleware(request: NextRequest) {
 
       // Enhanced debug logging
       if (!isValidToken) {
-        console.log('Token validation failed:', {
+        console.log('Middleware - Token validation failed:', {
           hasSession: !!session,
           hasUser: !!session?.user,
           hasEmail: !!session?.user?.email,
           isExpired: session?.expires_at ? session.expires_at * 1000 <= Date.now() : false,
           expiryTime: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'n/a',
           currentTime: new Date().toISOString(),
+          route: request.nextUrl.pathname
         });
       }
 
@@ -356,7 +426,14 @@ export default async function middleware(request: NextRequest) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        return createLoginRedirect(request, pathParts);
+        // Normalize the pathname to lowercase before creating the redirect
+        const normalizedPathname = request.nextUrl.pathname.toLowerCase();
+        const normalizedRequest = new NextRequest(
+          new URL(normalizedPathname, request.url),
+          { headers: request.headers }
+        );
+        
+        return createLoginRedirect(normalizedRequest, normalizedPathname.split('/').filter(Boolean));
       }
 
       // For protected UI routes, verify user record in database

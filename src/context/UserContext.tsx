@@ -99,14 +99,29 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Limit fetch attempts to prevent infinite loops
     if (fetchAttempts.current > 3) {
       console.warn('Too many fetch attempts, stopping to prevent infinite loop');
-      setError('Failed to fetch user data after multiple attempts');
+      
+      // Don't set error if we already have a user (prevents UI blocking)
+      if (!user) {
+        setError('Failed to fetch user data after multiple attempts');
+      } else {
+        console.log('Using existing user data despite fetch attempts limit');
+      }
+      
       setIsLoading(false);
       return;
     }
 
+    // Add a delay before starting the fetch to ensure auth is ready
+    const delayPromise = () => new Promise(resolve => 
+      setTimeout(resolve, fetchAttempts.current * 300) // Increase delay with each attempt
+    );
+    
+    await delayPromise();
+
     try {
       isFetchingRef.current = true;
       fetchAttempts.current += 1;
+      console.log(`fetchUser - Starting attempt ${fetchAttempts.current}`);
 
       if (!session?.user) {
         console.log('No active session found in fetchUser');
@@ -146,8 +161,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const supabase = createBrowserSupabase();
         const { data: sessionData } = await supabase.auth.getSession();
         
+        console.log('fetchUser - Checking Supabase session:', {
+          hasSession: !!sessionData.session,
+          sessionExpiry: sessionData.session?.expires_at ? new Date(sessionData.session.expires_at * 1000).toISOString() : 'n/a',
+          path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
+        });
+        
         if (!sessionData.session) {
-          console.error('No valid Supabase session found');
+          console.error('fetchUser - No valid Supabase session found');
           setError('No valid authentication session');
           setUser(null);
           setIsLoading(false);
@@ -155,23 +176,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         
-        console.log('Current auth session:', 'Valid session with token');
+        console.log('fetchUser - Valid session found with token:', 
+          sessionData.session.access_token ? `${sessionData.session.access_token.substring(0, 15)}...` : 'missing token');
         
-        // Get the current hostname and port
-        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const currentPort = typeof window !== 'undefined' ? window.location.port : '3000';
+        // Use the current origin for API calls
+        const apiUrl = typeof window !== 'undefined' 
+          ? `${window.location.origin}/api/auth/profile`
+          : 'http://localhost:3000/api/auth/profile';
         
-        // First try the current port, then fallback to others
-        const ports = [currentPort, '3000', '3001', '3002', '3003'].filter((p, i, arr) => arr.indexOf(p) === i);
         let userData = null;
         let lastError = null;
         
         // In this try block, we'll attempt to fetch the profile from our server
         // If the user doesn't exist in the database, the server will create it
         try {
-          // Only try the current port first for efficiency
-          const apiUrl = `http://${hostname}:${currentPort}/api/auth/profile`;
-          console.log('Trying profile endpoint at:', apiUrl);
+          console.log('fetchUser - Calling profile API:', apiUrl);
           
           const response = await fetch(apiUrl, {
             credentials: 'include',
@@ -181,56 +200,47 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             },
           });
 
+          console.log('fetchUser - Profile API response:', {
+            status: response.status,
+            ok: response.ok,
+            statusText: response.statusText,
+            contentType: response.headers.get('content-type')
+          });
+
           if (response.ok) {
             userData = await response.json();
-            console.log('User data fetched successfully');
+            console.log('fetchUser - User data fetched successfully:', {
+              userId: userData?.id ? `${userData.id.substring(0, 8)}...` : 'missing',
+              email: userData?.email || 'missing',
+              tenantId: userData?.tenantId || 'missing',
+              tenantName: userData?.tenantName || 'missing'
+            });
           } else {
             const errorText = await response.text();
-            console.log(`Profile fetch failed: Status ${response.status}`, errorText);
+            console.log(`fetchUser - Profile fetch failed: Status ${response.status}`, {
+              errorText: errorText.substring(0, 100) + (errorText.length > 100 ? '...' : ''),
+              url: apiUrl
+            });
             lastError = { status: response.status, error: errorText };
-            
-            // If we get a 401 (Unauthorized) or 404 (Not Found), we'll try other ports
-            if (response.status === 401 || response.status === 404) {
-              // Try other ports
-              for (const port of ports) {
-                if (port === currentPort) continue; // Skip current port as we already tried it
-                
-                try {
-                  const apiUrl = `http://${hostname}:${port}/api/auth/profile`;
-                  console.log('Trying profile endpoint at:', apiUrl);
-                  
-                  const response = await fetch(apiUrl, {
-                    credentials: 'include',
-                    headers: {
-                      'Cache-Control': 'no-cache',
-                      'Authorization': `Bearer ${sessionData.session.access_token}`,
-                    },
-                  });
-
-                  if (response.ok) {
-                    userData = await response.json();
-                    console.log('User data fetched successfully from port', port);
-                    break;
-                  }
-
-                  const errorText = await response.text();
-                  lastError = { port, status: response.status, error: errorText };
-                  console.log(`Profile fetch failed on port ${port}: Status ${response.status}`, errorText);
-                } catch (err) {
-                  console.log(`Error fetching from port ${port}:`, err);
-                  lastError = { port, error: err };
-                }
-              }
-            }
           }
         } catch (err) {
-          console.error('Error fetching user data:', err);
+          console.error('fetchUser - Error fetching user data:', err);
           lastError = { error: err };
         }
 
         if (!userData) {
-          console.error('Failed to fetch profile from all ports:', lastError);
-          throw new Error('Failed to fetch user profile from any available port');
+          console.error('Failed to fetch profile:', lastError);
+          
+          // Check if we already have a user - if so, use that instead of throwing an error
+          if (user) {
+            console.log('Using existing user data despite profile fetch failure');
+            // Keep existing user data and don't throw error
+            setIsLoading(false);
+            isFetchingRef.current = false;
+            return;
+          }
+          
+          throw new Error(`Failed to fetch user profile: ${lastError?.status || ''} ${lastError?.error || 'Unknown error'}`);
         }
 
         // Cache the user data
@@ -249,9 +259,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setLastFetch(now);
         // Reset fetch attempts on success
         fetchAttempts.current = 0;
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error in fetchUser:', err);
-        setError('Failed to fetch user profile');
+        setError(`Failed to fetch user profile: ${err.message || 'Unknown error'}`);
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -318,25 +328,81 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [lastFetch, fetchUser]);
 
+  // Add a listener to refresh the session when the app regains focus
+  useEffect(() => {
+    function handleFocus() {
+      console.log('Window focused, checking session');
+      checkSession();
+    }
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+      return () => window.removeEventListener('focus', handleFocus);
+    }
+  }, [checkSession]);
+  
+  // Add automatic retry with backoff if there's an error loading user data
+  useEffect(() => {
+    // Only attempt recovery if:
+    // 1. We have an error
+    // 2. We have a valid session
+    // 3. We're not already loading
+    // 4. We don't already have user data
+    if (error && session && !isLoading && !user) {
+      console.log('UserContext - Detected error state, scheduling recovery attempt');
+      
+      const retryTimeout = setTimeout(() => {
+        console.log('UserContext - Attempting recovery fetch for user data');
+        // Reset fetch attempts counter to give it a fresh start
+        fetchAttempts.current = 0;
+        fetchUser();
+      }, 2000); // 2 second delay before retry
+      
+      return () => clearTimeout(retryTimeout);
+    }
+  }, [error, session, isLoading, user, fetchUser]);
+
   useEffect(() => {
     if (sessionStatus === 'loading') {
+      console.log('UserContext - Session is loading');
       setIsLoading(true);
       return;
     }
 
     if (sessionStatus === 'authenticated' && session?.user) {
-      console.log('Session authenticated, fetching user data');
+      console.log('UserContext - Session authenticated:', { 
+        status: 'authenticated',
+        userId: session.user.id,
+        email: session.user.email,
+        accessToken: session.access_token ? `${session.access_token.substring(0, 15)}...` : 'missing',
+        expires: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown',
+        path: typeof window !== 'undefined' ? window.location.pathname : 'server-side',
+        currentUser: user ? `${user.id.substring(0, 8)}...` : 'not loaded yet'
+      });
+      
+      // If we already have a user and no error, we might not need to fetch again
+      if (user && !error) {
+        console.log('UserContext - Already have user data, skipping fetch');
+        setIsLoading(false);
+        return;
+      }
+      
       // Debounce the initial fetch
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current);
       }
 
+      console.log('UserContext - Scheduling user profile fetch with delay');
       fetchTimeoutRef.current = setTimeout(() => {
+        console.log('UserContext - Executing user profile fetch now');
         fetchUser();
         fetchTimeoutRef.current = null;
-      }, 300);
+      }, 1500); // Increased delay to 1.5 seconds to ensure auth is fully established
     } else if (sessionStatus === 'unauthenticated') {
-      console.log('Session unauthenticated, clearing user data');
+      console.log('UserContext - Session unauthenticated:', { 
+        status: 'unauthenticated',
+        path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
+      });
       setUser(null);
       setIsLoading(false);
       if (typeof window !== 'undefined') {
@@ -350,7 +416,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(fetchTimeoutRef.current);
       }
     };
-  }, [sessionStatus, session, fetchUser]);
+  }, [sessionStatus, session, fetchUser, user, error]);
 
   const checkFeature = (feature: string): boolean => {
     if (!user) return false;

@@ -21,18 +21,31 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const locale = (params?.locale as string) || 'en';
   const currentTenant = params?.tenant as string;
 
-  // Load Supabase session
+  // Load Supabase session with a small delay to ensure cookies are properly set
   useEffect(() => {
     async function loadSession() {
       setIsSessionLoading(true);
-      try {
-        const { data } = await supabaseAuth.getSession();
-        setSession(data.session);
-      } catch (error) {
-        console.error('Error loading session:', error);
-      } finally {
-        setIsSessionLoading(false);
-      }
+      
+      // Add a small delay to ensure auth is ready
+      const loadWithDelay = () => {
+        setTimeout(async () => {
+          try {
+            console.log('RouteGuard - Loading session after delay');
+            const { data } = await supabaseAuth.getSession();
+            console.log('RouteGuard - Session loaded:', {
+              hasSession: !!data.session,
+              path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
+            });
+            setSession(data.session);
+          } catch (error) {
+            console.error('Error loading session:', error);
+          } finally {
+            setIsSessionLoading(false);
+          }
+        }, 500); // 500ms delay for initial session check
+      };
+      
+      loadWithDelay();
     }
     
     loadSession();
@@ -108,17 +121,32 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
       // For public routes, only redirect if user is authenticated and trying to access auth pages
       if (isPublicRoute) {
-        // Only redirect from login/signup to dashboard if we have a valid user and no user error
+        // Only redirect from login/signup to dashboard if we have a valid session
+        // Note: We don't wait for complete user data as that might cause delays
         if (
           session?.user &&
-          user &&
-          !userError &&
           (pathname.includes('/login') || pathname.includes('/signup'))
         ) {
-          const tenant = user.tenantName || 'trial'; // Default to trial if no tenant
+          // For login/signup pages, redirect to dashboard as soon as we have a session
+          // The tenant data can come from multiple sources in priority order:
+          // 1. User object if available
+          // 2. Session user metadata
+          // 3. Default to 'trial'
+          const tenant = 
+            (user?.tenantName) || 
+            (session.user.user_metadata?.tenantName) || 
+            (session.user.user_metadata?.tenantId) || 
+            'trial';
+            
           if (tenant && !isRedirecting.current) {
             console.log(
-              `Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`,
+              `RouteGuard - Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`,
+              {
+                hasUser: !!user,
+                source: user?.tenantName ? 'user object' : 
+                       session.user.user_metadata?.tenantName ? 'metadata.tenantName' : 
+                       session.user.user_metadata?.tenantId ? 'metadata.tenantId' : 'default'
+              }
             );
             isRedirecting.current = true;
             router.replace(`/${locale}/${tenant}/dashboard`);
@@ -154,13 +182,43 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Show debug info in development
-  if (process.env.NODE_ENV === 'development' && debugInfo && userError) {
-    // Log the error but don't show the banner
-    console.error('Auth Error:', userError, debugInfo);
-
-    // Return children without the error banner
+  // Improved error handling - don't block the UI if we have a session and user error
+  if (userError && session?.user) {
+    console.log('Auth warning (non-blocking):', userError, {
+      hasSession: !!session,
+      hasUser: !!user,
+      pathname
+    });
+    
+    // If we have a session but UserContext has an error,
+    // we'll still render the app to prevent blocking the UI
     return <>{children}</>;
+  }
+  
+  // Show debug info only in development and if there's a critical error
+  if (process.env.NODE_ENV === 'development' && debugInfo && userError && !session) {
+    // Log the error but don't show the banner
+    console.error('Critical Auth Error:', userError, debugInfo);
+    
+    // In development, display the error for debugging
+    return (
+      <>
+        {/* Display the error only in development */}
+        <div className="fixed bottom-0 left-0 right-0 bg-yellow-100 p-2 text-sm z-50">
+          <p>Auth error (dev only): {userError}</p>
+          <button 
+            className="underline text-blue-500"
+            onClick={() => {
+              // Force reload the page to try again
+              window.location.reload();
+            }}
+          >
+            Reload page
+          </button>
+        </div>
+        {children}
+      </>
+    );
   }
 
   return <>{children}</>;

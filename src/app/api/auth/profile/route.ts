@@ -56,13 +56,13 @@ export async function GET(request: Request) {
           });
         }
         
-        // Create user
+        // Create user with admin role by default
         const newUser = await db.user.create({
           data: {
             id: userId,
             email: session.user.email,
             name: session.user.name || session.user.email?.split('@')[0] || 'User',
-            role: session.user.role || 'user',
+            role: session.user.role || 'admin', // Default to admin role
             tenantId: session.user.tenantId || 'trial',
           }
         });
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
           id: session.user.id,
           name: session.user.name,
           email: session.user.email,
-          role: session.user.role || 'user',
+          role: session.user.role || 'admin', // Default to admin role
           tenantId: session.user.tenantId || 'trial',
           tenantName: session.user.tenantName || 'Trial',
           plan: 'free',

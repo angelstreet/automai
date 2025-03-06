@@ -23,17 +23,64 @@ export default function LoginPage() {
 
   // Check if user is already authenticated
   useEffect(() => {
-    // Check for existing Supabase session
+    // Check for existing Supabase session with retry logic
+    let checkAttempts = 0;
+    const maxAttempts = 3;
+    
     async function checkSession() {
-      const { data } = await supabaseAuth.getSession();
-      if (data.session) {
-        // User is already logged in, redirect to dashboard
-        router.push(`/${locale}/trial/dashboard`);
-      } else {
+      try {
+        console.log('Login page - Checking for existing session...');
+        const { data } = await supabaseAuth.getSession();
+        
+        if (data.session) {
+          console.log('Login page - Session found, redirecting to dashboard:', {
+            userId: data.session.user.id,
+            email: data.session.user.email,
+            tokenExpiry: data.session.expires_at 
+              ? new Date(data.session.expires_at * 1000).toISOString() 
+              : 'unknown'
+          });
+          
+          // User is already logged in, redirect to dashboard
+          // Use replace instead of push to avoid having the login page in history
+          setTimeout(() => {
+            router.replace(`/${locale}/trial/dashboard`);
+          }, 100); // Small delay to ensure proper redirection
+        } else {
+          console.log('Login page - No session found, showing login form');
+          setIsLoading(false);
+          
+          if (checkAttempts < maxAttempts) {
+            // Retry after a delay with exponential backoff
+            checkAttempts++;
+            const delay = 1000 * Math.pow(2, checkAttempts);
+            console.log(`Login page - Will retry session check in ${delay}ms (attempt ${checkAttempts})`);
+            
+            setTimeout(checkSession, delay);
+          }
+        }
+      } catch (error) {
+        console.error('Login page - Error checking session:', error);
         setIsLoading(false);
       }
     }
+    
     checkSession();
+    
+    // Also listen for auth state changes
+    const { data: authListener } = supabaseAuth.onAuthStateChange((event, session) => {
+      console.log('Login page - Auth state changed:', { event, hasSession: !!session });
+      
+      if (session) {
+        // User signed in, redirect to dashboard
+        router.replace(`/${locale}/trial/dashboard`);
+      }
+    });
+    
+    return () => {
+      // Cleanup listener on unmount
+      authListener?.subscription.unsubscribe();
+    };
   }, [router, locale]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,22 +89,39 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      console.log('Login page - Attempting sign in with password...');
+      
       // Use Supabase authentication
       const { data, error } = await supabaseAuth.signInWithPassword(email, password);
+      
       if (error) {
+        console.error('Login page - Sign in error:', error);
         setError(error.message);
         return;
       }
+      
       if (data?.session) {
+        console.log('Login page - Sign in successful:', {
+          userId: data.session.user.id,
+          email: data.session.user.email
+        });
+        
         // Login successful, redirect to dashboard
-        router.push(`/${locale}/trial/dashboard`);
+        // Wait briefly to ensure the session is properly set
+        setTimeout(() => {
+          // Use replace to avoid having login in history
+          router.replace(`/${locale}/trial/dashboard`);
+        }, 500);
+      } else {
+        console.error('Login page - No session returned after successful login');
+        setError('Authentication successful but no session was created');
       }
     } catch (err: any) {
-      console.error('Login error:', err);
+      console.error('Login page - Error during login:', err);
       setError(err.message || 'An error occurred during login');
-    } finally {
       setIsSubmitting(false);
     }
+    // Don't set isSubmitting to false if successful, as we're redirecting
   };
 
   const handleOAuthLogin = async (provider: 'google' | 'github') => {
