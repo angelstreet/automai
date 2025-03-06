@@ -1,17 +1,27 @@
 import { NextResponse } from 'next/server';
-import { getSession, resetSupabaseClient } from '@/auth';
+import { getSession, extractSessionFromHeader } from '@/auth';
 import db from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     console.log('[PROFILE_GET] Fetching user profile');
     
-    // Reset the client to ensure we get a fresh session
-    resetSupabaseClient();
+    // Try to get session from Authorization header first
+    const authHeader = request.headers.get('Authorization');
+    let session = null;
     
-    // Use the getSession helper
-    const session = await getSession();
+    if (authHeader) {
+      console.log('[PROFILE_GET] Authorization header present, extracting session');
+      session = await extractSessionFromHeader(authHeader);
+    }
     
+    // Fall back to cookie-based session if header auth fails
+    if (!session) {
+      console.log('[PROFILE_GET] No session from header, trying cookie-based session');
+      session = await getSession();
+    }
+    
+    // Check if we have a valid session
     if (!session?.user) {
       console.log('[PROFILE_GET] No valid session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,17 +36,62 @@ export async function GET() {
     });
 
     if (!user) {
-      console.log('[PROFILE_GET] User not found in database, using session data');
-      // Return session user data as fallback
-      return NextResponse.json({
-        id: session.user.id,
-        name: session.user.name,
-        email: session.user.email,
-        role: session.user.role || 'user',
-        tenantId: session.user.tenantId || 'trial',
-        tenantName: session.user.tenantName || 'Trial',
-        plan: 'free',
-      });
+      console.log('[PROFILE_GET] User not found in database, creating user');
+      
+      // Try to create the user
+      try {
+        // Check if tenant exists, create if not
+        let tenant = await db.tenant.findUnique({
+          where: { id: 'trial' }
+        });
+        
+        if (!tenant) {
+          console.log('[PROFILE_GET] Creating trial tenant');
+          tenant = await db.tenant.create({
+            data: {
+              id: 'trial',
+              name: 'Trial',
+              plan: 'free'
+            }
+          });
+        }
+        
+        // Create user
+        const newUser = await db.user.create({
+          data: {
+            id: userId,
+            email: session.user.email,
+            name: session.user.name || session.user.email?.split('@')[0] || 'User',
+            role: session.user.role || 'user',
+            tenantId: session.user.tenantId || 'trial',
+          }
+        });
+        
+        console.log('[PROFILE_GET] User created:', newUser.id);
+        
+        // Return the newly created user
+        return NextResponse.json({
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          role: newUser.role,
+          tenantId: newUser.tenantId,
+          tenantName: 'Trial',
+          plan: 'free',
+        });
+      } catch (createError) {
+        console.error('[PROFILE_GET] Error creating user:', createError);
+        // Return session user data as fallback even if creation fails
+        return NextResponse.json({
+          id: session.user.id,
+          name: session.user.name,
+          email: session.user.email,
+          role: session.user.role || 'user',
+          tenantId: session.user.tenantId || 'trial',
+          tenantName: session.user.tenantName || 'Trial',
+          plan: 'free',
+        });
+      }
     }
 
     // Get tenant data separately
@@ -64,36 +119,32 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    console.log('[PROFILE_PATCH] Updating user profile');
-    
-    // Reset the client to ensure we get a fresh session
-    resetSupabaseClient();
-    
     const session = await getSession();
-    
+
     if (!session?.user) {
-      console.log('[PROFILE_PATCH] No valid session found');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
-    
-    const userId = session.user.id;
-    const data = await req.json();
-    
-    console.log('[PROFILE_PATCH] Updating user:', userId, 'with data:', data);
-    
-    // Update user in database
+
+    const body = await req.json();
+    const { name } = body;
+
+    if (!name) {
+      return new NextResponse(JSON.stringify({ error: 'Name is required' }), { status: 400 });
+    }
+
     const updatedUser = await db.user.update({
-      where: { id: userId },
-      data: {
-        name: data.name,
-        // Add other fields as needed
-      },
+      where: { id: session.user.id },
+      data: { name },
     });
-    
-    console.log('[PROFILE_PATCH] User updated successfully');
-    return NextResponse.json(updatedUser);
+
+    return NextResponse.json({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+    });
   } catch (error) {
-    console.error('[PROFILE_PATCH] Error:', error);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    console.error('[PROFILE_PATCH]', error);
+    return new NextResponse(JSON.stringify({ error: 'Internal error' }), { status: 500 });
   }
 }

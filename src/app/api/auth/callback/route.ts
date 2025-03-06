@@ -319,6 +319,44 @@ export async function GET(request: NextRequest) {
       email: session.user.email,
     });
 
+    // Exchange the code successfully
+    console.log('Exchanged code for session successfully!');
+    console.log('User authenticated:', session.user.id);
+    
+    // Try to create user in database directly from this endpoint
+    try {
+      // Create a server-side fetch request to our create-user endpoint
+      console.log('Creating user in database...');
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      const createUserUrl = `${siteUrl}/api/auth/create-user`;
+      
+      const createUserResponse = await fetch(createUserUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token || ''}`
+        },
+        body: JSON.stringify({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+          role: session.user.user_metadata?.role || 'user',
+          tenantId: 'trial',
+          provider: session.user.app_metadata?.provider || 'github'
+        })
+      });
+      
+      if (createUserResponse.ok) {
+        console.log('User created or verified in database during callback');
+      } else {
+        console.error('Failed to create user in database during callback:', 
+          await createUserResponse.text());
+      }
+    } catch (createUserError) {
+      console.error('Error creating user in database during callback:', createUserError);
+      // Continue even if user creation fails here, we'll try again later
+    }
+
     // Always redirect to the auth-redirect page with 'en' locale as fallback
     return NextResponse.redirect(new URL('/en/auth-redirect', process.env.NEXT_PUBLIC_SITE_URL));
   } catch (error) {

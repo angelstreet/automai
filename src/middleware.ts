@@ -87,16 +87,48 @@ export default async function middleware(request: NextRequest) {
 
   // Extract path parts for better matching
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+  
+  // Add locale-based home paths to public paths
+  locales.forEach(locale => {
+    publicPaths.push(`/${locale}`);
+    publicPaths.push(`/${locale}/`);
+  });
 
   // Check if it's a public path more precisely
   const isPublicPath =
     publicPaths.some((path) => request.nextUrl.pathname === path) ||
     request.nextUrl.pathname === '/' ||
+    request.nextUrl.pathname === '//' ||
     (pathParts.length === 1 && locales.includes(pathParts[0] as any)) ||
     request.nextUrl.pathname.includes('/auth-redirect');
+    
+  // Add debug logging for public path detection
+  console.log('Public path check:', {
+    pathname: request.nextUrl.pathname,
+    pathParts,
+    isPublicPath,
+    matchedExplicitPath: publicPaths.some((path) => request.nextUrl.pathname === path),
+    isRootPath: request.nextUrl.pathname === '/',
+    isLocaleRoot: pathParts.length === 1 && locales.includes(pathParts[0] as any),
+    normPathname: request.nextUrl.pathname.replace(/\/+$/, '') // Path with trailing slashes removed
+  });
 
   if (isPublicPath) {
     console.log('Public path detected, bypassing auth:', request.nextUrl.pathname);
+    return NextResponse.next();
+  }
+  
+  // Additional check for root paths with or without locales
+  // This ensures URLs like /en/ are treated as public
+  if (
+    request.nextUrl.pathname === '/' || 
+    request.nextUrl.pathname === '//' ||
+    locales.some(locale => 
+      request.nextUrl.pathname === `/${locale}` || 
+      request.nextUrl.pathname === `/${locale}/`
+    )
+  ) {
+    console.log('Root path detected, bypassing auth:', request.nextUrl.pathname);
     return NextResponse.next();
   }
 
@@ -164,26 +196,75 @@ export default async function middleware(request: NextRequest) {
         console.log('Middleware using Codespace Supabase URL:', supabaseUrl);
       }
       
-      const supabase = createServerClient(
-        supabaseUrl,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get: (name) => request.cookies.get(name)?.value,
-            set: (name, value, options) => {
-              res.cookies.set({ name, value, ...options });
-            },
-            remove: (name, options) => {
-              res.cookies.set({ name, value: '', ...options });
+      // First, try to extract token from Authorization header if present
+      const authHeader = request.headers.get('Authorization');
+      let session = null;
+      
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        console.log('Middleware: Authorization header found, using token');
+        const token = authHeader.substring(7);
+        
+        try {
+          // Create a one-time client to verify the token
+          const verifyClient = createServerClient(
+            supabaseUrl,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+              cookies: {
+                get: () => null,
+                set: () => {},
+                remove: () => {},
+              },
+            }
+          );
+          
+          // Verify the token
+          const { data, error } = await verifyClient.auth.getUser(token);
+          
+          if (data?.user && !error) {
+            console.log('Middleware: Valid token in Authorization header');
+            // Create a session object
+            session = {
+              user: data.user,
+              expires_at: Math.floor(Date.now() / 1000) + 3600, // Approximate 1 hour validity
+              access_token: token
+            };
+          } else {
+            console.log('Middleware: Invalid token in Authorization header:', error?.message);
+          }
+        } catch (error) {
+          console.error('Middleware: Error verifying token from header:', error);
+        }
+      }
+      
+      // If no valid session from header, try cookies
+      if (!session) {
+        console.log('Middleware: No valid token in header, checking cookies');
+        
+        // Create a client for cookie-based auth
+        const supabase = createServerClient(
+          supabaseUrl,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          {
+            cookies: {
+              get: (name) => {
+                const cookie = request.cookies.get(name);
+                return cookie?.value;
+              },
+              set: (name, value, options) => {
+                res.cookies.set({ name, value, ...options });
+              },
+              remove: (name, options) => {
+                res.cookies.set({ name, value: '', ...options });
+              },
             },
           },
-        },
-      );
+        );
 
-      // Get current session
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        // Get current session from cookies
+        const { data } = await supabase.auth.getSession();
+        session = data.session;
+      }
 
       console.log('Auth session check:', {
         path: request.nextUrl.pathname,
@@ -203,9 +284,73 @@ export default async function middleware(request: NextRequest) {
         !!session.user.email &&
         (!session.expires_at || session.expires_at * 1000 > Date.now());
 
+      // Enhanced debug logging
+      if (!isValidToken) {
+        console.log('Token validation failed:', {
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          hasEmail: !!session?.user?.email,
+          isExpired: session?.expires_at ? session.expires_at * 1000 <= Date.now() : false,
+          expiryTime: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'n/a',
+          currentTime: new Date().toISOString(),
+        });
+      }
+
       // Only check token validity in middleware
       if (!isValidToken) {
         console.log('Invalid token for protected route:', request.nextUrl.pathname);
+
+        // Attempt to refresh the session before failing
+        if (session && session.user) {
+          try {
+            console.log('Attempting to refresh session for user:', session.user.id);
+            
+            // Create a fresh client for refresh attempt
+            const refreshClient = createServerClient(
+              supabaseUrl,
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+              {
+                cookies: {
+                  get: (name) => {
+                    const cookie = request.cookies.get(name);
+                    return cookie?.value;
+                  },
+                  set: (name, value, options) => {
+                    res.cookies.set({ name, value, ...options });
+                  },
+                  remove: (name, options) => {
+                    res.cookies.set({ name, value: '', ...options });
+                  },
+                },
+              }
+            );
+            
+            // Try to refresh the session
+            const { data, error } = await refreshClient.auth.refreshSession();
+            
+            if (data?.session && !error) {
+              console.log('Session refreshed successfully');
+              session = data.session;
+              
+              // Check if the refreshed token is valid
+              const isRefreshedTokenValid =
+                !!session &&
+                !!session.user &&
+                !!session.user.email &&
+                (!session.expires_at || session.expires_at * 1000 > Date.now());
+              
+              if (isRefreshedTokenValid) {
+                console.log('Refreshed token is valid, continuing with request');
+                // Continue with the request using the refreshed token
+                return res;
+              }
+            } else {
+              console.log('Failed to refresh session:', error?.message);
+            }
+          } catch (refreshError) {
+            console.error('Error refreshing session:', refreshError);
+          }
+        }
 
         if (isApiRoute) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

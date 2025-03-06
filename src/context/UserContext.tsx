@@ -145,42 +145,87 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         // Check if we have a valid auth session before making the request
         const supabase = createBrowserSupabase();
         const { data: sessionData } = await supabase.auth.getSession();
-        console.log('Current auth session:', sessionData.session ? 'Valid session' : 'No session');
         
-        // Get the current hostname
+        if (!sessionData.session) {
+          console.error('No valid Supabase session found');
+          setError('No valid authentication session');
+          setUser(null);
+          setIsLoading(false);
+          isFetchingRef.current = false;
+          return;
+        }
+        
+        console.log('Current auth session:', 'Valid session with token');
+        
+        // Get the current hostname and port
         const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const currentPort = typeof window !== 'undefined' ? window.location.port : '3000';
         
-        // Try ports 3000-3003
-        const ports = [3000, 3001, 3002, 3003];
+        // First try the current port, then fallback to others
+        const ports = [currentPort, '3000', '3001', '3002', '3003'].filter((p, i, arr) => arr.indexOf(p) === i);
         let userData = null;
         let lastError = null;
+        
+        // In this try block, we'll attempt to fetch the profile from our server
+        // If the user doesn't exist in the database, the server will create it
+        try {
+          // Only try the current port first for efficiency
+          const apiUrl = `http://${hostname}:${currentPort}/api/auth/profile`;
+          console.log('Trying profile endpoint at:', apiUrl);
+          
+          const response = await fetch(apiUrl, {
+            credentials: 'include',
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Authorization': `Bearer ${sessionData.session.access_token}`,
+            },
+          });
 
-        for (const port of ports) {
-          try {
-            const apiUrl = `http://${hostname}:${port}/api/auth/profile`;
-            console.log('Trying profile endpoint at:', apiUrl);
-            
-            const response = await fetch(apiUrl, {
-              credentials: 'include',
-              headers: {
-                'Cache-Control': 'no-cache',
-                'Authorization': `Bearer ${session.access_token}`,
-              },
-            });
-
-            if (response.ok) {
-              userData = await response.json();
-              console.log('User data fetched successfully from port', port);
-              break;
-            }
-
+          if (response.ok) {
+            userData = await response.json();
+            console.log('User data fetched successfully');
+          } else {
             const errorText = await response.text();
-            lastError = { port, status: response.status, error: errorText };
-            console.log(`Profile fetch failed on port ${port}:`, lastError);
-          } catch (err) {
-            console.log(`Error fetching from port ${port}:`, err);
-            lastError = { port, error: err };
+            console.log(`Profile fetch failed: Status ${response.status}`, errorText);
+            lastError = { status: response.status, error: errorText };
+            
+            // If we get a 401 (Unauthorized) or 404 (Not Found), we'll try other ports
+            if (response.status === 401 || response.status === 404) {
+              // Try other ports
+              for (const port of ports) {
+                if (port === currentPort) continue; // Skip current port as we already tried it
+                
+                try {
+                  const apiUrl = `http://${hostname}:${port}/api/auth/profile`;
+                  console.log('Trying profile endpoint at:', apiUrl);
+                  
+                  const response = await fetch(apiUrl, {
+                    credentials: 'include',
+                    headers: {
+                      'Cache-Control': 'no-cache',
+                      'Authorization': `Bearer ${sessionData.session.access_token}`,
+                    },
+                  });
+
+                  if (response.ok) {
+                    userData = await response.json();
+                    console.log('User data fetched successfully from port', port);
+                    break;
+                  }
+
+                  const errorText = await response.text();
+                  lastError = { port, status: response.status, error: errorText };
+                  console.log(`Profile fetch failed on port ${port}: Status ${response.status}`, errorText);
+                } catch (err) {
+                  console.log(`Error fetching from port ${port}:`, err);
+                  lastError = { port, error: err };
+                }
+              }
+            }
           }
+        } catch (err) {
+          console.error('Error fetching user data:', err);
+          lastError = { error: err };
         }
 
         if (!userData) {
