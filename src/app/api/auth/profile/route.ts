@@ -2,104 +2,110 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/auth';
 import db from '@/lib/db';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { RequestCookie, ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies';
+import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+
+// Helper function to create Supabase client with different URLs
+function createSupabaseClient(url: string) {
+  return createServerClient(
+    url,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
+          cookieStore.set(name, value, {
+            ...options,
+            path: options.path || '/'
+          });
+        },
+        remove(name: string, options: CookieOptions) {
+          const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
+          cookieStore.set(name, '', {
+            ...options,
+            path: options.path || '/',
+            maxAge: 0
+          });
+        }
+      }
+    }
+  );
+}
 
 export async function GET() {
   try {
-    // Get session from both methods to debug which one works
-    const session = await getSession();
-    
-    // Also try direct Supabase session check
-    const cookieStore = cookies();
-    
-    // Log all cookies for debugging
+    // Log all available cookies for debugging
+    const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
+    const availableCookies = cookieStore.getAll();
     console.log('[PROFILE_GET] Available cookies:', 
-      cookieStore.getAll().map(c => `${c.name}: ${c.value.substring(0, 10)}...`)
+      availableCookies.map((cookie: RequestCookie) => 
+        `${cookie.name}: ${cookie.value.substring(0, 10)}...`
+      )
     );
-    
-    // Try with localhost URL
-    const supabaseLocal = createServerClient(
-      'http://localhost:54321',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get: (name) => cookieStore.get(name)?.value,
-          set: (name, value, options) => {
-            cookieStore.set(name, value, options);
-          },
-          remove: (name, options) => {
-            cookieStore.set(name, '', { ...options, maxAge: 0 });
-          },
-        },
-      }
-    );
-    
-    // Try with 127.0.0.1 URL
-    const supabaseIP = createServerClient(
-      'http://127.0.0.1:54321',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get: (name) => cookieStore.get(name)?.value,
-          set: (name, value, options) => {
-            cookieStore.set(name, value, options);
-          },
-          remove: (name, options) => {
-            cookieStore.set(name, '', { ...options, maxAge: 0 });
-          },
-        },
-      }
-    );
-    
-    // Check both clients
-    const { data: localData } = await supabaseLocal.auth.getSession();
-    const { data: ipData } = await supabaseIP.auth.getSession();
-    
-    console.log('[PROFILE_GET] Auth check:', { 
-      sessionExists: !!session,
-      localhostSessionExists: !!localData.session,
-      ipSessionExists: !!ipData.session,
-      userId: session?.user?.id || localData?.session?.user?.id || ipData?.session?.user?.id || 'none'
-    });
 
-    // Use any session source that works
-    const userId = session?.user?.id || localData?.session?.user?.id || ipData?.session?.user?.id;
-    const supabaseUser = localData?.session?.user || ipData?.session?.user;
-    
-    if (!userId) {
-      console.error('[PROFILE_GET] No valid user ID found in any session');
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    // Try different Supabase URLs
+    const urls = [
+      'http://localhost:54321',
+      'http://127.0.0.1:54321',
+      ...Array.from({ length: 4 }, (_, i) => `http://localhost:${3000 + i}`),
+      ...Array.from({ length: 4 }, (_, i) => `http://127.0.0.1:${3000 + i}`)
+    ];
+
+    // Create clients for all URLs
+    const clients = urls.map(url => createSupabaseClient(url));
+
+    // Try to get session from each client
+    const sessions = await Promise.all(
+      clients.map(client => client.auth.getSession())
+    );
+
+    // Log session check results
+    console.log('[PROFILE_GET] Session check:', 
+      sessions.map((s, i) => ({ 
+        url: urls[i], 
+        hasSession: !!s.data.session 
+      }))
+    );
+
+    // Find first valid session
+    const validSession = sessions.find(s => s.data.session)?.data.session;
+
+    if (!validSession?.user) {
+      console.log('[PROFILE_GET] No valid session found');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('[PROFILE_GET] Session found, user ID:', userId);
+    const userId = validSession.user.id;
+    console.log('[PROFILE_GET] Valid session found for user:', userId);
 
-    // Get full user data from database
+    // Get user data from database
     const user = await db.user.findUnique({
-      where: { id: userId },
-      include: { tenant: true },
+      where: { id: userId }
     });
 
     if (!user) {
-      console.error('[PROFILE_GET] User not found in database for ID:', userId);
-
-      // Get Supabase user metadata as fallback
-      if (supabaseUser) {
-        console.log('[PROFILE_GET] Using Supabase user data as fallback');
-        
-        // Return the session user data as fallback instead of 404
-        return NextResponse.json({
-          id: supabaseUser.id,
-          name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-          email: supabaseUser.email,
-          role: supabaseUser.user_metadata?.role || 'user',
-          tenantId: supabaseUser.user_metadata?.tenantId || 'trial',
-          tenantName: supabaseUser.user_metadata?.tenantName || 'Trial',
-          plan: 'free',
-        });
-      }
-      
-      return new NextResponse(JSON.stringify({ error: 'User not found' }), { status: 404 });
+      console.log('[PROFILE_GET] User not found in database, using session data');
+      // Return session user data as fallback
+      return NextResponse.json({
+        id: validSession.user.id,
+        name: validSession.user.user_metadata?.name || validSession.user.email?.split('@')[0] || 'User',
+        email: validSession.user.email,
+        role: validSession.user.user_metadata?.role || 'user',
+        tenantId: validSession.user.user_metadata?.tenantId || 'trial',
+        tenantName: validSession.user.user_metadata?.tenantName || 'Trial',
+        plan: 'free',
+      });
     }
+
+    // Get tenant data separately
+    const tenant = user.tenantId ? await db.tenant.findUnique({
+      where: { id: user.tenantId }
+    }) : null;
 
     return NextResponse.json({
       id: user.id,
@@ -107,12 +113,12 @@ export async function GET() {
       email: user.email,
       role: user.role,
       tenantId: user.tenantId,
-      tenantName: user.tenant?.name || null,
-      plan: user.tenant?.plan || 'free',
+      tenantName: tenant?.name || null,
+      plan: tenant?.plan || 'free',
     });
   } catch (error) {
-    console.error('[PROFILE_GET] Error details:', error);
-    return new NextResponse(JSON.stringify({ error: 'Internal error' }), { status: 500 });
+    console.error('[PROFILE_GET] Error:', error);
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

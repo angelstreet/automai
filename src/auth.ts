@@ -4,6 +4,7 @@
  */
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 
 import { createServerSupabase } from '@/lib/supabase';
 
@@ -26,7 +27,7 @@ export interface SessionData {
 
 // Create a server-side Supabase client with cookies
 export async function createSupabaseServerClient() {
-  const cookieStore = cookies();
+  const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
   
   // Get the Supabase URL from environment or use localhost as default
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
@@ -39,15 +40,21 @@ export async function createSupabaseServerClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name: string) => {
-          const cookie = cookieStore.get(name);
-          return cookie?.value;
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
-        set: (name: string, value: string, options: any) => {
-          cookieStore.set({ name, value, ...options });
+        set(name: string, value: string, options: any) {
+          cookieStore.set(name, value, {
+            ...options,
+            path: options.path || '/'
+          });
         },
-        remove: (name: string, options: any) => {
-          cookieStore.set({ name, value: '', ...options });
+        remove(name: string, options: any) {
+          cookieStore.set(name, '', {
+            ...options,
+            path: options.path || '/',
+            maxAge: 0
+          });
         },
       },
     }

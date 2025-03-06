@@ -147,59 +147,46 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const { data: sessionData } = await supabase.auth.getSession();
         console.log('Current auth session:', sessionData.session ? 'Valid session' : 'No session');
         
-        // Get the current hostname to match API calls
+        // Get the current hostname
         const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-        const port = typeof window !== 'undefined' ? window.location.port : '3001';
-        const apiUrl = `http://${hostname}:${port}/api/auth/profile`;
         
-        console.log('Fetching profile from:', apiUrl);
-        
-        const response = await fetch(apiUrl, {
-          credentials: 'include',
-          headers: {
-            'Cache-Control': 'no-cache',
-          },
-        });
+        // Try ports 3000-3003
+        const ports = [3000, 3001, 3002, 3003];
+        let userData = null;
+        let lastError = null;
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorData = {};
-          
+        for (const port of ports) {
           try {
-            errorData = JSON.parse(errorText);
-          } catch (e) {
-            console.error('Failed to parse error response:', errorText);
-          }
-          
-          console.error('Profile fetch failed:', {
-            status: response.status,
-            statusText: response.statusText,
-            error: errorData,
-            responseText: errorText.substring(0, 200) // First 200 chars for debugging
-          });
+            const apiUrl = `http://${hostname}:${port}/api/auth/profile`;
+            console.log('Trying profile endpoint at:', apiUrl);
+            
+            const response = await fetch(apiUrl, {
+              credentials: 'include',
+              headers: {
+                'Cache-Control': 'no-cache',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+            });
 
-          // If user not found (404), clear session cache and set appropriate error
-          if (response.status === 404) {
-            if (typeof window !== 'undefined') {
-              localStorage.removeItem(SESSION_CACHE_KEY);
+            if (response.ok) {
+              userData = await response.json();
+              console.log('User data fetched successfully from port', port);
+              break;
             }
-            setError('User not found - please log in again');
-            setUser(null);
-            // Don't throw here, just return to prevent further processing
-            return;
-          }
-          
-          if (response.status === 401) {
-            setError('Unauthorized - authentication required');
-            setUser(null);
-            return;
-          }
 
-          throw new Error((errorData as any).error || `Failed to fetch user profile: ${response.status}`);
+            const errorText = await response.text();
+            lastError = { port, status: response.status, error: errorText };
+            console.log(`Profile fetch failed on port ${port}:`, lastError);
+          } catch (err) {
+            console.log(`Error fetching from port ${port}:`, err);
+            lastError = { port, error: err };
+          }
         }
 
-        const userData = await response.json();
-        console.log('User data fetched successfully:', { ...userData, id: '***' });
+        if (!userData) {
+          console.error('Failed to fetch profile from all ports:', lastError);
+          throw new Error('Failed to fetch user profile from any available port');
+        }
 
         // Cache the user data
         if (typeof window !== 'undefined') {
@@ -219,7 +206,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         fetchAttempts.current = 0;
       } catch (err) {
         console.error('Error in fetchUser:', err);
-        setError(null);
+        setError('Failed to fetch user profile');
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -227,7 +214,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.error('Error in fetchUser:', err);
-      setError(null);
+      setError('Failed to fetch user profile');
       setUser(null);
     } finally {
       setIsLoading(false);
