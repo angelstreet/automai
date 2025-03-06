@@ -28,20 +28,26 @@ export interface SessionData {
 export async function createSupabaseServerClient() {
   const cookieStore = cookies();
   
+  // Get the Supabase URL from environment or use localhost as default
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
+  
+  // Log the URL being used
+  console.log('Creating Supabase server client with URL:', supabaseUrl);
+  
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseUrl,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: async (name: string) => {
-          const cookie = await cookieStore.get(name);
+        get: (name: string) => {
+          const cookie = cookieStore.get(name);
           return cookie?.value;
         },
-        set: async (name: string, value: string, options: any) => {
-          await cookieStore.set({ name, value, ...options });
+        set: (name: string, value: string, options: any) => {
+          cookieStore.set({ name, value, ...options });
         },
-        remove: async (name: string, options: any) => {
-          await cookieStore.set({ name, value: '', ...options });
+        remove: (name: string, options: any) => {
+          cookieStore.set({ name, value: '', ...options });
         },
       },
     }

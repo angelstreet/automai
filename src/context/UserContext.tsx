@@ -5,6 +5,7 @@ import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features
 import supabaseAuth from '@/lib/supabase-auth';
 import { Session } from '@supabase/supabase-js';
 import { AuthUser, CustomSupabaseUser } from '@/types/auth';
+import { createBrowserSupabase } from '@/lib/supabase';
 
 type PlanType = keyof typeof getPlanFeatures;
 
@@ -139,51 +140,91 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('Fetching fresh user data from API');
-      const response = await fetch('/api/auth/profile', {
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Profile fetch failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData.error,
+      
+      try {
+        // Check if we have a valid auth session before making the request
+        const supabase = createBrowserSupabase();
+        const { data: sessionData } = await supabase.auth.getSession();
+        console.log('Current auth session:', sessionData.session ? 'Valid session' : 'No session');
+        
+        // Get the current hostname to match API calls
+        const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+        const port = typeof window !== 'undefined' ? window.location.port : '3001';
+        const apiUrl = `http://${hostname}:${port}/api/auth/profile`;
+        
+        console.log('Fetching profile from:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
+          credentials: 'include',
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
         });
 
-        // If user not found (404), clear session cache and set appropriate error
-        if (response.status === 404) {
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem(SESSION_CACHE_KEY);
+        if (!response.ok) {
+          const errorText = await response.text();
+          let errorData = {};
+          
+          try {
+            errorData = JSON.parse(errorText);
+          } catch (e) {
+            console.error('Failed to parse error response:', errorText);
           }
-          setError('User not found - please log in again');
-          setUser(null);
-          // Don't throw here, just return to prevent further processing
-          return;
+          
+          console.error('Profile fetch failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+            responseText: errorText.substring(0, 200) // First 200 chars for debugging
+          });
+
+          // If user not found (404), clear session cache and set appropriate error
+          if (response.status === 404) {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(SESSION_CACHE_KEY);
+            }
+            setError('User not found - please log in again');
+            setUser(null);
+            // Don't throw here, just return to prevent further processing
+            return;
+          }
+          
+          if (response.status === 401) {
+            setError('Unauthorized - authentication required');
+            setUser(null);
+            return;
+          }
+
+          throw new Error((errorData as any).error || `Failed to fetch user profile: ${response.status}`);
         }
 
-        throw new Error(errorData.error || `Failed to fetch user profile: ${response.status}`);
+        const userData = await response.json();
+        console.log('User data fetched successfully:', { ...userData, id: '***' });
+
+        // Cache the user data
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(
+            SESSION_CACHE_KEY,
+            JSON.stringify({
+              user: userData,
+              timestamp: now,
+            }),
+          );
+        }
+
+        setUser(userData);
+        setError(null);
+        setLastFetch(now);
+        // Reset fetch attempts on success
+        fetchAttempts.current = 0;
+      } catch (err) {
+        console.error('Error in fetchUser:', err);
+        setError(null);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+        isFetchingRef.current = false;
       }
-
-      const userData = await response.json();
-      console.log('User data fetched successfully:', { ...userData, id: '***' });
-
-      // Cache the user data
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          SESSION_CACHE_KEY,
-          JSON.stringify({
-            user: userData,
-            timestamp: now,
-          }),
-        );
-      }
-
-      setUser(userData);
-      setError(null);
-      setLastFetch(now);
-      // Reset fetch attempts on success
-      fetchAttempts.current = 0;
     } catch (err) {
       console.error('Error in fetchUser:', err);
       setError(null);
