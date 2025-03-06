@@ -8,6 +8,7 @@ import { debounce } from '@/lib/utils';
 
 // Import as a function to ensure it's only called in client context
 import getSupabaseAuth from '@/lib/supabase-auth';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 type PlanType = keyof typeof getPlanFeatures;
 
@@ -37,41 +38,40 @@ const SESSION_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  // Initialize supabaseAuth in state to ensure it's only created in client context
-  const [supabaseAuth, setSupabaseAuth] = useState<ReturnType<typeof getSupabaseAuth>>(null);
+  // Initialize state
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [sessionStatus, setSessionStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const router = useRouter();
-  const pathname = usePathname();
-  
-  // Track if we've initialized the auth client
-  const isInitialized = useRef(false);
+  const [session, setSession] = useState<Session | null>(null);
+
+  // Initialize refs to track state between renders
   const isFetchingUser = useRef(false);
-  const lastFetchedAt = useRef<number | null>(null);
+  const lastFetchedAt = useRef(0);
+  const authInitialized = useRef(false);
   
-  // Initialize supabaseAuth on client side
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !supabaseAuth) {
-      try {
-        const auth = getSupabaseAuth();
-        console.log('UserContext - Initializing Supabase auth client:', !!auth);
-        setSupabaseAuth(auth);
-      } catch (err) {
-        console.error('UserContext - Error initializing Supabase auth client:', err);
-        setError('Failed to initialize authentication client');
-      }
+  // Try to get supabase client, with better error handling
+  const supabaseAuthRef = useRef<SupabaseClient | null>(null);
+  
+  try {
+    if (!supabaseAuthRef.current) {
+      supabaseAuthRef.current = getSupabaseAuth();
+      // Log available methods for debugging
+      console.log("UserContext - Supabase auth methods:", supabaseAuthRef.current);
     }
-  }, []);
+  } catch (e) {
+    console.error("Error initializing Supabase client:", e);
+    setError("Failed to initialize authentication client");
+  }
+  
+  // Get supabase client safely
+  const supabaseAuth = supabaseAuthRef.current;
   
   // Load session on initial mount
   useEffect(() => {
     // Only proceed if supabaseAuth is initialized
-    if (!supabaseAuth || isInitialized.current) return;
+    if (!supabaseAuth || authInitialized.current) return;
     
-    isInitialized.current = true;
+    authInitialized.current = true;
 
     console.log('UserContext - Initial session load');
     
@@ -82,7 +82,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       hasGetSession: typeof supabaseAuth?.getSession === 'function',
       hasAuthStateChange: typeof supabaseAuth?.onAuthStateChange === 'function',
       pathname: typeof window !== 'undefined' ? window.location.pathname : 'server-side',
-      isInitialized: isInitialized.current
+      isInitialized: authInitialized.current
     });
     
     // Longer delay to ensure supabaseAuth is fully ready
