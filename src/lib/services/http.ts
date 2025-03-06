@@ -32,9 +32,20 @@ export async function initializeNextApp(options: {
 
   // Create new Next.js app
   logger.info('Initializing Next.js app');
-  nextApp = next({ dev, hostname, port }) as unknown as NextServer;
-  await nextApp.prepare();
-  logger.info('Next.js app prepared successfully');
+  try {
+    nextApp = next({ 
+      dev, 
+      hostname, 
+      port,
+      // Add 'dir' option to make sure Next.js looks in the right directory
+      dir: process.cwd(),
+    }) as unknown as NextServer;
+    await nextApp.prepare();
+    logger.info('Next.js app prepared successfully');
+  } catch (error) {
+    logger.error('Failed to prepare Next.js app: ' + (error instanceof Error ? error.message : String(error)));
+    throw error;
+  }
 
   return nextApp;
 }
@@ -80,8 +91,25 @@ export async function createServer(options: {
     // Create HTTP server
     logger.info('Creating HTTP server');
     httpServer = http.createServer((req, res) => {
-      const parsedUrl = parse(req.url || '', true);
-      handle(req, res, parsedUrl);
+      try {
+        const parsedUrl = parse(req.url || '', true);
+        
+        // Special handling for common Next.js system pages
+        if (req.url?.startsWith('/_next/') || 
+            req.url === '/_document' || 
+            req.url === '/_app' || 
+            req.url === '/_error') {
+          console.log(`Handling Next.js system page: ${req.url}`);
+        }
+        
+        // Let the Next.js request handler manage the request
+        handle(req, res, parsedUrl);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Error handling request for ${req.url}: ${errorMessage}`);
+        res.statusCode = 500;
+        res.end('Internal Server Error');
+      }
     });
 
     // Set max listeners to avoid warnings
