@@ -282,26 +282,32 @@ export default function AuthRedirectPage() {
           if (accessToken) {
             console.log('Found access token in sessionStorage, attempting to establish session');
             
-            try {
-              // Create a fresh Supabase client
-              const supabase = createBrowserSupabase();
-              
-              // Try to set the session with the stored tokens
-              const { data, error } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken || '',
-              });
-              
-              if (error) {
-                console.error('Error setting session from stored tokens:', error);
-              } else if (data?.session) {
-                console.log('Successfully established session from stored tokens!');
-                setSession(data.session);
-                setStatus('authenticated');
+            // We need to use a separate async function to handle the token recovery
+            const recoverSession = async () => {
+              try {
+                // Create a fresh Supabase client
+                const supabase = createBrowserSupabase();
+                
+                // Try to set the session with the stored tokens
+                const { data, error } = await supabase.auth.setSession({
+                  access_token: accessToken,
+                  refresh_token: refreshToken || '',
+                });
+                
+                if (error) {
+                  console.error('Error setting session from stored tokens:', error);
+                } else if (data?.session) {
+                  console.log('Successfully established session from stored tokens!');
+                  setSession(data.session);
+                  setStatus('authenticated');
+                }
+              } catch (err) {
+                console.error('Error recovering session from stored tokens:', err);
               }
-            } catch (err) {
-              console.error('Error recovering session from stored tokens:', err);
-            }
+            };
+            
+            // Call the async function
+            recoverSession();
           }
         }
         
