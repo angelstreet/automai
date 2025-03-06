@@ -216,10 +216,14 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
       
       // Set the session with enhanced error handling
       try {
-        const response = await globalThis.__supabaseBrowserClient.auth.setSession({
+        const response = await globalThis.__supabaseBrowserClient?.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken || '',
         });
+        
+        if (!response) {
+          return { data: { session: null }, error: new Error('Supabase client not initialized') };
+        }
         
         console.log('Session set successfully:', !!response.data.session);
         return response;
@@ -235,8 +239,9 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
         
         // Try to get an existing session as fallback
         console.log('Trying to get existing session as fallback...');
-        const existingSession = await globalThis.__supabaseBrowserClient.auth.getSession();
-        if (existingSession.data.session) {
+        const existingSession = await globalThis.__supabaseBrowserClient?.auth.getSession();
+        
+        if (existingSession?.data.session) {
           console.log('Found existing valid session, using that instead');
           return existingSession;
         }
