@@ -34,7 +34,17 @@ const getSupabaseServiceKey = () => {
 
 // Cache the client to avoid creating multiple instances
 let serverClient: ReturnType<typeof createClient> | null = null;
-let browserClient: ReturnType<typeof createClient> | null = null;
+let browserClient: any = null; // Using 'any' to avoid complex TS generics issues
+
+// Type for a Supabase client with our custom extension
+type ExtendedSupabaseClient = ReturnType<typeof createClient> & {
+  auth: ReturnType<typeof createClient>['auth'] & {
+    createSessionFromUrl: (url: string) => Promise<{
+      data: { session: any },
+      error: any
+    }>
+  }
+};
 
 // Server-side client with service role when available
 export function createServerSupabase() {
@@ -52,12 +62,12 @@ export function createServerSupabase() {
 }
 
 // Client-side client with improved options for Codespaces environments
-export function createBrowserSupabase() {
+export function createBrowserSupabase(): ExtendedSupabaseClient {
   if (typeof window === 'undefined') {
     throw new Error('createBrowserSupabase should only be used in browser environment');
   }
 
-  if (browserClient) return browserClient;
+  if (browserClient) return browserClient as ExtendedSupabaseClient;
 
   // IMPORTANT FIX: For GitHub Codespaces, we need to use 127.0.0.1 as the URL
   // This is because Supabase tokens are issued with 'iss' set to http://127.0.0.1:54321/auth/v1
@@ -88,7 +98,7 @@ export function createBrowserSupabase() {
   const baseUrl = window.location.origin;
   
   // For debugging purposes, add an onAuthStateChange callback
-  const handleAuthStateChange = (event: string, session: any) => {
+  const handleAuthStateChange = (event: string, session: any): void => {
     console.log('Supabase Auth State Change:', { 
       event, 
       hasSession: !!session,
@@ -97,7 +107,8 @@ export function createBrowserSupabase() {
     });
   };
 
-  browserClient = createClient(supabaseUrl, supabaseAnonKey, {
+  // Create a new Supabase client instance
+  const newClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -136,13 +147,16 @@ export function createBrowserSupabase() {
     },
   });
   
+  // Assign the new client to our cached variable
+  browserClient = newClient;
+  
   // Add auth state change listener to help debug
   browserClient.auth.onAuthStateChange(handleAuthStateChange);
 
   // Add a special helper method to create a session from token parameters
   // This is useful for handling GitHub auth redirects with tokens in the URL
-  // Use type assertion to extend the auth client with our custom method
-  (browserClient.auth as any).createSessionFromUrl = async (url: string) => {
+  // Add our custom method to the auth client
+  (browserClient as ExtendedSupabaseClient).auth.createSessionFromUrl = async (url: string) => {
     try {
       // Parse URL to extract hash parameters
       const hashParams = new URLSearchParams(
@@ -196,15 +210,19 @@ export function createBrowserSupabase() {
 
   // We won't modify the auth methods directly since it's causing issues
   // Instead, we'll make sure the client initializes correctly
-  // browserClient should never be null at this point, but we'll check to satisfy TypeScript
-  if (browserClient) {
-    // Force the client to initialize properly before returning
-    browserClient.auth.getSession().catch(err => {
-      console.error('Error initializing Supabase client:', err);
-    });
+  // At this point, browserClient must exist since we assigned it above
+  if (!browserClient) {
+    // This should never happen, but TypeScript doesn't know that
+    throw new Error('Failed to create Supabase client');
   }
+  
+  // Force the client to initialize properly before returning
+  browserClient.auth.getSession().catch((err: any) => {
+    console.error('Error initializing Supabase client:', err);
+  });
 
-  return browserClient;
+  // Now we're sure browserClient is initialized, so we can return it
+  return browserClient as ExtendedSupabaseClient;
 }
 
 // Default export for server-side use

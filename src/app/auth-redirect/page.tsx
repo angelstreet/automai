@@ -30,8 +30,7 @@ export default function RootAuthRedirect() {
           const supabase = createBrowserSupabase();
           
           // Use helper to create session from URL with token
-          // Type assertion needed since we added this method dynamically
-          const { data, error } = await (supabase.auth as any).createSessionFromUrl(window.location.href);
+          const { data, error } = await supabase.auth.createSessionFromUrl(window.location.href);
           
           if (error) {
             console.error('ROOT AUTH-REDIRECT: Error creating session:', {

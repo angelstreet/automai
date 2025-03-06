@@ -35,8 +35,7 @@ export default function AuthRedirectPage() {
           console.log('Access token found in URL hash, using it directly');
           
           // Use the special helper method to create a session from the URL
-          // Type assertion needed since we added this method dynamically
-          const { data, error } = await (supabase.auth as any).createSessionFromUrl(window.location.href);
+          const { data, error } = await supabase.auth.createSessionFromUrl(window.location.href);
           
           if (error) {
             console.error('Error creating session from URL:', {
