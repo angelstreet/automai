@@ -146,9 +146,10 @@ export default function AuthRedirectPage() {
             try {
               await supabaseAuth.updateUser({
                 data: {
-                  tenantId: 'trial',
-                  tenantName: 'Trial',
                   role: 'user',
+                  accessToken: session.user.access_token || '',
+                  tenantId: 'trial',
+                  tenantName: 'trial',
                 }
               });
               console.log('User metadata updated');

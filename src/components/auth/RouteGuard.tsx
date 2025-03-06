@@ -11,8 +11,6 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const params = useParams();
   const { user, isLoading: isUserLoading, error: userError } = useUser();
-  const [session, setSession] = useState<any>(null);
-  const [isSessionLoading, setIsSessionLoading] = useState(true);
   const isRedirecting = useRef(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const userErrorHandled = useRef(false);
@@ -21,34 +19,11 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const locale = (params?.locale as string) || 'en';
   const currentTenant = params?.tenant as string;
 
-  // Load Supabase session with a small delay to ensure cookies are properly set
+  // Use the UserContext session instead of loading our own
   useEffect(() => {
-    async function loadSession() {
-      setIsSessionLoading(true);
-      
-      // Add a small delay to ensure auth is ready
-      const loadWithDelay = () => {
-        setTimeout(async () => {
-          try {
-            console.log('RouteGuard - Loading session after delay');
-            const { data } = await supabaseAuth.getSession();
-            console.log('RouteGuard - Session loaded:', {
-              hasSession: !!data.session,
-              path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
-            });
-            setSession(data.session);
-          } catch (error) {
-            console.error('Error loading session:', error);
-          } finally {
-            setIsSessionLoading(false);
-          }
-        }, 500); // 500ms delay for initial session check
-      };
-      
-      loadWithDelay();
-    }
-    
-    loadSession();
+    console.log('RouteGuard - Using session from UserContext');
+    // We'll rely on UserContext for session management
+    setIsSessionLoading(false);
   }, []);
 
   useEffect(() => {
@@ -68,7 +43,6 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       pathname,
       locale,
       currentTenant,
-      sessionStatus: isSessionLoading ? 'loading' : session ? 'authenticated' : 'unauthenticated',
       isUserLoading,
       hasUser: !!user,
       userError,
@@ -77,11 +51,11 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     };
     console.log('RouteGuard state:', info);
     setDebugInfo(info);
-  }, [pathname, locale, currentTenant, isSessionLoading, session, isUserLoading, user, userError]);
+  }, [pathname, locale, currentTenant, isUserLoading, user, userError]);
 
   useEffect(() => {
-    // Don't do anything while loading session or user data
-    if (isSessionLoading || isUserLoading) return;
+    // Don't do anything while loading user data
+    if (isUserLoading) return;
 
     // Prevent multiple redirects
     if (isRedirecting.current) return;
@@ -98,7 +72,6 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       console.log('Handling routing:', {
         isPublicRoute,
         pathname,
-        hasSession: !!session,
         hasUser: !!user,
         currentTenant,
         userError,
@@ -121,32 +94,17 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
 
       // For public routes, only redirect if user is authenticated and trying to access auth pages
       if (isPublicRoute) {
-        // Only redirect from login/signup to dashboard if we have a valid session
-        // Note: We don't wait for complete user data as that might cause delays
+        // Only redirect from login/signup to dashboard if we have a valid user
         if (
-          session?.user &&
+          user &&
           (pathname.includes('/login') || pathname.includes('/signup'))
         ) {
-          // For login/signup pages, redirect to dashboard as soon as we have a session
-          // The tenant data can come from multiple sources in priority order:
-          // 1. User object if available
-          // 2. Session user metadata
-          // 3. Default to 'trial'
-          const tenant = 
-            (user?.tenantName) || 
-            (session.user.user_metadata?.tenantName) || 
-            (session.user.user_metadata?.tenantId) || 
-            'trial';
+          // The tenant comes from the user object, with a fallback to 'trial'
+          const tenant = user.tenantName || 'trial';
             
           if (tenant && !isRedirecting.current) {
             console.log(
-              `RouteGuard - Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`,
-              {
-                hasUser: !!user,
-                source: user?.tenantName ? 'user object' : 
-                       session.user.user_metadata?.tenantName ? 'metadata.tenantName' : 
-                       session.user.user_metadata?.tenantId ? 'metadata.tenantId' : 'default'
-              }
+              `RouteGuard - Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`
             );
             isRedirecting.current = true;
             router.replace(`/${locale}/${tenant}/dashboard`);
@@ -156,7 +114,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       }
 
       // For protected routes, ensure we have complete user data
-      if (session?.user && user) {
+      if (user) {
         const expectedTenant = user.tenantName || 'trial'; // Default to trial if no tenant
 
         // Only redirect if we have a definite tenant mismatch
@@ -171,10 +129,10 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     };
 
     handleRouting();
-  }, [pathname, locale, currentTenant, isSessionLoading, session, isUserLoading, user, userError, router]);
+  }, [pathname, locale, currentTenant, isUserLoading, user, userError, router]);
 
   // Show loading state while checking auth
-  if (isUserLoading || isSessionLoading) {
+  if (isUserLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -182,21 +140,22 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // Improved error handling - don't block the UI if we have a session and user error
-  if (userError && session?.user) {
+  // Improved error handling - don't block the UI if we have a user error
+  if (userError) {
     console.log('Auth warning (non-blocking):', userError, {
-      hasSession: !!session,
       hasUser: !!user,
       pathname
     });
     
-    // If we have a session but UserContext has an error,
+    // If UserContext has an error but we have some user data,
     // we'll still render the app to prevent blocking the UI
-    return <>{children}</>;
+    if (user) {
+      return <>{children}</>;
+    }
   }
   
   // Show debug info only in development and if there's a critical error
-  if (process.env.NODE_ENV === 'development' && debugInfo && userError && !session) {
+  if (process.env.NODE_ENV === 'development' && debugInfo && userError && !user) {
     // Log the error but don't show the banner
     console.error('Critical Auth Error:', userError, debugInfo);
     

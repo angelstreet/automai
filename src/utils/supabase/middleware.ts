@@ -45,12 +45,31 @@ export const createClient = (request: NextRequest) => {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          // Log all cookies in middleware for debugging
+          const allCookies = request.cookies.getAll();
+          console.log('Middleware - All cookies:', allCookies.map(c => ({
+            name: c.name,
+            value: c.name.includes('token') || c.name.includes('supabase') ? 
+              `${c.value.substring(0, 10)}...` : c.value.substring(0, 10)
+          })));
+          return allCookies;
         },
         setAll(cookiesToSet: Cookie[]) {
           cookiesToSet.forEach(({ name, value, options }) => {
+            // Ensure cookies are properly set with path and secure options
+            // Always set path to '/' to ensure cookies are available across all routes
+            const enhancedOptions = {
+              ...options,
+              path: '/',
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax' as const,
+            };
+            
+            // Log cookie operations
+            console.log(`Middleware - Setting cookie: ${name} with options:`, enhancedOptions);
+            
             request.cookies.set(name, value);
-            supabaseResponse.cookies.set(name, value, options);
+            supabaseResponse.cookies.set(name, value, enhancedOptions);
           });
         },
       },

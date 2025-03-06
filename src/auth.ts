@@ -109,7 +109,7 @@ export async function extractSessionFromHeader(authHeader: string | null): Promi
         image: data.user.user_metadata?.avatar_url || null,
         role: data.user.user_metadata?.role || 'user',
         tenantId: data.user.user_metadata?.tenantId || 'trial',
-        tenantName: data.user.user_metadata?.tenantName || 'Trial',
+        tenantName: data.user.user_metadata?.tenantName || 'trial',
       },
       accessToken: token,
       expires: new Date(Date.now() + 3600 * 1000).toISOString(), // Approximate expiry
@@ -151,7 +151,7 @@ export async function getSession(): Promise<SessionData | null> {
         image: user.user_metadata?.avatar_url || null,
         role: user.user_metadata?.role || 'user',
         tenantId: user.user_metadata?.tenantId || 'trial',
-        tenantName: user.user_metadata?.tenantName || 'Trial',
+        tenantName: user.user_metadata?.tenantName || 'trial',
       },
       accessToken: access_token,
       expires: new Date(expires_at! * 1000).toISOString(),

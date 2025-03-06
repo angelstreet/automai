@@ -51,19 +51,88 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function loadSession() {
       setSessionStatus('loading');
+      
+      // First check for a user-session cookie as a fallback mechanism
+      const checkForSessionCookie = () => {
+        if (typeof window !== 'undefined') {
+          const cookies = document.cookie.split('; ');
+          const sessionCookie = cookies.find(c => c.startsWith('user-session='));
+          if (sessionCookie) {
+            const userId = sessionCookie.split('=')[1];
+            console.log('Found user-session cookie with ID:', userId);
+            return userId;
+          }
+        }
+        return null;
+      };
+      
       try {
-        const { data, error } = await supabaseAuth.getSession();
-        if (error || !data.session) {
-          console.log('No Supabase session found or error:', error);
+        // Try to get session from Supabase
+        console.log('UserContext - Loading session from Supabase');
+        const { data, error } = await Promise.race([
+          supabaseAuth.getSession(),
+          new Promise<any>((_, reject) => 
+            setTimeout(() => reject(new Error('Session load timeout after 5s')), 5000)
+          )
+        ]) as any;
+        
+        if (error) {
+          console.log('Error loading Supabase session:', error);
+          
+          // Check for cookie as fallback
+          const userId = checkForSessionCookie();
+          if (userId) {
+            console.log('No Supabase session but user-session cookie found, treating as authenticated');
+            // We don't have a full session, but we know the user was authenticated recently
+            // This helps prevent flashing unauthenticated state while tokens reload
+            setSessionStatus('authenticated');
+            return;
+          }
+          
           setSession(null);
           setSessionStatus('unauthenticated');
           return;
         }
         
+        if (!data?.session) {
+          console.log('No Supabase session found');
+          
+          // Check for cookie as fallback
+          const userId = checkForSessionCookie();
+          if (userId) {
+            console.log('No Supabase session but user-session cookie found, treating as authenticated');
+            // We don't have a full session, but we know the user was authenticated recently
+            setSessionStatus('authenticated');
+            return;
+          }
+          
+          setSession(null);
+          setSessionStatus('unauthenticated');
+          return;
+        }
+        
+        console.log('Supabase session found:', { 
+          userId: data.session.user.id,
+          email: data.session.user.email,
+          expiresAt: data.session.expires_at 
+            ? new Date(data.session.expires_at * 1000).toISOString() 
+            : 'unknown'
+        });
+        
         setSession(data.session);
         setSessionStatus('authenticated');
       } catch (error) {
         console.error('Error loading Supabase session:', error);
+        
+        // Check for cookie as fallback
+        const userId = checkForSessionCookie();
+        if (userId) {
+          console.log('Error loading session but user-session cookie found, treating as authenticated');
+          // We don't have a full session, but we know the user was authenticated recently
+          setSessionStatus('authenticated');
+          return;
+        }
+        
         setSession(null);
         setSessionStatus('unauthenticated');
       }
@@ -123,8 +192,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       fetchAttempts.current += 1;
       console.log(`fetchUser - Starting attempt ${fetchAttempts.current}`);
 
-      if (!session?.user) {
-        console.log('No active session found in fetchUser');
+      // First check the cookie fallback system
+      let hasSessionCookie = false;
+      if (typeof window !== 'undefined') {
+        const cookies = document.cookie.split('; ');
+        const sessionCookie = cookies.find(c => c.startsWith('user-session='));
+        if (sessionCookie) {
+          const userId = sessionCookie.split('=')[1];
+          console.log('fetchUser - Found user-session cookie with ID:', userId);
+          hasSessionCookie = true;
+        }
+      }
+
+      if (!session?.user && !hasSessionCookie) {
+        console.log('No active session found in fetchUser and no session cookie');
         setUser(null);
         setError('No active session');
         setIsLoading(false);
@@ -243,8 +324,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           throw new Error(`Failed to fetch user profile: ${lastError?.status || ''} ${lastError?.error || 'Unknown error'}`);
         }
 
-        // Cache the user data
+        // Cache the user data in localStorage and also set a cookie as backup
         if (typeof window !== 'undefined') {
+          // Store in localStorage
           localStorage.setItem(
             SESSION_CACHE_KEY,
             JSON.stringify({
@@ -252,6 +334,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
               timestamp: now,
             }),
           );
+          
+          // Also store a minimal version in a cookie as backup
+          // This helps in cases where localStorage might not be synced between tabs
+          try {
+            const userId = userData?.id;
+            const expiry = new Date();
+            expiry.setTime(expiry.getTime() + SESSION_CACHE_EXPIRY);
+            document.cookie = `user-session=${userId}; expires=${expiry.toUTCString()}; path=/; SameSite=Lax`;
+            console.log('Set user-session cookie for user ID:', userId);
+          } catch (e) {
+            console.warn('Failed to set user-session cookie:', e);
+          }
         }
 
         setUser(userData);
@@ -384,6 +478,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (user && !error) {
         console.log('UserContext - Already have user data, skipping fetch');
         setIsLoading(false);
+        
+        // Check if the user data is reasonably fresh (less than 5 minutes old)
+        const now = Date.now();
+        if (lastFetch && now - lastFetch < SESSION_CACHE_EXPIRY) {
+          console.log('UserContext - User data is fresh, no need to refetch');
+          return;
+        }
+      }
+      
+      // Check if we're already fetching
+      if (isFetchingRef.current) {
+        console.log('UserContext - Already fetching user data, skipping duplicate fetch');
         return;
       }
       
@@ -397,7 +503,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         console.log('UserContext - Executing user profile fetch now');
         fetchUser();
         fetchTimeoutRef.current = null;
-      }, 1500); // Increased delay to 1.5 seconds to ensure auth is fully established
+      }, 3000); // Increased delay to 3 seconds to reduce frequency of calls
     } else if (sessionStatus === 'unauthenticated') {
       console.log('UserContext - Session unauthenticated:', { 
         status: 'unauthenticated',

@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
     // Create default tenant for the user (trial)
     const tenant = await db.tenant.create({
       data: {
-        name: 'Trial Tenant',
-        domain: `trial-${Date.now()}`,
+        name: 'trial',
+        domain: `trial-${Date.now()}`.toLowerCase(),
         plan: 'trial',
       },
     });

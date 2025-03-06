@@ -50,7 +50,7 @@ export async function GET(request: Request) {
           tenant = await db.tenant.create({
             data: {
               id: 'trial',
-              name: 'Trial',
+              name: 'trial',
               plan: 'free'
             }
           });
@@ -76,7 +76,7 @@ export async function GET(request: Request) {
           email: newUser.email,
           role: newUser.role,
           tenantId: newUser.tenantId,
-          tenantName: 'Trial',
+          tenantName: 'trial',
           plan: 'free',
         });
       } catch (createError) {
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
           email: session.user.email,
           role: session.user.role || 'admin', // Default to admin role
           tenantId: session.user.tenantId || 'trial',
-          tenantName: session.user.tenantName || 'Trial',
+          tenantName: session.user.tenantName || 'trial',
           plan: 'free',
         });
       }

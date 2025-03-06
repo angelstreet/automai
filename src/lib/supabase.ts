@@ -46,7 +46,14 @@ const getSupabaseServiceKey = () => {
 
 // Cache the client to avoid creating multiple instances
 let serverClient: ReturnType<typeof createClient> | null = null;
-let browserClient: any = null; // Using 'any' to avoid complex TS generics issues
+
+// Use a global variable to cache the browser client instance
+// This prevents creating multiple instances that cause the GoTrueClient warning
+// @ts-ignore - global types
+if (typeof window !== 'undefined' && !globalThis.__supabaseBrowserClient) {
+  // @ts-ignore - global types
+  globalThis.__supabaseBrowserClient = null;
+}
 
 // Type for a Supabase client with our custom extension
 type ExtendedSupabaseClient = ReturnType<typeof createClient> & {
@@ -79,9 +86,15 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
     throw new Error('createBrowserSupabase should only be used in browser environment');
   }
 
-  if (browserClient) return browserClient as ExtendedSupabaseClient;
+  // Check the global cache first
+  // @ts-ignore - global types
+  if (globalThis.__supabaseBrowserClient) {
+    console.log('Using cached global Supabase browser client');
+    // @ts-ignore - global types
+    return globalThis.__supabaseBrowserClient as ExtendedSupabaseClient;
+  }
 
-   let supabaseUrl = getSupabaseUrl();
+  let supabaseUrl = getSupabaseUrl();
   
   // Explicitly check for Codespace environment to ensure consistency
   const isCodespaceEnvironment = typeof window !== 'undefined' && 
@@ -168,16 +181,18 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
     },
   });
   
-  // Assign the new client to our cached variable
-  browserClient = newClient;
+  // Assign the new client to our global cached variable instead of the local one
+  // @ts-ignore - global types
+  globalThis.__supabaseBrowserClient = newClient;
   
   // Add auth state change listener to help debug
-  browserClient.auth.onAuthStateChange(handleAuthStateChange);
+  // @ts-ignore - global types
+  globalThis.__supabaseBrowserClient.auth.onAuthStateChange(handleAuthStateChange);
 
   // Add a special helper method to create a session from token parameters
   // This is useful for handling GitHub auth redirects with tokens in the URL
   // Add our custom method to the auth client
-  (browserClient as ExtendedSupabaseClient).auth.createSessionFromUrl = async (url: string) => {
+  (globalThis.__supabaseBrowserClient as ExtendedSupabaseClient).auth.createSessionFromUrl = async (url: string) => {
     try {
       // Parse URL to extract hash parameters
       const hashParams = new URLSearchParams(
@@ -196,7 +211,7 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
       
       // Set the session with enhanced error handling
       try {
-        const response = await browserClient.auth.setSession({
+        const response = await globalThis.__supabaseBrowserClient.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken || '',
         });
@@ -215,7 +230,7 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
         
         // Try to get an existing session as fallback
         console.log('Trying to get existing session as fallback...');
-        const existingSession = await browserClient.auth.getSession();
+        const existingSession = await globalThis.__supabaseBrowserClient.auth.getSession();
         if (existingSession.data.session) {
           console.log('Found existing valid session, using that instead');
           return existingSession;
@@ -232,18 +247,19 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
   // We won't modify the auth methods directly since it's causing issues
   // Instead, we'll make sure the client initializes correctly
   // At this point, browserClient must exist since we assigned it above
-  if (!browserClient) {
+  if (!globalThis.__supabaseBrowserClient) {
     // This should never happen, but TypeScript doesn't know that
     throw new Error('Failed to create Supabase client');
   }
   
   // Force the client to initialize properly before returning
-  browserClient.auth.getSession().catch((err: any) => {
+  globalThis.__supabaseBrowserClient.auth.getSession().catch((err: any) => {
     console.error('Error initializing Supabase client:', err);
   });
 
   // Now we're sure browserClient is initialized, so we can return it
-  return browserClient as ExtendedSupabaseClient;
+  // @ts-ignore - global types
+  return globalThis.__supabaseBrowserClient as ExtendedSupabaseClient;
 }
 
 // Default export for server-side use

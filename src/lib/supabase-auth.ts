@@ -1,12 +1,8 @@
 import { createBrowserSupabase } from './supabase';
 
-let browserSupabase: any = null;
-
+// Don't create a local cache here, as createBrowserSupabase already uses a global cache
 const getBrowserSupabase = () => {
-  if (!browserSupabase) {
-    browserSupabase = createBrowserSupabase();
-  }
-  return browserSupabase;
+  return createBrowserSupabase();
 };
 
 /**
@@ -201,12 +197,78 @@ export const supabaseAuth = {
   },
 
   /**
-   * Get the current session
+   * Get the current session with enhanced logging and debugging
    */
   getSession: async () => {
     const supabase = getBrowserSupabase();
-    const { data, error } = await supabase.auth.getSession();
-    return { data, error };
+    
+    try {
+      // Log session request for debugging
+      console.log('getSession - Requesting session from Supabase');
+      
+      // Check localStorage for debug purposes
+      if (typeof window !== 'undefined') {
+        try {
+          const localStorageKeys = Object.keys(localStorage);
+          const supabaseKeys = localStorageKeys.filter(key => 
+            key.includes('supabase') || key.includes('sb-')
+          );
+          
+          if (supabaseKeys.length > 0) {
+            console.log('getSession - Found Supabase keys in localStorage:', supabaseKeys);
+          } else {
+            console.log('getSession - No Supabase keys found in localStorage');
+          }
+          
+          // Check for cookies as well
+          const cookies = document.cookie.split('; ');
+          const supabaseCookies = cookies.filter(cookie => 
+            cookie.includes('supabase') || cookie.includes('sb-')
+          );
+          
+          if (supabaseCookies.length > 0) {
+            console.log('getSession - Found Supabase cookies:', 
+              supabaseCookies.map(c => c.split('=')[0] + '=***')
+            );
+          } else {
+            console.log('getSession - No Supabase cookies found');
+          }
+        } catch (e) {
+          console.warn('getSession - Error checking storage:', e);
+        }
+      }
+      
+      // Get session with timeout to prevent hanging
+      const { data, error } = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<any>((_, reject) => 
+          setTimeout(() => reject(new Error('getSession timeout after 3s')), 3000)
+        )
+      ]) as any;
+      
+      // Verbose logging of session data
+      if (data?.session) {
+        console.log('getSession - Session found:', {
+          userId: data.session.user.id,
+          email: data.session.user.email,
+          expiresAt: data.session.expires_at 
+            ? new Date(data.session.expires_at * 1000).toISOString() 
+            : 'unknown',
+          tokenLength: data.session.access_token?.length || 0,
+          path: typeof window !== 'undefined' ? window.location.pathname : 'server-side'
+        });
+      } else {
+        console.log('getSession - No session found');
+        if (error) {
+          console.error('getSession - Error:', error.message);
+        }
+      }
+      
+      return { data, error };
+    } catch (e) {
+      console.error('getSession - Exception:', e);
+      return { data: { session: null }, error: e };
+    }
   },
 
   /**
