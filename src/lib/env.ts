@@ -91,7 +91,7 @@ export const getBaseUrl = () => {
   }
   
   if (process.env.CODESPACE) {
-    return `https://${process.env.CODESPACE_NAME}-3000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
+    return `https://${process.env.CODESPACE_NAME}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
   }
   
   // Use NEXT_PUBLIC_SITE_URL for Supabase
