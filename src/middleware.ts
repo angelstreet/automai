@@ -73,7 +73,9 @@ export default async function middleware(request: NextRequest) {
     '/signup',
     '/forgot-password',
     '/reset-password',
-    '/auth-redirect',
+    '/auth-redirect',  // Root auth redirect path
+    '/en/auth-redirect',  // Localized auth redirect paths
+    '/fr/auth-redirect',
     '/error',
     '/_next',
     '/favicon.ico',
@@ -102,6 +104,13 @@ export default async function middleware(request: NextRequest) {
 
   // More precise protected route detection
   const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings', 'trial'];
+
+  console.log('pathParts:', pathParts);
+  // Be more explicit about auth-redirect path to ensure it's not mistakenly protected
+  if (request.nextUrl.pathname.includes('/auth-redirect')) {
+    console.log('Auth redirect path detected, bypassing auth check');
+    return NextResponse.next();
+  }
 
   // Check if any part of the path matches a protected path
   const isProtectedRoute =

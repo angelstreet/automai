@@ -42,7 +42,7 @@ export function createServerSupabase() {
   return serverClient;
 }
 
-// Client-side client
+// Client-side client with improved options for Codespaces environments
 export function createBrowserSupabase() {
   if (typeof window === 'undefined') {
     throw new Error('createBrowserSupabase should only be used in browser environment');
@@ -54,7 +54,80 @@ export function createBrowserSupabase() {
   const supabaseAnonKey = getSupabaseAnonKey();
 
   console.log(`Creating Supabase browser client for ${supabaseUrl}`);
-  browserClient = createClient(supabaseUrl, supabaseAnonKey);
+  
+  // Determine if we're in a Codespace environment from the URL
+  const isCodespaceEnvironment = typeof window !== 'undefined' && 
+    window.location.hostname.includes('.app.github.dev');
+  
+  // Create client with options configured for the environment
+  const baseUrl = window.location.origin;
+  
+  // For debugging purposes, add an onAuthStateChange callback
+  const handleAuthStateChange = (event: string, session: any) => {
+    console.log('Supabase Auth State Change:', { 
+      event, 
+      hasSession: !!session,
+      sessionUser: session?.user?.email || 'none',
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  browserClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      // Add debugging to help diagnose auth issues
+      debug: process.env.NODE_ENV === 'development',
+      // Special handling for Codespace environments
+      ...(isCodespaceEnvironment && {
+        flowType: 'implicit',
+        // This makes Supabase Auth work better with GitHub Codespaces
+        // Enable for all environments since redirects may come from either
+        storageKey: 'supabase.auth.token',
+      }),
+    },
+  });
+  
+  // Add auth state change listener to help debug
+  browserClient.auth.onAuthStateChange(handleAuthStateChange);
+
+  // For TypeScript compatibility, create a wrapper on the original client
+  const processSessionFromUrl = async () => {
+    try {
+      if (typeof window === 'undefined') return { data: { session: null }, error: new Error('No window object') };
+      
+      console.log('Processing session from URL hash');
+      
+      // If we have a hash with access_token, we need to manually handle it
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token=')) {
+        console.log('Found hash fragment with access_token');
+        
+        // Use the browser client's built-in method to handle the hash
+        // This will use the "detectSessionInUrl" option we enabled
+        if (browserClient) {
+          return await browserClient.auth.getSession();
+        } else {
+          return { data: { session: null }, error: new Error('Browser client not initialized') };
+        }
+      } else {
+        return { data: { session: null }, error: new Error('No access token in URL') };
+      }
+    } catch (error: any) {
+      console.error('Error getting session from URL:', error);
+      return { data: { session: null }, error };
+    }
+  };
+
+  // We won't modify the auth methods directly since it's causing issues
+  // Instead, we'll make sure the client initializes correctly
+  if (browserClient) {
+    // Force the client to initialize properly before returning
+    browserClient.auth.getSession().catch(err => {
+      console.error('Error initializing Supabase client:', err);
+    });
+  }
 
   return browserClient;
 }

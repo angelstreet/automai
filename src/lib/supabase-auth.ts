@@ -13,16 +13,49 @@ const getBrowserSupabase = () => {
  * Helper function to determine production environment and get the appropriate redirect URL
  * Handles all OAuth redirects consistently across environments
  */
-const getRedirectUrl = (path: string = '/api/auth/callback'): string => {
+const getRedirectUrl = (path: string = '/auth-redirect'): string => {
+  // Log current URL if in browser for debugging
+  if (typeof window !== 'undefined') {
+    console.log('Current window location:', window.location.href);
+  }
+  
+  // Get the current locale from the URL or default to 'en'
+  let locale = 'en';
+  if (typeof window !== 'undefined') {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    if (pathParts.length > 0 && ['en', 'fr'].includes(pathParts[0])) {
+      locale = pathParts[0];
+    }
+  }
+  
+  // Modify path to include locale if it doesn't start with a locale
+  if (!path.startsWith('/en/') && !path.startsWith('/fr/')) {
+    path = `/${locale}${path}`;
+  }
+  
+  // Detect if we're in a GitHub Codespace from client-side
+  const isClientCodespace = 
+    typeof window !== 'undefined' && 
+    window.location.hostname.includes('.app.github.dev');
+  
   // First, check if SUPABASE_AUTH_CALLBACK_URL is explicitly set in any environment
   if (process.env.SUPABASE_AUTH_CALLBACK_URL) {
     console.log('Using configured SUPABASE_AUTH_CALLBACK_URL:', process.env.SUPABASE_AUTH_CALLBACK_URL);
     return process.env.SUPABASE_AUTH_CALLBACK_URL;
   }
 
-  // Check for Codespace environment
-  if (process.env.CODESPACE && process.env.CODESPACE_NAME && process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN) {
-    const codespaceUrl = `https://${process.env.CODESPACE_NAME}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
+  // For Codespace environment, we need to handle auth differently
+  // We're redirecting directly to /auth-redirect with implicit flow
+  if (isClientCodespace || (process.env.CODESPACE && process.env.CODESPACE_NAME && process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN)) {
+    let codespaceUrl;
+    if (isClientCodespace) {
+      codespaceUrl = window.location.origin;
+    } else {
+      codespaceUrl = `https://${process.env.CODESPACE_NAME}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
+    }
+    
+    // Use auth-redirect page instead of the API callback for Codespaces
+    // Make sure we use the correct format for the redirect URL
     console.log('Using Codespace URL for redirect:', `${codespaceUrl}${path}`);
     return `${codespaceUrl}${path}`;
   }
@@ -84,14 +117,34 @@ export const supabaseAuth = {
   signInWithOAuth: async (provider: 'google' | 'github') => {
     const supabase = getBrowserSupabase();
     
-    console.log(`Initiating ${provider} OAuth login with redirect to:`, getRedirectUrl());
-    
     try {
+      // Check if we're in a GitHub Codespace
+      const isCodespace = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      
+      // Get the current locale from the URL or default to 'en'
+      let locale = 'en';
+      if (typeof window !== 'undefined') {
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        if (pathParts.length > 0 && ['en', 'fr'].includes(pathParts[0])) {
+          locale = pathParts[0];
+        }
+      }
+      
+      // Always include locale in the redirect URL
+      const redirectUrl = `${origin}/${locale}/auth-redirect`;
+      console.log(`Initiating ${provider} OAuth login with redirect to:`, redirectUrl);
+      
+      // For Codespaces, we need to use implicit flow for the redirect
+      // Always explicitly set redirectTo to include the locale
       return await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: getRedirectUrl(),
+          redirectTo: redirectUrl,
+          // Make sure scopes are specified
           scopes: provider === 'github' ? 'repo,user' : 'email profile',
+          // For Codespaces, we're now always using implicit flow
+          flowType: isCodespace ? 'implicit' : undefined,
         },
       });
     } catch (error) {
@@ -115,7 +168,7 @@ export const supabaseAuth = {
   resetPassword: async (email: string) => {
     const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: getRedirectUrl('/api/auth/callback?type=recovery'),
+      redirectTo: getRedirectUrl('?type=recovery'),
     });
 
     return { data, error };
@@ -128,6 +181,16 @@ export const supabaseAuth = {
     const supabase = getBrowserSupabase();
     const { data, error } = await supabase.auth.getSession();
     return { data, error };
+  },
+
+  /**
+   * Process session from URL hash fragment
+   */
+  processSessionFromUrl: async () => {
+    const supabase = getBrowserSupabase();
+    // Use the getSession method to detect and process tokens in the URL 
+    // This relies on the detectSessionInUrl option being enabled
+    return await supabase.auth.getSession();
   },
 
   /**

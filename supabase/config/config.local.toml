@@ -105,7 +105,7 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev"
+site_url = "http://localhost:3000"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
   "http://localhost:3000",
@@ -256,13 +256,15 @@ max_frequency = "5s"
 enabled = true
 client_id = "Ov23liaMpBie6bYgkSwX"
 secret = "724246a35c225201be32a43256bebb026a4e7827"
-redirect_uri = "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback"
+# Use the Supabase auth endpoint as redirect target for local development
+redirect_uri = "http://localhost:54321/auth/v1/callback"
 
 [auth.external.google]
 enabled = true
 client_id = "1004866229182-p6ribbdkmmblb0k44o5h1g5hoaddi05s.apps.googleusercontent.com"
 secret = "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"
-redirect_uri = "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback"
+# Use the Supabase auth endpoint as redirect target for local development
+redirect_uri = "http://localhost:54321/auth/v1/callback"
 
 [auth.external.apple]
 enabled = false
