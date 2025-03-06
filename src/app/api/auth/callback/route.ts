@@ -10,14 +10,13 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   
-  // Get cookieStore
-  const cookieStore = cookies();
-
+  // Get response to work with cookies
+  const response = NextResponse.next();
+  
   // Log information about the request for debugging
   console.log('Auth callback received:', {
     url: request.url,
     hasCode: !!code,
-    cookies: (await cookieStore.getAll()).map(c => c.name),
     env: {
       NODE_ENV: process.env.NODE_ENV,
       NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
@@ -27,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   // If there's no code, redirect to login
   if (!code) {
-    return NextResponse.redirect(new URL('/en/login', request.url));
+    return NextResponse.redirect(new URL('/en/login', process.env.NEXT_PUBLIC_SITE_URL || request.url));
   }
 
   // Create a Supabase client for handling the callback
@@ -36,15 +35,14 @@ export async function GET(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: async (name) => {
-          const cookie = await cookieStore.get(name);
-          return cookie?.value;
+        get: (name) => {
+          return request.cookies.get(name)?.value;
         },
-        set: async (name, value, options) => {
-          await cookieStore.set({ name, value, ...options });
+        set: (name, value, options) => {
+          response.cookies.set({ name, value, ...options });
         },
-        remove: async (name, options) => {
-          await cookieStore.set({ name, value: '', ...options });
+        remove: (name, options) => {
+          response.cookies.set({ name, value: '', ...options });
         },
       },
     },
@@ -58,18 +56,120 @@ export async function GET(request: NextRequest) {
       normalizedUrl: request.url.replace('localhost:3000', process.env.NEXT_PUBLIC_SITE_URL?.replace('https://', ''))
     });
 
-    // Exchange the code for a session
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    
-    if (error) {
-      console.error('Error exchanging code for session:', error);
-      console.log('Error details:', {
-        message: error.message,
-        name: error.name,
-        status: (error as any).status,
-        originalError: (error as any).originalError
+    // Test Supabase connection before exchanging the code
+    try {
+      console.log('Testing Supabase connection...');
+      // Test the health endpoint first
+      const healthResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, {
+        method: 'GET',
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        }
       });
-      return NextResponse.redirect(new URL(`/en/login?error=${encodeURIComponent(error.message)}`, process.env.NEXT_PUBLIC_SITE_URL));
+      console.log('Supabase health response:', {
+        status: healthResponse.status,
+        ok: healthResponse.ok,
+        statusText: healthResponse.statusText
+      });
+      
+      // Test the auth endpoint
+      const authResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/`, {
+        method: 'GET',
+        headers: {
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        }
+      });
+      console.log('Supabase auth endpoint response:', {
+        status: authResponse.status,
+        ok: authResponse.ok,
+        statusText: authResponse.statusText
+      });
+      
+      // Full test of the complete auth/token endpoint
+      const pingResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+        },
+        body: JSON.stringify({ email: 'test@example.com', password: 'test' }),
+      });
+      
+      const responseText = await pingResponse.text();
+      console.log('Supabase auth token response:', {
+        status: pingResponse.status,
+        ok: pingResponse.ok,
+        statusText: pingResponse.statusText,
+        response: responseText.substring(0, 100) + (responseText.length > 100 ? '...' : '')
+      });
+    } catch (pingError) {
+      console.error('Supabase ping error:', pingError);
+    }
+
+    // Exchange the code for a session - with better error handling
+    console.log('Exchanging code for session...');
+    try {
+      // First verify we can access the token endpoint directly
+      const tokenEndpoint = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/token`;
+      console.log(`Testing token endpoint: ${tokenEndpoint}`);
+      
+      // Try another approach with direct fetch to debug
+      try {
+        const tokenResponse = await fetch(`${tokenEndpoint}?grant_type=authorization_code&code=${code}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+          },
+        });
+        
+        if (tokenResponse.ok) {
+          console.log('Manual token exchange was successful!');
+        } else {
+          console.log('Manual token exchange response:', {
+            status: tokenResponse.status,
+            ok: tokenResponse.ok,
+            statusText: tokenResponse.statusText
+          });
+          try {
+            const errorText = await tokenResponse.text();
+            console.log('Error response text:', errorText);
+          } catch (e) {
+            console.log('Could not read error response');
+          }
+        }
+      } catch (directFetchError) {
+        console.error('Error with direct token fetch:', directFetchError);
+      }
+      
+      // Try to exchange the code using Supabase client
+      console.log('Trying exchange with Supabase client...');
+      let error, data;
+      try {
+        const result = await supabase.auth.exchangeCodeForSession(code);
+        error = result.error;
+        data = result.data;
+        
+        console.log('Exchange code result:', { 
+          hasError: !!error,
+          hasData: !!data,
+          sessionExists: !!data?.session
+        });
+      } catch (exchangeError) {
+        console.error('Exception during code exchange:', exchangeError);
+        return NextResponse.redirect(new URL(`/en/login?error=${encodeURIComponent('Error during code exchange')}`, process.env.NEXT_PUBLIC_SITE_URL));
+      }
+    
+      if (error) {
+        console.error('Error exchanging code for session:', error);
+        console.log('Error details:', {
+          message: error.message,
+          name: error.name,
+          status: (error as any).status,
+          originalError: (error as any).originalError
+        });
+        return NextResponse.redirect(new URL(`/en/login?error=${encodeURIComponent(error.message)}`, process.env.NEXT_PUBLIC_SITE_URL));
+      }
     }
 
     // Get session to verify success

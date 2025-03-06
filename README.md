@@ -27,8 +27,8 @@ npx @agentdeskai/browser-tools-server
 # Run tests
 npm test  # or: npx jest tests/e2e.test.ts --runInBand
 
-# Open Prisma database GUI
-npm run prisma:studio
+# Supabase studio codespace
+https://vigilant-spork-q667vwj94c9x55-54323.app.github.dev
 ```
 
 ## Installation
