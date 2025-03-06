@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { z } from 'zod';
 
 import db from '@/lib/db';
@@ -19,7 +19,7 @@ export async function GET(request: Request, { params }: Props) {
   try {
     const { id } = await params;
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = createClient(cookieStore);
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (!session?.user) {
@@ -68,7 +68,7 @@ export async function PATCH(request: Request, { params }: Props) {
   try {
     const { id } = await params;
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = createClient(cookieStore);
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (!session?.user) {
@@ -122,7 +122,7 @@ export async function DELETE(request: Request, { params }: Props) {
   try {
     const { id } = await params;
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = createClient(cookieStore);
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (!session?.user) {

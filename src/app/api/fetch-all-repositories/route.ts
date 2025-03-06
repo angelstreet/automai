@@ -1,15 +1,26 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import db from '@/lib/db';
 
 // GET /api/fetch-all-repositories
 export async function GET(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const supabase = createClient(cookieStore);
     
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication not available",
+        },
+        { status: 401 },
+      );
+    }
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }

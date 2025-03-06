@@ -1,12 +1,28 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import { testConnectionSchema } from './schema';
 
 export async function POST(request: Request) {
   try {
     // 1. Auth check
-    const session = await getServerSession();
-    if (!session) {
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Authentication not available',
+        },
+        { status: 401 },
+      );
+    }
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
       return NextResponse.json(
         {
           success: false,

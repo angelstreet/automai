@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 
 import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
@@ -29,7 +29,7 @@ async function checkRepositoryAccess(id: string, userId: string) {
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
+    const supabase = createClient(cookieStore);
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (!session?.user) {

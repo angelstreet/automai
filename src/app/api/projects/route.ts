@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@/utils/supabase/server';
+import { createClient } from '@/utils/supabase/server';
 import { z } from 'zod';
 
 import db from '@/lib/db';
@@ -15,9 +15,20 @@ const ProjectSchema = z.object({
 export async function GET() {
   try {
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const supabase = createClient(cookieStore);
     
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication not available",
+        },
+        { status: 401 },
+      );
+    }
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -53,9 +64,20 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const supabase = createClient(cookieStore);
     
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication not available",
+        },
+        { status: 401 },
+      );
+    }
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -98,9 +120,20 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const supabase = createClient(cookieStore);
     
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication not available",
+        },
+        { status: 401 },
+      );
+    }
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
@@ -144,9 +177,20 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createServerClient(cookieStore);
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const supabase = createClient(cookieStore);
     
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Authentication not available",
+        },
+        { status: 401 },
+      );
+    }
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();    
     if (!session?.user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
