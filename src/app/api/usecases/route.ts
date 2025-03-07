@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/auth';
-import db from '@/lib/db';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
 // Find the next available number for a prefix
 async function findNextNumber(prefix: string) {
-  const useCases = await db.useCase.findMany({
-    where: {
-      shortId: {
-        startsWith: `${prefix}-`,
-      },
-    },
-    orderBy: {
-      shortId: 'desc',
-    },
-  });
-
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  
+  const { data: useCases, error } = await supabase
+    .from('use_cases')
+    .select('shortId')
+    .like('shortId', `${prefix}-%`)
+    .order('shortId', { ascending: false });
+  
+  if (error) {
+    console.error('Error finding next number:', error);
+    return 1;
+  }
+  
   if (useCases.length === 0) {
     return 1;
   }
@@ -41,7 +44,12 @@ async function generateShortId(prefix: string) {
 
 export async function GET(request: Request) {
   try {
-    const session = await getSession();
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
+    // Get the user session
+    const { data: { session } } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -53,22 +61,38 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
 
-    const useCases = await db.useCase.findMany({
-      where: {
-        projectId: String(projectId),
-      },
-      include: {
-        project: true,
-        executions: {
-          orderBy: {
-            createdAt: 'desc',
-          },
-          take: 1,
-        },
-      },
+    // Get use cases with their related project and latest execution
+    const { data: useCases, error } = await supabase
+      .from('use_cases')
+      .select(`
+        *,
+        project:projects(*),
+        executions:executions(*)
+      `)
+      .eq('projectId', projectId)
+      .order('createdAt', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching use cases:', error);
+      return NextResponse.json({ error: 'Failed to fetch use cases' }, { status: 500 });
+    }
+    
+    // Process the data to match the expected format
+    const processedUseCases = useCases.map(useCase => {
+      // Sort executions by createdAt and take the latest one
+      const sortedExecutions = useCase.executions
+        ? [...useCase.executions].sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          ).slice(0, 1)
+        : [];
+      
+      return {
+        ...useCase,
+        executions: sortedExecutions
+      };
     });
 
-    return NextResponse.json(useCases);
+    return NextResponse.json(processedUseCases);
   } catch (error) {
     console.error('Error fetching use cases:', error);
     return NextResponse.json({ error: 'Failed to fetch use cases' }, { status: 500 });
@@ -77,7 +101,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
+    // Get the user session
+    const { data: { session } } = await supabase.auth.getSession();
+    
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -93,17 +122,27 @@ export async function POST(request: Request) {
 
     const shortId = await generateShortId(shortIdPrefix);
 
-    const useCase = await db.useCase.create({
-      data: {
+    // Create the use case
+    const { data: useCase, error } = await supabase
+      .from('use_cases')
+      .insert({
         name,
         projectId,
         steps,
         shortId,
-      },
-      include: {
-        project: true,
-      },
-    });
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+      .select(`
+        *,
+        project:projects(*)
+      `)
+      .single();
+    
+    if (error) {
+      console.error('Error creating use case:', error);
+      return NextResponse.json({ error: 'Failed to create use case' }, { status: 500 });
+    }
 
     return NextResponse.json(useCase, { status: 201 });
   } catch (error) {

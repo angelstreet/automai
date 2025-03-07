@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { z } from 'zod';
 
-import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 
 // Schema for repository update
@@ -16,14 +15,19 @@ const RepositoryUpdateSchema = z.object({
 
 // Helper to check if user has access to the repository
 async function checkRepositoryAccess(id: string, userId: string) {
-  const repository = await db.repository.findUnique({
-    where: { id },
-    include: {
-      provider: true,
-    },
-  });
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  
+  const { data: repository, error } = await supabase
+    .from('repositories')
+    .select(`
+      *,
+      provider:git_providers(*)
+    `)
+    .eq('id', id)
+    .single();
 
-  if (!repository) {
+  if (error || !repository) {
     return { success: false, message: 'Repository not found', status: 404 };
   }
 
@@ -92,11 +96,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     // If projectId is provided, verify that the project belongs to the user
     if (validatedData.projectId) {
-      const project = await db.project.findUnique({
-        where: { id: validatedData.projectId },
-      });
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', validatedData.projectId)
+        .single();
 
-      if (!project || project.ownerId !== session.user.id) {
+      if (projectError || !project || project.ownerId !== session.user.id) {
         return NextResponse.json(
           { success: false, message: 'Project not found or not authorized' },
           { status: 403 },

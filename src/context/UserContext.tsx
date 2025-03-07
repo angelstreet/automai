@@ -3,16 +3,15 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { useRouter, usePathname } from 'next/navigation';
 
 import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features';
-import { Session, User as AuthUser } from '@supabase/supabase-js';
 import { debounce } from '@/lib/utils';
 
 // Import the client-side Supabase utilities
 import { createClient } from '@/utils/supabase/client';
-import type { SupabaseClient, AuthError } from '@supabase/supabase-js';
+import type { Session, User as AuthUser, AuthError } from '@/utils/supabase/index';
 import { PlanType } from '@/lib/features';
 
 // Define auth client type
-type SupabaseAuthClient = SupabaseClient;
+type SupabaseAuthClient = ReturnType<typeof createClient>;
 
 type User = AuthUser & {
   plan: PlanType;

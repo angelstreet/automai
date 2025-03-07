@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-import db from '@/lib/db';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: NextRequest, context: { params: { name: string } }) {
   try {
@@ -14,19 +14,20 @@ export async function GET(request: NextRequest, context: { params: { name: strin
 
     console.log(`Looking up host by name: ${name}`);
 
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
     // Try to find the host with case-insensitive search
-    const host = await db.host.findFirst({
-      where: {
-        name: {
-          equals: name,
-          mode: 'insensitive',
-        },
-      },
-    });
-
+    const { data: host, error } = await supabase
+      .from('hosts')
+      .select('*')
+      .ilike('name', name)
+      .limit(1)
+      .single();
+    
     console.log('Database query completed');
 
-    if (!host) {
+    if (error || !host) {
       console.log(`Host not found with name: ${name}`);
 
       // For debugging, create a mock host

@@ -1,4 +1,5 @@
-import db from '@/lib/db';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import {
   Repository,
   RepositoryCreateInput,
@@ -28,35 +29,45 @@ export async function getGitProviderService(
       }
       throw new Error('Server URL is required for Gitea provider');
     default:
-      throw new Error(`Unknown provider type: ${providerType}`);
+      throw new Error(`Unsupported provider type: ${providerType}`);
   }
 }
 
+// List all git providers for a user
 export async function listGitProviders(userId: string): Promise<GitProvider[]> {
-  try {
-    const providers = await db.gitProvider.findMany({
-      where: { userId },
-    });
-
-    return providers.map((provider: any) => ({
-      ...provider,
-      status: provider.accessToken ? 'connected' : 'disconnected',
-    }));
-  } catch (error) {
-    console.error('Error in listGitProviders:', error);
-    // Return empty array when database table doesn't exist or other errors
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  
+  const { data, error } = await supabase
+    .from('git_providers')
+    .select('*')
+    .eq('user_id', userId);
+  
+  if (error) {
+    console.error('Error listing git providers:', error);
     return [];
   }
+  
+  return data || [];
 }
 
+// Get a specific git provider by ID
 export async function getGitProvider(id: string): Promise<GitProvider | null> {
-  const provider = await db.gitProvider.findUnique({
-    where: { id },
-  });
-
-  if (!provider) return null;
-
-  return provider;
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  
+  const { data, error } = await supabase
+    .from('git_providers')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (error) {
+    console.error('Error getting git provider:', error);
+    return null;
+  }
+  
+  return data;
 }
 
 export async function createGitProvider(

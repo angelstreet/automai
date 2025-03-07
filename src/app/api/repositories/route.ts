@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { z } from 'zod';
 
-import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 
 // Schema for repository creation
@@ -19,26 +18,16 @@ const RepositoryCreateSchema = z.object({
 // GET /api/repositories
 export async function GET(request: Request) {
   try {
+    // Get the user session
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
+    const { data: { session } } = await supabase.auth.getSession();
 
-    // If Supabase client is null, fall back to a simple check
-    if (!supabase) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Authentication not available',
-        },
-        { status: 401 },
-      );
-    }
-
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
     if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(request.url);

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 
-import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 import { GitProviderType } from '@/types/repositories';
 
@@ -11,13 +10,23 @@ export async function GET(request: Request) {
   try {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    
+    // Get the user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { success: false, error: 'Authentication error' },
+        { status: 401 }
+      );
+    }
 
     if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -53,11 +62,13 @@ export async function GET(request: Request) {
     const { providerId, redirectUri } = stateData;
 
     // Get the provider
-    const provider = await db.gitProvider.findUnique({
-      where: { id: providerId },
-    });
+    const { data: provider, error: providerError } = await supabase
+      .from('git_providers')
+      .select('*')
+      .eq('id', providerId)
+      .single();
 
-    if (!provider || provider.userId !== session.user.id) {
+    if (providerError || !provider || provider.userId !== session.user.id) {
       return NextResponse.json(
         { success: false, message: 'Provider not found or not authorized' },
         { status: 403 },
@@ -65,7 +76,7 @@ export async function GET(request: Request) {
     }
 
     // Get the appropriate provider service
-    const providerService = repositoryService.getGitProviderService(
+    const providerService = await repositoryService.getGitProviderService(
       provider.name as GitProviderType,
     );
 

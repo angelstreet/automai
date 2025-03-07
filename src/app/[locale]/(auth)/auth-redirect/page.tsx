@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Session } from '@supabase/supabase-js';
+import type { Session } from '@/utils/supabase/index';
 
 // Simplified cookie setting function
 const setAuthCookies = (session: Session): boolean => {

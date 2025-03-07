@@ -1,24 +1,43 @@
 import { NextResponse } from 'next/server';
-import { getSession, extractSessionFromHeader } from '@/auth';
-import db from '@/lib/db';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: Request) {
   try {
     console.log('[PROFILE_GET] Fetching user profile');
 
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
     // Try to get session from Authorization header first
     const authHeader = request.headers.get('Authorization');
     let session = null;
 
     if (authHeader) {
       console.log('[PROFILE_GET] Authorization header present, extracting session');
-      session = await extractSessionFromHeader(authHeader);
+      // Extract token from Bearer token
+      const token = authHeader.replace('Bearer ', '');
+      
+      // Set session with token
+      const { data, error } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: '',
+      });
+      
+      if (!error && data.session) {
+        session = data.session;
+      } else {
+        console.log('[PROFILE_GET] Error extracting session from header:', error);
+      }
     }
 
     // Fall back to cookie-based session if header auth fails
     if (!session) {
       console.log('[PROFILE_GET] No session from header, trying cookie-based session');
-      session = await getSession();
+      const { data, error } = await supabase.auth.getSession();
+      if (!error) {
+        session = data.session;
+      }
     }
 
     // Check if we have a valid session
@@ -31,41 +50,62 @@ export async function GET(request: Request) {
     console.log('[PROFILE_GET] Valid session found for user:', userId);
 
     // Get user data from database
-    const user = await db.user.findUnique({
-      where: { id: userId },
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-    if (!user) {
+    if (userError || !user) {
       console.log('[PROFILE_GET] User not found in database, creating user');
 
       // Try to create the user
       try {
         // Check if tenant exists, create if not
-        let tenant = await db.tenant.findUnique({
-          where: { id: 'trial' },
-        });
+        const { data: tenant, error: tenantError } = await supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', 'trial')
+          .single();
 
-        if (!tenant) {
+        if (tenantError || !tenant) {
           console.log('[PROFILE_GET] Creating trial tenant');
-          tenant = await db.tenant.create({
-            data: {
+          const { data: newTenant, error: createTenantError } = await supabase
+            .from('tenants')
+            .insert({
               id: 'trial',
               name: 'trial',
               plan: 'free',
-            },
-          });
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            })
+            .select()
+            .single();
+            
+          if (createTenantError) {
+            console.error('[PROFILE_GET] Error creating tenant:', createTenantError);
+          }
         }
 
         // Create user with admin role by default
-        const newUser = await db.user.create({
-          data: {
+        const { data: newUser, error: createUserError } = await supabase
+          .from('users')
+          .insert({
             id: userId,
             email: session.user.email,
             name: session.user.name || session.user.email?.split('@')[0] || 'User',
             user_role: session.user.user_role || 'admin', // Default to admin role
             tenant_id: (session.user.tenant_id || 'trial').toLowerCase(),
-          },
-        });
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createUserError) {
+          console.error('[PROFILE_GET] Error creating user:', createUserError);
+          throw createUserError;
+        }
 
         console.log('[PROFILE_GET] User created:', newUser.id);
 
@@ -95,11 +135,13 @@ export async function GET(request: Request) {
     }
 
     // Get tenant data separately
-    const tenant = user.tenant_id
-      ? await db.tenant.findUnique({
-          where: { id: user.tenant_id },
-        })
-      : null;
+    const { data: tenant, error: tenantError } = user.tenant_id
+      ? await supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', user.tenant_id)
+          .single()
+      : { data: null, error: null };
 
     const response = {
       id: user.id,
@@ -121,23 +163,55 @@ export async function GET(request: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getSession();
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
+    // Get the user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { error: 'Authentication error' },
+        { status: 401 }
+      );
+    }
 
     if (!session?.user) {
-      return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const body = await req.json();
     const { name } = body;
 
     if (!name) {
-      return new NextResponse(JSON.stringify({ error: 'Name is required' }), { status: 400 });
+      return NextResponse.json(
+        { error: 'Name is required' },
+        { status: 400 }
+      );
     }
 
-    const updatedUser = await db.user.update({
-      where: { id: session.user.id },
-      data: { name },
-    });
+    // Update the user
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update({
+        name,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', session.user.id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('Error updating user:', updateError);
+      return NextResponse.json(
+        { error: 'Failed to update user' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       id: updatedUser.id,
@@ -147,6 +221,9 @@ export async function PATCH(req: Request) {
     });
   } catch (error) {
     console.error('[PROFILE_PATCH]', error);
-    return new NextResponse(JSON.stringify({ error: 'Internal error' }), { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal error' },
+      { status: 500 }
+    );
   }
 }

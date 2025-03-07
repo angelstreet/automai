@@ -1,5 +1,6 @@
 /* eslint-disable */
-import db from '@/lib/db';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import { logger } from '../logger';
 
 // Define a TerminalService class to implement singleton pattern
@@ -16,19 +17,25 @@ class TerminalService {
     logger.info('Creating terminal connection', { hostId: data.hostId, type: data.type });
 
     try {
+      const cookieStore = cookies();
+      const supabase = createClient(cookieStore);
+      
       // Get host information
-      const host = await db.host.findUnique({
-        where: { id: data.hostId },
-      });
+      const { data: host, error: hostError } = await supabase
+        .from('hosts')
+        .select('*')
+        .eq('id', data.hostId)
+        .single();
 
-      if (!host) {
-        logger.error('Host not found', { hostId: data.hostId });
+      if (hostError || !host) {
+        logger.error('Host not found', { hostId: data.hostId, error: hostError?.message });
         throw new Error(`Host not found: ${data.hostId}`);
       }
 
       // Create connection record
-      const connection = await db.connection.create({
-        data: {
+      const { data: connection, error: connectionError } = await supabase
+        .from('connections')
+        .insert({
           type: data.type,
           status: 'pending',
           ip: host.ip,
@@ -36,8 +43,16 @@ class TerminalService {
           username: data.username || host.user,
           password: data.password || host.password,
           hostId: host.id,
-        },
-      });
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (connectionError) {
+        logger.error('Error creating connection', { error: connectionError.message });
+        throw new Error(`Failed to create connection: ${connectionError.message}`);
+      }
 
       logger.info('Terminal connection created', { connectionId: connection.id });
 
@@ -56,15 +71,17 @@ class TerminalService {
     logger.info('Getting terminal connection', { connectionId: id });
 
     try {
-      const connection = await db.connection.findUnique({
-        where: { id },
-        include: {
-          host: true,
-        },
-      });
+      const cookieStore = cookies();
+      const supabase = createClient(cookieStore);
+      
+      const { data: connection, error } = await supabase
+        .from('connections')
+        .select('*, host:hosts(*)')
+        .eq('id', id)
+        .single();
 
-      if (!connection) {
-        logger.error('Connection not found', { connectionId: id });
+      if (error || !connection) {
+        logger.error('Connection not found', { connectionId: id, error: error?.message });
         throw new Error(`Connection not found: ${id}`);
       }
 
@@ -83,13 +100,23 @@ class TerminalService {
     logger.info('Updating terminal connection status', { connectionId: id, status });
 
     try {
-      const connection = await db.connection.update({
-        where: { id },
-        data: {
+      const cookieStore = cookies();
+      const supabase = createClient(cookieStore);
+      
+      const { data: connection, error } = await supabase
+        .from('connections')
+        .update({
           status,
-          updatedAt: new Date(),
-        },
-      });
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('Error updating connection status', { error: error.message });
+        throw new Error(`Failed to update connection status: ${error.message}`);
+      }
 
       logger.info('Terminal connection status updated', { connectionId: id, status });
 
@@ -111,13 +138,23 @@ class TerminalService {
     logger.info('Closing terminal connection', { connectionId: id });
 
     try {
-      const connection = await db.connection.update({
-        where: { id },
-        data: {
+      const cookieStore = cookies();
+      const supabase = createClient(cookieStore);
+      
+      const { data: connection, error } = await supabase
+        .from('connections')
+        .update({
           status: 'closed',
-          updatedAt: new Date(),
-        },
-      });
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error('Error closing connection', { error: error.message });
+        throw new Error(`Failed to close connection: ${error.message}`);
+      }
 
       logger.info('Terminal connection closed', { connectionId: id });
 
@@ -136,13 +173,20 @@ class TerminalService {
     logger.info('Getting all terminal connections');
 
     try {
-      const connections = await db.connection.findMany({
-        include: {
-          host: true,
-        },
-      });
+      const cookieStore = cookies();
+      const supabase = createClient(cookieStore);
+      
+      const { data: connections, error } = await supabase
+        .from('connections')
+        .select('*, host:hosts(*)')
+        .order('createdAt', { ascending: false });
 
-      return connections;
+      if (error) {
+        logger.error('Error getting connections', { error: error.message });
+        throw new Error(`Failed to get connections: ${error.message}`);
+      }
+
+      return connections || [];
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Error getting terminal connections', { error: errorMessage });
@@ -180,12 +224,17 @@ export async function getCompatibleConnection(connectionId: string) {
   try {
     logger.info('Getting compatible connection', { connectionId });
 
-    const connection = await db.connection.findUnique({
-      where: { id: connectionId },
-    });
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
+    const { data: connection, error } = await supabase
+      .from('connections')
+      .select('*')
+      .eq('id', connectionId)
+      .single();
 
-    if (!connection) {
-      logger.error('Terminal connection not found', { connectionId });
+    if (error || !connection) {
+      logger.error('Terminal connection not found', { connectionId, error: error?.message });
       return null;
     }
 
@@ -193,7 +242,7 @@ export async function getCompatibleConnection(connectionId: string) {
       connectionId,
       connectionType: connection.type,
       connectionHasHost: !!connection.host,
-      connectionHasIp: !!(_connection as any).ip,
+      connectionHasIp: !!(connection as any).ip,
     });
 
     // Add missing properties for compatibility

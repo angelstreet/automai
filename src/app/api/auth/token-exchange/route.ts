@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 
 // CORS headers for API routes
 const corsHeaders = {
@@ -16,44 +17,50 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     // Extract parameters from the request
-    const { code, supabaseUrl, apiKey } = await request.json();
+    const { code } = await request.json();
 
-    if (!code || !supabaseUrl || !apiKey) {
+    if (!code) {
       return NextResponse.json(
-        { error: 'Missing required parameters' },
+        { error: 'Missing required code parameter' },
         { status: 400, headers: corsHeaders }
       );
     }
 
     console.log(`[API] Proxying token exchange request for code: ${code.substring(0, 5)}...`);
 
-    // Direct fetch to Supabase from the server
-    const tokenUrl = `${supabaseUrl}/auth/v1/token?grant_type=pkce`;
+    // Use our Supabase server singleton
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
     
-    const response = await fetch(tokenUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': apiKey,
-        'X-Client-Info': 'supabase-js-server/2.38.4',
-      },
-      body: JSON.stringify({ code }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[API] Token exchange failed: ${response.status} ${response.statusText}`, errorText);
+    // Exchange the code for a session
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    
+    if (error) {
+      console.error(`[API] Token exchange failed:`, error);
       return NextResponse.json(
-        { error: `Token exchange failed: ${response.statusText}` },
-        { status: response.status, headers: corsHeaders }
+        { error: `Token exchange failed: ${error.message}` },
+        { status: 400, headers: corsHeaders }
       );
     }
 
-    const data = await response.json();
+    if (!data?.session) {
+      console.error('[API] Token exchange returned no session');
+      return NextResponse.json(
+        { error: 'No session returned from token exchange' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
     console.log('[API] Token exchange successful');
 
-    // Return the token data to the client
-    return NextResponse.json(data, { headers: corsHeaders });
+    // Return the session data to the client
+    return NextResponse.json(
+      { 
+        session: data.session,
+        user: data.user 
+      }, 
+      { headers: corsHeaders }
+    );
   } catch (error) {
     console.error('[API] Token exchange error:', error);
     return NextResponse.json(

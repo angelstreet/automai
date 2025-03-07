@@ -2,16 +2,20 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 
-import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 
 // Helper to check if user has access to the provider
 async function checkProviderAccess(id: string, userId: string) {
-  const provider = await db.gitProvider.findUnique({
-    where: { id },
-  });
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  
+  const { data: provider, error } = await supabase
+    .from('git_providers')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-  if (!provider) {
+  if (error || !provider) {
     return { success: false, message: 'Provider not found', status: 404 };
   }
 
@@ -28,13 +32,23 @@ export async function GET(request: Request, context: { params: { id: string } })
     const { params } = context;
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
+    
+    // Get the user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { success: false, error: 'Authentication error' },
+        { status: 401 }
+      );
+    }
 
     if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const { success, provider, message, status } = await checkProviderAccess(
@@ -62,13 +76,23 @@ export async function DELETE(request: Request, context: { params: { id: string }
     const { params } = context;
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
+    
+    // Get the user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { success: false, error: 'Authentication error' },
+        { status: 401 }
+      );
+    }
 
     if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const { success, message, status } = await checkProviderAccess(params.id, session.user.id);
