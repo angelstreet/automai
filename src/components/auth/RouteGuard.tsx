@@ -86,24 +86,18 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     }
 
     const handleRouting = async () => {
-      // Public routes don't need tenant
+      // Simplified public route check
       const isPublicRoute =
         pathname.includes('/login') ||
         pathname.includes('/signup') ||
-        pathname.includes('/(auth)/auth-redirect') ||
         pathname.includes('/auth-redirect') ||
-        pathname.includes('/error') ||
         pathname === `/${locale}` ||
         pathname === `/${locale}/`;
 
       console.log('RouteGuard - Handling routing:', {
         isPublicRoute,
         pathname,
-        hasUser: !!user,
-        userEmail: user?.email,
-        currentTenant,
-        userError,
-        userErrorHandled: userErrorHandled.current,
+        hasUser: !!user
       });
 
       // Handle OAuth errors
@@ -116,25 +110,12 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // DISABLE CLIENT-SIDE REDIRECTS FOR UNAUTHENTICATED USERS
-      // Let the middleware handle this instead
-      // The middleware will redirect unauthenticated users to login
-
-      // For public routes, only redirect if user is authenticated and trying to access auth pages
-      if (isPublicRoute) {
-        // Only redirect from login/signup to dashboard if we have a valid user
-        if (user && (pathname.includes('/login') || pathname.includes('/signup') || pathname === `/${locale}` || pathname === `/${locale}/` || pathname.includes('/auth-redirect'))) {
-          // The tenant comes from the user object, with a fallback to 'trial'
-          const tenant = user.tenantName || 'trial';
-
-          if (tenant && !isRedirecting.current) {
-            console.log(
-              `RouteGuard - Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`,
-            );
-            isRedirecting.current = true;
-            router.replace(`/${locale}/${tenant}/dashboard`);
-          }
-        }
+      // Simple redirect for authenticated users on public pages
+      if (isPublicRoute && user && !isRedirecting.current) {
+        const tenant = 'trial'; // Default tenant
+        console.log(`Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`);
+        isRedirecting.current = true;
+        router.replace(`/${locale}/${tenant}/dashboard`);
         return;
       }
 

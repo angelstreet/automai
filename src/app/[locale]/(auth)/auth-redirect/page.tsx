@@ -11,28 +11,19 @@ interface AuthSession {
   refresh_token: string;
 }
 
-// Update the setAuthCookies function type
+// Simplified cookie setting function
 const setAuthCookies = (session: Session): boolean => {
   try {
     if (!session?.user) return false;
     
-    // Determine environment and set appropriate domain
+    // Determine domain based on hostname
     const hostname = window.location.hostname;
     let cookieDomain = '';
     
-    if (hostname.includes('github.dev')) {
-      // For GitHub Codespaces
-      cookieDomain = '.app.github.dev';
-    } else if (hostname.includes('github.io')) {
-      // For GitHub Pages
-      cookieDomain = '.github.io';  
-    } else if (hostname.includes('vercel.app')) {
-      // For Vercel deployments
-      cookieDomain = '.vercel.app';
-    }
-    // localhost doesn't need domain specified
+    if (hostname.includes('.app.github.dev')) cookieDomain = '.app.github.dev';
+    else if (hostname.includes('.vercel.app')) cookieDomain = '.vercel.app';
     
-    // Cookie options based on environment
+    // Simple cookie options
     const isProduction = process.env.NODE_ENV === 'production';
     const cookieOptions = [
       'path=/',
@@ -42,22 +33,12 @@ const setAuthCookies = (session: Session): boolean => {
       cookieDomain ? `domain=${cookieDomain}` : ''
     ].filter(Boolean).join('; ');
     
-    // Set cookies with appropriate domain
-    document.cookie = `user-session=${session.user.id}; ${cookieOptions}`;
-    
-    // Set the specific cookie that middleware is checking for
+    // Set essential cookies
     document.cookie = `sb-access-token=${session.access_token}; ${cookieOptions}`;
     document.cookie = `sb-refresh-token=${session.refresh_token}; ${cookieOptions}`;
+    document.cookie = `user-session=${session.user.id}; ${cookieOptions}`;
     
-    const provider = session.user.app_metadata?.provider || 'unknown';
-    document.cookie = `auth-provider=${provider}; ${cookieOptions}`;
-    
-    console.log('[Auth-Redirect] Cookies set with options:', {
-      domain: cookieDomain || 'default',
-      isProduction,
-      sameSite: 'Lax',
-      secure: isProduction
-    });
+    console.log('[Auth-Redirect] Cookies set');
     
     return true;
   } catch (e) {
@@ -186,17 +167,16 @@ export default function AuthRedirectPage() {
         });
 
         if (session?.user) {
-          // Try to set cookies but don't fail if they don't work
+          // Set cookies
           try {
             setAuthCookies(session);
           } catch (cookieError) {
             console.warn('[Auth] Cookie setup failed:', cookieError);
           }
           
-          // Proceed with session regardless of cookies
+          // Redirect to dashboard with default tenant
           setStatus('success');
-          // Default to 'trial' tenant if no tenant information available
-          const tenant = session.user.user_metadata?.tenant || 'trial';
+          const tenant = 'trial'; // Default tenant
           router.push(`/${locale}/${tenant}/dashboard`);
           return;
         }
