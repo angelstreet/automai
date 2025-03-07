@@ -146,49 +146,57 @@ export type Database = {
       }
       git_providers: {
         Row: {
-          accessToken: string | null
-          createdAt: string
-          displayName: string | null
-          expiresAt: string | null
+          access_token: string | null
+          created_at: string
+          display_name: string | null
+          expires_at: string | null
           id: string
           name: string
-          refreshToken: string | null
-          serverUrl: string | null
+          refresh_token: string | null
+          server_url: string | null
           type: string
-          updatedAt: string
-          userId: string
+          updated_at: string
+          user_id: string
         }
         Insert: {
-          accessToken?: string | null
-          createdAt?: string
-          displayName?: string | null
-          expiresAt?: string | null
+          access_token?: string | null
+          created_at?: string
+          display_name?: string | null
+          expires_at?: string | null
           id?: string
           name: string
-          refreshToken?: string | null
-          serverUrl?: string | null
+          refresh_token?: string | null
+          server_url?: string | null
           type: string
-          updatedAt?: string
-          userId: string
+          updated_at?: string
+          user_id: string
         }
         Update: {
-          accessToken?: string | null
-          createdAt?: string
-          displayName?: string | null
-          expiresAt?: string | null
+          access_token?: string | null
+          created_at?: string
+          display_name?: string | null
+          expires_at?: string | null
           id?: string
           name?: string
-          refreshToken?: string | null
-          serverUrl?: string | null
+          refresh_token?: string | null
+          server_url?: string | null
           type?: string
-          updatedAt?: string
-          userId?: string
+          updated_at?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "git_providers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       hosts: {
         Row: {
-          createdAt: string
+          created_at: string
           description: string | null
           id: string
           ip: string
@@ -196,13 +204,16 @@ export type Database = {
           name: string
           password: string | null
           port: number | null
+          private_key: string | null
           status: string
+          tenant_id: string | null
           type: string
-          updatedAt: string
-          user: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
         }
         Insert: {
-          createdAt?: string
+          created_at?: string
           description?: string | null
           id?: string
           ip: string
@@ -210,13 +221,16 @@ export type Database = {
           name: string
           password?: string | null
           port?: number | null
+          private_key?: string | null
           status?: string
+          tenant_id?: string | null
           type: string
-          updatedAt?: string
-          user?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
         }
         Update: {
-          createdAt?: string
+          created_at?: string
           description?: string | null
           id?: string
           ip?: string
@@ -224,135 +238,153 @@ export type Database = {
           name?: string
           password?: string | null
           port?: number | null
+          private_key?: string | null
           status?: string
+          tenant_id?: string | null
           type?: string
-          updatedAt?: string
-          user?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "hosts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hosts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       repositories: {
         Row: {
-          createdAt: string
-          defaultBranch: string | null
+          created_at: string
+          default_branch: string | null
           description: string | null
           id: string
-          lastSyncedAt: string | null
+          last_synced_at: string | null
           name: string
-          providerId: string
-          syncStatus: string
-          updatedAt: string
+          provider_id: string
+          sync_status: string
+          updated_at: string
           url: string | null
         }
         Insert: {
-          createdAt?: string
-          defaultBranch?: string | null
+          created_at?: string
+          default_branch?: string | null
           description?: string | null
           id?: string
-          lastSyncedAt?: string | null
+          last_synced_at?: string | null
           name: string
-          providerId: string
-          syncStatus?: string
-          updatedAt?: string
+          provider_id: string
+          sync_status?: string
+          updated_at?: string
           url?: string | null
         }
         Update: {
-          createdAt?: string
-          defaultBranch?: string | null
+          created_at?: string
+          default_branch?: string | null
           description?: string | null
           id?: string
-          lastSyncedAt?: string | null
+          last_synced_at?: string | null
           name?: string
-          providerId?: string
-          syncStatus?: string
-          updatedAt?: string
+          provider_id?: string
+          sync_status?: string
+          updated_at?: string
           url?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "repositories_providerId_fkey"
-            columns: ["providerId"]
+            foreignKeyName: "repositories_provider_id_fkey"
+            columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "git_providers"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
       tenants: {
         Row: {
-          createdAt: string
+          created_at: string
           domain: string | null
           id: string
           name: string
           plan: string
-          updatedAt: string
+          updated_at: string
         }
         Insert: {
-          createdAt?: string
+          created_at?: string
           domain?: string | null
           id?: string
           name: string
           plan?: string
-          updatedAt?: string
+          updated_at?: string
         }
         Update: {
-          createdAt?: string
+          created_at?: string
           domain?: string | null
           id?: string
           name?: string
           plan?: string
-          updatedAt?: string
+          updated_at?: string
         }
         Relationships: []
       }
       users: {
         Row: {
-          createdAt: string
+          created_at: string
           email: string | null
-          emailVerified: string | null
+          email_verified: string | null
           id: string
           image: string | null
           name: string | null
           password: string | null
           provider: string | null
           user_role: string
-          tenantId: string | null
-          updatedAt: string
+          tenant_id: string | null
+          updated_at: string
         }
         Insert: {
-          createdAt?: string
+          created_at?: string
           email?: string | null
-          emailVerified?: string | null
+          email_verified?: string | null
           id?: string
           image?: string | null
           name?: string | null
           password?: string | null
           provider?: string | null
           user_role?: string
-          tenantId?: string | null
-          updatedAt?: string
+          tenant_id?: string | null
+          updated_at?: string
         }
         Update: {
-          createdAt?: string
+          created_at?: string
           email?: string | null
-          emailVerified?: string | null
+          email_verified?: string | null
           id?: string
           image?: string | null
           name?: string | null
           password?: string | null
           provider?: string | null
           user_role?: string
-          tenantId?: string | null
-          updatedAt?: string
+          tenant_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "users_tenantId_fkey"
-            columns: ["tenantId"]
+            foreignKeyName: "users_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
       verificationtokens: {

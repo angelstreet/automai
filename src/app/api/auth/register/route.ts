@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         user_role: 'admin', // First user is admin of their tenant
-        tenantId: tenant.id,
+        tenant_id: tenant.id,
       },
     });
 

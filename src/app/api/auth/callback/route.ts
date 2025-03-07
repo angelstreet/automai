@@ -377,7 +377,7 @@ export async function GET(request: NextRequest) {
           email: session.user.email,
           name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
           user_role: session.user.user_metadata?.role || 'admin', // Default to admin role
-          tenantId: 'trial',
+          tenant_id: 'trial',
           provider: session.user.app_metadata?.provider || 'github',
         }),
       });

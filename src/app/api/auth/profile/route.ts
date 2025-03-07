@@ -63,7 +63,7 @@ export async function GET(request: Request) {
             email: session.user.email,
             name: session.user.name || session.user.email?.split('@')[0] || 'User',
             user_role: session.user.user_role || 'admin', // Default to admin role
-            tenantId: (session.user.tenantId || 'trial').toLowerCase(),
+            tenant_id: (session.user.tenant_id || 'trial').toLowerCase(),
           },
         });
 
@@ -75,8 +75,8 @@ export async function GET(request: Request) {
           name: newUser.name,
           email: newUser.email,
           user_role: newUser.user_role,
-          tenantId: newUser.tenantId,
-          tenantName: 'trial',
+          tenant_id: newUser.tenant_id,
+          tenant_name: 'trial',
           plan: 'free',
         });
       } catch (createError) {
@@ -87,17 +87,17 @@ export async function GET(request: Request) {
           name: session.user.name,
           email: session.user.email,
           user_role: session.user.user_role || 'admin', // Default to admin role
-          tenantId: (session.user.tenantId || 'trial').toLowerCase(),
-          tenantName: (session.user.tenantName || 'trial').toLowerCase(),
+          tenant_id: (session.user.tenant_id || 'trial').toLowerCase(),
+          tenant_name: (session.user.tenant_name || 'trial').toLowerCase(),
           plan: 'free',
         });
       }
     }
 
     // Get tenant data separately
-    const tenant = user.tenantId
+    const tenant = user.tenant_id
       ? await db.tenant.findUnique({
-          where: { id: user.tenantId },
+          where: { id: user.tenant_id },
         })
       : null;
 
@@ -106,8 +106,8 @@ export async function GET(request: Request) {
       name: user.name,
       email: user.email,
       user_role: user.user_role,
-      tenantId: user.tenantId,
-      tenantName: tenant?.name || null,
+      tenant_id: user.tenant_id,
+      tenant_name: tenant?.name || null,
       plan: tenant?.plan || 'free',
     };
 

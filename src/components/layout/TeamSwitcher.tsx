@@ -49,7 +49,7 @@ export function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
   const isCollapsed = state === 'collapsed';
 
   // Only show for pro users or users with a tenant
-  if (!user || (user.plan !== 'PRO' && !user.tenantId)) {
+  if (!user || (user.plan !== 'PRO' && !user.tenant_id)) {
     return null;
   }
 

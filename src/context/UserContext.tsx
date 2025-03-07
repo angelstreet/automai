@@ -8,17 +8,16 @@ import { debounce } from '@/lib/utils';
 
 // Import the client-side Supabase utilities
 import { createClient } from '@/utils/supabase/client';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient, AuthError } from '@supabase/supabase-js';
+import { PlanType } from '@/lib/features';
 
 // Define auth client type
 type SupabaseAuthClient = SupabaseClient;
 
-type PlanType = keyof typeof getPlanFeatures;
-
 type User = AuthUser & {
   plan: PlanType;
-  tenantName?: string | null;
-  user_role?: string;
+  tenant_name?: string | null;
+  tenant_id?: string | null;
 };
 
 type UserContextType = {
@@ -95,60 +94,91 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   
   // Get client when needed by calling getSupabaseClient()
   
-  // Load session on initial mount - simplified
+  // Effect to load session on mount
   useEffect(() => {
-    // Skip if already initialized
-    if (authInitialized.current) return;
-    
-    authInitialized.current = true;
-    console.log('UserContext - Initial session load');
-    
-    // Load session immediately
-    loadSession();
-
-    // Set up auth state change listener
-    let subscription: { unsubscribe: () => void } | null = null;
-    
-    const supabase = getSupabaseClient();
-    if (supabase) {
-      try {
-        const {
-          data: { subscription: authSubscription },
-        } = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
-          console.log('UserContext - Auth state change:', event, {
-            hasSession: !!session,
-            user: session?.user ? `${session.user.email || 'no-email'}` : 'no-user'
-          });
-
-          // Load session on auth state changes
-          loadSession();
-        });
-
-        subscription = authSubscription;
-      } catch (err) {
-        console.error('UserContext - Error setting up auth state change listener:', err);
-        // Still try to load session if listener fails
-        loadSession();
-      }
-    } else {
-      // No client available, use polling as fallback
-      const intervalId = setInterval(() => {
-        if (lastFetchedAt.current && Date.now() - lastFetchedAt.current < 30000) {
-          return; // Don't check more than once every 30 seconds
-        }
-        loadSession();
-      }, 30000);
-      
-      // Store interval ID for cleanup
-      return () => clearInterval(intervalId);
+    // Skip if we already have a session status
+    if (sessionStatus !== 'loading') {
+      return;
     }
 
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
+    const loadSession = async () => {
+      try {
+        console.log('UserContext - Loading session');
+        isFetchingUser.current = true;
+
+        // No cached session, fetch from Supabase
+        const { data, error } = await safeAuthCall(
+          'getSession',
+          (client) => client.auth.getSession(),
+          { data: { session: null }, error: null }
+        );
+
+        if (error) {
+          console.error('UserContext - Error loading session:', error);
+          setError('Failed to load user session');
+          setUser(null);
+          setSessionStatus('unauthenticated');
+          return;
+        }
+
+        if (data?.session) {
+          // Session exists - authenticated
+          console.log('UserContext - Valid session found:', {
+            email: data.session.user.email,
+            userId: data.session.user.id
+          });
+          
+          setSession(data.session);
+          setSessionStatus('authenticated');
+
+          // Create or update user object from session
+          const userFromSession = {
+            ...data.session.user,
+            plan: (data.session.user.user_metadata?.plan || 'TRIAL') as PlanType,
+            tenant_id: data.session.user.user_metadata?.tenant_id || data.session.user.user_metadata?.tenantId || 'trial',
+            tenant_name: data.session.user.user_metadata?.tenant_name || data.session.user.user_metadata?.tenantName || 'trial'
+          };
+          
+          // Fetch user profile from API to get the most up-to-date data
+          try {
+            const profileResponse = await fetch('/api/auth/profile');
+            if (profileResponse.ok) {
+              const profileData = await profileResponse.json();
+              // Update user with profile data
+              const updatedUser: User = {
+                ...userFromSession,
+                tenant_id: profileData.tenant_id || userFromSession.tenant_id,
+                tenant_name: profileData.tenant_name || userFromSession.tenant_name,
+                plan: (profileData.plan || userFromSession.plan) as PlanType
+              };
+              setUser(updatedUser);
+            } else {
+              setUser(userFromSession as User);
+            }
+          } catch (profileError) {
+            console.error('UserContext - Error fetching profile:', profileError);
+            setUser(userFromSession as User);
+          }
+          
+          setError(null);
+        } else {
+          // No session - not authenticated
+          console.log('UserContext - No session found');
+          setUser(null);
+          setSessionStatus('unauthenticated');
+        }
+      } catch (e) {
+        console.error('UserContext - Unexpected error loading session:', e);
+        setError('Unexpected error loading user session');
+        setUser(null);
+        setSessionStatus('unauthenticated');
+      } finally {
+        isFetchingUser.current = false;
       }
     };
-  }, [getSupabaseClient]);
+    
+    loadSession();
+  }, [sessionStatus]);
 
   // Track the last time we checked the session to avoid frequent checks
   const lastFocusCheckRef = useRef(Date.now());
@@ -160,143 +190,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     fallback: T
   ): Promise<T> => {
     try {
-      const client = getSupabaseClient();
-      if (!client) {
-        console.error(`UserContext - Cannot call ${methodName}: Supabase client is not initialized`);
-        return fallback;
-      }
-      
-      // In development mode, add additional logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`UserContext - Calling ${methodName}`);
-      }
-      
-      return await methodFn(client);
+      const supabase = createClient();
+      return await methodFn(supabase);
     } catch (error) {
-      console.error(`UserContext - Error calling ${methodName}:`, error);
+      console.error(`Error in ${methodName}:`, error);
       return fallback;
     }
   };
-
-  const loadSession = useCallback(async () => {
-    // Skip if already loading
-    if (isFetchingUser.current) {
-      console.log('UserContext - Session check already in progress, skipping');
-      return;
-    }
-  
-    // Check if we have fresh data (less than 30 seconds old)
-    const now = Date.now();
-    if (user && lastFetchedAt.current && now - lastFetchedAt.current < 30 * 1000) {
-      console.log('UserContext - User data is fresh, skipping session check');
-      setIsLoading(false);
-      return;
-    }
-    
-    // If we already have a user and the data is not too stale (less than 5 minutes old),
-    // don't show loading state to avoid UI flicker
-    const shouldShowLoading = !user || !lastFetchedAt.current || now - lastFetchedAt.current > 5 * 60 * 1000;
-    
-    if (shouldShowLoading) {
-      setIsLoading(true);
-    }
-    
-    console.log('UserContext - Loading session from Supabase');
-    isFetchingUser.current = true;
-  
-    try {
-      // Check if we have a user-session cookie
-      let fallbackUserId = null;
-      
-      try {
-        const cookies = document.cookie.split(';').map(c => c.trim());
-        const userSessionCookie = cookies.find(c => c.startsWith('user-session='));
-        
-        if (userSessionCookie) {
-          fallbackUserId = userSessionCookie.split('=')[1];
-          console.log('UserContext - Found user-session cookie:', fallbackUserId);
-        }
-      } catch (e) {
-        console.error('UserContext - Error checking cookies:', e);
-      }
-      
-      // Get session from Supabase
-      const { data, error } = await safeAuthCall(
-        'getSession',
-        (client) => client.auth.getSession(),
-        { data: { session: null }, error: new Error('Failed to get session') }
-      );
-      
-      if (error) {
-        console.error('UserContext - Session error:', error);
-        
-        // If we have a user-session cookie, consider the user logged in
-        // This is a minimal fallback for when Supabase session is temporarily unavailable
-        if (fallbackUserId && user?.id === fallbackUserId) {
-          console.log('UserContext - Using existing user with matching user-session cookie');
-          setIsLoading(false);
-          isFetchingUser.current = false;
-          lastFetchedAt.current = now;
-          return;
-        }
-        
-        setError(error.message);
-        setUser(null);
-        setSessionStatus('unauthenticated');
-        setIsLoading(false);
-        isFetchingUser.current = false;
-        return;
-      }
-
-      if (data?.session) {
-        // Session exists - authenticated
-        console.log('UserContext - Valid session found:', {
-          email: data.session.user.email,
-          userId: data.session.user.id
-        });
-        
-        setSession(data.session);
-        setSessionStatus('authenticated');
-        
-        // Create or update user object from session
-        const userFromSession = {
-          ...data.session.user,
-          plan: data.session.user.user_metadata?.plan || 'free' as PlanType
-        };
-        
-        // Success case
-        setUser(userFromSession);
-        setError(null);
-      } else {
-        // No session - not authenticated
-        console.log('UserContext - No session found');
-        setUser(null);
-        setSession(null);
-        setSessionStatus('unauthenticated');
-      }
-    } catch (e) {
-      console.error('UserContext - Unexpected error loading session:', e);
-      setError('Unexpected error loading user session');
-      setUser(null);
-      setSessionStatus('unauthenticated');
-    } finally {
-      setIsLoading(false);
-      isFetchingUser.current = false;
-      lastFetchedAt.current = now;
-    }
-  }, [user]);
 
   // We don't need a separate fetch user function anymore
   // All user data comes directly from the session
   
   // This is a simplified version that can be used if needed
   async function refreshUser() {
-    // Skip if already loading
-    if (isFetchingUser.current) {
-      console.log('UserContext - Refresh already in progress, skipping');
-      return;
-    }
-    
     // Implement debouncing to prevent multiple rapid refreshes
     const now = Date.now();
     if (lastFetchedAt.current && now - lastFetchedAt.current < 2000) {
@@ -312,7 +218,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await safeAuthCall(
         'getSession',
         (client) => client.auth.getSession(),
-        { data: { session: null }, error: new Error('Failed to get session') }
+        { data: { session: null }, error: null }
       );
       
       if (error) {
@@ -330,10 +236,32 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         // Create or update user object from session
         const userFromSession = {
           ...data.session.user,
-          plan: data.session.user.user_metadata?.plan || 'free' as PlanType
+          plan: (data.session.user.user_metadata?.plan || 'TRIAL') as PlanType,
+          tenant_id: data.session.user.user_metadata?.tenant_id || data.session.user.user_metadata?.tenantId || 'trial',
+          tenant_name: data.session.user.user_metadata?.tenant_name || data.session.user.user_metadata?.tenantName || 'trial'
         };
         
-        setUser(userFromSession);
+        // Fetch user profile from API to get the most up-to-date data
+        try {
+          const profileResponse = await fetch('/api/auth/profile');
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            // Update user with profile data
+            const updatedUser: User = {
+              ...userFromSession,
+              tenant_id: profileData.tenant_id || userFromSession.tenant_id,
+              tenant_name: profileData.tenant_name || userFromSession.tenant_name,
+              plan: (profileData.plan || userFromSession.plan) as PlanType
+            };
+            setUser(updatedUser);
+          } else {
+            setUser(userFromSession as User);
+          }
+        } catch (profileError) {
+          console.error('UserContext - Error fetching profile:', profileError);
+          setUser(userFromSession as User);
+        }
+        
         setError(null);
       } else {
         // No session - not authenticated
@@ -578,7 +506,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return safeAuthCall(
       'getSession',
       (client) => client.auth.getSession(),
-      { data: { session: null }, error: new Error('Failed to get session') }
+      { data: { session: null }, error: null }
     );
   }, [safeAuthCall]);
 
@@ -586,7 +514,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return safeAuthCall(
       'signInWithPassword',
       (client) => client.auth.signInWithPassword({ email, password }),
-      { data: null, error: new Error('Failed to sign in') } as any
+      { data: null, error: null } as any
     );
   }, [safeAuthCall]);
 
@@ -620,7 +548,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           // No need to specify flowType - let Supabase handle it
         }
       }),
-      { data: null, error: new Error('Failed to sign in with OAuth') } as any
+      { data: null, error: null } as any
     );
   }, [safeAuthCall]);
 
@@ -645,7 +573,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           emailRedirectTo: redirectUrl
         }
       }),
-      { data: null, error: new Error('Failed to sign up') } as any
+      { data: null, error: null } as any
     );
   }, [safeAuthCall]);
 
@@ -666,7 +594,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       (client) => client.auth.resetPasswordForEmail(email, { 
         redirectTo: redirectUrl
       }),
-      { data: null, error: new Error('Failed to reset password') } as any
+      { data: null, error: null } as any
     );
   }, [safeAuthCall]);
 

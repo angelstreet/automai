@@ -91,7 +91,7 @@ export default function AuthRedirectPage() {
           
           // Redirect to dashboard with tenant from user metadata or default
           setStatus('success');
-          const tenant = session.user.user_metadata?.tenantName || 'trial';
+          const tenant = session.user.user_metadata?.tenant_name || 'trial';
           
           // Get current origin for dynamic redirect
           const origin = window.location.origin;

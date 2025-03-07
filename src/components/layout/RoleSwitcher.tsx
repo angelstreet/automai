@@ -1,5 +1,5 @@
 import * as React from 'react';
-
+import { Role, useRole } from '@/context/RoleContext';
 import {
   Select,
   SelectContent,
@@ -17,18 +17,24 @@ const roles: { value: Role; label: string }[] = [
 ];
 
 interface RoleSwitcherProps {
-  currentRole: Role;
-  onRoleChange: (role: Role) => void;
   className?: string;
 }
 
-export function RoleSwitcher({ currentRole, onRoleChange, className }: RoleSwitcherProps) {
+export function RoleSwitcher({ className }: RoleSwitcherProps) {
+  const { currentRole, setCurrentRole, isLoading } = useRole();
+  
   const handleValueChange = (value: Role) => {
     // Dispatch a custom event when the role changes
     const event = new CustomEvent('roleChange', { detail: value });
     window.dispatchEvent(event);
-    onRoleChange(value);
+    setCurrentRole(value);
   };
+
+  if (isLoading) {
+    return (
+      <div className={cn('w-[200px] h-10 bg-muted animate-pulse rounded-md', className)} />
+    );
+  }
 
   return (
     <Select value={currentRole} onValueChange={handleValueChange}>

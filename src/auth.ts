@@ -12,8 +12,8 @@ export interface UserSession {
   name?: string | null;
   image?: string | null;
   role?: string;
-  tenantId?: string;
-  tenantName?: string | null;
+  tenant_id?: string;
+  tenant_name?: string | null;
 }
 
 export interface SessionData {
@@ -51,8 +51,8 @@ export async function getSession(): Promise<SessionData | null> {
         name: user.user_metadata?.name || user.email?.split('@')[0] || null,
         image: user.user_metadata?.avatar_url || null,
         role: user.user_metadata?.role || 'user',
-        tenantId: user.user_metadata?.tenantId || 'trial',
-        tenantName: user.user_metadata?.tenantName || 'trial',
+        tenant_id: user.user_metadata?.tenant_id || user.user_metadata?.tenantId || 'trial',
+        tenant_name: user.user_metadata?.tenant_name || user.user_metadata?.tenantName || 'trial',
       },
       accessToken: access_token,
       expires: new Date(expires_at! * 1000).toISOString(),
@@ -95,8 +95,8 @@ export async function extractSessionFromHeader(
         name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || null,
         image: data.user.user_metadata?.avatar_url || null,
         role: data.user.user_metadata?.role || 'user',
-        tenantId: data.user.user_metadata?.tenantId || 'trial',
-        tenantName: data.user.user_metadata?.tenantName || 'trial',
+        tenant_id: data.user.user_metadata?.tenant_id || data.user.user_metadata?.tenantId || 'trial',
+        tenant_name: data.user.user_metadata?.tenant_name || data.user.user_metadata?.tenantName || 'trial',
       },
       accessToken: token,
       expires: new Date(Date.now() + 3600 * 1000).toISOString(), // Approximate expiry

@@ -8,7 +8,7 @@ import * as React from 'react';
 import { SidebarTrigger } from '@/components/sidebar';
 import { UserProfile } from '@/components/profile/UserProfile';
 import { Button } from '@/components/shadcn/button';
-import { RoleSwitcher } from '@/components/shadcn/role-switcher';
+import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';

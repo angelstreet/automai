@@ -1,18 +1,18 @@
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
-export interface AuthUser {
+export interface User {
   id: string;
   email?: string | null;
   name?: string | null;
   image?: string | null;
   role?: string;
-  tenantId?: string | null;
-  tenantName: string | null;
+  tenant_id?: string | null;
+  tenant_name?: string | null;
   plan?: string;
 }
 
 export interface AuthSession {
-  user: AuthUser;
+  user: User;
   accessToken: string;
 }
 
@@ -21,8 +21,8 @@ export interface CustomSupabaseUser extends SupabaseUser {
   user_metadata: {
     name?: string;
     role?: string;
-    tenantId?: string;
-    tenantName?: string;
+    tenant_id?: string;
+    tenant_name?: string;
     plan?: string;
   };
 }

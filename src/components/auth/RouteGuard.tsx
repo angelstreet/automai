@@ -124,7 +124,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       // For protected routes with active tenant, we don't need to do any redirects
       // Only consider tenant mismatch if we're at a root path without a tenant
       if (user && pathParts.length <= 2) {
-        const expectedTenant = user.tenantName || 'trial'; // Default to trial if no tenant
+        const expectedTenant = user.tenant_name || 'trial'; // Default to trial if no tenant
 
         // Only redirect if we don't have a tenant in the path
         if (expectedTenant && !currentTenant && !isRedirecting.current) {

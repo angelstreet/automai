@@ -56,7 +56,7 @@ export function HomePage() {
 
   if (user && !isRootLocalePath) {
     // Always use lowercase for tenant name
-    const tenant = (user.tenantName || 'trial').toLowerCase();
+    const tenant = (user.tenant_name || 'trial').toLowerCase();
     console.log(`Redirecting authenticated user to: /${locale}/${tenant}/dashboard`);
     redirect(`/${locale}/${tenant}/dashboard`);
   }

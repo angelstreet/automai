@@ -1,28 +1,31 @@
 declare module 'next-auth' {
-  interface Session {
-    accessToken: string;
-    user: {
-      id: string;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-      role?: string;
-      tenantId?: string | null;
-      tenantName: string | null;
-      plan?: string;
-      accessToken?: string;
-    };
-  }
-
   interface User {
     id: string;
-    email: string;
+    email?: string | null;
     name?: string | null;
+    image?: string | null;
     role?: string;
-    tenantId?: string | null;
-    tenantName?: string | null;
-    plan?: string;
-    accessToken?: string;
+    tenant_id?: string | null;
+    tenant_name?: string | null;
+  }
+
+  interface Session {
+    user: User;
+    accessToken: string;
+    expires: string;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: string;
+    email?: string | null;
+    name?: string | null;
+    image?: string | null;
+    role?: string;
+    tenant_id?: string | null;
+    tenant_name?: string | null;
+    accessToken: string;
   }
 }
 
