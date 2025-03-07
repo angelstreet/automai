@@ -272,7 +272,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       isFetchingUser.current = false;
       lastFetchedAt.current = now;
     }
-  }, [supabaseAuth, user]);
+  }, [user]);
 
   // We don't need a separate fetch user function anymore
   // All user data comes directly from the session
