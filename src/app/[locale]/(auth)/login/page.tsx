@@ -39,7 +39,18 @@ export default function LoginPage() {
     if (user) {
       console.log('User already logged in, redirecting to dashboard');
       const redirectPath = callbackUrl || `/${locale}/trial/dashboard`;
+      
+      // First try with router
       router.replace(redirectPath);
+      
+      // Use window.location as a fallback for more forceful redirect
+      // Add a slight delay to allow router.replace to happen first
+      const redirectTimer = setTimeout(() => {
+        console.log('Forcing redirect with window.location');
+        window.location.href = redirectPath;
+      }, 500);
+      
+      return () => clearTimeout(redirectTimer);
     }
   }, [user, router, locale, callbackUrl]);
 
