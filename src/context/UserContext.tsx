@@ -592,67 +592,83 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [supabaseAuth]);
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {
-    return await safeAuthCall(
-      'signInWithPassword',
-      supabaseAuth ? () => supabaseAuth.signInWithPassword(email, password) : undefined,
-      { 
+    if (!supabaseAuth) {
+      console.error('UserContext - Cannot sign in: Supabase auth client is not initialized');
+      return { 
         data: null, 
-        error: { 
-          message: 'Authentication client not initialized',
-          status: 0,
-          code: 'auth/not-initialized',
-          __isAuthError: true
-        } 
-      }
-    );
+        error: new Error('Authentication client not initialized') 
+      } as any; // Type casting to avoid complex AuthError typing
+    }
+    
+    try {
+      return await supabaseAuth.signInWithPassword(email, password);
+    } catch (error) {
+      console.error('UserContext - Error signing in:', error);
+      return { 
+        data: null, 
+        error: error || new Error('Error signing in') 
+      } as any; // Type casting to avoid complex AuthError typing
+    }
   }, [supabaseAuth]);
 
   const signInWithOAuth = useCallback(async (provider: 'google' | 'github') => {
-    return await safeAuthCall(
-      'signInWithOAuth',
-      supabaseAuth ? () => supabaseAuth.signInWithOAuth(provider) : undefined,
-      { 
-        data: { provider, url: null }, 
-        error: { 
-          message: 'Authentication client not initialized',
-          status: 0,
-          code: 'auth/not-initialized',
-          __isAuthError: true
-        } 
-      }
-    );
+    if (!supabaseAuth) {
+      console.error('UserContext - Cannot sign in with OAuth: Supabase auth client is not initialized');
+      return { 
+        data: null, 
+        error: new Error('Authentication client not initialized') 
+      } as any; // Type casting to avoid complex AuthError typing
+    }
+    
+    try {
+      return await supabaseAuth.signInWithOAuth(provider);
+    } catch (error) {
+      console.error('UserContext - Error signing in with OAuth:', error);
+      return { 
+        data: null, 
+        error: error || new Error('Error signing in with OAuth') 
+      } as any; // Type casting to avoid complex AuthError typing
+    }
   }, [supabaseAuth]);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    return await safeAuthCall(
-      'signUp',
-      supabaseAuth ? () => supabaseAuth.signUp(email, password) : undefined,
-      { 
-        data: { user: null, session: null }, 
-        error: { 
-          message: 'Authentication client not initialized',
-          status: 0,
-          code: 'auth/not-initialized',
-          __isAuthError: true
-        } 
-      }
-    );
+    if (!supabaseAuth) {
+      console.error('UserContext - Cannot sign up: Supabase auth client is not initialized');
+      return { 
+        data: null, 
+        error: new Error('Authentication client not initialized') 
+      } as any; // Type casting to avoid complex AuthError typing
+    }
+    
+    try {
+      return await supabaseAuth.signUp(email, password);
+    } catch (error) {
+      console.error('UserContext - Error signing up:', error);
+      return { 
+        data: null, 
+        error: error || new Error('Error signing up') 
+      } as any; // Type casting to avoid complex AuthError typing
+    }
   }, [supabaseAuth]);
 
   const resetPassword = useCallback(async (email: string) => {
-    return await safeAuthCall(
-      'resetPassword',
-      supabaseAuth ? () => supabaseAuth.resetPassword(email) : undefined,
-      { 
-        data: {}, 
-        error: { 
-          message: 'Authentication client not initialized',
-          status: 0,
-          code: 'auth/not-initialized',
-          __isAuthError: true
-        } 
-      }
-    );
+    if (!supabaseAuth) {
+      console.error('UserContext - Cannot reset password: Supabase auth client is not initialized');
+      return { 
+        data: null, 
+        error: new Error('Authentication client not initialized') 
+      } as any; // Type casting to avoid complex AuthError typing
+    }
+    
+    try {
+      return await supabaseAuth.resetPassword(email);
+    } catch (error) {
+      console.error('UserContext - Error resetting password:', error);
+      return { 
+        data: null, 
+        error: error || new Error('Error resetting password') 
+      } as any; // Type casting to avoid complex AuthError typing
+    }
   }, [supabaseAuth]);
 
   const value = {
