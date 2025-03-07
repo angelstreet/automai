@@ -8,6 +8,12 @@ project_id = "automai3"
 enabled = true
 # Port to use for the API URL.
 port = 54321
+# Add CORS configuration for production
+cors_allowed_origins = [
+  "https://automai-eta.vercel.app",
+  "https://wexkgcszrwxqsthahfyq.supabase.co"
+]
+cors_allow_credentials = true
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
 schemas = ["public", "graphql_public"]
@@ -81,6 +87,13 @@ enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
 site_url = "https://automai-eta.vercel.app"
+# Update cookie settings for production
+cookie_options = { 
+  same_site = "lax",
+  path = "/",
+  secure = true,
+  domain = "vercel.app"
+}
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
   # Production URLs
@@ -90,7 +103,11 @@ additional_redirect_urls = [
   "https://automai-eta.vercel.app/fr/auth-redirect",
   "https://automai-eta.vercel.app/api/auth/callback",
   "https://automai-eta.vercel.app/api/auth/callback/github",
-  "https://automai-eta.vercel.app/api/auth/callback/google"
+  "https://automai-eta.vercel.app/api/auth/callback/google",
+  "https://automai-eta.vercel.app/*",
+  "https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback",
+  "https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/user",
+  "https://wexkgcszrwxqsthahfyq.supabase.co/*"
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -170,14 +187,16 @@ max_frequency = "5s"
 [auth.external.github]
 enabled = true
 client_id = "Ov23liaMpBie6bYgkSwX"
-secret = "724246a35c225201be32a43256bebb026a4e7827"
+# Use environment variable in production
+secret = "env(SUPABASE_AUTH_GITHUB_SECRET)"
 # Use the Supabase production auth endpoint as redirect target
 redirect_uri = "https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback"
 
 [auth.external.google]
 enabled = true
 client_id = "1004866229182-p6ribbdkmmblb0k44o5h1g5hoaddi05s.apps.googleusercontent.com"
-secret = "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"
+# Use environment variable in production
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
 # Use the Supabase production auth endpoint as redirect target
 redirect_uri = "https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback"
 
@@ -219,4 +238,4 @@ s3_region = "env(S3_REGION)"
 # Configures AWS_ACCESS_KEY_ID for S3 bucket
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
-s3_secret_key = "env(S3_SECRET_KEY)" 
+s3_secret_key = "env(S3_SECRET_KEY)"
