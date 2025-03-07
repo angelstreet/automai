@@ -10,6 +10,9 @@ import { debounce } from '@/lib/utils';
 import getSupabaseAuth from '@/lib/supabase-auth';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+// Define a type for the auth client returned by getSupabaseAuth
+type SupabaseAuthClient = ReturnType<typeof getSupabaseAuth>;
+
 type PlanType = keyof typeof getPlanFeatures;
 
 type User = AuthUser & {
@@ -59,13 +62,27 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const authInitialized = useRef(false);
   
   // Try to get supabase client, with better error handling
-  const supabaseAuthRef = useRef<SupabaseClient | null>(null);
+  const supabaseAuthRef = useRef<SupabaseAuthClient>(null);
   
   try {
     if (!supabaseAuthRef.current) {
-      supabaseAuthRef.current = getSupabaseAuth();
-      // Log available methods for debugging
-      console.log("UserContext - Supabase auth methods:", supabaseAuthRef.current);
+      console.log("UserContext - Attempting to initialize Supabase client");
+      try {
+        supabaseAuthRef.current = getSupabaseAuth();
+        // Log available methods for debugging
+        console.log("UserContext - Supabase auth methods initialized");
+      } catch (initError) {
+        console.error("UserContext - Error initializing Supabase client:", initError);
+        // Try again with a delay
+        setTimeout(() => {
+          try {
+            supabaseAuthRef.current = getSupabaseAuth();
+            console.log("UserContext - Retry successful, Supabase client initialized");
+          } catch (retryError) {
+            console.error("UserContext - Retry failed:", retryError);
+          }
+        }, 1000);
+      }
     }
   } catch (e) {
     console.error("Error initializing Supabase client:", e);

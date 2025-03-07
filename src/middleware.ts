@@ -64,16 +64,6 @@ export default async function middleware(request: NextRequest) {
     request.cookies.getAll().map((c) => `${c.name}: ${c.value.substring(0, 10)}...`),
   );
 
-  // TEMPORARY BYPASS: Allow direct access to certain routes for testing
-  // This lets us test the app without middleware redirects
-  const bypassRoutes = ['/dashboard', '/login-debug', '/bypass', '/trial/', '/Trial/'];
-  const shouldBypass = bypassRoutes.some((route) => request.nextUrl.pathname.includes(route));
-
-  if (shouldBypass) {
-    console.log('TEMPORARY: Bypassing auth checks for dashboard testing');
-    return NextResponse.next();
-  }
-
   // Force lowercase for all parts of the URL to avoid case sensitivity issues
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
   const originalPath = request.nextUrl.pathname;
