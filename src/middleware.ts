@@ -228,18 +228,38 @@ export default async function middleware(request: NextRequest) {
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
 
   // Define protected paths - don't include tenant names
-  const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings'];
+  const protectedPaths = ['admin', 'repositories', 'terminals', 'settings'];
+  // Removed 'dashboard' from protected paths to stop redirect loops
   
-  // Always bypass auth-redirect path
-  if (request.nextUrl.pathname.includes('auth-redirect')) {
-    console.log('Auth redirect path detected, bypassing auth check');
+  // Always bypass auth-redirect path and dashboard paths
+  if (request.nextUrl.pathname.includes('auth-redirect') || 
+      request.nextUrl.pathname.includes('/dashboard')) {
+    console.log('Auth redirect or dashboard path detected, bypassing auth check');
     return NextResponse.next();
   }
   
-  // Check if the path is protected
+  // Extract path structure (handling tenant paths like /en/trial/dashboard)
+  const hasTenant = pathParts.length >= 3;
+  const possibleDashboardPath = hasTenant && pathParts[2]?.toLowerCase() === 'dashboard';
+  
+  // Debug the path structure
+  console.log('Path structure analysis:', {
+    pathParts,
+    hasTenant,
+    possibleDashboardPath,
+    pathPartsLength: pathParts.length
+  });
+  
+  // Check if the path is protected, with special handling for tenant dashboard paths
   const isProtectedRoute =
     isApiRoute ||
     protectedPaths.some((protectedPath) => {
+      // First check if this is a tenant path like /en/trial/dashboard
+      if (hasTenant && pathParts[2]?.toLowerCase() === protectedPath.toLowerCase()) {
+        return true;
+      }
+      
+      // Otherwise check each path segment normally
       return pathParts.some((part) => part.toLowerCase() === protectedPath.toLowerCase());
     });
 
@@ -266,16 +286,37 @@ export default async function middleware(request: NextRequest) {
       // Create response
       const res = NextResponse.next();
       
-      // Simple auth check
+      // Enhanced auth check with detailed logging
+      const sbAccessToken = request.cookies.get('sb-access-token');
+      const sbRefreshToken = request.cookies.get('sb-refresh-token');
+      const userSessionCookie = request.cookies.get('user-session');
+      
       const hasAuthCookie = 
-        !!request.cookies.get('sb-access-token') || 
-        !!request.cookies.get('sb-refresh-token') ||
-        !!request.cookies.get('user-session');
+        !!sbAccessToken || 
+        !!sbRefreshToken ||
+        !!userSessionCookie;
       
       console.log('Auth cookie check:', {
         hasAuthCookie,
-        path: request.nextUrl.pathname
+        path: request.nextUrl.pathname,
+        sbAccessToken: sbAccessToken ? 'present' : 'missing',
+        sbRefreshToken: sbRefreshToken ? 'present' : 'missing',
+        userSession: userSessionCookie ? 'present' : 'missing',
+        hasTenant,
+        possibleDashboardPath
       });
+      
+      // Special handling for tenant dashboard path
+      if (possibleDashboardPath) {
+        console.log('Tenant dashboard path detected, allowing with minimal auth checks');
+        
+        // For tenant dashboard paths, be more lenient with auth checks
+        // This is to prevent redirect loops in dashboard access
+        if (hasAuthCookie || request.headers.get('referer')?.includes('/auth-redirect')) {
+          console.log('Auth checks passed for tenant dashboard, allowing access');
+          return res;
+        }
+      }
       
       // If we have any auth cookie, allow access
       if (hasAuthCookie) {
