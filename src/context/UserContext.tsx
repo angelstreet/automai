@@ -75,13 +75,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Create client on first use
       if (!supabaseAuthRef.current) {
         console.log("UserContext - Initializing Supabase client");
-        supabaseAuthRef.current = createClient();
-        console.log("UserContext - Supabase client initialized successfully");
+        // Wrap client creation in try/catch to handle potential errors
+        try {
+          supabaseAuthRef.current = createClient();
+          console.log("UserContext - Supabase client initialized successfully");
+        } catch (initError) {
+          console.error("UserContext - Failed to initialize Supabase client:", initError);
+          setError("Failed to initialize authentication client");
+          return null;
+        }
       }
       return supabaseAuthRef.current;
     } catch (e) {
-      console.error("UserContext - Error initializing Supabase client:", e);
-      setError("Failed to initialize authentication client");
+      console.error("UserContext - Error accessing Supabase client:", e);
+      setError("Failed to access authentication client");
       return null;
     }
   }, []);
@@ -152,13 +159,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     methodFn: (client: SupabaseAuthClient) => Promise<T>,
     fallback: T
   ): Promise<T> => {
-    const client = getSupabaseClient();
-    if (!client) {
-      console.error(`UserContext - Cannot call ${methodName}: Supabase client is not initialized`);
-      return fallback;
-    }
-    
     try {
+      const client = getSupabaseClient();
+      if (!client) {
+        console.error(`UserContext - Cannot call ${methodName}: Supabase client is not initialized`);
+        return fallback;
+      }
+      
+      // In development mode, add additional logging
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`UserContext - Calling ${methodName}`);
+      }
+      
       return await methodFn(client);
     } catch (error) {
       console.error(`UserContext - Error calling ${methodName}:`, error);

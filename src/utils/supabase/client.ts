@@ -77,20 +77,22 @@ export const createClient = () => {
   }
   
   // Create and store client instance
+  // For browser clients, don't specify cookie methods - use browser's document.cookie API
   const client = createBrowserClient(url, SUPABASE_ANON_KEY, {
-    cookies: {
-      name: 'sb-auth',
-      lifetime: 60 * 60 * 24 * 7, // 7 days
-      domain: cookieDomain,
-      path: '/',
-      sameSite: 'lax',
-    },
     auth: {
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
       flowType: isCodespaceEnv ? 'implicit' : 'pkce',
       debug: isDevelopment(),
+      // Add cookie options but not the methods
+      cookieOptions: {
+        name: 'sb-auth',
+        lifetime: 60 * 60 * 24 * 7, // 7 days
+        domain: cookieDomain,
+        path: '/',
+        sameSite: 'lax',
+      }
     },
     global: {
       headers: {
