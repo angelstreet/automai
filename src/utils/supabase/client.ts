@@ -16,6 +16,7 @@ export const corsHeaders = () => {
 // Environment config - only use cloud config
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://wexkgcszrwxqsthahfyq.supabase.co';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
 // Fail-fast if no key is provided
 if (!SUPABASE_ANON_KEY) {
   console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined!');
@@ -96,15 +97,14 @@ export const createClient = () => {
   // Always use cloud Supabase URL
   const url = SUPABASE_URL;
 
-  const isCodespaceEnv = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
   const cookieDomain = getCookieDomain();
   
-  // Always log in development and also in production for debugging this issue
+  // Log configuration for debugging
   console.log(`[Supabase] Creating browser client with URL: ${url}`);
   console.log(`[Supabase] Using cookie domain: ${cookieDomain || '(none)'}`);
-  console.log(`[Supabase] Auth flow type: ${isCodespaceEnv ? 'implicit' : 'pkce'}`);
-  console.log(`[Supabase] isDevelopment: ${isDevelopment()}`);
-  console.log(`[Supabase] Hostname: ${window.location.hostname}`);
+  console.log(`[Supabase] Environment SITE_URL:`, process.env.NEXT_PUBLIC_SITE_URL || 'not set');
+  console.log(`[Supabase] Current origin:`, window.location.origin);
+  console.log(`[Supabase] ANON_KEY length:`, SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.length : 0);
   
   // Configure auth options based on environment
   const authOptions = {
@@ -124,13 +124,16 @@ export const createClient = () => {
     },
     // Set the site URL for redirects - use current origin
     site_url: window.location.origin,
+    // Explicitly set flow type to PKCE
+    flowType: 'pkce'
   };
   
   // Log the configuration
   console.log(`[Supabase] Auth configuration:`, {
     detectSessionInUrl: authOptions.detectSessionInUrl,
     site_url: authOptions.site_url,
-    cookieDomain: cookieDomain
+    cookieDomain: cookieDomain,
+    flowType: authOptions.flowType
   });
   
   // Create and store client instance
@@ -149,98 +152,55 @@ export const createClient = () => {
   return client;
 };
 
-// Helper to create a session from URL hash parameters (for auth redirects)
+// Helper function for explicit code exchange
 export const exchangeCodeForSession = async (code: string) => {
-  if (typeof window === 'undefined') {
-    throw new Error('exchangeCodeForSession should only be called in browser environment');
-  }
-
   try {
-    const client = createClient();
+    console.log('[Supabase] Explicitly exchanging code for session');
+    const supabase = createClient();
     
-    // Try the built-in method first
     try {
-      // Add debug log for tracking
-      console.log(`Attempting to exchange code for session with client URL: ${client.auth.url}`);
-      return await client.auth.exchangeCodeForSession(code);
-    } catch (error) {
-      console.error('Error using built-in exchangeCodeForSession:', error);
+      // Try client-side exchange first
+      const result = await supabase.auth.exchangeCodeForSession(code);
       
-      // For GitHub Codespaces, we need a solution that avoids CORS
-      // Use a route on our Next.js server to proxy the request
-      try {
-        console.log('Attempting to use Next.js API proxy for token exchange');
-        
-        // Call our own API endpoint which will handle the token exchange server-side
-        const proxyUrl = '/api/auth/token-exchange';
-        const response = await fetch(proxyUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            code, 
-            supabaseUrl: client.auth.url,
-            apiKey: client.supabaseKey
-          })
-        });
-        
-        if (!response.ok) {
-          console.error('Proxy token exchange failed:', await response.text());
-          throw new Error(`Proxy token exchange failed: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('Proxy token exchange response:', { hasAccessToken: !!data.access_token });
-        
-        // Format the response to match Supabase's expected format
-        if (data.access_token) {
-          // Set the session using the tokens we received
-          return await client.auth.setSession({
-            access_token: data.access_token,
-            refresh_token: data.refresh_token || '',
-          });
-        }
-        
-        throw new Error('No access token in proxy response');
-      } catch (proxyError) {
-        console.error('Proxy token exchange failed:', proxyError);
-        
-        // Last resort - try direct fetch with all possible CORS workarounds
-        console.log('Attempting final direct token exchange');
-        const endpoint = `${client.auth.url}/token?grant_type=pkce&code=${code}`;
-        
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          mode: 'cors',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': client.supabaseKey,
-            'X-Client-Info': 'supabase-js-browser/2.38.4',
-            ...corsHeaders()
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Direct token exchange failed: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('Direct token exchange response:', { hasAccessToken: !!data.access_token });
-        
-        if (data.access_token) {
-          return await client.auth.setSession({
-            access_token: data.access_token,
-            refresh_token: data.refresh_token || '',
-          });
-        }
-        
-        throw new Error('No access token in direct response');
+      if (result.error) {
+        throw result.error;
       }
+      
+      return result;
+    } catch (clientError) {
+      console.error('[Supabase] Client-side code exchange failed:', clientError);
+      console.log('[Supabase] Falling back to API route for code exchange');
+      
+      // Fall back to server-side exchange via API route
+      const response = await fetch('/api/auth/exchange-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'API route failed');
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success || !data.session) {
+        throw new Error('API route returned no session');
+      }
+      
+      console.log('[Supabase] API route code exchange succeeded');
+      
+      // Set the session using the data from the API route
+      return await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
     }
   } catch (error) {
-    console.error('Error exchanging code for session:', error);
+    console.error('[Supabase] Error exchanging code for session:', error);
     return { data: { session: null }, error };
   }
 };
