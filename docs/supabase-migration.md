@@ -136,6 +136,6 @@ If you encounter authentication issues:
 
 ## Resources
 
-- [Supabase Documentation](https://supabase.io/docs)
+- [Supabase Documentation](https://supabase.com/docs)
 - [Supabase Auth with Next.js](https://supabase.com/docs/guides/auth/auth-helpers/nextjs)
 - [Supabase Data API Reference](https://supabase.com/docs/reference/javascript/select)

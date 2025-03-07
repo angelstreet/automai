@@ -88,8 +88,6 @@ const nextConfig = {
   },
 };
 
-if (process.env.JWT_SECRET && !process.env.NEXTAUTH_SECRET) {
-  process.env.NEXTAUTH_SECRET = process.env.JWT_SECRET;
-}
+// NextAuth references removed - using Supabase Auth exclusively
 
 module.exports = withNextIntl(nextConfig);

@@ -10,20 +10,22 @@
   - `/src/lib` - Core utilities, services, and business logic
   - `/src/utils` - Utility functions, including Supabase clients
 
-## Supabase Integration
+## Supabase Cloud Integration
 
 - **Client Architecture**:
   - Browser client: `/src/utils/supabase/client.ts` - For client components
   - Server client: `/src/utils/supabase/server.ts` - For server components
   - Middleware client: `/src/utils/supabase/middleware.ts` - For middleware
 
-- **Environment Configurations**:
-  - Local: `supabase/config/config.local.toml`
-  - GitHub Codespace: `supabase/config/config.codespace.toml`
-  - Production: `supabase/config/config.production.toml`
+- **Environment Configuration**:
+  - We use cloud Supabase exclusively for all environments
+  - Configuration is controlled via environment variables:
+    - `NEXT_PUBLIC_SUPABASE_URL` - The Supabase project URL
+    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - The anonymous API key
+    - `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations (server-side only)
 
-- **Switch between environments**:
-  - `scripts/switch-supabase-config.sh [local|codespace|production]`
+- **Documentation**:
+  - See `/docs/supabase-migration.md` for details on the migration to cloud Supabase
 
 ## Build/Test/Lint Commands
 
