@@ -1,46 +1,68 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createBrowserSupabase } from '@/lib/supabase';
+import { Session, User, AuthError } from '@supabase/supabase-js';
+
+interface AuthSession {
+  user: User;
+  access_token: string;
+  refresh_token: string;
+}
+
+// Update the setAuthCookies function type
+const setAuthCookies = (session: Session): boolean => {
+  try {
+    if (!session?.user) return false;
+    
+    // Determine environment and set appropriate domain
+    const hostname = window.location.hostname;
+    let cookieDomain = '';
+    
+    if (hostname.includes('github.dev')) {
+      cookieDomain = '.app.github.dev';
+    } else if (hostname.includes('vercel.app')) {
+      cookieDomain = '.vercel.app';
+    }
+    // localhost doesn't need domain specified
+    
+    // Cookie options based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = [
+      'path=/',
+      'max-age=604800',
+      'SameSite=Lax',
+      isProduction ? 'Secure' : '',
+      cookieDomain ? `domain=${cookieDomain}` : ''
+    ].filter(Boolean).join('; ');
+    
+    // Set cookies with appropriate domain
+    document.cookie = `user-session=${session.user.id}; ${cookieOptions}`;
+    
+    const provider = session.user.app_metadata?.provider || 'unknown';
+    document.cookie = `auth-provider=${provider}; ${cookieOptions}`;
+    
+    console.log('[Auth-Redirect] Cookies set with options:', {
+      domain: cookieDomain || 'default',
+      isProduction,
+      sameSite: 'Lax',
+      secure: isProduction
+    });
+    
+    return true;
+  } catch (e) {
+    console.error('[Auth-Redirect] Error setting auth cookies:', e);
+    return false;
+  }
+};
 
 export default function AuthRedirectPage() {
   const params = useParams();
+  const router = useRouter();
   const locale = (params?.locale as string) || 'en';
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  
-  // Helper function to safely set authentication cookies
-  const setAuthCookies = (session: any) => {
-    try {
-      if (!session?.user) return false;
-      
-      // Cookie options - secure in production
-      const isProduction = process.env.NODE_ENV === 'production';
-      const cookieOptions = `path=/; max-age=604800; SameSite=Lax${isProduction ? '; Secure' : ''}`;
-      
-      // Main authentication cookie - contains user ID only (not sensitive)
-      document.cookie = `user-session=${session.user.id}; ${cookieOptions}`;
-      
-      // Store provider type for analytics
-      const provider = session.user.app_metadata?.provider || 'unknown';
-      document.cookie = `auth-provider=${provider}; ${cookieOptions}`;
-      
-      // Store minimal non-sensitive UI preferences in localStorage
-      if (typeof localStorage !== 'undefined') {
-        // Store display name for UI personalization
-        if (session.user.user_metadata?.name) {
-          localStorage.setItem('user-name', session.user.user_metadata.name);
-        }
-      }
-      
-      console.log('[Auth-Redirect] Auth cookies set successfully');
-      return true;
-    } catch (e) {
-      console.error('[Auth-Redirect] Error setting auth cookies:', e);
-      return false;
-    }
-  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -49,83 +71,55 @@ export default function AuthRedirectPage() {
     
     const handleAuth = async () => {
       try {
-        // Create Supabase client - this will automatically handle the auth callback
         const supabase = createBrowserSupabase();
-        console.log('[Auth-Redirect] Processing authentication...');
         
-        // Get session - Supabase will automatically process the auth callback
-        const { data, error } = await supabase.auth.getSession();
+        // Extract hash params first
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const access_token = hashParams.get('access_token');
         
-        if (error) {
-          console.error('[Auth-Redirect] Error getting session:', error);
-          setStatus('error');
-          setErrorMessage(error.message);
-          return;
+        if (access_token) {
+          // Set session from hash params before checking
+          await supabase.auth.setSession({
+            access_token,
+            refresh_token: hashParams.get('refresh_token') || '',
+          });
         }
+
+        // Now check session
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (!data?.session) {
-          console.error('[Auth-Redirect] No session found after auth flow');
-          setStatus('error');
-          setErrorMessage('Authentication failed - no session was created');
-          
-          setTimeout(() => {
-            window.location.href = `/${locale}/login?error=${encodeURIComponent('Authentication failed')}`;
-          }, 800);
-          return;
-        }
-        
-        // Log successful authentication
-        console.log('[Auth-Redirect] Session found', {
-          provider: data.session.user.app_metadata?.provider || 'unknown',
-          email: data.session.user.email || 'no-email',
+        console.log('[Auth-Debug] Session state:', {
+          hasSession: !!session,
+          sessionUser: session?.user?.email,
+          error: error?.message,
+          hasAccessToken: !!access_token
         });
-        
-        // Set default tenant if needed
-        if (!data.session.user.user_metadata?.tenantId) {
+
+        if (session?.user) {
+          // Try to set cookies but don't fail if they don't work
           try {
-            await supabase.auth.updateUser({
-              data: {
-                role: 'user',
-                tenantId: 'trial',
-                tenantName: 'trial',
-              }
-            });
-            console.log('[Auth-Redirect] User metadata updated with default tenant');
-          } catch (e) {
-            console.error('[Auth-Redirect] Error updating user metadata:', e);
-            // Continue anyway since this isn't critical
+            setAuthCookies(session);
+          } catch (cookieError) {
+            console.warn('[Auth] Cookie setup failed:', cookieError);
           }
+          
+          // Proceed with session regardless of cookies
+          setStatus('success');
+          router.push(`/${locale}/dashboard`);
+          return;
         }
-        
-        // Set auth cookies for middleware authentication
-        setAuthCookies(data.session);
-        
-        // Get tenant for redirect
-        const tenantId = data.session.user.user_metadata?.tenantId || 'trial';
-        
-        // Successful authentication
-        setStatus('success');
-        const dashboardUrl = `/${locale}/${tenantId}/dashboard`;
-        console.log('[Auth-Redirect] Redirecting to:', dashboardUrl);
-        
-        // Redirect with short delay to ensure UI updates and cookies are set
-        setTimeout(() => {
-          window.location.href = dashboardUrl;
-        }, 300);
-        
-      } catch (error: any) {
-        console.error('[Auth-Redirect] Unhandled authentication error:', error);
+
+        // Only reach here if no session
         setStatus('error');
-        setErrorMessage(error.message || 'An unexpected error occurred');
-        
-        setTimeout(() => {
-          window.location.href = `/${locale}/login?error=${encodeURIComponent(error.message || 'An unexpected error occurred')}`;
-        }, 800);
+        setErrorMessage('No valid session found');
+      } catch (error) {
+        console.error('[Auth] Fatal error:', error);
+        setStatus('error');
       }
     };
 
     handleAuth();
-  }, [locale]);
+  }, [locale, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">

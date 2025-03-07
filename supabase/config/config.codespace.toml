@@ -133,6 +133,8 @@ additional_redirect_urls = [
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback/github",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback/google"
+  "https://vigilant-spork-q667vwj94c9x55-54321.app.github.dev",
+  "https://vigilant-spork-q667vwj94c9x55-54321.app.github.dev/auth-redirect",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
