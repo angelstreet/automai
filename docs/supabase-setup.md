@@ -416,6 +416,17 @@ Our Supabase configuration supports authentication across different domains and 
 - Middleware Client: `src/utils/supabase/middleware.ts`
 - Exports Index: `src/utils/supabase/index.ts`
 
+### Service Abstractions
+- Auth Service: `src/lib/services/supabase-auth.ts`
+  - Used for server-side authentication operations
+  - Provides success/error result wrapping
+  - Used in API routes like `/api/auth/register`
+
+- Data Service: `src/lib/services/supabase-data.ts`
+  - Higher-level data operations with error handling
+  - Connection testing utilities
+  - Uses admin client with service role privileges
+
 ### Singleton Pattern
 The Supabase clients are implemented as singletons to prevent multiple connections:
 - Browser client uses a global variable (`__supabaseBrowserClient`)

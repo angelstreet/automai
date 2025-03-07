@@ -1,15 +1,6 @@
 import { isUsingSupabase } from '@/lib/env';
 import { cookies } from 'next/headers';
-
-// Dynamically import createClient to prevent errors when Supabase isn't available
-let createClient: any;
-try {
-  const supabaseServer = require('@/utils/supabase/server');
-  createClient = supabaseServer.createClient;
-} catch (error) {
-  console.warn('Supabase server client not available, using mock client');
-  createClient = () => null;
-}
+import { createClient } from '@/utils/supabase/server';
 
 export interface SupabaseAuthResult {
   success: boolean;

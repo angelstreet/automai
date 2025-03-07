@@ -1,53 +1,23 @@
 import { isProduction, isUsingSupabase } from '../env';
-
-// Import Supabase client
-let createServerClient: any;
-try {
-  const { createClient } = require('@supabase/supabase-js');
-  createServerClient = createClient;
-} catch (error) {
-  console.warn('Supabase JS package not available');
-  createServerClient = null;
-}
-
-// Cache the client in the global scope to prevent multiple connections
-const globalScope = global as any;
-if (!globalScope._supabaseClient) {
-  globalScope._supabaseClient = null;
-}
+import { cookies } from 'next/headers';
+import { createAdminClient } from '@/utils/supabase/server';
 
 /**
  * Get or create a Supabase client for direct data access
+ * Uses the admin client with service role for privileged operations
  */
 export function getSupabaseClient() {
-  // Return cached client if available
-  if (globalScope._supabaseClient) {
-    return globalScope._supabaseClient;
+  if (!isUsingSupabase()) {
+    return null;
   }
-
-  // Create a new client if not available
-  if (
-    createServerClient &&
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-  ) {
-    // Use service role key if available, otherwise use anon key
-    const client = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      {
-        auth: {
-          persistSession: false,
-        },
-      },
-    );
-
-    // Cache the client
-    globalScope._supabaseClient = client;
-    return client;
+  
+  try {
+    // Use the admin client for privileged operations
+    return createAdminClient(cookies());
+  } catch (error) {
+    console.error('Failed to create Supabase admin client:', error);
+    return null;
   }
-
-  return null;
 }
 
 /**
