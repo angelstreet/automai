@@ -97,11 +97,59 @@ Main tables:
    DATABASE_URL=postgresql://postgres:password@db.your-project-id.supabase.co:5432/postgres
    ```
 
-## Using Supabase in Your Code
+## Supabase Client Architecture
 
-We've implemented a consistent API for database access:
+AutomAI uses a standardized Supabase client architecture that properly handles different environments (local development, GitHub Codespaces, Vercel deployments) and contexts (server vs browser).
 
-### Prisma-like Interface
+### Client Architecture Overview
+
+1. **Server Components**
+   ```typescript
+   import { cookies } from 'next/headers';
+   import { createClient } from '@/utils/supabase/server';
+   
+   // In a Server Component or API route
+   const supabase = createClient(cookies());
+   const { data } = await supabase.from('users').select('*');
+   ```
+
+2. **Client Components**
+   ```typescript
+   'use client';
+   import { createClient } from '@/utils/supabase/client';
+   
+   // In a Client Component
+   const supabase = createClient();
+   const { data } = await supabase.from('users').select('*');
+   ```
+
+3. **Middleware**
+   ```typescript
+   // In middleware.ts
+   import { createClient } from '@/utils/supabase/middleware';
+   
+   export async function middleware(request: NextRequest) {
+     const { supabase, response } = createClient(request);
+     // Use supabase client and return the response
+     return response;
+   }
+   ```
+
+4. **Admin Operations** (service role)
+   ```typescript
+   import { cookies } from 'next/headers';
+   import { createAdminClient } from '@/utils/supabase/server';
+   
+   // For privileged operations that need service role
+   const supabaseAdmin = createAdminClient(cookies());
+   await supabaseAdmin.from('users').update({ role: 'admin' });
+   ```
+
+Each client is optimized for its specific context and implements proper singleton patterns to prevent multiple client instances.
+
+### Prisma-like Database Interface
+
+We also provide a higher-level abstraction similar to Prisma:
 
 ```typescript
 // Main import for database operations
@@ -134,12 +182,16 @@ await db.user.delete({
 });
 ```
 
-### Direct Supabase Access
+### Direct Supabase Queries
 
-For more advanced queries:
+For more advanced queries, use the appropriate client for your context:
 
 ```typescript
-import supabase from '@/lib/supabase';
+// In a Server Component
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
+
+const supabase = createClient(cookies());
 
 // Select with joins
 const { data, error } = await supabase
