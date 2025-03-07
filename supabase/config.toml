@@ -8,7 +8,6 @@ project_id = "automai3"
 enabled = true
 # Port to use for the API URL.
 port = 54321
-# CORS configuration is now handled differently
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
 schemas = ["public", "graphql_public"]
@@ -264,7 +263,7 @@ enabled = true
 client_id = "Ov23liaMpBie6bYgkSwX"
 # Use environment variable for secret in production
 secret = "724246a35c225201be32a43256bebb026a4e7827"
-# Correct redirect URI that points to Supabase auth endpoint
+# Original Supabase redirect URI - our enhanced client code will handle both auth flows
 redirect_uri = "https://vigilant-spork-q667vwj94c9x55-54321.app.github.dev/auth/v1/callback"
 
 [auth.external.google]

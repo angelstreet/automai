@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { createClient, createSessionFromUrl } from '@/utils/supabase/client';
+import { createClient, createSessionFromUrl, exchangeCodeForSession, corsHeaders } from '@/utils/supabase/client';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 
 interface AuthSession {
@@ -67,19 +67,103 @@ export default function AuthRedirectPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    console.log('[Auth-Redirect] Page loaded:', window.location.href.split('?')[0]);
+    console.log('[Auth-Redirect] Page loaded:', window.location.href);
+    console.log('[Auth-Redirect] Hash fragment:', window.location.hash);
+    console.log('[Auth-Redirect] Search params:', window.location.search);
     
     const handleAuth = async () => {
       try {
         const supabase = createClient();
         
-        // Extract hash params and create session if they exist
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const access_token = hashParams.get('access_token');
+        console.log('[Auth-Redirect] Attempting to handle auth redirect');
+        console.log('[Auth-Redirect] URL:', window.location.href);
+        console.log('[Auth-Redirect] Hash fragment:', window.location.hash);
+        console.log('[Auth-Redirect] Search params:', window.location.search);
         
-        if (access_token) {
-          // Use the helper to set session from URL hash
-          await createSessionFromUrl(window.location.href);
+        const isCodespace = window.location.hostname.includes('.app.github.dev');
+        console.log('[Auth-Redirect] Is Codespace environment:', isCodespace);
+        
+        // For GitHub Codespaces, we prioritize hash fragment (implicit flow)
+        if (isCodespace && window.location.hash) {
+          console.log('[Auth-Redirect] Using hash fragment for Codespace auth (implicit flow)');
+          
+          try {
+            // Parse the hash fragment manually
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const accessToken = hashParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token');
+            
+            if (accessToken) {
+              console.log('[Auth-Redirect] Found access_token in hash fragment');
+              
+              // Set the session directly using tokens from the hash
+              const { data, error } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken || '',
+              });
+              
+              if (error) {
+                console.error('[Auth-Redirect] Error setting session from hash tokens:', error);
+              } else {
+                console.log('[Auth-Redirect] Successfully set session from hash tokens');
+              }
+            } else {
+              console.warn('[Auth-Redirect] No access_token found in hash fragment');
+            }
+          } catch (hashError) {
+            console.error('[Auth-Redirect] Error processing hash fragment:', hashError);
+          }
+        } else if (window.location.search.includes('code=')) {
+          // PKCE flow - code in URL query params
+          console.log('[Auth-Redirect] Detected code parameter (PKCE flow)');
+          const urlParams = new URLSearchParams(window.location.search);
+          const code = urlParams.get('code');
+          
+          if (code) {
+            console.log('[Auth-Redirect] Exchanging code for session');
+            
+            try {
+              // First try with built-in method
+              const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+              
+              if (error) {
+                console.error('[Auth-Redirect] Built-in code exchange failed:', error);
+                // Fall back to proxy endpoint
+                try {
+                  const { data: proxyData, error: proxyError } = await exchangeCodeForSession(code);
+                  
+                  if (proxyError) {
+                    console.error('[Auth-Redirect] Proxy code exchange also failed:', proxyError);
+                  } else {
+                    console.log('[Auth-Redirect] Proxy code exchange succeeded');
+                  }
+                } catch (proxyError) {
+                  console.error('[Auth-Redirect] Error in proxy code exchange:', proxyError);
+                }
+              } else {
+                console.log('[Auth-Redirect] Built-in code exchange succeeded');
+              }
+            } catch (codeError) {
+              console.error('[Auth-Redirect] Code exchange error:', codeError);
+            }
+          }
+        } else {
+          // If no specific auth parameters found, try the generic method
+          console.log('[Auth-Redirect] No specific auth parameters found, trying createSessionFromUrl');
+          
+          try {
+            const { data, error } = await createSessionFromUrl(window.location.href);
+            
+            if (error) {
+              console.error('[Auth-Redirect] Error creating session from URL:', error);
+            } else if (data.session) {
+              console.log('[Auth-Redirect] Session created successfully from URL');
+            } else {
+              console.warn('[Auth-Redirect] No session created from URL');
+            }
+          } catch (err) {
+            console.error('[Auth-Redirect] Exception in createSessionFromUrl:', err);
+          }
         }
 
         // Now check session
@@ -89,7 +173,7 @@ export default function AuthRedirectPage() {
           hasSession: !!session,
           sessionUser: session?.user?.email,
           error: error?.message,
-          hasAccessToken: !!access_token
+          hasAccessToken: session?.access_token ? true : false
         });
 
         if (session?.user) {

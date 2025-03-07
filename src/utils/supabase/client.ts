@@ -1,10 +1,22 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { isCodespace, isDevelopment } from '@/lib/env';
 
+// CORS headers for Supabase auth requests
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Credentials': 'true',
+  'Origin': 'https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev',
+};
+
 // Environment config
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+
+// For debugging
+console.log('[Supabase] Environment SUPABASE_URL:', SUPABASE_URL);
 
 // Singleton instance for browser
 declare global {
@@ -71,29 +83,49 @@ export const createClient = () => {
   const isCodespaceEnv = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
   const cookieDomain = getCookieDomain();
   
-  if (isDevelopment()) {
-    console.log(`[Supabase] Creating browser client with URL: ${url}`);
-    console.log(`[Supabase] Using cookie domain: ${cookieDomain || '(none)'}`);
+  // Always log in development and also in production for debugging this issue
+  console.log(`[Supabase] Creating browser client with URL: ${url}`);
+  console.log(`[Supabase] Using cookie domain: ${cookieDomain || '(none)'}`);
+  console.log(`[Supabase] Auth flow type: ${isCodespaceEnv ? 'implicit' : 'pkce'}`);
+  console.log(`[Supabase] isDevelopment: ${isDevelopment()}`);
+  console.log(`[Supabase] Hostname: ${window.location.hostname}`);
+  
+  // Configure auth options based on environment
+  const authOptions = {
+    autoRefreshToken: true,
+    persistSession: true,
+    // Never detect session in URL to prevent automatic PKCE flow
+    detectSessionInUrl: false,
+    // Always enable debug for troubleshooting
+    debug: true,
+    // Always use implicit flow for Codespaces to avoid CORS issues
+    flowType: 'implicit', // Force implicit flow for all environments in Codespaces
+    // Configure cookies
+    cookieOptions: {
+      name: 'sb-auth',
+      lifetime: 60 * 60 * 24 * 7, // 7 days
+      domain: cookieDomain,
+      path: '/',
+      sameSite: 'lax',
+    }
+  };
+  
+  // Log the configuration
+  console.log(`[Supabase] Auth flow type FORCED to: ${authOptions.flowType}`);
+  console.log('[Supabase] detectSessionInUrl DISABLED to prevent PKCE flow');
+  
+  // For non-Codespaces environments, revert to PKCE flow
+  if (!isCodespaceEnv) {
+    authOptions.flowType = 'pkce';
+    authOptions.detectSessionInUrl = true;
+    console.log('[Supabase] Non-Codespace environment, reverting to PKCE flow');
+  } else {
+    console.log('[Supabase] Codespace environment detected, using implicit flow');
   }
   
   // Create and store client instance
-  // For browser clients, don't specify cookie methods - use browser's document.cookie API
   const client = createBrowserClient(url, SUPABASE_ANON_KEY, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      flowType: isCodespaceEnv ? 'implicit' : 'pkce',
-      debug: isDevelopment(),
-      // Add cookie options but not the methods
-      cookieOptions: {
-        name: 'sb-auth',
-        lifetime: 60 * 60 * 24 * 7, // 7 days
-        domain: cookieDomain,
-        path: '/',
-        sameSite: 'lax',
-      }
-    },
+    auth: authOptions,
     global: {
       headers: {
         'X-Client-Info': 'supabase-js-browser/2.38.4',
@@ -108,6 +140,101 @@ export const createClient = () => {
 };
 
 // Helper to create a session from URL hash parameters (for auth redirects)
+export const exchangeCodeForSession = async (code: string) => {
+  if (typeof window === 'undefined') {
+    throw new Error('exchangeCodeForSession should only be called in browser environment');
+  }
+
+  try {
+    const client = createClient();
+    
+    // Try the built-in method first
+    try {
+      // Add debug log for tracking
+      console.log(`Attempting to exchange code for session with client URL: ${client.auth.url}`);
+      return await client.auth.exchangeCodeForSession(code);
+    } catch (error) {
+      console.error('Error using built-in exchangeCodeForSession:', error);
+      
+      // For GitHub Codespaces, we need a solution that avoids CORS
+      // Use a route on our Next.js server to proxy the request
+      try {
+        console.log('Attempting to use Next.js API proxy for token exchange');
+        
+        // Call our own API endpoint which will handle the token exchange server-side
+        const proxyUrl = '/api/auth/token-exchange';
+        const response = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            code, 
+            supabaseUrl: client.auth.url,
+            apiKey: client.supabaseKey
+          })
+        });
+        
+        if (!response.ok) {
+          console.error('Proxy token exchange failed:', await response.text());
+          throw new Error(`Proxy token exchange failed: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Proxy token exchange response:', { hasAccessToken: !!data.access_token });
+        
+        // Format the response to match Supabase's expected format
+        if (data.access_token) {
+          // Set the session using the tokens we received
+          return await client.auth.setSession({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token || '',
+          });
+        }
+        
+        throw new Error('No access token in proxy response');
+      } catch (proxyError) {
+        console.error('Proxy token exchange failed:', proxyError);
+        
+        // Last resort - try direct fetch with all possible CORS workarounds
+        console.log('Attempting final direct token exchange');
+        const endpoint = `${client.auth.url}/token?grant_type=pkce&code=${code}`;
+        
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          mode: 'cors',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': client.supabaseKey,
+            'X-Client-Info': 'supabase-js-browser/2.38.4',
+            ...corsHeaders
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Direct token exchange failed: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Direct token exchange response:', { hasAccessToken: !!data.access_token });
+        
+        if (data.access_token) {
+          return await client.auth.setSession({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token || '',
+          });
+        }
+        
+        throw new Error('No access token in direct response');
+      }
+    }
+  } catch (error) {
+    console.error('Error exchanging code for session:', error);
+    return { data: { session: null }, error };
+  }
+};
+
 export const createSessionFromUrl = async (url: string) => {
   if (typeof window === 'undefined') {
     throw new Error('createSessionFromUrl should only be called in browser environment');
@@ -123,15 +250,22 @@ export const createSessionFromUrl = async (url: string) => {
     const accessToken = hashParams.get('access_token');
     const refreshToken = hashParams.get('refresh_token');
     
-    if (!accessToken) {
-      return { data: { session: null }, error: new Error('No access token found in URL') };
+    // Check for code in URL parameters (for PKCE flow)
+    const urlParams = new URLSearchParams(url.includes('?') ? url.split('?')[1] : '');
+    const code = urlParams.get('code');
+    
+    if (accessToken) {
+      // Set the session using hash fragment tokens
+      return await client.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || '',
+      });
+    } else if (code) {
+      // Exchange the code for a session
+      return await exchangeCodeForSession(code);
     }
     
-    // Set the session
-    return await client.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken || '',
-    });
+    return { data: { session: null }, error: new Error('No access token or code found in URL') };
   } catch (error) {
     console.error('Error creating session from URL:', error);
     return { data: { session: null }, error };
