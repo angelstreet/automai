@@ -300,5 +300,42 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
 }
 
 // Default export for server-side use
-const supabase = createServerSupabase();
+export const supabase = createClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storage: {
+      getItem: (key) => {
+        try {
+          return localStorage.getItem(key);
+        } catch (error) {
+          console.error('[Auth] Error getting item from storage:', error);
+          return null;
+        }
+      },
+      setItem: (key, value) => {
+        try {
+          localStorage.setItem(key, value);
+        } catch (error) {
+          console.error('[Auth] Error setting item in storage:', error);
+        }
+      },
+      removeItem: (key) => {
+        try {
+          localStorage.removeItem(key);
+        } catch (error) {
+          console.error('[Auth] Error removing item from storage:', error);
+        }
+      }
+    }
+  },
+  global: {
+    headers: {
+      'Access-Control-Allow-Origin': typeof window !== 'undefined' ? window.location.origin : '*',
+      'Access-Control-Allow-Credentials': 'true'
+    }
+  }
+})
+
 export default supabase;
