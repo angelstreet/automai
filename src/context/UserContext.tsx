@@ -92,98 +92,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
   
-  // Get client when needed by calling getSupabaseClient()
-  
-  // Effect to load session on mount
-  useEffect(() => {
-    // Skip if we already have a session status
-    if (sessionStatus !== 'loading') {
-      return;
-    }
-
-    const loadSession = async () => {
-      try {
-        console.log('UserContext - Loading session');
-        isFetchingUser.current = true;
-
-        // No cached session, fetch from Supabase
-        const { data, error } = await safeAuthCall(
-          'getSession',
-          (client) => client.auth.getSession(),
-          { data: { session: null }, error: null }
-        );
-
-        if (error) {
-          console.error('UserContext - Error loading session:', error);
-          setError('Failed to load user session');
-          setUser(null);
-          setSessionStatus('unauthenticated');
-          return;
-        }
-
-        if (data?.session) {
-          // Session exists - authenticated
-          console.log('UserContext - Valid session found:', {
-            email: data.session.user.email,
-            userId: data.session.user.id
-          });
-          
-          setSession(data.session);
-          setSessionStatus('authenticated');
-
-          // Create or update user object from session
-          const userFromSession = {
-            ...data.session.user,
-            plan: (data.session.user.user_metadata?.plan || 'TRIAL') as PlanType,
-            tenant_id: data.session.user.user_metadata?.tenant_id || data.session.user.user_metadata?.tenantId || 'trial',
-            tenant_name: data.session.user.user_metadata?.tenant_name || data.session.user.user_metadata?.tenantName || 'trial'
-          };
-          
-          // Fetch user profile from API to get the most up-to-date data
-          try {
-            const profileResponse = await fetch('/api/auth/profile');
-            if (profileResponse.ok) {
-              const profileData = await profileResponse.json();
-              // Update user with profile data
-              const updatedUser: User = {
-                ...userFromSession,
-                tenant_id: profileData.tenant_id || userFromSession.tenant_id,
-                tenant_name: profileData.tenant_name || userFromSession.tenant_name,
-                plan: (profileData.plan || userFromSession.plan) as PlanType
-              };
-              setUser(updatedUser);
-            } else {
-              setUser(userFromSession as User);
-            }
-          } catch (profileError) {
-            console.error('UserContext - Error fetching profile:', profileError);
-            setUser(userFromSession as User);
-          }
-          
-          setError(null);
-        } else {
-          // No session - not authenticated
-          console.log('UserContext - No session found');
-          setUser(null);
-          setSessionStatus('unauthenticated');
-        }
-      } catch (e) {
-        console.error('UserContext - Unexpected error loading session:', e);
-        setError('Unexpected error loading user session');
-        setUser(null);
-        setSessionStatus('unauthenticated');
-      } finally {
-        isFetchingUser.current = false;
-      }
-    };
-    
-    loadSession();
-  }, [sessionStatus]);
-
-  // Track the last time we checked the session to avoid frequent checks
-  const lastFocusCheckRef = useRef(Date.now());
-
-  // Helper function to safely call Supabase methods
+  // Safe auth call wrapper
   const safeAuthCall = async <T,>(
     methodName: string,
     methodFn: (client: SupabaseAuthClient) => Promise<T>,
@@ -197,6 +106,66 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return fallback;
     }
   };
+
+  // Define loadSession function
+  const loadSession = useCallback(async () => {
+    try {
+      console.log('UserContext - Loading session');
+      isFetchingUser.current = true;
+
+      // No cached session, fetch from Supabase
+      const { data, error } = await safeAuthCall(
+        'getSession',
+        (client) => client.auth.getSession(),
+        { data: { session: null }, error: null }
+      );
+
+      if (error) {
+        console.error('UserContext - Error loading session:', error);
+        setError('Failed to load user session');
+        setUser(null);
+        setSessionStatus('unauthenticated');
+        return;
+      }
+
+      if (data?.session) {
+        // Session exists - authenticated
+        console.log('UserContext - Valid session found:', {
+          email: data.session.user.email,
+          userId: data.session.user.id
+        });
+        
+        setSession(data.session);
+        setSessionStatus('authenticated');
+
+        // Create or update user object from session
+        const userFromSession = {
+          ...data.session.user,
+          plan: (data.session.user.user_metadata?.plan || 'TRIAL') as PlanType,
+          tenant_id: data.session.user.user_metadata?.tenant_id || data.session.user.user_metadata?.tenantId || 'trial',
+          tenant_name: data.session.user.user_metadata?.tenant_name || data.session.user.user_metadata?.tenantName || 'trial'
+        };
+        
+        setUser(userFromSession as User);
+        setError(null);
+      } else {
+        // No session - not authenticated
+        console.log('UserContext - No session found');
+        setUser(null);
+        setSessionStatus('unauthenticated');
+      }
+    } catch (e) {
+      console.error('UserContext - Unexpected error loading session:', e);
+      setError('Unexpected error loading user session');
+      setUser(null);
+      setSessionStatus('unauthenticated');
+    } finally {
+      isFetchingUser.current = false;
+    }
+  }, [safeAuthCall]);
+
+  // Track the last time we checked the session to avoid frequent checks
+  const lastFocusCheckRef = useRef(Date.now());
 
   // We don't need a separate fetch user function anymore
   // All user data comes directly from the session
@@ -278,44 +247,33 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const updateProfile = useCallback(
-    async (data: Partial<User>) => {
-      if (!session?.access_token) {
-        throw new Error('No active session');
+  const updateProfile = async (data: Partial<User>): Promise<void> => {
+    try {
+      const { data: sessionData } = await getSession();
+      if (!sessionData?.session) {
+        throw new Error('No session found');
       }
 
-      try {
-        console.log('Updating user profile...');
-        const response = await fetch('/api/auth/profile', {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify(data),
-          credentials: 'include',
-        });
+      const response = await fetch('/api/auth/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to update profile: ${response.status}`);
-        }
-
-        // Refresh user data after successful update
-        if (session.user) {
-          // Use loadSession instead of fetchUser
-          await loadSession();
-          console.log('Profile updated successfully');
-        } else {
-          console.error('Cannot refresh user: session.user is undefined');
-        }
-      } catch (err) {
-        console.error('Error updating profile:', err);
-        throw err;
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
       }
-    },
-    [session],
-  );
+
+      // Refresh user data
+      await refreshUser();
+      console.log('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  };
 
   // Reference to timeout for fetch debouncing
   const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -398,75 +356,23 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, isLoading, error]);
 
+  // Effect to handle auth state changes
   useEffect(() => {
     if (sessionStatus === 'loading') {
-      console.log('UserContext - Session is loading');
-      setIsLoading(true);
-      return;
-    }
-
-    if (sessionStatus === 'authenticated' && session?.user) {
-      console.log('UserContext - Session authenticated:', {
-        status: 'authenticated',
-        userId: session.user.id,
-        email: session.user.email,
-        accessToken: session.access_token
-          ? `${session.access_token.substring(0, 15)}...`
-          : 'missing',
-        expires: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'unknown',
-        path: typeof window !== 'undefined' ? window.location.pathname : 'server-side',
-        currentUser: user ? `${user.id.substring(0, 8)}...` : 'not loaded yet',
-      });
-
-      // If we already have a user and no error, we might not need to fetch again
-      if (user && !error) {
-        console.log('UserContext - Already have user data, skipping fetch');
-        setIsLoading(false);
-
-        // Check if the user data is reasonably fresh (less than 5 minutes old)
-        const now = Date.now();
-        if (lastFetchedAt.current && now - lastFetchedAt.current < SESSION_CACHE_EXPIRY) {
-          console.log('UserContext - User data is fresh, no need to refetch');
-          return;
-        }
-      }
-
-      // Check if we're already fetching
-      if (isFetchingUser.current) {
-        console.log('UserContext - Already fetching user data, skipping duplicate fetch');
-        return;
-      }
-
-      // Debounce the initial fetch
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-
-      console.log('UserContext - Scheduling session refresh with delay');
+      // Debounce the fetch call to prevent multiple rapid calls
       fetchTimeoutRef.current = setTimeout(() => {
-        console.log('UserContext - Executing session refresh');
-        loadSession();
+        refreshUser();
         fetchTimeoutRef.current = null;
-      }, 3000); // Increased delay to 3 seconds to reduce frequency of calls
-    } else if (sessionStatus === 'unauthenticated') {
-      console.log('UserContext - Session unauthenticated:', {
-        status: 'unauthenticated',
-        path: typeof window !== 'undefined' ? window.location.pathname : 'server-side',
-      });
-      setUser(null);
-      setSessionStatus('unauthenticated');
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(SESSION_CACHE_KEY);
-      }
+      }, 300);
     }
+  }, [sessionStatus, refreshUser]);
 
-    // Cleanup timeouts on unmount
-    return () => {
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-    };
-  }, [sessionStatus, session, user, error]);
+  // Effect to load session on mount
+  useEffect(() => {
+    if (sessionStatus === 'loading') {
+      loadSession();
+    }
+  }, [sessionStatus, loadSession]);
 
   const checkFeature = (feature: string): boolean => {
     if (!user) return false;

@@ -8,7 +8,7 @@ import * as React from 'react';
 import { SidebarTrigger } from '@/components/sidebar';
 import { UserProfile } from '@/components/profile/UserProfile';
 import { Button } from '@/components/shadcn/button';
-import { RoleSwitcher } from '@/components/RoleSwitcher';
+import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
@@ -55,7 +55,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
 
             {/* Right section */}
             <div className="flex items-center gap-2 px-4 h-full">
-              <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+              <RoleSwitcher />
               <Search className="w-[240px]" />
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <ThemeToggle />
