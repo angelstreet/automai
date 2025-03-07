@@ -61,8 +61,81 @@ To complete the migration:
 
 3. **Migrations**: You'll need to manage schema migrations manually or through Supabase's interface
 
+# Migration to Cloud Supabase
+
+## Overview
+
+We've migrated from using local Supabase instances to exclusively using cloud-hosted Supabase for all environments (development, testing, and production). This change resolves CORS issues and provides a more consistent development experience.
+
+## Current Configuration
+
+- Cloud Supabase URL: `https://wexkgcszrwxqsthahfyq.supabase.co`
+- Each environment uses the same Supabase project but with different authentication settings
+- Authentication flows use the "implicit" flow type for all environments to avoid CORS issues
+
+## Environment Setup
+
+### Local Development
+
+```bash
+# Add these to your .env.local file
+NEXT_PUBLIC_SUPABASE_URL=https://wexkgcszrwxqsthahfyq.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### GitHub Codespaces
+
+The same configuration is used, but with environment variables set in Codespace secrets:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://wexkgcszrwxqsthahfyq.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### Production (Vercel)
+
+Set the environment variables in your Vercel project settings:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://wexkgcszrwxqsthahfyq.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-production-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+```
+
+## Authentication Flow
+
+- All environments now use the "implicit" authentication flow to avoid CORS issues
+- The token exchange API route (`/api/auth/token-exchange`) serves as a fallback for environments where direct token exchange fails
+- Session management is handled by cookies with appropriate domains set automatically based on the environment
+
+## Client Implementation
+
+Three client implementations are provided:
+
+1. **Browser Client** (`/src/utils/supabase/client.ts`) - For client components
+2. **Server Client** (`/src/utils/supabase/server.ts`) - For server components and API routes
+3. **Middleware Client** (`/src/utils/supabase/middleware.ts`) - For Next.js middleware
+
+## CORS Configuration
+
+CORS is handled at multiple levels:
+
+1. **Browser Client**: Adds appropriate headers to requests
+2. **Server Client**: Configures allowed origins
+3. **API Routes**: Each route includes CORS headers
+4. **Middleware**: Adds CORS headers to responses
+
+## Troubleshooting
+
+If you encounter authentication issues:
+
+1. Check the browser console for CORS errors
+2. Verify environment variables are set correctly
+3. Ensure you're using the correct client for your context (browser vs server)
+4. For GitHub Codespaces, verify the URL is added to the allowed redirect URLs in Supabase
+
 ## Resources
 
 - [Supabase Documentation](https://supabase.io/docs)
-- [Prisma to Supabase Migration Guide](https://supabase.com/docs/guides/database/connecting-to-postgres)
+- [Supabase Auth with Next.js](https://supabase.com/docs/guides/auth/auth-helpers/nextjs)
 - [Supabase Data API Reference](https://supabase.com/docs/reference/javascript/select)

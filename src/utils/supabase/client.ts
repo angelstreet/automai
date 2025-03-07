@@ -10,10 +10,13 @@ export const corsHeaders = {
   'Origin': 'https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev',
 };
 
-// Environment config
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+// Environment config - only use cloud config
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://wexkgcszrwxqsthahfyq.supabase.co';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+// Fail-fast if no key is provided
+if (!SUPABASE_ANON_KEY) {
+  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined!');
+}
 
 // For debugging
 console.log('[Supabase] Environment SUPABASE_URL:', SUPABASE_URL);
