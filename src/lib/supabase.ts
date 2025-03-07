@@ -164,25 +164,51 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
       storage: {
         getItem: (key) => {
           try {
-            return localStorage.getItem(key);
+            // First try to get from localStorage
+            const localValue = localStorage.getItem(key);
+            
+            // If not in localStorage, try to get from cookies
+            if (!localValue) {
+              const cookies = document.cookie.split(';').map(c => c.trim());
+              const cookie = cookies.find(c => c.startsWith(`${key}=`));
+              if (cookie) {
+                const value = cookie.split('=')[1];
+                // Store in localStorage for future use
+                localStorage.setItem(key, value);
+                return value;
+              }
+            }
+            
+            return localValue;
           } catch (error) {
-            console.error('Error getting item from localStorage:', error);
+            console.error('Error getting item from storage:', error);
             return null;
           }
         },
         setItem: (key, value) => {
           try {
+            // Store in localStorage
             localStorage.setItem(key, value);
-            // For important auth keys, also set as cookies for redundancy
+            
+            // Also set as cookies for redundancy with proper attributes
             if (key.includes('access') || key.includes('refresh')) {
               try {
-                document.cookie = `${key}=${value}; path=/; max-age=604800; sameSite=lax`;
+                const maxAge = key.includes('refresh') ? 7776000 : 3600; // 90 days for refresh, 1 hour for access
+                document.cookie = `${key}=${value}; path=/; max-age=${maxAge}; SameSite=Lax`;
+                console.log(`Set ${key} cookie with proper attributes`);
               } catch (e) {
                 console.error('Error setting redundant cookie:', e);
               }
             }
           } catch (error) {
-            console.error('Error setting item in localStorage:', error);
+            console.error('Error setting item in storage:', error);
+            // If localStorage fails, try to set only as cookie
+            try {
+              const maxAge = key.includes('refresh') ? 7776000 : 3600;
+              document.cookie = `${key}=${value}; path=/; max-age=${maxAge}; SameSite=Lax`;
+            } catch (e) {
+              console.error('Error setting fallback cookie:', e);
+            }
           }
         },
         removeItem: (key) => {
@@ -197,7 +223,7 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
               }
             }
           } catch (error) {
-            console.error('Error removing item from localStorage:', error);
+            console.error('Error removing item from storage:', error);
           }
         },
       },

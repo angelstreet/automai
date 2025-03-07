@@ -45,7 +45,7 @@ export default function AuthRedirectPage() {
       if (!hasSbAuthCookie) {
         console.log('No Supabase auth cookies found, manually setting session');
         try {
-          // Try to set the session again
+          // Try to set the session again with explicit persistence
           await supabase.auth.setSession({
             access_token: session.access_token,
             refresh_token: session.refresh_token || '',
@@ -61,6 +61,22 @@ export default function AuthRedirectPage() {
           
           if (!hasCookiesAfterSet) {
             console.warn('Still no Supabase auth cookies after manual setSession');
+            
+            // Manually set the Supabase cookies with correct attributes
+            try {
+              // Set access token cookie
+              document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=3600; SameSite=Lax`;
+              
+              // Set refresh token cookie if available
+              if (session.refresh_token) {
+                document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=7776000; SameSite=Lax`;
+              }
+              
+              console.log('Manually set Supabase auth cookies with correct attributes');
+            } catch (e) {
+              console.error('Error manually setting Supabase cookies:', e);
+            }
+            
             // Set a fallback cookie with the access token
             try {
               document.cookie = `sb-fallback-token=${session.access_token.substring(0, 10)}...; path=/; max-age=86400; SameSite=Lax`;
@@ -193,8 +209,26 @@ export default function AuthRedirectPage() {
                 access_token: authSession.access_token,
                 refresh_token: authSession.refresh_token || '',
               });
+              
+              // Verify cookies are set
+              const finalCookies = document.cookie.split(';').map(c => c.trim());
+              const hasFinalCookies = finalCookies.some(c => 
+                c.startsWith('sb-access-token=') || 
+                c.startsWith('sb-refresh-token=') ||
+                c.startsWith('user-session=')
+              );
+              
+              if (!hasFinalCookies) {
+                console.warn('CRITICAL: Still no auth cookies after final attempt');
+                // Force set cookies with direct DOM API
+                document.cookie = `user-session=${authSession.user.id}; path=/; max-age=86400; SameSite=Lax`;
+                document.cookie = `sb-fallback-token=${authSession.access_token.substring(0, 10)}...; path=/; max-age=86400; SameSite=Lax`;
+              }
             } catch (e) {
               console.error('Final session set attempt failed:', e);
+              // Force set cookies as last resort
+              document.cookie = `user-session=${authSession.user.id}; path=/; max-age=86400; SameSite=Lax`;
+              document.cookie = `sb-fallback-token=${authSession.access_token.substring(0, 10)}...; path=/; max-age=86400; SameSite=Lax`;
             }
           }
           
@@ -205,8 +239,9 @@ export default function AuthRedirectPage() {
           
           // Small delay to ensure UI updates and cookies are set before redirect
           setTimeout(() => {
+            // Force reload to ensure cookies are properly recognized
             window.location.href = dashboardUrl;
-          }, 1000);
+          }, 500);
           
         } else {
           console.log('No session found, redirecting to login');

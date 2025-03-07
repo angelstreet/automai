@@ -256,7 +256,37 @@ export default async function middleware(request: NextRequest) {
       // Use consistent Supabase URL
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       
-      // Create a simple client for auth
+      // Check for auth-related cookies directly first for faster processing
+      const hasDirectAuthCookie = 
+        !!request.cookies.get('sb-access-token') || 
+        !!request.cookies.get('sb-refresh-token') ||
+        !!request.cookies.get('sb-auth-token');
+      
+      // Check for user-session cookie as fallback
+      const userSessionCookie = request.cookies.get('user-session');
+      const hasUserSessionCookie = !!userSessionCookie?.value;
+      
+      // Check for fallback token cookie
+      const fallbackTokenCookie = request.cookies.get('sb-fallback-token');
+      const hasFallbackToken = !!fallbackTokenCookie?.value;
+      
+      // If we have direct auth cookies, skip the expensive Supabase client creation
+      if (hasDirectAuthCookie || hasUserSessionCookie || hasFallbackToken) {
+        console.log('Auth cookies found, skipping Supabase client creation');
+        
+        // Add detailed debug information
+        console.log('Middleware session check details:', {
+          hasDirectAuthCookie,
+          hasUserSessionCookie: hasUserSessionCookie,
+          hasFallbackToken: hasFallbackToken,
+          cookies: request.cookies.getAll().map(c => c.name).join(', ')
+        });
+        
+        // If we have any auth cookie, allow the request
+        return res;
+      }
+      
+      // Only create Supabase client if we don't have direct auth cookies
       const supabase = createServerClient(
         supabaseUrl,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -279,14 +309,6 @@ export default async function middleware(request: NextRequest) {
       // Get current session from cookies - simple single call
       const { data, error } = await supabase.auth.getSession();
       
-      // Check for user-session cookie as fallback
-      const userSessionCookie = request.cookies.get('user-session');
-      const hasUserSessionCookie = !!userSessionCookie?.value;
-      
-      // Check for fallback token cookie
-      const fallbackTokenCookie = request.cookies.get('sb-fallback-token');
-      const hasFallbackToken = !!fallbackTokenCookie?.value;
-      
       // Add detailed debug information for session handling
       console.log('Middleware session check details:', {
         hasData: !!data,
@@ -296,9 +318,7 @@ export default async function middleware(request: NextRequest) {
         hasError: !!error,
         errorMsg: error?.message,
         cookies: request.cookies.getAll().map(c => c.name).join(', '),
-        hasSbAuthToken: !!request.cookies.get('sb-access-token') || 
-                         !!request.cookies.get('sb-refresh-token') ||
-                         !!request.cookies.get('sb-auth-token'),
+        hasSbAuthToken: hasDirectAuthCookie,
         hasUserSessionCookie,
         hasFallbackToken
       });
