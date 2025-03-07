@@ -6,12 +6,12 @@ import { isFeatureEnabled, canCreateMore, getPlanFeatures } from '@/lib/features
 import { Session, User as AuthUser } from '@supabase/supabase-js';
 import { debounce } from '@/lib/utils';
 
-// Import as a function to ensure it's only called in client context
-import getSupabaseAuth from '@/lib/supabase-auth';
+// Import the client-side Supabase utilities
+import { createClient } from '@/utils/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-// Define a type for the auth client returned by getSupabaseAuth
-type SupabaseAuthClient = ReturnType<typeof getSupabaseAuth>;
+// Define auth client type
+type SupabaseAuthClient = SupabaseClient;
 
 type PlanType = keyof typeof getPlanFeatures;
 
@@ -61,41 +61,37 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const lastFetchedAt = useRef(0);
   const authInitialized = useRef(false);
   
-  // Try to get supabase client, with better error handling
-  const supabaseAuthRef = useRef<SupabaseAuthClient>(null);
+  // Initialize supabase client
+  const supabaseAuthRef = useRef<SupabaseAuthClient | null>(null);
   
-  try {
-    if (!supabaseAuthRef.current) {
-      console.log("UserContext - Attempting to initialize Supabase client");
-      try {
-        supabaseAuthRef.current = getSupabaseAuth();
-        // Log available methods for debugging
-        console.log("UserContext - Supabase auth methods initialized");
-      } catch (initError) {
-        console.error("UserContext - Error initializing Supabase client:", initError);
-        // Try again with a delay
-        setTimeout(() => {
-          try {
-            supabaseAuthRef.current = getSupabaseAuth();
-            console.log("UserContext - Retry successful, Supabase client initialized");
-          } catch (retryError) {
-            console.error("UserContext - Retry failed:", retryError);
-          }
-        }, 1000);
-      }
+  // Initialize client on demand
+  const getSupabaseClient = useCallback(() => {
+    if (typeof window === 'undefined') {
+      console.error("UserContext - Attempted to get Supabase client in server context");
+      return null;
     }
-  } catch (e) {
-    console.error("Error initializing Supabase client:", e);
-    setError("Failed to initialize authentication client");
-  }
+    
+    try {
+      // Create client on first use
+      if (!supabaseAuthRef.current) {
+        console.log("UserContext - Initializing Supabase client");
+        supabaseAuthRef.current = createClient();
+        console.log("UserContext - Supabase client initialized successfully");
+      }
+      return supabaseAuthRef.current;
+    } catch (e) {
+      console.error("UserContext - Error initializing Supabase client:", e);
+      setError("Failed to initialize authentication client");
+      return null;
+    }
+  }, []);
   
-  // Get supabase client safely
-  const supabaseAuth = supabaseAuthRef.current;
+  // Get client when needed by calling getSupabaseClient()
   
   // Load session on initial mount - simplified
   useEffect(() => {
-    // Skip if already initialized or no supabaseAuth
-    if (!supabaseAuth || authInitialized.current) return;
+    // Skip if already initialized
+    if (authInitialized.current) return;
     
     authInitialized.current = true;
     console.log('UserContext - Initial session load');
@@ -106,11 +102,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state change listener
     let subscription: { unsubscribe: () => void } | null = null;
     
-    if (supabaseAuth && typeof supabaseAuth.onAuthStateChange === 'function') {
+    const supabase = getSupabaseClient();
+    if (supabase) {
       try {
         const {
           data: { subscription: authSubscription },
-        } = supabaseAuth.onAuthStateChange((event: string, session: Session | null) => {
+        } = supabase.auth.onAuthStateChange((event: string, session: Session | null) => {
           console.log('UserContext - Auth state change:', event, {
             hasSession: !!session,
             user: session?.user ? `${session.user.email || 'no-email'}` : 'no-user'
@@ -127,7 +124,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         loadSession();
       }
     } else {
-      // No listener available, use polling as fallback
+      // No client available, use polling as fallback
       const intervalId = setInterval(() => {
         if (lastFetchedAt.current && Date.now() - lastFetchedAt.current < 30000) {
           return; // Don't check more than once every 30 seconds
@@ -144,29 +141,25 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         subscription.unsubscribe();
       }
     };
-  }, [supabaseAuth]);
+  }, [getSupabaseClient]);
 
   // Track the last time we checked the session to avoid frequent checks
   const lastFocusCheckRef = useRef(Date.now());
 
-  // Helper function to safely call supabaseAuth methods
+  // Helper function to safely call Supabase methods
   const safeAuthCall = async <T,>(
     methodName: string,
-    method: (() => Promise<T>) | undefined,
+    methodFn: (client: SupabaseAuthClient) => Promise<T>,
     fallback: T
   ): Promise<T> => {
-    if (!supabaseAuth) {
-      console.error(`UserContext - Cannot call ${methodName}: Supabase auth client is not initialized`);
-      return fallback;
-    }
-    
-    if (typeof method !== 'function') {
-      console.error(`UserContext - Cannot call ${methodName}: Method is not a function`);
+    const client = getSupabaseClient();
+    if (!client) {
+      console.error(`UserContext - Cannot call ${methodName}: Supabase client is not initialized`);
       return fallback;
     }
     
     try {
-      return await method();
+      return await methodFn(client);
     } catch (error) {
       console.error(`UserContext - Error calling ${methodName}:`, error);
       return fallback;
@@ -177,14 +170,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Skip if already loading
     if (isFetchingUser.current) {
       console.log('UserContext - Session check already in progress, skipping');
-      return;
-    }
-  
-    // Skip if supabaseAuth is not initialized yet
-    if (!supabaseAuth) {
-      console.error('UserContext - Supabase auth client is not initialized');
-      setError('Authentication client not initialized');
-      setIsLoading(false);
       return;
     }
   
@@ -226,7 +211,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Get session from Supabase
       const { data, error } = await safeAuthCall(
         'getSession',
-        () => supabaseAuth.getSession(),
+        (client) => client.auth.getSession(),
         { data: { session: null }, error: new Error('Failed to get session') }
       );
       
@@ -300,12 +285,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // Skip if supabaseAuth is not initialized yet
-    if (!supabaseAuth) {
-      console.error('UserContext - Cannot refresh user: Supabase auth client is not initialized');
-      return;
-    }
-    
     // Implement debouncing to prevent multiple rapid refreshes
     const now = Date.now();
     if (lastFetchedAt.current && now - lastFetchedAt.current < 2000) {
@@ -320,7 +299,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Don't show loading state for quick refreshes to avoid UI flicker
       const { data, error } = await safeAuthCall(
         'getSession',
-        () => supabaseAuth.getSession(),
+        (client) => client.auth.getSession(),
         { data: { session: null }, error: new Error('Failed to get session') }
       );
       
@@ -570,7 +549,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Sign out from Supabase
     await safeAuthCall(
       'signOut',
-      supabaseAuth ? () => supabaseAuth.signOut() : undefined,
+      (client) => client.auth.signOut(),
       { error: null }
     );
 
@@ -582,94 +561,95 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // We've already updated the refreshUser function earlier
   // This is just to fix the missing reference in the code
 
-  // Authentication methods that call through to supabaseAuth
+  // Authentication methods using the new Supabase client
   const getSession = useCallback(async () => {
     return safeAuthCall(
       'getSession',
-      supabaseAuth ? () => supabaseAuth.getSession() : undefined,
+      (client) => client.auth.getSession(),
       { data: { session: null }, error: new Error('Failed to get session') }
     );
-  }, [supabaseAuth]);
+  }, [safeAuthCall]);
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {
-    if (!supabaseAuth) {
-      console.error('UserContext - Cannot sign in: Supabase auth client is not initialized');
-      return { 
-        data: null, 
-        error: new Error('Authentication client not initialized') 
-      } as any; // Type casting to avoid complex AuthError typing
-    }
-    
-    try {
-      return await supabaseAuth.signInWithPassword(email, password);
-    } catch (error) {
-      console.error('UserContext - Error signing in:', error);
-      return { 
-        data: null, 
-        error: error || new Error('Error signing in') 
-      } as any; // Type casting to avoid complex AuthError typing
-    }
-  }, [supabaseAuth]);
+    return safeAuthCall(
+      'signInWithPassword',
+      (client) => client.auth.signInWithPassword({ email, password }),
+      { data: null, error: new Error('Failed to sign in') } as any
+    );
+  }, [safeAuthCall]);
 
   const signInWithOAuth = useCallback(async (provider: 'google' | 'github') => {
-    if (!supabaseAuth) {
-      console.error('UserContext - Cannot sign in with OAuth: Supabase auth client is not initialized');
-      return { 
-        data: null, 
-        error: new Error('Authentication client not initialized') 
-      } as any; // Type casting to avoid complex AuthError typing
+    // Get current locale for redirect
+    let locale = 'en';
+    if (typeof window !== 'undefined') {
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      if (pathParts.length > 0 && ['en', 'fr'].includes(pathParts[0])) {
+        locale = pathParts[0];
+      }
     }
     
-    try {
-      return await supabaseAuth.signInWithOAuth(provider);
-    } catch (error) {
-      console.error('UserContext - Error signing in with OAuth:', error);
-      return { 
-        data: null, 
-        error: error || new Error('Error signing in with OAuth') 
-      } as any; // Type casting to avoid complex AuthError typing
-    }
-  }, [supabaseAuth]);
+    const redirectUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/auth-redirect`;
+    const isCodespace = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+    
+    return safeAuthCall(
+      'signInWithOAuth',
+      (client) => client.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: redirectUrl,
+          scopes: provider === 'github' ? 'repo,user' : 'email profile',
+          flowType: isCodespace ? 'implicit' : undefined
+        }
+      }),
+      { data: null, error: new Error('Failed to sign in with OAuth') } as any
+    );
+  }, [safeAuthCall]);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    if (!supabaseAuth) {
-      console.error('UserContext - Cannot sign up: Supabase auth client is not initialized');
-      return { 
-        data: null, 
-        error: new Error('Authentication client not initialized') 
-      } as any; // Type casting to avoid complex AuthError typing
+    // Get current locale for redirect
+    let locale = 'en';
+    if (typeof window !== 'undefined') {
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      if (pathParts.length > 0 && ['en', 'fr'].includes(pathParts[0])) {
+        locale = pathParts[0];
+      }
     }
     
-    try {
-      return await supabaseAuth.signUp(email, password);
-    } catch (error) {
-      console.error('UserContext - Error signing up:', error);
-      return { 
-        data: null, 
-        error: error || new Error('Error signing up') 
-      } as any; // Type casting to avoid complex AuthError typing
-    }
-  }, [supabaseAuth]);
+    const redirectUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/auth-redirect`;
+    
+    return safeAuthCall(
+      'signUp',
+      (client) => client.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      }),
+      { data: null, error: new Error('Failed to sign up') } as any
+    );
+  }, [safeAuthCall]);
 
   const resetPassword = useCallback(async (email: string) => {
-    if (!supabaseAuth) {
-      console.error('UserContext - Cannot reset password: Supabase auth client is not initialized');
-      return { 
-        data: null, 
-        error: new Error('Authentication client not initialized') 
-      } as any; // Type casting to avoid complex AuthError typing
+    // Get current locale for redirect
+    let locale = 'en';
+    if (typeof window !== 'undefined') {
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      if (pathParts.length > 0 && ['en', 'fr'].includes(pathParts[0])) {
+        locale = pathParts[0];
+      }
     }
     
-    try {
-      return await supabaseAuth.resetPassword(email);
-    } catch (error) {
-      console.error('UserContext - Error resetting password:', error);
-      return { 
-        data: null, 
-        error: error || new Error('Error resetting password') 
-      } as any; // Type casting to avoid complex AuthError typing
-    }
-  }, [supabaseAuth]);
+    const redirectUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/reset-password`;
+    
+    return safeAuthCall(
+      'resetPassword',
+      (client) => client.auth.resetPasswordForEmail(email, { 
+        redirectTo: redirectUrl
+      }),
+      { data: null, error: new Error('Failed to reset password') } as any
+    );
+  }, [safeAuthCall]);
 
   const value = {
     user,
