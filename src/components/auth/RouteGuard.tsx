@@ -18,6 +18,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   // Properly handle params
   const locale = (params?.locale as string) || 'en';
   const currentTenant = params?.tenant as string;
+  
+  // Extract path parts for more precise path analysis
+  const pathParts = pathname.split('/').filter(Boolean);
 
   // Add a listener for auth state changes from UserContext
   useEffect(() => {
@@ -86,16 +89,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     }
 
     const handleRouting = async () => {
-      // Simplified public route check
-      const isPublicRoute =
-        pathname.includes('/login') ||
-        pathname.includes('/signup') ||
-        pathname.includes('/auth-redirect') ||
-        pathname === `/${locale}` ||
-        pathname === `/${locale}/`;
-
       console.log('RouteGuard - Handling routing:', {
-        isPublicRoute,
         pathname,
         hasUser: !!user
       });
@@ -110,8 +104,16 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Simple redirect for authenticated users on public pages
-      if (isPublicRoute && user && !isRedirecting.current) {
+      // Only redirect if explicitly on the login or signup page, or root pages
+      const shouldRedirectFromPublic = 
+        user && 
+        !isRedirecting.current && 
+        (pathname.includes('/login') || 
+         pathname.includes('/signup') || 
+         pathname === `/${locale}` || 
+         pathname === `/${locale}/`);
+      
+      if (shouldRedirectFromPublic) {
         const tenant = 'trial'; // Default tenant
         console.log(`Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`);
         isRedirecting.current = true;
@@ -119,15 +121,14 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // For protected routes, ensure we have complete user data
-      if (user) {
+      // For protected routes with active tenant, we don't need to do any redirects
+      // Only consider tenant mismatch if we're at a root path without a tenant
+      if (user && pathParts.length <= 2) {
         const expectedTenant = user.tenantName || 'trial'; // Default to trial if no tenant
 
-        // Only redirect if we have a definite tenant mismatch
-        if (expectedTenant && currentTenant !== expectedTenant && !isRedirecting.current) {
-          console.log(
-            `Tenant mismatch, redirecting: current=${currentTenant}, expected=${expectedTenant}`,
-          );
+        // Only redirect if we don't have a tenant in the path
+        if (expectedTenant && !currentTenant && !isRedirecting.current) {
+          console.log(`No tenant in path, redirecting to default tenant: ${expectedTenant}`);
           isRedirecting.current = true;
           router.replace(`/${locale}/${expectedTenant}/dashboard`);
         }

@@ -227,41 +227,24 @@ export default async function middleware(request: NextRequest) {
   // 3. Auth check for protected routes - SIMPLIFIED
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
 
-  // Define protected paths - don't include tenant names
-  const protectedPaths = ['admin', 'repositories', 'terminals', 'settings'];
-  // Removed 'dashboard' from protected paths to stop redirect loops
+  // Simplified approach: bypass all tenant paths (/locale/tenant/*)
+  // Check if this is a tenant path (e.g., /en/trial/something)
+  const hasTenant = pathParts.length >= 3;
   
-  // Always bypass auth-redirect path and dashboard paths
-  if (request.nextUrl.pathname.includes('auth-redirect') || 
-      request.nextUrl.pathname.includes('/dashboard')) {
-    console.log('Auth redirect or dashboard path detected, bypassing auth check');
+  // For any path with a tenant structure, let client-side handle auth
+  if (hasTenant) {
+    console.log('Tenant path detected, bypassing middleware auth check:', request.nextUrl.pathname);
     return NextResponse.next();
   }
   
-  // Extract path structure (handling tenant paths like /en/trial/dashboard)
-  const hasTenant = pathParts.length >= 3;
-  const possibleDashboardPath = hasTenant && pathParts[2]?.toLowerCase() === 'dashboard';
+  // Always bypass auth-redirect path
+  if (request.nextUrl.pathname.includes('auth-redirect')) {
+    console.log('Auth redirect path detected, bypassing middleware auth check');
+    return NextResponse.next();
+  }
   
-  // Debug the path structure
-  console.log('Path structure analysis:', {
-    pathParts,
-    hasTenant,
-    possibleDashboardPath,
-    pathPartsLength: pathParts.length
-  });
-  
-  // Check if the path is protected, with special handling for tenant dashboard paths
-  const isProtectedRoute =
-    isApiRoute ||
-    protectedPaths.some((protectedPath) => {
-      // First check if this is a tenant path like /en/trial/dashboard
-      if (hasTenant && pathParts[2]?.toLowerCase() === protectedPath.toLowerCase()) {
-        return true;
-      }
-      
-      // Otherwise check each path segment normally
-      return pathParts.some((part) => part.toLowerCase() === protectedPath.toLowerCase());
-    });
+  // For all other routes, we'll use a simplified check
+  const isProtectedRoute = isApiRoute;
 
   console.log('Route protection check:', {
     path: request.nextUrl.pathname,
