@@ -211,24 +211,22 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Auth check for protected routes
+  // 3. Auth check for protected routes - SIMPLIFIED
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
 
-  // More precise protected route detection
+  // Define protected paths clearly
   const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings', 'trial'];
 
-  console.log('pathParts:', pathParts);
-  // Be more explicit about auth-redirect path to ensure it's not mistakenly protected
+  // Explicitly bypass auth-redirect path
   if (request.nextUrl.pathname.includes('/auth-redirect')) {
     console.log('Auth redirect path detected, bypassing auth check');
     return NextResponse.next();
   }
 
-  // Check if any part of the path matches a protected path
+  // Check if the path is protected
   const isProtectedRoute =
     isApiRoute ||
     protectedPaths.some((protectedPath) => {
-      // For each path part, check if it matches a protected path (case insensitive)
       return pathParts.some((part) => part.toLowerCase() === protectedPath.toLowerCase());
     });
 
@@ -245,393 +243,74 @@ export default async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Check for RSC requests and bypass auth check if needed
+    // Allow RSC requests through
     if (request.nextUrl.search.includes('_rsc=')) {
-      console.log(
-        'Middleware - RSC request detected in protected route, allowing:',
-        request.nextUrl.pathname + request.nextUrl.search,
-      );
+      console.log('RSC request detected, allowing:', request.nextUrl.pathname + request.nextUrl.search);
       return NextResponse.next();
     }
 
     try {
-      // Create Supabase client for auth
+      // Create response and Supabase client for auth check
       const res = NextResponse.next();
-
-      // Determine if we need to use the Codespace URL
-      let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const isCodespace =
-        process.env.CODESPACE &&
-        process.env.CODESPACE_NAME &&
-        process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
-
-      if (isCodespace) {
-        // Construct the Supabase URL to match what's in the browser
-        const codespaceHost = process.env.CODESPACE_NAME;
-        const codespaceDomain = process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
-
-        // Make sure we don't include any app port in the Supabase URL
-        // Extract just the codespace project name without any port numbers
-        let codespaceBase = codespaceHost || '';
-        const portMatch = codespaceBase.match(/(.*?)(-\d+)$/);
-        if (portMatch && portMatch[1]) {
-          codespaceBase = portMatch[1]; // Just the base name without port
-          console.log(
-            `Middleware: Detected Codespace base name: ${codespaceBase} (removed port from ${codespaceHost})`,
-          );
-        }
-
-        // Always use -54321 suffix for Supabase
-        supabaseUrl = `https://${codespaceBase}-54321.${codespaceDomain}`;
-        console.log('Middleware using Codespace Supabase URL:', supabaseUrl);
-      }
-
-      // First, try to extract token from Authorization header if present
-      const authHeader = request.headers.get('Authorization');
-      let session = null;
-
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        console.log('Middleware: Authorization header found, using token');
-        const token = authHeader.substring(7);
-
-        try {
-          // Create a one-time client to verify the token
-          const verifyClient = createServerClient(
-            supabaseUrl,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-              cookies: {
-                get: () => null,
-                set: () => {},
-                remove: () => {},
-              },
+      
+      // Use consistent Supabase URL
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      
+      // Create a simple client for auth
+      const supabase = createServerClient(
+        supabaseUrl,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            get: (name) => {
+              const cookie = request.cookies.get(name);
+              return cookie?.value;
             },
-          );
-
-          // Verify the token
-          const { data, error } = await verifyClient.auth.getUser(token);
-
-          if (data?.user && !error) {
-            console.log('Middleware: Valid token in Authorization header');
-            // Create a session object
-            session = {
-              user: data.user,
-              expires_at: Math.floor(Date.now() / 1000) + 3600, // Approximate 1 hour validity
-              access_token: token,
-            };
-          } else {
-            console.log('Middleware: Invalid token in Authorization header:', error?.message);
-          }
-        } catch (error) {
-          console.error('Middleware: Error verifying token from header:', error);
-        }
-      }
-
-      // Check for manual token cookie if no session yet
-      if (!session) {
-        const manualTokenCookie = request.cookies.get('sb-manual-token');
-        if (manualTokenCookie?.value) {
-          console.log('Middleware: Found manual token cookie, using it');
-          try {
-            // Create a one-time client to verify the token
-            const verifyClient = createServerClient(
-              supabaseUrl,
-              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              {
-                cookies: {
-                  get: () => null,
-                  set: () => {},
-                  remove: () => {},
-                },
-              },
-            );
-
-            // Verify the token from manual cookie
-            const { data, error } = await verifyClient.auth.getUser(manualTokenCookie.value);
-
-            if (data?.user && !error) {
-              console.log('Middleware: Valid manual token cookie');
-              // Create a session object
-              session = {
-                user: data.user,
-                expires_at: Math.floor(Date.now() / 1000) + 3600, // Approximate 1 hour validity
-                access_token: manualTokenCookie.value,
-              };
-            } else {
-              console.log('Middleware: Invalid manual token cookie:', error?.message);
-            }
-          } catch (error) {
-            console.error('Middleware: Error verifying manual token cookie:', error);
-          }
-        }
-      }
-
-      // Check for user-session cookie as a last resort
-      if (!session) {
-        const userSessionCookie = request.cookies.get('user-session');
-        if (userSessionCookie?.value) {
-          console.log('Middleware: Found user-session cookie, attempting to use it');
-
-          try {
-            // We can't fully validate this cookie since it only contains user ID
-            // But we can check if the user exists in the database
-
-            // Create a client for database queries
-            const supabase = createServerClient(
-              supabaseUrl,
-              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              {
-                cookies: {
-                  get: (name) => {
-                    const cookie = request.cookies.get(name);
-                    return cookie?.value;
-                  },
-                  set: () => {},
-                  remove: () => {},
-                },
-              },
-            );
-
-            // Check if the user ID exists in the database
-            const { data: user, error } = await supabase
-              .from('users')
-              .select('id, email')
-              .eq('id', userSessionCookie.value)
-              .single();
-
-            if (user && !error) {
-              console.log('Middleware: Valid user-session cookie, user exists in database');
-              // Create a minimal session object
-              // This is enough to pass middleware but will need to be refreshed
-              session = {
-                user: {
-                  id: user.id,
-                  email: user.email,
-                  app_metadata: {},
-                  user_metadata: {},
-                  aud: 'authenticated',
-                  created_at: '',
-                },
-                expires_at: Math.floor(Date.now() / 1000) + 3600, // 1 hour temporary validity
-                access_token: 'temporary-from-user-session-cookie',
-              };
-
-              // Add a header to indicate this is a fallback session
-              // This can be used by the client to know it should refresh the session
-              res.headers.set('X-Auth-Session-Fallback', 'true');
-            } else {
-              console.log(
-                'Middleware: Invalid user-session cookie or user not in database:',
-                error?.message,
-              );
-            }
-          } catch (error) {
-            console.error('Middleware: Error verifying user-session cookie:', error);
-          }
-        }
-      }
-
-      // If no valid session from header or manual cookie, try cookies
-      if (!session) {
-        console.log(
-          'Middleware: No valid token in header or manual cookie, checking Supabase cookies',
-        );
-
-        // Create a client for cookie-based auth
-        const supabase = createServerClient(
-          supabaseUrl,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          {
-            cookies: {
-              get: (name) => {
-                const cookie = request.cookies.get(name);
-                return cookie?.value;
-              },
-              set: (name, value, options) => {
-                res.cookies.set({ name, value, ...options });
-              },
-              remove: (name, options) => {
-                res.cookies.set({ name, value: '', ...options });
-              },
+            set: (name, value, options) => {
+              res.cookies.set({ name, value, ...options });
+            },
+            remove: (name, options) => {
+              res.cookies.set({ name, value: '', ...options });
             },
           },
-        );
+        },
+      );
 
-        // Get current session from cookies
-        const { data } = await supabase.auth.getSession();
-        session = data.session;
-      }
-
-      console.log('Auth session check:', {
-        path: request.nextUrl.pathname,
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        hasValidEmail: !!session?.user?.email,
-        sessionExpiry: session?.expires_at
-          ? new Date(session.expires_at * 1000).toISOString()
-          : null,
-        now: new Date().toISOString(),
-      });
-
-      // Enhanced validation with more detailed debugging
-      // Always log token details for protected routes
-      console.log('Middleware - Token validation details:', {
-        path: request.nextUrl.pathname,
-        hasSession: !!session,
-        hasUser: !!session?.user,
-        userEmail: session?.user?.email ? `${session.user.email.substring(0, 5)}...` : null,
-        expiryTimestamp: session?.expires_at,
-        expiryFormatted: session?.expires_at
-          ? new Date(session.expires_at * 1000).toISOString()
-          : 'n/a',
-        currentTime: new Date().toISOString(),
-        isExpired: session?.expires_at ? session.expires_at * 1000 <= Date.now() : false,
-        tokenLength: session?.access_token ? session.access_token.length : 0,
-        cookieCount: request.cookies.getAll().length,
-      });
-
-      // Validate that session exists and has required user data
-      const isValidToken =
-        !!session &&
-        !!session.user &&
-        !!session.user.email &&
-        (!session.expires_at || session.expires_at * 1000 > Date.now());
-
-      // Enhanced debug logging
-      if (!isValidToken) {
-        console.log('Middleware - Token validation failed:', {
-          hasSession: !!session,
-          hasUser: !!session?.user,
-          hasEmail: !!session?.user?.email,
-          isExpired: session?.expires_at ? session.expires_at * 1000 <= Date.now() : false,
-          expiryTime: session?.expires_at
-            ? new Date(session.expires_at * 1000).toISOString()
-            : 'n/a',
-          currentTime: new Date().toISOString(),
-          route: request.nextUrl.pathname,
-        });
-      }
-
-      // Only check token validity in middleware
-      if (!isValidToken) {
-        console.log('Invalid token for protected route:', request.nextUrl.pathname);
-
-        // Attempt to refresh the session before failing
-        if (session && session.user) {
-          try {
-            console.log('Attempting to refresh session for user:', session.user.id);
-
-            // Create a fresh client for refresh attempt
-            const refreshClient = createServerClient(
-              supabaseUrl,
-              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-              {
-                cookies: {
-                  get: (name) => {
-                    const cookie = request.cookies.get(name);
-                    return cookie?.value;
-                  },
-                  set: (name, value, options) => {
-                    res.cookies.set({ name, value, ...options });
-                  },
-                  remove: (name, options) => {
-                    res.cookies.set({ name, value: '', ...options });
-                  },
-                },
-              },
-            );
-
-            // Try to refresh the session
-            const { data, error } = await refreshClient.auth.refreshSession();
-
-            if (data?.session && !error) {
-              console.log('Session refreshed successfully');
-              session = data.session;
-
-              // Check if the refreshed token is valid
-              const isRefreshedTokenValid =
-                !!session &&
-                !!session.user &&
-                !!session.user.email &&
-                (!session.expires_at || session.expires_at * 1000 > Date.now());
-
-              if (isRefreshedTokenValid) {
-                console.log('Refreshed token is valid, continuing with request');
-                // Continue with the request using the refreshed token
-                return res;
-              }
-            } else {
-              console.log('Failed to refresh session:', error?.message);
-            }
-          } catch (refreshError) {
-            console.error('Error refreshing session:', refreshError);
-          }
-        }
-
+      // Get current session from cookies - simple single call
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Session error:', error.message);
+        
         if (isApiRoute) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-
-        // Normalize the pathname to lowercase before creating the redirect
-        const normalizedPathname = request.nextUrl.pathname.toLowerCase();
-        const normalizedRequest = new NextRequest(new URL(normalizedPathname, request.url), {
-          headers: request.headers,
-        });
-
-        return createLoginRedirect(
-          normalizedRequest,
-          normalizedPathname.split('/').filter(Boolean),
-        );
+        
+        return createLoginRedirect(request, pathParts);
       }
-
-      // For protected UI routes, verify user record in database
-      if (!isApiRoute && session?.user?.id) {
-        try {
-          // Create a database client for user verification
-          const dbClient = createServerClient(
-            supabaseUrl,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-              cookies: {
-                get: (name) => {
-                  const cookie = request.cookies.get(name);
-                  return cookie?.value;
-                },
-                set: (name, value, options) => {
-                  res.cookies.set({ name, value, ...options });
-                },
-                remove: (name, options) => {
-                  res.cookies.set({ name, value: '', ...options });
-                },
-              },
-            },
-          );
-
-          // Check if user exists in Supabase database
-          const { data: user, error } = await dbClient
-            .from('users')
-            .select('id')
-            .eq('id', session.user.id)
-            .single();
-
-          if (error || !user) {
-            console.log('User not found in database, redirecting to login');
-            return createLoginRedirect(request, pathParts);
-          }
-
-          console.log('User record validated successfully');
-        } catch (error) {
-          // Log error but allow request to continue
-          console.error('Error checking user record:', error);
-          console.log('Allowing request despite database check failure');
+      
+      // Check if we have a valid session
+      if (!data.session || !data.session.user || !data.session.user.email) {
+        console.log('No valid session found, redirecting to login');
+        
+        if (isApiRoute) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+        
+        return createLoginRedirect(request, pathParts);
       }
-
-      // Attach the Supabase session to the response so it can be used by the app
+      
+      console.log('Valid session found:', {
+        user: data.session.user.email,
+        expires: data.session.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown'
+      });
+      
+      // Session is valid, continue with the request
       return res;
+      
     } catch (error) {
       // Log any errors in token validation
-      console.error('Error validating token:', error);
+      console.error('Error validating session:', error);
 
       if (isApiRoute) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -129,11 +129,6 @@ export const supabaseAuth = {
     const supabase = getBrowserSupabase();
 
     try {
-      // Check if we're in a GitHub Codespace
-      const isCodespace =
-        typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-
       // Get the current locale from the URL or default to 'en'
       let locale = 'en';
       if (typeof window !== 'undefined') {
@@ -143,37 +138,22 @@ export const supabaseAuth = {
         }
       }
 
-      // For Codespace environment, ensure the redirect URL is one of the allowed URLs
-      // specified in the Supabase config
-      let redirectUrl;
-      if (isCodespace) {
-        // Use the root auth-redirect path for Codespace
-        // This is specifically included in additional_redirect_urls in config.codespace.toml
-        // We'll add both formats for maximum compatibility
-        const useRoot = true; // Set to true to use root path, false to use localized path
-
-        if (useRoot) {
-          redirectUrl = `${origin}/auth-redirect`;
-          console.log(`Using Codespace-specific root redirect URL: ${redirectUrl}`);
-        } else {
-          redirectUrl = `${origin}/${locale}/auth-redirect`;
-          console.log(`Using Codespace-specific localized redirect URL: ${redirectUrl}`);
-        }
-      } else {
-        // For non-Codespace environments, use the localized path
-        redirectUrl = `${origin}/${locale}/auth-redirect`;
-      }
-
+      // Simplified redirect URL - always use localized auth-redirect
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const redirectUrl = `${origin}/${locale}/auth-redirect`;
+      
+      // Check if we're in a GitHub Codespace to determine flow type
+      const isCodespace = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+      
       console.log(`Initiating ${provider} OAuth login with redirect to:`, redirectUrl);
 
-      // Configure OAuth sign-in
+      // Configure OAuth sign-in with simplified options
       return await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: redirectUrl,
-          // Make sure scopes are specified
           scopes: provider === 'github' ? 'repo,user' : 'email profile',
-          // For Codespaces, we're now always using implicit flow
+          // For Codespaces, use implicit flow. For normal environments, let Supabase decide
           flowType: isCodespace ? 'implicit' : undefined,
         },
       });

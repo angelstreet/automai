@@ -2,6 +2,14 @@
 
 This document provides comprehensive information about the authentication system in the AutomAI application.
 
+> **⚠️ IMPORTANT GUIDELINES - DO NOT BREAK THESE RULES ⚠️**
+> 
+> 1. Always use localized auth redirect URLs: `/${locale}/auth-redirect`
+> 2. Never add custom token validation - trust Supabase's built-in session management
+> 3. Keep auth flows simple - don't create complex conditionals for OAuth handling
+> 4. Add proper error handling with clear user messages
+> 5. Follow the established auth flow pattern: Login → Provider → auth-redirect → Dashboard
+
 ## Overview
 
 The application implements a multi-provider authentication system using Supabase Auth. It supports:
@@ -52,7 +60,7 @@ Key features include:
 
 2. **Auth Redirect Process**
 
-   - After successful authentication, user is redirected to `/auth-redirect`
+   - After successful authentication, user is redirected to `/${locale}/auth-redirect`
    - Auth-redirect page checks the session and user information
    - On success, redirects to appropriate dashboard based on tenant
    - On any failure, redirects to login with error
@@ -62,6 +70,34 @@ Key features include:
    - JWT token contains user details that can be accessed client and server-side
    - Sessions expire after 24 hours by default
    - Session verification happens via middleware for protected routes
+
+## Simplified Auth Implementation Rules
+
+To maintain a reliable and consistent authentication system:
+
+1. **Trust Supabase Session Management**
+   - Let Supabase handle cookie/localStorage persistence
+   - Use standard `getSession()` to check auth status
+   - Don't implement custom token validation or refresh logic
+
+2. **Consistent Redirect URLs**
+   - ALWAYS use `/${locale}/auth-redirect` for OAuth redirects
+   - Never use different paths for different environments
+
+3. **Clean Auth-Redirect Page**
+   - Keep the auth-redirect page simple and focused
+   - Verify session → extract user data → redirect to dashboard
+   - Handle errors gracefully with clear messages
+
+4. **Middleware Simplicity**
+   - Use a single method to check for session validity in middleware
+   - Don't implement multiple fallback mechanisms
+   - Redirect unauthenticated users to login with clear messages
+
+5. **Clear Error Handling**
+   - Display specific error messages for authentication failures
+   - Log detailed errors for debugging
+   - Provide user-friendly error messages on the UI
 
 ## OAuth Provider Integration
 

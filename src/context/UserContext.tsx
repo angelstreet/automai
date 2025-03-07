@@ -92,66 +92,55 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // Get supabase client safely
   const supabaseAuth = supabaseAuthRef.current;
   
-  // Load session on initial mount
+  // Load session on initial mount - simplified
   useEffect(() => {
-    // Only proceed if supabaseAuth is initialized
+    // Skip if already initialized or no supabaseAuth
     if (!supabaseAuth || authInitialized.current) return;
     
     authInitialized.current = true;
-
     console.log('UserContext - Initial session load');
     
-    // Debugging the current auth state and supabase client
-    console.log('UserContext - Debug info:', {
-      isInBrowser: typeof window !== 'undefined',
-      hasSupabase: !!supabaseAuth,
-      hasGetSession: typeof supabaseAuth?.getSession === 'function',
-      hasAuthStateChange: typeof supabaseAuth?.onAuthStateChange === 'function',
-      pathname: typeof window !== 'undefined' ? window.location.pathname : 'server-side',
-      isInitialized: authInitialized.current
-    });
-    
-    // Longer delay to ensure supabaseAuth is fully ready
-    setTimeout(() => {
-      console.log('UserContext - Delayed session load starting now');
-      loadSession();
-    }, 500);
+    // Load session immediately
+    loadSession();
 
     // Set up auth state change listener
     let subscription: { unsubscribe: () => void } | null = null;
     
     if (supabaseAuth && typeof supabaseAuth.onAuthStateChange === 'function') {
       try {
-        console.log('UserContext - Setting up auth state change listener');
         const {
           data: { subscription: authSubscription },
         } = supabaseAuth.onAuthStateChange((event: string, session: Session | null) => {
           console.log('UserContext - Auth state change:', event, {
             hasSession: !!session,
-            user: session?.user ? `${session.user.email || 'no-email'}` : 'no-user',
-            timestamp: new Date().toISOString()
+            user: session?.user ? `${session.user.email || 'no-email'}` : 'no-user'
           });
 
-          // Process all auth state changes
+          // Load session on auth state changes
           loadSession();
         });
 
         subscription = authSubscription;
-        console.log('UserContext - Auth state change listener set up successfully');
       } catch (err) {
         console.error('UserContext - Error setting up auth state change listener:', err);
-        // Still try to load session even if listener fails
+        // Still try to load session if listener fails
         loadSession();
       }
     } else {
-      console.warn('UserContext - Could not set up auth state change listener, manual checks only');
-      // No listener available, still try to load session
-      loadSession();
+      // No listener available, use polling as fallback
+      const intervalId = setInterval(() => {
+        if (lastFetchedAt.current && Date.now() - lastFetchedAt.current < 30000) {
+          return; // Don't check more than once every 30 seconds
+        }
+        loadSession();
+      }, 30000);
+      
+      // Store interval ID for cleanup
+      return () => clearInterval(intervalId);
     }
 
     return () => {
       if (subscription) {
-        console.log('UserContext - Cleaning up auth state change listener');
         subscription.unsubscribe();
       }
     };
@@ -210,15 +199,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     if (!supabaseAuth) {
       console.error('UserContext - Supabase auth client is not initialized');
       setError('Authentication client not initialized');
-      // Don't set user to null here - just exit without changing state
-      setIsLoading(false); // Make sure to update loading state even if we exit early
+      setIsLoading(false);
       return;
     }
   
-    // Check if we have fresh data (less than 5 minutes old)
-    if (user && lastFetchedAt.current && Date.now() - lastFetchedAt.current < 5 * 60 * 1000) {
+    // Check if we have fresh data (less than 30 seconds old)
+    if (user && lastFetchedAt.current && Date.now() - lastFetchedAt.current < 30 * 1000) {
       console.log('UserContext - User data is fresh, skipping session check');
-      setIsLoading(false); // Ensure we're not stuck in loading state
+      setIsLoading(false);
       return;
     }
   
@@ -227,27 +215,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     isFetchingUser.current = true;
   
     try {
-      console.log('UserContext - Supabase auth methods:', {
-        getSession: typeof supabaseAuth.getSession,
-        onAuthStateChange: typeof supabaseAuth.onAuthStateChange,
-        signOut: typeof supabaseAuth.signOut
-      });
-      
-      // Enhanced debug logging before the call
-      console.log('UserContext - About to call getSession');
-      
+      // Single call to get session
       const { data, error } = await safeAuthCall(
         'getSession',
         () => supabaseAuth.getSession(),
         { data: { session: null }, error: new Error('Failed to get session') }
       );
-
-      console.log('UserContext - getSession returned:', { 
-        hasData: !!data, 
-        hasSession: !!data?.session,
-        hasError: !!error,
-        errorMessage: error?.message
-      });
       
       if (error) {
         console.error('UserContext - Session error:', error);
@@ -260,57 +233,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data?.session) {
-        console.log('Supabase session found:', {
+        // Session exists - authenticated
+        console.log('UserContext - Session found:', {
           userId: data.session.user.id,
-          email: data.session.user.email,
-          expiresAt: data.session.expires_at
-            ? new Date(data.session.expires_at * 1000).toISOString()
-            : 'unknown',
+          email: data.session.user.email
         });
-
-        console.log('UserContext - Session authenticated:', {
-          status: 'authenticated',
-          userId: data.session.user.id,
-          email: data.session.user.email,
-          accessToken: data.session.access_token
-            ? `${data.session.access_token.substring(0, 10)}...`
-            : 'none',
-          expires: data.session.expires_at
-            ? new Date(data.session.expires_at * 1000).toISOString()
-            : 'unknown',
-          path: typeof window !== 'undefined' ? window.location.pathname : 'server',
-          currentUser: user ? 'loaded' : 'not loaded yet',
-        });
-
+        
         setSession(data.session);
         setSessionStatus('authenticated');
-
-        // If we already have user data for this user, don't fetch again
-        if (user && user.id === data.session.user.id) {
-          console.log('UserContext - Already have user data, skipping fetch');
-          lastFetchedAt.current = Date.now();
-          setIsLoading(false);
-          isFetchingUser.current = false;
-          return;
-        }
-
-        // For now, create a minimal user from the session data so we have something to show
-        // This helps prevent blank screens while waiting for the full user profile
-        if (!user) {
-          console.log('UserContext - Creating minimal user from session data');
-          const minimalUser = {
-            ...data.session.user,
-            plan: 'free' as PlanType // Default to free plan until we fetch complete profile
-          };
-          setUser(minimalUser as User);
-        }
-
-        // Schedule user profile fetch with debounce
-        console.log('UserContext - Scheduling user profile fetch with delay');
-        debouncedFetchUser(data.session.user);
+        
+        // Create or update user object from session
+        const userFromSession = {
+          ...data.session.user,
+          plan: data.session.user.user_metadata?.plan || 'free' as PlanType
+        };
+        
+        // Update user state with data from session
+        setUser(userFromSession as User);
+        
+        // Mark as fetched now
+        lastFetchedAt.current = Date.now();
       } else {
-        console.log('UserContext - No session found, clearing user state');
+        // No session - unauthenticated
+        console.log('UserContext - No session found');
         setUser(null);
+        setSession(null);
         setSessionStatus('unauthenticated');
       }
     } catch (err: any) {
@@ -318,81 +265,29 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setError(err.message);
       setUser(null);
       setSessionStatus('unauthenticated');
-      setIsLoading(false);
     } finally {
-      // We'll still set loading to false, but the debouncedFetchUser might still be running
       setIsLoading(false);
       isFetchingUser.current = false;
     }
   }
 
-  // Improved debounced fetch with longer delay
-  const debouncedFetchUser = useCallback(
-    debounce((sessionUser: AuthUser) => {
-      console.log('UserContext - Executing user profile fetch now');
-      fetchUser(sessionUser);
-    }, 3000), // Increased from 1500ms to 3000ms
-    [],
-  );
-
-  async function fetchUser(sessionUser: AuthUser) {
-    // Skip if already fetching
-    if (isFetchingUser.current) {
-      console.log('UserContext - User fetch already in progress, skipping');
+  // We don't need a separate fetch user function anymore
+  // All user data comes directly from the session
+  
+  // This is a simplified version that can be used if needed
+  async function refreshUser() {
+    if (!supabaseAuth) {
+      console.error('Cannot refresh user: Supabase auth client is not initialized');
       return;
     }
-
-    isFetchingUser.current = true;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    try {
-      while (attempts < maxAttempts) {
-        attempts++;
-        console.log(`fetchUser - Starting attempt ${attempts}`);
-
-        // Check for user-session cookie as a quick way to get user ID
-        const userSessionCookie = document.cookie
-          .split('; ')
-          .find((row) => row.startsWith('user-session='));
-
-        if (userSessionCookie) {
-          const userId = userSessionCookie.split('=')[1];
-          console.log(`fetchUser - Found user-session cookie with ID: ${userId}`);
-
-          // Verify this matches the session user
-          if (userId !== sessionUser.id) {
-            console.warn('Cookie user ID does not match session user ID');
-          }
-        }
-
-        console.log('Session found, fetching user data');
-
-        // Check if we have fresh data for this user
-        if (
-          user &&
-          user.id === sessionUser.id &&
-          lastFetchedAt.current &&
-          Date.now() - lastFetchedAt.current < 5 * 60 * 1000
-        ) {
-          console.log('Using cached user data');
-          lastFetchedAt.current = Date.now(); // Refresh timestamp
-          return;
-        }
-
-        // Fetch user profile data
-        // ... existing fetch user code ...
-
-        // Update last fetched timestamp
-        lastFetchedAt.current = Date.now();
-        return;
-      }
-    } catch (err: any) {
-      console.error('Error fetching user:', err);
-      setError(err.message);
-    } finally {
-      isFetchingUser.current = false;
+    
+    if (!session?.user) {
+      console.error('Cannot refresh user: No active session');
+      return;
     }
+    
+    // Just reload the session
+    loadSession();
   }
 
   const updateProfile = useCallback(
@@ -630,14 +525,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setSessionStatus('unauthenticated');
   };
 
-  // Create a wrapper for fetchUser that uses the current session
-  const refreshUser = useCallback(async () => {
-    if (session?.user) {
-      await fetchUser(session.user);
-    } else {
-      console.error('Cannot refresh user: No active session user');
-    }
-  }, [session, fetchUser]);
+  // We've already updated the refreshUser function earlier
+  // This is just to fix the missing reference in the code
 
   // Authentication methods that call through to supabaseAuth
   const getSession = useCallback(async () => {

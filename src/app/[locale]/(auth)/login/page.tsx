@@ -37,10 +37,19 @@ export default function LoginPage() {
   // Redirect if user is already logged in
   useEffect(() => {
     if (user) {
+      console.log('User already logged in, redirecting to dashboard');
       const redirectPath = callbackUrl || `/${locale}/trial/dashboard`;
       router.replace(redirectPath);
     }
   }, [user, router, locale, callbackUrl]);
+
+  // Check for error query param from failed OAuth redirects
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,15 +57,18 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
+      console.log('Attempting email/password login');
       const { data, error } = await signInWithPassword(email, password);
 
       if (error) {
+        console.error('Login error:', error.message);
         setError(error.message);
         setIsSubmitting(false);
         return;
       }
 
       if (data?.session) {
+        console.log('Login successful, redirecting');
         // Login successful, redirect to callback URL or dashboard
         const redirectPath = callbackUrl || `/${locale}/trial/dashboard`;
         router.replace(redirectPath);
@@ -65,6 +77,7 @@ export default function LoginPage() {
         setIsSubmitting(false);
       }
     } catch (err: any) {
+      console.error('Login exception:', err);
       setError(err.message || 'An error occurred during login');
       setIsSubmitting(false);
     }
@@ -75,9 +88,17 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      await signInWithOAuth(provider);
-      // OAuth flow will redirect the user
+      console.log(`Initiating ${provider} OAuth login`);
+      const { error } = await signInWithOAuth(provider);
+      
+      if (error) {
+        console.error(`${provider} OAuth error:`, error);
+        setError(error.message);
+        setIsSubmitting(false);
+      }
+      // On success, the OAuth flow will redirect to auth-redirect
     } catch (err: any) {
+      console.error(`${provider} OAuth exception:`, err);
       setError(err.message || `An unexpected error occurred with ${provider} sign in`);
       setIsSubmitting(false);
     }
