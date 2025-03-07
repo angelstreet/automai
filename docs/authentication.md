@@ -553,9 +553,104 @@ If GitHub authentication isn't working:
 - **OAuth errors**: Check redirect URIs in both Supabase dashboard and provider settings
 - **"Invalid redirect URL"**: Your OAuth redirect setting doesn't match Supabase configuration
 - **Password reset issues**: Verify SMTP settings in Supabase dashboard
+- **Redirect loops**: Check that `/${locale}/auth-redirect` is properly configured in OAuth settings
 
 ### Testing Authentication
 
 - Use the Supabase dashboard to verify user accounts
 - Check the Authentication > Users section to see registered users
 - Use the SQL editor to inspect the auth schema directly
+
+## Simplified Authentication Implementation
+
+To avoid the most common issues, follow these implementation patterns:
+
+### OAuth Login (GitHub/Google)
+
+```typescript
+// GOOD: Simple, consistent OAuth implementation
+const handleOAuthLogin = async (provider: 'google' | 'github') => {
+  try {
+    // Get current locale from URL
+    const locale = getCurrentLocale();
+    
+    // Always use consistent redirect URL
+    const redirectUrl = `/${locale}/auth-redirect`;
+    
+    // Let Supabase handle the OAuth flow
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: redirectUrl,
+        scopes: provider === 'github' ? 'repo,user' : 'email profile'
+      }
+    });
+    
+    if (error) {
+      console.error(`${provider} OAuth error:`, error);
+      // Show user-friendly error
+    }
+  } catch (err) {
+    console.error(`Error during ${provider} login:`, err);
+    // Show user-friendly error
+  }
+};
+```
+
+### Auth Redirect Page
+
+```typescript
+// GOOD: Simple auth-redirect implementation
+const handleAuth = async () => {
+  try {
+    // Let Supabase handle session extraction
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      // Handle error and redirect to login
+      return;
+    }
+    
+    if (data?.session) {
+      // Get tenant and redirect to dashboard
+      const tenantId = data.session.user.user_metadata?.tenantId || 'trial';
+      window.location.href = `/${locale}/${tenantId}/dashboard`;
+    } else {
+      // No session, redirect to login
+      window.location.href = `/${locale}/login?error=No session found`;
+    }
+  } catch (error) {
+    console.error('Auth error:', error);
+    // Redirect to login with error
+  }
+};
+```
+
+### Session Checking in Middleware
+
+```typescript
+// GOOD: Simple session check in middleware
+try {
+  // Create Supabase client
+  const supabase = createServerClient(
+    supabaseUrl,
+    supabaseAnonKey,
+    { cookies: { get, set, remove } }
+  );
+  
+  // Single call to get session
+  const { data, error } = await supabase.auth.getSession();
+  
+  if (error || !data.session) {
+    // Redirect to login
+    return createLoginRedirect(request, pathParts);
+  }
+  
+  // Continue with valid session
+  return res;
+} catch (error) {
+  console.error('Auth error:', error);
+  // Redirect to login
+  return createLoginRedirect(request, pathParts);
+}
+```
