@@ -2,26 +2,13 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { createClient, createSessionFromUrl, exchangeCodeForSession, corsHeaders } from '@/utils/supabase/client';
-import { Session, User, AuthError } from '@supabase/supabase-js';
-
-interface AuthSession {
-  user: User;
-  access_token: string;
-  refresh_token: string;
-}
+import { createClient } from '@/utils/supabase/client';
+import { Session } from '@supabase/supabase-js';
 
 // Simplified cookie setting function
 const setAuthCookies = (session: Session): boolean => {
   try {
     if (!session?.user) return false;
-    
-    // Determine domain based on hostname
-    const hostname = window.location.hostname;
-    let cookieDomain = '';
-    
-    if (hostname.includes('.app.github.dev')) cookieDomain = '.app.github.dev';
-    else if (hostname.includes('.vercel.app')) cookieDomain = '.vercel.app';
     
     // Simple cookie options
     const isProduction = process.env.NODE_ENV === 'production';
@@ -29,8 +16,7 @@ const setAuthCookies = (session: Session): boolean => {
       'path=/',
       'max-age=604800',
       'SameSite=Lax',
-      isProduction ? 'Secure' : '',
-      cookieDomain ? `domain=${cookieDomain}` : ''
+      isProduction ? 'Secure' : ''
     ].filter(Boolean).join('; ');
     
     // Set essential cookies
@@ -38,8 +24,7 @@ const setAuthCookies = (session: Session): boolean => {
     document.cookie = `sb-refresh-token=${session.refresh_token}; ${cookieOptions}`;
     document.cookie = `user-session=${session.user.id}; ${cookieOptions}`;
     
-    console.log('[Auth-Redirect] Cookies set');
-    
+    console.log('[Auth-Redirect] Cookies set successfully');
     return true;
   } catch (e) {
     console.error('[Auth-Redirect] Error setting auth cookies:', e);
@@ -58,66 +43,75 @@ export default function AuthRedirectPage() {
     if (typeof window === 'undefined') return;
     
     console.log('[Auth-Redirect] Page loaded:', window.location.href);
-    console.log('[Auth-Redirect] Hash fragment:', window.location.hash);
-    console.log('[Auth-Redirect] Search params:', window.location.search);
     
     const handleAuth = async () => {
       try {
         const supabase = createClient();
         
-        console.log('[Auth-Redirect] Attempting to handle auth redirect');
+        // Get code from URL if present
+        const code = new URLSearchParams(window.location.search).get('code');
         
-        // Detect environment
-        const isCodespace = window.location.hostname.includes('.app.github.dev');
-        console.log('[Auth-Redirect] Is Codespace environment:', isCodespace);
-        
-        // Let Supabase handle session extraction based on URL parameters
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        console.log('[Auth-Debug] Session state:', {
-          hasSession: !!session,
-          sessionUser: session?.user?.email,
-          error: error?.message,
-          hasAccessToken: session?.access_token ? true : false
-        });
-
-        if (session?.user) {
-          // Set cookies
+        if (code) {
+          console.log('[Auth-Redirect] Found authorization code, exchanging for session');
+          
           try {
-            setAuthCookies(session);
-          } catch (cookieError) {
-            console.warn('[Auth] Cookie setup failed:', cookieError);
+            // Exchange code for session
+            const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+            
+            if (error) {
+              console.error('[Auth-Redirect] Error exchanging code:', error);
+              setStatus('error');
+              setErrorMessage(error.message);
+              setTimeout(() => router.push(`/${locale}/login`), 2000);
+              return;
+            }
+            
+            if (data?.session) {
+              console.log('[Auth-Redirect] Successfully obtained session');
+              
+              // Set cookies
+              setAuthCookies(data.session);
+              
+              // Redirect to dashboard
+              setStatus('success');
+              const tenant = data.session.user.user_metadata?.tenant_name || 'trial';
+              const dashboardUrl = `/${locale}/${tenant}/dashboard`;
+              
+              console.log('[Auth-Redirect] Redirecting to dashboard:', dashboardUrl);
+              router.push(dashboardUrl);
+              return;
+            }
+          } catch (e) {
+            console.error('[Auth-Redirect] Exception during code exchange:', e);
           }
-          
-          // Redirect to dashboard with tenant from user metadata or default
+        }
+        
+        // Fallback to checking for existing session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          console.log('[Auth-Redirect] Found existing session');
+          setAuthCookies(session);
           setStatus('success');
-          const tenant = session.user.user_metadata?.tenant_name || 'trial';
           
-          // Get current origin for dynamic redirect
-          const origin = window.location.origin;
+          const tenant = session.user.user_metadata?.tenant_name || 'trial';
           const dashboardUrl = `/${locale}/${tenant}/dashboard`;
           
           console.log('[Auth-Redirect] Redirecting to dashboard:', dashboardUrl);
           router.push(dashboardUrl);
           return;
         }
-
-        // Only reach here if no session
-        setStatus('error');
-        setErrorMessage('No valid session found');
         
-        // After delay, redirect to login
-        setTimeout(() => {
-          router.push(`/${locale}/login`);
-        }, 2000);
+        // No session found
+        console.log('[Auth-Redirect] No session found');
+        setStatus('error');
+        setErrorMessage('Authentication failed. No session found.');
+        setTimeout(() => router.push(`/${locale}/login`), 2000);
       } catch (error) {
-        console.error('[Auth] Fatal error:', error);
+        console.error('[Auth-Redirect] Fatal error:', error);
         setStatus('error');
-        
-        // After delay, redirect to login
-        setTimeout(() => {
-          router.push(`/${locale}/login`);
-        }, 2000);
+        setErrorMessage('An unexpected error occurred');
+        setTimeout(() => router.push(`/${locale}/login`), 2000);
       }
     };
 

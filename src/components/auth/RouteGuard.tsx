@@ -14,6 +14,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const isRedirecting = useRef(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const userErrorHandled = useRef(false);
+  const authStateProcessed = useRef(false);
 
   // Properly handle params
   const locale = (params?.locale as string) || 'en';
@@ -57,6 +58,9 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     if (!pathname.includes('/login')) {
       userErrorHandled.current = false;
     }
+    
+    // Reset auth state processed flag when pathname changes
+    authStateProcessed.current = false;
   }, [pathname]);
 
   useEffect(() => {
@@ -70,6 +74,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       userError,
       isRedirecting: isRedirecting.current,
       userErrorHandled: userErrorHandled.current,
+      authStateProcessed: authStateProcessed.current
     };
     console.log('RouteGuard state:', info);
     setDebugInfo(info);
@@ -87,6 +92,15 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       console.log('RouteGuard - Already redirecting, skipping...');
       return;
     }
+    
+    // Prevent processing the same auth state multiple times
+    if (authStateProcessed.current) {
+      console.log('RouteGuard - Auth state already processed, skipping...');
+      return;
+    }
+    
+    // Mark that we've processed this auth state
+    authStateProcessed.current = true;
 
     const handleRouting = async () => {
       console.log('RouteGuard - Handling routing:', {
@@ -95,13 +109,15 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       });
 
       // Handle OAuth errors
-      const searchParams = new URLSearchParams(window.location.search);
-      const error = searchParams.get('error');
-      if (error && !isRedirecting.current) {
-        console.log('Redirecting due to OAuth error');
-        isRedirecting.current = true;
-        router.replace(`/${locale}/login?error=${error}`);
-        return;
+      if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search);
+        const error = searchParams.get('error');
+        if (error && !isRedirecting.current) {
+          console.log('Redirecting due to OAuth error');
+          isRedirecting.current = true;
+          router.replace(`/${locale}/login?error=${error}`);
+          return;
+        }
       }
 
       // Only redirect if explicitly on the login or signup page, or root pages
@@ -114,7 +130,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
          pathname === `/${locale}/`);
       
       if (shouldRedirectFromPublic) {
-        const tenant = 'trial'; // Default tenant
+        const tenant = user.tenant_name || 'trial'; // Use user's tenant or default
         console.log(`Redirecting authenticated user to dashboard: /${locale}/${tenant}/dashboard`);
         isRedirecting.current = true;
         router.replace(`/${locale}/${tenant}/dashboard`);
@@ -135,8 +151,12 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       }
     };
 
-    handleRouting();
-  }, [pathname, locale, currentTenant, isUserLoading, user, userError, router]);
+    // Only run routing logic if we have a definitive auth state (not loading)
+    // and we're not already redirecting
+    if (!isUserLoading && !isRedirecting.current) {
+      handleRouting();
+    }
+  }, [pathname, locale, currentTenant, isUserLoading, user, router]);
 
   // Show loading state while checking auth
   if (isUserLoading) {

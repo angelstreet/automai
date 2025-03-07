@@ -110,12 +110,10 @@ export const createClient = () => {
   const authOptions = {
     autoRefreshToken: true,
     persistSession: true,
-    // Never detect session in URL to prevent automatic PKCE flow
-    detectSessionInUrl: false,
-    // Always enable debug for troubleshooting
+    // Always enable detecting session in URL for PKCE flow
+    detectSessionInUrl: true,
+    // Enable debug for troubleshooting
     debug: true,
-    // Always use implicit flow for Codespaces to avoid CORS issues
-    flowType: 'implicit', // Force implicit flow for all environments in Codespaces
     // Configure cookies
     cookieOptions: {
       name: 'sb-auth',
@@ -123,21 +121,17 @@ export const createClient = () => {
       domain: cookieDomain,
       path: '/',
       sameSite: 'lax',
-    }
+    },
+    // Set the site URL for redirects - use current origin
+    site_url: window.location.origin,
   };
   
   // Log the configuration
-  console.log(`[Supabase] Auth flow type FORCED to: ${authOptions.flowType}`);
-  console.log('[Supabase] detectSessionInUrl DISABLED to prevent PKCE flow');
-  
-  // For non-Codespaces environments, revert to PKCE flow
-  if (!isCodespaceEnv) {
-    authOptions.flowType = 'pkce';
-    authOptions.detectSessionInUrl = true;
-    console.log('[Supabase] Non-Codespace environment, reverting to PKCE flow');
-  } else {
-    console.log('[Supabase] Codespace environment detected, using implicit flow');
-  }
+  console.log(`[Supabase] Auth configuration:`, {
+    detectSessionInUrl: authOptions.detectSessionInUrl,
+    site_url: authOptions.site_url,
+    cookieDomain: cookieDomain
+  });
   
   // Create and store client instance
   const client = createBrowserClient(url, SUPABASE_ANON_KEY, {

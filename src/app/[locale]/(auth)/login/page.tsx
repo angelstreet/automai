@@ -23,44 +23,33 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simple timeout to prevent infinite loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
   // Get user context
   const { user, signInWithPassword, signInWithOAuth } = useUser();
 
-  // Redirect if user is already logged in
+  // Handle initial page load effects: check for logged in user and error params
   useEffect(() => {
-    if (user) {
-      console.log('User already logged in, redirecting to dashboard');
-      const redirectPath = callbackUrl || `/${locale}/trial/dashboard`;
-      
-      // First try with router
-      router.replace(redirectPath);
-      
-      // Use window.location as a fallback for more forceful redirect
-      // Add a slight delay to allow router.replace to happen first
-      const redirectTimer = setTimeout(() => {
-        console.log('Forcing redirect with window.location');
-        window.location.href = redirectPath;
-      }, 500);
-      
-      return () => clearTimeout(redirectTimer);
-    }
-  }, [user, router, locale, callbackUrl]);
+    // Set a timeout to prevent infinite loading state
+    const loadingTimer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000); // Reduced from 2000ms to 1000ms for faster UI response
 
-  // Check for error query param from failed OAuth redirects
-  useEffect(() => {
+    // Check for error query param from failed OAuth redirects
     const errorParam = searchParams.get('error');
     if (errorParam) {
       setError(decodeURIComponent(errorParam));
     }
-  }, [searchParams]);
+
+    // Redirect if user is already logged in
+    if (user) {
+      console.log('User already logged in, redirecting to dashboard');
+      const redirectPath = callbackUrl || `/${locale}/trial/dashboard`;
+      
+      // Use router.replace for navigation
+      router.replace(redirectPath);
+    }
+
+    return () => clearTimeout(loadingTimer);
+  }, [user, router, locale, callbackUrl, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

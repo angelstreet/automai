@@ -107,10 +107,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Create a ref to store previous auth state
+  const prevAuthStateRef = useRef<{
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    hasError: boolean;
+  } | null>(null);
+
+  // Track if we've dispatched the initial auth state
+  const initialAuthStateDispatched = useRef(false);
+
   // Define loadSession function
   const loadSession = useCallback(async () => {
     try {
       console.log('UserContext - Loading session');
+      
+      // Don't set loading state if we're just initializing
+      if (!initialAuthStateDispatched.current) {
+        setIsLoading(true);
+      }
+      
       isFetchingUser.current = true;
 
       // No cached session, fetch from Supabase
@@ -161,6 +177,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setSessionStatus('unauthenticated');
     } finally {
       isFetchingUser.current = false;
+      setIsLoading(false);
+      lastFetchedAt.current = Date.now();
     }
   }, [safeAuthCall]);
 
@@ -194,6 +212,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         console.error('UserContext - Error refreshing user:', error);
         // Don't clear user on refresh errors to avoid disrupting the UI
         isFetchingUser.current = false;
+        setSessionStatus('unauthenticated');
+        setIsLoading(false);
         return;
       }
       
@@ -241,9 +261,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (e) {
       console.error('UserContext - Unexpected error refreshing user:', e);
+      setSessionStatus('unauthenticated');
     } finally {
       isFetchingUser.current = false;
       lastFetchedAt.current = now;
+      setIsLoading(false);
     }
   }
 
@@ -322,57 +344,61 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [error, session, isLoading, user]);
 
+  // Effect to load session on mount - only run once
+  useEffect(() => {
+    // Only run on initial mount, not on every sessionStatus change
+    if (!authInitialized.current) {
+      authInitialized.current = true;
+      loadSession();
+    }
+  }, [loadSession]);
+
   // Expose session state to parent components via a custom event
   // This allows Server Components to potentially react to auth state
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Dispatch a custom event with the authentication state
-      // This is useful for server components to detect auth state changes
+      // Only dispatch event if the state has actually changed
       const authState = {
         isAuthenticated: !!user,
         isLoading,
         hasError: !!error,
       };
 
-      const event = new CustomEvent('authStateChange', {
-        detail: authState,
-        bubbles: true,
-      });
+      // Only dispatch if state has changed or it's the first time
+      if (!initialAuthStateDispatched.current || 
+          !prevAuthStateRef.current ||
+          prevAuthStateRef.current.isAuthenticated !== authState.isAuthenticated ||
+          prevAuthStateRef.current.isLoading !== authState.isLoading ||
+          prevAuthStateRef.current.hasError !== authState.hasError) {
+        
+        // Mark that we've dispatched the initial state
+        initialAuthStateDispatched.current = true;
+        prevAuthStateRef.current = authState;
+        
+        console.log('UserContext - Dispatching auth state change:', authState);
+        
+        const event = new CustomEvent('authStateChange', {
+          detail: authState,
+          bubbles: true,
+        });
 
-      window.dispatchEvent(event);
+        window.dispatchEvent(event);
 
-      // Also store minimal auth state in localStorage for potential SSR hydration hints
-      try {
-        localStorage.setItem(
-          'auth_state',
-          JSON.stringify({
-            isAuthenticated: !!user,
-            timestamp: Date.now(),
-          }),
-        );
-      } catch (e) {
-        console.warn('Failed to store auth state in localStorage:', e);
+        // Also store minimal auth state in localStorage for potential SSR hydration hints
+        try {
+          localStorage.setItem(
+            'auth_state',
+            JSON.stringify({
+              isAuthenticated: !!user,
+              timestamp: Date.now(),
+            }),
+          );
+        } catch (e) {
+          console.warn('Failed to store auth state in localStorage:', e);
+        }
       }
     }
   }, [user, isLoading, error]);
-
-  // Effect to handle auth state changes
-  useEffect(() => {
-    if (sessionStatus === 'loading') {
-      // Debounce the fetch call to prevent multiple rapid calls
-      fetchTimeoutRef.current = setTimeout(() => {
-        refreshUser();
-        fetchTimeoutRef.current = null;
-      }, 300);
-    }
-  }, [sessionStatus, refreshUser]);
-
-  // Effect to load session on mount
-  useEffect(() => {
-    if (sessionStatus === 'loading') {
-      loadSession();
-    }
-  }, [sessionStatus, loadSession]);
 
   const checkFeature = (feature: string): boolean => {
     if (!user) return false;
@@ -434,16 +460,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
-    const redirectUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/${locale}/auth-redirect`;
-    const isCodespace = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+    // Always use the current window's origin for redirects
+    const origin = typeof window !== 'undefined' ? window.location.origin : 
+      (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+    
+    const redirectUrl = `${origin}/${locale}/auth-redirect`;
     
     console.log(`[UserContext] Initiating OAuth sign-in with ${provider}`);
     console.log(`[UserContext] Using redirect URL: ${redirectUrl}`);
-    console.log(`[UserContext] Environment: ${isCodespace ? 'GitHub Codespace' : 'Standard'}`);
+    console.log(`[UserContext] Current origin: ${origin}`);
     
     // Always use Supabase for OAuth flow to ensure proper handling of callbacks
-    // The redirectTo URL will be properly handled by Supabase and correctly redirected
-    // after authentication through the registered Supabase callback URL
     return safeAuthCall(
       'signInWithOAuth',
       (client) => client.auth.signInWithOAuth({
@@ -451,7 +478,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         options: {
           redirectTo: redirectUrl,
           scopes: provider === 'github' ? 'repo,user' : 'email profile',
-          // No need to specify flowType - let Supabase handle it
+          // Use PKCE flow for better security
+          flowType: 'pkce'
         }
       }),
       { data: null, error: null } as any
