@@ -1,8 +1,9 @@
-import { createServerSupabase } from './supabase';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import { GitProviderType } from '@/types/repositories';
 
 // Create a supabase client
-const supabase = createServerSupabase();
+const supabase = createClient(cookies());
 
 // Helper function to safely create Date objects
 const safeDate = (value: unknown): Date => {
