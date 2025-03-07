@@ -38,6 +38,16 @@ function createLoginRedirect(request: NextRequest, pathParts: string[]) {
     console.log('Debug bypass detected, skipping login redirect');
     return NextResponse.next();
   }
+  
+  // Special handling for tenant/dashboard paths
+  // Check if we have a structure like /locale/tenant/dashboard
+  const hasTenant = pathParts.length >= 3;
+  const hasDashboard = hasTenant && pathParts[2]?.toLowerCase() === 'dashboard';
+  
+  // For /locale/tenant/dashboard paths, preserve this structure in the callback URL
+  if (hasTenant && hasDashboard) {
+    console.log('Tenant dashboard path detected, preserving in callback URL');
+  }
 
   // Redirect to login with the current URL as the callbackUrl
   const loginUrl = new URL(`/${validLocale}/login`, request.url);
@@ -218,14 +228,22 @@ export default async function middleware(request: NextRequest) {
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
 
   // Define protected paths clearly
-  const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings', 'trial'];
-
+  const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings'];
+  // Don't treat 'trial' as a protected path since it's a tenant name
+  
   // Explicitly bypass auth-redirect path - handles both old and new path with route group
   if (request.nextUrl.pathname.includes('auth-redirect')) {
     console.log('Auth redirect path detected, bypassing auth check:', request.nextUrl.pathname);
     return NextResponse.next();
   }
-
+  
+  // Extract tenant from path (for routes like /en/trial/dashboard)
+  const hasTenant = pathParts.length >= 3;
+  const tenant = hasTenant ? pathParts[1] : null;
+  
+  // Check if the path contains a dashboard route with a tenant
+  const isDashboardWithTenant = hasTenant && pathParts[2]?.toLowerCase() === 'dashboard';
+  
   // Check if the path is protected
   const isProtectedRoute =
     isApiRoute ||
@@ -237,6 +255,9 @@ export default async function middleware(request: NextRequest) {
     path: request.nextUrl.pathname,
     isProtectedRoute,
     pathParts,
+    hasTenant,
+    tenant,
+    isDashboardWithTenant
   });
 
   if (isProtectedRoute) {
@@ -257,19 +278,45 @@ export default async function middleware(request: NextRequest) {
       const res = NextResponse.next();
       
       // Simple auth check without creating a Supabase client
-      const hasAuthCookie = 
-        !!request.cookies.get('sb-access-token') || 
-        !!request.cookies.get('sb-refresh-token') ||
-        !!request.cookies.get('sb-auth-token');
+      const sbAccessToken = request.cookies.get('sb-access-token');
+      const sbRefreshToken = request.cookies.get('sb-refresh-token');
+      const sbAuthToken = request.cookies.get('sb-auth-token');
+      const hasAuthCookie = !!sbAccessToken || !!sbRefreshToken || !!sbAuthToken;
       
       // Check for user-session cookie as fallback
       const userSessionCookie = request.cookies.get('user-session');
       const hasUserSessionCookie = !!userSessionCookie?.value;
       
+      // Log the auth state for debugging
+      console.log('Auth cookie check:', {
+        hasAuthCookie,
+        hasUserSessionCookie,
+        sbAccessToken: sbAccessToken ? 'present' : 'missing',
+        sbRefreshToken: sbRefreshToken ? 'present' : 'missing',
+        sbAuthToken: sbAuthToken ? 'present' : 'missing',
+        userSession: userSessionCookie?.value ? 'present' : 'missing',
+        path: request.nextUrl.pathname
+      });
+      
       // If we have auth cookies, skip Supabase client creation
       if (hasAuthCookie || hasUserSessionCookie) {
         console.log('Auth cookies found, allowing request without Supabase client creation');
         return res;
+      }
+      
+      // Special handling for tenant dashboard paths
+      if (isDashboardWithTenant) {
+        console.log('Tenant dashboard path detected, checking additional auth indicators');
+        
+        // Check for any auth cookies or signs of authentication
+        const hasAnyAuthIndicator = 
+          !!request.cookies.get('user-session')?.value ||
+          !!request.cookies.get('auth-provider')?.value;
+        
+        if (hasAnyAuthIndicator) {
+          console.log('Auth indicators found for tenant dashboard path, allowing access');
+          return res;
+        }
       }
       
       // If no auth cookies, redirect to login for protected routes

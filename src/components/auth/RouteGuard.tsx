@@ -91,6 +91,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
         pathname.includes('/login') ||
         pathname.includes('/signup') ||
         pathname.includes('/(auth)/auth-redirect') ||
+        pathname.includes('/auth-redirect') ||
         pathname.includes('/error') ||
         pathname === `/${locale}` ||
         pathname === `/${locale}/`;
@@ -122,7 +123,7 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
       // For public routes, only redirect if user is authenticated and trying to access auth pages
       if (isPublicRoute) {
         // Only redirect from login/signup to dashboard if we have a valid user
-        if (user && (pathname.includes('/login') || pathname.includes('/signup') || pathname === `/${locale}` || pathname === `/${locale}/`)) {
+        if (user && (pathname.includes('/login') || pathname.includes('/signup') || pathname === `/${locale}` || pathname === `/${locale}/` || pathname.includes('/auth-redirect'))) {
           // The tenant comes from the user object, with a fallback to 'trial'
           const tenant = user.tenantName || 'trial';
 

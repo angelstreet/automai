@@ -45,6 +45,10 @@ const setAuthCookies = (session: Session): boolean => {
     // Set cookies with appropriate domain
     document.cookie = `user-session=${session.user.id}; ${cookieOptions}`;
     
+    // Set the specific cookie that middleware is checking for
+    document.cookie = `sb-access-token=${session.access_token}; ${cookieOptions}`;
+    document.cookie = `sb-refresh-token=${session.refresh_token}; ${cookieOptions}`;
+    
     const provider = session.user.app_metadata?.provider || 'unknown';
     document.cookie = `auth-provider=${provider}; ${cookieOptions}`;
     
@@ -191,7 +195,9 @@ export default function AuthRedirectPage() {
           
           // Proceed with session regardless of cookies
           setStatus('success');
-          router.push(`/${locale}/dashboard`);
+          // Default to 'trial' tenant if no tenant information available
+          const tenant = session.user.user_metadata?.tenant || 'trial';
+          router.push(`/${locale}/${tenant}/dashboard`);
           return;
         }
 
