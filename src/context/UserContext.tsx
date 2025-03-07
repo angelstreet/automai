@@ -592,34 +592,66 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [supabaseAuth]);
 
   const signInWithPassword = useCallback(async (email: string, password: string) => {
-    return safeAuthCall(
+    return await safeAuthCall(
       'signInWithPassword',
       supabaseAuth ? () => supabaseAuth.signInWithPassword(email, password) : undefined,
-      { data: null, error: new Error('Authentication client not initialized') }
+      { 
+        data: null, 
+        error: { 
+          message: 'Authentication client not initialized',
+          status: 0,
+          code: 'auth/not-initialized',
+          __isAuthError: true
+        } 
+      }
     );
   }, [supabaseAuth]);
 
   const signInWithOAuth = useCallback(async (provider: 'google' | 'github') => {
-    return safeAuthCall(
+    return await safeAuthCall(
       'signInWithOAuth',
       supabaseAuth ? () => supabaseAuth.signInWithOAuth(provider) : undefined,
-      { data: null, error: new Error('Authentication client not initialized') }
+      { 
+        data: { provider, url: null }, 
+        error: { 
+          message: 'Authentication client not initialized',
+          status: 0,
+          code: 'auth/not-initialized',
+          __isAuthError: true
+        } 
+      }
     );
   }, [supabaseAuth]);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    return safeAuthCall(
+    return await safeAuthCall(
       'signUp',
       supabaseAuth ? () => supabaseAuth.signUp(email, password) : undefined,
-      { data: null, error: new Error('Authentication client not initialized') }
+      { 
+        data: { user: null, session: null }, 
+        error: { 
+          message: 'Authentication client not initialized',
+          status: 0,
+          code: 'auth/not-initialized',
+          __isAuthError: true
+        } 
+      }
     );
   }, [supabaseAuth]);
 
   const resetPassword = useCallback(async (email: string) => {
-    return safeAuthCall(
+    return await safeAuthCall(
       'resetPassword',
       supabaseAuth ? () => supabaseAuth.resetPassword(email) : undefined,
-      { data: null, error: new Error('Authentication client not initialized') }
+      { 
+        data: {}, 
+        error: { 
+          message: 'Authentication client not initialized',
+          status: 0,
+          code: 'auth/not-initialized',
+          __isAuthError: true
+        } 
+      }
     );
   }, [supabaseAuth]);
 
