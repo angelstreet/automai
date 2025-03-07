@@ -1,20 +1,11 @@
-import { createBrowserSupabase } from './supabase';
-
-// Don't create a local cache here, as createBrowserSupabase already uses a global cache
-const getBrowserSupabase = () => {
-  return createBrowserSupabase();
-};
+// Client-side authentication helpers using the new Supabase client
+import { createClient, createSessionFromUrl } from '@/utils/supabase/client';
+import { isDevelopment } from './env';
 
 /**
  * Helper function to determine production environment and get the appropriate redirect URL
- * Handles all OAuth redirects consistently across environments
  */
 const getRedirectUrl = (path: string = '/auth-redirect'): string => {
-  // Log current URL if in browser for debugging
-  if (typeof window !== 'undefined') {
-    console.log('Current window location:', window.location.href);
-  }
-
   // Get the current locale from the URL or default to 'en'
   let locale = 'en';
   if (typeof window !== 'undefined') {
@@ -26,49 +17,19 @@ const getRedirectUrl = (path: string = '/auth-redirect'): string => {
 
   // Modify path to include locale if it doesn't start with a locale
   if (!path.startsWith('/en/') && !path.startsWith('/fr/')) {
-    // For auth-redirect, always use the localized version
     if (path === '/auth-redirect') {
-      console.log(`Using localized auth-redirect: /${locale}/auth-redirect`);
       path = `/${locale}/auth-redirect`;
     } else {
       path = `/${locale}${path}`;
     }
   }
 
-  console.log('Final redirect URL path:', path);
-
-  // Detect if we're in a GitHub Codespace from client-side
-  const isClientCodespace =
-    typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
-
-  // First, check if SUPABASE_AUTH_CALLBACK_URL is explicitly set in any environment
-  if (process.env.SUPABASE_AUTH_CALLBACK_URL) {
-    console.log(
-      'Using configured SUPABASE_AUTH_CALLBACK_URL:',
-      process.env.SUPABASE_AUTH_CALLBACK_URL,
-    );
-    return process.env.SUPABASE_AUTH_CALLBACK_URL;
-  }
-
-  // For Codespace environment, we need to handle auth differently
-  // We're redirecting directly to /auth-redirect with implicit flow
-  if (
-    isClientCodespace ||
-    (process.env.CODESPACE &&
-      process.env.CODESPACE_NAME &&
-      process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN)
-  ) {
-    let codespaceUrl;
-    if (isClientCodespace) {
-      codespaceUrl = window.location.origin;
-    } else {
-      codespaceUrl = `https://${process.env.CODESPACE_NAME}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
-    }
-
-    // Use auth-redirect page instead of the API callback for Codespaces
-    // Make sure we use the correct format for the redirect URL
-    console.log('Using Codespace URL for redirect:', `${codespaceUrl}${path}`);
-    return `${codespaceUrl}${path}`;
+  // Detect environment type
+  const isCodespace = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+  
+  // For Codespace environment, use current origin
+  if (isCodespace) {
+    return `${window.location.origin}${path}`;
   }
 
   // In production, use the site URL
@@ -76,20 +37,9 @@ const getRedirectUrl = (path: string = '/auth-redirect'): string => {
     return `${process.env.NEXT_PUBLIC_SITE_URL}${path}`;
   }
 
-  // For development on server side
-  if (typeof window === 'undefined') {
-    return `http://localhost:3000${path}`;
-  }
-
-  // For development on client side, use the current origin
-  const baseUrl = window.location.origin;
-  return `${baseUrl}${path}`;
+  // For development, use the current origin
+  return `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}${path}`;
 };
-
-// Log the redirect URL on client-side initialization
-if (typeof window !== 'undefined') {
-  console.log('OAuth redirect URL configured as:', getRedirectUrl());
-}
 
 // Convenience functions for Supabase Auth
 export const supabaseAuth = {
@@ -97,39 +47,35 @@ export const supabaseAuth = {
    * Sign in with email and password
    */
   signInWithPassword: async (email: string, password: string) => {
-    const supabase = getBrowserSupabase();
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const supabase = createClient();
+    return await supabase.auth.signInWithPassword({
       email,
       password,
     });
-
-    return { data, error };
   },
 
   /**
    * Sign up a new user
    */
   signUp: async (email: string, password: string) => {
-    const supabase = getBrowserSupabase();
-    const { data, error } = await supabase.auth.signUp({
+    const supabase = createClient();
+    return await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: getRedirectUrl(),
       },
     });
-
-    return { data, error };
   },
 
   /**
    * Sign in with OAuth provider
    */
   signInWithOAuth: async (provider: 'google' | 'github') => {
-    const supabase = getBrowserSupabase();
+    const supabase = createClient();
 
     try {
-      // Get the current locale from the URL or default to 'en'
+      // Get the current locale from the URL
       let locale = 'en';
       if (typeof window !== 'undefined') {
         const pathParts = window.location.pathname.split('/').filter(Boolean);
@@ -138,47 +84,31 @@ export const supabaseAuth = {
         }
       }
 
-      // Redirect URL - use auth-redirect in base locale path for maximum compatibility
-      // This needs to match the URLs allowed in the Supabase dashboard settings
-      const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const redirectUrl = `${origin}/${locale}/auth-redirect`;
+      // Generate redirect URL with locale
+      const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
       
-      // Log the exact redirect URL we're using
-      console.log(`OAuth redirect URL: ${redirectUrl}`);
-      
-      // Detect environment (development, codespace, or production)
+      // Detect environment
       const isCodespace = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
-      const isDevelopment = typeof window !== 'undefined' && 
-        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       
-      console.log(`Initiating ${provider} OAuth login with redirect to:`, redirectUrl);
-      console.log(`Environment: ${isCodespace ? 'Codespace' : isDevelopment ? 'Development' : 'Production'}`);
+      if (isDevelopment()) {
+        console.log(`Initiating ${provider} OAuth login with redirect to:`, redirectUrl);
+      }
 
-      // Configure GitHub-specific options based on environment
+      // Configure provider-specific options
       const providerOptions = provider === 'github' ? {
-        // For GitHub, we need specific options based on environment
-        // Each environment has its own GitHub OAuth app
         queryParams: {
-          // Add a hint to identify which environment for debugging
-          environment: isCodespace ? 'codespace' : isDevelopment ? 'development' : 'production',
-          debug: 'true' // Enable debug mode for troubleshooting
+          environment: isCodespace ? 'codespace' : isDevelopment() ? 'development' : 'production',
         },
-        // GitHub-specific scopes
         scopes: 'repo,user',
-        // Always use implicit flow for Codespaces
         flowType: isCodespace ? 'implicit' : undefined,
       } : {
-        // For Google, the options are simpler
         queryParams: {
-          // Add debugging parameters
-          debug: 'true',
-          environment: isCodespace ? 'codespace' : isDevelopment ? 'development' : 'production'
+          environment: isCodespace ? 'codespace' : isDevelopment() ? 'development' : 'production'
         },
         scopes: 'email profile',
         flowType: isCodespace ? 'implicit' : undefined,
       };
 
-      // Configure OAuth sign-in with environment-specific options
       return await supabase.auth.signInWithOAuth({
         provider,
         options: {
@@ -196,153 +126,69 @@ export const supabaseAuth = {
    * Sign out the current user
    */
   signOut: async () => {
-    const supabase = getBrowserSupabase();
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    const supabase = createClient();
+    return await supabase.auth.signOut();
   },
 
   /**
    * Reset password with a recovery email
    */
   resetPassword: async (email: string) => {
-    const supabase = getBrowserSupabase();
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    const supabase = createClient();
+    return await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: getRedirectUrl('?type=recovery'),
     });
-
-    return { data, error };
   },
 
   /**
-   * Get the current session with enhanced logging and debugging
+   * Get the current session
    */
   getSession: async () => {
-    const supabase = getBrowserSupabase();
-
-    try {
-      // Log session request for debugging
-      console.log('getSession - Requesting session from Supabase');
-
-      // Check localStorage for debug purposes
-      if (typeof window !== 'undefined') {
-        try {
-          const localStorageKeys = Object.keys(localStorage);
-          const supabaseKeys = localStorageKeys.filter(
-            (key) => key.includes('supabase') || key.includes('sb-'),
-          );
-
-          if (supabaseKeys.length > 0) {
-            console.log('getSession - Found Supabase keys in localStorage:', supabaseKeys);
-          } else {
-            console.log('getSession - No Supabase keys found in localStorage');
-          }
-
-          // Check for cookies as well
-          const cookies = document.cookie.split('; ');
-          const supabaseCookies = cookies.filter(
-            (cookie) => cookie.includes('supabase') || cookie.includes('sb-'),
-          );
-
-          if (supabaseCookies.length > 0) {
-            console.log(
-              'getSession - Found Supabase cookies:',
-              supabaseCookies.map((c) => c.split('=')[0] + '=***'),
-            );
-          } else {
-            console.log('getSession - No Supabase cookies found');
-          }
-        } catch (e) {
-          console.warn('getSession - Error checking storage:', e);
-        }
-      }
-
-      // Get session with timeout to prevent hanging
-      const { data, error } = (await Promise.race([
-        supabase.auth.getSession(),
-        new Promise<any>((_, reject) =>
-          setTimeout(() => reject(new Error('getSession timeout after 3s')), 3000),
-        ),
-      ])) as any;
-
-      // Verbose logging of session data
-      if (data?.session) {
-        console.log('getSession - Session found:', {
-          userId: data.session.user.id,
-          email: data.session.user.email,
-          expiresAt: data.session.expires_at
-            ? new Date(data.session.expires_at * 1000).toISOString()
-            : 'unknown',
-          tokenLength: data.session.access_token?.length || 0,
-          path: typeof window !== 'undefined' ? window.location.pathname : 'server-side',
-        });
-      } else {
-        console.log('getSession - No session found');
-        if (error) {
-          console.error('getSession - Error:', error.message);
-        }
-      }
-
-      return { data, error };
-    } catch (e) {
-      console.error('getSession - Exception:', e);
-      return { data: { session: null }, error: e };
-    }
+    const supabase = createClient();
+    return await supabase.auth.getSession();
   },
 
   /**
-   * Process session from URL hash fragment
+   * Process session from URL (for OAuth and magic link redirects)
    */
-  processSessionFromUrl: async () => {
-    const supabase = getBrowserSupabase();
-    // Use the getSession method to detect and process tokens in the URL
-    // This relies on the detectSessionInUrl option being enabled
-    return await supabase.auth.getSession();
+  processSessionFromUrl: async (url: string = window.location.href) => {
+    if (typeof window === 'undefined') {
+      throw new Error('processSessionFromUrl should only be called in browser environment');
+    }
+    
+    return await createSessionFromUrl(url);
   },
 
   /**
    * Get the current user
    */
   getUser: async () => {
-    const supabase = getBrowserSupabase();
-    const { data, error } = await supabase.auth.getUser();
-    return { data, error };
+    const supabase = createClient();
+    return await supabase.auth.getUser();
   },
 
   /**
    * Update user data
    */
   updateUser: async (attributes: { email?: string; password?: string; data?: any }) => {
-    const supabase = getBrowserSupabase();
-    const { data, error } = await supabase.auth.updateUser(attributes);
-    return { data, error };
+    const supabase = createClient();
+    return await supabase.auth.updateUser(attributes);
   },
 
   /**
    * Subscribe to auth state changes
    */
   onAuthStateChange: (callback: (event: string, session: any) => void) => {
-    const supabase = getBrowserSupabase();
+    const supabase = createClient();
     return supabase.auth.onAuthStateChange(callback);
   },
 };
 
 // Export a function that gets the supabaseAuth instance
-// This ensures it's only created when called in client context
-const getSupabaseAuth = () => {
-  // Only create the client in browser context
+export default function getSupabaseAuth() {
   if (typeof window === 'undefined') {
-    console.warn('getSupabaseAuth called in server context');
-    return null;
+    throw new Error('getSupabaseAuth should only be called in browser environment');
   }
   
-  // Add some debug logging
-  console.log('getSupabaseAuth - Methods available:', {
-    getSession: typeof supabaseAuth.getSession === 'function',
-    onAuthStateChange: typeof supabaseAuth.onAuthStateChange === 'function',
-    signOut: typeof supabaseAuth.signOut === 'function'
-  });
-  
   return supabaseAuth;
-};
-
-export default getSupabaseAuth;
+}
