@@ -19,12 +19,27 @@
 
 - **Environment Configuration**:
   - We use cloud Supabase exclusively for all environments
+  - A single `.env` file for all environments with the same Supabase configuration
+  - Dynamic URL detection handles redirects based on current hostname
   - Configuration is controlled via environment variables:
     - `NEXT_PUBLIC_SUPABASE_URL` - The Supabase project URL
     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - The anonymous API key
     - `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations (server-side only)
+    - `SUPABASE_AUTH_CALLBACK_URL` - The Supabase callback URL for OAuth
+
+- **Dynamic URL Detection**:
+  - The application automatically detects the current environment based on hostname
+  - Redirect URLs are constructed dynamically using `window.location.origin`
+  - No environment-specific configuration files needed
+  - Functions like `getSiteUrl()` and `getRedirectUrl()` handle this logic
+
+- **Authentication Flow**:
+  - Uses a streamlined OAuth flow with Supabase cloud
+  - Follows the pattern: Login → OAuth Provider → Supabase Callback → auth-redirect page → Dashboard
+  - Unified approach works across development, codespace, and production environments
 
 - **Documentation**:
+  - See `/docs/authentication.md` for details on the authentication system
   - See `/docs/supabase-migration.md` for details on the migration to cloud Supabase
 
 ## Build/Test/Lint Commands
