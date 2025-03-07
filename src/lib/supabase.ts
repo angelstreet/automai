@@ -150,7 +150,7 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
     });
   };
 
-  // Create a new Supabase client instance
+  // Enhanced Supabase client with better cookie handling
   const newClient = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
@@ -158,34 +158,52 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
       detectSessionInUrl: true,
       // Debug auth issues
       debug: isDevelopment(),
-      // CRITICAL: For Codespace environments, enable localStorage persistence
-      // and use 'implicit' flow
-      ...(isCodespaceEnvironment && {
-        flowType: 'implicit',
-        storage: {
-          getItem: (key) => {
-            try {
-              return localStorage.getItem(key);
-            } catch (error) {
-              console.error('Error getting item from localStorage:', error);
-              return null;
-            }
-          },
-          setItem: (key, value) => {
-            try {
-              localStorage.setItem(key, value);
-            } catch (error) {
-              console.error('Error setting item in localStorage:', error);
-            }
-          },
-          removeItem: (key) => {
-            try {
-              localStorage.removeItem(key);
-            } catch (error) {
-              console.error('Error removing item from localStorage:', error);
-            }
-          },
+      // CRITICAL: use both cookie and localStorage persistence
+      // for maximum compatibility
+      // Also provide localStorage as backup storage
+      storage: {
+        getItem: (key) => {
+          try {
+            return localStorage.getItem(key);
+          } catch (error) {
+            console.error('Error getting item from localStorage:', error);
+            return null;
+          }
         },
+        setItem: (key, value) => {
+          try {
+            localStorage.setItem(key, value);
+            // For important auth keys, also set as cookies for redundancy
+            if (key.includes('access') || key.includes('refresh')) {
+              try {
+                document.cookie = `${key}=${value}; path=/; max-age=604800; sameSite=lax`;
+              } catch (e) {
+                console.error('Error setting redundant cookie:', e);
+              }
+            }
+          } catch (error) {
+            console.error('Error setting item in localStorage:', error);
+          }
+        },
+        removeItem: (key) => {
+          try {
+            localStorage.removeItem(key);
+            // Remove from cookies too
+            if (key.includes('access') || key.includes('refresh')) {
+              try {
+                document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+              } catch (e) {
+                console.error('Error removing redundant cookie:', e);
+              }
+            }
+          } catch (error) {
+            console.error('Error removing item from localStorage:', error);
+          }
+        },
+      },
+      // For Codespace environments, use implicit flow
+      ...(isCodespaceEnvironment && {
+        flowType: 'implicit'
       }),
     },
   });

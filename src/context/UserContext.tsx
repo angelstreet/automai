@@ -315,7 +315,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
         // Refresh user data after successful update
         if (session.user) {
-          await fetchUser(session.user);
+          // Use loadSession instead of fetchUser
+          await loadSession();
           console.log('Profile updated successfully');
         } else {
           console.error('Cannot refresh user: session.user is undefined');
@@ -325,7 +326,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         throw err;
       }
     },
-    [session, fetchUser],
+    [session],
   );
 
   // Reference to timeout for fetch debouncing
@@ -342,13 +343,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       // Debounce the fetch call to prevent multiple rapid calls
       fetchTimeoutRef.current = setTimeout(() => {
-        if (session?.user) {
-          fetchUser(session.user);
-        }
+        loadSession();
         fetchTimeoutRef.current = null;
       }, 300);
     }
-  }, [session, fetchUser]);
+  }, [session]);
 
   // Add a listener to refresh the session when the app regains focus
   useEffect(() => {
@@ -377,17 +376,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       console.log('UserContext - Detected error state, scheduling recovery attempt');
 
       const retryTimeout = setTimeout(() => {
-        console.log('UserContext - Attempting recovery fetch for user data');
+        console.log('UserContext - Attempting recovery load session');
         // Reset fetch attempts counter to give it a fresh start
         fetchAttempts.current = 0;
-        if (session.user) {
-          fetchUser(session.user);
-        }
+        // Load session directly
+        loadSession();
       }, 2000); // 2 second delay before retry
 
       return () => clearTimeout(retryTimeout);
     }
-  }, [error, session, isLoading, user, fetchUser]);
+  }, [error, session, isLoading, user]);
 
   // Expose session state to parent components via a custom event
   // This allows Server Components to potentially react to auth state
@@ -467,12 +465,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(fetchTimeoutRef.current);
       }
 
-      console.log('UserContext - Scheduling user profile fetch with delay');
+      console.log('UserContext - Scheduling session refresh with delay');
       fetchTimeoutRef.current = setTimeout(() => {
-        console.log('UserContext - Executing user profile fetch now');
-        if (session?.user) {
-          fetchUser(session.user);
-        }
+        console.log('UserContext - Executing session refresh');
+        loadSession();
         fetchTimeoutRef.current = null;
       }, 3000); // Increased delay to 3 seconds to reduce frequency of calls
     } else if (sessionStatus === 'unauthenticated') {
@@ -493,7 +489,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(fetchTimeoutRef.current);
       }
     };
-  }, [sessionStatus, session, fetchUser, user, error]);
+  }, [sessionStatus, session, user, error]);
 
   const checkFeature = (feature: string): boolean => {
     if (!user) return false;

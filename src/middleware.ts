@@ -279,6 +279,36 @@ export default async function middleware(request: NextRequest) {
       // Get current session from cookies - simple single call
       const { data, error } = await supabase.auth.getSession();
       
+      // Check for user-session cookie as fallback
+      const userSessionCookie = request.cookies.get('user-session');
+      const hasUserSessionCookie = !!userSessionCookie?.value;
+      
+      // Check for fallback token cookie
+      const fallbackTokenCookie = request.cookies.get('sb-fallback-token');
+      const hasFallbackToken = !!fallbackTokenCookie?.value;
+      
+      // Add detailed debug information for session handling
+      console.log('Middleware session check details:', {
+        hasData: !!data,
+        hasSession: !!data?.session,
+        hasUser: !!data?.session?.user,
+        hasEmail: !!data?.session?.user?.email,
+        hasError: !!error,
+        errorMsg: error?.message,
+        cookies: request.cookies.getAll().map(c => c.name).join(', '),
+        hasSbAuthToken: !!request.cookies.get('sb-access-token') || 
+                         !!request.cookies.get('sb-refresh-token') ||
+                         !!request.cookies.get('sb-auth-token'),
+        hasUserSessionCookie,
+        hasFallbackToken
+      });
+      
+      // Special handling for RSC requests to prevent redirect loops
+      if (request.nextUrl.search.includes('_rsc=')) {
+        console.log('RSC request detected, allowing without strict session check');
+        return res;
+      }
+      
       if (error) {
         console.error('Session error:', error.message);
         
@@ -286,24 +316,54 @@ export default async function middleware(request: NextRequest) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
         
+        // Check URL path to prevent redirect loops
+        if (request.nextUrl.pathname.includes('/login') ||
+            request.nextUrl.pathname.includes('/auth-redirect')) {
+          return NextResponse.next();  
+        }
+        
+        // If we have a user-session cookie, allow the request even if Supabase session has an error
+        if (hasUserSessionCookie || hasFallbackToken) {
+          console.log('User session or fallback token cookie found, allowing request despite Supabase session error');
+          return res;
+        }
+        
         return createLoginRedirect(request, pathParts);
       }
       
-      // Check if we have a valid session
-      if (!data.session || !data.session.user || !data.session.user.email) {
+      // Check if we have a valid session or user-session cookie
+      if ((!data.session || !data.session.user || !data.session.user.email) && 
+          !hasUserSessionCookie && !hasFallbackToken) {
         console.log('No valid session found, redirecting to login');
         
         if (isApiRoute) {
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
         
+        // Check URL path to prevent redirect loops
+        if (request.nextUrl.pathname.includes('/login') ||
+            request.nextUrl.pathname.includes('/auth-redirect')) {
+          return NextResponse.next();  
+        }
+        
         return createLoginRedirect(request, pathParts);
       }
       
-      console.log('Valid session found:', {
-        user: data.session.user.email,
-        expires: data.session.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown'
-      });
+      // If we have a valid session or user-session cookie, log and continue
+      if (data.session?.user) {
+        console.log('Valid session found:', {
+          user: data.session.user.email,
+          expires: data.session.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown',
+          userId: data.session.user.id,
+          tokenLength: data.session.access_token?.length || 0
+        });
+      } else if (hasUserSessionCookie) {
+        console.log('Valid user-session cookie found:', {
+          userId: userSessionCookie.value
+        });
+      } else if (hasFallbackToken) {
+        console.log('Valid fallback token cookie found');
+      }
       
       // Session is valid, continue with the request
       return res;

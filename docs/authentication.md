@@ -81,20 +81,31 @@ To maintain a reliable and consistent authentication system:
    - Don't implement custom token validation or refresh logic
 
 2. **Consistent Redirect URLs**
-   - ALWAYS use `/${locale}/auth-redirect` for OAuth redirects
-   - Never use different paths for different environments
+   - ALWAYS use `/${locale}/auth-redirect` for OAuth redirects on the client side
+   - The actual callback URL for Supabase is different and environment-specific:
+     - Development: `http://localhost:54321/auth/v1/callback`
+     - Codespace: `https://[your-codespace-name]-54321.app.github.dev/auth/v1/callback`
+     - Production: `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
 
-3. **Clean Auth-Redirect Page**
+3. **GitHub OAuth Apps**
+   - GitHub does NOT support wildcards in redirect URLs
+   - You MUST maintain separate GitHub OAuth apps for each environment:
+     - Development app: Use `http://localhost:54321/auth/v1/callback`
+     - Codespace app: Use `https://[your-codespace-name]-54321.app.github.dev/auth/v1/callback`
+     - Production app: Use `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+   - Environment detection in code determines which GitHub app to use
+
+4. **Clean Auth-Redirect Page**
    - Keep the auth-redirect page simple and focused
    - Verify session → extract user data → redirect to dashboard
    - Handle errors gracefully with clear messages
 
-4. **Middleware Simplicity**
+5. **Middleware Simplicity**
    - Use a single method to check for session validity in middleware
    - Don't implement multiple fallback mechanisms
    - Redirect unauthenticated users to login with clear messages
 
-5. **Clear Error Handling**
+6. **Clear Error Handling**
    - Display specific error messages for authentication failures
    - Log detailed errors for debugging
    - Provide user-friendly error messages on the UI

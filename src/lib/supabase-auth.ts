@@ -142,19 +142,38 @@ export const supabaseAuth = {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const redirectUrl = `${origin}/${locale}/auth-redirect`;
       
-      // Check if we're in a GitHub Codespace to determine flow type
+      // Detect environment (development, codespace, or production)
       const isCodespace = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+      const isDevelopment = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       
       console.log(`Initiating ${provider} OAuth login with redirect to:`, redirectUrl);
+      console.log(`Environment: ${isCodespace ? 'Codespace' : isDevelopment ? 'Development' : 'Production'}`);
 
-      // Configure OAuth sign-in with simplified options
+      // Configure GitHub-specific options based on environment
+      const providerOptions = provider === 'github' ? {
+        // For GitHub, we need specific options based on environment
+        // Each environment has its own GitHub OAuth app
+        queryParams: {
+          // Add a hint to identify which environment for debugging
+          environment: isCodespace ? 'codespace' : isDevelopment ? 'development' : 'production'
+        },
+        // GitHub-specific scopes
+        scopes: 'repo,user',
+        // Always use implicit flow for Codespaces
+        flowType: isCodespace ? 'implicit' : undefined,
+      } : {
+        // For Google, the options are simpler
+        scopes: 'email profile',
+        flowType: isCodespace ? 'implicit' : undefined,
+      };
+
+      // Configure OAuth sign-in with environment-specific options
       return await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: redirectUrl,
-          scopes: provider === 'github' ? 'repo,user' : 'email profile',
-          // For Codespaces, use implicit flow. For normal environments, let Supabase decide
-          flowType: isCodespace ? 'implicit' : undefined,
+          ...providerOptions
         },
       });
     } catch (error) {
