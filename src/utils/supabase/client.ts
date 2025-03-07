@@ -1,13 +1,16 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { isCodespace, isDevelopment } from '@/lib/env';
 
-// CORS headers for Supabase auth requests
-export const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Credentials': 'true',
-  'Origin': 'https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev',
+// CORS headers for Supabase auth requests - dynamically set origin based on window location
+export const corsHeaders = () => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '*';
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Credentials': 'true',
+    'Origin': origin,
+  };
 };
 
 // Environment config - only use cloud config
@@ -26,15 +29,10 @@ declare global {
   var __supabaseBrowserClient: ReturnType<typeof createBrowserClient> | undefined;
 }
 
-// Helper for Codespace URL detection and formatting
+// Helper for Codespace URL detection and formatting - Always use cloud Supabase
 const getCodespaceUrl = () => {
-  if (typeof window === 'undefined' || !window.location.hostname.includes('.app.github.dev')) {
-    return SUPABASE_URL;
-  }
-  
-  const hostnameBase = window.location.hostname.split('.')[0];
-  const codespacePart = hostnameBase.match(/(.*?)(-\d+)?$/)?.[1] || hostnameBase;
-  return `https://${codespacePart}-54321.app.github.dev`;
+  // Always return cloud Supabase URL - never try to use local Supabase in Codespaces
+  return 'https://wexkgcszrwxqsthahfyq.supabase.co';
 };
 
 // Determine the correct cookie domain based on the environment
@@ -78,10 +76,8 @@ export const createClient = () => {
     return globalThis.__supabaseBrowserClient;
   }
 
-  // Determine the correct URL based on environment
-  const url = isDevelopment() && window.location.hostname.includes('.app.github.dev') 
-    ? getCodespaceUrl() 
-    : SUPABASE_URL;
+  // Always use cloud Supabase URL
+  const url = SUPABASE_URL;
 
   const isCodespaceEnv = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
   const cookieDomain = getCookieDomain();
@@ -211,7 +207,7 @@ export const exchangeCodeForSession = async (code: string) => {
             'Content-Type': 'application/json',
             'apikey': client.supabaseKey,
             'X-Client-Info': 'supabase-js-browser/2.38.4',
-            ...corsHeaders
+            ...corsHeaders()
           }
         });
         

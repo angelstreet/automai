@@ -30,19 +30,26 @@ additional_redirect_urls = [
   "https://automai-eta.vercel.app/api/auth/callback/github",
   "https://automai-eta.vercel.app/api/auth/callback/google",
   "https://automai-eta.vercel.app/*",
+  
   # Local development
   "http://localhost:3000",
   "http://localhost:3000/auth-redirect",
   "http://localhost:3000/en/auth-redirect",
   "http://localhost:3000/fr/auth-redirect",
   "http://localhost:3000/api/auth/callback",
-  # Codespace URLs - wildcard to handle any codespace subdomain
+  
+  # Codespace URLs - both wildcard and specific for current codespace
   "https://*.app.github.dev",
   "https://*.app.github.dev/auth-redirect",
   "https://*.app.github.dev/en/auth-redirect", 
   "https://*.app.github.dev/fr/auth-redirect",
   "https://*.app.github.dev/api/auth/callback",
-  # Supabase URLs
+  "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev",
+  "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/auth-redirect",
+  "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/en/auth-redirect",
+  "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/fr/auth-redirect",
+  
+  # Supabase URLs - required for the OAuth callback flow
   "https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback",
   "https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/user",
   "https://wexkgcszrwxqsthahfyq.supabase.co/*"

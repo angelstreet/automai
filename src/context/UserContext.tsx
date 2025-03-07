@@ -606,44 +606,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     console.log(`[UserContext] Initiating OAuth sign-in with ${provider}`);
     console.log(`[UserContext] Using redirect URL: ${redirectUrl}`);
     console.log(`[UserContext] Environment: ${isCodespace ? 'GitHub Codespace' : 'Standard'}`);
-    console.log(`[UserContext] Flow type: ${isCodespace ? 'implicit' : 'pkce'}`);
     
-    if (isCodespace) {
-      // For Codespaces, ALWAYS use implicit flow and directly redirect
-      try {
-        // Get the full OAuth URL directly for GitHub Codespaces
-        // This bypasses Supabase's flow handling issues in Codespaces
-        const origin = window.location.origin;
-        const codespaceNameParts = window.location.hostname.split('.');
-        const codespacePrefix = codespaceNameParts[0];
-        
-        // Create redirects that avoid CORS issues
-        let providerUrl = '';
-        
-        if (provider === 'github') {
-          // GitHub OAuth with direct implicit flow
-          const clientId = 'Ov23liaMpBie6bYgkSwX'; // From config
-          const scope = 'repo,user';
-          providerUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUrl)}&scope=${scope}&response_type=token`;
-        } else if (provider === 'google') {
-          // Google OAuth with direct implicit flow
-          const clientId = '1004866229182-p6ribbdkmmblb0k44o5h1g5hoaddi05s.apps.googleusercontent.com'; // From config
-          const scope = 'email profile';
-          providerUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUrl)}&scope=${scope}&response_type=token`;
-        }
-        
-        if (providerUrl) {
-          console.log(`[UserContext] Redirecting directly to provider URL: ${providerUrl}`);
-          window.location.href = providerUrl;
-          return { data: null, error: null };
-        }
-      } catch (err) {
-        console.error('[UserContext] Error with direct OAuth URL construction:', err);
-        // Fall back to default method if direct URL fails
-      }
-    }
-    
-    // Standard OAuth flow using Supabase
+    // Always use Supabase for OAuth flow to ensure proper handling of callbacks
+    // The redirectTo URL will be properly handled by Supabase and correctly redirected
+    // after authentication through the registered Supabase callback URL
     return safeAuthCall(
       'signInWithOAuth',
       (client) => client.auth.signInWithOAuth({
@@ -651,8 +617,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         options: {
           redirectTo: redirectUrl,
           scopes: provider === 'github' ? 'repo,user' : 'email profile',
-          // Force implicit flow in Codespaces
-          flowType: isCodespace ? 'implicit' : 'pkce'
+          // No need to specify flowType - let Supabase handle it
         }
       }),
       { data: null, error: new Error('Failed to sign in with OAuth') } as any

@@ -15,40 +15,11 @@ const port = parseInt(process.env.PORT || '3000', 10);
 
 // Track shutdown status to prevent duplicate signals
 let isShuttingDown = false;
-let hasCheckedSupabase = false;
-
-async function checkSupabaseConnection() {
-  if (hasCheckedSupabase) return true;
-
-  try {
-    console.log('Checking Supabase connection...');
-    const healthResponse = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/`, {
-      method: 'GET',
-      headers: {
-        apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      },
-    });
-
-    if (!healthResponse.ok) {
-      throw new Error(`Supabase health check failed: ${healthResponse.status}`);
-    }
-
-    hasCheckedSupabase = true;
-    console.log('✓ Supabase connection verified');
-    return true;
-  } catch (error) {
-    console.error('Failed to connect to Supabase:', error);
-    return false;
-  }
-}
 
 async function main() {
   try {
     const startTime = Date.now();
-
-    // Check Supabase connection before starting server
-    await checkSupabaseConnection();
-
+    
     // Start server without WebSocket support by default
     // WebSockets will be lazily initialized when needed
     const server = await startServer({
