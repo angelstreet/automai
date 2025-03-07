@@ -52,7 +52,8 @@ export default function RepositoriesPage() {
     setIsLoading(true);
 
     try {
-      // Fetch providers with retry enabled
+      // Step 1: Fetch providers from database
+      console.log('Fetching Git providers from database...');
       const providersResponse = await fetchWithAuth(
         '/api/git-providers',
         {},
@@ -76,12 +77,30 @@ export default function RepositoriesPage() {
         }
         
         setProviders([]);
-      } else {
-        const providersData = await providersResponse.json();
-        setProviders(providersData);
+        setRepositories([]);
+        setIsLoading(false);
+        isFetchingRef.current = false;
+        return; // Exit early if we can't fetch providers
       }
 
-      // Fetch all repositories in a single call with retry enabled
+      // Process provider data
+      const providersData = await providersResponse.json();
+      setProviders(providersData);
+      
+      // Step 2: Check if we have any providers with valid status
+      const hasValidProviders = providersData.length > 0 && 
+        providersData.some(provider => provider.status === 'connected');
+      
+      if (!hasValidProviders) {
+        console.log('No valid providers found, skipping repository fetch');
+        setRepositories([]);
+        setIsLoading(false);
+        isFetchingRef.current = false;
+        return; // Exit early if no valid providers
+      }
+      
+      // Step 3: Fetch repositories only if we have valid providers
+      console.log('Fetching repositories for providers...');
       const reposResponse = await fetchWithAuth(
         '/api/fetch-all-repositories',
         {},
@@ -107,6 +126,7 @@ export default function RepositoriesPage() {
         setRepositories([]);
       } else {
         const reposData = await reposResponse.json();
+        console.log(`Fetched ${reposData.length} repositories`);
         setRepositories(reposData);
       }
     } catch (error) {
@@ -289,7 +309,28 @@ export default function RepositoriesPage() {
   const handleRefreshAllRepositories = async () => {
     setIsRefreshingAll(true);
     try {
-      // Call API to refresh all repositories
+      // Step 1: Check if we have valid providers first
+      if (providers.length === 0) {
+        toast({
+          title: 'No Providers',
+          description: 'No Git providers found to refresh repositories.',
+          variant: 'default',
+        });
+        return;
+      }
+      
+      const hasValidProviders = providers.some(provider => provider.status === 'connected');
+      if (!hasValidProviders) {
+        toast({
+          title: 'No Connected Providers',
+          description: 'No connected Git providers found. Please connect a provider first.',
+          variant: 'default',
+        });
+        return;
+      }
+      
+      // Step 2: Call API to refresh all repositories
+      console.log('Refreshing repositories for all providers...');
       const response = await fetchWithAuth('/api/fetch-all-repositories', {
         method: 'POST',
       });
@@ -298,8 +339,7 @@ export default function RepositoriesPage() {
         throw new Error('Failed to refresh repositories');
       }
 
-      // Refresh data
-      isFetchingRef.current = false;
+      // Step 3: Fetch updated data
       await fetchData();
 
       toast({
@@ -320,40 +360,146 @@ export default function RepositoriesPage() {
 
   // Render content based on whether providers exist
   const renderContent = () => {
+    // If still loading, show loading state
     if (isLoading) {
       return (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">{t('loading')}</p>
+          </div>
         </div>
       );
     }
 
-    if (providers.length === 0) {
+    // Handle empty states
+    if (tabsValue === 'providers' && providers.length === 0) {
       return (
         <EmptyState
-          title="No Git Providers Connected"
-          description="Connect to a Git provider to import your repositories."
-          icon={<GitBranch className="h-10 w-10" />}
+          title={t('no_providers')}
+          description={t('connectGit')}
+          icon={<GitBranch className="h-6 w-6" />}
+          action={
+            <Button onClick={() => setAddProviderOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('add_provider')}
+            </Button>
+          }
         />
       );
     }
 
-    return (
-      <div className="space-y-8">
-        <Tabs
-          defaultValue="providers"
-          className="w-full"
-          value={tabsValue}
-          onValueChange={setTabsValue}
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="repositories">Repositories</TabsTrigger>
-            <TabsTrigger value="providers">Git Providers</TabsTrigger>
-          </TabsList>
+    if (tabsValue === 'repositories') {
+      // If no providers at all, show provider empty state even in repositories tab
+      if (providers.length === 0) {
+        return (
+          <EmptyState
+            title={t('no_providers')}
+            description={t('connectGit')}
+            icon={<GitBranch className="h-6 w-6" />}
+            action={
+              <Button onClick={() => setAddProviderOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('add_provider')}
+              </Button>
+            }
+          />
+        );
+      }
+      
+      // If providers exist but no repositories, show repositories empty state
+      if (repositories.length === 0) {
+        return (
+          <EmptyState
+            title={t('no_repositories')}
+            description={t('no_repositories_description')}
+            icon={<GitBranch className="h-6 w-6" />}
+            action={
+              <Button onClick={() => setTabsValue('providers')}>
+                {t('view_providers')}
+              </Button>
+            }
+          />
+        );
+      }
+      
+      // If repositories exist but none match the filter, show filtered empty state
+      const filteredRepos = filterRepositories();
+      if (filteredRepos.length === 0) {
+        return (
+          <EmptyState
+            title={t('no_repos_found')}
+            description={searchQuery || selectedProviders.length > 0 ? t('no_repos_found') : t('no_repositories_description')}
+            icon={<GitBranch className="h-6 w-6" />}
+            action={
+              <Button onClick={handleClearFilters}>
+                {t('clear_all')}
+              </Button>
+            }
+          />
+        );
+      }
+    }
 
-          {/* Rest of the tabs content */}
-        </Tabs>
-      </div>
+    // If we have data to show, render the appropriate content
+    return (
+      <Tabs value={tabsValue} onValueChange={setTabsValue} className="w-full">
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="repositories">{t('repositories')}</TabsTrigger>
+            <TabsTrigger value="providers">{t('provider_type')}</TabsTrigger>
+          </TabsList>
+          <div className="flex space-x-2">
+            {tabsValue === 'repositories' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshAllRepositories}
+                disabled={isRefreshingAll}
+              >
+                {isRefreshingAll ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    {t('refreshing')}
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    {t('refresh')}
+                  </>
+                )}
+              </Button>
+            )}
+            <Button size="sm" onClick={() => setAddProviderOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('add_provider')}
+            </Button>
+          </div>
+        </div>
+
+        <TabsContent value="repositories" className="mt-0">
+          <RepositoryTable
+            repositories={filterRepositories()}
+            onSyncRepository={handleSyncRepository}
+            syncingRepoId={syncingRepoId}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+          />
+        </TabsContent>
+
+        <TabsContent value="providers" className="mt-0">
+          <GitProviderGrid
+            providers={providers}
+            repositories={repositories}
+            selectedProviders={selectedProviders}
+            onAddProvider={() => setAddProviderOpen(true)}
+            onEditProvider={handleEditProvider}
+            onDeleteProvider={handleDeleteProvider}
+            onToggleProviderFilter={handleToggleProviderFilter}
+            refreshingProviderId={refreshingProviderId}
+          />
+        </TabsContent>
+      </Tabs>
     );
   };
 
