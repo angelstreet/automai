@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
 import { LanguageSettings } from '@/components/settings/LanguageSettings';
-import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import {
   Card,
   CardContent,
@@ -18,21 +17,18 @@ export default function SettingsPage() {
   const t = useTranslations('Settings');
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <SettingsHeader title={t('title')} description={t('description')} />
-      <div className="grid gap-6 mt-6">
-        {/* General Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('generalSettings')}</CardTitle>
-            <CardDescription>{t('description')}</CardDescription>
-          </CardHeader>
-          <CardContent>{/* General settings content will go here */}</CardContent>
-        </Card>
+    <div className="grid gap-6">
+      {/* General Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('generalSettings')}</CardTitle>
+          <CardDescription>{t('description')}</CardDescription>
+        </CardHeader>
+        <CardContent>{/* General settings content will go here */}</CardContent>
+      </Card>
 
-        {/* Language Settings */}
-        <LanguageSettings />
-      </div>
+      {/* Language Settings */}
+      <LanguageSettings />
     </div>
   );
 }
