@@ -1,9 +1,13 @@
-import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { GitProviderType } from '@/types/repositories';
 
-// Create a supabase client
-const supabase = createClient(cookies());
+// Environment config for direct Supabase client creation
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+
+// Create a direct supabase client (compatible with pages router)
+const supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Helper function to safely create Date objects
 const safeDate = (value: unknown): Date => {
