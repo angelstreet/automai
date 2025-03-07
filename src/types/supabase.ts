@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       accounts: {
@@ -87,63 +62,6 @@ export type Database = {
           },
         ]
       }
-      connections: {
-        Row: {
-          createdAt: string
-          host: string
-          id: string
-          name: string
-          password: string | null
-          port: number
-          privateKey: string | null
-          tenantId: string | null
-          updatedAt: string
-          userId: string
-          username: string
-        }
-        Insert: {
-          createdAt?: string
-          host: string
-          id?: string
-          name: string
-          password?: string | null
-          port?: number
-          privateKey?: string | null
-          tenantId?: string | null
-          updatedAt?: string
-          userId: string
-          username: string
-        }
-        Update: {
-          createdAt?: string
-          host?: string
-          id?: string
-          name?: string
-          password?: string | null
-          port?: number
-          privateKey?: string | null
-          tenantId?: string | null
-          updatedAt?: string
-          userId?: string
-          username?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "connections_tenantId_fkey"
-            columns: ["tenantId"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "connections_userId_fkey"
-            columns: ["userId"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       git_providers: {
         Row: {
           access_token: string | null
@@ -155,7 +73,7 @@ export type Database = {
           refresh_token: string | null
           server_url: string | null
           type: string
-          updated_at: string
+          updatedAt: string
           user_id: string
         }
         Insert: {
@@ -168,7 +86,7 @@ export type Database = {
           refresh_token?: string | null
           server_url?: string | null
           type: string
-          updated_at?: string
+          updatedAt?: string
           user_id: string
         }
         Update: {
@@ -181,18 +99,10 @@ export type Database = {
           refresh_token?: string | null
           server_url?: string | null
           type?: string
-          updated_at?: string
+          updatedAt?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "git_providers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       hosts: {
         Row: {
@@ -204,13 +114,10 @@ export type Database = {
           name: string
           password: string | null
           port: number | null
-          private_key: string | null
           status: string
-          tenant_id: string | null
           type: string
           updated_at: string
-          user_id: string
-          username: string | null
+          user: string | null
         }
         Insert: {
           created_at?: string
@@ -221,13 +128,10 @@ export type Database = {
           name: string
           password?: string | null
           port?: number | null
-          private_key?: string | null
           status?: string
-          tenant_id?: string | null
           type: string
           updated_at?: string
-          user_id: string
-          username?: string | null
+          user?: string | null
         }
         Update: {
           created_at?: string
@@ -238,34 +142,16 @@ export type Database = {
           name?: string
           password?: string | null
           port?: number | null
-          private_key?: string | null
           status?: string
-          tenant_id?: string | null
           type?: string
           updated_at?: string
-          user_id?: string
-          username?: string | null
+          user?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "hosts_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "hosts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
       repositories: {
         Row: {
-          created_at: string
+          createdAt: string
           default_branch: string | null
           description: string | null
           id: string
@@ -277,7 +163,7 @@ export type Database = {
           url: string | null
         }
         Insert: {
-          created_at?: string
+          createdAt?: string
           default_branch?: string | null
           description?: string | null
           id?: string
@@ -289,7 +175,7 @@ export type Database = {
           url?: string | null
         }
         Update: {
-          created_at?: string
+          createdAt?: string
           default_branch?: string | null
           description?: string | null
           id?: string
@@ -307,7 +193,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "git_providers"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       tenants: {
@@ -347,7 +233,7 @@ export type Database = {
           name: string | null
           password: string | null
           provider: string | null
-          user_role: string
+          role: string
           tenant_id: string | null
           updated_at: string
         }
@@ -360,7 +246,7 @@ export type Database = {
           name?: string | null
           password?: string | null
           provider?: string | null
-          user_role?: string
+          role?: string
           tenant_id?: string | null
           updated_at?: string
         }
@@ -373,7 +259,7 @@ export type Database = {
           name?: string | null
           password?: string | null
           provider?: string | null
-          user_role?: string
+          role?: string
           tenant_id?: string | null
           updated_at?: string
         }
@@ -384,26 +270,8 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
-          }
+          },
         ]
-      }
-      verificationtokens: {
-        Row: {
-          expires: string
-          identifier: string
-          token: string
-        }
-        Insert: {
-          expires: string
-          identifier: string
-          token: string
-        }
-        Update: {
-          expires?: string
-          identifier?: string
-          token?: string
-        }
-        Relationships: []
       }
     }
     Views: {
@@ -562,4 +430,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
     ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
