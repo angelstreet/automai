@@ -2,7 +2,6 @@
 import { Client } from 'ssh2';
 import { WebSocket } from 'ws';
 import { logger } from '../logger';
-import db from '../db';
 
 // Define WebSocketConnection type
 export type WebSocketConnection = WebSocket & {
@@ -10,22 +9,17 @@ export type WebSocketConnection = WebSocket & {
   authTimeout?: NodeJS.Timeout;
 };
 
-// Add a type definition for the connection object
-interface Connection {
-  id: string;
-  ssh_host: string;
-  ssh_port: number;
-  ssh_username: string;
-  ssh_password: string | null;
-  ssh_privateKey: string | null;
-  userId: string;
-  tenantId: string | null;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-  // Make these required as they're used throughout the code
-  type: string;
-  ip: string;
+// Define a more specific type for authData
+interface SSHAuthData {
+  ssh_username?: string;
+  ssh_password?: string;
+  ssh_host?: string;
+  ssh_port?: number;
+  is_windows?: boolean;
+  username?: string;
+  password?: string;
+  host?: string;
+  port?: number;
 }
 
 // Add SSH error interface
@@ -40,17 +34,12 @@ interface SSHError extends Error {
 export async function handleSshConnection(
   clientSocket: WebSocketConnection,
   connectionId: string,
-  authData?:
-    | {
-        ssh_username?: string;
-        ssh_password?: string;
-        ssh_host?: string;
-        ssh_port?: number;
-        is_windows?: boolean;
-      }
-    | { username?: string; password?: string; host?: string; port?: number; is_windows?: boolean },
+  authData?: SSHAuthData,
 ) {
-  let isConnecting = true;
+  logger.info('Starting SSH connection handler', { connectionId });
+  
+  // Declare variables at the top to fix linter errors
+  let stream: any = null;
   let sshClient: Client | null = null;
 
   // For backward compatibility, check both prefixed and non-prefixed parameters
@@ -60,48 +49,8 @@ export async function handleSshConnection(
   const ssh_port = (authData as any)?.ssh_port || (authData as any)?.port;
   let is_windows = (authData as any)?.is_windows || false;
 
-  // If we have a host IP, try to get the is_windows flag from the database
-  if (ssh_host && !is_windows) {
-    try {
-      console.log(`[Windows Detection] Checking database for ${ssh_host} Windows status`);
-
-      // Try to find the host record with a client-side selection to avoid errors on missing fields
-      try {
-        const host = await db.host.findMany({
-          where: {
-            ip: ssh_host,
-            type: 'ssh',
-          },
-        });
-
-        const firstHost = host && host.length > 0 ? host[0] : null;
-
-        if (firstHost) {
-          console.log(
-            `[Windows Detection] Found host in database: ${firstHost.id}, but is_windows field might not exist yet`,
-          );
-          // We can't check is_windows here since the field might not exist in the database yet
-        } else {
-          console.log(`[Windows Detection] No host found in database for ${ssh_host}`);
-        }
-      } catch (e: unknown) {
-        console.log(
-          `[Windows Detection] Error when querying for host: ${e instanceof Error ? e.message : String(e)}`,
-        );
-      }
-    } catch (e) {
-      // Ignore database errors, just proceed with the connection
-      console.error(
-        `[Windows Detection] ❌ Database error checking Windows status for ${ssh_host}`,
-        e,
-      );
-      logger.warn('Failed to check host Windows status in database', {
-        connectionId,
-        ssh_host,
-        error: e instanceof Error ? e.message : String(e),
-      });
-    }
-  } else if (is_windows) {
+  // If we have a host IP and Windows flag is explicitly set, log it
+  if (is_windows) {
     console.log(`[Windows Detection] 🪟 Using Windows mode from explicit flag for ${ssh_host}`);
   }
 
@@ -225,7 +174,6 @@ export async function handleSshConnection(
     });
 
     sshClient.on('ready', () => {
-      isConnecting = false;
       logger.info('SSH connection ready', {
         connectionId,
         ssh_host,
@@ -460,7 +408,15 @@ export async function handleSshConnection(
 
   // Set up WebSocket close handler first
   clientSocket.on('close', () => {
-    logger.info('WebSocket closed by client', { connectionId, isConnecting });
+    logger.info('WebSocket closed');
+    if (stream) {
+      try {
+        // Use destroy instead of close for compatibility
+        stream.destroy();
+      } catch (e) {
+        // Ignore errors when closing stream
+      }
+    }
     if (sshClient) {
       try {
         logger.info('Ending SSH client due to WebSocket closure', { connectionId });

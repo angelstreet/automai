@@ -1,5 +1,5 @@
-import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+import { createServerClient, createAdminClient } from '@/utils/supabase';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import {
   Repository,
   RepositoryCreateInput,
@@ -8,8 +8,43 @@ import {
   GitProviderType,
   SyncStatus,
 } from '@/types/repositories';
-
 import { GitHubProviderService } from './git-providers/github';
+import { logger } from '../logger';
+
+// Environment config for direct client creation as fallback
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+// Get a Supabase client for service operations
+const getServiceClient = () => {
+  try {
+    // Direct client creation for service functions
+    // This avoids the need for cookies from next/headers
+    const apiKey = SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
+    
+    if (!apiKey) {
+      logger.error('Missing Supabase API key');
+      return null;
+    }
+    
+    return createSupabaseClient(SUPABASE_URL, apiKey);
+  } catch (error) {
+    logger.error('Failed to create Supabase client:', error);
+    return null;
+  }
+};
+
+// Helper function to get a client and check if it's available
+const getClient = (operation: string, providedClient?: any) => {
+  const client = providedClient || getServiceClient();
+  
+  if (!client) {
+    logger.warn(`No Supabase client available for ${operation}`);
+  }
+  
+  return client;
+};
 
 // Factory to get the appropriate provider service
 export async function getGitProviderService(
@@ -34,40 +69,56 @@ export async function getGitProviderService(
 }
 
 // List all git providers for a user
-export async function listGitProviders(userId: string): Promise<GitProvider[]> {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-  
-  const { data, error } = await supabase
-    .from('git_providers')
-    .select('*')
-    .eq('user_id', userId);
-  
-  if (error) {
-    console.error('Error listing git providers:', error);
+export async function listGitProviders(userId: string, supabaseClient?: any): Promise<GitProvider[]> {
+  try {
+    const supabase = getClient('listGitProviders', supabaseClient);
+    
+    if (!supabase) {
+      return [];
+    }
+    
+    const { data, error } = await supabase
+      .from('git_providers')
+      .select('*')
+      .eq('user_id', userId);
+      
+    if (error) {
+      logger.error('Error listing git providers:', { error, userId });
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    logger.error('Failed to list git providers:', { error, userId });
     return [];
   }
-  
-  return data || [];
 }
 
 // Get a specific git provider by ID
-export async function getGitProvider(id: string): Promise<GitProvider | null> {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-  
-  const { data, error } = await supabase
-    .from('git_providers')
-    .select('*')
-    .eq('id', id)
-    .single();
-  
-  if (error) {
-    console.error('Error getting git provider:', error);
+export async function getGitProvider(id: string, supabaseClient?: any): Promise<GitProvider | null> {
+  try {
+    const supabase = getClient('getGitProvider', supabaseClient);
+    
+    if (!supabase) {
+      return null;
+    }
+    
+    const { data, error } = await supabase
+      .from('git_providers')
+      .select('*')
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      logger.error('Error getting git provider:', { error, id });
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    logger.error('Failed to get git provider:', { error, id });
     return null;
   }
-  
-  return data;
 }
 
 export async function createGitProvider(
@@ -81,22 +132,44 @@ export async function createGitProvider(
     refreshToken?: string;
     expiresAt?: Date;
   },
-): Promise<GitProvider> {
-  const provider = await db.gitProvider.create({
-    data: {
-      userId,
-      tenantId: userId, // For now, tenantId is the same as userId
-      type: data.type || data.name,
-      displayName: data.displayName,
-      serverUrl: data.serverUrl,
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-      expiresAt: data.expiresAt,
-      status: data.accessToken ? 'connected' : 'disconnected',
-    },
-  });
-
-  return provider;
+  supabaseClient?: any
+): Promise<GitProvider | null> {
+  try {
+    const supabase = getClient('createGitProvider', supabaseClient);
+    
+    // If no client is available, return null
+    if (!supabase) {
+      logger.warn('No Supabase client available for createGitProvider');
+      return null;
+    }
+    
+    const { data: provider, error } = await supabase
+      .from('git_providers')
+      .insert({
+        user_id: userId,
+        name: data.name,
+        type: data.type || data.name,
+        display_name: data.displayName,
+        server_url: data.serverUrl,
+        access_token: data.accessToken,
+        refresh_token: data.refreshToken,
+        expires_at: data.expiresAt,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      logger.error('Error creating git provider:', { error, data });
+      return null;
+    }
+    
+    return provider;
+  } catch (error) {
+    logger.error('Failed to create git provider:', { error, data });
+    return null;
+  }
 }
 
 export async function updateGitProvider(
@@ -106,22 +179,62 @@ export async function updateGitProvider(
     refreshToken?: string;
     expiresAt?: Date;
   },
-): Promise<GitProvider> {
-  const provider = await db.gitProvider.update({
-    where: { id },
-    data: {
-      ...data,
-      status: data.accessToken ? 'connected' : 'disconnected',
-    },
-  });
-
-  return provider;
+  supabaseClient?: any
+): Promise<GitProvider | null> {
+  try {
+    const supabase = getClient('updateGitProvider', supabaseClient);
+    
+    if (!supabase) {
+      return null;
+    }
+    
+    const { data: provider, error } = await supabase
+      .from('git_providers')
+      .update({
+        access_token: data.accessToken,
+        refresh_token: data.refreshToken,
+        expires_at: data.expiresAt,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      logger.error('Error updating git provider:', { error, id, data });
+      return null;
+    }
+    
+    return provider;
+  } catch (error) {
+    logger.error('Failed to update git provider:', { error, id });
+    return null;
+  }
 }
 
-export async function deleteGitProvider(id: string): Promise<void> {
-  await db.gitProvider.delete({
-    where: { id },
-  });
+export async function deleteGitProvider(id: string, supabaseClient?: any): Promise<boolean> {
+  try {
+    const supabase = getClient('deleteGitProvider', supabaseClient);
+    
+    if (!supabase) {
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('git_providers')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      logger.error('Error deleting git provider:', { error, id });
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    logger.error('Failed to delete git provider:', { error, id });
+    return false;
+  }
 }
 
 export async function listRepositories(
@@ -131,254 +244,372 @@ export async function listRepositories(
     projectId?: string;
     syncStatus?: SyncStatus;
   },
+  supabaseClient?: any
 ): Promise<Repository[]> {
   try {
-    const where: any = {
-      provider: {
-        userId,
-      },
-    };
-
+    const supabase = getClient('listRepositories', supabaseClient);
+    
+    if (!supabase) {
+      return [];
+    }
+    
+    let query = supabase
+      .from('repositories')
+      .select(`
+        *,
+        provider:git_providers(*)
+      `);
+    
+    // Apply filters
     if (filters?.providerId) {
-      where.providerId = filters.providerId;
+      query = query.eq('provider_id', filters.providerId);
     }
-
-    if (filters?.projectId) {
-      where.projectId = filters.projectId;
-    }
-
+    
     if (filters?.syncStatus) {
-      where.syncStatus = filters.syncStatus;
+      query = query.eq('sync_status', filters.syncStatus);
     }
-
-    return await db.repository.findMany({
-      where,
-      include: {
-        provider: true,
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    
+    const { data, error } = await query;
+      
+    if (error) {
+      logger.error('Error listing repositories:', { error, userId, filters });
+      return [];
+    }
+    
+    return data || [];
   } catch (error) {
-    console.error('Error in listRepositories:', error);
-    // Return empty array when database table doesn't exist or other errors
+    logger.error('Error in listRepositories:', error);
     return [];
   }
 }
 
-export async function getRepository(id: string): Promise<Repository | null> {
-  return db.repository.findUnique({
-    where: { id },
-    include: {
-      provider: true,
-      project: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  });
+export async function getRepository(id: string, supabaseClient?: any): Promise<Repository | null> {
+  try {
+    const supabase = getClient('getRepository', supabaseClient);
+    
+    if (!supabase) {
+      return null;
+    }
+    
+    const { data, error } = await supabase
+      .from('repositories')
+      .select(`
+        *,
+        provider:git_providers(*)
+      `)
+      .eq('id', id)
+      .single();
+      
+    if (error) {
+      logger.error('Error getting repository:', { error, id });
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    logger.error('Failed to get repository:', { error, id });
+    return null;
+  }
 }
 
-export async function createRepository(data: RepositoryCreateInput): Promise<Repository> {
-  return db.repository.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      url: data.url,
-      defaultBranch: data.defaultBranch || 'main',
-      providerId: data.providerId,
-      projectId: data.projectId,
-      syncStatus: 'IDLE',
-    },
-    include: {
-      provider: true,
-      project: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  });
+export async function createRepository(data: RepositoryCreateInput, supabaseClient?: any): Promise<Repository | null> {
+  try {
+    const supabase = getClient('createRepository', supabaseClient);
+    
+    if (!supabase) {
+      return null;
+    }
+    
+    const { data: repository, error } = await supabase
+      .from('repositories')
+      .insert({
+        ...data,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      logger.error('Error creating repository:', { error, data });
+      return null;
+    }
+    
+    return repository;
+  } catch (error) {
+    logger.error('Failed to create repository:', { error, data });
+    return null;
+  }
 }
 
 export async function updateRepository(
   id: string,
   data: RepositoryUpdateInput,
-): Promise<Repository> {
-  return db.repository.update({
-    where: { id },
-    data,
-    include: {
-      provider: true,
-      project: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  });
-}
-
-export async function deleteRepository(id: string): Promise<void> {
-  await db.repository.delete({
-    where: { id },
-  });
-}
-
-export async function syncRepository(id: string): Promise<Repository> {
-  // First, mark the repository as syncing
-  const repository = await db.repository.update({
-    where: { id },
-    data: {
-      syncStatus: 'SYNCING',
-    },
-    include: {
-      provider: true,
-    },
-  });
-
+  supabaseClient?: any
+): Promise<Repository | null> {
   try {
-    if (!repository.provider) {
-      throw new Error('Repository provider not found');
+    const supabase = getClient('updateRepository', supabaseClient);
+    
+    if (!supabase) {
+      return null;
     }
-
-    const providerService = await getGitProviderService(
-      repository.provider.name as GitProviderType,
-    );
-
-    // Sync the repository with the provider
-    const syncedData = await providerService.syncRepository(repository);
-
-    // Update the repository with the synced data
-    return db.repository.update({
-      where: { id },
-      data: {
-        name: syncedData.name,
-        description: syncedData.description,
-        url: syncedData.url,
-        defaultBranch: syncedData.defaultBranch,
-        lastSyncedAt: new Date(),
-        syncStatus: 'SYNCED',
-      },
-      include: {
-        provider: true,
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-  } catch (_error) {
-    // If there's an error, mark the repository as having an error
-    return db.repository.update({
-      where: { id },
-      data: {
-        syncStatus: 'ERROR',
-      },
-      include: {
-        provider: true,
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    
+    const { data: repository, error } = await supabase
+      .from('repositories')
+      .update({
+        ...data,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      logger.error('Error updating repository:', { error, id, data });
+      return null;
+    }
+    
+    return repository;
+  } catch (error) {
+    logger.error('Failed to update repository:', { error, id });
+    return null;
   }
 }
 
-export async function importRepositoriesFromProvider(providerId: string): Promise<Repository[]> {
-  const provider = await db.gitProvider.findUnique({
-    where: { id: providerId },
-  });
-
-  if (!provider || !provider.accessToken) {
-    throw new Error('Provider not found or not authenticated');
+export async function deleteRepository(id: string, supabaseClient?: any): Promise<boolean> {
+  try {
+    const supabase = getClient('deleteRepository', supabaseClient);
+    
+    if (!supabase) {
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('repositories')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      logger.error('Error deleting repository:', { error, id });
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    logger.error('Failed to delete repository:', { error, id });
+    return false;
   }
+}
 
-  const providerService = await getGitProviderService(provider.name as GitProviderType);
+export async function syncRepository(id: string, supabaseClient?: any): Promise<Repository | null> {
+  try {
+    const supabase = getClient('syncRepository', supabaseClient);
+    
+    if (!supabase) {
+      return null;
+    }
+    
+    // First get the repository
+    const { data: repository, error: getError } = await supabase
+      .from('repositories')
+      .select(`
+        *,
+        provider:git_providers(*)
+      `)
+      .eq('id', id)
+      .single();
+      
+    if (getError || !repository) {
+      logger.error('Error getting repository for sync:', { error: getError, id });
+      return null;
+    }
+    
+    // Update sync status to in_progress
+    const { error: updateError } = await supabase
+      .from('repositories')
+      .update({
+        sync_status: 'in_progress',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+      
+    if (updateError) {
+      logger.error('Error updating repository sync status:', { error: updateError, id });
+      return null;
+    }
+    
+    try {
+      // Get the provider service
+      const providerService = await getGitProviderService(
+        repository.provider.type,
+        {
+          serverUrl: repository.provider.server_url,
+          accessToken: repository.provider.access_token
+        }
+      );
+      
+      // Sync the repository
+      const repoDetails = await providerService.getRepository(repository.url);
+      
+      // Update the repository with the latest data
+      const { data: updatedRepo, error: finalUpdateError } = await supabase
+        .from('repositories')
+        .update({
+          name: repoDetails.name,
+          description: repoDetails.description,
+          default_branch: repoDetails.defaultBranch,
+          sync_status: 'synced',
+          last_synced_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (finalUpdateError) {
+        logger.error('Error updating repository after sync:', { error: finalUpdateError, id });
+        return null;
+      }
+      
+      return updatedRepo;
+    } catch (syncError) {
+      // Update sync status to failed
+      const { error: failedUpdateError } = await supabase
+        .from('repositories')
+        .update({
+          sync_status: 'failed',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+        
+      if (failedUpdateError) {
+        logger.error('Error updating repository sync status to failed:', { error: failedUpdateError, id });
+      }
+      
+      logger.error('Error syncing repository:', { error: syncError, id });
+      return null;
+    }
+  } catch (error) {
+    logger.error('Failed to sync repository:', { error, id });
+    return null;
+  }
+}
 
-  // Get repositories from the provider
-  const repositories = await providerService.listRepositories(provider);
-
-  // Get existing repositories to avoid duplicates
-  const existingRepos = await db.repository.findMany({
-    where: { providerId },
-    select: { name: true },
-  });
-
-  const existingRepoNames = new Set(existingRepos.map((repo: any) => repo.name));
-
-  // Filter out repositories that already exist
-  const newRepositories = repositories.filter((repo) => !existingRepoNames.has(repo.name));
-
-  // Create the new repositories
-  const createdRepos = await Promise.all(
-    newRepositories.map((repo) =>
-      db.repository.create({
-        data: {
+export async function importRepositoriesFromProvider(providerId: string, supabaseClient?: any): Promise<Repository[]> {
+  try {
+    const supabase = getClient('importRepositoriesFromProvider', supabaseClient);
+    
+    if (!supabase) {
+      return [];
+    }
+    
+    // Get the provider
+    const { data: provider, error: providerError } = await supabase
+      .from('git_providers')
+      .select('*')
+      .eq('id', providerId)
+      .single();
+      
+    if (providerError || !provider) {
+      logger.error('Error getting provider for import:', { error: providerError, providerId });
+      return [];
+    }
+    
+    // Get the provider service
+    const providerService = await getGitProviderService(
+      provider.type,
+      {
+        serverUrl: provider.server_url,
+        accessToken: provider.access_token
+      }
+    );
+    
+    // Get repositories from the provider
+    const repositories = await providerService.listRepositories();
+    
+    // Create repositories in the database
+    const createdRepos: Repository[] = [];
+    
+    for (const repo of repositories) {
+      // Check if repository already exists
+      const { data: existingRepo, error: checkError } = await supabase
+        .from('repositories')
+        .select('id')
+        .eq('provider_id', providerId)
+        .eq('url', repo.url)
+        .single();
+        
+      if (!checkError && existingRepo) {
+        // Repository already exists, skip
+        logger.info('Repository already exists, skipping:', { url: repo.url });
+        continue;
+      }
+      
+      // Create the repository
+      const { data: createdRepo, error: createError } = await supabase
+        .from('repositories')
+        .insert({
           name: repo.name,
           description: repo.description,
           url: repo.url,
-          defaultBranch: repo.defaultBranch,
-          providerId,
-          lastSyncedAt: new Date(),
-          syncStatus: 'SYNCED',
-        },
-        include: {
-          provider: true,
-          project: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      }),
-    ),
-  );
-
-  return createdRepos;
-}
-
-interface TestConnectionParams {
-  type: GitProviderType;
-  serverUrl?: string;
-  token: string;
-}
-
-interface ApiResponse<T = any> {
-  success: boolean;
-  message?: string;
-  error?: string;
-  data?: T;
-}
-
-export async function testGitProviderConnection({ type, serverUrl, token }: TestConnectionParams) {
-  const response = await fetch('/api/repositories/test-connection', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ type, serverUrl, token }),
-  });
-
-  const data: ApiResponse = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.error || 'Connection to git provider failed');
+          default_branch: repo.defaultBranch,
+          provider_id: providerId,
+          sync_status: 'synced',
+          last_synced_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (createError) {
+        logger.error('Error creating repository during import:', { error: createError, repo });
+        continue;
+      }
+      
+      createdRepos.push(createdRepo);
+    }
+    
+    return createdRepos;
+  } catch (error) {
+    logger.error('Failed to import repositories:', { error, providerId });
+    return [];
   }
+}
 
-  return data;
+// Test connection to a git provider
+export async function testGitProviderConnection({ 
+  type, 
+  serverUrl, 
+  token 
+}: { 
+  type: GitProviderType; 
+  serverUrl?: string; 
+  token: string;
+}): Promise<{ success: boolean; message?: string; error?: string; }> {
+  try {
+    // Get the provider service
+    const providerService = await getGitProviderService(
+      type,
+      {
+        serverUrl,
+        accessToken: token
+      }
+    );
+    
+    // Test the connection
+    const result = await providerService.testConnection();
+    
+    return {
+      success: result.success,
+      message: result.message,
+      error: result.error
+    };
+  } catch (error) {
+    logger.error('Failed to test git provider connection:', { error, type });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }
