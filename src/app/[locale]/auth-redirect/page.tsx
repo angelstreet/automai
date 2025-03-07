@@ -32,10 +32,25 @@ export default function AuthRedirectPage() {
             email: session.user.email,
           }));
           
+          // Store the actual tokens in localStorage for redundancy
+          try {
+            localStorage.setItem('sb-access-token', session.access_token);
+            if (session.refresh_token) {
+              localStorage.setItem('sb-refresh-token', session.refresh_token);
+            }
+            console.log('Stored auth tokens in localStorage for redundancy');
+          } catch (e) {
+            console.error('Error storing tokens in localStorage:', e);
+          }
+          
           // Set custom user-session cookie with proper attributes
           const maxAge = 86400; // 24 hours
           document.cookie = `user-session=${session.user.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
           console.log('Set user-session cookie with userId:', session.user.id);
+          
+          // Set a persistent session marker with a longer expiration
+          document.cookie = `session-active=true; path=/; max-age=2592000; SameSite=Lax`; // 30 days
+          console.log('Set persistent session marker cookie');
         }
       } catch (e) {
         console.error('localStorage access error:', e);
@@ -72,15 +87,20 @@ export default function AuthRedirectPage() {
                 document.cookie = `sb-refresh-token=${session.refresh_token}; path=/; max-age=7776000; SameSite=Lax`;
               }
               
+              // Set a special cookie that indicates we've manually set the tokens
+              document.cookie = `sb-auth-manual=true; path=/; max-age=7776000; SameSite=Lax`;
+              
               console.log('Manually set Supabase auth cookies with correct attributes');
             } catch (e) {
               console.error('Error manually setting Supabase cookies:', e);
             }
             
-            // Set a fallback cookie with the access token
+            // Set a fallback token cookie with the access token
             try {
-              document.cookie = `sb-fallback-token=${session.access_token.substring(0, 10)}...; path=/; max-age=86400; SameSite=Lax`;
-              console.log('Set fallback token cookie');
+              // Store the full token in an encoded form
+              const encodedToken = btoa(session.access_token);
+              document.cookie = `sb-fallback-token=${encodedToken}; path=/; max-age=86400; SameSite=Lax`;
+              console.log('Set fallback token cookie with encoded token');
             } catch (e) {
               console.error('Error setting fallback token cookie:', e);
             }
@@ -222,13 +242,33 @@ export default function AuthRedirectPage() {
                 console.warn('CRITICAL: Still no auth cookies after final attempt');
                 // Force set cookies with direct DOM API
                 document.cookie = `user-session=${authSession.user.id}; path=/; max-age=86400; SameSite=Lax`;
-                document.cookie = `sb-fallback-token=${authSession.access_token.substring(0, 10)}...; path=/; max-age=86400; SameSite=Lax`;
+                document.cookie = `session-active=true; path=/; max-age=2592000; SameSite=Lax`;
+                document.cookie = `sb-auth-manual=true; path=/; max-age=7776000; SameSite=Lax`;
+                
+                // Store the full token in an encoded form
+                try {
+                  const encodedToken = btoa(authSession.access_token);
+                  document.cookie = `sb-fallback-token=${encodedToken}; path=/; max-age=86400; SameSite=Lax`;
+                } catch (e) {
+                  console.error('Error encoding token:', e);
+                  document.cookie = `sb-fallback-token=${authSession.access_token.substring(0, 10)}...; path=/; max-age=86400; SameSite=Lax`;
+                }
               }
             } catch (e) {
               console.error('Final session set attempt failed:', e);
               // Force set cookies as last resort
               document.cookie = `user-session=${authSession.user.id}; path=/; max-age=86400; SameSite=Lax`;
-              document.cookie = `sb-fallback-token=${authSession.access_token.substring(0, 10)}...; path=/; max-age=86400; SameSite=Lax`;
+              document.cookie = `session-active=true; path=/; max-age=2592000; SameSite=Lax`;
+              document.cookie = `sb-auth-manual=true; path=/; max-age=7776000; SameSite=Lax`;
+              
+              // Store the full token in an encoded form
+              try {
+                const encodedToken = btoa(authSession.access_token);
+                document.cookie = `sb-fallback-token=${encodedToken}; path=/; max-age=86400; SameSite=Lax`;
+              } catch (e) {
+                console.error('Error encoding token:', e);
+                document.cookie = `sb-fallback-token=${authSession.access_token.substring(0, 10)}...; path=/; max-age=86400; SameSite=Lax`;
+              }
             }
           }
           
@@ -236,6 +276,15 @@ export default function AuthRedirectPage() {
           setStatus('success');
           const dashboardUrl = `/${locale}/${tenantId}/dashboard`;
           console.log('Redirecting to dashboard:', dashboardUrl);
+          
+          // Store session info in sessionStorage for immediate access after redirect
+          try {
+            sessionStorage.setItem('auth_redirect_timestamp', Date.now().toString());
+            sessionStorage.setItem('auth_user_id', authSession.user.id);
+            sessionStorage.setItem('auth_user_email', authSession.user.email || '');
+          } catch (e) {
+            console.error('Error storing session info in sessionStorage:', e);
+          }
           
           // Small delay to ensure UI updates and cookies are set before redirect
           setTimeout(() => {

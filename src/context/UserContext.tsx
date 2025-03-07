@@ -148,13 +148,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Handle window focus events
   useEffect(() => {
+    // Track the last time we checked the session to avoid frequent checks
+    const lastFocusCheckRef = useRef(Date.now());
+    
     function handleFocus() {
-      // Only refresh if data is stale (older than 5 minutes) and supabaseAuth is initialized
-      if (supabaseAuth && (!lastFetchedAt.current || Date.now() - lastFetchedAt.current > 5 * 60 * 1000)) {
-        console.log('UserContext - Window focus, checking session');
+      // Get current time
+      const now = Date.now();
+      
+      // Only refresh if:
+      // 1. Data is stale (older than 5 minutes)
+      // 2. We haven't checked in the last 10 seconds (prevents rapid checks when switching windows)
+      // 3. Supabase auth is initialized
+      if (supabaseAuth && 
+          (!lastFetchedAt.current || now - lastFetchedAt.current > 5 * 60 * 1000) && 
+          now - lastFocusCheckRef.current > 10000) {
+        
+        console.log('UserContext - Window focus, checking session (stale data)');
+        lastFocusCheckRef.current = now;
         loadSession();
       } else if (!supabaseAuth) {
         console.log('UserContext - Window focus, but supabaseAuth not initialized yet');
+      } else if (now - lastFocusCheckRef.current <= 10000) {
+        console.log('UserContext - Window focus, but checked recently, skipping');
       } else {
         console.log('UserContext - Window focus, data is fresh, skipping check');
       }
@@ -204,17 +219,77 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   
     // Check if we have fresh data (less than 30 seconds old)
-    if (user && lastFetchedAt.current && Date.now() - lastFetchedAt.current < 30 * 1000) {
+    const now = Date.now();
+    if (user && lastFetchedAt.current && now - lastFetchedAt.current < 30 * 1000) {
       console.log('UserContext - User data is fresh, skipping session check');
       setIsLoading(false);
       return;
     }
-  
+    
+    // If we already have a user and the data is not too stale (less than 5 minutes old),
+    // don't show loading state to avoid UI flicker
+    const shouldShowLoading = !user || !lastFetchedAt.current || now - lastFetchedAt.current > 5 * 60 * 1000;
+    
+    if (shouldShowLoading) {
+      setIsLoading(true);
+    }
+    
     console.log('UserContext - Loading session from Supabase');
-    setIsLoading(true);
     isFetchingUser.current = true;
   
     try {
+      // Check for fallback auth mechanisms first
+      let fallbackUserId = null;
+      let fallbackAuthFound = false;
+      
+      // Check for session info in sessionStorage (from auth-redirect)
+      try {
+        const authRedirectTimestamp = sessionStorage.getItem('auth_redirect_timestamp');
+        const authUserId = sessionStorage.getItem('auth_user_id');
+        
+        if (authRedirectTimestamp && authUserId) {
+          const timestamp = parseInt(authRedirectTimestamp, 10);
+          
+          // If the auth redirect happened in the last 5 minutes, use this info
+          if (now - timestamp < 5 * 60 * 1000) {
+            console.log('UserContext - Found recent auth redirect info in sessionStorage');
+            fallbackUserId = authUserId;
+            fallbackAuthFound = true;
+          }
+        }
+      } catch (e) {
+        console.error('UserContext - Error checking sessionStorage:', e);
+      }
+      
+      // Check for user-session cookie
+      try {
+        const cookies = document.cookie.split(';').map(c => c.trim());
+        const userSessionCookie = cookies.find(c => c.startsWith('user-session='));
+        const sessionActiveCookie = cookies.find(c => c.startsWith('session-active='));
+        
+        if (userSessionCookie && sessionActiveCookie) {
+          const userId = userSessionCookie.split('=')[1];
+          console.log('UserContext - Found user-session cookie:', userId);
+          
+          if (!fallbackUserId) {
+            fallbackUserId = userId;
+            fallbackAuthFound = true;
+          }
+        }
+      } catch (e) {
+        console.error('UserContext - Error checking cookies:', e);
+      }
+      
+      // If we already have a user and found fallback auth that matches, skip the Supabase call
+      // This helps avoid unnecessary API calls when switching between windows
+      if (user && user.id === fallbackUserId && fallbackAuthFound) {
+        console.log('UserContext - Using existing user with matching fallback auth, skipping Supabase call');
+        setIsLoading(false);
+        isFetchingUser.current = false;
+        lastFetchedAt.current = now;
+        return;
+      }
+      
       // Single call to get session
       const { data, error } = await safeAuthCall(
         'getSession',
@@ -224,6 +299,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       
       if (error) {
         console.error('UserContext - Session error:', error);
+        
+        // If we have fallback auth, create a minimal user object
+        if (fallbackAuthFound && fallbackUserId) {
+          console.log('UserContext - Using fallback auth with userId:', fallbackUserId);
+          
+          const fallbackUser = {
+            id: fallbackUserId,
+            email: sessionStorage.getItem('auth_user_email') || undefined,
+            plan: 'free' as PlanType,
+            // Add minimal required properties to satisfy the User type
+            app_metadata: {},
+            user_metadata: { plan: 'free' },
+            aud: 'authenticated',
+            created_at: '',
+          } as User;
+          
+          setUser(fallbackUser);
+          setSessionStatus('authenticated');
+          setError(null);
+          setIsLoading(false);
+          isFetchingUser.current = false;
+          lastFetchedAt.current = Date.now();
+          return;
+        }
+        
         setError(error.message);
         setUser(null);
         setSessionStatus('unauthenticated');
@@ -276,18 +376,69 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   
   // This is a simplified version that can be used if needed
   async function refreshUser() {
+    // Skip if already loading
+    if (isFetchingUser.current) {
+      console.log('UserContext - Refresh already in progress, skipping');
+      return;
+    }
+    
+    // Skip if supabaseAuth is not initialized yet
     if (!supabaseAuth) {
-      console.error('Cannot refresh user: Supabase auth client is not initialized');
+      console.error('UserContext - Cannot refresh user: Supabase auth client is not initialized');
       return;
     }
     
-    if (!session?.user) {
-      console.error('Cannot refresh user: No active session');
+    // Implement debouncing to prevent multiple rapid refreshes
+    const now = Date.now();
+    if (lastFetchedAt.current && now - lastFetchedAt.current < 2000) {
+      console.log('UserContext - Refresh requested too soon after last fetch, debouncing');
       return;
     }
     
-    // Just reload the session
-    loadSession();
+    console.log('UserContext - Refreshing user data');
+    isFetchingUser.current = true;
+    
+    try {
+      // Don't show loading state for quick refreshes to avoid UI flicker
+      const { data, error } = await safeAuthCall(
+        'getSession',
+        () => supabaseAuth.getSession(),
+        { data: { session: null }, error: new Error('Failed to get session') }
+      );
+      
+      if (error) {
+        console.error('UserContext - Error refreshing user:', error);
+        // Don't clear user on refresh errors to avoid disrupting the UI
+        isFetchingUser.current = false;
+        return;
+      }
+      
+      if (data?.session) {
+        // Session exists - authenticated
+        setSession(data.session);
+        setSessionStatus('authenticated');
+        
+        // Create or update user object from session
+        const userFromSession = {
+          ...data.session.user,
+          plan: data.session.user.user_metadata?.plan || 'free' as PlanType
+        };
+        
+        setUser(userFromSession);
+        setError(null);
+      } else {
+        // No session - not authenticated
+        // On explicit refresh, we should clear the user if no session is found
+        setUser(null);
+        setSession(null);
+        setSessionStatus('unauthenticated');
+      }
+    } catch (e) {
+      console.error('UserContext - Unexpected error refreshing user:', e);
+    } finally {
+      isFetchingUser.current = false;
+      lastFetchedAt.current = now;
+    }
   }
 
   const updateProfile = useCallback(

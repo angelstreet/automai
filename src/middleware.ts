@@ -270,15 +270,26 @@ export default async function middleware(request: NextRequest) {
       const fallbackTokenCookie = request.cookies.get('sb-fallback-token');
       const hasFallbackToken = !!fallbackTokenCookie?.value;
       
-      // If we have direct auth cookies, skip the expensive Supabase client creation
-      if (hasDirectAuthCookie || hasUserSessionCookie || hasFallbackToken) {
+      // Check for persistent session marker
+      const sessionActiveCookie = request.cookies.get('session-active');
+      const hasSessionActiveCookie = !!sessionActiveCookie?.value;
+      
+      // Check for manual auth cookie
+      const manualAuthCookie = request.cookies.get('sb-auth-manual');
+      const hasManualAuthCookie = !!manualAuthCookie?.value;
+      
+      // If we have direct auth cookies or any of our fallback mechanisms, allow the request
+      if (hasDirectAuthCookie || hasUserSessionCookie || hasFallbackToken || 
+          (hasSessionActiveCookie && hasManualAuthCookie)) {
         console.log('Auth cookies found, skipping Supabase client creation');
         
         // Add detailed debug information
         console.log('Middleware session check details:', {
           hasDirectAuthCookie,
-          hasUserSessionCookie: hasUserSessionCookie,
-          hasFallbackToken: hasFallbackToken,
+          hasUserSessionCookie,
+          hasFallbackToken,
+          hasSessionActiveCookie,
+          hasManualAuthCookie,
           cookies: request.cookies.getAll().map(c => c.name).join(', ')
         });
         
@@ -320,7 +331,9 @@ export default async function middleware(request: NextRequest) {
         cookies: request.cookies.getAll().map(c => c.name).join(', '),
         hasSbAuthToken: hasDirectAuthCookie,
         hasUserSessionCookie,
-        hasFallbackToken
+        hasFallbackToken,
+        hasSessionActiveCookie,
+        hasManualAuthCookie
       });
       
       // Special handling for RSC requests to prevent redirect loops
@@ -342,18 +355,20 @@ export default async function middleware(request: NextRequest) {
           return NextResponse.next();  
         }
         
-        // If we have a user-session cookie, allow the request even if Supabase session has an error
-        if (hasUserSessionCookie || hasFallbackToken) {
-          console.log('User session or fallback token cookie found, allowing request despite Supabase session error');
+        // If we have any of our fallback auth mechanisms, allow the request despite the error
+        if (hasUserSessionCookie || hasFallbackToken || 
+            (hasSessionActiveCookie && hasManualAuthCookie)) {
+          console.log('Fallback auth mechanism found, allowing request despite Supabase session error');
           return res;
         }
         
         return createLoginRedirect(request, pathParts);
       }
       
-      // Check if we have a valid session or user-session cookie
+      // Check if we have a valid session or any of our fallback auth mechanisms
       if ((!data.session || !data.session.user || !data.session.user.email) && 
-          !hasUserSessionCookie && !hasFallbackToken) {
+          !hasUserSessionCookie && !hasFallbackToken && 
+          !(hasSessionActiveCookie && hasManualAuthCookie)) {
         console.log('No valid session found, redirecting to login');
         
         if (isApiRoute) {
@@ -369,7 +384,7 @@ export default async function middleware(request: NextRequest) {
         return createLoginRedirect(request, pathParts);
       }
       
-      // If we have a valid session or user-session cookie, log and continue
+      // If we have a valid session or any of our fallback auth mechanisms, log and continue
       if (data.session?.user) {
         console.log('Valid session found:', {
           user: data.session.user.email,
@@ -383,6 +398,8 @@ export default async function middleware(request: NextRequest) {
         });
       } else if (hasFallbackToken) {
         console.log('Valid fallback token cookie found');
+      } else if (hasSessionActiveCookie && hasManualAuthCookie) {
+        console.log('Valid session marker and manual auth cookies found');
       }
       
       // Session is valid, continue with the request

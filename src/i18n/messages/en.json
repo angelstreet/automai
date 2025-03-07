@@ -30,6 +30,7 @@
     "signingUp": "Creating account...",
     "signupHeroText": "Join thousands of teams automating their testing workflow.",
     "emailPlaceholder": "name@example.com",
+    "namePlaceholder": "Your name",
     "passwordPlaceholder": "Enter your password",
     "confirmPasswordPlaceholder": "Confirm your password",
     "termsText": "I agree to the",
