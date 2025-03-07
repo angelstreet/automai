@@ -58,14 +58,26 @@ Key features include:
    - Supabase validates credentials and creates a session
    - JWT token is generated and stored in HTTP-only cookies
 
-2. **Auth Redirect Process**
+2. **OAuth Flow (GitHub/Google)**
+
+   - When user clicks "Sign in with GitHub/Google", `signInWithOAuth` is called
+   - The OAuth flow is: Client → Supabase → GitHub → Supabase → Client
+   - Detailed steps:
+     1. User clicks OAuth button in our application
+     2. Supabase initiates OAuth with the provider (GitHub/Google)
+     3. Provider authenticates the user and asks for permissions
+     4. Provider redirects back to Supabase callback URL: `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
+     5. Supabase processes authentication and creates a session
+     6. Supabase redirects to our application's auth-redirect page
+
+3. **Auth Redirect Process**
 
    - After successful authentication, user is redirected to `/${locale}/auth-redirect`
    - Auth-redirect page checks the session and user information
    - On success, redirects to appropriate dashboard based on tenant
    - On any failure, redirects to login with error
 
-3. **Session Management**
+4. **Session Management**
    - Supabase manages the session with automatic token refresh
    - JWT token contains user details that can be accessed client and server-side
    - Sessions expire after 24 hours by default
@@ -195,26 +207,61 @@ GitHub OAuth is more restrictive than Google and only allows a single callback U
 
 #### Development Setup
 
-Since GitHub only allows one callback URL per OAuth app, you need a separate OAuth app for development:
+Since GitHub only allows one callback URL per OAuth app, you have several options:
+
+**Option 1: Separate OAuth Apps (Recommended for Teams)**
 
 1. Create a development GitHub OAuth App:
-
    - Go to GitHub Developer Settings > OAuth Apps > New OAuth App
    - Set homepage URL to `http://localhost:3000`
    - Set callback URL to: `http://localhost:54321/auth/v1/callback`
-   - Add the additional redirect URL: `http://localhost:3000/auth-redirect`
    - Get the development client ID and secret
 
 2. When running in development mode, set these environment variables in your `.env.development`:
-
    ```
    GITHUB_CLIENT_ID=your_development_client_id
    GITHUB_CLIENT_SECRET=your_development_client_secret
    ```
 
-3. When deploying to production, use the production client ID and secret in your `.env.production`
+**Option 2: Use Cloud Supabase in Dev (Simpler Option)**
 
-This approach requires maintaining two separate GitHub OAuth apps, but it's the simplest solution given GitHub's limitation of one callback URL per OAuth app.
+1. Use the production GitHub OAuth App with a single callback URL:
+   - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback` 
+
+2. Configure your Supabase project to allow redirects to your development URLs:
+   ```
+   # In supabase/config.toml - additional_redirect_urls section
+   "http://localhost:3000",
+   "http://localhost:3000/auth-redirect",
+   "http://localhost:3000/en/auth-redirect",
+   "http://localhost:3000/fr/auth-redirect"
+   ```
+
+3. Configure URL replacement in callback handler:
+   - This ensures localhost URLs work with production Supabase instance
+   - See `/src/app/api/auth/callback/route.ts` for implementation
+
+**Option 3: For GitHub Codespaces**
+
+GitHub Codespaces requires special handling due to dynamic domain names:
+
+1. Add wildcard entries to your Supabase redirect URLs:
+   ```
+   "https://*.app.github.dev",
+   "https://*.app.github.dev/auth-redirect",
+   "https://*.app.github.dev/en/auth-redirect",
+   "https://*.app.github.dev/fr/auth-redirect"
+   ```
+
+2. In your auth-redirect page, detect Codespace environment and set cookies appropriately:
+   ```javascript
+   if (hostname.includes('github.dev')) {
+     cookieDomain = '.app.github.dev';
+   }
+   ```
+
+3. Use the same Supabase callback URL:
+   - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
 
 ## Email/Password Authentication
 

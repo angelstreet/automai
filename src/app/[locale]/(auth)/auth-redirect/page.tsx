@@ -21,8 +21,13 @@ const setAuthCookies = (session: Session): boolean => {
     let cookieDomain = '';
     
     if (hostname.includes('github.dev')) {
+      // For GitHub Codespaces
       cookieDomain = '.app.github.dev';
+    } else if (hostname.includes('github.io')) {
+      // For GitHub Pages
+      cookieDomain = '.github.io';  
     } else if (hostname.includes('vercel.app')) {
+      // For Vercel deployments
       cookieDomain = '.vercel.app';
     }
     // localhost doesn't need domain specified

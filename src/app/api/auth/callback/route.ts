@@ -19,18 +19,29 @@ export async function GET(request: NextRequest) {
   // Fix the request URL if it's localhost in a GitHub Codespace
   let fixedUrl = request.url;
 
-  // Check if we're in a GitHub Codespace and the URL contains localhost
+  // Check if we're in a GitHub Codespace or if URL needs to be fixed for any environment
+  if (request.url.includes('localhost:') || request.url.includes('127.0.0.1:')) {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+    if (siteUrl) {
+      // Replace localhost with the actual site URL (Codespace URL or production URL)
+      fixedUrl = request.url.replace(
+        /https?:\/\/(localhost|127\.0\.0\.1):[0-9]+/,
+        siteUrl,
+      );
+      console.log('Fixed request URL for callback:', fixedUrl);
+    } else {
+      console.warn('No NEXT_PUBLIC_SITE_URL provided for URL replacement');
+    }
+  }
+  
+  // If we're in a GitHub Codespace and the URL contains the Codespace domain
   if (
     process.env.CODESPACE &&
-    process.env.NEXT_PUBLIC_SITE_URL &&
-    request.url.includes('localhost:')
+    process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN &&
+    request.url.includes(process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN)
   ) {
-    // Replace localhost with the actual GitHub Codespace URL
-    fixedUrl = request.url.replace(
-      /https?:\/\/(localhost|127\.0\.0\.1):[0-9]+/,
-      process.env.NEXT_PUBLIC_SITE_URL,
-    );
-    console.log('Fixed request URL for GitHub Codespace:', fixedUrl);
+    console.log('Detected Codespace URL in callback:', request.url);
   }
 
   const requestUrl = new URL(fixedUrl);
