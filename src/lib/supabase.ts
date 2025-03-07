@@ -74,12 +74,17 @@ type ExtendedSupabaseClient = ReturnType<typeof createClient> & {
 
 // Server-side client with service role when available
 export function createServerSupabase() {
-  if (serverClient) return serverClient;
+  // Ensure singleton pattern - if client already exists, just return it
+  if (serverClient) {
+    // Do not log every time to reduce noise
+    return serverClient;
+  }
 
+  // Initialize if it doesn't exist
   const supabaseUrl = getSupabaseUrl();
   const key = getSupabaseServiceKey() || getSupabaseAnonKey();
 
-  console.log(`Creating Supabase server client for ${supabaseUrl}`);
+  console.log(`Creating Supabase server client (singleton) for ${supabaseUrl}`);
   serverClient = createClient(supabaseUrl, key, {
     auth: { persistSession: false },
   });
@@ -93,11 +98,10 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
     throw new Error('createBrowserSupabase should only be used in browser environment');
   }
 
-  // Check the global cache first
+  // Check the global cache first - ensure singleton pattern
   // @ts-ignore - global types
   if (globalThis.__supabaseBrowserClient) {
-    console.log('Using cached global Supabase browser client');
-    // @ts-ignore - global types
+    // No logging to reduce console noise
     return globalThis.__supabaseBrowserClient as ExtendedSupabaseClient;
   }
 
@@ -132,8 +136,8 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
     console.log('Codespace environment detected, using public URL:', supabaseUrl);
   }
 
-  // Log the URL being used
-  console.log(`Creating Supabase browser client for ${supabaseUrl}`);
+  // Log the URL only when creating a new client instance (just once)
+  console.log(`Creating Supabase browser client (singleton) for ${supabaseUrl}`);
 
   const supabaseAnonKey = getSupabaseAnonKey();
 
@@ -158,72 +162,44 @@ export function createBrowserSupabase(): ExtendedSupabaseClient {
       detectSessionInUrl: true,
       // Debug auth issues
       debug: isDevelopment(),
-      // CRITICAL: use both cookie and localStorage persistence
-      // for maximum compatibility
-      // Also provide localStorage as backup storage
+      // Use standardized storage approach with logging
       storage: {
         getItem: (key) => {
           try {
-            // First try to get from localStorage
-            const localValue = localStorage.getItem(key);
-            
-            // If not in localStorage, try to get from cookies
-            if (!localValue) {
-              const cookies = document.cookie.split(';').map(c => c.trim());
-              const cookie = cookies.find(c => c.startsWith(`${key}=`));
-              if (cookie) {
-                const value = cookie.split('=')[1];
-                // Store in localStorage for future use
-                localStorage.setItem(key, value);
-                return value;
-              }
+            const value = localStorage.getItem(key);
+            if (value && (key === 'sb-access-token' || key === 'sb-refresh-token')) {
+              console.log(`[Auth] Retrieved ${key} from storage (${value.substring(0, 5)}...)`);
             }
-            
-            return localValue;
+            return value;
           } catch (error) {
-            console.error('Error getting item from storage:', error);
+            console.error('[Auth] Error getting item from storage:', error);
             return null;
           }
         },
         setItem: (key, value) => {
           try {
-            // Store in localStorage
             localStorage.setItem(key, value);
-            
-            // Also set as cookies for redundancy with proper attributes
-            if (key.includes('access') || key.includes('refresh')) {
-              try {
-                const maxAge = key.includes('refresh') ? 7776000 : 3600; // 90 days for refresh, 1 hour for access
-                document.cookie = `${key}=${value}; path=/; max-age=${maxAge}; SameSite=Lax`;
-                console.log(`Set ${key} cookie with proper attributes`);
-              } catch (e) {
-                console.error('Error setting redundant cookie:', e);
-              }
+            if (key === 'sb-access-token' || key === 'sb-refresh-token') {
+              console.log(`[Auth] Stored ${key} in localStorage (${value.substring(0, 5)}...)`);
+              
+              // Simple cookie storage for standard browser behavior
+              const maxAge = key.includes('refresh') ? 7776000 : 3600; // 90 days for refresh, 1 hour for access
+              document.cookie = `${key}=${value}; path=/; max-age=${maxAge}; SameSite=Lax`;
+              console.log(`[Auth] Set ${key} cookie`);
             }
           } catch (error) {
-            console.error('Error setting item in storage:', error);
-            // If localStorage fails, try to set only as cookie
-            try {
-              const maxAge = key.includes('refresh') ? 7776000 : 3600;
-              document.cookie = `${key}=${value}; path=/; max-age=${maxAge}; SameSite=Lax`;
-            } catch (e) {
-              console.error('Error setting fallback cookie:', e);
-            }
+            console.error('[Auth] Error setting item in storage:', error);
           }
         },
         removeItem: (key) => {
           try {
             localStorage.removeItem(key);
-            // Remove from cookies too
-            if (key.includes('access') || key.includes('refresh')) {
-              try {
-                document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-              } catch (e) {
-                console.error('Error removing redundant cookie:', e);
-              }
-            }
+            console.log(`[Auth] Removed ${key} from localStorage`);
+            
+            // For cookies, expire them
+            document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
           } catch (error) {
-            console.error('Error removing item from storage:', error);
+            console.error('[Auth] Error removing item from storage:', error);
           }
         },
       },

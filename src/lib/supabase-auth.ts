@@ -138,7 +138,8 @@ export const supabaseAuth = {
         }
       }
 
-      // Simplified redirect URL - always use localized auth-redirect
+      // Redirect URL to auth-redirect in (auth) route group
+      // IMPORTANT: This is where the auth-redirect page is located in our app structure
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const redirectUrl = `${origin}/${locale}/auth-redirect`;
       

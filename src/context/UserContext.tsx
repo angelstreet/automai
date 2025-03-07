@@ -146,6 +146,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     };
   }, [supabaseAuth]);
 
+  // Track the last time we checked the session to avoid frequent checks
+  const lastFocusCheckRef = useRef(Date.now());
+
   // Helper function to safely call supabaseAuth methods
   const safeAuthCall = async <T,>(
     methodName: string,
@@ -170,7 +173,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  async function loadSession() {
+  const loadSession = useCallback(async () => {
     // Skip if already loading
     if (isFetchingUser.current) {
       console.log('UserContext - Session check already in progress, skipping');
@@ -208,6 +211,56 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Check for fallback auth mechanisms first
       let fallbackUserId = null;
       let fallbackAuthFound = false;
+      let isGoogleAuth = false;
+      
+      // Check for Google-specific auth indicators
+      try {
+        // Check localStorage for Google auth
+        if (typeof localStorage !== 'undefined') {
+          const sbProvider = localStorage.getItem('sb-provider');
+          const sbUserId = localStorage.getItem('sb-user-id');
+          const sbAccessToken = localStorage.getItem('sb-access-token');
+          
+          if (sbProvider === 'google' && sbUserId && sbAccessToken) {
+            console.log('UserContext - Found Google auth in localStorage');
+            fallbackUserId = sbUserId;
+            fallbackAuthFound = true;
+            isGoogleAuth = true;
+            
+            // Try to set the session from localStorage
+            if (supabaseAuth && typeof supabaseAuth.auth.setSession === 'function') {
+              try {
+                const refreshToken = localStorage.getItem('sb-refresh-token') || '';
+                await supabaseAuth.auth.setSession({
+                  access_token: sbAccessToken,
+                  refresh_token: refreshToken,
+                });
+                console.log('UserContext - Set session from Google localStorage tokens');
+              } catch (e) {
+                console.error('UserContext - Error setting session from localStorage:', e);
+              }
+            }
+          }
+        }
+        
+        // Check cookies for Google auth
+        const cookies = document.cookie.split(';').map(c => c.trim());
+        const authProviderCookie = cookies.find(c => c.startsWith('auth-provider='));
+        const googleUserIdCookie = cookies.find(c => c.startsWith('google-user-id='));
+        
+        if (authProviderCookie?.includes('google') && googleUserIdCookie) {
+          console.log('UserContext - Found Google auth cookies');
+          const googleUserId = googleUserIdCookie.split('=')[1];
+          
+          if (!fallbackUserId) {
+            fallbackUserId = googleUserId;
+            fallbackAuthFound = true;
+            isGoogleAuth = true;
+          }
+        }
+      } catch (e) {
+        console.error('UserContext - Error checking for Google auth:', e);
+      }
       
       // Check for session info in sessionStorage (from auth-redirect)
       try {
@@ -220,8 +273,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           // If the auth redirect happened in the last 5 minutes, use this info
           if (now - timestamp < 5 * 60 * 1000) {
             console.log('UserContext - Found recent auth redirect info in sessionStorage');
-            fallbackUserId = authUserId;
-            fallbackAuthFound = true;
+            
+            if (!fallbackUserId) {
+              fallbackUserId = authUserId;
+              fallbackAuthFound = true;
+            }
           }
         }
       } catch (e) {
@@ -276,7 +332,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             email: sessionStorage.getItem('auth_user_email') || undefined,
             plan: 'free' as PlanType,
             // Add minimal required properties to satisfy the User type
-            app_metadata: {},
+            app_metadata: { provider: isGoogleAuth ? 'google' : undefined },
             user_metadata: { plan: 'free' },
             aud: 'authenticated',
             created_at: '',
@@ -287,7 +343,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           setError(null);
           setIsLoading(false);
           isFetchingUser.current = false;
-          lastFetchedAt.current = Date.now();
+          lastFetchedAt.current = now;
           return;
         }
         
@@ -336,7 +392,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       isFetchingUser.current = false;
     }
-  }
+  }, [supabaseAuth, user, setError, setIsLoading, setUser, setSession, setSessionStatus]);
 
   // We don't need a separate fetch user function anymore
   // All user data comes directly from the session
@@ -465,20 +521,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         fetchTimeoutRef.current = null;
       }, 300);
     }
-  }, [session]);
+  }, [loadSession]);
 
-  // Add a listener to refresh the session when the app regains focus
-  useEffect(() => {
-    function handleFocus() {
-      console.log('Window focused, checking session');
-      checkSession();
-    }
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('focus', handleFocus);
-      return () => window.removeEventListener('focus', handleFocus);
-    }
-  }, [checkSession]);
+  // No window focus event listener to reduce complexity
 
   // Track number of fetch attempts for retries
   const fetchAttempts = useRef(0);
