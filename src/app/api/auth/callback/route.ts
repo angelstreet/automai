@@ -73,7 +73,6 @@ export async function GET(request: NextRequest) {
   });
 
   try {
-    // Use the fixed URL throughout instead of the original request.url
     console.log('Supabase environment:', {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       originalUrl: request.url,

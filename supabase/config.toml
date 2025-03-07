@@ -22,7 +22,7 @@ max_rows = 1000
 enabled = false
 
 [db]
-# Port to use for the local database URL.
+# Port to use for the locodespace doesn ot recal database URL.
 port = 54322
 # Port used by db diff command to initialize the shadow database.
 shadow_port = 54320
@@ -69,7 +69,7 @@ enabled = true
 # Port to use for Supabase Studio.
 port = 54323
 # External URL of the API server that frontend connects to.
-api_url = "http://localhost"
+api_url = "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev"
 # OpenAI API Key to use for Supabase AI in the Supabase Studio.
 openai_api_key = "env(OPENAI_API_KEY)"
 
@@ -105,48 +105,31 @@ file_size_limit = "50MiB"
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://localhost:3000"
+site_url = "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
-  # Base localhost URLs
   "http://localhost:3000",
-  "http://localhost:3001",
-  # Root auth redirect paths
   "http://localhost:3000/auth-redirect",
-  "http://localhost:3001/auth-redirect",
-  # Localized auth redirect paths
-  "http://localhost:3000/en/auth-redirect",
-  "http://localhost:3000/fr/auth-redirect",
-  "http://localhost:3001/en/auth-redirect",
-  "http://localhost:3001/fr/auth-redirect",
-  # API callback paths
   "http://localhost:3000/api/auth/callback",
   "http://localhost:3000/api/auth/callback/github",
   "http://localhost:3000/api/auth/callback/google",
+  "http://localhost:3001",
+  "http://localhost:3001/auth-redirect",
   "http://localhost:3001/api/auth/callback",
   "http://localhost:3001/api/auth/callback/github",
   "http://localhost:3001/api/auth/callback/google",
-  # GitHub dev URLs
   "https://vigilant-spork-q667vwj94c9x55.github.dev",
   "https://vigilant-spork-q667vwj94c9x55.github.dev/auth-redirect",
-  "https://vigilant-spork-q667vwj94c9x55.github.dev/en/auth-redirect",
-  "https://vigilant-spork-q667vwj94c9x55.github.dev/fr/auth-redirect",
   "https://vigilant-spork-q667vwj94c9x55.github.dev/api/auth/callback",
   "https://vigilant-spork-q667vwj94c9x55.github.dev/api/auth/callback/github",
   "https://vigilant-spork-q667vwj94c9x55.github.dev/api/auth/callback/google",
-  # GitHub Codespace port 3000
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev",
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/auth-redirect",
-  "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/en/auth-redirect",
-  "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/fr/auth-redirect",
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback",
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback/github",
   "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback/google",
-  # GitHub Codespace port 3001
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/auth-redirect",
-  "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/en/auth-redirect",
-  "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/fr/auth-redirect",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback/github",
   "https://vigilant-spork-q667vwj94c9x55-3001.app.github.dev/api/auth/callback/google"
@@ -271,17 +254,17 @@ max_frequency = "5s"
 
 [auth.external.github]
 enabled = true
-client_id = "Ov23li9Mgk9UsSftpKW3"
-secret = "511e1370dedef47c803b62e1354530d8453797ae"
-# Use the Supabase auth endpoint as redirect target for local development
-redirect_uri = "http://localhost:54321/auth/v1/callback"
+client_id = "Ov23liaMpBie6bYgkSwX"
+secret = "724246a35c225201be32a43256bebb026a4e7827"
+# Correct redirect URI that points to Supabase auth endpoint
+redirect_uri = "https://vigilant-spork-q667vwj94c9x55-54321.app.github.dev/auth/v1/callback"
 
 [auth.external.google]
 enabled = true
 client_id = "1004866229182-p6ribbdkmmblb0k44o5h1g5hoaddi05s.apps.googleusercontent.com"
 secret = "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"
-# Use the Supabase auth endpoint as redirect target for local development
-redirect_uri = "http://localhost:54321/auth/v1/callback"
+# Correct redirect URI that points to Supabase auth endpoint
+redirect_uri = "https://vigilant-spork-q667vwj94c9x55-54321.app.github.dev/auth/v1/callback"
 
 [auth.external.apple]
 enabled = false
@@ -289,7 +272,7 @@ client_id = ""
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
 secret = "env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)"
 # Overrides the default auth redirectUrl.
-redirect_uri = ""
+redirect_uri = "https://vigilant-spork-q667vwj94c9x55-3000.app.github.dev/api/auth/callback"
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,
 # or any other third-party OIDC providers.
 url = ""
