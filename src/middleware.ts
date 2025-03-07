@@ -159,13 +159,16 @@ export default async function middleware(request: NextRequest) {
       request.nextUrl.pathname === `/${locale}` || request.nextUrl.pathname === `/${locale}/`,
   );
 
-  // Check for auth-related pages explicitly
+  // Check for auth-related pages explicitly - including paths in (auth) route group
   const isAuthPage =
-    pathParts.length >= 2 &&
-    locales.includes(pathParts[0] as any) &&
-    ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(
-      pathParts[1],
-    );
+    (pathParts.length >= 2 &&
+     locales.includes(pathParts[0] as any) &&
+     ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(
+       pathParts[1],
+     )) || 
+    // Special check for route group with (auth)
+    request.nextUrl.pathname.includes('/(auth)/') ||
+    request.nextUrl.pathname.includes('/auth-redirect');
 
   // Check if it's a public path more precisely
   const isPublicPath =
@@ -175,7 +178,7 @@ export default async function middleware(request: NextRequest) {
     isRootLocalePath ||
     isExplicitLocalePath ||
     isAuthPage ||
-    request.nextUrl.pathname.includes('/auth-redirect');
+    request.nextUrl.pathname.includes('auth-redirect'); // Note: no leading slash needed for includes
 
   // Special handling for login path - ALWAYS consider it public
   const isLoginPage =
@@ -217,9 +220,9 @@ export default async function middleware(request: NextRequest) {
   // Define protected paths clearly
   const protectedPaths = ['dashboard', 'admin', 'repositories', 'terminals', 'settings', 'trial'];
 
-  // Explicitly bypass auth-redirect path
-  if (request.nextUrl.pathname.includes('/auth-redirect')) {
-    console.log('Auth redirect path detected, bypassing auth check');
+  // Explicitly bypass auth-redirect path - handles both old and new path with route group
+  if (request.nextUrl.pathname.includes('auth-redirect')) {
+    console.log('Auth redirect path detected, bypassing auth check:', request.nextUrl.pathname);
     return NextResponse.next();
   }
 

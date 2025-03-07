@@ -138,10 +138,13 @@ export const supabaseAuth = {
         }
       }
 
-      // Redirect URL to auth-redirect in (auth) route group
-      // IMPORTANT: This is where the auth-redirect page is located in our app structure
+      // Redirect URL - use auth-redirect in base locale path for maximum compatibility
+      // This needs to match the URLs allowed in the Supabase dashboard settings
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const redirectUrl = `${origin}/${locale}/auth-redirect`;
+      
+      // Log the exact redirect URL we're using
+      console.log(`OAuth redirect URL: ${redirectUrl}`);
       
       // Detect environment (development, codespace, or production)
       const isCodespace = typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
@@ -157,7 +160,8 @@ export const supabaseAuth = {
         // Each environment has its own GitHub OAuth app
         queryParams: {
           // Add a hint to identify which environment for debugging
-          environment: isCodespace ? 'codespace' : isDevelopment ? 'development' : 'production'
+          environment: isCodespace ? 'codespace' : isDevelopment ? 'development' : 'production',
+          debug: 'true' // Enable debug mode for troubleshooting
         },
         // GitHub-specific scopes
         scopes: 'repo,user',
@@ -165,6 +169,11 @@ export const supabaseAuth = {
         flowType: isCodespace ? 'implicit' : undefined,
       } : {
         // For Google, the options are simpler
+        queryParams: {
+          // Add debugging parameters
+          debug: 'true',
+          environment: isCodespace ? 'codespace' : isDevelopment ? 'development' : 'production'
+        },
         scopes: 'email profile',
         flowType: isCodespace ? 'implicit' : undefined,
       };
