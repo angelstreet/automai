@@ -62,7 +62,7 @@ export async function GET(request: Request) {
             id: userId,
             email: session.user.email,
             name: session.user.name || session.user.email?.split('@')[0] || 'User',
-            role: session.user.role || 'admin', // Default to admin role
+            user_role: session.user.user_role || 'admin', // Default to admin role
             tenantId: (session.user.tenantId || 'trial').toLowerCase(),
           },
         });
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
           id: newUser.id,
           name: newUser.name,
           email: newUser.email,
-          role: newUser.role,
+          user_role: newUser.user_role,
           tenantId: newUser.tenantId,
           tenantName: 'trial',
           plan: 'free',
@@ -86,7 +86,7 @@ export async function GET(request: Request) {
           id: session.user.id,
           name: session.user.name,
           email: session.user.email,
-          role: session.user.role || 'admin', // Default to admin role
+          user_role: session.user.user_role || 'admin', // Default to admin role
           tenantId: (session.user.tenantId || 'trial').toLowerCase(),
           tenantName: (session.user.tenantName || 'trial').toLowerCase(),
           plan: 'free',
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
+      user_role: user.user_role,
       tenantId: user.tenantId,
       tenantName: tenant?.name || null,
       plan: tenant?.plan || 'free',
@@ -143,7 +143,7 @@ export async function PATCH(req: Request) {
       id: updatedUser.id,
       name: updatedUser.name,
       email: updatedUser.email,
-      role: updatedUser.role,
+      user_role: updatedUser.user_role,
     });
   } catch (error) {
     console.error('[PROFILE_PATCH]', error);

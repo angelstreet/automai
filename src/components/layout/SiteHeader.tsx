@@ -47,11 +47,8 @@ export function SiteHeader({ showAuth = true }: HeaderProps) {
             <ThemeToggle />
             {showAuth && (
               <>
-                <Button variant="ghost" asChild>
-                  <Link href={`/${locale}/login`}>Sign in</Link>
-                </Button>
                 <Button asChild>
-                  <Link href={`/${locale}/signup`}>Get Started</Link>
+                  <Link href={`/${locale}/login`}>Sign in</Link>
                 </Button>
               </>
             )}

@@ -16,3 +16,4 @@ docs/jenkins-infrastructure/
 
 # Auth test files with sensitive information
 public/test-auth.html
+.cursor/rules/mcp.json

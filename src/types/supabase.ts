@@ -315,7 +315,7 @@ export type Database = {
           name: string | null
           password: string | null
           provider: string | null
-          role: string
+          user_role: string
           tenantId: string | null
           updatedAt: string
         }
@@ -328,7 +328,7 @@ export type Database = {
           name?: string | null
           password?: string | null
           provider?: string | null
-          role?: string
+          user_role?: string
           tenantId?: string | null
           updatedAt?: string
         }
@@ -341,7 +341,7 @@ export type Database = {
           name?: string | null
           password?: string | null
           provider?: string | null
-          role?: string
+          user_role?: string
           tenantId?: string | null
           updatedAt?: string
         }

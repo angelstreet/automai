@@ -17,6 +17,8 @@ type PlanType = keyof typeof getPlanFeatures;
 
 type User = AuthUser & {
   plan: PlanType;
+  tenantName?: string | null;
+  user_role?: string;
 };
 
 type UserContextType = {
@@ -53,8 +55,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [sessionStatus, setSessionStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
-  const router = useRouter();
-  const pathname = usePathname();
 
   // Initialize refs to track state between renders
   const isFetchingUser = useRef(false);

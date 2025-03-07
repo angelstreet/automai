@@ -19,9 +19,9 @@ export function RoleProvider({ children }: { children: ReactNode }) {
 
   // Update role when user data is loaded
   useEffect(() => {
-    if (user && user.role) {
+    if (user && user.user_role) {
       // Convert role to lowercase and ensure it's a valid Role type
-      const userRole = user.role.toLowerCase() as Role;
+      const userRole = user.user_role.toLowerCase() as Role;
       if (
         userRole === 'admin' ||
         userRole === 'developer' ||
