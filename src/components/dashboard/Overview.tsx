@@ -50,9 +50,24 @@ const data = {
 
 export function Overview() {
   const [isClient, setIsClient] = useState(false);
+  const [chartData, setChartData] = useState(data);
 
   useEffect(() => {
     setIsClient(true);
+    
+    // Ensure chart data is valid to prevent undefined point errors
+    setChartData({
+      ...data,
+      datasets: data.datasets.map(dataset => ({
+        ...dataset,
+        // Ensure data is not undefined and has valid length
+        data: dataset.data || [0, 0, 0, 0, 0, 0],
+        // Add missing required properties
+        fill: false,
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }))
+    });
   }, []);
 
   if (!isClient) {
@@ -61,7 +76,7 @@ export function Overview() {
 
   return (
     <div className="h-[350px]">
-      <LineChart options={options} data={data} />
+      <LineChart options={options} data={chartData} />
     </div>
   );
 }
