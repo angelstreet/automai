@@ -2,6 +2,15 @@ import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
+// Add this interface at the top of the file
+interface SupabaseError extends Error {
+  status?: number;
+  originalError?: {
+    name: string;
+    message: string;
+  };
+}
+
 /**
  * This route handles OAuth callback requests from Supabase Auth.
  * It is needed for processing OAuth provider redirects.
@@ -276,14 +285,15 @@ export async function GET(request: NextRequest) {
         console.log('Cookies after exchange:', cookiesAfter);
       } catch (exchangeError) {
         console.error('Exception during code exchange:', exchangeError);
+        const typedError = exchangeError as SupabaseError;
         console.log('Exchange error details:', {
-          name: exchangeError.name,
-          message: exchangeError.message,
-          stack: exchangeError.stack?.split('\n').slice(0, 3),
-          originalError: exchangeError.originalError
+          name: typedError.name,
+          message: typedError.message,
+          stack: typedError.stack?.split('\n').slice(0, 3),
+          originalError: typedError.originalError
             ? {
-                name: exchangeError.originalError.name,
-                message: exchangeError.originalError.message,
+                name: typedError.originalError.name,
+                message: typedError.originalError.message,
               }
             : null,
         });
@@ -297,15 +307,16 @@ export async function GET(request: NextRequest) {
 
       if (error) {
         console.error('Error exchanging code for session:', error);
+        const typedError = error as SupabaseError;
         console.log('Error details:', {
-          message: error.message,
-          name: error.name,
-          status: (error as any).status,
-          originalError: (error as any).originalError,
+          message: typedError.message,
+          name: typedError.name,
+          status: typedError.status,
+          originalError: typedError.originalError,
         });
         return NextResponse.redirect(
           new URL(
-            `/en/login?error=${encodeURIComponent(error.message)}`,
+            `/en/login?error=${encodeURIComponent(typedError.message)}`,
             process.env.NEXT_PUBLIC_SITE_URL,
           ),
         );
