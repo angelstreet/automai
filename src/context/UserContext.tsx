@@ -29,6 +29,12 @@ type UserContextType = {
   refreshUser: () => Promise<void>; // Will use current session user
   checkSession: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  // Authentication methods
+  getSession: () => Promise<{ data: { session: Session | null }, error: any }>;
+  signInWithPassword: (email: string, password: string) => Promise<{ data: any, error: any }>;
+  signInWithOAuth: (provider: 'google' | 'github') => Promise<{ data: any, error: any }>;
+  signUp: (email: string, password: string) => Promise<{ data: any, error: any }>;
+  resetPassword: (email: string) => Promise<{ data: any, error: any }>;
 };
 
 // Cache for session data
@@ -616,6 +622,47 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session, fetchUser]);
 
+  // Authentication methods that call through to supabaseAuth
+  const getSession = useCallback(async () => {
+    return safeAuthCall(
+      'getSession',
+      supabaseAuth ? () => supabaseAuth.getSession() : undefined,
+      { data: { session: null }, error: new Error('Failed to get session') }
+    );
+  }, [supabaseAuth]);
+
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    return safeAuthCall(
+      'signInWithPassword',
+      supabaseAuth ? () => supabaseAuth.signInWithPassword(email, password) : undefined,
+      { data: null, error: new Error('Authentication client not initialized') }
+    );
+  }, [supabaseAuth]);
+
+  const signInWithOAuth = useCallback(async (provider: 'google' | 'github') => {
+    return safeAuthCall(
+      'signInWithOAuth',
+      supabaseAuth ? () => supabaseAuth.signInWithOAuth(provider) : undefined,
+      { data: null, error: new Error('Authentication client not initialized') }
+    );
+  }, [supabaseAuth]);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    return safeAuthCall(
+      'signUp',
+      supabaseAuth ? () => supabaseAuth.signUp(email, password) : undefined,
+      { data: null, error: new Error('Authentication client not initialized') }
+    );
+  }, [supabaseAuth]);
+
+  const resetPassword = useCallback(async (email: string) => {
+    return safeAuthCall(
+      'resetPassword',
+      supabaseAuth ? () => supabaseAuth.resetPassword(email) : undefined,
+      { data: null, error: new Error('Authentication client not initialized') }
+    );
+  }, [supabaseAuth]);
+
   const value = {
     user,
     isLoading: isLoading || sessionStatus === 'loading',
@@ -626,6 +673,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     refreshUser,
     checkSession,
     updateProfile,
+    // Auth methods
+    getSession,
+    signInWithPassword,
+    signInWithOAuth,
+    signUp,
+    resetPassword,
   };
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

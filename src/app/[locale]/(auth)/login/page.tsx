@@ -9,7 +9,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import supabaseAuth from '@/lib/supabase-auth';
+import { useUser } from '@/context/UserContext';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -67,6 +67,9 @@ export default function LoginPage() {
     throw lastError;
   };
 
+  // Get user context with all needed methods
+  const { getSession, user, signInWithPassword, signInWithOAuth } = useUser();
+
   // Check if user is already authenticated
   useEffect(() => {
     // Check for existing Supabase session with retry logic
@@ -78,7 +81,7 @@ export default function LoginPage() {
         console.log('Login page - Checking for existing session...');
 
         // Use retry logic for API calls
-        const { data } = await callWithRetry(() => supabaseAuth.getSession());
+        const { data } = await callWithRetry(() => getSession());
 
         if (data.session) {
           console.log('Login page - Session found, redirecting:', {
@@ -125,27 +128,16 @@ export default function LoginPage() {
       }
     }
 
+    // If user is already loaded, redirect without checking session
+    if (user) {
+      console.log('Login page - User already in context, redirecting');
+      const redirectPath = normalizedCallbackUrl || `/${locale}/trial/dashboard`;
+      router.replace(redirectPath);
+      return;
+    }
+
     checkSession();
-
-    // Also listen for auth state changes
-    const { data: authListener } = supabaseAuth.onAuthStateChange((event, session) => {
-      console.log('Login page - Auth state changed:', { event, hasSession: !!session });
-
-      if (session) {
-        // User signed in, redirect to dashboard or callback URL
-        let redirectPath = normalizedCallbackUrl || `/${locale}/trial/dashboard`;
-        // Ensure path is lowercase
-        redirectPath = redirectPath.toLowerCase();
-        console.log('Auth state changed, redirecting to:', redirectPath);
-        router.replace(redirectPath);
-      }
-    });
-
-    return () => {
-      // Cleanup listener on unmount
-      authListener?.subscription.unsubscribe();
-    };
-  }, [router, locale, normalizedCallbackUrl]);
+  }, [router, locale, normalizedCallbackUrl, getSession, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,7 +149,7 @@ export default function LoginPage() {
 
       // Use retry logic for API calls
       const { data, error } = await callWithRetry(() =>
-        supabaseAuth.signInWithPassword(email, password),
+        signInWithPassword(email, password),
       );
 
       if (error) {
@@ -235,7 +227,7 @@ export default function LoginPage() {
     try {
       // Use Supabase OAuth
       console.log(`Starting ${provider} OAuth login flow`);
-      const { data, error } = await supabaseAuth.signInWithOAuth(provider);
+      const { data, error } = await signInWithOAuth(provider);
 
       if (error) {
         console.error(`${provider} OAuth error:`, error);
