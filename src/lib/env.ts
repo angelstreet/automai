@@ -59,7 +59,6 @@ const clientEnvSchema = z.object({
     .default(
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
     ),
-  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
 
@@ -68,14 +67,15 @@ export const env = isBrowser
   ? clientEnvSchema.parse({
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
       NODE_ENV: process.env.NODE_ENV,
     })
   : envSchema.parse(processEnv);
 
 // Safe helper functions that work in both browser and server
 export const isCodespace = () => {
-  if (isBrowser) return false;
+  if (isBrowser) {
+    return typeof window !== 'undefined' && window.location.hostname.includes('.app.github.dev');
+  }
   return Boolean(process.env.CODESPACE);
 };
 export const isDevelopment = () => process.env.NODE_ENV === 'development';
@@ -90,15 +90,28 @@ export const isUsingSupabase = () => {
   );
 };
 
-export const getBaseUrl = () => {
+// Dynamic site URL determination based on environment
+export const getSiteUrl = () => {
+  // Client-side: use the current origin
   if (isBrowser) {
     return window.location.origin;
   }
 
-  if (process.env.CODESPACE) {
-    return `https://${process.env.CODESPACE_NAME}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`;
+  // Server-side determination based on environment
+  if (isCodespace()) {
+    return `https://${process.env.CODESPACE_NAME}-3000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || 'app.github.dev'}`;
   }
+  
+  // Production
+  if (isProduction()) {
+    return 'https://automai-eta.vercel.app';
+  }
+  
+  // Development fallback
+  return 'http://localhost:3000';
+};
 
-  // Use NEXT_PUBLIC_SITE_URL for Supabase
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+// For backward compatibility - uses the new getSiteUrl function
+export const getBaseUrl = () => {
+  return getSiteUrl();
 };

@@ -29,6 +29,23 @@ declare global {
   var __supabaseBrowserClient: ReturnType<typeof createBrowserClient> | undefined;
 }
 
+// Helper for URL detection and formatting - Always use cloud Supabase
+const getRedirectUrl = (path = '/auth-redirect') => {
+  if (typeof window === 'undefined') {
+    return 'https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback';
+  }
+  
+  // Dynamically determine the redirect URL based on current hostname
+  const origin = window.location.origin;
+  const locale = window.location.pathname.split('/')[1] || 'en';
+  
+  // Ensure the path starts with a slash
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  
+  // Include locale in the redirect path
+  return `${origin}/${locale}${normalizedPath}`;
+};
+
 // Helper for Codespace URL detection and formatting - Always use cloud Supabase
 const getCodespaceUrl = () => {
   // Always return cloud Supabase URL - never try to use local Supabase in Codespaces

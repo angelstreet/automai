@@ -66,97 +66,12 @@ export default function AuthRedirectPage() {
         const supabase = createClient();
         
         console.log('[Auth-Redirect] Attempting to handle auth redirect');
-        console.log('[Auth-Redirect] URL:', window.location.href);
-        console.log('[Auth-Redirect] Hash fragment:', window.location.hash);
-        console.log('[Auth-Redirect] Search params:', window.location.search);
         
+        // Detect environment
         const isCodespace = window.location.hostname.includes('.app.github.dev');
         console.log('[Auth-Redirect] Is Codespace environment:', isCodespace);
         
-        // For GitHub Codespaces, we prioritize hash fragment (implicit flow)
-        if (isCodespace && window.location.hash) {
-          console.log('[Auth-Redirect] Using hash fragment for Codespace auth (implicit flow)');
-          
-          try {
-            // Parse the hash fragment manually
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const accessToken = hashParams.get('access_token');
-            const refreshToken = hashParams.get('refresh_token');
-            
-            if (accessToken) {
-              console.log('[Auth-Redirect] Found access_token in hash fragment');
-              
-              // Set the session directly using tokens from the hash
-              const { data, error } = await supabase.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken || '',
-              });
-              
-              if (error) {
-                console.error('[Auth-Redirect] Error setting session from hash tokens:', error);
-              } else {
-                console.log('[Auth-Redirect] Successfully set session from hash tokens');
-              }
-            } else {
-              console.warn('[Auth-Redirect] No access_token found in hash fragment');
-            }
-          } catch (hashError) {
-            console.error('[Auth-Redirect] Error processing hash fragment:', hashError);
-          }
-        } else if (window.location.search.includes('code=')) {
-          // PKCE flow - code in URL query params
-          console.log('[Auth-Redirect] Detected code parameter (PKCE flow)');
-          const urlParams = new URLSearchParams(window.location.search);
-          const code = urlParams.get('code');
-          
-          if (code) {
-            console.log('[Auth-Redirect] Exchanging code for session');
-            
-            try {
-              // First try with built-in method
-              const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-              
-              if (error) {
-                console.error('[Auth-Redirect] Built-in code exchange failed:', error);
-                // Fall back to proxy endpoint
-                try {
-                  const { data: proxyData, error: proxyError } = await exchangeCodeForSession(code);
-                  
-                  if (proxyError) {
-                    console.error('[Auth-Redirect] Proxy code exchange also failed:', proxyError);
-                  } else {
-                    console.log('[Auth-Redirect] Proxy code exchange succeeded');
-                  }
-                } catch (proxyError) {
-                  console.error('[Auth-Redirect] Error in proxy code exchange:', proxyError);
-                }
-              } else {
-                console.log('[Auth-Redirect] Built-in code exchange succeeded');
-              }
-            } catch (codeError) {
-              console.error('[Auth-Redirect] Code exchange error:', codeError);
-            }
-          }
-        } else {
-          // If no specific auth parameters found, try the generic method
-          console.log('[Auth-Redirect] No specific auth parameters found, trying createSessionFromUrl');
-          
-          try {
-            const { data, error } = await createSessionFromUrl(window.location.href);
-            
-            if (error) {
-              console.error('[Auth-Redirect] Error creating session from URL:', error);
-            } else if (data.session) {
-              console.log('[Auth-Redirect] Session created successfully from URL');
-            } else {
-              console.warn('[Auth-Redirect] No session created from URL');
-            }
-          } catch (err) {
-            console.error('[Auth-Redirect] Exception in createSessionFromUrl:', err);
-          }
-        }
-
-        // Now check session
+        // Let Supabase handle session extraction based on URL parameters
         const { data: { session }, error } = await supabase.auth.getSession();
         
         console.log('[Auth-Debug] Session state:', {
@@ -174,19 +89,35 @@ export default function AuthRedirectPage() {
             console.warn('[Auth] Cookie setup failed:', cookieError);
           }
           
-          // Redirect to dashboard with default tenant
+          // Redirect to dashboard with tenant from user metadata or default
           setStatus('success');
-          const tenant = 'trial'; // Default tenant
-          router.push(`/${locale}/${tenant}/dashboard`);
+          const tenant = session.user.user_metadata?.tenantName || 'trial';
+          
+          // Get current origin for dynamic redirect
+          const origin = window.location.origin;
+          const dashboardUrl = `/${locale}/${tenant}/dashboard`;
+          
+          console.log('[Auth-Redirect] Redirecting to dashboard:', dashboardUrl);
+          router.push(dashboardUrl);
           return;
         }
 
         // Only reach here if no session
         setStatus('error');
         setErrorMessage('No valid session found');
+        
+        // After delay, redirect to login
+        setTimeout(() => {
+          router.push(`/${locale}/login`);
+        }, 2000);
       } catch (error) {
         console.error('[Auth] Fatal error:', error);
         setStatus('error');
+        
+        // After delay, redirect to login
+        setTimeout(() => {
+          router.push(`/${locale}/login`);
+        }, 2000);
       }
     };
 
