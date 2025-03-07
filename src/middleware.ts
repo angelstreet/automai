@@ -253,14 +253,11 @@ export default async function middleware(request: NextRequest) {
     }
 
     try {
-      // Create response and Supabase client for auth check
+      // Create response
       const res = NextResponse.next();
       
-      // Use consistent Supabase URL
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      
-      // Check for auth-related cookies directly first for faster processing
-      const hasDirectAuthCookie = 
+      // Simple auth check without creating a Supabase client
+      const hasAuthCookie = 
         !!request.cookies.get('sb-access-token') || 
         !!request.cookies.get('sb-refresh-token') ||
         !!request.cookies.get('sb-auth-token');
@@ -269,148 +266,23 @@ export default async function middleware(request: NextRequest) {
       const userSessionCookie = request.cookies.get('user-session');
       const hasUserSessionCookie = !!userSessionCookie?.value;
       
-      // Check for fallback token cookie
-      const fallbackTokenCookie = request.cookies.get('sb-fallback-token');
-      const hasFallbackToken = !!fallbackTokenCookie?.value;
-      
-      // Check for persistent session marker
-      const sessionActiveCookie = request.cookies.get('session-active');
-      const hasSessionActiveCookie = !!sessionActiveCookie?.value;
-      
-      // Check for manual auth cookie
-      const manualAuthCookie = request.cookies.get('sb-auth-manual');
-      const hasManualAuthCookie = !!manualAuthCookie?.value;
-      
-      // If we have direct auth cookies or any of our fallback mechanisms, allow the request
-      if (hasDirectAuthCookie || hasUserSessionCookie || hasFallbackToken || 
-          (hasSessionActiveCookie && hasManualAuthCookie)) {
-        console.log('Auth cookies found, skipping Supabase client creation');
-        
-        // Add detailed debug information
-        console.log('Middleware session check details:', {
-          hasDirectAuthCookie,
-          hasUserSessionCookie,
-          hasFallbackToken,
-          hasSessionActiveCookie,
-          hasManualAuthCookie,
-          cookies: request.cookies.getAll().map(c => c.name).join(', ')
-        });
-        
-        // If we have any auth cookie, allow the request
+      // If we have auth cookies, skip Supabase client creation
+      if (hasAuthCookie || hasUserSessionCookie) {
+        console.log('Auth cookies found, allowing request without Supabase client creation');
         return res;
       }
       
-      // Only create Supabase client if we don't have direct auth cookies
-      const supabase = createServerClient(
-        supabaseUrl,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get: (name) => {
-              const cookie = request.cookies.get(name);
-              return cookie?.value;
-            },
-            set: (name, value, options) => {
-              res.cookies.set({ name, value, ...options });
-            },
-            remove: (name, options) => {
-              res.cookies.set({ name, value: '', ...options });
-            },
-          },
-        },
-      );
-
-      // Get current session from cookies - simple single call
-      const { data, error } = await supabase.auth.getSession();
-      
-      // Add detailed debug information for session handling
-      console.log('Middleware session check details:', {
-        hasData: !!data,
-        hasSession: !!data?.session,
-        hasUser: !!data?.session?.user,
-        hasEmail: !!data?.session?.user?.email,
-        hasError: !!error,
-        errorMsg: error?.message,
-        cookies: request.cookies.getAll().map(c => c.name).join(', '),
-        hasSbAuthToken: hasDirectAuthCookie,
-        hasUserSessionCookie,
-        hasFallbackToken,
-        hasSessionActiveCookie,
-        hasManualAuthCookie
-      });
-      
-      // Special handling for RSC requests to prevent redirect loops
-      if (request.nextUrl.search.includes('_rsc=')) {
-        console.log('RSC request detected, allowing without strict session check');
-        return res;
-      }
-      
-      if (error) {
-        console.error('Session error:', error.message);
-        
-        if (isApiRoute) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        
-        // Check URL path to prevent redirect loops
-        if (request.nextUrl.pathname.includes('/login') ||
-            request.nextUrl.pathname.includes('/auth-redirect')) {
-          return NextResponse.next();  
-        }
-        
-        // If we have any of our fallback auth mechanisms, allow the request despite the error
-        if (hasUserSessionCookie || hasFallbackToken || 
-            (hasSessionActiveCookie && hasManualAuthCookie)) {
-          console.log('Fallback auth mechanism found, allowing request despite Supabase session error');
-          return res;
-        }
-        
+      // If no auth cookies, redirect to login for protected routes
+      if (isProtectedRoute) {
+        console.log('No auth cookies found for protected route, redirecting to login');
         return createLoginRedirect(request, pathParts);
       }
       
-      // Check if we have a valid session or any of our fallback auth mechanisms
-      if ((!data.session || !data.session.user || !data.session.user.email) && 
-          !hasUserSessionCookie && !hasFallbackToken && 
-          !(hasSessionActiveCookie && hasManualAuthCookie)) {
-        console.log('No valid session found, redirecting to login');
-        
-        if (isApiRoute) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-        
-        // Check URL path to prevent redirect loops
-        if (request.nextUrl.pathname.includes('/login') ||
-            request.nextUrl.pathname.includes('/auth-redirect')) {
-          return NextResponse.next();  
-        }
-        
-        return createLoginRedirect(request, pathParts);
-      }
-      
-      // If we have a valid session or any of our fallback auth mechanisms, log and continue
-      if (data.session?.user) {
-        console.log('Valid session found:', {
-          user: data.session.user.email,
-          expires: data.session.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'unknown',
-          userId: data.session.user.id,
-          tokenLength: data.session.access_token?.length || 0
-        });
-      } else if (hasUserSessionCookie) {
-        console.log('Valid user-session cookie found:', {
-          userId: userSessionCookie.value
-        });
-      } else if (hasFallbackToken) {
-        console.log('Valid fallback token cookie found');
-      } else if (hasSessionActiveCookie && hasManualAuthCookie) {
-        console.log('Valid session marker and manual auth cookies found');
-      }
-      
-      // Session is valid, continue with the request
+      // Allow access to public routes
       return res;
-      
     } catch (error) {
-      // Log any errors in token validation
-      console.error('Error validating session:', error);
+      // Log any errors
+      console.error('Error in middleware auth check:', error);
 
       if (isApiRoute) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

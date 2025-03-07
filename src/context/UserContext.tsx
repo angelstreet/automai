@@ -208,112 +208,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     isFetchingUser.current = true;
   
     try {
-      // Check for fallback auth mechanisms first
+      // Check if we have a user-session cookie
       let fallbackUserId = null;
-      let fallbackAuthFound = false;
-      let isGoogleAuth = false;
       
-      // Check for Google-specific auth indicators
-      try {
-        // Check localStorage for Google auth
-        if (typeof localStorage !== 'undefined') {
-          const sbProvider = localStorage.getItem('sb-provider');
-          const sbUserId = localStorage.getItem('sb-user-id');
-          const sbAccessToken = localStorage.getItem('sb-access-token');
-          
-          if (sbProvider === 'google' && sbUserId && sbAccessToken) {
-            console.log('UserContext - Found Google auth in localStorage');
-            fallbackUserId = sbUserId;
-            fallbackAuthFound = true;
-            isGoogleAuth = true;
-            
-            // Try to set the session from localStorage
-            if (supabaseAuth && typeof supabaseAuth.auth.setSession === 'function') {
-              try {
-                const refreshToken = localStorage.getItem('sb-refresh-token') || '';
-                await supabaseAuth.auth.setSession({
-                  access_token: sbAccessToken,
-                  refresh_token: refreshToken,
-                });
-                console.log('UserContext - Set session from Google localStorage tokens');
-              } catch (e) {
-                console.error('UserContext - Error setting session from localStorage:', e);
-              }
-            }
-          }
-        }
-        
-        // Check cookies for Google auth
-        const cookies = document.cookie.split(';').map(c => c.trim());
-        const authProviderCookie = cookies.find(c => c.startsWith('auth-provider='));
-        const googleUserIdCookie = cookies.find(c => c.startsWith('google-user-id='));
-        
-        if (authProviderCookie?.includes('google') && googleUserIdCookie) {
-          console.log('UserContext - Found Google auth cookies');
-          const googleUserId = googleUserIdCookie.split('=')[1];
-          
-          if (!fallbackUserId) {
-            fallbackUserId = googleUserId;
-            fallbackAuthFound = true;
-            isGoogleAuth = true;
-          }
-        }
-      } catch (e) {
-        console.error('UserContext - Error checking for Google auth:', e);
-      }
-      
-      // Check for session info in sessionStorage (from auth-redirect)
-      try {
-        const authRedirectTimestamp = sessionStorage.getItem('auth_redirect_timestamp');
-        const authUserId = sessionStorage.getItem('auth_user_id');
-        
-        if (authRedirectTimestamp && authUserId) {
-          const timestamp = parseInt(authRedirectTimestamp, 10);
-          
-          // If the auth redirect happened in the last 5 minutes, use this info
-          if (now - timestamp < 5 * 60 * 1000) {
-            console.log('UserContext - Found recent auth redirect info in sessionStorage');
-            
-            if (!fallbackUserId) {
-              fallbackUserId = authUserId;
-              fallbackAuthFound = true;
-            }
-          }
-        }
-      } catch (e) {
-        console.error('UserContext - Error checking sessionStorage:', e);
-      }
-      
-      // Check for user-session cookie
       try {
         const cookies = document.cookie.split(';').map(c => c.trim());
         const userSessionCookie = cookies.find(c => c.startsWith('user-session='));
-        const sessionActiveCookie = cookies.find(c => c.startsWith('session-active='));
         
-        if (userSessionCookie && sessionActiveCookie) {
-          const userId = userSessionCookie.split('=')[1];
-          console.log('UserContext - Found user-session cookie:', userId);
-          
-          if (!fallbackUserId) {
-            fallbackUserId = userId;
-            fallbackAuthFound = true;
-          }
+        if (userSessionCookie) {
+          fallbackUserId = userSessionCookie.split('=')[1];
+          console.log('UserContext - Found user-session cookie:', fallbackUserId);
         }
       } catch (e) {
         console.error('UserContext - Error checking cookies:', e);
       }
       
-      // If we already have a user and found fallback auth that matches, skip the Supabase call
-      // This helps avoid unnecessary API calls when switching between windows
-      if (user && user.id === fallbackUserId && fallbackAuthFound) {
-        console.log('UserContext - Using existing user with matching fallback auth, skipping Supabase call');
-        setIsLoading(false);
-        isFetchingUser.current = false;
-        lastFetchedAt.current = now;
-        return;
-      }
-      
-      // Single call to get session
+      // Get session from Supabase
       const { data, error } = await safeAuthCall(
         'getSession',
         () => supabaseAuth.getSession(),
@@ -323,24 +233,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (error) {
         console.error('UserContext - Session error:', error);
         
-        // If we have fallback auth, create a minimal user object
-        if (fallbackAuthFound && fallbackUserId) {
-          console.log('UserContext - Using fallback auth with userId:', fallbackUserId);
-          
-          const fallbackUser = {
-            id: fallbackUserId,
-            email: sessionStorage.getItem('auth_user_email') || undefined,
-            plan: 'free' as PlanType,
-            // Add minimal required properties to satisfy the User type
-            app_metadata: { provider: isGoogleAuth ? 'google' : undefined },
-            user_metadata: { plan: 'free' },
-            aud: 'authenticated',
-            created_at: '',
-          } as User;
-          
-          setUser(fallbackUser);
-          setSessionStatus('authenticated');
-          setError(null);
+        // If we have a user-session cookie, consider the user logged in
+        // This is a minimal fallback for when Supabase session is temporarily unavailable
+        if (fallbackUserId && user?.id === fallbackUserId) {
+          console.log('UserContext - Using existing user with matching user-session cookie');
           setIsLoading(false);
           isFetchingUser.current = false;
           lastFetchedAt.current = now;
@@ -357,9 +253,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       if (data?.session) {
         // Session exists - authenticated
-        console.log('UserContext - Session found:', {
-          userId: data.session.user.id,
-          email: data.session.user.email
+        console.log('UserContext - Valid session found:', {
+          email: data.session.user.email,
+          userId: data.session.user.id
         });
         
         setSession(data.session);
@@ -371,28 +267,27 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           plan: data.session.user.user_metadata?.plan || 'free' as PlanType
         };
         
-        // Update user state with data from session
-        setUser(userFromSession as User);
-        
-        // Mark as fetched now
-        lastFetchedAt.current = Date.now();
+        // Success case
+        setUser(userFromSession);
+        setError(null);
       } else {
-        // No session - unauthenticated
+        // No session - not authenticated
         console.log('UserContext - No session found');
         setUser(null);
         setSession(null);
         setSessionStatus('unauthenticated');
       }
-    } catch (err: any) {
-      console.error('UserContext - Error loading session:', err);
-      setError(err.message);
+    } catch (e) {
+      console.error('UserContext - Unexpected error loading session:', e);
+      setError('Unexpected error loading user session');
       setUser(null);
       setSessionStatus('unauthenticated');
     } finally {
       setIsLoading(false);
       isFetchingUser.current = false;
+      lastFetchedAt.current = now;
     }
-  }, [supabaseAuth, user, setError, setIsLoading, setUser, setSession, setSessionStatus]);
+  }, [supabaseAuth, user]);
 
   // We don't need a separate fetch user function anymore
   // All user data comes directly from the session
@@ -751,8 +646,30 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
 export function useUser() {
   const context = useContext(UserContext);
+  
   if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
+    console.warn(
+      'useUser() hook was called outside of UserProvider context. ' +
+      'Make sure your component is wrapped in the UserProvider.'
+    );
+    
+    return {
+      user: null,
+      isLoading: false,
+      error: 'UserProvider not found',
+      isFeatureEnabled: () => false,
+      canCreateMore: () => false,
+      logout: async () => {},
+      refreshUser: async () => {},
+      checkSession: () => {},
+      updateProfile: async () => {},
+      getSession: async () => ({ data: { session: null }, error: null }),
+      signInWithPassword: async () => ({ data: null, error: null }),
+      signInWithOAuth: async () => ({ data: null, error: null }),
+      signUp: async () => ({ data: null, error: null }),
+      resetPassword: async () => ({ data: null, error: null }),
+    };
   }
+  
   return context;
 }
