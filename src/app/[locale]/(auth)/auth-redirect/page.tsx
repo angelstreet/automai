@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { createBrowserSupabase } from '@/lib/supabase';
+import { createClient, createSessionFromUrl } from '@/utils/supabase/client';
 import { Session, User, AuthError } from '@supabase/supabase-js';
 
 interface AuthSession {
@@ -71,18 +71,15 @@ export default function AuthRedirectPage() {
     
     const handleAuth = async () => {
       try {
-        const supabase = createBrowserSupabase();
+        const supabase = createClient();
         
-        // Extract hash params first
+        // Extract hash params and create session if they exist
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const access_token = hashParams.get('access_token');
         
         if (access_token) {
-          // Set session from hash params before checking
-          await supabase.auth.setSession({
-            access_token,
-            refresh_token: hashParams.get('refresh_token') || '',
-          });
+          // Use the helper to set session from URL hash
+          await createSessionFromUrl(window.location.href);
         }
 
         // Now check session

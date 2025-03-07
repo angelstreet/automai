@@ -8,7 +8,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import supabaseAuth from '@/lib/supabase-auth';
+import { createClient } from '@/utils/supabase/client';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -36,7 +36,17 @@ export default function SignUpPage() {
 
     try {
       // Create user with Supabase
-      const { data, error: signUpError } = await supabaseAuth.signUp(email, password);
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/${locale}/auth-redirect`,
+          data: {
+            name: name,
+          }
+        }
+      });
 
       if (signUpError) {
         setError(signUpError.message);
@@ -75,7 +85,14 @@ export default function SignUpPage() {
   const handleOAuthSignUp = async (provider: 'google' | 'github') => {
     try {
       // Use Supabase OAuth
-      const { error } = await supabaseAuth.signInWithOAuth(provider);
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/${locale}/auth-redirect`,
+          scopes: provider === 'github' ? 'repo,user' : 'email profile'
+        }
+      });
 
       if (error) {
         console.error('OAuth error:', error);

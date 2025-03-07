@@ -4,7 +4,7 @@ import { useRouter, usePathname, useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { useUser } from '@/context/UserContext';
-import supabaseAuth from '@/lib/supabase-auth';
+// No longer need to import supabase directly as we use UserContext
 
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
