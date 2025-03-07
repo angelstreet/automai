@@ -14,21 +14,14 @@ export async function fetchWithAuth(
 
   while (true) {
     try {
-      // Get the CSRF token from the cookie
-      const csrfToken = getCsrfToken();
-
-      // Merge the headers with the Authorization header
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-        ...options.headers,
-      };
-
-      // Make the request with the merged options
+      // Make the request with credentials included
       const response = await fetch(url, {
         ...options,
-        headers,
-        credentials: 'include', // Include cookies in the request
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        credentials: 'include', // This ensures cookies are sent with the request
       });
 
       // If shouldRetry is true and we get a 500 error, retry the request

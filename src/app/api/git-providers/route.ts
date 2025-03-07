@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getSession } from '@/auth';
+import { cookies } from 'next/headers';
+import { createClient } from '@/utils/supabase/server';
 import { listGitProviders, createGitProvider } from '@/lib/services/repositories';
 import { GitProviderType } from '@/types/repositories';
 import { createGithubOauthUrl, createGitlabOauthUrl } from '@/lib/services/oauth';
@@ -16,28 +17,80 @@ const GitProviderCreateSchema = z.object({
 // GET /api/git-providers
 export async function GET() {
   try {
-    const session = await getSession();
+    // Get the session using the Supabase client
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return NextResponse.json(
+        { error: 'Service unavailable', details: 'Authentication service not available' },
+        { status: 503 }
+      );
+    }
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { error: 'Authentication error', details: sessionError.message },
+        { status: 500 }
+      );
+    }
 
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('No session found');
+      return NextResponse.json(
+        { error: 'Unauthorized', details: 'No active session found' },
+        { status: 401 }
+      );
     }
 
     const providers = await listGitProviders(session.user.id);
-
     return NextResponse.json(providers);
+    
   } catch (error) {
     console.error('Error fetching git providers:', error);
-    return NextResponse.json({ error: 'Failed to fetch git providers' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json(
+      { error: 'Failed to fetch git providers', details: errorMessage },
+      { status: 500 }
+    );
   }
 }
 
 // POST /api/git-providers
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
+    // Get the session using the Supabase client
+    const cookieStore = cookies();
+    const supabase = createClient(cookieStore);
+    
+    if (!supabase) {
+      console.error('Failed to create Supabase client');
+      return NextResponse.json(
+        { error: 'Service unavailable', details: 'Authentication service not available' },
+        { status: 503 }
+      );
+    }
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      console.error('Session error:', sessionError);
+      return NextResponse.json(
+        { error: 'Authentication error', details: sessionError.message },
+        { status: 500 }
+      );
+    }
 
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.log('No session found');
+      return NextResponse.json(
+        { error: 'Unauthorized', details: 'No active session found' },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();

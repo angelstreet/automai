@@ -41,23 +41,24 @@ export async function createSupabaseServerClient() {
   // Log the URL being used
   console.log('Creating new Supabase server client with URL:', supabaseUrl);
 
-  // Create a cookie handler that doesn't rely on the cookies() API
+  // Create a cookie handler that properly awaits the cookies() API
   const cookieStore = cookies();
 
-  // Create a server client with simplified cookie handling
+  // Create a server client with proper async cookie handling
   supabaseInstance = createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
       get(name) {
-        // Simple cookie getter
-        return cookieStore.get(name)?.value || '';
+        // Properly handle cookie access
+        const cookie = cookieStore.get(name);
+        return cookie?.value;
       },
       set(name, value, options) {
-        // Simple cookie setter
+        // Set cookie
         cookieStore.set(name, value, options);
       },
       remove(name, options) {
-        // Simple cookie remover
-        cookieStore.set(name, '', { ...options, maxAge: 0 });
+        // Remove cookie
+        cookieStore.delete(name, options);
       },
     },
   });

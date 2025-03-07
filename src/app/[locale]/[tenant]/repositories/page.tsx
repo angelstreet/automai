@@ -64,12 +64,17 @@ export default function RepositoriesPage() {
       );
 
       if (!providersResponse.ok) {
-        if (providersResponse.status === 401) {
-          router.push('/login');
-          return;
-        }
-        // For non-401 errors, just set empty providers array
+        // Handle error without redirecting
         console.log('Failed to fetch providers:', providersResponse.status);
+        
+        if (providersResponse.status === 401) {
+          toast({
+            title: 'Authentication Error',
+            description: 'Unable to access Git providers. Please check your connection.',
+            variant: 'destructive',
+          });
+        }
+        
         setProviders([]);
       } else {
         const providersData = await providersResponse.json();
@@ -88,11 +93,17 @@ export default function RepositoriesPage() {
       );
 
       if (!reposResponse.ok) {
-        if (reposResponse.status === 401) {
-          router.push('/login');
-          return;
-        }
+        // Handle error without redirecting
         console.log('Failed to fetch repositories:', reposResponse.status);
+        
+        if (reposResponse.status === 401) {
+          toast({
+            title: 'Authentication Error',
+            description: 'Unable to access repositories. Please check your connection.',
+            variant: 'destructive',
+          });
+        }
+        
         setRepositories([]);
       } else {
         const reposData = await reposResponse.json();

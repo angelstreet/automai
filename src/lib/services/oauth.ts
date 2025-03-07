@@ -41,13 +41,17 @@ export function createGithubOauthUrl(providerId: string): string {
 export function createGitlabOauthUrl(providerId: string): string {
   const clientId = process.env.GITLAB_CLIENT_ID;
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const redirectUri = `${baseUrl}/api/auth/callback/gitlab`;
+  const redirectUri = `${baseUrl}/api/git-providers/callback`;
+  
+  // Create state with providerId and redirectUri for callback handling
+  const stateData = Buffer.from(JSON.stringify({ providerId, redirectUri })).toString('base64');
+  
   const scope = 'api read_api read_user read_repository';
   const params = new URLSearchParams({
     client_id: clientId || '',
     redirect_uri: redirectUri,
     scope,
-    state: providerId,
+    state: stateData,
     response_type: 'code',
   });
 
