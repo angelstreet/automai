@@ -14,6 +14,7 @@ npm run dev:debug
 
 # Kill running process node
  pkill -f "node"
+ npx kill-port 3000 3001
 
 # Start Next.js frontend
 rm -rf .next && npm run dev

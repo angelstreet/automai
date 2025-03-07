@@ -8,9 +8,7 @@ project_id = "automai3"
 enabled = true
 # Port to use for the API URL.
 port = 54321
-# Add CORS configuration
-cors_allowed_origins = ["*"]
-cors_allow_credentials = true
+# CORS configuration is now handled differently
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
 schemas = ["public", "graphql_public"]
@@ -307,11 +305,7 @@ enabled = false
 # user_pool_id = "my-user-pool-id"
 # user_pool_region = "us-east-1"
 
-# Add cookie configuration
-[auth.cookie]
-domain = ".app.github.dev"
-same_site = "lax"
-secure = true
+# Cookie configuration is now handled differently
 
 [edge_runtime]
 enabled = false
