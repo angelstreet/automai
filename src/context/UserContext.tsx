@@ -146,39 +146,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     };
   }, [supabaseAuth]);
 
-  // Handle window focus events
-  useEffect(() => {
-    // Track the last time we checked the session to avoid frequent checks
-    const lastFocusCheckRef = useRef(Date.now());
-    
-    function handleFocus() {
-      // Get current time
-      const now = Date.now();
-      
-      // Only refresh if:
-      // 1. Data is stale (older than 5 minutes)
-      // 2. We haven't checked in the last 10 seconds (prevents rapid checks when switching windows)
-      // 3. Supabase auth is initialized
-      if (supabaseAuth && 
-          (!lastFetchedAt.current || now - lastFetchedAt.current > 5 * 60 * 1000) && 
-          now - lastFocusCheckRef.current > 10000) {
-        
-        console.log('UserContext - Window focus, checking session (stale data)');
-        lastFocusCheckRef.current = now;
-        loadSession();
-      } else if (!supabaseAuth) {
-        console.log('UserContext - Window focus, but supabaseAuth not initialized yet');
-      } else if (now - lastFocusCheckRef.current <= 10000) {
-        console.log('UserContext - Window focus, but checked recently, skipping');
-      } else {
-        console.log('UserContext - Window focus, data is fresh, skipping check');
-      }
-    }
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [supabaseAuth]);
-
   // Helper function to safely call supabaseAuth methods
   const safeAuthCall = async <T,>(
     methodName: string,
