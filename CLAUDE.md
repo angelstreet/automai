@@ -7,8 +7,13 @@
   - `/src/app` - All routes and pages
   - `/src/app/[locale]/[tenant]` - Main app structure with locale and tenant segments
   - `/src/components` - Shared components
-  - `/src/lib` - Core utilities, aservices, and business logic
+  - `/src/lib` - Core utilities, services, and business logic
   - `/src/utils` - Utility functions, including Supabase clients
+  - `/src/hooks` - Custom React hooks
+  - `/src/context` - React context providers
+  - `/src/types` - TypeScript type definitions
+  - `/src/i18n` - Internationalization utilities
+  - `/src/config` - Application configuration
 
 ## Supabase Cloud Integration
 
@@ -37,26 +42,47 @@
   - Uses a streamlined OAuth flow with Supabase cloud
   - Follows the pattern: Login → OAuth Provider → Supabase Callback → auth-redirect page → Dashboard
   - Unified approach works across development, codespace, and production environments
+  - Authentication logic in `src/auth.ts`
 
 - **Documentation**:
   - See `/docs/authentication.md` for details on the authentication system
   - See `/docs/supabase-migration.md` for details on the migration to cloud Supabase
+  - See `/docs/supabase-auth.md` for detailed Supabase auth implementation
+  - See `/docs/supabase-setup.md` for Supabase setup instructions
+
+## Electron Integration
+
+- **Desktop Application**:
+  - Electron configuration in `/electron/` directory
+  - Integration with Next.js web application
+  - Utilities in `/src/utils/isElectron.ts` and `/src/utils/electronApi.ts`
+  - Separate build and packaging scripts
+  - See `/docs/desktop.md` for desktop application details
 
 ## Build/Test/Lint Commands
 
 ```bash
 # Development
 npm run dev               # Run full dev server with custom server
-npm run dev:next          # Run Next.js only
 npm run build             # Create production build
 npm run start             # Start production server
 npm run lint              # Run ESLint
 npm run lint:fix          # Fix ESLint issues
 npm run format            # Run Prettier formatter
+npm run format:check      # Check formatting without fixing
 npm run test              # Run all tests
 npm run test:watch        # Run tests in watch mode
 npm run test:e2e          # Run end-to-end tests
-npm test -- -t "test name" # Run specific test
+npm run analyze           # Analyze bundle size
+npm run browser-tools     # Run browser tools server
+
+# Electron
+npm run electron-dev      # Run Electron in development mode
+npm run electron-build    # Build Electron application
+npm run electron-pack     # Package Electron application
+
+# Maintenance
+npm run update-deps       # Update dependencies
 ```
 
 ## Code Style Guidelines
@@ -70,7 +96,17 @@ npm test -- -t "test name" # Run specific test
   - Page-specific components go in `_components/` folders
   - Group related components in feature directories
   - Follow App Router directory structure
-- **Naming**: PascalCase for components, camelCase for functions/variables, snale_case for supabase columns
+- **Naming**: PascalCase for components, camelCase for functions/variables, snake_case for supabase columns
 - **Error Handling**: Use try/catch with proper error messages
 - **Server Components**: Default to React Server Components unless client functionality needed
 - **API Routes**: Route handlers are in `/src/app/api/[route]/route.ts`
+
+## Documentation
+
+- **Project Structure**: `/docs/project_structure.md`
+- **Frontend Architecture**: `/docs/frontend-architecture.md`
+- **Backend Architecture**: `/docs/backend.md`
+- **Database Model**: `/docs/database-model.md`
+- **API Standards**: `/docs/api-standards.md`
+- **Deployment**: `/docs/deployment.md`
+- **Tech Stack**: `/docs/techstack.md`

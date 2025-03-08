@@ -103,4 +103,9 @@ alwaysApply: true
 3. **Stay current with technology**
    - Keep dependencies updated
    - Follow security advisories
-   - Adopt new best practices when appropriate 
+   - Adopt new best practices when appropriate
+
+4. **Update Cursor rules**
+   - Update Cursor rules when new patterns or requirements emerge
+   - Immediately update rules when mistakes are identified to prevent repetition
+   - Use rules as a living document that evolves with the codebase 
