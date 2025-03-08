@@ -1,130 +1,75 @@
 'use server';
 
-import { db } from '@/lib/supabase/db';
-import { createServerClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
-import { revalidatePath } from 'next/cache';
+import { createClient } from '@/lib/supabase/client';
+import { Host } from '@/types/hosts';
 
-export type Host = {
-  id: string;
-  name: string;
-  url: string;
-  created_at: string;
-  updated_at: string;
-  tenant_id: string;
-  status: 'active' | 'inactive';
-};
-
-export type HostFilter = {
-  status?: 'active' | 'inactive';
-  search?: string;
-};
-
-export async function getHosts(filter?: HostFilter) {
-  try {
-    const cookieStore = await cookies();
-    const supabase = await createServerClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
-
-    let query = {
-      where: { tenant_id: user.tenant_id } as any,
-      orderBy: { created_at: 'desc' as const }
-    };
-
-    if (filter?.status) {
-      query.where.status = filter.status;
-    }
-
-    const hosts = await db.host.findMany(query);
-
-    // Apply search filter in memory
-    if (filter?.search) {
-      return hosts.filter(host => 
-        host.name.toLowerCase().includes(filter.search!.toLowerCase()) ||
-        host.url.toLowerCase().includes(filter.search!.toLowerCase())
-      );
-    }
-
-    return hosts;
-  } catch (error) {
-    console.error('Error fetching hosts:', error);
-    throw new Error('Failed to fetch hosts');
-  }
+export interface HostFilter {
+  status?: string;
 }
 
-export async function createHost(data: Partial<Host>) {
-  try {
-    const cookieStore = await cookies();
-    const supabase = await createServerClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
+export async function getHosts(filter?: HostFilter): Promise<Host[]> {
+  const supabase = createClient();
+  let query = supabase.from('hosts').select('*');
 
-    const host = await db.host.create({
-      data: {
-        ...data,
-        tenant_id: user.tenant_id,
-        status: data.status || 'active'
-      }
-    });
-
-    revalidatePath('/[locale]/[tenant]/hosts');
-    return host;
-  } catch (error) {
-    console.error('Error creating host:', error);
-    throw new Error('Failed to create host');
+  if (filter?.status) {
+    query = query.eq('status', filter.status);
   }
+
+  const { data, error } = await query.order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data;
 }
 
-export async function updateHost(id: string, data: Partial<Host>) {
-  try {
-    const cookieStore = await cookies();
-    const supabase = await createServerClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
+export async function addHost(data: Omit<Host, 'id'>): Promise<Host> {
+  const supabase = createClient();
+  const { data: newHost, error } = await supabase
+    .from('hosts')
+    .insert([data])
+    .select()
+    .single();
 
-    const host = await db.host.update({
-      where: { 
-        id,
-        tenant_id: user.tenant_id // Ensure tenant isolation
-      },
-      data
-    });
-
-    revalidatePath('/[locale]/[tenant]/hosts');
-    return host;
-  } catch (error) {
-    console.error('Error updating host:', error);
-    throw new Error('Failed to update host');
-  }
+  if (error) throw error;
+  return newHost;
 }
 
-export async function deleteHost(id: string) {
-  try {
-    const cookieStore = await cookies();
-    const supabase = await createServerClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Unauthorized');
+export async function deleteHost(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('hosts')
+    .delete()
+    .eq('id', id);
 
-    await db.host.delete({
-      where: { 
-        id,
-        tenant_id: user.tenant_id // Ensure tenant isolation
-      }
-    });
+  if (error) throw error;
+}
 
-    revalidatePath('/[locale]/[tenant]/hosts');
-    return { success: true };
-  } catch (error) {
-    console.error('Error deleting host:', error);
-    throw new Error('Failed to delete host');
+export async function testConnection(id: string): Promise<{ success: boolean; message?: string }> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('hosts')
+    .update({ last_connection_test: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    return { success: false, message: error.message };
   }
+
+  return { success: true };
+}
+
+export async function testAllHosts(): Promise<{ success: boolean; results: Array<{ id: string; success: boolean; message?: string }> }> {
+  const hosts = await getHosts();
+  const results = await Promise.all(
+    hosts.map(async (host) => {
+      const result = await testConnection(host.id);
+      return { id: host.id, ...result };
+    })
+  );
+
+  return {
+    success: true,
+    results
+  };
 }

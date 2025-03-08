@@ -1,16 +1,12 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Building2 } from 'lucide-react';
-import { 
-  getTenants, 
-  switchTenant as switchTenantAction 
-} from '@/app/actions/tenants';
+import { getTenants, switchTenant as switchTenantAction } from '@/app/actions/tenants';
 
 interface Tenant {
   id: string;
   name: string;
-  icon?: React.ReactNode;
+  iconName?: string;
 }
 
 export function useTenants() {
@@ -32,18 +28,18 @@ export function useTenants() {
       setIsLoading(true);
       const data = await getTenants(user.id);
       
-      // Map database tenants to UI tenants with icons
-      const tenantsWithIcons = data.map(tenant => ({
+      // Map database tenants to UI tenants
+      const mappedTenants = data.map(tenant => ({
         id: tenant.id,
         name: tenant.name,
-        icon: <Building2 className="h-4 w-4" />,
+        iconName: 'building',
       }));
 
-      setTenants(tenantsWithIcons);
+      setTenants(mappedTenants);
 
       // Set current tenant from user metadata or first available tenant
-      const currentTenantId = user.user_metadata?.tenant_id || tenantsWithIcons[0]?.id;
-      const current = tenantsWithIcons.find(t => t.id === currentTenantId) || tenantsWithIcons[0];
+      const currentTenantId = user.user_metadata?.tenant_id || mappedTenants[0]?.id;
+      const current = mappedTenants.find(t => t.id === currentTenantId) || mappedTenants[0];
       setCurrentTenant(current);
     } catch (error) {
       console.error('Error fetching tenants:', error);
@@ -56,7 +52,7 @@ export function useTenants() {
       const defaultTenant = {
         id: 'default',
         name: 'Default',
-        icon: <Building2 className="h-4 w-4" />,
+        iconName: 'building',
       };
       setTenants([defaultTenant]);
       setCurrentTenant(defaultTenant);
