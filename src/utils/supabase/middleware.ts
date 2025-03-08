@@ -27,15 +27,25 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
-
   // IMPORTANT: DO NOT REMOVE auth.getUser()
-
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Extract path parts for analysis
+  const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+  const locale = pathParts[0] || 'en';
+  
+  // Check if we're on a public path
+  const isPublicPath = 
+    request.nextUrl.pathname === '/' ||
+    request.nextUrl.pathname === `/${locale}` ||
+    request.nextUrl.pathname === `/${locale}/` ||
+    request.nextUrl.pathname.includes('/login') ||
+    request.nextUrl.pathname.includes('/signup') ||
+    request.nextUrl.pathname.includes('/forgot-password') ||
+    request.nextUrl.pathname.includes('/reset-password') ||
+    request.nextUrl.pathname.includes('/auth-redirect');
 
   // Check if we're on a protected route
   const isProtectedRoute = 
@@ -54,11 +64,8 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.includes('/tests') ||
     request.nextUrl.pathname.includes('/billing');
 
+  // 1. Handle unauthenticated users trying to access protected routes
   if (!user && isProtectedRoute) {
-    // Extract locale from URL
-    const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
-    const locale = pathParts[0] || 'en';
-    
     // Redirect to login page
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/login`
@@ -66,18 +73,27 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is.
-  // If you're creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
+  // 2. Handle authenticated users on public pages (redirect to dashboard)
+  if (user && isPublicPath) {
+    // Get tenant from user metadata
+    const tenant = user.user_metadata?.tenant_name || 'trial';
+    
+    // Redirect to tenant dashboard
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}/${tenant}/dashboard`
+    return NextResponse.redirect(url)
+  }
+
+  // 3. Handle authenticated users without tenant in URL
+  if (user && pathParts.length < 2) {
+    // Get tenant from user metadata
+    const tenant = user.user_metadata?.tenant_name || 'trial';
+    
+    // Redirect to tenant dashboard
+    const url = request.nextUrl.clone()
+    url.pathname = `/${locale}/${tenant}/dashboard`
+    return NextResponse.redirect(url)
+  }
 
   return supabaseResponse
 }

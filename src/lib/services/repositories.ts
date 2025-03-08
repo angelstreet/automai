@@ -1,4 +1,4 @@
-import { createServerClient, createAdminClient } from '@/utils/supabase';
+import { createClient as createServerClient, createAdminClient } from '@/utils/supabase/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import {
   Repository,
