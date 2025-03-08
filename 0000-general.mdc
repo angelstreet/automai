@@ -1,3 +1,8 @@
+---
+description: general
+globs: *
+alwaysApply: true
+---
 # AutomAI Project Guidelines
 
 ## Architecture Overview
@@ -19,13 +24,13 @@
 
 - **Environment Configuration**:
   - We use cloud Supabase exclusively for all environments
-  - A single `.env` file for all environments with the same Supabase configuration
+  - A single `.env.local` file for local env
   - Dynamic URL detection handles redirects based on current hostname
   - Configuration is controlled via environment variables:
     - `NEXT_PUBLIC_SUPABASE_URL` - The Supabase project URL
     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - The anonymous API key
     - `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations (server-side only)
-    - `SUPABASE_AUTH_CALLBACK_URL` - The Supabase callback URL for OAuth
+
 
 - **Dynamic URL Detection**:
   - The application automatically detects the current environment based on hostname

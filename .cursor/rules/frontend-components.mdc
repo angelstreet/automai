@@ -1,0 +1,207 @@
+---
+description: Component Structure and Organization Guidelines
+globs: "src/components/**/*.tsx, src/app/**/_components/**/*.tsx"
+alwaysApply: false
+---
+
+# Component Structure and Organization
+
+## Overview
+
+These guidelines define how to structure, organize, and implement React components in the application. Following these practices ensures components are reusable, maintainable, and consistently implemented across the project.
+
+## Key Principles
+
+1. **Single Responsibility** - Components should have a single, well-defined purpose
+2. **Reusability** - Design components to be reused across the application
+3. **Composition** - Prefer composition over configuration
+4. **Separation of Concerns** - Separate UI from business logic
+5. **Server vs. Client** - Appropriate use of server and client components
+
+## Detailed Rules
+
+### Component Organization
+
+#### Directory Structure
+
+- Shared components go in `/src/components/`
+- Page-specific components go in `_components/` folders next to pages
+- Group related components in feature directories
+- shadcn components go in `/src/components/shadcn/`
+
+```
+src/
+  ├── components/           # Shared components
+  │   ├── ui/               # UI primitives
+  │   ├── layout/           # Layout components
+  │   ├── form/             # Form components
+  │   └── feature/          # Feature-specific components
+  └── app/
+      └── [locale]/
+          └── feature/
+              └── _components/ # Page-specific components
+```
+
+#### Component Naming
+
+- Use `PascalCase` for component files and names
+- Child components follow `ParentNameChildPart` pattern
+- Maintain a consistent naming scheme (e.g., for related components)
+
+### Component Structure
+
+#### File Size Limits
+
+- Keep component files under 300 lines of code
+- Break large components into smaller sub-components
+- Extract complex logic into custom hooks
+
+#### Internal Component Structure
+
+```typescript
+// Types first
+interface ButtonProps {
+  variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+  onClick?: () => void;
+  children: React.ReactNode;
+}
+
+// Helper functions next
+const getButtonClasses = (variant: string, size: string) => {
+  // ...
+};
+
+// Component last
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  onClick,
+  children
+}: ButtonProps) {
+  // ...
+}
+```
+
+### Server vs. Client Components
+
+- Use Server Components by default
+- Add 'use client' directive only when needed:
+  - Client-side state (useState, useReducer)
+  - Effects (useEffect, useLayoutEffect)
+  - Browser-only APIs
+  - Event handlers
+
+### Props and State
+
+- Define explicit interfaces for component props
+- Use destructuring with default values
+- Keep state minimal and focused
+- Lift state up when shared between components
+
+### Custom Hooks
+
+- Extract complex logic into custom hooks
+- Follow the `use` prefix naming convention
+- Keep hooks focused on a single concern
+- Maintain separation between UI and business logic
+
+## Examples
+
+### ✅ Good Example - Component Structure
+
+```tsx
+'use client';
+
+// Types first
+interface CounterProps {
+  initialCount?: number;
+  step?: number;
+  onCountChange?: (count: number) => void;
+}
+
+// Component with clear structure
+export function Counter({
+  initialCount = 0,
+  step = 1,
+  onCountChange
+}: CounterProps) {
+  const [count, setCount] = useState(initialCount);
+  
+  // Effect to notify parent of changes
+  useEffect(() => {
+    onCountChange?.(count);
+  }, [count, onCountChange]);
+  
+  // Handlers
+  const handleIncrement = () => {
+    setCount(prev => prev + step);
+  };
+  
+  const handleDecrement = () => {
+    setCount(prev => prev - step);
+  };
+  
+  // UI rendering
+  return (
+    <div className="flex items-center gap-4">
+      <button 
+        onClick={handleDecrement}
+        className="px-3 py-1 border rounded-md"
+      >
+        -
+      </button>
+      <span>{count}</span>
+      <button 
+        onClick={handleIncrement}
+        className="px-3 py-1 border rounded-md"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+```
+
+**Why it's good**: Clear interface, well-organized structure, small and focused component, proper event handling.
+
+### ❌ Bad Example - Component Structure
+
+```tsx
+// Missing 'use client' directive despite using hooks
+// No prop interface
+export default function Counter(props) {
+  let countState = React.useState(0);
+  
+  // Inline function with no destructuring
+  return (
+    <div>
+      <button onClick={function() { 
+        countState[1](mdc:countState[0] - (props.step || 1)); 
+        if (props.onCountChange) props.onCountChange(countState[0]);
+      }}>-</button>
+      <span>{countState[0]}</span>
+      <button onClick={function() { 
+        countState[1](mdc:countState[0] + (props.step || 1));
+        if (props.onCountChange) props.onCountChange(countState[0]);
+      }}>+</button>
+    </div>
+  );
+}
+```
+
+**Why it's bad**: Missing 'use client' directive, no prop interface, poor state variable naming, inline event handlers, no default props, missing styles.
+
+## Common Pitfalls
+
+- **Mixing client and server concerns** - Keep server components free of client-side code
+- **Prop drilling** - Use context or composition instead of passing props through many levels
+- **Huge components** - Break down large components into smaller, focused ones
+- **Duplicated logic** - Extract shared logic into custom hooks or utility functions
+- **Missing 'use client' directive** - Remember to add it when using client-side features
+
+## Related Rules
+
+- core-code-style.mdc - Core code style standards
+- supabase-auth-db.mdc - Authentication with Supabase
+- backend-api.mdc - API integration with components 

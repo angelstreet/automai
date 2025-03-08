@@ -5,6 +5,7 @@
   "type": "commonjs",
   "site_url": "https://automai-eta.vercel.app",
   "scripts": {
+    "browser-tools": "npx @agentdeskai/browser-tools-server",
     "dev": "NODE_ENV=development ts-node server.ts",
     "prod": "next build && NODE_ENV=production ts-node server.ts",
     "build": "next build",

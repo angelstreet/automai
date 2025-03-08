@@ -1,0 +1,106 @@
+---
+description: Core Principles and General Development Guidelines
+globs: "**/*.{ts,tsx,js,jsx}"
+priority: 1
+alwaysApply: true
+---
+
+# General Development Guidelines
+
+## Core Principles
+
+1. **Thoughtful Change Management**
+   - Always provide a plan before making changes
+   - Wait for explicit agreement before implementing
+   - Document significant architectural decisions
+
+2. **Code Quality**
+   - Write clean, maintainable, and self-documenting code
+   - Follow established patterns and conventions
+   - Keep functions and components small and focused
+
+3. **User Experience**
+   - Prioritize user experience in all design decisions
+   - Ensure interfaces are intuitive and accessible
+   - Optimize for performance and responsiveness
+
+4. **Security and Privacy**
+   - Treat security as a core requirement, not an add-on
+   - Follow secure coding practices
+   - Protect user data and respect privacy
+
+5. **Testing and Quality Assurance**
+   - Write tests for new features and bug fixes
+   - Verify changes work across supported environments
+   - Use automated testing where appropriate
+
+## Critical Process Guidelines
+
+### Change Management Process
+
+1. **✅ ALWAYS provide a plan before implementing changes**
+   - Analyze the issue or requirement
+   - Outline proposed changes
+   - Identify potential impacts
+   - Get explicit agreement before proceeding
+
+2. **✅ ALWAYS provide context for why a change is needed**
+   - Explain the problem being solved
+   - Describe the expected outcome
+   - Reference relevant issues or requirements
+
+3. **✅ Minimize code changes**
+   - Make the smallest change necessary to achieve the goal
+   - Avoid refactoring unrelated code in the same PR
+   - Keep pull requests focused on a single concern
+
+### Safety Measures
+
+1. **✅ NEVER edit code without approval**
+   - Always wait for explicit agreement on the plan
+   - If requirements change, update the plan and seek approval again
+   - Document any deviations from the approved plan
+
+2. **✅ NEVER deploy untested code**
+   - Test changes thoroughly before submitting
+   - Verify changes in a development environment
+   - Include appropriate unit, integration, or e2e tests
+
+3. **✅ NEVER commit secrets or sensitive data**
+   - Keep secrets in environment variables or secure storage
+   - Do not hardcode API keys, passwords, or tokens
+   - Check for accidentally committed secrets before pushing
+
+## Communication Guidelines
+
+1. **Be clear and specific**
+   - Use precise language when describing changes
+   - Include relevant details like file paths and function names
+   - Provide concrete examples when possible
+
+2. **Ask questions when requirements are unclear**
+   - Don't make assumptions about unclear requirements
+   - Request clarification from stakeholders
+   - Document the clarification for future reference
+
+3. **Document important decisions**
+   - Record the reasoning behind significant architectural choices
+   - Document unexpected challenges and their solutions
+   - Update documentation when implementation details change
+
+## Continuous Improvement
+
+1. **Learn from past issues**
+   - Review past bugs and incidents for lessons
+   - Apply those lessons to prevent similar issues
+   - Update guidelines based on new learnings
+
+2. **Share knowledge**
+   - Document complex parts of the codebase
+   - Provide context in comments and pull requests
+   - Mentor others on best practices
+
+3. **Stay current with technology**
+   - Keep dependencies updated
+   - Follow security advisories
+   - Adopt new best practices when appropriate 

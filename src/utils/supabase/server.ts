@@ -1,22 +1,28 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export const createClient = (cookieStore: ReturnType<typeof cookies>) => {
+export const createClient = async (cookieStore: ReturnType<typeof cookies>) => {
+  // Ensure cookieStore is resolved if it's a promise
+  const resolvedCookieStore = await cookieStore;
+  
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return cookieStore.getAll()
+        async getAll() {
+          return resolvedCookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        async setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {
+            cookiesToSet.forEach(({ name, value, options }) => 
+              resolvedCookieStore.set(name, value, options)
+            );
+          } catch (error) {
             // The `setAll` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing
             // user sessions.
+            console.error('Error setting cookies:', error);
           }
         },
       },

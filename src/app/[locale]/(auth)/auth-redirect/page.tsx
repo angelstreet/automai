@@ -7,9 +7,13 @@ export default async function AuthRedirectPage({
 }: {
   params: { locale: string };
 }) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-  const { locale } = params;
+  // Await params to get locale
+  const resolvedParams = await params;
+  const locale = resolvedParams.locale;
+  
+  // Get cookies and create Supabase client
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
   
   // Check for existing session - the middleware has already handled token refresh
   const { data: { session } } = await supabase.auth.getSession();

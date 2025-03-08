@@ -1,0 +1,165 @@
+---
+description: Supabase Authentication and Database Guidelines
+globs: "src/utils/supabase/*, src/lib/db.ts, src/app/api/**/*.ts, src/app/[locale]/(auth)/**/*.tsx"
+priority: 2
+category: Integrations
+---
+
+# Supabase Authentication and Database
+
+## Overview
+
+These guidelines cover how to properly integrate with Supabase services including authentication, database, storage, and more. Following these guidelines ensures consistent, secure, and efficient usage of Supabase throughout the application.
+
+## Key Principles
+
+1. **Abstraction** - Use wrapper utilities to abstract Supabase implementation details
+2. **Tenant Isolation** - Always enforce tenant boundaries in database operations
+3. **Type Safety** - Leverage TypeScript for full type safety with Supabase
+4. **Error Handling** - Handle Supabase errors consistently and gracefully
+5. **Security** - Follow best practices for secure authentication and data access
+
+## Detailed Rules
+
+### Authentication
+
+#### Client Structure
+
+- Use the wrapper utilities in `src/utils/supabase/client.ts` for browser environments
+- Never import directly from `@supabase/ssr` in application code
+- Handle loading and error states properly in authentication UI
+
+#### Server Structure
+
+- Use the wrapper utilities in `src/utils/supabase/server.ts` for server environments
+- Always await `cookies()` and `createClient()` in server components
+- Handle authentication errors gracefully and provide clear feedback
+
+#### Middleware
+
+- Use `updateSession` from `src/utils/supabase/middleware.ts` for session management
+- Do not modify authentication cookies directly in application code
+- Let the middleware handle redirects for unauthenticated users
+
+### Database Access
+
+#### Data Model
+
+- Use snake_case for all database table and column names
+- Include standard fields (`id`, `created_at`, `updated_at`) in all tables
+- Add `tenant_id` to all multi-tenant tables
+
+#### Query Patterns
+
+- Always use the db wrapper (`src/lib/db.ts`) instead of direct Supabase queries
+- Enforce tenant isolation in all database queries
+- Use pagination for list queries to avoid performance issues
+
+#### Error Handling
+
+- Use try/catch blocks around database operations
+- Log database errors with appropriate context
+- Return standardized error responses in API routes
+
+### Storage
+
+- Organize storage buckets by tenant
+- Validate file uploads before storing
+- Use signed URLs for secure file access
+
+## Examples
+
+### ✅ Good Example - Server Authentication
+
+```typescript
+// src/app/[locale]/profile/page.tsx
+import { createClient } from '@/utils/supabase/server';
+import { cookies } from 'next/headers';
+
+export default async function ProfilePage({ params }) {
+  // Await params and cookies
+  const resolvedParams = await params;
+  const locale = resolvedParams.locale;
+  
+  // Get cookies and create Supabase client
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+  
+  // Get user session
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    redirect(`/${locale}/login`);
+  }
+  
+  // Use the session data
+  return <ProfileDisplay user={session.user} />;
+}
+```
+
+**Why it's good**: Properly awaits async APIs, uses the server wrapper, handles the case where no session exists.
+
+### ❌ Bad Example - Server Authentication
+
+```typescript
+// src/app/[locale]/profile/page.tsx
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+export default function ProfilePage({ params }) {
+  // Direct import from @supabase/ssr
+  const cookieStore = cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: cookieStore }
+  );
+  
+  // Not awaiting async APIs
+  const { data: { session } } = supabase.auth.getSession();
+  
+  // No handling for missing session
+  
+  return <ProfileDisplay user={session.user} />;
+}
+```
+
+**Why it's bad**: Imports directly from `@supabase/ssr`, doesn't await async APIs, lacks error handling.
+
+### ✅ Good Example - Database Query
+
+```typescript
+// Using the db wrapper with tenant isolation
+const projects = await db.project.findMany({
+  where: { tenant_id: session.user.tenant_id },
+  orderBy: { created_at: 'desc' },
+  take: 10
+});
+```
+
+**Why it's good**: Uses the db wrapper, includes tenant isolation, uses pagination.
+
+### ❌ Bad Example - Database Query
+
+```typescript
+// Direct Supabase query without tenant isolation
+const { data: projects } = await supabase
+  .from('projects')
+  .select('*');
+```
+
+**Why it's bad**: Uses direct Supabase query, lacks tenant isolation, no pagination.
+
+## Common Pitfalls
+
+- **Missing Tenant Isolation** - Always include tenant_id in database queries
+- **Direct Supabase Usage** - Use the wrappers instead of direct Supabase imports
+- **Not Awaiting Async APIs** - Remember to await params, cookies, and createClient
+- **Exposing Supabase Keys** - Never expose service role keys in client code
+- **Inconsistent Error Handling** - Standardize how Supabase errors are handled
+
+## Related Rules
+
+- core-code-style.mdc - General code quality standards
+- backend-api.mdc - API design and implementation
+- frontend-components.mdc - Components that interact with auth/data 

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@/utils/supabase/server';
 
 // Add this interface at the top of the file
 interface SupabaseError extends Error {
@@ -69,28 +69,16 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Create a Supabase client for handling the callback
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-  console.log('Creating Supabase client with:', {
-    url: supabaseUrl,
-    keyFirstChars: supabaseKey.substring(0, 10) + '...',
-  });
-
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      get: (name) => {
-        return request.cookies.get(name)?.value;
-      },
-      set: (name, value, options) => {
-        response.cookies.set({ name, value, ...options });
-      },
-      remove: (name, options) => {
-        response.cookies.set({ name, value: '', ...options });
-      },
+  // Create a custom cookieStore that works with the NextRequest/NextResponse objects
+  const cookieStore = {
+    getAll: () => request.cookies.getAll(),
+    set: (name: string, value: string, options: any) => {
+      response.cookies.set({ name, value, ...options });
     },
-  });
+  };
+
+  // Use our wrapper to create the Supabase client
+  const supabase = await createClient(cookieStore as any);
 
   try {
     console.log('Supabase environment:', {
@@ -234,178 +222,80 @@ export async function GET(request: NextRequest) {
         // This is important for GitHub Codespaces environment
         console.log('Running in GitHub Codespace, fixing request headers');
         const siteUrlHost = process.env.NEXT_PUBLIC_SITE_URL.replace('https://', '');
-
-        // Set headers to match the expected domain
-        request.headers.set('host', siteUrlHost);
-        request.headers.set('origin', process.env.NEXT_PUBLIC_SITE_URL);
-        request.headers.set('referer', process.env.NEXT_PUBLIC_SITE_URL);
-
-        // Create a modified request with fixed URL for exchangeCodeForSession
-        const modifiedRequest = new Request(fixedUrl, {
-          headers: request.headers,
-          method: request.method,
-          body: request.body,
-          cache: request.cache,
-          credentials: request.credentials,
-          integrity: request.integrity,
-          keepalive: request.keepalive,
-          mode: request.mode,
-          redirect: request.redirect,
-          referrer: process.env.NEXT_PUBLIC_SITE_URL,
-          referrerPolicy: request.referrerPolicy,
-          signal: request.signal,
-        });
-
-        // Use this modified request with exchangeCodeForSession
-        request = modifiedRequest;
       }
 
-      let error, data;
-      try {
-        // Exchange the code using the Supabase client
-        console.log('Using Supabase client to exchange code with length:', code?.length);
-
-        // Get the cookies before exchange attempt
-        const cookiesBefore = request.cookies.getAll().map((c) => ({
-          name: c.name,
-          value: c.name.includes('token') ? '***' : c.value.substring(0, 10) + '...',
-        }));
-        console.log('Cookies before exchange:', cookiesBefore);
-
-        // Attempt the exchange
-        const result = await supabase.auth.exchangeCodeForSession(code);
-        error = result.error;
-        data = result.data;
-
-        // Log detailed result information
-        console.log('Exchange code result:', {
-          hasError: !!error,
-          errorMessage: error?.message,
-          errorName: error?.name,
-          hasData: !!data,
-          dataKeys: data ? Object.keys(data) : null,
-          sessionExists: !!data?.session,
-          userEmail: data?.session?.user?.email ? '***' : null,
-        });
-
-        // Log all cookies after the exchange attempt
-        const cookiesAfter = response.cookies.getAll().map((c) => ({
-          name: c.name,
-          value: c.name.includes('token') ? '***' : c.value.substring(0, 10) + '...',
-        }));
-        console.log('Cookies after exchange:', cookiesAfter);
-      } catch (exchangeError) {
-        console.error('Exception during code exchange:', exchangeError);
-        const typedError = exchangeError as SupabaseError;
-        console.log('Exchange error details:', {
-          name: typedError.name,
-          message: typedError.message,
-          stack: typedError.stack?.split('\n').slice(0, 3),
-          originalError: typedError.originalError
-            ? {
-                name: typedError.originalError.name,
-                message: typedError.originalError.message,
-              }
-            : null,
-        });
-        return NextResponse.redirect(
-          new URL(
-            `/en/login?error=${encodeURIComponent('Error during code exchange')}`,
-            process.env.NEXT_PUBLIC_SITE_URL,
-          ),
-        );
-      }
+      // Exchange the code for a session
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error('Error exchanging code for session:', error);
-        const typedError = error as SupabaseError;
-        console.log('Error details:', {
-          message: typedError.message,
-          name: typedError.name,
-          status: typedError.status,
-          originalError: typedError.originalError,
-        });
-        return NextResponse.redirect(
-          new URL(
-            `/en/login?error=${encodeURIComponent(typedError.message)}`,
-            process.env.NEXT_PUBLIC_SITE_URL,
-          ),
-        );
+        throw error;
       }
-    } catch (error) {
-      console.error('Error during token exchange process:', error);
-      return NextResponse.redirect(
-        new URL('/en/login?error=Token+exchange+failed', process.env.NEXT_PUBLIC_SITE_URL),
-      );
-    }
 
-    // Get session to verify success
-    const sessionResult = await supabase.auth.getSession();
-    const session = sessionResult.data.session;
-
-    if (!session) {
-      console.error('No session after code exchange');
-      return NextResponse.redirect(
-        new URL('/en/login?error=Authentication+failed', process.env.NEXT_PUBLIC_SITE_URL),
-      );
-    }
-
-    console.log('Successfully authenticated user:', {
-      userId: session.user.id,
-      email: session.user.email,
-    });
-
-    // Exchange the code successfully
-    console.log('Exchanged code for session successfully!');
-    console.log('User authenticated:', session.user.id);
-
-    // Try to create user in database directly from this endpoint
-    try {
-      // Create a server-side fetch request to our create-user endpoint
-      console.log('Creating user in database...');
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-      const createUserUrl = `${siteUrl}/api/auth/create-user`;
-
-      const createUserResponse = await fetch(createUserUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token || ''}`,
-        },
-        body: JSON.stringify({
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
-          user_role: session.user.user_metadata?.role || 'admin', // Default to admin role
-          tenant_id: 'trial',
-          provider: session.user.app_metadata?.provider || 'github',
-        }),
-      });
-
-      if (createUserResponse.ok) {
-        console.log('User created or verified in database during callback');
-      } else {
-        console.error(
-          'Failed to create user in database during callback:',
-          await createUserResponse.text(),
-        );
+      if (!data.session) {
+        console.error('No session returned from exchangeCodeForSession');
+        throw new Error('No session returned from exchangeCodeForSession');
       }
-    } catch (createUserError) {
-      console.error('Error creating user in database during callback:', createUserError);
-      // Continue even if user creation fails here, we'll try again later
-    }
 
-    // Always redirect to the auth-redirect page with 'en' locale as fallback
-    return NextResponse.redirect(new URL('/en/auth-redirect', process.env.NEXT_PUBLIC_SITE_URL));
+      console.log('Successfully exchanged code for session');
+
+      // Determine the redirect URL
+      let redirectTo = '/en/auth-redirect';
+
+      // Check if we have a locale in the URL
+      const locale = requestUrl.pathname.split('/')[1];
+      if (locale && ['en', 'fr'].includes(locale)) {
+        redirectTo = `/${locale}/auth-redirect`;
+      }
+
+      // Add the site URL if available
+      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL
+        ? new URL(redirectTo, process.env.NEXT_PUBLIC_SITE_URL)
+        : new URL(redirectTo, request.url);
+
+      console.log('Redirecting to:', redirectUrl.toString());
+
+      // Redirect to the auth-redirect page which will handle the final redirect
+      return NextResponse.redirect(redirectUrl);
+    } catch (exchangeError) {
+      console.error('Error in code exchange:', exchangeError);
+
+      // Enhanced error handling
+      let errorMessage = 'Authentication failed';
+      let statusCode = 500;
+
+      if (exchangeError instanceof Error) {
+        const supabaseError = exchangeError as SupabaseError;
+        errorMessage = supabaseError.message;
+
+        // Check for specific error types
+        if (supabaseError.status) {
+          statusCode = supabaseError.status;
+        }
+
+        if (supabaseError.originalError) {
+          console.error('Original error:', supabaseError.originalError);
+        }
+      }
+
+      // Redirect to login with error
+      const loginUrl = new URL(
+        `/en/login?error=${encodeURIComponent(errorMessage)}`,
+        process.env.NEXT_PUBLIC_SITE_URL || request.url,
+      );
+
+      console.log('Redirecting to login with error:', loginUrl.toString());
+      return NextResponse.redirect(loginUrl);
+    }
   } catch (error) {
-    console.error('Exception during auth callback:', error);
-    console.log('Detailed error:', {
-      error,
-      message: (error as any)?.message,
-      stack: (error as any)?.stack,
-    });
-    return NextResponse.redirect(
-      new URL('/en/login?error=Server+error', process.env.NEXT_PUBLIC_SITE_URL),
+    console.error('Unexpected error in auth callback:', error);
+
+    // Redirect to login with generic error
+    const loginUrl = new URL(
+      `/en/login?error=${encodeURIComponent('Authentication failed')}`,
+      process.env.NEXT_PUBLIC_SITE_URL || request.url,
     );
+
+    return NextResponse.redirect(loginUrl);
   }
-}
+} 

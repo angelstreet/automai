@@ -80,13 +80,17 @@ export default async function LoginPage({
   params: { locale: string };
   searchParams: { callbackUrl?: string; error?: string };
 }) {
-  const { locale } = params;
-  const callbackUrl = searchParams.callbackUrl;
-  const errorMessage = searchParams.error;
+  // Await params and searchParams
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  
+  const locale = resolvedParams.locale;
+  const callbackUrl = resolvedSearchParams.callbackUrl;
+  const errorMessage = resolvedSearchParams.error;
   
   // Check if user is already logged in
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
   const { data: { session } } = await supabase.auth.getSession();
   
   // If user is already logged in, redirect to dashboard

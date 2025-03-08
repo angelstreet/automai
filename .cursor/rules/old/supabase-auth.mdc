@@ -1,0 +1,157 @@
+---
+description: Supabase Authentication Implementation
+globs: src/middleware.ts, src/utils/supabase/*, src/app/[locale]/(auth)/**/*.tsx
+alwaysApply: true
+---
+
+# Supabase Authentication Implementation
+
+## Authentication Architecture
+
+The application uses Supabase for authentication and supports multiple providers:
+- OAuth providers (Google, GitHub)
+- Email/password (native Supabase)
+- Magic link authentication
+
+## Supabase Authentication Configuration
+
+### Client-Side Setup in src/utils/supabase/client.ts
+
+```typescript
+import { createBrowserClient } from "@supabase/ssr";
+
+export const createClient = () =>
+  createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+```
+
+### Server-Side Setup in src/utils/supabase/server.ts
+
+```typescript
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+export const createClient = async (cookieStore: ReturnType<typeof cookies>) => {
+  // Ensure cookieStore is resolved if it's a promise
+  const resolvedCookieStore = await cookieStore;
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        async getAll() {
+          return resolvedCookieStore.getAll();
+        },
+        async setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => 
+              resolvedCookieStore.set(name, value, options)
+            );
+          } catch (error) {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing
+            // user sessions.
+            console.error('Error setting cookies:', error);
+          }
+        },
+      },
+    },
+  );
+};
+```
+
+### Middleware Setup in src/utils/supabase/middleware.ts
+
+```typescript
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // IMPORTANT: DO NOT REMOVE auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Handle authentication redirects based on user state
+  // ...
+
+  return supabaseResponse
+}
+```
+
+## Authentication Flow
+
+1. **User initiates login** via Supabase auth providers
+2. **Auth provider callback** is processed by Supabase
+3. **Server middleware** validates Supabase session and authorizes access
+4. **Auth-redirect page** processes successful login and redirects to dashboard
+5. **Tenant-specific dashboard** is loaded based on user metadata
+
+## Authentication Endpoints
+
+### OAuth Callback (/api/auth/callback)
+
+This endpoint handles OAuth callbacks from providers:
+- Receives authorization code from OAuth provider
+- Exchanges code for session using Supabase
+- Redirects to auth-redirect page
+
+### Auth Redirect Page (/[locale]/auth-redirect)
+
+This page handles post-authentication redirects:
+- Checks for valid session
+- Extracts tenant from user metadata
+- Redirects to tenant-specific dashboard
+
+## Best Practices
+
+1. **Always use the wrapper**:
+   - Import from `@/utils/supabase/server` for server components
+   - Import from `@/utils/supabase/client` for client components
+   - Never import directly from `@supabase/ssr`
+
+2. **Handle async APIs**:
+   - Always await `params` and `searchParams` in page components
+   - Always await `cookies()` before using it
+   - Always await `createClient()` when using the server wrapper
+
+3. **Tenant isolation**:
+   - Always use tenant from user metadata for redirects
+   - Default to 'trial' if no tenant is specified
+
+4. **Error handling**:
+   - Provide fallback redirects to login page
+   - Include error messages in redirect URLs when possible
+
+5. **Security**:
+   - Never expose Supabase keys in client code
+   - Use middleware for route protection
+   - Validate session on both client and server 
