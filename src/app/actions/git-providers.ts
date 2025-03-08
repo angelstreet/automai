@@ -3,8 +3,7 @@
 import db from '@/lib/supabase/db';
 import { GitProvider } from '@/types/repositories';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { supabaseAuth } from '@/lib/supabase/auth';
 
 // Schema for testing a connection
 const testConnectionSchema = z.object({
@@ -31,21 +30,19 @@ type GitProviderCreateInput = z.infer<typeof gitProviderCreateSchema>;
 
 // Helper function to get the current user
 async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const result = await supabaseAuth.getUser();
   
-  if (error || !user) {
+  if (!result.success || !result.data) {
     return null;
   }
   
-  return user;
+  return result.data;
 }
 
 /**
  * Test a connection to a git provider
  */
-export async function testConnection(data: TestConnectionInput): Promise<{ success: boolean; error?: string; message?: string }> {
+export async function testGitProviderConnection(data: TestConnectionInput): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
     // Validate input data
     const validatedData = testConnectionSchema.parse(data);
@@ -83,7 +80,7 @@ export async function testConnection(data: TestConnectionInput): Promise<{ succe
       message: 'Connection test successful'
     };
   } catch (error: any) {
-    console.error('Error in testConnection:', error);
+    console.error('Error in testGitProviderConnection:', error);
     
     // Handle specific errors
     if (error instanceof Error) {

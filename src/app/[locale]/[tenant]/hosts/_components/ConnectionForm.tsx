@@ -39,9 +39,6 @@ interface ConnectionFormProps {
 
 export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: ConnectionFormProps) {
   const t = useTranslations('Common');
-  const paramsPromise = useParams();
-  const params = React.use(paramsPromise);
-  const locale = params.locale as string;
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
@@ -143,8 +140,13 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
 
     setTesting(true);
     setTestError(null);
-
+    
     try {
+      if (!fingerprint) {
+        setTestError('Fingerprint is required');
+        return;
+      }
+      
       setVerifyingFingerprint(true);
       const data = await hostsApi.verifyFingerprint({
         fingerprint: fingerprint,

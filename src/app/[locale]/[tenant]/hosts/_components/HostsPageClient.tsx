@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { RefreshCcw, Plus, Server } from 'lucide-react';
+import { RefreshCcw, Plus } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
@@ -126,7 +126,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
       <ConnectHostDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onSubmit={addHost}
+        onSuccess={addHost}
       />
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -138,7 +138,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
           <AlertDialogFooter>
             <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              variant="destructive"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDeleteHost}
               disabled={isDeleting}
             >

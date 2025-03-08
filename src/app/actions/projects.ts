@@ -1,8 +1,7 @@
 'use server';
 
 import db from '@/lib/supabase/db';
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { supabaseAuth } from '@/lib/supabase/auth';
 
 export interface Project {
   id: string;
@@ -15,15 +14,13 @@ export interface Project {
 
 // Helper function to get the current user
 async function getCurrentUser() {
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const result = await supabaseAuth.getUser();
   
-  if (error || !user) {
+  if (!result.success || !result.data) {
     return null;
   }
   
-  return user;
+  return result.data;
 }
 
 /**

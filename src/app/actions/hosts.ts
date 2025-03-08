@@ -84,7 +84,7 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
   }
 }
 
-export async function testConnection(id: string): Promise<{ success: boolean; error?: string; message?: string }> {
+export async function testHostConnection(id: string): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
     await db.host.update({
       where: { id },
@@ -95,7 +95,7 @@ export async function testConnection(id: string): Promise<{ success: boolean; er
     // For now, we'll just simulate a successful connection
     return { success: true, message: 'Connection successful' };
   } catch (error: any) {
-    console.error('Error in testConnection:', error);
+    console.error('Error in testHostConnection:', error);
     return { success: false, error: error.message || 'Failed to test connection' };
   }
 }
@@ -111,7 +111,7 @@ export async function testAllHosts(): Promise<{ success: boolean; error?: string
     const hosts = hostsResult.data || [];
     const results = await Promise.all(
       hosts.map(async (host) => {
-        const result = await testConnection(host.id);
+        const result = await testHostConnection(host.id);
         return { id: host.id, success: result.success, message: result.message };
       })
     );
