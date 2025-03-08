@@ -7,6 +7,7 @@ import type { User } from '@supabase/supabase-js';
 import { Footer } from '@/components/layout/Footer';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { useAuth } from '@/hooks/useAuth';
+import { useTenants } from '@/hooks/useTenants';
 
 import { Features } from '../(marketing)/_components/Features';
 import { Hero } from '../(marketing)/_components/Hero';
@@ -20,63 +21,28 @@ interface UserWithTenant extends User {
 }
 
 export function HomePage() {
-  const { user, isLoading, error } = useAuth();
+  const { user, isLoading } = useAuth();
+  const { currentTenant, isLoading: isLoadingTenant } = useTenants();
   const params = useParams();
   const locale = params.locale as string;
 
-  // Debug logs to see what's happening
-  console.log('HomePage rendering:', { 
-    user: user ? 'exists' : 'null', 
-    isLoading, 
-    hasError: !!error,
-    errorMsg: error,
-    locale, 
-    path: typeof window !== 'undefined' ? window.location.pathname : 'unknown'
-  });
-
-  // Only redirect if authenticated and not on root locale path
-  // Don't redirect from paths like /en/ or /fr/
-  const isRootLocalePath =
-    typeof window !== 'undefined' && 
-    (window.location.pathname === `/${locale}` || window.location.pathname === `/${locale}/`);
-
-  // Add loading state to show we're attempting to render
-  if (isLoading) {
+  // Show loading state while checking auth
+  if (isLoading || isLoadingTenant) {
     return (
-      <div className="relative flex min-h-screen flex-col items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold">Loading...</h2>
-          <p className="text-muted-foreground">Initializing application</p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-32 w-32 animate-spin rounded-full border-b-2 border-t-2 border-gray-900 dark:border-gray-100"></div>
       </div>
     );
   }
 
-  // Show error state if any
-  if (error) {
-    return (
-      <div className="relative flex min-h-screen flex-col items-center justify-center">
-        <div className="text-center text-red-500">
-          <h2 className="text-xl font-semibold">Error initializing application</h2>
-          <p>{error.message}</p>
-        </div>
-      </div>
-    );
+  // If user is logged in, redirect to their tenant's dashboard
+  if (user && currentTenant) {
+    redirect(`/${locale}/${currentTenant.id}/dashboard`);
   }
 
-  if (user && !isRootLocalePath) {
-    // Always use lowercase for tenant name
-    const userWithTenant = user as UserWithTenant;
-    const tenant = (userWithTenant.user_metadata?.tenant_name || 'trial').toLowerCase();
-    console.log(`Redirecting authenticated user to: /${locale}/${tenant}/dashboard`);
-    redirect(`/${locale}/${tenant}/dashboard`);
-  }
-
-  // If we're not loading, there's no error and we're not redirecting,
-  // then render the landing page
   return (
     <div className="relative flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader user={user} />
       <main className="flex-1">
         <Hero />
         <Features />

@@ -10,26 +10,73 @@ import {
   UserRole,
   UserRoleFilter
 } from '@/app/actions/user';
+import { useToast } from '@/components/shadcn/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { Code2, Building2, Factory } from 'lucide-react';
 
-export function useUserRoles(initialFilter?: UserRoleFilter) {
-  const [roles, setRoles] = useState<UserRole[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [filter, setFilter] = useState<UserRoleFilter | undefined>(initialFilter);
+interface Role {
+  id: string;
+  name: string;
+  icon?: React.ReactNode;
+}
+
+export function useUserRoles() {
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const fetchRoles = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getUserRoles(filter);
-      setRoles(data);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch user roles'));
-    } finally {
-      setLoading(false);
+    if (!user) {
+      setRoles([]);
+      setIsLoading(false);
+      return;
     }
-  }, [filter]);
 
+    try {
+      setIsLoading(true);
+      const data = await getUserRoles(user.id);
+      
+      // Map database roles to UI roles with icons
+      const rolesWithIcons = data.map(role => ({
+        id: role.id,
+        name: role.name,
+        icon: getRoleIcon(role.name),
+      }));
+
+      setRoles(rolesWithIcons);
+    } catch (error) {
+      console.error('Error fetching user roles:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch user roles',
+        variant: 'destructive',
+      });
+      // Set default roles if fetch fails
+      setRoles([
+        { id: 'user', name: 'User', icon: <Code2 className="h-4 w-4" /> },
+        { id: 'admin', name: 'Admin', icon: <Building2 className="h-4 w-4" /> },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, toast]);
+
+  // Helper function to get role icon
+  const getRoleIcon = (roleName: string) => {
+    switch (roleName.toLowerCase()) {
+      case 'admin':
+        return <Building2 className="h-4 w-4" />;
+      case 'developer':
+        return <Code2 className="h-4 w-4" />;
+      case 'operator':
+        return <Factory className="h-4 w-4" />;
+      default:
+        return <Code2 className="h-4 w-4" />;
+    }
+  };
+
+  // Fetch roles on mount or when user changes
   useEffect(() => {
     fetchRoles();
   }, [fetchRoles]);
@@ -65,10 +112,6 @@ export function useUserRoles(initialFilter?: UserRoleFilter) {
     }
   };
 
-  const updateFilter = (newFilter: UserRoleFilter) => {
-    setFilter(newFilter);
-  };
-
   // Hook to get current user's roles
   const useCurrentUserRoles = () => {
     const [currentRoles, setCurrentRoles] = useState<UserRole[]>([]);
@@ -102,14 +145,10 @@ export function useUserRoles(initialFilter?: UserRoleFilter) {
 
   return {
     roles,
-    loading,
-    error,
-    filter,
-    updateFilter,
+    isLoading,
     create,
     update,
     remove,
-    refresh: fetchRoles,
     useCurrentUserRoles
   };
 }

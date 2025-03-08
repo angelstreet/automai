@@ -1,9 +1,9 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import { signOut } from '@/app/actions';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
@@ -17,23 +17,15 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import { LogOut, Settings, User } from 'lucide-react';
 
 export function ProfileDropdown() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const router = useRouter();
-  const paramsPromise = useParams();
-  const params = React.use(paramsPromise);
+  const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string;
-
-  // Get user's initials for avatar fallback
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((part) => part[0])
-      .join('')
-      .toUpperCase();
-  };
+  const t = useTranslations();
 
   if (!user) return null;
 
@@ -41,14 +33,20 @@ export function ProfileDropdown() {
   const userImage = user.user_metadata?.avatar_url || '/avatars/01.svg';
   // Get user display name
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+  // Get user initials for avatar fallback
+  const userInitials = userName
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarImage src={userImage} alt={userName} />
-            <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+            <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -61,38 +59,23 @@ export function ProfileDropdown() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${tenant}/settings/profile`)}
-          >
-            Profile
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/profile`)}>
+            <User className="mr-2 h-4 w-4" />
+            <span>{t('Profile.profile')}</span>
             <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${tenant}/settings/billing`)}
-          >
-            Billing
-            <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings`)}>
-            Settings
+            <Settings className="mr-2 h-4 w-4" />
+            <span>{t('Settings.title')}</span>
             <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${tenant}/settings/team`)}
-          >
-            New Team
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <form action={signOut}>
-          <input type="hidden" name="locale" value={locale} />
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full text-left cursor-pointer">
-              Log out
-              <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-            </button>
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem onClick={signOut}>
+          <LogOut className="mr-2 h-4 w-4" />
+          <span>{t('Auth.signOut')}</span>
+          <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

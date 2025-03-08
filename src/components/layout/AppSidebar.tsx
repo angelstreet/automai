@@ -33,8 +33,6 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
-import { sidebarData } from './data/sidebarData';
-
 interface AppSidebarProps {
   user: User | null;
   tenant: string;
@@ -45,6 +43,7 @@ export function AppSidebar({ user, tenant, locale }: AppSidebarProps) {
   const t = useTranslations();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { role } = useRole();
 
   // If no user is provided, show a minimal sidebar with limited functionality
   if (!user) {
@@ -60,115 +59,108 @@ export function AppSidebar({ user, tenant, locale }: AppSidebarProps) {
       name: t('Dashboard.title'),
       href: `/${locale}/${tenant}/dashboard`,
       icon: LayoutDashboard,
+      roles: ['user', 'admin'],
     },
     {
       name: t('Common.hosts'),
       href: `/${locale}/${tenant}/hosts`,
       icon: Server,
+      roles: ['user', 'admin'],
     },
     {
       name: t('Common.terminal'),
       href: `/${locale}/${tenant}/terminals`,
       icon: Terminal,
+      roles: ['user', 'admin'],
     },
     {
       name: t('repositories.repositories'),
       href: `/${locale}/${tenant}/repositories`,
       icon: GitBranch,
+      roles: ['user', 'admin'],
     },
     {
       name: 'Scripts',
       href: `/${locale}/${tenant}/scripts`,
       icon: FileCode,
+      roles: ['user', 'admin'],
     },
     {
       name: 'Tests',
       href: `/${locale}/${tenant}/tests`,
       icon: TestTube,
+      roles: ['user', 'admin'],
     },
     {
       name: 'Reports',
       href: `/${locale}/${tenant}/reports`,
       icon: BarChart,
+      roles: ['user', 'admin'],
     },
     {
       name: t('Team.title'),
       href: `/${locale}/${tenant}/team`,
       icon: Users,
+      roles: ['admin'],
     },
     {
       name: t('billing.title'),
       href: `/${locale}/${tenant}/billing`,
       icon: CreditCard,
+      roles: ['admin'],
     },
     {
       name: t('Settings.title'),
       href: `/${locale}/${tenant}/settings`,
       icon: Settings,
+      roles: ['user', 'admin'],
     },
-  ];
+  ].filter(item => item.roles.includes(role));
 
   return (
-    <>
-      {/* Mobile toggle */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed left-4 top-4 z-50 rounded-md bg-primary p-2 text-primary-foreground md:hidden"
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
-
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-40 w-64 transform bg-card shadow-lg transition-transform duration-200 ease-in-out md:relative md:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        <div className="flex h-full flex-col">
-          {/* Logo */}
-          <div className="flex h-16 items-center justify-center border-b px-4">
-            <Link href={`/${locale}/${tenant}/dashboard`} className="flex items-center space-x-2">
-              <span className="text-xl font-bold">Automai</span>
-            </Link>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4">
-            <ul className="space-y-2">
-              {sidebarItems.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      'flex items-center rounded-md px-4 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground',
-                      pathname === item.href
-                        ? 'bg-accent text-accent-foreground'
-                        : 'text-muted-foreground'
-                    )}
-                  >
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {item.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* User info */}
-          <div className="border-t p-4">
-            <div className="flex items-center space-x-3">
-              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                {user?.user_metadata?.name ? user.user_metadata.name.charAt(0).toUpperCase() : '?'}
-              </div>
-              <div>
-                <p className="text-sm font-medium">{user?.user_metadata?.name || 'Guest User'}</p>
-                <p className="text-xs text-muted-foreground">{user?.email || 'No email'}</p>
-              </div>
-            </div>
-          </div>
+    <Sidebar open={isOpen} onOpenChange={setIsOpen}>
+      <SidebarHeader>
+        <div className="flex items-center justify-between px-4">
+          <Link
+            href={`/${locale}/${tenant}/dashboard`}
+            className="flex items-center space-x-2"
+          >
+            <span className="font-bold">AutomAI</span>
+          </Link>
+          <button onClick={toggleSidebar} className="lg:hidden">
+            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
-      </aside>
-    </>
+        <TeamSwitcher />
+      </SidebarHeader>
+      <SidebarContent>
+        <NavGroup
+          title={t('Menu.title')}
+          items={sidebarItems.map(item => ({
+            title: item.name,
+            href: item.href,
+            icon: item.icon,
+            active: pathname === item.href,
+          }))}
+        />
+      </SidebarContent>
+      <SidebarFooter>
+        <NavUser user={user} tenant={tenant} locale={locale} />
+      </SidebarFooter>
+      <SidebarRail>
+        {sidebarItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              'flex h-12 w-12 items-center justify-center rounded-lg hover:bg-accent',
+              pathname === item.href && 'bg-accent',
+            )}
+          >
+            <item.icon className="h-5 w-5" />
+          </Link>
+        ))}
+      </SidebarRail>
+    </Sidebar>
   );
 }

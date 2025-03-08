@@ -8,16 +8,16 @@ import { useState } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useAuth } from '@/hooks/useAuth';
-import { updateProfile } from '@/app/actions';
+import { useProfile } from '@/hooks/useProfile';
 
 export function ProfileContent() {
   const { user, isLoading } = useAuth();
+  const { updateProfile, isUpdating } = useProfile();
   const t = useTranslations('Profile');
   const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string | undefined;
   const [name, setName] = useState(user?.user_metadata?.name || '');
-  const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
   if (isLoading) {
@@ -40,92 +40,74 @@ export function ProfileContent() {
     );
   }
 
-  const userPlan = user.user_metadata?.plan || 'TRIAL';
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const success = await updateProfile({ name });
+    if (success) {
+      router.back();
+    }
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-3xl font-bold">{t('title')}</h1>
-        </div>
-      </div>
+    <div className="container mx-auto p-6">
+      <div className="max-w-2xl mx-auto">
+        <Button
+          variant="ghost"
+          className="mb-6"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          {t('back')}
+        </Button>
 
-      <div className="grid gap-6">
-        {/* Personal Information */}
-        <div className="p-6 bg-card rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">{t('personalInfo')}</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">{t('name')}</label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t('enterName')}
-                  className="max-w-md"
-                />
-                <form action={updateProfile}>
-                  <input type="hidden" name="name" value={name} />
-                  <input type="hidden" name="locale" value={locale} />
-                  <Button type="submit" disabled={isUpdating || name === user.user_metadata?.name}>
-                    {isUpdating ? t('updating') : t('update')}
-                  </Button>
-                </form>
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium">{t('email')}</label>
-              <p className="text-muted-foreground">{user.email}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium">{t('plan')}</label>
-              <p className="text-muted-foreground">{userPlan}</p>
-            </div>
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold">{t('title')}</h2>
+            <p className="text-muted-foreground">{t('description')}</p>
           </div>
-        </div>
 
-        {/* Account Settings */}
-        <div className="p-6 bg-card rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">{t('accountSettings')}</h2>
-          <div className="space-y-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/${locale}/${tenant || 'default'}/settings`)}
-            >
-              {t('manageSettings')}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium mb-2">
+                {t('name')}
+              </label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('namePlaceholder')}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-2">
+                {t('email')}
+              </label>
+              <Input
+                id="email"
+                value={user.email}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="plan" className="block text-sm font-medium mb-2">
+                {t('plan')}
+              </label>
+              <Input
+                id="plan"
+                value={user.user_metadata?.plan || 'TRIAL'}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? t('saving') : t('save')}
             </Button>
-            {userPlan !== 'ENTERPRISE' && (
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/${locale}/${tenant || 'default'}/billing`)}
-              >
-                {t('upgradePlan')}
-              </Button>
-            )}
-          </div>
+          </form>
         </div>
-
-        {/* Tenant Information (_Enterprise only) */}
-        {userPlan === 'ENTERPRISE' && tenant && (
-          <div className="p-6 bg-card rounded-lg shadow">
-            <h2 className="text-xl font-semibold mb-4">{t('workspaceInfo')}</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Workspace ID</label>
-                <p className="text-muted-foreground">{tenant}</p>
-              </div>
-              <Button
-                variant="outline"
-                onClick={() => (window.location.href = `/${locale}/${tenant}/team`)}
-              >
-                {t('manageTeam')}
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

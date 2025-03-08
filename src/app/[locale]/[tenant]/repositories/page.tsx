@@ -18,6 +18,9 @@ import {
   RepositoryTable,
 } from './_components';
 import { useTranslations } from 'next-intl';
+import { useRepositories } from '@/hooks/useRepositories';
+import { useGitProviders } from '@/hooks/useGitProviders';
+import { cn } from '@/lib/utils';
 
 export default function RepositoriesPage() {
   const router = useRouter();
@@ -40,6 +43,26 @@ export default function RepositoriesPage() {
 
   // Add a ref to track if fetching is already in progress
   const isFetchingRef = useRef(false);
+
+  const {
+    repositories: repositoriesFromHooks,
+    isLoading: isLoadingRepos,
+    syncRepository,
+    isSyncing,
+    refreshAll: refreshRepositories
+  } = useRepositories();
+
+  const {
+    providers: providersFromHooks,
+    isLoading: isLoadingProviders,
+    refreshProvider,
+    isRefreshing: isRefreshingProvider,
+    addProvider: addProviderFromHooks,
+    isAddingProvider: isAddingProviderFromHooks,
+    editProvider,
+    editingProvider: editingProviderFromHooks,
+    setEditingProvider: setEditingProviderFromHooks
+  } = useGitProviders();
 
   // Define fetchData outside of useEffect so it can be called from other places
   const fetchData = async () => {
@@ -356,6 +379,15 @@ export default function RepositoriesPage() {
     }
   };
 
+  // Filter repositories based on search and selected providers
+  const filteredRepositories = repositories.filter(repo => {
+    const matchesSearch = searchQuery.toLowerCase() === '' || 
+      repo.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesProvider = selectedProviders.length === 0 || 
+      (repo.provider && selectedProviders.includes(repo.provider.id));
+    return matchesSearch && matchesProvider;
+  });
+
   // Render content based on whether providers exist
   const renderContent = () => {
     // If still loading, show loading state
@@ -422,8 +454,7 @@ export default function RepositoriesPage() {
       }
       
       // If repositories exist but none match the filter, show filtered empty state
-      const filteredRepos = filterRepositories();
-      if (filteredRepos.length === 0) {
+      if (filteredRepositories.length === 0) {
         return (
           <EmptyState
             title={t('no_repos_found')}
@@ -477,24 +508,33 @@ export default function RepositoriesPage() {
 
         <TabsContent value="repositories" className="mt-0">
           <RepositoryTable
-            repositories={filterRepositories()}
-            onSyncRepository={handleSyncRepository}
-            syncingRepoId={syncingRepoId}
+            repositories={filteredRepositories}
+            providers={providers}
+            selectedProviders={selectedProviders}
             searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
+            isLoading={isLoadingRepos}
+            syncingRepoId={isSyncing}
+            onSearchChange={setSearchQuery}
+            onToggleProviderFilter={(providerId) => {
+              setSelectedProviders(prev =>
+                prev.includes(providerId)
+                  ? prev.filter(id => id !== providerId)
+                  : [...prev, providerId]
+              );
+            }}
+            onClearFilters={handleClearFilters}
+            onRefreshRepos={refreshRepositories}
+            onSyncRepository={syncRepository}
           />
         </TabsContent>
 
         <TabsContent value="providers" className="mt-0">
           <GitProviderGrid
             providers={providers}
-            repositories={repositories}
-            selectedProviders={selectedProviders}
-            onAddProvider={() => setAddProviderOpen(true)}
-            onEditProvider={handleEditProvider}
-            onDeleteProvider={handleDeleteProvider}
-            onToggleProviderFilter={handleToggleProviderFilter}
-            refreshingProviderId={refreshingProviderId}
+            isLoading={isLoadingProviders}
+            onRefresh={refreshProvider}
+            refreshingProviderId={isRefreshingProvider}
+            onEdit={setEditingProviderFromHooks}
           />
         </TabsContent>
       </Tabs>
