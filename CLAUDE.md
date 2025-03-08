@@ -19,36 +19,35 @@
 
 - **Client Architecture**:
   - Centralized implementation in `/src/lib/supabase/`
-  - Browser client: `createBrowserClient()` - For client components
-  - Server client: `createServerClient()` - For server components
-  - Middleware client: `createMiddlewareClient()` - For middleware
-  - Admin client: `createAdminClient()` - For privileged operations
+  - All clients follow a consistent pattern for easy use
+  - Direct environment variable access without abstraction layer
+  - Browser client: `import { createClient } from '@/lib/supabase/client'` - For client components
+  - Server client: `import { createClient } from '@/lib/supabase/server'` - For server components
+  - Middleware client: `import { createClient } from '@/lib/supabase/middleware'` - For middleware
+  - Admin client: `import { createClient } from '@/lib/supabase/admin'` - For privileged operations
 
 - **Environment Configuration**:
   - We use cloud Supabase exclusively for all environments
-  - A single `.env` file for all environments with the same Supabase configuration
-  - Dynamic URL detection handles redirects based on current hostname
-  - Configuration is controlled via environment variables:
+  - Environment variables control all configuration:
     - `NEXT_PUBLIC_SUPABASE_URL` - The Supabase project URL
     - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - The anonymous API key
     - `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations (server-side only)
-    - `SUPABASE_AUTH_CALLBACK_URL` - The Supabase callback URL for OAuth
-
-- **Dynamic URL Detection**:
-  - The application automatically detects the current environment based on hostname
-  - Redirect URLs are constructed dynamically using `window.location.origin`
-  - No environment-specific configuration files needed
-  - Functions like `getSiteUrl()` and `getRedirectUrl()` handle this logic
 
 - **Authentication Flow**:
   - Uses a streamlined OAuth flow with Supabase cloud
-  - Follows the pattern: Login → OAuth Provider → Supabase Callback → auth-redirect page → Dashboard
-  - Unified approach works across development, codespace, and production environments
-  - Authentication logic in `src/auth.ts`
+  - Middleware handles session refresh and token validation
+  - `getUser()` in `src/auth.ts` provides user information
+  - Critical `supabase.auth.getUser()` call in middleware ensures secure token validation
+
+- **Security Best Practices**:
+  - Service role key is never exposed to client code
+  - Always use `getUser()` to validate tokens in security-critical operations
+  - Tenant isolation enforced in all database queries
+  - Let middleware handle authentication cookies
 
 - **Documentation**:
+  - See `/docs/supabase-integration.md` for comprehensive Supabase integration guide
   - See `/docs/authentication.md` for details on the authentication system
-  - See `/docs/supabase-migration.md` for details on the migration to cloud Supabase
   - See `/docs/supabase-auth.md` for detailed Supabase auth implementation
   - See `/docs/supabase-setup.md` for Supabase setup instructions
 

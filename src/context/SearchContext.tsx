@@ -1,8 +1,38 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { Search } from 'lucide-react';
 
-import { CommandMenu } from '@/components/shadcn/command-menu';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/shadcn/command';
+
+// Navigation data for the command menu
+const navigation = [
+  {
+    title: 'Main',
+    items: [
+      { title: 'Dashboard', url: '/dashboard' },
+      { title: 'Projects', url: '/projects' },
+      { title: 'Test Cases', url: '/test-cases' },
+      { title: 'Reports', url: '/reports' },
+    ],
+  },
+  {
+    title: 'Settings',
+    items: [
+      { title: 'Profile', url: '/profile' },
+      { title: 'Settings', url: '/settings' },
+    ],
+  },
+];
 
 interface SearchContextType {
   open: boolean;
@@ -23,19 +53,53 @@ export function useSearch() {
   return context;
 }
 
+/**
+ * Internal CommandMenu component used exclusively by the SearchProvider
+ */
+function CommandMenu({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
+  const router = useRouter();
+
+  const runCommand = useCallback(
+    (command: () => unknown) => {
+      setOpen(false);
+      command();
+    },
+    [setOpen],
+  );
+
+  return (
+    <CommandDialog modal open={open} onOpenChange={setOpen}>
+      <CommandInput placeholder="Type a command or search..." />
+      <CommandList>
+        <CommandEmpty>No results found.</CommandEmpty>
+        {navigation.map((group) => (
+          <CommandGroup key={group.title} heading={group.title}>
+            {group.items.map((item) => (
+              <CommandItem
+                key={item.url}
+                value={item.title}
+                onSelect={() => {
+                  runCommand(() => router.push(item.url));
+                }}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                {item.title}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ))}
+      </CommandList>
+    </CommandDialog>
+  );
+}
+
 export function SearchProvider({ children }: Props) {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    const down = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setOpen((open) => !open);
-      }
-    };
-    document.addEventListener('keydown', down);
-    return () => document.removeEventListener('keydown', down);
-  }, []);
+  useHotkeys('ctrl+k, cmd+k', (e: KeyboardEvent) => {
+    e.preventDefault();
+    setOpen((open) => !open);
+  });
 
   return (
     <SearchContext.Provider value={{ open, setOpen }}>
