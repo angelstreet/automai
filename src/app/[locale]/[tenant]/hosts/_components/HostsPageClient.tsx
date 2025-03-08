@@ -84,7 +84,7 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
   return (
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t('hosts')}</h1>
+          <h1 className="text-2xl font-bold">{t('hosts')}</h1>
         <div className="flex items-center gap-2">
           <TooltipProvider>
             <Tooltip>
@@ -112,13 +112,13 @@ function HostsPageContent({ initialHosts }: HostsPageClientProps) {
         </div>
       </div>
 
-      <HostOverview
-        hosts={hosts}
+        <HostOverview
+          hosts={hosts}
         onDelete={(id) => {
           setHostToDelete(id);
           setIsDeleteDialogOpen(true);
         }}
-        onRefresh={refreshConnections}
+          onRefresh={refreshConnections}
         onTestConnection={handleTestConnection}
         className="mt-6"
       />

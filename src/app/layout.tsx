@@ -1,19 +1,34 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-
 import './globals.css';
-import { Providers } from '@/components/providers';
+import { Inter } from 'next/font/google';
+import { Metadata } from 'next';
 
-const inter = Inter({ subsets: ['latin'] });
+// Load Inter font with subset optimization
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', 'sans-serif'],
+  adjustFontFallback: true,
+});
 
 export const metadata: Metadata = {
-  title: 'Automai - Awsomation AI tool',
-  description: 'Automate your testing workflow with AI',
+  title: {
+    default: 'AutomAI',
+    template: '%s | AutomAI',
+  },
+  description: 'Automate your development workflow with AI',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={inter.className}>
       <head>
         <meta name="theme-color" content="#ffffff" />
         {/* This script runs before the page is rendered to prevent theme flash */}
@@ -43,9 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={inter.className}>
-        <Providers>{children}</Providers>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

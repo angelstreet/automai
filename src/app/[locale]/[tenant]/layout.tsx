@@ -7,6 +7,7 @@ import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { Providers } from '@/components/providers';
 
 interface TenantLayoutProps {
   children: React.ReactNode;
@@ -88,22 +89,24 @@ export default function TenantLayout({ children, params }: TenantLayoutProps) {
 
   // If we have a user, render the layout
   return (
-    <div className="flex h-screen overflow-hidden">
-      <AppSidebar 
-        user={user} 
-        tenant={tenant} 
-        locale={locale} 
-      />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <WorkspaceHeader 
+    <Providers>
+      <div className="flex h-screen overflow-hidden">
+        <AppSidebar 
           user={user} 
           tenant={tenant} 
           locale={locale} 
         />
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {children}
-        </main>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <WorkspaceHeader 
+            user={user} 
+            tenant={tenant} 
+            locale={locale} 
+          />
+          <main className="flex-1 overflow-auto p-4 md:p-6">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </Providers>
   );
 }
