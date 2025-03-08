@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-
 import { createClient } from '@/lib/supabase/server';
-
 import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 
@@ -26,8 +24,7 @@ async function checkProviderAccess(id: string, userId: string) {
 export async function GET(request: Request, context: { params: { id: string } }) {
   try {
     const { params } = context;
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
     const {
       data: { session },
       error,
@@ -60,8 +57,7 @@ export async function GET(request: Request, context: { params: { id: string } })
 export async function DELETE(request: Request, context: { params: { id: string } }) {
   try {
     const { params } = context;
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
     const {
       data: { session },
       error,

@@ -1,33 +1,37 @@
-import { createClient } from '@supabase/ssr';
+// DO NOT MODIFY THIS FILE
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import type { CookieOptions } from "@supabase/ssr";
 
-import type { CookieOptions } from '@supabase/ssr';
-import { getSupabaseUrl, getSupabaseAnonKey, validateSupabaseEnv } from './env';
+// Define the cookie store type based on what cookies() returns
+type CookieStore = ReturnType<typeof cookies> extends Promise<infer T> ? T : never;
 
-// Validate environment variables on import
-validateSupabaseEnv();
+export const createClient = async (cookieStore?: CookieStore) => {
+  // If cookieStore is not provided, await it
+  const resolvedCookieStore: CookieStore = cookieStore ?? (await cookies());
 
-/**
- * Creates a Supabase client for server components and API routes
- * - Handles cookie management for authentication
- * - Uses appropriate environment variables
- */
-export const createClient = async () => {
-  const supabaseUrl = getSupabaseUrl();
-  const supabaseAnonKey = getSupabaseAnonKey();
-  
-  // Resolve the cookie store properly
-  const cookieStore = await cookies();
-  
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll: () => cookieStore.getAll(),
-      
-      setAll: (cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) => {
-        // In Next.js Server Components, we can't modify cookies directly
-        // This is just a placeholder that logs a warning
-        // To modify cookies, use middleware or API routes
-        console.warn("setAll() cannot modify cookies inside Server Components.");
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          // Simply spread the cookie object as it already has name, value, and other properties
+          return resolvedCookieStore.getAll().map((cookie) => ({
+            ...cookie,
+          }));
+        },
+        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              resolvedCookieStore.set(name, value, options);
+            });
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be ignored if you have middleware refreshing user sessions.
+          }
+        },
       },
-    },
-  });
+    }
+  );
 };

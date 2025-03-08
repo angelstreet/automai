@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { locales } from '@/config';
 import { RoleProvider } from '@/context/RoleContext';
 import { getMessages } from '@/i18n';
+import { cookies } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -44,7 +45,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Get theme from cookies
   const cookieList = await cookies();
   const themeCookie = cookieList.get('theme');
-  const theme = themeCookie?.value ?? 'system';
+  const theme = (themeCookie?.value ?? 'system') as 'light' | 'dark' | 'system';
 
   return (
     <>

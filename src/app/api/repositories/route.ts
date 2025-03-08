@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     const repositories = await repositoryService.listRepositories(session.user.id, {
       providerId,
       projectId,
-      syncStatus: syncStatus as any,
+      syncStatus: syncStatus as string | undefined,
     });
 
     return NextResponse.json(repositories);
