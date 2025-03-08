@@ -18,9 +18,11 @@
 ## Supabase Cloud Integration
 
 - **Client Architecture**:
-  - Browser client: `/src/utils/supabase/client.ts` - For client components
-  - Server client: `/src/utils/supabase/server.ts` - For server components
-  - Middleware client: `/src/utils/supabase/middleware.ts` - For middleware
+  - Centralized implementation in `/src/lib/supabase/`
+  - Browser client: `createBrowserClient()` - For client components
+  - Server client: `createServerClient()` - For server components
+  - Middleware client: `createMiddlewareClient()` - For middleware
+  - Admin client: `createAdminClient()` - For privileged operations
 
 - **Environment Configuration**:
   - We use cloud Supabase exclusively for all environments

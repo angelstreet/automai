@@ -204,6 +204,10 @@ export default function Counter(props) {
 - **Duplicated logic** - Extract shared logic into custom hooks or utility functions
 - **Missing 'use client' directive** - Remember to add it when using client-side features
 - **Using `React.use()` in client components** - Only use `React.use()` in server components to handle promises
+- **Supabase Integration** - Always use the centralized clients from `@/lib/supabase` (never the old utils implementation):
+  - Use `createBrowserClient` for client components
+  - Use `createServerClient` for server components
+  - Use `createMiddlewareClient` for middleware
 
 ## Related Rules
 

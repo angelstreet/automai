@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server';
+import { createServerClient } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -94,9 +94,8 @@ export default async function AuthRedirectPage({
       return <LoadingState />;
     }
     
-    // Get cookies and create Supabase client
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
+    // Create Supabase client
+    const supabase = await createServerClient();
     
     // Check for existing session first
     const { data: sessionData } = await supabase.auth.getSession();

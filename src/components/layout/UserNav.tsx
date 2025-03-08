@@ -1,7 +1,7 @@
 import { User } from '@supabase/supabase-js';
 import { LogOut, Settings, User as UserIcon } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/client';
+import { createBrowserClient } from '@/lib/supabase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,7 @@ interface UserNavProps {
 }
 
 export function UserNav({ user, tenant, locale }: UserNavProps) {
-  const supabase = createClient();
+  const supabase = createBrowserClient();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

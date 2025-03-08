@@ -7,7 +7,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { createClient } from '@/utils/supabase/client';
+import { createBrowserClient } from '@/lib/supabase';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const supabase = createClient();
+      const supabase = createBrowserClient();
 
       // Update the user's password
       const { error } = await supabase.auth.updateUser({ password });

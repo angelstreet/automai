@@ -52,7 +52,8 @@ GET    /api/getProject/123          # Uses verb
 ### Authentication & Authorization
 
 - Always check session in protected routes
-- Use `getSession` from auth utilities
+- Use `getSession()` from auth utilities or `createServerClient()` from Supabase centralized client
+- Follow centralized Supabase client pattern (see supabase-auth-db.mdc)
 - Implement proper tenant isolation
 - Return appropriate status codes for auth failures (401/403)
 
@@ -107,6 +108,7 @@ Use appropriate HTTP status codes:
 // src/app/api/projects/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/auth';
+import { createServerClient } from '@/lib/supabase';
 import { z } from 'zod';
 import { projectService } from '@/lib/services';
 

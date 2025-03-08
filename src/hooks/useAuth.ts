@@ -1,6 +1,6 @@
 'use client';
 
-import { createClient } from '@/utils/supabase/client';
+import { createBrowserClient } from '@/lib/supabase';
 import { useEffect, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -12,7 +12,7 @@ export function useAuth() {
 
   useEffect(() => {
     // Create Supabase client
-    const supabase = createClient();
+    const supabase = createBrowserClient();
     
     // Get initial session and user
     const initializeAuth = async () => {
@@ -130,4 +130,4 @@ export function useAuth() {
     isAuthenticated: !!user,
     error,
   };
-} 
+}

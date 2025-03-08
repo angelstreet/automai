@@ -1,12 +1,11 @@
-import { createClient } from '@/utils/supabase/server';
+import { createServerClient } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 
 // Create a simple database interface that uses Supabase
 const db = {
   // Generic query method
   async query(table: string, query: any = {}) {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    const supabase = await createServerClient();
     
     let builder = supabase.from(table).select();
     
@@ -46,8 +45,7 @@ const db = {
   // Table-specific methods to mimic Prisma's API
   user: {
     async findUnique({ where }: { where: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createServerClient();
       
       const { data, error } = await supabase
         .from('users')
@@ -68,8 +66,7 @@ const db = {
     },
     
     async create({ data }: { data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createServerClient();
       
       const { data: result, error } = await supabase
         .from('users')
@@ -86,8 +83,7 @@ const db = {
     },
     
     async update({ where, data }: { where: any; data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createServerClient();
       
       const { data: result, error } = await supabase
         .from('users')
@@ -112,8 +108,7 @@ const db = {
     },
     
     async findUnique({ where }: { where: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createServerClient();
       
       const { data, error } = await supabase
         .from('projects')
@@ -130,8 +125,7 @@ const db = {
     },
     
     async create({ data }: { data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createServerClient();
       
       const { data: result, error } = await supabase
         .from('projects')
@@ -148,8 +142,7 @@ const db = {
     },
     
     async update({ where, data }: { where: any; data: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createServerClient();
       
       const { data: result, error } = await supabase
         .from('projects')
@@ -167,8 +160,7 @@ const db = {
     },
     
     async delete({ where }: { where: any }) {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createServerClient();
       
       const { error } = await supabase
         .from('projects')
@@ -187,4 +179,4 @@ const db = {
   // Add more tables as needed
 };
 
-export default db; 
+export default db;

@@ -8,7 +8,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { createClient } from '@/utils/supabase/client';
+import { createBrowserClient } from '@/lib/supabase';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -36,7 +36,7 @@ export default function SignUpPage() {
 
     try {
       // Create user with Supabase
-      const supabase = createClient();
+      const supabase = createBrowserClient();
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -85,7 +85,7 @@ export default function SignUpPage() {
   const handleOAuthSignUp = async (provider: 'google' | 'github') => {
     try {
       // Use Supabase OAuth
-      const supabase = createClient();
+      const supabase = createBrowserClient();
       const { error, data } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

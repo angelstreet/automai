@@ -7,7 +7,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { createClient } from '@/utils/supabase/client';
+import { createBrowserClient } from '@/lib/supabase';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -25,7 +25,7 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createClient();
+      const supabase = createBrowserClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/${locale}/reset-password`,
       });

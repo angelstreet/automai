@@ -3,7 +3,7 @@
  * Authentication utilities for working with Supabase Auth
  */
 import { cookies } from 'next/headers';
-import { createClient, createAdminClient } from '@/utils/supabase/server';
+import { createServerClient, createAdminClient } from '@/lib/supabase';
 
 // Types for Supabase auth
 export interface UserSession {
@@ -26,8 +26,7 @@ export interface SessionData {
 export async function getSession(): Promise<SessionData | null> {
   try {
     // Create a server client with cookies
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient();
 
     // Try to get the session
     const { data, error } = await supabase.auth.getSession();
@@ -76,8 +75,7 @@ export async function extractSessionFromHeader(
     console.log('Extracting session from header token');
 
     // Create a Supabase admin client
-    const cookieStore = cookies();
-    const supabase = createAdminClient(cookieStore);
+    const supabase = createAdminClient();
 
     // Get the user from the token
     const { data, error } = await supabase.auth.getUser(token);
