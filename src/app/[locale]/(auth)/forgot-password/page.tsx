@@ -9,7 +9,7 @@ import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { createBrowserClient } from '@/lib/supabase';
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage() {
   const router = useRouter();
   const { locale } = useParams();
   const t = useTranslations('Auth');
