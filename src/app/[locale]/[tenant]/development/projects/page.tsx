@@ -9,6 +9,7 @@ import {
   Row,
 } from '@tanstack/react-table';
 import { useRouter, useParams } from 'next/navigation';
+import * as React from 'react';
 import { useState, useEffect } from 'react';
 
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
@@ -57,7 +58,10 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
+  const locale = params.locale as string;
+  const tenant = params.tenant as string;
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -350,7 +354,7 @@ export default function ProjectsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/${params.locale}/${params.tenant}/settings/billing`)}
+              onClick={() => router.push(`/${locale}/${tenant}/settings/billing`)}
             >
               Upgrade to Pro
             </Button>
