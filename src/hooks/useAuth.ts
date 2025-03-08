@@ -46,20 +46,33 @@ export function useAuth() {
         } else {
           console.log('No session found in useAuth');
           
-          // Try to refresh the session
-          try {
-            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-            if (!refreshError && refreshData.session) {
-              console.log('Session refreshed successfully:', refreshData.session);
-              setSession(refreshData.session);
-              setUser(refreshData.user);
-            } else if (refreshError) {
-              // Don't throw here, just log the error - this is expected for logged out users
-              console.log('Failed to refresh session:', refreshError);
+          // Only try to refresh the session if we're not on a login/auth page
+          // This prevents unnecessary refresh attempts on auth pages
+          const isAuthPage = 
+            typeof window !== 'undefined' && 
+            (window.location.pathname.includes('/login') || 
+             window.location.pathname.includes('/signup') || 
+             window.location.pathname.includes('/auth-redirect') ||
+             window.location.pathname.includes('/forgot-password') ||
+             window.location.pathname.includes('/reset-password'));
+          
+          if (!isAuthPage) {
+            try {
+              console.log('Attempting to refresh session...');
+              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+              
+              if (!refreshError && refreshData.session) {
+                console.log('Session refreshed successfully:', refreshData.session);
+                setSession(refreshData.session);
+                setUser(refreshData.user);
+              } else if (refreshError) {
+                console.log('Failed to refresh session:', refreshError);
+              }
+            } catch (refreshErr) {
+              console.error('Error during session refresh:', refreshErr);
             }
-          } catch (refreshErr) {
-            console.error('Error during session refresh:', refreshErr);
-            // Don't throw here either, just continue with no session
+          } else {
+            console.log('Skipping session refresh on auth page');
           }
         }
       } catch (err) {

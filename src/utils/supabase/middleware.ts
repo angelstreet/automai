@@ -15,7 +15,8 @@ export async function updateSession(request: NextRequest) {
     {
       cookies: {
         get(name) {
-          return request.cookies.get(name)?.value
+          const cookie = request.cookies.get(name);
+          return cookie?.value;
         },
         set(name, value, options) {
           // Set cookie on the response
@@ -38,12 +39,12 @@ export async function updateSession(request: NextRequest) {
   )
 
   // Refresh the session if it exists
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data } = await supabase.auth.getSession()
+  const session = data?.session;
   
-  // Log session status for debugging
+  // Log session status for debugging (minimal logging)
   console.log('Middleware session check:', { 
     hasSession: !!session, 
-    userId: session?.user?.id,
     path: request.nextUrl.pathname
   })
 
