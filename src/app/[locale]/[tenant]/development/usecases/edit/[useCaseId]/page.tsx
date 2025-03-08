@@ -4,12 +4,12 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function UseCaseEditPage() {
   const router = useRouter();
   const params = useParams();
-  const { user, isLoading: userLoading } = useUser();
+  const { user, isLoading: userLoading } = useAuth();
 
   // Redirect if not authenticated
   useEffect(() => {

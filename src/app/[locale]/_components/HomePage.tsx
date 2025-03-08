@@ -4,13 +4,13 @@ import { redirect, useParams } from 'next/navigation';
 
 import { Footer } from '@/components/layout/Footer';
 import { SiteHeader } from '@/components/layout/SiteHeader';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 import { Features } from '../(marketing)/_components/Features';
 import { Hero } from '../(marketing)/_components/Hero';
 
 export function HomePage() {
-  const { user, isLoading, error } = useUser();
+  const { user, isLoading, error } = useAuth();
   const params = useParams();
   const locale = params.locale as string;
 

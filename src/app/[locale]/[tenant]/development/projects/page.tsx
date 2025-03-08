@@ -32,7 +32,7 @@ import {
 } from '@/components/shadcn/table';
 import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
 
 // Type matching Prisma Project model
@@ -59,7 +59,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user } = useAuth();
 
   // Fetch projects on mount
   useEffect(() => {

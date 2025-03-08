@@ -1,8 +1,7 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { signOut } from '@/lib/auth';
+import { signOut } from '@/app/actions';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';

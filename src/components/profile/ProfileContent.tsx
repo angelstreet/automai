@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useAuth } from '@/hooks/useAuth';
-import { updateProfile } from '@/lib/auth';
+import { updateProfile } from '@/app/actions';
 
 export function ProfileContent() {
   const { user, isLoading } = useAuth();

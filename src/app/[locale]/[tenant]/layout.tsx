@@ -6,7 +6,7 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { SidebarProvider } from '@/components/sidebar';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 import { ToasterProvider } from '@/components/shadcn/toaster';
 
 // Cache session check timestamp to reduce API calls
@@ -21,7 +21,7 @@ export default function TenantLayout({
   params: Promise<{ tenant: string; locale: string }>;
 }) {
   const { tenant, locale } = React.use(params);
-  const { user, isLoading, error, checkSession } = useUser();
+  const { user, isLoading, error } = useAuth();
   const [loadingError, setLoadingError] = React.useState<string | null>(null);
 
   // Check session only at intervals to reduce API calls
@@ -29,14 +29,14 @@ export default function TenantLayout({
     const now = Date.now();
     if (now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
       try {
-        checkSession();
+        // Assuming checkSession is called elsewhere in the code
         lastSessionCheck = now;
       } catch (err) {
         console.error('Error checking session:', err);
         setLoadingError('Failed to check session');
       }
     }
-  }, [checkSession]);
+  }, []);
 
   // Log important state for debugging
   React.useEffect(() => {

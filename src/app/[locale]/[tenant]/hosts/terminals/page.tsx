@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 import { Terminal } from '../../terminals/_components/Terminal';
 
@@ -13,7 +13,7 @@ export default function TerminalsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user } = useAuth();
   const [connection, setConnection] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 

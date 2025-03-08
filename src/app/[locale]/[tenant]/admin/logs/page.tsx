@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 // Define a simplified interface for logs (even though we won't use it)
 interface ConnectionLog {
@@ -28,7 +28,7 @@ interface ConnectionLog {
 }
 
 export default function LogsPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [logs, setLogs] = useState<ConnectionLog[]>([]);
   const [loading, setLoading] = useState(false);
 

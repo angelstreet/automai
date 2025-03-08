@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { signOut } from '@/lib/auth';
+import { signOut } from '@/app/actions';
 
 interface NavUserProps {
   user: {

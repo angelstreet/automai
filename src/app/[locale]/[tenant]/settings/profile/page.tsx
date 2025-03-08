@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import {
@@ -12,7 +12,7 @@ import {
 } from '@/components/shadcn/card';
 
 export default function ProfileSettingsPage() {
-  const { user } = useUser();
+  const { user } = useAuth();
 
   return (
     <div className="container mx-auto py-6 space-y-8">
