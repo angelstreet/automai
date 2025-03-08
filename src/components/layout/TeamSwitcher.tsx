@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TeamSwitcherProps {
   teams?: {
@@ -44,12 +44,12 @@ const defaultTeams = [
 export function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
   const [activeTeam, setActiveTeam] = React.useState(teams[0]);
   const { state } = useSidebar();
-  const { user } = useUser();
+  const { user } = useAuth();
   const Icon = activeTeam.logo;
   const isCollapsed = state === 'collapsed';
 
   // Only show for pro users or users with a tenant
-  if (!user || (user.plan !== 'PRO' && !user.tenant_id)) {
+  if (!user || (user.user_metadata?.plan !== 'PRO' && !user.user_metadata?.tenant_id)) {
     return null;
   }
 

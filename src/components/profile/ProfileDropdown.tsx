@@ -1,5 +1,8 @@
+'use client';
+
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { signOut } from '@/lib/auth';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
@@ -13,10 +16,9 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context/UserContext';
 
 export function ProfileDropdown() {
-  const { user, logout } = useUser();
+  const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
@@ -30,17 +32,12 @@ export function ProfileDropdown() {
       .toUpperCase();
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.push(`/${locale}/login`);
-  };
-
   if (!user) return null;
 
   // Get user avatar image
-  const userImage = user.avatarUrl || user.user_metadata?.avatar_url || '/avatars/01.svg';
+  const userImage = user.user_metadata?.avatar_url || '/avatars/01.svg';
   // Get user display name
-  const userName = user.name || user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+  const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
 
   return (
     <DropdownMenu modal={false}>
@@ -84,10 +81,15 @@ export function ProfileDropdown() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
-          Log out
-          <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-        </DropdownMenuItem>
+        <form action={signOut}>
+          <input type="hidden" name="locale" value={locale} />
+          <DropdownMenuItem asChild>
+            <button type="submit" className="w-full text-left cursor-pointer">
+              Log out
+              <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+            </button>
+          </DropdownMenuItem>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,8 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 export type Role = 'admin' | 'developer' | 'tester' | 'viewer';
 
@@ -17,7 +16,7 @@ const RoleContext = createContext<RoleContextType | undefined>(undefined);
 export function RoleProvider({ children }: { children: ReactNode }) {
   const [currentRole, setCurrentRole] = useState<Role>('viewer');
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useUser();
+  const { user } = useAuth();
 
   // Fetch user role from the database
   useEffect(() => {

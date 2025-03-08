@@ -7,28 +7,18 @@ import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
+import { updateProfile } from '@/lib/auth';
 
 export function ProfileContent() {
-  const { user, isLoading, updateProfile } = useUser();
+  const { user, isLoading } = useAuth();
   const t = useTranslations('Profile');
   const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string | undefined;
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState(user?.user_metadata?.name || '');
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
-
-  const handleUpdateName = async () => {
-    try {
-      setIsUpdating(true);
-      await updateProfile({ name });
-    } catch (error) {
-      console.error('Error updating profile:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -49,6 +39,8 @@ export function ProfileContent() {
       </div>
     );
   }
+
+  const userPlan = user.user_metadata?.plan || 'TRIAL';
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -75,9 +67,13 @@ export function ProfileContent() {
                   placeholder={t('enterName')}
                   className="max-w-md"
                 />
-                <Button onClick={handleUpdateName} disabled={isUpdating || name === user.name}>
-                  {isUpdating ? t('updating') : t('update')}
-                </Button>
+                <form action={updateProfile}>
+                  <input type="hidden" name="name" value={name} />
+                  <input type="hidden" name="locale" value={locale} />
+                  <Button type="submit" disabled={isUpdating || name === user.user_metadata?.name}>
+                    {isUpdating ? t('updating') : t('update')}
+                  </Button>
+                </form>
               </div>
             </div>
             <div>
@@ -86,7 +82,7 @@ export function ProfileContent() {
             </div>
             <div>
               <label className="text-sm font-medium">{t('plan')}</label>
-              <p className="text-muted-foreground">{user.plan}</p>
+              <p className="text-muted-foreground">{userPlan}</p>
             </div>
           </div>
         </div>
@@ -101,7 +97,7 @@ export function ProfileContent() {
             >
               {t('manageSettings')}
             </Button>
-            {user.plan !== 'ENTERPRISE' && (
+            {userPlan !== 'ENTERPRISE' && (
               <Button
                 variant="outline"
                 onClick={() => router.push(`/${locale}/${tenant || 'default'}/billing`)}
@@ -113,7 +109,7 @@ export function ProfileContent() {
         </div>
 
         {/* Tenant Information (_Enterprise only) */}
-        {user.plan === 'ENTERPRISE' && tenant && (
+        {userPlan === 'ENTERPRISE' && tenant && (
           <div className="p-6 bg-card rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">{t('workspaceInfo')}</h2>
             <div className="space-y-4">

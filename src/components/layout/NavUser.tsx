@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context/UserContext';
+import { signOut } from '@/lib/auth';
 
 interface NavUserProps {
   user: {
@@ -28,18 +28,6 @@ export function NavUser({ user }: NavUserProps) {
   const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string;
-
-  const { logout } = useUser();
-
-  const handleSignOut = async () => {
-    try {
-      await logout();
-      router.push(`/${locale}/login`);
-    } catch (error) {
-      console.error('Error during sign out:', error);
-      router.push(`/${locale}/login`);
-    }
-  };
 
   return (
     <SidebarMenu>
@@ -79,7 +67,14 @@ export function NavUser({ user }: NavUserProps) {
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
+            <form action={signOut}>
+              <input type="hidden" name="locale" value={locale} />
+              <DropdownMenuItem asChild>
+                <button type="submit" className="w-full text-left cursor-pointer">
+                  Sign out
+                </button>
+              </DropdownMenuItem>
+            </form>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

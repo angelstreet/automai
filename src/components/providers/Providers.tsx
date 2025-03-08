@@ -6,7 +6,7 @@ import { RoleProvider } from '@/context/RoleContext';
 import { SearchProvider } from '@/context/SearchContext';
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
-import { UserProvider } from '@/context/UserContext';
+// UserProvider is no longer needed with server-side auth
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -18,13 +18,11 @@ export function Providers({ children }: ProvidersProps) {
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
       <ThemeProvider>
         <FontProvider>
-          <UserProvider>
-            <RoleProvider>
-              <SidebarProvider>
-                <SearchProvider>{children}</SearchProvider>
-              </SidebarProvider>
-            </RoleProvider>
-          </UserProvider>
+          <RoleProvider>
+            <SidebarProvider>
+              <SearchProvider>{children}</SearchProvider>
+            </SidebarProvider>
+          </RoleProvider>
         </FontProvider>
       </ThemeProvider>
     </NextThemesProvider>

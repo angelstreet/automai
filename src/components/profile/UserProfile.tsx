@@ -1,6 +1,8 @@
+'use client';
+
 import { User } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import * as React from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
@@ -14,7 +16,8 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
+import { signOut } from '@/lib/auth';
 
 interface UserProfileProps {
   tenant?: string;
@@ -22,19 +25,10 @@ interface UserProfileProps {
 
 export function UserProfile({ tenant }: UserProfileProps) {
   const router = useRouter();
-  const { logout, user } = useUser();
-  const locale = 'en'; // You might want to get this from your i18n system
+  const params = useParams();
+  const { user } = useAuth();
+  const locale = params.locale as string || 'en';
   const [imageError, setImageError] = React.useState(false);
-
-  const handleSignOut = async () => {
-    try {
-      await logout();
-      router.push(`/${locale}/login`);
-    } catch (error) {
-      console.error('Error during sign out:', error);
-      router.push(`/${locale}/login`);
-    }
-  };
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
@@ -45,12 +39,11 @@ export function UserProfile({ tenant }: UserProfileProps) {
       .toUpperCase();
   };
 
-  const avatarSrc = React.useMemo(() => {
-    if (imageError || !user?.image) {
-      return '/avatars/default.svg';
-    }
-    return user.image;
-  }, [user?.image, imageError]);
+  if (!user) return null;
+
+  const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+  
+  const avatarSrc = user.user_metadata?.avatar_url || '/avatars/default.svg';
 
   return (
     <DropdownMenu>
@@ -59,11 +52,11 @@ export function UserProfile({ tenant }: UserProfileProps) {
           <Avatar className="h-8 w-8">
             <AvatarImage
               src={avatarSrc}
-              alt={user?.name || 'User'}
+              alt={userName}
               onError={() => setImageError(true)}
             />
             <AvatarFallback>
-              {user?.name ? getInitials(user.name) : <User className="h-4 w-4" />}
+              {userName ? getInitials(userName) : <User className="h-4 w-4" />}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -71,8 +64,8 @@ export function UserProfile({ tenant }: UserProfileProps) {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user?.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+            <p className="text-sm font-medium leading-none">{userName}</p>
+            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -85,10 +78,15 @@ export function UserProfile({ tenant }: UserProfileProps) {
           <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>
-          Log out
-          <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-        </DropdownMenuItem>
+        <form action={signOut}>
+          <input type="hidden" name="locale" value={locale} />
+          <DropdownMenuItem asChild>
+            <button type="submit" className="w-full text-left cursor-pointer">
+              Log out
+              <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+            </button>
+          </DropdownMenuItem>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );

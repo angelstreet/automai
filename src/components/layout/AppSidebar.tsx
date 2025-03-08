@@ -11,12 +11,12 @@ import {
   SidebarRail,
 } from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 import { sidebarData } from './data/sidebarData';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useUser();
+  const { user } = useAuth();
   const { currentRole } = useRole();
 
   if (!user) return null;
@@ -33,6 +33,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return accessibleItems.length > 0;
   });
 
+  // Get user display name and email from user metadata
+  const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+  const userEmail = user.email || '';
+  const userAvatar = user.user_metadata?.avatar_url || undefined;
+
   return (
     <Sidebar collapsible="icon" variant="floating" {...props}>
       <SidebarHeader>
@@ -46,9 +51,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         <NavUser
           user={{
-            name: user.name || 'User',
-            email: user.email || '',
-            avatar: user.image || undefined,
+            name: userName,
+            email: userEmail,
+            avatar: userAvatar,
           }}
         />
       </SidebarFooter>
