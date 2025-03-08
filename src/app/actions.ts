@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation';
  */
 export async function signOut(formData: FormData) {
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createServerClient(cookieStore);
   await supabase.auth.signOut();
   
   // Get locale from form data or default to 'en'
@@ -24,7 +24,7 @@ export async function signOut(formData: FormData) {
  */
 export async function updateProfile(formData: FormData) {
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createServerClient(cookieStore);
   
   const name = formData.get('name') as string;
   const locale = formData.get('locale') as string || 'en';

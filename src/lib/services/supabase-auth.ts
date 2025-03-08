@@ -26,7 +26,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = createClient(cookieStore);
+      const supabase = await createServerClient(cookieStore);
 
       if (!supabase) {
         return {
@@ -73,7 +73,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = createClient(cookieStore);
+      const supabase = await createServerClient(cookieStore);
 
       if (!supabase) {
         return {
@@ -120,7 +120,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = createClient(cookieStore);
+      const supabase = await createServerClient(cookieStore);
 
       if (!supabase) {
         return {
@@ -163,7 +163,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = createClient(cookieStore);
+      const supabase = await createServerClient(cookieStore);
 
       if (!supabase) {
         return {
@@ -209,7 +209,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = createClient(cookieStore);
+      const supabase = await createServerClient(cookieStore);
 
       if (!supabase) {
         return {

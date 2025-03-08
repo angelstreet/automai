@@ -241,6 +241,86 @@ const db = {
     }
   },
   
+  // Add GitProvider model
+  gitProvider: {
+    async findMany(options: any = {}) {
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
+      
+      let builder = supabase.from('git_providers').select();
+      
+      // Apply filters if provided
+      if (options.where) {
+        Object.entries(options.where).forEach(([key, value]) => {
+          if (key === 'userId') {
+            builder = builder.eq('user_id', value);
+          } else if (key === 'in' && typeof value === 'object') {
+            // Handle 'in' query
+            const fieldName = Object.keys(value)[0];
+            const values = value[fieldName];
+            builder = builder.in(fieldName, values);
+          } else {
+            builder = builder.eq(key, value);
+          }
+        });
+      }
+      
+      // Handle select option
+      if (options.select) {
+        const selectFields = Object.keys(options.select).join(',');
+        builder = supabase.from('git_providers').select(selectFields);
+      }
+      
+      const { data, error } = await builder;
+      
+      if (error) {
+        console.error('Error finding git providers:', error);
+        throw error;
+      }
+      
+      return data || [];
+    }
+  },
+  
+  // Add Repository model
+  repository: {
+    async findMany(options: any = {}) {
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
+      
+      let selectQuery = '*';
+      if (options.include?.provider) {
+        selectQuery = '*, provider:git_providers(*)';
+      }
+      
+      let builder = supabase.from('repositories').select(selectQuery);
+      
+      // Apply filters if provided
+      if (options.where) {
+        Object.entries(options.where).forEach(([key, value]) => {
+          if (key === 'providerId') {
+            if (typeof value === 'object' && value !== null && 'in' in value) {
+              builder = builder.in('provider_id', value.in);
+            } else {
+              builder = builder.eq('provider_id', value);
+            }
+          } else {
+            builder = builder.eq(key, value);
+          }
+        });
+      }
+      
+      const { data, error } = await builder;
+      
+      if (error) {
+        console.error('Error finding repositories:', error);
+        throw error;
+      }
+      
+      return data || [];
+    }
+  },
+  
   // Add more tables as needed
 };
 

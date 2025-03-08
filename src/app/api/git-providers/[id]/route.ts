@@ -27,7 +27,7 @@ export async function GET(request: Request, context: { params: { id: string } })
   try {
     const { params } = context;
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     const {
       data: { session },
       error,
@@ -61,7 +61,7 @@ export async function DELETE(request: Request, context: { params: { id: string }
   try {
     const { params } = context;
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     const {
       data: { session },
       error,

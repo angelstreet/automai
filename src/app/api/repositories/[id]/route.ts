@@ -38,7 +38,7 @@ async function checkRepositoryAccess(id: string, userId: string) {
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     const {
       data: { session },
       error: sessionError,
@@ -71,7 +71,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     const {
       data: { session },
       error: sessionError,
@@ -127,7 +127,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     const {
       data: { session },
       error: sessionError,

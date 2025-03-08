@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient } from '@/lib/supabase/server';
 import db from '@/lib/db';
 
 // GET /api/fetch-all-repositories
 export async function GET(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       const repositories = await db.repository.findMany({
         where: {
           providerId: {
-            in: providers.map((p) => p.id),
+            in: providers.map((p: {id: string}) => p.id),
           },
         },
         include: {

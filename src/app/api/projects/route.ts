@@ -15,7 +15,7 @@ const ProjectSchema = z.object({
 export async function GET() {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
@@ -67,7 +67,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
@@ -186,7 +186,7 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {

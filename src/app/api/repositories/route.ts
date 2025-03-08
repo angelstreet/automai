@@ -20,7 +20,7 @@ const RepositoryCreateSchema = z.object({
 export async function GET(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {

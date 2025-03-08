@@ -19,7 +19,7 @@ export async function GET(request: Request, { params }: Props) {
   try {
     const { id } = await params;
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     
     // Get the user session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -84,7 +84,7 @@ export async function PATCH(request: Request, { params }: Props) {
   try {
     const { id } = await params;
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     
     // Get the user session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -173,7 +173,7 @@ export async function DELETE(request: Request, { params }: Props) {
   try {
     const { id } = await params;
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     
     // Get the user session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();

@@ -10,7 +10,7 @@ import { GitProviderType } from '@/types/repositories';
 export async function GET(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     const {
       data: { session },
       error: sessionError,

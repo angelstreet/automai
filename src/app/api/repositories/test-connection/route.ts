@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   try {
     // 1. Auth check
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {

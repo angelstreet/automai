@@ -19,7 +19,7 @@ export async function GET() {
   try {
     // Get the session using the Supabase client
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     
     if (!supabase) {
       console.error('Failed to create Supabase client');
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   try {
     // Get the session using the Supabase client
     const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerClient(cookieStore);
     
     if (!supabase) {
       console.error('Failed to create Supabase client');
