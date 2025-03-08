@@ -132,19 +132,18 @@ export async function getGitProvider(id: string): Promise<{ success: boolean; er
       return { success: false, error: 'Unauthorized', data: null };
     }
     
-    // We need to implement findUnique in the DB layer for git providers
-    const providers = await db.gitProvider.findMany({
+    const data = await db.gitProvider.findUnique({
       where: { 
-        id: id,
+        id,
         user_id: user.id
       }
     });
     
-    if (!providers || providers.length === 0) {
+    if (!data) {
       return { success: false, error: 'Git provider not found' };
     }
     
-    return { success: true, data: providers[0] };
+    return { success: true, data };
   } catch (error: any) {
     console.error('Error in getGitProvider:', error);
     return { success: false, error: error.message || 'Failed to fetch git provider' };
@@ -161,23 +160,19 @@ export async function deleteGitProvider(id: string): Promise<{ success: boolean;
       return { success: false, error: 'Unauthorized' };
     }
     
-    // Since we don't have a delete method in the DB layer for git providers,
-    // we need to use the createClient approach temporarily
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    const { error } = await supabase
-      .from('git_providers')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
-    
-    if (error) {
+    try {
+      await db.gitProvider.delete({
+        where: {
+          id,
+          user_id: user.id
+        }
+      });
+      
+      return { success: true };
+    } catch (error: any) {
       console.error('Error deleting git provider:', error);
       return { success: false, error: error.message };
     }
-    
-    return { success: true };
   } catch (error: any) {
     console.error('Error in deleteGitProvider:', error);
     return { success: false, error: error.message || 'Failed to delete git provider' };
@@ -185,53 +180,44 @@ export async function deleteGitProvider(id: string): Promise<{ success: boolean;
 }
 
 export async function addGitProvider(provider: Omit<GitProvider, 'id'>): Promise<GitProvider> {
-  // Since we don't have a create method in the DB layer for git providers with the same interface,
-  // we need to use the createClient approach temporarily
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-  
-  const { data, error } = await supabase
-    .from('git_providers')
-    .insert([provider])
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  try {
+    const result = await db.gitProvider.create({
+      data: provider
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error in addGitProvider:', error);
+    throw error;
+  }
 }
 
 export async function updateGitProvider(id: string, updates: Partial<GitProvider>): Promise<GitProvider> {
-  // Since we don't have an update method in the DB layer for git providers with the same interface,
-  // we need to use the createClient approach temporarily
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-  
-  const { data, error } = await supabase
-    .from('git_providers')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  try {
+    const result = await db.gitProvider.update({
+      where: { id },
+      data: updates
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error in updateGitProvider:', error);
+    throw error;
+  }
 }
 
 export async function refreshGitProvider(id: string): Promise<GitProvider> {
-  // Since we don't have an update method in the DB layer for git providers with this specific use case,
-  // we need to use the createClient approach temporarily
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-  
-  const { data, error } = await supabase
-    .from('git_providers')
-    .update({ last_synced: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  try {
+    const result = await db.gitProvider.update({
+      where: { id },
+      data: { last_synced: new Date().toISOString() }
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error in refreshGitProvider:', error);
+    throw error;
+  }
 }
 
 /**
@@ -254,31 +240,28 @@ export async function handleOAuthCallback(code: string, state: string): Promise<
     
     const { providerId, redirectUri } = stateData;
     
-    // Get the provider (using temporary direct database access)
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    // Get the provider
+    const provider = await db.gitProvider.findUnique({
+      where: {
+        id: providerId,
+        user_id: user.id
+      }
+    });
     
-    const { data: provider, error: providerError } = await supabase
-      .from('git_providers')
-      .select('*')
-      .eq('id', providerId)
-      .eq('user_id', user.id)
-      .single();
-    
-    if (providerError || !provider) {
+    if (!provider) {
       return { success: false, error: 'Provider not found or not authorized' };
     }
     
-    // Update provider with success status (using temporary direct database access)
-    const { error: updateError } = await supabase
-      .from('git_providers')
-      .update({ 
-        status: 'connected',
-        last_synced_at: new Date().toISOString()
-      })
-      .eq('id', providerId);
-    
-    if (updateError) {
+    // Update provider with success status
+    try {
+      await db.gitProvider.update({
+        where: { id: providerId },
+        data: { 
+          status: 'connected',
+          last_synced_at: new Date().toISOString()
+        }
+      });
+    } catch (updateError) {
       return { success: false, error: 'Failed to update provider' };
     }
     
@@ -306,24 +289,20 @@ export async function createGitProvider(data: GitProviderCreateInput): Promise<{
     // Validate input data
     const validatedData = gitProviderCreateSchema.parse(data);
     
-    // Create the provider (using temporary direct database access)
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    const { data: provider, error: createError } = await supabase
-      .from('git_providers')
-      .insert([{
-        type: validatedData.type,
-        display_name: validatedData.displayName,
-        server_url: validatedData.serverUrl,
-        token: validatedData.token,
-        user_id: user.id,
-        status: validatedData.token ? 'connected' : 'pending'
-      }])
-      .select()
-      .single();
-    
-    if (createError) {
+    // Create the provider
+    let provider;
+    try {
+      provider = await db.gitProvider.create({
+        data: {
+          type: validatedData.type,
+          display_name: validatedData.displayName,
+          server_url: validatedData.serverUrl,
+          token: validatedData.token,
+          user_id: user.id,
+          status: validatedData.token ? 'connected' : 'pending'
+        }
+      });
+    } catch (createError: any) {
       console.error('Error creating git provider:', createError);
       return { success: false, error: createError.message };
     }

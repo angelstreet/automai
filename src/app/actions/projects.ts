@@ -1,7 +1,8 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import db from '@/lib/supabase/db';
 import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
 
 export interface Project {
   id: string;
@@ -12,31 +13,34 @@ export interface Project {
   updated_at: string;
 }
 
+// Helper function to get the current user
+async function getCurrentUser() {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    return null;
+  }
+  
+  return user;
+}
+
 /**
  * Get all projects for the current user
  */
 export async function getProjects() {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { success: false, error: 'Unauthorized', data: null };
     }
     
-    // Get projects for the current tenant
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('tenant_id', user.user_metadata?.tenant_id || 'default')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching projects:', error);
-      return { success: false, error: error.message, data: null };
-    }
+    const tenantId = user.user_metadata?.tenant_id || 'default';
+    const data = await db.project.findMany({
+      where: { tenant_id: tenantId },
+      orderBy: { created_at: 'desc' }
+    });
     
     return { success: true, error: null, data };
   } catch (error: any) {
@@ -50,26 +54,21 @@ export async function getProjects() {
  */
 export async function getProject(id: string) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { success: false, error: 'Unauthorized', data: null };
     }
     
-    // Get project by ID, ensuring tenant isolation
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .eq('tenant_id', user.user_metadata?.tenant_id || 'default')
-      .single();
+    const tenantId = user.user_metadata?.tenant_id || 'default';
+    const data = await db.project.findUnique({
+      where: { 
+        id,
+        tenant_id: tenantId
+      }
+    });
     
-    if (error) {
-      console.error('Error fetching project:', error);
-      return { success: false, error: error.message, data: null };
+    if (!data) {
+      return { success: false, error: 'Project not found', data: null };
     }
     
     return { success: true, error: null, data };
@@ -84,29 +83,18 @@ export async function getProject(id: string) {
  */
 export async function createProject(projectData: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'tenant_id'>) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { success: false, error: 'Unauthorized', data: null };
     }
     
-    // Create project with tenant ID from user
-    const { data, error } = await supabase
-      .from('projects')
-      .insert([{
+    const tenantId = user.user_metadata?.tenant_id || 'default';
+    const data = await db.project.create({
+      data: {
         ...projectData,
-        tenant_id: user.user_metadata?.tenant_id || 'default'
-      }])
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error creating project:', error);
-      return { success: false, error: error.message, data: null };
-    }
+        tenant_id: tenantId
+      }
+    });
     
     return { success: true, error: null, data };
   } catch (error: any) {
@@ -120,28 +108,19 @@ export async function createProject(projectData: Omit<Project, 'id' | 'created_a
  */
 export async function updateProject(id: string, projectData: Partial<Omit<Project, 'id' | 'created_at' | 'updated_at' | 'tenant_id'>>) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { success: false, error: 'Unauthorized', data: null };
     }
     
-    // Update project, ensuring tenant isolation
-    const { data, error } = await supabase
-      .from('projects')
-      .update(projectData)
-      .eq('id', id)
-      .eq('tenant_id', user.user_metadata?.tenant_id || 'default')
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error updating project:', error);
-      return { success: false, error: error.message, data: null };
-    }
+    const tenantId = user.user_metadata?.tenant_id || 'default';
+    const data = await db.project.update({
+      where: { 
+        id,
+        tenant_id: tenantId
+      },
+      data: projectData
+    });
     
     return { success: true, error: null, data };
   } catch (error: any) {
@@ -155,26 +134,18 @@ export async function updateProject(id: string, projectData: Partial<Omit<Projec
  */
 export async function deleteProject(id: string) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    // Get current user to ensure tenant isolation
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
     
-    // Delete project, ensuring tenant isolation
-    const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', id)
-      .eq('tenant_id', user.user_metadata?.tenant_id || 'default');
-    
-    if (error) {
-      console.error('Error deleting project:', error);
-      return { success: false, error: error.message };
-    }
+    const tenantId = user.user_metadata?.tenant_id || 'default';
+    await db.project.delete({
+      where: {
+        id,
+        tenant_id: tenantId
+      }
+    });
     
     return { success: true, error: null };
   } catch (error: any) {

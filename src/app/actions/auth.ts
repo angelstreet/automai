@@ -1,8 +1,7 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { supabaseAuth, UserSession as AuthUserBase } from '@/lib/supabase/auth';
 
 export type AuthUser = {
   id: string;
@@ -27,9 +26,6 @@ export type ProfileUpdateData = {
  */
 export async function handleAuthCallback(url: string) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
     // Parse the URL to get the code
     const requestUrl = new URL(url);
     const code = requestUrl.searchParams.get('code');
@@ -43,22 +39,13 @@ export async function handleAuthCallback(url: string) {
       };
     }
     
-    // Exchange the code for a session
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    // Use the consolidated auth service
+    const result = await supabaseAuth.handleOAuthCallback(code);
     
-    if (error) {
-      console.error('Error exchanging code for session:', error);
+    if (!result.success || !result.data?.session) {
       return { 
         success: false, 
-        error: error.message,
-        redirectUrl: null
-      };
-    }
-    
-    if (!data.session) {
-      return { 
-        success: false, 
-        error: 'No session returned from authentication',
+        error: result.error || 'Authentication failed',
         redirectUrl: null
       };
     }
@@ -66,7 +53,7 @@ export async function handleAuthCallback(url: string) {
     // Determine the redirect URL
     // Check if we have a locale in the URL
     const locale = requestUrl.pathname.split('/')[1] || 'en';
-    const tenant = data.user.user_metadata?.tenant_id || 'default';
+    const tenant = result.data.user.user_metadata?.tenant_id || 'default';
     const redirectUrl = `/${locale}/${tenant}/dashboard`;
     
     return { 
@@ -89,24 +76,16 @@ export async function handleAuthCallback(url: string) {
  */
 export async function signUp(email: string, password: string, name: string, redirectUrl: string) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: { name }
-      }
+    const result = await supabaseAuth.signUp(email, password, {
+      redirectTo: redirectUrl,
+      data: { name }
     });
     
-    if (error) {
-      console.error('Error signing up:', error.message);
-      return { success: false, error: error.message, data: null };
-    }
-    
-    return { success: true, error: null, data };
+    return { 
+      success: result.success, 
+      error: result.error || null, 
+      data: result.data || null 
+    };
   } catch (error: any) {
     console.error('Error signing up:', error);
     return { success: false, error: error.message || 'Failed to sign up', data: null };
@@ -118,20 +97,13 @@ export async function signUp(email: string, password: string, name: string, redi
  */
 export async function signInWithPassword(email: string, password: string) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    const result = await supabaseAuth.signInWithPassword(email, password);
     
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) {
-      console.error('Error signing in with password:', error.message);
-      return { success: false, error: error.message, data: null };
-    }
-    
-    return { success: true, error: null, data };
+    return { 
+      success: result.success, 
+      error: result.error || null, 
+      data: result.data || null 
+    };
   } catch (error: any) {
     console.error('Error signing in with password:', error);
     return { success: false, error: error.message || 'Failed to sign in', data: null };
@@ -143,22 +115,15 @@ export async function signInWithPassword(email: string, password: string) {
  */
 export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl: string) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: redirectUrl
-      }
+    const result = await supabaseAuth.signInWithOAuth(provider, { 
+      redirectTo: redirectUrl 
     });
     
-    if (error) {
-      console.error('Error signing in with OAuth:', error.message);
-      return { success: false, error: error.message, data: null };
-    }
-    
-    return { success: true, error: null, data };
+    return { 
+      success: result.success, 
+      error: result.error || null, 
+      data: result.data || null 
+    };
   } catch (error: any) {
     console.error('Error signing in with OAuth:', error);
     return { success: false, error: error.message || 'Failed to sign in', data: null };
@@ -170,19 +135,12 @@ export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl
  */
 export async function updatePassword(password: string) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    const result = await supabaseAuth.updatePassword(password);
     
-    const { error } = await supabase.auth.updateUser({
-      password
-    });
-    
-    if (error) {
-      console.error('Error updating password:', error.message);
-      return { success: false, error: error.message };
-    }
-    
-    return { success: true, error: null };
+    return {
+      success: result.success,
+      error: result.error || null
+    };
   } catch (error: any) {
     console.error('Error updating password:', error);
     return { success: false, error: error.message || 'Failed to update password' };
@@ -194,19 +152,12 @@ export async function updatePassword(password: string) {
  */
 export async function resetPasswordForEmail(email: string, redirectUrl: string) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    const result = await supabaseAuth.resetPasswordForEmail(email, redirectUrl);
     
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl
-    });
-    
-    if (error) {
-      console.error('Error resetting password:', error.message);
-      return { success: false, error: error.message };
-    }
-    
-    return { success: true, error: null };
+    return {
+      success: result.success,
+      error: result.error || null
+    };
   } catch (error: any) {
     console.error('Error resetting password:', error);
     return { success: false, error: error.message || 'Failed to reset password' };
@@ -218,10 +169,11 @@ export async function resetPasswordForEmail(email: string, redirectUrl: string) 
  */
 export async function signOut(formData: FormData) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    const result = await supabaseAuth.signOut();
     
-    await supabase.auth.signOut();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to sign out');
+    }
     
     // Get locale from form data or default to 'en'
     const locale = formData.get('locale') as string || 'en';
@@ -239,20 +191,14 @@ export async function signOut(formData: FormData) {
  */
 export async function updateProfile(formData: FormData) {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    
     const name = formData.get('name') as string;
     const locale = formData.get('locale') as string || 'en';
     
     // Update user metadata
-    const { error } = await supabase.auth.updateUser({
-      data: { name }
-    });
+    const result = await supabaseAuth.updateProfile({ name });
     
-    if (error) {
-      console.error('Error updating profile:', error.message);
-      throw new Error('Failed to update profile');
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to update profile');
     }
     
     // Redirect back to profile page
@@ -268,16 +214,13 @@ export async function updateProfile(formData: FormData) {
  */
 export async function getCurrentUser() {
   try {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    const result = await supabaseAuth.getUser();
     
-    const { data: { user }, error } = await supabase.auth.getUser();
-    
-    if (error || !user) {
-      throw new Error('Not authenticated');
+    if (!result.success || !result.data) {
+      throw new Error(result.error || 'Not authenticated');
     }
     
-    return user as AuthUser;
+    return result.data as AuthUser;
   } catch (error) {
     console.error('Error getting current user:', error);
     throw new Error('Failed to get current user');

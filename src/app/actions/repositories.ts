@@ -15,10 +15,32 @@ export async function getRepositories(filter?: RepositoryFilter): Promise<{ succ
       where.provider_id = filter.providerId;
     }
     
-    const data = await db.repository.findMany({
+    const result = await db.repository.findMany({
       where,
       orderBy: { created_at: 'desc' }
     });
+    
+    // We need to ensure we're working with valid repository objects
+    // First convert to unknown to break the typing, then explicitly cast
+    const repositories = result as unknown as any[];
+    
+    // Transform to the correct Repository type
+    const data: Repository[] = repositories.map(repo => ({
+      id: String(repo.id),
+      providerId: String(repo.provider_id),
+      name: String(repo.name),
+      owner: String(repo.owner),
+      url: repo.url ? String(repo.url) : undefined,
+      branch: repo.branch ? String(repo.branch) : undefined,
+      defaultBranch: repo.default_branch ? String(repo.default_branch) : undefined,
+      isPrivate: Boolean(repo.is_private),
+      description: repo.description ? String(repo.description) : undefined,
+      syncStatus: String(repo.sync_status) as Repository['syncStatus'],
+      createdAt: new Date(repo.created_at),
+      updatedAt: new Date(repo.updated_at),
+      lastSyncedAt: repo.last_synced_at ? new Date(repo.last_synced_at) : undefined,
+      error: repo.error ? String(repo.error) : undefined
+    }));
     
     return { success: true, data };
   } catch (error: any) {

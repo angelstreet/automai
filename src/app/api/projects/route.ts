@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { 
   getProjects, 
-  createProject 
+  createProject,
+  updateProject,
+  deleteProject
 } from '@/app/actions/projects';
-
-import { createClient } from '@/lib/supabase/server';
-import { z } from 'zod';
-
-import db from '@/lib/supabase/db';
-
-// Schema for project creation/update
-const ProjectSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  description: z.string().optional(),
-});
 
 /**
  * GET /api/projects
@@ -73,9 +64,7 @@ export async function POST(request: NextRequest) {
 // PATCH /api/projects/[id]
 export async function PATCH(request: Request) {
   try {
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
-
+    
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
       return NextResponse.json(
@@ -133,8 +122,6 @@ export async function PATCH(request: Request) {
 // DELETE /api/projects/[id]
 export async function DELETE(request: Request) {
   try {
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
