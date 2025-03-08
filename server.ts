@@ -1,8 +1,19 @@
 import dotenv from 'dotenv';
+import { existsSync } from 'fs';
+import path from 'path';
 
 // Load environment variables before any imports that might use them
-console.log('Loading environment from .env');
+console.log('Loading environment variables...');
+
+// First load .env
 dotenv.config();
+
+// Then load .env.local if it exists (will override .env values)
+const envLocalPath = path.resolve(process.cwd(), '.env.local');
+if (existsSync(envLocalPath)) {
+  console.log('Found .env.local, loading additional variables');
+  dotenv.config({ path: envLocalPath });
+}
 
 // Now import modules that depend on environment variables
 import { startServer, stopServer } from './src/lib/services/http';
