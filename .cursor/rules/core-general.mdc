@@ -1,8 +1,7 @@
 ---
 description: Core Principles and General Development Guidelines
 globs: ["**/*"]
-priority: 100
-category: core
+alwaysApply: true
 ---
 
 # General Development Guidelines
