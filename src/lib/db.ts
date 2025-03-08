@@ -1,11 +1,12 @@
-import { createServerClient } from '@/lib/supabase';
+import { createServerClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
 // Create a simple database interface that uses Supabase
 const db = {
   // Generic query method
   async query(table: string, query: any = {}) {
-    const supabase = await createServerClient();
+    const cookieStore = cookies();
+    const supabase = await createServerClient(cookieStore);
     
     let builder = supabase.from(table).select();
     
@@ -42,10 +43,10 @@ const db = {
     return data;
   },
   
-  // Table-specific methods to mimic Prisma's API
   user: {
     async findUnique({ where }: { where: any }) {
-      const supabase = await createServerClient();
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
       
       const { data, error } = await supabase
         .from('users')
@@ -66,7 +67,8 @@ const db = {
     },
     
     async create({ data }: { data: any }) {
-      const supabase = await createServerClient();
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('users')
@@ -83,7 +85,8 @@ const db = {
     },
     
     async update({ where, data }: { where: any; data: any }) {
-      const supabase = await createServerClient();
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('users')
@@ -108,7 +111,8 @@ const db = {
     },
     
     async findUnique({ where }: { where: any }) {
-      const supabase = await createServerClient();
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
       
       const { data, error } = await supabase
         .from('projects')
@@ -125,7 +129,8 @@ const db = {
     },
     
     async create({ data }: { data: any }) {
-      const supabase = await createServerClient();
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('projects')
@@ -142,7 +147,8 @@ const db = {
     },
     
     async update({ where, data }: { where: any; data: any }) {
-      const supabase = await createServerClient();
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('projects')
@@ -160,7 +166,8 @@ const db = {
     },
     
     async delete({ where }: { where: any }) {
-      const supabase = await createServerClient();
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
       
       const { error } = await supabase
         .from('projects')
@@ -173,6 +180,64 @@ const db = {
       }
       
       return { success: true };
+    }
+  },
+  
+  // Add tenant model
+  tenant: {
+    async findUnique({ where }: { where: any }) {
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
+      
+      const { data, error } = await supabase
+        .from('tenants')
+        .select()
+        .match(where)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('Error finding tenant:', error);
+        throw error;
+      }
+      
+      return data || null;
+    },
+    
+    async create({ data }: { data: any }) {
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
+      
+      const { data: result, error } = await supabase
+        .from('tenants')
+        .insert(data)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error creating tenant:', error);
+        throw error;
+      }
+      
+      return result;
+    },
+    
+    async update({ where, data }: { where: any; data: any }) {
+      const cookieStore = cookies();
+      const supabase = await createServerClient(cookieStore);
+      
+      const { data: result, error } = await supabase
+        .from('tenants')
+        .update(data)
+        .match(where)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error updating tenant:', error);
+        throw error;
+      }
+      
+      return result;
     }
   },
   

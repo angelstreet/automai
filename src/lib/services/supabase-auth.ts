@@ -1,6 +1,6 @@
 import { isUsingSupabase } from '@/lib/env';
 import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 
 export interface SupabaseAuthResult {
   success: boolean;

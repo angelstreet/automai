@@ -23,7 +23,6 @@ interface ConnectionTestResult {
  * Last validated: 2024-03-21
  * Implements:
  * - Proper error handling
- * - Prisma client usage
  * - Logging
  * - Type safety
  */

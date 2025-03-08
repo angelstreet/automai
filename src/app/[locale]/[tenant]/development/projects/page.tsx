@@ -35,8 +35,9 @@ import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
+import { User } from '@/types/auth';
 
-// Type matching Prisma Project model
+
 type Project = {
   id: string;
   name: string;
@@ -58,8 +59,7 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
-  const paramsPromise = useParams();
-  const params = React.use(paramsPromise);
+  const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string;
   const { toast } = useToast();

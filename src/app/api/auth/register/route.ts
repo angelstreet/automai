@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       console.log('User registered with Supabase:', supabaseResult.data?.user?.id);
     }
 
-    // Hash password for storage in Prisma
+
     const hashedPassword = await hash(password, 10);
 
     // Create default tenant for the user (trial)

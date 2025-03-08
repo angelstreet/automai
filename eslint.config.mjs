@@ -20,7 +20,6 @@ export default [
       'docs',
       'public',
       'electron',
-      'prisma',
       'scripts',
       'tailwind.config.ts',
       'tsconfig.json',

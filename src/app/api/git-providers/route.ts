@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { listGitProviders, createGitProvider } from '@/lib/services/repositories';
 import { GitProviderType } from '@/types/repositories';
 import { createGithubOauthUrl, createGitlabOauthUrl } from '@/lib/services/oauth';

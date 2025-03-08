@@ -1,6 +1,6 @@
 'use client';
 
-import { createBrowserClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 import { useEffect, useState } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -12,7 +12,7 @@ export function useAuth() {
 
   useEffect(() => {
     // Create Supabase client
-    const supabase = createBrowserClient();
+    const supabase = createClient();
     
     // Get initial session and user
     const initializeAuth = async () => {
@@ -87,7 +87,7 @@ export function useAuth() {
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
+      async (event: string, newSession: Session | null) => {
         console.log('Auth state changed:', event);
         
         setSession(newSession);

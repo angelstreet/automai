@@ -5,11 +5,14 @@ export * as middlewareModule from './middleware';
 export * as adminModule from './admin';
 export * as envModule from './env';
 
-// Also export the createClient functions directly for easier imports
-export { createClient as createBrowserClient } from './client';
+// Export the client creation functions directly
+export { createClient } from './client';
 export { createClient as createServerClient } from './server';
 export { createClient as createMiddlewareClient } from './middleware';
 export { createClient as createAdminClient } from './admin';
+
+// Also export the browser client function as createBrowserClient for convenience
+export { createClient as createBrowserClient } from './client';
 
 // Export environment utility functions
 export { 

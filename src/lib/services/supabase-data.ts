@@ -1,6 +1,6 @@
 import { isProduction, isUsingSupabase } from '../env';
 import { cookies } from 'next/headers';
-import { createAdminClient } from '@/utils/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 
 /**
  * Get or create a Supabase client for direct data access

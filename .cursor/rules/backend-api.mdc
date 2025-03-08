@@ -239,6 +239,7 @@ export async function POST(req: NextRequest) {
 - **Inconsistent Response Format** - Use standardized response structure
 - **Poor Error Handling** - Handle errors gracefully with appropriate status codes
 - **Bloated Route Handlers** - Move business logic to service layer
+- **Direct Supabase Usage** - Always use centralized Supabase clients from `/src/lib/supabase`
 
 ## Related Rules
 

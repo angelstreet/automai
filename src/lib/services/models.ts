@@ -12,7 +12,7 @@ function applyFilters<T>(
     if (value === null) {
       filteredQuery = filteredQuery.is(key, null) as any;
     } else if (typeof value === 'object' && value !== null) {
-      // Handle Prisma-like operators
+
       Object.entries(value).forEach(([op, opValue]) => {
         switch (op) {
           case 'equals':

@@ -1,4 +1,3 @@
--- Schema generated from Prisma schema for Supabase
 -- This file needs to be run in Supabase SQL Editor to create the database tables
 
 -- Enable necessary extensions

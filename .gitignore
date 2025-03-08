@@ -9,8 +9,6 @@ src/app/.DS_Store
 docs/.DS_Store
 .DS_Store
 shadcn-admin/
-src/server/prisma/dev.db-journal
-prisma/migrations/
 .vscode/settings.json
 docs/jenkins-infrastructure/
 
