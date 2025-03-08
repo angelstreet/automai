@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/auth';
-import db from '@/lib/db';
+import db from '@/lib/supabase/db';
 
 // Find the next available number for a prefix
 async function findNextNumber(prefix: string) {

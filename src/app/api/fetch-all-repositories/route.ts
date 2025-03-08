@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@/lib/supabase/server';
-import db from '@/lib/db';
+import db from '@/lib/supabase/db';
 
 // GET /api/fetch-all-repositories
 export async function GET(request: Request) {

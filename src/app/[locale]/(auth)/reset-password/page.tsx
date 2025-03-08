@@ -32,7 +32,7 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const supabase = createBrowserClient();
+      const supabase = await createBrowserClient();
 
       // Update the user's password
       const { error } = await supabase.auth.updateUser({ password });

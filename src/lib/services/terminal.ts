@@ -1,5 +1,5 @@
 /* eslint-disable */
-import db from '@/lib/db';
+import db from '@/lib/supabase/db';
 import { logger } from '../logger';
 
 // Define a TerminalService class to implement singleton pattern

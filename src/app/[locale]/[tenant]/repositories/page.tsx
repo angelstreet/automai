@@ -17,9 +17,7 @@ import {
   GitProviderGrid,
   RepositoryTable,
 } from './_components';
-import { fetchWithAuth } from '@/lib/utils/fetchWithAuth';
 import { useTranslations } from 'next-intl';
-import { Badge } from '@/components/shadcn/badge';
 
 export default function RepositoriesPage() {
   const router = useRouter();

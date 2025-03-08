@@ -2,6 +2,7 @@
 
 import { redirect, useParams } from 'next/navigation';
 import * as React from 'react';
+import type { User } from '@supabase/supabase-js';
 
 import { Footer } from '@/components/layout/Footer';
 import { SiteHeader } from '@/components/layout/SiteHeader';
@@ -9,6 +10,14 @@ import { useAuth } from '@/hooks/useAuth';
 
 import { Features } from '../(marketing)/_components/Features';
 import { Hero } from '../(marketing)/_components/Hero';
+
+// Define a type for the user with user_metadata.tenant_name
+interface UserWithTenant extends User {
+  user_metadata: {
+    tenant_name?: string;
+    [key: string]: any;
+  };
+}
 
 export function HomePage() {
   const { user, isLoading, error } = useAuth();
@@ -49,7 +58,7 @@ export function HomePage() {
       <div className="relative flex min-h-screen flex-col items-center justify-center">
         <div className="text-center text-red-500">
           <h2 className="text-xl font-semibold">Error initializing application</h2>
-          <p>{error}</p>
+          <p>{error.message}</p>
         </div>
       </div>
     );
@@ -57,7 +66,8 @@ export function HomePage() {
 
   if (user && !isRootLocalePath) {
     // Always use lowercase for tenant name
-    const tenant = (user.tenant_name || 'trial').toLowerCase();
+    const userWithTenant = user as UserWithTenant;
+    const tenant = (userWithTenant.user_metadata?.tenant_name || 'trial').toLowerCase();
     console.log(`Redirecting authenticated user to: /${locale}/${tenant}/dashboard`);
     redirect(`/${locale}/${tenant}/dashboard`);
   }

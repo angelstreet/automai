@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { isUsingSupabase } from '@/lib/env';
-import db from '@/lib/db';
+import db from '@/lib/supabase/db';
 
 // Dynamically import supabaseAuthService to prevent errors when Supabase isn't available
 let supabaseAuthService: any;

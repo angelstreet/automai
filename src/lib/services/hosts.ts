@@ -1,7 +1,7 @@
 import { Client } from 'ssh2';
 
 import { logger } from '../logger';
-import db from '@/lib/db';
+import db from '@/lib/supabase/db';
 
 /**
  * Connection test result interface

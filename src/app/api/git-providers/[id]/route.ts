@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import db from '@/lib/db';
+import db from '@/lib/supabase/db';
 import * as repositoryService from '@/lib/services/repositories';
 
 // Helper to check if user has access to the provider
