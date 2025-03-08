@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession, extractSessionFromHeader } from '@/auth';
-import db from '@/lib/db';
+import { createClient } from '@/utils/supabase/server';
+import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   try {
