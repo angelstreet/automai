@@ -3,7 +3,6 @@ description: Supabase Authentication and Database Guidelines
 globs: ["**/*"]
 alwaysApply: false
 ---
-
 # Supabase Authentication and Database
 
 ## Overview
@@ -17,6 +16,37 @@ These guidelines cover how to properly integrate with Supabase services includin
 3. **Type Safety** - Leverage TypeScript for full type safety with Supabase
 4. **Error Handling** - Handle Supabase errors consistently and gracefully
 5. **Security** - Follow best practices for secure authentication and data access
+6. **Three-Layer Architecture** - Follow the server-db → server-actions → client-hooks pattern
+
+## Three-Layer Architecture
+
+We use a three-layer architecture for all Supabase database operations:
+
+1. **Server DB Layer** (Core)
+   - Lives in `/src/lib/supabase/db.ts`
+   - Contains ALL actual Supabase database calls
+   - Uses server-side Supabase client with cookies()
+   - Never imported directly by client components
+
+2. **Server Actions Layer** (Bridge)
+   - Lives in `/src/app/actions/*.ts`
+   - Server-only functions marked with 'use server'
+   - Calls the Server DB Layer functions
+   - Adds error handling, validation, and business logic
+   - Provides a clean API for client components
+   - Returns data in a consistent format (e.g., {success, data, error})
+
+3. **Client Hooks Layer** (Interface)
+   - Lives in `/src/hooks/*.ts`
+   - Client-side React hooks marked with 'use client'
+   - Calls Server Actions (not Server DB directly)
+   - Manages loading states, errors, and data caching
+   - Provides a React-friendly interface for components
+
+### Data Flow
+
+1. Client Component → Client Hook → Server Action → Server DB → Supabase
+2. Server Component → Server DB → Supabase (direct access)
 
 ## Detailed Rules
 
@@ -65,163 +95,164 @@ async function ProfilePage() {
 }
 ```
 
-#### Middleware
-
-```typescript
-// In middleware
-import { createMiddlewareClient } from '@/lib/supabase';
-
-// In middleware handler
-const { supabase, response } = createMiddlewareClient(request);
-```
-
-### Authentication
-
-#### Client-Side Auth
-
-- Handle loading and error states properly in authentication UI
-- Use `useAuth()` hook to access authentication state in client components
-- Redirect authenticated users to the appropriate page
-
-#### Server-Side Auth
-
-- Always await `createServerClient()` in server components
-- Handle authentication errors gracefully and provide clear feedback
-- Use `getSession()` and `getUser()` from `src/auth.ts`
-
-#### Middleware
-
-- Use the middleware client for session management
-- Do not modify authentication cookies directly in application code
-- Let the middleware handle redirects for unauthenticated users
-- **Always let middleware handle OAuth code exchange** - Do not manually exchange OAuth codes in page components
-
-#### OAuth Authentication
-
-- Use `skipBrowserRedirect: true` when initiating OAuth in server actions
-- Redirect directly to the dashboard from auth-redirect pages
-- Never manually exchange OAuth codes in server components
-- Let the middleware handle the code exchange and session creation
-
 ### Database Access
 
-#### Data Model
+#### Three-Layer Pattern Examples
 
-- Use snake_case for all database table and column names
-- Include standard fields (`id`, `created_at`, `updated_at`) in all tables
-- Add `tenant_id` to all multi-tenant tables
-
-#### Query Patterns
-
-- Always use the db wrapper (`src/lib/db.ts`) instead of direct Supabase queries
-- Enforce tenant isolation in all database queries
-- Use pagination for list queries to avoid performance issues
-
-#### Error Handling
-
-- Use try/catch blocks around database operations
-- Log database errors with appropriate context
-- Return standardized error responses in API routes
-
-### Storage
-
-- Organize storage buckets by tenant
-- Validate file uploads before storing
-- Use signed URLs for secure file access
-
-## Examples
-
-### ✅ Good Example - Server Authentication
+**1. Server DB Layer (Core)**
 
 ```typescript
-// src/app/[locale]/profile/page.tsx
-import { createServerClient } from '@/lib/supabase';
-
-export default async function ProfilePage({ params }) {
-  // Await params
-  const resolvedParams = await params;
-  const locale = resolvedParams.locale;
-  
-  // Create Supabase client
-  const supabase = await createServerClient();
-  
-  // Get user session
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session) {
-    redirect(`/${locale}/login`);
-  }
-  
-  // Use the session data
-  return <ProfileDisplay user={session.user} />;
-}
-```
-
-**Why it's good**: Uses the centralized client, properly awaits async APIs, handles the case where no session exists.
-
-### ❌ Bad Example - Server Authentication
-
-```typescript
-// src/app/[locale]/profile/page.tsx
-import { createServerClient } from '@supabase/ssr';
+// src/lib/supabase/db.ts
+import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
-export default function ProfilePage({ params }) {
-  // Direct import from @supabase/ssr
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { cookies: cookieStore }
-  );
+const db = {
+  host: {
+    async findMany(options: any = {}) {
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      
+      let builder = supabase.from('hosts').select('*');
+      
+      // Apply tenant isolation
+      if (options.tenant_id) {
+        builder = builder.eq('tenant_id', options.tenant_id);
+      }
+      
+      // Apply filters
+      if (options.where) {
+        Object.entries(options.where).forEach(([key, value]) => {
+          builder = builder.eq(key, value);
+        });
+      }
+      
+      const { data, error } = await builder;
+      
+      if (error) {
+        console.error('Error fetching hosts:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    
+    // Other host methods...
+  },
   
-  // Not awaiting async APIs
-  const { data: { session } } = supabase.auth.getSession();
+  // Other tables...
+};
+
+export default db;
+```
+
+**2. Server Actions Layer (Bridge)**
+
+```typescript
+// src/app/actions/hosts.ts
+'use server';
+
+import db from '@/lib/supabase/db';
+import { getUser } from '@/auth';
+
+export async function getHosts(filters = {}) {
+  try {
+    // Get the current user to enforce tenant isolation
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    // Add tenant_id to ensure tenant isolation
+    const hosts = await db.host.findMany({
+      ...filters,
+      tenant_id: user.tenant_id
+    });
+    
+    return { success: true, data: hosts };
+  } catch (error) {
+    console.error('Error in getHosts action:', error);
+    return { success: false, error: 'Failed to fetch hosts' };
+  }
+}
+
+// Other host actions...
+```
+
+**3. Client Hooks Layer (Interface)**
+
+```typescript
+// src/hooks/useHosts.ts
+'use client';
+
+import { useState, useEffect } from 'react';
+import { getHosts, createHost } from '@/app/actions/hosts';
+
+export function useHosts(initialFilters = {}) {
+  const [hosts, setHosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // No handling for missing session
+  async function fetchHosts(filters = initialFilters) {
+    setLoading(true);
+    const result = await getHosts(filters);
+    
+    if (result.success) {
+      setHosts(result.data);
+      setError(null);
+    } else {
+      setError(result.error);
+    }
+    
+    setLoading(false);
+  }
   
-  return <ProfileDisplay user={session.user} />;
+  // Other functions...
+  
+  useEffect(() => {
+    fetchHosts();
+  }, []);
+  
+  return {
+    hosts,
+    loading,
+    error,
+    refetch: fetchHosts,
+    addHost
+  };
 }
 ```
 
-**Why it's bad**: Imports directly from `@supabase/ssr`, doesn't use centralized client, doesn't await async APIs, lacks error handling.
-
-### ✅ Good Example - Database Query
+**4. Client Component Usage**
 
 ```typescript
-// Using the db wrapper with tenant isolation
-const projects = await db.project.findMany({
-  where: { tenant_id: session.user.tenant_id },
-  orderBy: { created_at: 'desc' },
-  take: 10
-});
+// src/components/hosts/HostList.tsx
+'use client';
+
+import { useHosts } from '@/hooks/useHosts';
+
+export default function HostList() {
+  const { hosts, loading, error } = useHosts();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  
+  return (
+    <div>
+      <h1>Hosts</h1>
+      {hosts.map(host => (
+        <div key={host.id}>{host.name}</div>
+      ))}
+    </div>
+  );
+}
 ```
 
-**Why it's good**: Uses the db wrapper, includes tenant isolation, uses pagination.
+### Common Pitfalls
 
-### ❌ Bad Example - Database Query
-
-```typescript
-// Direct Supabase query without tenant isolation
-const { data: projects } = await supabase
-  .from('projects')
-  .select('*');
-```
-
-**Why it's bad**: Uses direct Supabase query, lacks tenant isolation, no pagination.
-
-## Common Pitfalls
-
-- **Using Old Implementation** - Always use the centralized clients from `/src/lib/supabase`
+- **Bypassing the Three-Layer Architecture** - Always follow the server-db → server-actions → client-hooks pattern
 - **Missing Tenant Isolation** - Always include tenant_id in database queries
 - **Direct Supabase Usage** - Use the centralized clients instead of direct Supabase imports
 - **Not Awaiting Async APIs** - Remember to await createServerClient() and other async APIs
 - **Exposing Supabase Keys** - Never expose service role keys in client code
 - **Inconsistent Error Handling** - Standardize how Supabase errors are handled
 - **Using React.use() with Promises in Client Components** - Never use React.use() to unwrap promises in client components
-
-## Related Rules
-
-- core-code-style.mdc - General code quality standards
-- backend-api.mdc - API design and implementation
-- frontend-components.mdc - Components that interact with auth/data

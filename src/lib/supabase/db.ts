@@ -1,11 +1,12 @@
-import { createServerClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
+
 // Create a simple database interface that uses Supabase
 const db = {
   // Generic query method
   async query(table: string, query: any = {}) {
     const cookieStore = await cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     
     let builder = supabase.from(table).select();
     
@@ -25,13 +26,7 @@ const db = {
       builder = builder.range(query.skip, query.skip + (query.take || 10) - 1);
     }
     
-    // Apply ordering
-    if (query.orderBy) {
-      Object.entries(query.orderBy).forEach(([key, value]) => {
-        builder = builder.order(key, { ascending: value === 'asc' });
-      });
-    }
-    
+    // Execute the query
     const { data, error } = await builder;
     
     if (error) {
@@ -45,7 +40,7 @@ const db = {
   user: {
     async findUnique({ where }: { where: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data, error } = await supabase
         .from('users')
@@ -67,7 +62,7 @@ const db = {
     
     async create({ data }: { data: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('users')
@@ -85,7 +80,7 @@ const db = {
     
     async update({ where, data }: { where: any; data: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('users')
@@ -103,15 +98,10 @@ const db = {
     }
   },
   
-  // Add other tables as needed following the same pattern
   project: {
-    async findMany(options: any = {}) {
-      return db.query('projects', options);
-    },
-    
     async findUnique({ where }: { where: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data, error } = await supabase
         .from('projects')
@@ -127,9 +117,13 @@ const db = {
       return data;
     },
     
+    async findMany(options: any = {}) {
+      return db.query('projects', options);
+    },
+    
     async create({ data }: { data: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('projects')
@@ -147,7 +141,7 @@ const db = {
     
     async update({ where, data }: { where: any; data: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('projects')
@@ -166,7 +160,7 @@ const db = {
     
     async delete({ where }: { where: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { error } = await supabase
         .from('projects')
@@ -182,11 +176,10 @@ const db = {
     }
   },
   
-  // Add tenant model
   tenant: {
     async findUnique({ where }: { where: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data, error } = await supabase
         .from('tenants')
@@ -204,7 +197,7 @@ const db = {
     
     async create({ data }: { data: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('tenants')
@@ -222,7 +215,7 @@ const db = {
     
     async update({ where, data }: { where: any; data: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('tenants')
@@ -240,11 +233,10 @@ const db = {
     }
   },
   
-  // Add GitProvider model
   gitProvider: {
     async findMany(options: any = {}) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       let builder = supabase.from('git_providers').select();
       
@@ -285,11 +277,10 @@ const db = {
     }
   },
   
-  // Add Repository model
   repository: {
     async findMany(options: any = {}) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       let selectQuery = '*';
       if (options.include?.provider) {
@@ -331,7 +322,7 @@ const db = {
     
     async findUnique({ where }: { where: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data, error } = await supabase
         .from('repositories')
@@ -349,7 +340,7 @@ const db = {
     
     async create({ data }: { data: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('repositories')
@@ -367,7 +358,7 @@ const db = {
     
     async update({ where, data }: { where: any; data: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('repositories')
@@ -386,7 +377,7 @@ const db = {
     
     async delete({ where }: { where: any }) {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { error } = await supabase
         .from('repositories')
@@ -400,9 +391,7 @@ const db = {
       
       return { success: true };
     }
-  },
-  
-  // Add more tables as needed
+  }
 };
 
 export default db;

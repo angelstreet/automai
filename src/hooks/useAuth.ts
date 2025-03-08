@@ -1,150 +1,62 @@
 'use client';
 
-import { createBrowserClient } from '@/lib/supabase';
-import { useEffect, useState } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
+import { useCallback, useEffect, useState } from 'react';
+import { 
+  signOut, 
+  updateProfile, 
+  getCurrentUser,
+  AuthUser,
+  ProfileUpdateData
+} from '@/app/actions/auth';
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    let subscription: { unsubscribe: () => void } | null = null;
-    
-    // Initialize auth
-    const initAuth = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Create Supabase client
-        const supabase = await createBrowserClient();
-        
-        // Get initial session and user
-        const initializeAuth = async () => {
-          try {
-            // Get session
-            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-            
-            if (sessionError) {
-              console.error('Session error in useAuth:', sessionError);
-              throw sessionError;
-            }
-            
-            // Debug session data
-            console.log('Session data in useAuth:', sessionData);
-            
-            setSession(sessionData.session);
-            
-            // Get user if session exists
-            if (sessionData.session) {
-              const { data: userData, error: userError } = await supabase.auth.getUser();
-              
-              if (userError) {
-                console.error('User error in useAuth:', userError);
-                throw userError;
-              }
-              
-              setUser(userData.user);
-              console.log('User loaded in useAuth:', userData.user);
-            } else {
-              console.log('No session found in useAuth');
-              
-              // Only try to refresh the session if we're not on a login/auth page
-              // This prevents unnecessary refresh attempts on auth pages
-              const isAuthPage = 
-                typeof window !== 'undefined' && 
-                (window.location.pathname.includes('/login') || 
-                 window.location.pathname.includes('/signup') || 
-                 window.location.pathname.includes('/auth-redirect') ||
-                 window.location.pathname.includes('/forgot-password') ||
-                 window.location.pathname.includes('/reset-password'));
-              
-              if (!isAuthPage) {
-                try {
-                  console.log('Attempting to refresh session...');
-                  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-                  
-                  if (!refreshError && refreshData.session) {
-                    console.log('Session refreshed successfully:', refreshData.session);
-                    setSession(refreshData.session);
-                    setUser(refreshData.user);
-                  } else if (refreshError) {
-                    console.log('Failed to refresh session:', refreshError);
-                  }
-                } catch (refreshErr) {
-                  console.error('Error during session refresh:', refreshErr);
-                }
-              } else {
-                console.log('Skipping session refresh on auth page');
-              }
-            }
-          } catch (err: any) {
-            console.error('Error initializing auth:', err);
-            setError(err instanceof Error ? err : new Error('Unknown authentication error'));
-          } finally {
-            setIsLoading(false);
-          }
-        };
-        
-        await initializeAuth();
-        
-        // Set up auth state listener
-        const { data } = supabase.auth.onAuthStateChange(
-          async (event: string, newSession: Session | null) => {
-            console.log('Auth state changed:', event);
-            
-            setSession(newSession);
-            
-            if (newSession) {
-              try {
-                // Explicitly get the user to ensure we have the latest data
-                const { data: userData, error: userError } = await supabase.auth.getUser();
-                
-                if (userError) {
-                  console.error('Error getting user after auth state change:', userError);
-                  throw userError;
-                }
-                
-                setUser(userData.user);
-                console.log('User updated in auth state change:', userData.user);
-              } catch (err: any) {
-                console.error('Error getting user after auth state change:', err);
-                setError(err instanceof Error ? err : new Error('Failed to get user data'));
-              }
-            } else {
-              setUser(null);
-              console.log('Session cleared in auth state change');
-            }
-            
-            setIsLoading(false);
-          }
-        );
-        
-        subscription = data.subscription;
-      } catch (err: any) {
-        console.error('Error in useAuth effect:', err);
-        setError(err instanceof Error ? err : new Error('Unknown authentication error'));
-        setIsLoading(false);
-      }
-    };
-    
-    initAuth();
-    
-    // Clean up subscription on unmount
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
+  const fetchUser = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await getCurrentUser();
+      setUser(data);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch user'));
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
-  
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
+  const handleSignOut = async (formData: FormData) => {
+    try {
+      await signOut(formData);
+      setUser(null);
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to sign out');
+    }
+  };
+
+  const handleUpdateProfile = async (formData: FormData) => {
+    try {
+      await updateProfile(formData);
+      // Refresh user data after profile update
+      await fetchUser();
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to update profile');
+    }
+  };
+
   return {
     user,
-    session,
-    isLoading,
-    isAuthenticated: !!user,
+    loading,
     error,
+    signOut: handleSignOut,
+    updateProfile: handleUpdateProfile,
+    refresh: fetchUser
   };
 }

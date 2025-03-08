@@ -1,114 +1,253 @@
-# AutomAI Project Guidelines
+# Supabase Authentication and Database
 
-## Architecture Overview
+## Overview
 
-- **Next.js App Router**: 100% App Router based (no Pages Router components)
-- **File structure**:
-  - `/src/app` - All routes and pages
-  - `/src/app/[locale]/[tenant]` - Main app structure with locale and tenant segments
-  - `/src/components` - Shared components
-  - `/src/lib` - Core utilities, services, and business logic
-  - `/src/utils` - Utility functions, including Supabase clients
-  - `/src/hooks` - Custom React hooks
-  - `/src/context` - React context providers
-  - `/src/types` - TypeScript type definitions
-  - `/src/i18n` - Internationalization utilities
-  - `/src/config` - Application configuration
+These guidelines cover how to properly integrate with Supabase services including authentication, database, storage, and more. Following these guidelines ensures consistent, secure, and efficient usage of Supabase throughout the application.
 
-## Supabase Cloud Integration
+## Key Principles
 
-- **Client Architecture**:
-  - Centralized implementation in `/src/lib/supabase/`
-  - All clients follow a consistent pattern for easy use
-  - Direct environment variable access without abstraction layer
-  - Browser client: `import { createClient } from '@/lib/supabase/client'` - For client components
-  - Server client: `import { createClient } from '@/lib/supabase/server'` - For server components
-  - Middleware client: `import { createClient } from '@/lib/supabase/middleware'` - For middleware
-  - Admin client: `import { createClient } from '@/lib/supabase/admin'` - For privileged operations
+1. **Centralization** - Use the centralized clients from `/src/lib/supabase` for all Supabase operations
+2. **Tenant Isolation** - Always enforce tenant boundaries in database operations
+3. **Type Safety** - Leverage TypeScript for full type safety with Supabase
+4. **Error Handling** - Handle Supabase errors consistently and gracefully
+5. **Security** - Follow best practices for secure authentication and data access
+6. **Three-Layer Architecture** - Follow the server-db → server-actions → client-hooks pattern
 
-- **Environment Configuration**:
-  - We use cloud Supabase exclusively for all environments
-  - Environment variables control all configuration:
-    - `NEXT_PUBLIC_SUPABASE_URL` - The Supabase project URL
-    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - The anonymous API key
-    - `SUPABASE_SERVICE_ROLE_KEY` - Service role key for admin operations (server-side only)
+## Three-Layer Architecture
 
-- **Authentication Flow**:
-  - Uses a streamlined OAuth flow with Supabase cloud
-  - Middleware handles session refresh and token validation
-  - `getUser()` in `src/auth.ts` provides user information
-  - Critical `supabase.auth.getUser()` call in middleware ensures secure token validation
+We use a three-layer architecture for all Supabase database operations:
 
-- **Security Best Practices**:
-  - Service role key is never exposed to client code
-  - Always use `getUser()` to validate tokens in security-critical operations
-  - Tenant isolation enforced in all database queries
-  - Let middleware handle authentication cookies
+1. **Server DB Layer** (Core)
+   - Lives in `/src/lib/supabase/db.ts`
+   - Contains ALL actual Supabase database calls
+   - Uses server-side Supabase client with cookies()
+   - Never imported directly by client components
 
-- **Documentation**:
-  - See `/docs/supabase-integration.md` for comprehensive Supabase integration guide
-  - See `/docs/authentication.md` for details on the authentication system
-  - See `/docs/supabase-auth.md` for detailed Supabase auth implementation
-  - See `/docs/supabase-setup.md` for Supabase setup instructions
+2. **Server Actions Layer** (Bridge)
+   - Lives in `/src/app/actions/*.ts`
+   - Server-only functions marked with 'use server'
+   - Calls the Server DB Layer functions
+   - Adds error handling, validation, and business logic
+   - Provides a clean API for client components
+   - Returns data in a consistent format (e.g., {success, data, error})
 
-## Electron Integration
+3. **Client Hooks Layer** (Interface)
+   - Lives in `/src/hooks/*.ts`
+   - Client-side React hooks marked with 'use client'
+   - Calls Server Actions (not Server DB directly)
+   - Manages loading states, errors, and data caching
+   - Provides a React-friendly interface for components
 
-- **Desktop Application**:
-  - Electron configuration in `/electron/` directory
-  - Integration with Next.js web application
-  - Utilities in `/src/utils/isElectron.ts` and `/src/utils/electronApi.ts`
-  - Separate build and packaging scripts
-  - See `/docs/desktop.md` for desktop application details
+### Data Flow
 
-## Build/Test/Lint Commands
+1. Client Component → Client Hook → Server Action → Server DB → Supabase
+2. Server Component → Server DB → Supabase (direct access)
 
-```bash
-# Development
-npm run dev               # Run full dev server with custom server
-npm run build             # Create production build
-npm run start             # Start production server
-npm run lint              # Run ESLint
-npm run lint:fix          # Fix ESLint issues
-npm run format            # Run Prettier formatter
-npm run format:check      # Check formatting without fixing
-npm run test              # Run all tests
-npm run test:watch        # Run tests in watch mode
-npm run test:e2e          # Run end-to-end tests
-npm run analyze           # Analyze bundle size
-npm run browser-tools     # Run browser tools server
+## Detailed Rules
 
-# Electron
-npm run electron-dev      # Run Electron in development mode
-npm run electron-build    # Build Electron application
-npm run electron-pack     # Package Electron application
+### Supabase Client Usage
 
-# Maintenance
-npm run update-deps       # Update dependencies
+#### Client Architecture
+
+- Use centralized clients from `/src/lib/supabase`:
+  - `createBrowserClient()` - For client components
+  - `createServerClient()` - For server components
+  - `createMiddlewareClient()` - For middleware
+  - `createAdminClient()` - For privileged operations with service role
+
+- Never import directly from:
+  - `@supabase/supabase-js`
+  - `@supabase/ssr`
+  - The old implementation in `/src/utils/supabase`
+
+#### Client Components
+
+```typescript
+// In client components
+import { createBrowserClient } from '@/lib/supabase';
+
+function ProfileButton() {
+  const handleLogout = async () => {
+    const supabase = createBrowserClient();
+    await supabase.auth.signOut();
+  };
+  
+  return <button onClick={handleLogout}>Sign out</button>;
+}
 ```
 
-## Code Style Guidelines
+#### Server Components
 
-- **TypeScript**: Use strict types, prefer interfaces over types
-- **Imports**: Follow order: external, internal, types, styles with newlines between groups
-- **Components**: Use functional components, keep under 300 lines
-- **Organization**:
-  - Client components in `[feature]/_components/`
-  - Shared components in `src/components/`
-  - Page-specific components go in `_components/` folders
-  - Group related components in feature directories
-  - Follow App Router directory structure
-- **Naming**: PascalCase for components, camelCase for functions/variables, snake_case for supabase columns
-- **Error Handling**: Use try/catch with proper error messages
-- **Server Components**: Default to React Server Components unless client functionality needed
-- **React.use()**: The `React.use()` function is only for use in Server Components with promises. Never use it in Client Components ('use client')
-- **API Routes**: Route handlers are in `/src/app/api/[route]/route.ts`
+```typescript
+// In server components
+import { createServerClient } from '@/lib/supabase';
 
-## Documentation
+async function ProfilePage() {
+  const supabase = await createServerClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  // Use session data
+}
+```
 
-- **Project Structure**: `/docs/project_structure.md`
-- **Frontend Architecture**: `/docs/frontend-architecture.md`
-- **Backend Architecture**: `/docs/backend.md`
-- **Database Model**: `/docs/database-model.md`
-- **API Standards**: `/docs/api-standards.md`
-- **Deployment**: `/docs/deployment.md`
-- **Tech Stack**: `/docs/techstack.md`
+### Database Access
+
+#### Three-Layer Pattern Examples
+
+**1. Server DB Layer (Core)**
+
+```typescript
+// src/lib/supabase/db.ts
+import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+
+const db = {
+  host: {
+    async findMany(options: any = {}) {
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      
+      let builder = supabase.from('hosts').select('*');
+      
+      // Apply tenant isolation
+      if (options.tenant_id) {
+        builder = builder.eq('tenant_id', options.tenant_id);
+      }
+      
+      // Apply filters
+      if (options.where) {
+        Object.entries(options.where).forEach(([key, value]) => {
+          builder = builder.eq(key, value);
+        });
+      }
+      
+      const { data, error } = await builder;
+      
+      if (error) {
+        console.error('Error fetching hosts:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    
+    // Other host methods...
+  },
+  
+  // Other tables...
+};
+
+export default db;
+```
+
+**2. Server Actions Layer (Bridge)**
+
+```typescript
+// src/app/actions/hosts.ts
+'use server';
+
+import db from '@/lib/supabase/db';
+import { getUser } from '@/auth';
+
+export async function getHosts(filters = {}) {
+  try {
+    // Get the current user to enforce tenant isolation
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    // Add tenant_id to ensure tenant isolation
+    const hosts = await db.host.findMany({
+      ...filters,
+      tenant_id: user.tenant_id
+    });
+    
+    return { success: true, data: hosts };
+  } catch (error) {
+    console.error('Error in getHosts action:', error);
+    return { success: false, error: 'Failed to fetch hosts' };
+  }
+}
+
+// Other host actions...
+```
+
+**3. Client Hooks Layer (Interface)**
+
+```typescript
+// src/hooks/useHosts.ts
+'use client';
+
+import { useState, useEffect } from 'react';
+import { getHosts, createHost } from '@/app/actions/hosts';
+
+export function useHosts(initialFilters = {}) {
+  const [hosts, setHosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  async function fetchHosts(filters = initialFilters) {
+    setLoading(true);
+    const result = await getHosts(filters);
+    
+    if (result.success) {
+      setHosts(result.data);
+      setError(null);
+    } else {
+      setError(result.error);
+    }
+    
+    setLoading(false);
+  }
+  
+  // Other functions...
+  
+  useEffect(() => {
+    fetchHosts();
+  }, []);
+  
+  return {
+    hosts,
+    loading,
+    error,
+    refetch: fetchHosts,
+    addHost
+  };
+}
+```
+
+**4. Client Component Usage**
+
+```typescript
+// src/components/hosts/HostList.tsx
+'use client';
+
+import { useHosts } from '@/hooks/useHosts';
+
+export default function HostList() {
+  const { hosts, loading, error } = useHosts();
+  
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  
+  return (
+    <div>
+      <h1>Hosts</h1>
+      {hosts.map(host => (
+        <div key={host.id}>{host.name}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Common Pitfalls
+
+- **Bypassing the Three-Layer Architecture** - Always follow the server-db → server-actions → client-hooks pattern
+- **Missing Tenant Isolation** - Always include tenant_id in database queries
+- **Direct Supabase Usage** - Use the centralized clients instead of direct Supabase imports
+- **Not Awaiting Async APIs** - Remember to await createServerClient() and other async APIs
+- **Exposing Supabase Keys** - Never expose service role keys in client code
+- **Inconsistent Error Handling** - Standardize how Supabase errors are handled
+- **Using React.use() with Promises in Client Components** - Never use React.use() to unwrap promises in client components
