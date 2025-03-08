@@ -3,6 +3,7 @@
 import { User } from 'lucide-react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
+import * as React from 'react';
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
 import {
@@ -25,7 +26,8 @@ interface NavUserProps {
 
 export function NavUser({ user }: NavUserProps) {
   const router = useRouter();
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
   const locale = params.locale as string;
   const tenant = params.tenant as string;
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useParams } from 'next/navigation';
+import * as React from 'react';
 import { useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
@@ -8,15 +9,18 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function UseCasesPage() {
   const router = useRouter();
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
+  const locale = params.locale as string;
+  const tenant = params.tenant as string;
   const { user, isLoading: userLoading } = useAuth();
 
   // Redirect if not authenticated
   useEffect(() => {
     if (!userLoading && !user) {
-      router.push(`/${params.locale}/login`);
+      router.push(`/${locale}/login`);
     }
-  }, [userLoading, user, router, params.locale]);
+  }, [userLoading, user, router, locale]);
 
   return (
     <div className="container mx-auto p-6">
@@ -30,7 +34,7 @@ export default function UseCasesPage() {
           This feature is currently under development and will be available in a future update.
         </p>
         <Button
-          onClick={() => router.push(`/${params.locale}/${params.tenant}/dashboard`)}
+          onClick={() => router.push(`/${locale}/${tenant}/dashboard`)}
           variant="default"
         >
           Return to Dashboard

@@ -9,6 +9,7 @@ import {
 import { RefreshCcw, Plus, Server } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -49,7 +50,8 @@ interface HostsPageClientProps {
 
 function HostsPageContent({ initialHosts }: HostsPageClientProps) {
   const t = useTranslations('Common');
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
   const queryClient = useQueryClient();
   const locale = params.locale as string;
   const [isDialogOpen, setIsDialogOpen] = useState(false);

@@ -6,17 +6,21 @@ import { useRouter } from 'next/navigation';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { useTranslations } from 'next-intl';
+import React from 'react';
 
 interface TenantLayoutProps {
   children: React.ReactNode;
-  params: {
+  params: Promise<{
     locale: string;
     tenant: string;
-  };
+  }>;
 }
 
 export default function TenantLayout({ children, params }: TenantLayoutProps) {
-  const { locale, tenant } = params;
+  // Use React.use to unwrap the params Promise
+  const resolvedParams = React.use(params);
+  const { locale, tenant } = resolvedParams;
+  
   const { user, isLoading, error } = useAuth();
   const router = useRouter();
   const t = useTranslations();

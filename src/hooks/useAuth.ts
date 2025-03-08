@@ -23,6 +23,7 @@ export function useAuth() {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
+          console.error('Session error in useAuth:', sessionError);
           throw sessionError;
         }
         
@@ -36,6 +37,7 @@ export function useAuth() {
           const { data: userData, error: userError } = await supabase.auth.getUser();
           
           if (userError) {
+            console.error('User error in useAuth:', userError);
             throw userError;
           }
           
@@ -45,13 +47,19 @@ export function useAuth() {
           console.log('No session found in useAuth');
           
           // Try to refresh the session
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-          if (!refreshError && refreshData.session) {
-            console.log('Session refreshed successfully:', refreshData.session);
-            setSession(refreshData.session);
-            setUser(refreshData.user);
-          } else if (refreshError) {
-            console.log('Failed to refresh session:', refreshError);
+          try {
+            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+            if (!refreshError && refreshData.session) {
+              console.log('Session refreshed successfully:', refreshData.session);
+              setSession(refreshData.session);
+              setUser(refreshData.user);
+            } else if (refreshError) {
+              // Don't throw here, just log the error - this is expected for logged out users
+              console.log('Failed to refresh session:', refreshError);
+            }
+          } catch (refreshErr) {
+            console.error('Error during session refresh:', refreshErr);
+            // Don't throw here either, just continue with no session
           }
         }
       } catch (err) {
@@ -77,6 +85,7 @@ export function useAuth() {
             const { data: userData, error: userError } = await supabase.auth.getUser();
             
             if (userError) {
+              console.error('Error getting user after auth state change:', userError);
               throw userError;
             }
             

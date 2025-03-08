@@ -1,8 +1,7 @@
 ---
 description: Supabase Authentication and Database Guidelines
-globs: "src/utils/supabase/*, src/lib/db.ts, src/app/api/**/*.ts, src/app/[locale]/(auth)/**/*.tsx"
-priority: 2
-category: Integrations
+globs: ["**/*"]
+alwaysApply: false
 ---
 
 # Supabase Authentication and Database

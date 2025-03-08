@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -27,7 +28,8 @@ interface ConnectHostDialogProps {
 
 export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHostDialogProps) {
   const t = useTranslations('Common');
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
   const locale = params.locale as string;
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);

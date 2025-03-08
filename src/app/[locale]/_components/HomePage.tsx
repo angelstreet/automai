@@ -1,6 +1,7 @@
 'use client';
 
 import { redirect, useParams } from 'next/navigation';
+import * as React from 'react';
 
 import { Footer } from '@/components/layout/Footer';
 import { SiteHeader } from '@/components/layout/SiteHeader';
@@ -11,7 +12,8 @@ import { Hero } from '../(marketing)/_components/Hero';
 
 export function HomePage() {
   const { user, isLoading, error } = useAuth();
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
   const locale = params.locale as string;
 
   // Debug logs to see what's happening

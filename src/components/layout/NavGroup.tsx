@@ -37,12 +37,16 @@ interface NavGroupProps {
 
 export function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
+  const locale = params.locale as string;
+  const tenant = params.tenant as string;
+  
   const { currentRole } = useRole();
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
   const isActive = (href: string) => {
-    return pathname === `/${params.locale as string}/${params.tenant as string}${href}`;
+    return pathname === `/${locale}/${tenant}${href}`;
   };
 
   const toggleSubmenu = (href: string) => {
@@ -109,7 +113,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                       className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
                       <Link
-                        href={`/${params.locale as string}/${params.tenant as string}${item.href}`}
+                        href={`/${locale}/${tenant}${item.href}`}
                       >
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>
@@ -136,7 +140,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                             className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                           >
                             <Link
-                              href={`/${params.locale as string}/${params.tenant as string}${subItem.href}`}
+                              href={`/${locale}/${tenant}${subItem.href}`}
                             >
                               <SubIcon className="h-4 w-4" />
                               <span>{subItem.title}</span>

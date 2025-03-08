@@ -1,6 +1,7 @@
 import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import * as React from 'react';
 import { useState, useRef } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
@@ -38,7 +39,8 @@ interface ConnectionFormProps {
 
 export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: ConnectionFormProps) {
   const t = useTranslations('Common');
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
   const locale = params.locale as string;
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
@@ -55,6 +57,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
   const [fingerprint, setFingerprint] = useState<string | null>(null);
   const [fingerprintVerified, setFingerprintVerified] = useState(false);
   const [requireVerification, setRequireVerification] = useState(false);
+  const [verifyingFingerprint, setVerifyingFingerprint] = useState(false);
 
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');

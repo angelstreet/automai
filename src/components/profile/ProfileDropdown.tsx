@@ -2,6 +2,8 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/app/actions';
+import { useParams, useRouter } from 'next/navigation';
+import * as React from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
@@ -19,8 +21,10 @@ import {
 export function ProfileDropdown() {
   const { user } = useAuth();
   const router = useRouter();
-  const params = useParams();
+  const paramsPromise = useParams();
+  const params = React.use(paramsPromise);
   const locale = params.locale as string;
+  const tenant = params.tenant as string;
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
@@ -58,23 +62,23 @@ export function ProfileDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${params.tenant}/settings/profile`)}
+            onClick={() => router.push(`/${locale}/${tenant}/settings/profile`)}
           >
             Profile
             <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${params.tenant}/settings/billing`)}
+            onClick={() => router.push(`/${locale}/${tenant}/settings/billing`)}
           >
             Billing
             <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => router.push(`/${locale}/${params.tenant}/settings`)}>
+          <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings`)}>
             Settings
             <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => router.push(`/${locale}/${params.tenant}/settings/team`)}
+            onClick={() => router.push(`/${locale}/${tenant}/settings/team`)}
           >
             New Team
           </DropdownMenuItem>
