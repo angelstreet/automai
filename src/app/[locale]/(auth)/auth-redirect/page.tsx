@@ -1,5 +1,5 @@
-import { createServerClient } from '@/lib/supabase';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase';
+
 import { redirect } from 'next/navigation';
 
 // Add error boundary component
@@ -95,7 +95,7 @@ export default async function AuthRedirectPage({
     }
     
     // Create Supabase client
-    const supabase = await createServerClient();
+    const supabase = await createClient();
     
     // Check for existing session first
     const { data: sessionData } = await supabase.auth.getSession();

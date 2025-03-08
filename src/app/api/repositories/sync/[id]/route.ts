@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 
 import db from '@/lib/db';
@@ -29,7 +29,7 @@ async function checkRepositoryAccess(id: string, userId: string) {
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     const {
       data: { session },
       error: sessionError,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { cookies } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 import { listGitProviders, createGitProvider } from '@/lib/services/repositories';
 import { GitProviderType } from '@/types/repositories';
@@ -19,7 +19,7 @@ export async function GET() {
   try {
     // Get the session using the Supabase client
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     
     if (!supabase) {
       console.error('Failed to create Supabase client');
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   try {
     // Get the session using the Supabase client
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     
     if (!supabase) {
       console.error('Failed to create Supabase client');

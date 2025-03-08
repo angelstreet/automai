@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 
 import db from '@/lib/db';
@@ -27,7 +27,7 @@ export async function GET(request: Request, context: { params: { id: string } })
   try {
     const { params } = context;
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     const {
       data: { session },
       error,
@@ -61,7 +61,7 @@ export async function DELETE(request: Request, context: { params: { id: string }
   try {
     const { params } = context;
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     const {
       data: { session },
       error,

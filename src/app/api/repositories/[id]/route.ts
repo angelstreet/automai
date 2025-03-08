@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
@@ -38,7 +38,7 @@ async function checkRepositoryAccess(id: string, userId: string) {
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     const {
       data: { session },
       error: sessionError,
@@ -71,7 +71,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     const {
       data: { session },
       error: sessionError,
@@ -127,7 +127,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     const {
       data: { session },
       error: sessionError,

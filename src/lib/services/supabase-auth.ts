@@ -1,5 +1,5 @@
 import { isUsingSupabase } from '@/lib/env';
-import { cookies } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 
 export interface SupabaseAuthResult {
@@ -26,7 +26,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
 
       if (!supabase) {
         return {
@@ -73,7 +73,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
 
       if (!supabase) {
         return {
@@ -120,7 +120,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
 
       if (!supabase) {
         return {
@@ -163,7 +163,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
 
       if (!supabase) {
         return {
@@ -209,7 +209,7 @@ export const supabaseAuthService = {
 
     try {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
 
       if (!supabase) {
         return {

@@ -1,5 +1,5 @@
 import { isProduction, isUsingSupabase } from '../env';
-import { cookies } from 'next/headers';
+
 import { createAdminClient } from '@/lib/supabase/server';
 
 /**

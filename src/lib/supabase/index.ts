@@ -7,7 +7,7 @@ export * as envModule from './env';
 
 // Export the client creation functions directly
 export { createClient } from './client';
-export { createClient as createServerClient } from './server';
+export { createClient as createClient } from './server';
 export { createClient as createMiddlewareClient } from './middleware';
 export { createClient as createAdminClient } from './admin';
 

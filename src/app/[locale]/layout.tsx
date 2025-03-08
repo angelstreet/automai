@@ -1,5 +1,5 @@
 import { Inter } from 'next/font/google';
-import { cookies } from 'next/headers';
+
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { ToasterProvider } from '@/components/shadcn/toaster';

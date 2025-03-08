@@ -1,5 +1,5 @@
-import { createServerClient } from '@/lib/supabase';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase';
+
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Chrome, Github } from 'lucide-react';
@@ -16,7 +16,7 @@ async function signInWithPassword(formData: FormData) {
   const callbackUrl = formData.get('callbackUrl') as string || '';
   const locale = formData.get('locale') as string || 'en';
   
-  const supabase = await createServerClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -42,7 +42,7 @@ async function signInWithOAuthAction(formData: FormData) {
   const provider = formData.get('provider') as 'google' | 'github';
   const locale = formData.get('locale') as string || 'en';
   
-  const supabase = await createServerClient();
+  const supabase = await createClient();
   
   // Get the current origin for the redirect URL
   const origin = process.env.NEXT_PUBLIC_SITE_URL || 
@@ -98,7 +98,7 @@ export default async function LoginPage({
   });
   
   // Check if user is already logged in
-  const supabase = await createServerClient();
+  const supabase = await createClient();
   
   try {
     const { data, error } = await supabase.auth.getSession();

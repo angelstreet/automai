@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 import { testConnectionSchema } from './schema';
 
@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   try {
     // 1. Auth check
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {

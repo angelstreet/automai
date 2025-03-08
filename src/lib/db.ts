@@ -1,12 +1,12 @@
-import { createServerClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
+
 
 // Create a simple database interface that uses Supabase
 const db = {
   // Generic query method
   async query(table: string, query: any = {}) {
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
     
     let builder = supabase.from(table).select();
     
@@ -46,7 +46,7 @@ const db = {
   user: {
     async findUnique({ where }: { where: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data, error } = await supabase
         .from('users')
@@ -68,7 +68,7 @@ const db = {
     
     async create({ data }: { data: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('users')
@@ -86,7 +86,7 @@ const db = {
     
     async update({ where, data }: { where: any; data: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('users')
@@ -112,7 +112,7 @@ const db = {
     
     async findUnique({ where }: { where: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data, error } = await supabase
         .from('projects')
@@ -130,7 +130,7 @@ const db = {
     
     async create({ data }: { data: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('projects')
@@ -148,7 +148,7 @@ const db = {
     
     async update({ where, data }: { where: any; data: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('projects')
@@ -167,7 +167,7 @@ const db = {
     
     async delete({ where }: { where: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { error } = await supabase
         .from('projects')
@@ -187,7 +187,7 @@ const db = {
   tenant: {
     async findUnique({ where }: { where: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data, error } = await supabase
         .from('tenants')
@@ -205,7 +205,7 @@ const db = {
     
     async create({ data }: { data: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('tenants')
@@ -223,7 +223,7 @@ const db = {
     
     async update({ where, data }: { where: any; data: any }) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       const { data: result, error } = await supabase
         .from('tenants')
@@ -245,7 +245,7 @@ const db = {
   gitProvider: {
     async findMany(options: any = {}) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       let builder = supabase.from('git_providers').select();
       
@@ -286,7 +286,7 @@ const db = {
   repository: {
     async findMany(options: any = {}) {
       const cookieStore = cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
       let selectQuery = '*';
       if (options.include?.provider) {

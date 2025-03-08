@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getSupabaseUrl, getSupabaseAnonKey } from './env';
 
@@ -19,7 +19,7 @@ export const createClient = (request: NextRequest) => {
   });
   
   // Create client with cookie handlers for middleware
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       get: (name) => {
         return request.cookies.get(name)?.value;

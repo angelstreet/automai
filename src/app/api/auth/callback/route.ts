@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers';
+
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 
 // Add this interface at the top of the file
 interface SupabaseError extends Error {
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
   };
 
   // Use our wrapper to create the Supabase client
-  const supabase = await createServerClient();
+  const supabase = await createClient();
 
   try {
     console.log('Supabase environment:', {

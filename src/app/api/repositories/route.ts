@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
@@ -20,7 +20,7 @@ const RepositoryCreateSchema = z.object({
 export async function GET(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies();
-    const supabase = await createServerClient(cookieStore);
+    const supabase = await createClient(cookieStore);
 
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
