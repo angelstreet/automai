@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { z } from 'zod';
 
+import db from '@/lib/db';
+
 // Schema for project creation/update
 const ProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -15,45 +17,42 @@ export async function GET() {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
-    // Get the user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError);
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
       return NextResponse.json(
-        { success: false, error: 'Authentication error' },
-        { status: 401 }
-      );
-    }
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
+        {
+          success: false,
+          error: 'Authentication not available',
+        },
+        { status: 401 },
       );
     }
 
-    // Get projects with owner information
-    const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select(`
-        *,
-        owner:users(id, name, email)
-      `)
-      .eq('ownerId', session.user.id);
-    
-    if (projectsError) {
-      console.error('Error fetching projects:', projectsError);
-      return NextResponse.json(
-        { success: false, message: 'Failed to fetch projects' },
-        { status: 500 }
-      );
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+    if (!session?.user) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
+
+    const projects = await db.project.findMany({
+      where: { ownerId: session.user.id },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Projects fetched successfully',
-      data: projects || [],
+      data: projects,
     });
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -70,46 +69,34 @@ export async function POST(request: Request) {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
-    // Get the user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError);
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
       return NextResponse.json(
-        { success: false, error: 'Authentication error' },
-        { status: 401 }
+        {
+          success: false,
+          error: 'Authentication not available',
+        },
+        { status: 401 },
       );
     }
-    
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const validatedData = ProjectSchema.parse(body);
 
-    // Create the project
-    const { data: project, error: projectError } = await supabase
-      .from('projects')
-      .insert({
+    const project = await db.project.create({
+      data: {
         ...validatedData,
         ownerId: session.user.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })
-      .select()
-      .single();
-    
-    if (projectError) {
-      console.error('Error creating project:', projectError);
-      return NextResponse.json(
-        { success: false, message: 'Failed to create project' },
-        { status: 500 }
-      );
-    }
+      },
+    });
 
     return NextResponse.json(
       {
@@ -141,66 +128,45 @@ export async function PATCH(request: Request) {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
-    // Get the user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError);
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
       return NextResponse.json(
-        { success: false, error: 'Authentication error' },
-        { status: 401 }
+        {
+          success: false,
+          error: 'Authentication not available',
+        },
+        { status: 401 },
       );
     }
-    
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const id = request.url.split('/').pop(); // Get the project ID from the URL
 
     // Check if project exists and user has access
-    const { data: existingProject, error: projectError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (projectError || !existingProject) {
-      return NextResponse.json(
-        { success: false, message: 'Project not found' },
-        { status: 404 }
-      );
+    const existingProject = await db.project.findUnique({
+      where: { id },
+    });
+
+    if (!existingProject) {
+      return NextResponse.json({ success: false, message: 'Project not found' }, { status: 404 });
     }
 
     if (existingProject.ownerId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, message: 'Forbidden' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
-    // Update the project
-    const { data: updatedProject, error: updateError } = await supabase
-      .from('projects')
-      .update({
-        ...body,
-        updatedAt: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (updateError) {
-      console.error('Error updating project:', updateError);
-      return NextResponse.json(
-        { success: false, message: 'Failed to update project' },
-        { status: 500 }
-      );
-    }
+    const updatedProject = await db.project.update({
+      where: { id },
+      data: body,
+    });
 
     return NextResponse.json({
       success: true,
@@ -222,60 +188,43 @@ export async function DELETE(request: Request) {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
-    // Get the user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError);
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
       return NextResponse.json(
-        { success: false, error: 'Authentication error' },
-        { status: 401 }
+        {
+          success: false,
+          error: 'Authentication not available',
+        },
+        { status: 401 },
       );
     }
-    
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     const id = request.url.split('/').pop(); // Get the project ID from the URL
 
     // Check if project exists and user has access
-    const { data: existingProject, error: projectError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (projectError || !existingProject) {
-      return NextResponse.json(
-        { success: false, message: 'Project not found' },
-        { status: 404 }
-      );
+    const existingProject = await db.project.findUnique({
+      where: { id },
+    });
+
+    if (!existingProject) {
+      return NextResponse.json({ success: false, message: 'Project not found' }, { status: 404 });
     }
 
     if (existingProject.ownerId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, message: 'Forbidden' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
-    // Delete the project
-    const { error: deleteError } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', id);
-    
-    if (deleteError) {
-      console.error('Error deleting project:', deleteError);
-      return NextResponse.json(
-        { success: false, message: 'Failed to delete project' },
-        { status: 500 }
-      );
-    }
+    await db.project.delete({
+      where: { id },
+    });
 
     return NextResponse.json({
       success: true,

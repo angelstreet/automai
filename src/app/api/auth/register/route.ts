@@ -1,9 +1,9 @@
 import { hash } from 'bcrypt';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+
 import { isUsingSupabase } from '@/lib/env';
+import db from '@/lib/db';
 
 // Dynamically import supabaseAuthService to prevent errors when Supabase isn't available
 let supabaseAuthService: any;
@@ -79,15 +79,10 @@ export async function POST(request: NextRequest) {
 
     const { name, email, password } = validationResult.data;
 
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
-    
     // Check if user already exists
-    const { data: existingUser, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
+    const existingUser = await db.user.findUnique({
+      where: { email },
+    });
 
     if (existingUser) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
@@ -108,52 +103,28 @@ export async function POST(request: NextRequest) {
       console.log('User registered with Supabase:', supabaseResult.data?.user?.id);
     }
 
-    // Hash password for storage in database
+    // Hash password for storage in Prisma
     const hashedPassword = await hash(password, 10);
 
     // Create default tenant for the user (trial)
-    const { data: tenant, error: tenantError } = await supabase
-      .from('tenants')
-      .insert({
+    const tenant = await db.tenant.create({
+      data: {
         name: 'trial',
         domain: `trial-${Date.now()}`.toLowerCase(),
         plan: 'trial',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })
-      .select()
-      .single();
-      
-    if (tenantError) {
-      console.error('Error creating tenant:', tenantError);
-      return NextResponse.json(
-        { error: 'Failed to create tenant' },
-        { status: 500 }
-      );
-    }
+      },
+    });
 
     // Create user in the database
-    const { data: user, error: createUserError } = await supabase
-      .from('users')
-      .insert({
+    const user = await db.user.create({
+      data: {
         name,
         email,
         password: hashedPassword,
         user_role: 'admin', // First user is admin of their tenant
         tenant_id: tenant.id,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })
-      .select()
-      .single();
-      
-    if (createUserError) {
-      console.error('Error creating user:', createUserError);
-      return NextResponse.json(
-        { error: 'Failed to create user' },
-        { status: 500 }
-      );
-    }
+      },
+    });
 
     // Don't send the password back to client
     const { password: _, ...userWithoutPassword } = user;

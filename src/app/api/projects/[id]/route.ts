@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 import { z } from 'zod';
 
+import db from '@/lib/db';
+
 type Props = {
   params: Promise<{ id: string }>;
 };

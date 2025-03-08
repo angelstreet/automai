@@ -1,118 +1,101 @@
-'use client';
-
-import { Chrome, Github } from 'lucide-react';
+import { createClient } from '@/utils/supabase/server';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
-import * as React from 'react';
+import { Chrome, Github } from 'lucide-react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context/UserContext';
 
-export default function LoginPage() {
-  const router = useRouter();
-  const { locale } = useParams();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl');
-  const t = useTranslations('Auth');
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [error, setError] = React.useState('');
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Get user context
-  const { user, signInWithPassword, signInWithOAuth } = useUser();
-
-  // Handle initial page load effects: check for logged in user and error params
-  useEffect(() => {
-    // Set a timeout to prevent infinite loading state
-    const loadingTimer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000); // Reduced from 2000ms to 1000ms for faster UI response
-
-    // Check for error query param from failed OAuth redirects
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      setError(decodeURIComponent(errorParam));
-    }
-
-    // Redirect if user is already logged in
-    if (user) {
-      console.log('User already logged in, redirecting to dashboard');
-      const redirectPath = callbackUrl || `/${locale}/trial/dashboard`;
-      
-      // Use router.replace for navigation
-      router.replace(redirectPath);
-    }
-
-    return () => clearTimeout(loadingTimer);
-  }, [user, router, locale, callbackUrl, searchParams]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsSubmitting(true);
-
-    try {
-      console.log('Attempting email/password login');
-      const { data, error } = await signInWithPassword(email, password);
-
-      if (error) {
-        console.error('Login error:', error.message);
-        setError(error.message);
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (data?.session) {
-        console.log('Login successful, redirecting');
-        // Login successful, redirect to callback URL or dashboard
-        const redirectPath = callbackUrl || `/${locale}/trial/dashboard`;
-        router.replace(redirectPath);
-      } else {
-        setError('Authentication successful but no session was created');
-        setIsSubmitting(false);
-      }
-    } catch (err: any) {
-      console.error('Login exception:', err);
-      setError(err.message || 'An error occurred during login');
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleOAuthLogin = async (provider: 'google' | 'github') => {
-    setError('');
-    setIsSubmitting(true);
-
-    try {
-      console.log(`Initiating ${provider} OAuth login`);
-      const { error } = await signInWithOAuth(provider);
-      
-      if (error) {
-        console.error(`${provider} OAuth error:`, error);
-        setError(error.message);
-        setIsSubmitting(false);
-      }
-      // On success, the OAuth flow will redirect to auth-redirect
-    } catch (err: any) {
-      console.error(`${provider} OAuth exception:`, err);
-      setError(err.message || `An unexpected error occurred with ${provider} sign in`);
-      setIsSubmitting(false);
-    }
-  };
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    );
+// Server actions for authentication
+async function signInWithPassword(formData: FormData) {
+  'use server';
+  
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const callbackUrl = formData.get('callbackUrl') as string || '';
+  const locale = formData.get('locale') as string || 'en';
+  
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  
+  if (error) {
+    // Redirect back to login page with error
+    return redirect(`/${locale}/login?error=${encodeURIComponent(error.message)}`);
   }
+  
+  // Get tenant from user metadata or default to 'trial'
+  const tenant = data.user.user_metadata?.tenant_name || 'trial';
+  const redirectPath = callbackUrl || `/${locale}/${tenant}/dashboard`;
+  
+  // Redirect to dashboard or callback URL
+  return redirect(redirectPath);
+}
 
+async function signInWithOAuthAction(formData: FormData) {
+  'use server';
+  
+  const provider = formData.get('provider') as 'google' | 'github';
+  const locale = formData.get('locale') as string || 'en';
+  
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  
+  // Get the current origin for the redirect URL
+  const origin = process.env.NEXT_PUBLIC_SITE_URL || 
+                (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
+                (process.env.CODESPACE_NAME ? `https://${process.env.CODESPACE_NAME}-3000.app.github.dev` : 
+                'http://localhost:3000'));
+  
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${origin}/${locale}/auth-redirect`,
+    },
+  });
+  
+  if (error) {
+    // Redirect back to login page with error
+    return redirect(`/${locale}/login?error=${encodeURIComponent(error.message)}`);
+  }
+  
+  // Redirect to the OAuth provider's authorization page
+  if (data?.url) {
+    return redirect(data.url);
+  }
+  
+  // Fallback if no URL is returned
+  return redirect(`/${locale}/login?error=Failed to initiate OAuth login`);
+}
+
+export default async function LoginPage({
+  params,
+  searchParams,
+}: {
+  params: { locale: string };
+  searchParams: { callbackUrl?: string; error?: string };
+}) {
+  const { locale } = params;
+  const callbackUrl = searchParams.callbackUrl;
+  const errorMessage = searchParams.error;
+  
+  // Check if user is already logged in
+  const cookieStore = cookies();
+  const supabase = createClient(cookieStore);
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  // If user is already logged in, redirect to dashboard
+  if (session) {
+    const tenant = session.user.user_metadata?.tenant_name || 'trial';
+    const redirectPath = callbackUrl || `/${locale}/${tenant}/dashboard`;
+    redirect(redirectPath);
+  }
+  
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <div className="absolute top-8 left-8">
@@ -135,23 +118,25 @@ export default function LoginPage() {
 
       <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{t('loginTitle')}</h1>
-          <p className="text-sm text-muted-foreground">{t('loginDescription')}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Sign in to your account</h1>
+          <p className="text-sm text-muted-foreground">Enter your email below to sign in to your account</p>
         </div>
 
         <div className="grid gap-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form action={signInWithPassword} className="space-y-4">
+            <input type="hidden" name="locale" value={locale} />
+            {callbackUrl && <input type="hidden" name="callbackUrl" value={callbackUrl} />}
+            
             <div className="grid gap-2">
               <div className="grid gap-1">
                 <Input
                   id="email"
-                  placeholder={t('emailPlaceholder')}
+                  name="email"
+                  placeholder="Email"
                   type="email"
                   autoCapitalize="none"
                   autoComplete="email"
                   autoCorrect="off"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="h-11"
                 />
@@ -159,24 +144,23 @@ export default function LoginPage() {
               <div className="grid gap-1">
                 <Input
                   id="password"
-                  placeholder={t('passwordPlaceholder')}
+                  name="password"
+                  placeholder="Password"
                   type="password"
                   autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   required
                   className="h-11"
                 />
               </div>
-              {error && (
+              {errorMessage && (
                 <div className="text-sm text-red-500 text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                  {error}
+                  {errorMessage}
                 </div>
               )}
             </div>
 
-            <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
-              {isSubmitting ? t('loggingIn') : t('loginButton')}
+            <Button type="submit" className="w-full h-11 text-base">
+              Sign In
             </Button>
           </form>
 
@@ -186,30 +170,38 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                {t('orContinueWith')}
+                Or continue with
               </span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <Button variant="outline" onClick={() => handleOAuthLogin('google')} className="h-11">
-              <Chrome className="mr-2 h-5 w-5" />
-              Google
-            </Button>
-            <Button variant="outline" onClick={() => handleOAuthLogin('github')} className="h-11">
-              <Github className="mr-2 h-5 w-5" />
-              GitHub
-            </Button>
+            <form action={signInWithOAuthAction}>
+              <input type="hidden" name="provider" value="google" />
+              <input type="hidden" name="locale" value={locale} />
+              <Button type="submit" variant="outline" className="w-full h-11">
+                <Chrome className="mr-2 h-5 w-5" />
+                Google
+              </Button>
+            </form>
+            <form action={signInWithOAuthAction}>
+              <input type="hidden" name="provider" value="github" />
+              <input type="hidden" name="locale" value={locale} />
+              <Button type="submit" variant="outline" className="w-full h-11">
+                <Github className="mr-2 h-5 w-5" />
+                GitHub
+              </Button>
+            </form>
           </div>
         </div>
 
         <div className="text-sm text-muted-foreground text-center">
-          {t('noAccount')}{' '}
+          Don't have an account?{' '}
           <Link
             href={`/${locale}/signup`}
             className="text-primary underline-offset-4 hover:underline font-medium"
           >
-            {t('signupLink')}
+            Sign up
           </Link>
         </div>
 
@@ -218,7 +210,7 @@ export default function LoginPage() {
             href={`/${locale}/forgot-password`}
             className="text-primary underline-offset-4 hover:underline font-medium"
           >
-            {t('forgotPassword')}
+            Forgot password?
           </Link>
         </div>
       </div>

@@ -2,23 +2,19 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
 
+import db from '@/lib/db';
 import * as repositoryService from '@/lib/services/repositories';
 
 // Helper to check if user has access to the repository
 async function checkRepositoryAccess(id: string, userId: string) {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
-  
-  const { data: repository, error } = await supabase
-    .from('repositories')
-    .select(`
-      *,
-      provider:git_providers(*)
-    `)
-    .eq('id', id)
-    .single();
+  const repository = await db.repository.findUnique({
+    where: { id },
+    include: {
+      provider: true,
+    },
+  });
 
-  if (error || !repository) {
+  if (!repository) {
     return { success: false, message: 'Repository not found', status: 404 };
   }
 

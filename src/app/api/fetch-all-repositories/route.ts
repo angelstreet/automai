@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/utils/supabase/server';
+import db from '@/lib/db';
 
 // GET /api/fetch-all-repositories
 export async function GET(request: Request) {
@@ -8,56 +9,50 @@ export async function GET(request: Request) {
     const cookieStore = cookies();
     const supabase = createClient(cookieStore);
 
-    // Get the user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError);
+    // If Supabase client is null, fall back to a simple check
+    if (!supabase) {
       return NextResponse.json(
-        { success: false, error: 'Authentication error' },
-        { status: 401 }
+        {
+          success: false,
+          error: 'Authentication not available',
+        },
+        { status: 401 },
       );
     }
-    
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
     if (!session?.user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
     try {
       // Get all git providers for the user
-      const { data: providers, error: providersError } = await supabase
-        .from('git_providers')
-        .select('id')
-        .eq('userId', session.user.id);
-      
-      if (providersError) {
-        console.error('Error fetching git providers:', providersError);
-        return NextResponse.json([], { status: 200 });
-      }
+      const providers = await db.gitProvider.findMany({
+        where: { userId: session.user.id },
+        select: { id: true },
+      });
 
       // If no providers, return empty array with 200 status
-      if (!providers || providers.length === 0) {
+      if (providers.length === 0) {
         return NextResponse.json([], { status: 200 });
       }
 
       // Fetch all repositories for all providers
-      const { data: repositories, error: reposError } = await supabase
-        .from('repositories')
-        .select(`
-          *,
-          provider:git_providers(*)
-        `)
-        .in('providerId', providers.map(p => p.id));
-      
-      if (reposError) {
-        console.error('Error fetching repositories:', reposError);
-        return NextResponse.json([], { status: 200 });
-      }
+      const repositories = await db.repository.findMany({
+        where: {
+          providerId: {
+            in: providers.map((p) => p.id),
+          },
+        },
+        include: {
+          provider: true,
+        },
+      });
 
-      return NextResponse.json(repositories || []);
+      return NextResponse.json(repositories);
     } catch (dbError) {
       // Handle any database errors
       console.log('Database error, returning empty array:', dbError);

@@ -1,7 +1,7 @@
 import { Client } from 'ssh2';
-import { cookies } from 'next/headers';
-import { createClient } from '@/utils/supabase/server';
+
 import { logger } from '../logger';
+import db from '@/lib/db';
 
 /**
  * Connection test result interface
@@ -23,7 +23,7 @@ interface ConnectionTestResult {
  * Last validated: 2024-03-21
  * Implements:
  * - Proper error handling
- * - Supabase client usage
+ * - Prisma client usage
  * - Logging
  * - Type safety
  */
@@ -34,28 +34,17 @@ interface ConnectionTestResult {
 export async function getHosts() {
   try {
     console.log('Fetching hosts from database...');
-    
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
-    
-    console.log('Calling supabase.from("hosts").select()...');
-    
-    const { data: hosts, error } = await supabase
-      .from('hosts')
-      .select('*')
-      .order('createdAt', { ascending: false });
-      
-    if (error) {
-      console.error('Error fetching hosts:', error);
-      throw error;
-    }
-    
+    console.log('Calling db.host.findMany...');
+    // Use a client-side projection to avoid requesting the is_windows field directly
+    const hosts = await db.host.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
     console.log('Supabase returned hosts successfully');
 
     // Add the is_windows field with a default value
-    return (hosts || []).map((host) => ({
+    return hosts.map((host) => ({
       ...host,
-      is_windows: host.is_windows || false, // Default value if not present
+      is_windows: false, // Default value until the database is updated
     }));
   } catch (error) {
     console.error('Error in getHosts service:', error);
@@ -68,21 +57,9 @@ export async function getHosts() {
  */
 export async function getHostById(id: string) {
   try {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
-    
-    const { data: host, error } = await supabase
-      .from('hosts')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (error) {
-      console.error(`Error fetching host with id ${id}:`, error);
-      throw error;
-    }
-    
-    return host;
+    return await db.host.findUnique({
+      where: { id },
+    });
   } catch (error) {
     console.error(`Error in getHostById service for id ${id}:`, error);
     throw error;
@@ -144,15 +121,11 @@ export async function createHost(data: {
     }
 
     console.log(
-      `Creating host in database with data: ${JSON.stringify({ ...data, password: data.password ? '***' : undefined })}`,
+      `Calling db.host.create with data: ${JSON.stringify({ ...data, password: data.password ? '***' : undefined })}`,
     );
-    
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
-    
-    const { data: host, error } = await supabase
-      .from('hosts')
-      .insert({
+
+    const host = await db.host.create({
+      data: {
         name: data.name,
         description: data.description || '',
         type: data.type,
@@ -162,16 +135,8 @@ export async function createHost(data: {
         password: data.password,
         status: data.status || 'pending',
         is_windows: (data as any).is_windows || false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      })
-      .select()
-      .single();
-      
-    if (error) {
-      console.error('Error creating host:', error);
-      throw error;
-    }
+      },
+    });
 
     console.log(`Supabase created host successfully`);
     console.log(
@@ -191,22 +156,9 @@ export async function createHost(data: {
  */
 export async function deleteHost(id: string) {
   try {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
-    
-    const { data: host, error } = await supabase
-      .from('hosts')
-      .delete()
-      .eq('id', id)
-      .select()
-      .single();
-      
-    if (error) {
-      console.error(`Error deleting host with id ${id}:`, error);
-      throw error;
-    }
-    
-    return host;
+    return await db.host.delete({
+      where: { id },
+    });
   } catch (error) {
     console.error(`Error in deleteHost service for id ${id}:`, error);
     throw error;
@@ -333,30 +285,13 @@ export async function testHostConnection(data: {
 
         try {
           // Try to update with is_windows field
-          const cookieStore = cookies();
-          const supabase = createClient(cookieStore);
-          
-          const { data: updatedHost, error } = await supabase
-            .from('hosts')
-            .update({
+          await db.host.update({
+            where: { id: data.hostId },
+            data: {
               status: result.success ? 'connected' : 'failed',
               is_windows: detectedWindows,
-            })
-            .eq('id', data.hostId)
-            .select()
-            .single();
-          
-          if (error) {
-            console.error(`Error updating host ${data.hostId}:`, error);
-            throw error;
-          }
-          
-          console.log(
-            `[Windows Detection] ✅ Host ${data.hostId} updated with status=${result.success ? 'connected' : 'failed'}`,
-          );
-          logger.info(
-            `Updated host status for ${data.hostId} to ${result.success ? 'connected' : 'failed'}, attempted to set is_windows: ${detectedWindows}`,
-          );
+            },
+          });
         } catch (schemaError) {
           // If the update fails due to missing is_windows field, update without it
           if (
@@ -366,35 +301,25 @@ export async function testHostConnection(data: {
             console.log(
               `[Windows Detection] is_windows field not in database schema, updating without it`,
             );
-            const cookieStore = cookies();
-            const supabase = createClient(cookieStore);
-            
-            const { data: updatedHost, error } = await supabase
-              .from('hosts')
-              .update({
+            await db.host.update({
+              where: { id: data.hostId },
+              data: {
                 status: result.success ? 'connected' : 'failed',
                 // is_windows field is omitted
-              })
-              .eq('id', data.hostId)
-              .select()
-              .single();
-            
-            if (error) {
-              console.error(`Error updating host ${data.hostId}:`, error);
-              throw error;
-            }
-            
-            console.log(
-              `[Windows Detection] ✅ Host ${data.hostId} updated with status=${result.success ? 'connected' : 'failed'}`,
-            );
-            logger.info(
-              `Updated host status for ${data.hostId} to ${result.success ? 'connected' : 'failed'}, attempted to set is_windows: ${detectedWindows}`,
-            );
+              },
+            });
           } else {
             // Re-throw if it's a different error
             throw schemaError;
           }
         }
+
+        console.log(
+          `[Windows Detection] ✅ Host ${data.hostId} updated with status=${result.success ? 'connected' : 'failed'}`,
+        );
+        logger.info(
+          `Updated host status for ${data.hostId} to ${result.success ? 'connected' : 'failed'}, attempted to set is_windows: ${detectedWindows}`,
+        );
       } catch (dbError) {
         console.error(`[Windows Detection] ❌ Failed to update host ${data.hostId}`, dbError);
         logger.error('Failed to update host status in database:', {

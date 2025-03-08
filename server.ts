@@ -1,10 +1,8 @@
 import dotenv from 'dotenv';
 
 // Load environment variables before any imports that might use them
-const envFile = process.env.ENV_FILE || '.env.development';
-
-console.log(`Loading environment from ${envFile}`);
-dotenv.config({ path: envFile });
+console.log('Loading environment from .env');
+dotenv.config();
 
 // Now import modules that depend on environment variables
 import { startServer, stopServer } from './src/lib/services/http';
