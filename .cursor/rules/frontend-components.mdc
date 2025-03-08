@@ -91,6 +91,10 @@ export function Button({
   - Effects (useEffect, useLayoutEffect)
   - Browser-only APIs
   - Event handlers
+- **IMPORTANT:** Never use `React.use()` in Client Components:
+  - `React.use()` is for unwrapping promises in Server Components only
+  - In Client Components, hooks like `useParams()` already return resolved values, not promises
+  - Using `React.use()` in Client Components will cause runtime errors
 
 ### Props and State
 
@@ -199,6 +203,7 @@ export default function Counter(props) {
 - **Huge components** - Break down large components into smaller, focused ones
 - **Duplicated logic** - Extract shared logic into custom hooks or utility functions
 - **Missing 'use client' directive** - Remember to add it when using client-side features
+- **Using `React.use()` in client components** - Only use `React.use()` in server components to handle promises
 
 ## Related Rules
 

@@ -99,6 +99,7 @@ npm run update-deps       # Update dependencies
 - **Naming**: PascalCase for components, camelCase for functions/variables, snake_case for supabase columns
 - **Error Handling**: Use try/catch with proper error messages
 - **Server Components**: Default to React Server Components unless client functionality needed
+- **React.use()**: The `React.use()` function is only for use in Server Components with promises. Never use it in Client Components ('use client')
 - **API Routes**: Route handlers are in `/src/app/api/[route]/route.ts`
 
 ## Documentation

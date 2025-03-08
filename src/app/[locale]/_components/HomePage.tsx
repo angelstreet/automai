@@ -12,8 +12,7 @@ import { Hero } from '../(marketing)/_components/Hero';
 
 export function HomePage() {
   const { user, isLoading, error } = useAuth();
-  const paramsPromise = useParams();
-  const params = React.use(paramsPromise);
+  const params = useParams();
   const locale = params.locale as string;
 
   // Debug logs to see what's happening

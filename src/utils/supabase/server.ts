@@ -1,49 +1,29 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { CookieOptions } from "@supabase/ssr";
 
-export const createClient = async (cookieStore?: ReturnType<typeof cookies>) => {
-  // If cookieStore is not provided, get it
-  if (!cookieStore) {
-    cookieStore = await cookies();
-  }
+// Validate environment variables at runtime
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name) {
-          return cookieStore!.get(name)?.value;
-        },
-        set(name, value, options) {
-          cookieStore!.set(name, value, options);
-        },
-        remove(name, options) {
-          cookieStore!.set(name, '', options);
-        },
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error("Missing Supabase environment variables.");
+}
+
+// Define the function to create the Supabase client
+export const createClient = async () => {
+  // Resolve the cookie store properly
+  const cookieStore = await cookies(); // Ensure it's awaited
+
+  return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll: () => cookieStore.getAll(), // Accessing getAll after resolving
+
+      setAll: (cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) => {
+        console.warn("setAll() cannot modify cookies inside Server Components.");
+        // Next.js Server Components do not support modifying cookies directly
+        // If you need to modify cookies, use middleware or API routes.
       },
-    }
-  );
-};
-
-// Create an admin client with the service role key
-export const createAdminClient = async () => {
-  // Admin client doesn't need cookies for auth
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: {
-        get(name) {
-          return null;
-        },
-        set(name, value, options) {
-          // No-op for admin client
-        },
-        remove(name, options) {
-          // No-op for admin client
-        },
-      },
-    }
-  );
+    },
+  });
 };
