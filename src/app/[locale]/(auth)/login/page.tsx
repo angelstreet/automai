@@ -17,7 +17,7 @@ async function signInWithPassword(formData: FormData) {
   const locale = formData.get('locale') as string || 'en';
   
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient(cookieStore);
   
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -44,7 +44,7 @@ async function signInWithOAuthAction(formData: FormData) {
   const locale = formData.get('locale') as string || 'en';
   
   const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = await createClient(cookieStore);
   
   // Get the current origin for the redirect URL
   const origin = process.env.NEXT_PUBLIC_SITE_URL || 
@@ -52,25 +52,30 @@ async function signInWithOAuthAction(formData: FormData) {
                 (process.env.CODESPACE_NAME ? `https://${process.env.CODESPACE_NAME}-3000.app.github.dev` : 
                 'http://localhost:3000'));
   
+  console.log(`Initiating OAuth sign-in with ${provider}...`);
+  
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
       redirectTo: `${origin}/${locale}/auth-redirect`,
+      skipBrowserRedirect: true, // Don't redirect in the server action
     },
   });
   
   if (error) {
-    // Redirect back to login page with error
-    return redirect(`/${locale}/login?error=${encodeURIComponent(error.message)}`);
+    console.error(`OAuth sign-in error with ${provider}:`, error);
+    redirect(`/${locale}/login?error=${encodeURIComponent(error.message)}`);
   }
   
   // Redirect to the OAuth provider's authorization page
   if (data?.url) {
-    return redirect(data.url);
+    console.log(`Redirecting to ${provider} authorization page...`);
+    redirect(data.url);
   }
   
   // Fallback if no URL is returned
-  return redirect(`/${locale}/login?error=Failed to initiate OAuth login`);
+  console.error(`No URL returned from ${provider} OAuth initialization`);
+  redirect(`/${locale}/login?error=Failed to initiate OAuth login`);
 }
 
 export default async function LoginPage({
@@ -88,16 +93,37 @@ export default async function LoginPage({
   const callbackUrl = resolvedSearchParams.callbackUrl;
   const errorMessage = resolvedSearchParams.error;
   
-  // Check if user is already logged in
-  const cookieStore = await cookies();
-  const supabase = await createClient(cookieStore);
-  const { data: { session } } = await supabase.auth.getSession();
+  console.log("Login page loaded with params:", {
+    locale,
+    callbackUrl,
+    errorMessage,
+  });
   
-  // If user is already logged in, redirect to dashboard
-  if (session) {
-    const tenant = session.user.user_metadata?.tenant_name || 'trial';
-    const redirectPath = callbackUrl || `/${locale}/${tenant}/dashboard`;
-    redirect(redirectPath);
+  // Check if user is already logged in
+  const cookieStore = cookies();
+  const supabase = await createClient(cookieStore);
+  
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error("Error getting session:", error);
+    } else {
+      console.log("Session status on login page:", {
+        hasSession: !!data.session,
+        userId: data.session?.user?.id,
+      });
+      
+      // If user is already logged in, redirect to dashboard
+      if (data.session) {
+        const tenant = data.session.user.user_metadata?.tenant_name || 'trial';
+        const redirectPath = callbackUrl || `/${locale}/${tenant}/dashboard`;
+        console.log("User already logged in, redirecting to:", redirectPath);
+        return redirect(redirectPath);
+      }
+    }
+  } catch (error) {
+    console.error("Unexpected error on login page:", error);
   }
   
   return (

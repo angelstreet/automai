@@ -86,22 +86,28 @@ export default function SignUpPage() {
     try {
       // Use Supabase OAuth
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error, data } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/${locale}/auth-redirect`,
-          scopes: provider === 'github' ? 'repo,user' : 'email profile'
+          scopes: provider === 'github' ? 'repo,user' : 'email profile',
+          skipBrowserRedirect: true,
         }
       });
 
       if (error) {
         console.error('OAuth error:', error);
         setError(error.message);
+        return;
       }
-      // If successful, Supabase will handle the redirect automatically
-    } catch (err: any) {
-      console.error('OAuth error:', err);
-      setError(err.message || 'An error occurred with OAuth sign in');
+      
+      // Redirect to the OAuth provider's authorization page
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('OAuth error:', error);
+      setError('Authentication service unavailable');
     }
   };
 

@@ -40,6 +40,14 @@ These guidelines cover how to properly integrate with Supabase services includin
 - Use `updateSession` from `src/utils/supabase/middleware.ts` for session management
 - Do not modify authentication cookies directly in application code
 - Let the middleware handle redirects for unauthenticated users
+- **Always let middleware handle OAuth code exchange** - Do not manually exchange OAuth codes in page components
+
+#### OAuth Authentication
+
+- Use `skipBrowserRedirect: true` when initiating OAuth in server actions
+- Redirect directly to the dashboard from auth-redirect pages
+- Never manually exchange OAuth codes in server components
+- Let the middleware handle the code exchange and session creation
 
 ### Database Access
 

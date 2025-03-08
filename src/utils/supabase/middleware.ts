@@ -2,8 +2,11 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
+  // Create a response object that we'll modify with cookies
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
   })
 
   const supabase = createServerClient(
@@ -11,26 +14,38 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
+        get(name) {
+          return request.cookies.get(name)?.value
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
+        set(name, value, options) {
+          // Set cookie on the response
+          response.cookies.set({
+            name,
+            value,
+            ...options,
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+        },
+        remove(name, options) {
+          // Remove cookie from the response
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
         },
       },
     }
   )
 
-  // IMPORTANT: DO NOT REMOVE auth.getUser()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Refresh the session if it exists
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  // Log session status for debugging
+  console.log('Middleware session check:', { 
+    hasSession: !!session, 
+    userId: session?.user?.id,
+    path: request.nextUrl.pathname
+  })
 
   // Extract path parts for analysis
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
@@ -65,7 +80,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.includes('/billing');
 
   // 1. Handle unauthenticated users trying to access protected routes
-  if (!user && isProtectedRoute) {
+  if (!session && isProtectedRoute) {
     // Redirect to login page
     const url = request.nextUrl.clone()
     url.pathname = `/${locale}/login`
@@ -74,9 +89,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   // 2. Handle authenticated users on public pages (redirect to dashboard)
-  if (user && isPublicPath) {
+  if (session && isPublicPath) {
     // Get tenant from user metadata
-    const tenant = user.user_metadata?.tenant_name || 'trial';
+    const tenant = session.user.user_metadata?.tenant_name || 'trial';
     
     // Redirect to tenant dashboard
     const url = request.nextUrl.clone()
@@ -85,9 +100,9 @@ export async function updateSession(request: NextRequest) {
   }
 
   // 3. Handle authenticated users without tenant in URL
-  if (user && pathParts.length < 2) {
+  if (session && pathParts.length < 2) {
     // Get tenant from user metadata
-    const tenant = user.user_metadata?.tenant_name || 'trial';
+    const tenant = session.user.user_metadata?.tenant_name || 'trial';
     
     // Redirect to tenant dashboard
     const url = request.nextUrl.clone()
@@ -95,6 +110,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  return supabaseResponse
+  return response
 }
 

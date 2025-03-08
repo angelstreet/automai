@@ -130,51 +130,34 @@ export const getSiteUrl = () => {
 };
 ```
 
-## OAuth Provider Integration
+## OAuth Authentication Flow
 
-AutomAI uses Supabase Auth to handle authentication with OAuth providers like Google and GitHub, with a single configuration that works across all environments:
+The application uses Supabase's OAuth providers for authentication with services like GitHub and Google.
 
-### Authentication Flow for OAuth (Google, GitHub)
+### Server-Side OAuth Flow (Recommended)
 
-1. **User initiates OAuth login** by clicking a provider button
-2. **Supabase redirects to provider** (Google or GitHub)
-3. **User authenticates with provider**
-4. **Provider redirects back to Supabase callback URL**:
-   - `https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback`
-5. **Supabase processes authentication** and creates a session
-6. **Supabase redirects to application** at the `/auth-redirect` URL
-7. **Application validates the session** and redirects to the appropriate dashboard
+1. User clicks "Sign in with GitHub/Google" button which submits a form to a server action
+2. Server action calls `supabase.auth.signInWithOAuth()` with `skipBrowserRedirect: true`
+3. Server action redirects to the provider's authorization URL
+4. After authorization, provider redirects back to our `/auth-redirect` page with a code
+5. The middleware automatically handles the code exchange and session creation
+6. The auth-redirect page redirects to the dashboard
 
-### Code Implementation
+### Client-Side OAuth Flow
 
-```typescript
-// In src/utils/supabase/client.ts
-const getRedirectUrl = (path = '/auth-redirect') => {
-  if (typeof window === 'undefined') {
-    return 'https://wexkgcszrwxqsthahfyq.supabase.co/auth/v1/callback';
-  }
-  
-  // Dynamically determine the redirect URL based on current hostname
-  const origin = window.location.origin;
-  const locale = window.location.pathname.split('/')[1] || 'en';
-  
-  // Include locale in the redirect path
-  return `${origin}/${locale}${path.startsWith('/') ? path : `/${path}`}`;
-};
+1. User clicks "Sign in with GitHub/Google" button
+2. Client calls `supabase.auth.signInWithOAuth()` with `skipBrowserRedirect: true`
+3. Client redirects to the provider's authorization URL
+4. After authorization, provider redirects back to our `/auth-redirect` page with a code
+5. The middleware automatically handles the code exchange and session creation
+6. The auth-redirect page redirects to the dashboard
 
-signInWithOAuth: async (provider: 'google' | 'github') => {
-  const supabase = createBrowserSupabase();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: getRedirectUrl(),
-      scopes: provider === 'github' ? 'repo,user' : 'email profile',
-    },
-  });
+### Important Guidelines
 
-  return { data, error };
-}
-```
+- **Never manually exchange OAuth codes** in page components or API routes
+- Always let the middleware handle the code exchange and session creation
+- Use `skipBrowserRedirect: true` and handle the redirect manually
+- Redirect directly to the dashboard from auth-redirect pages
 
 ## Google and GitHub OAuth Setup
 

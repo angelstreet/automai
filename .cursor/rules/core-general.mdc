@@ -1,11 +1,33 @@
 ---
 description: Core Principles and General Development Guidelines
-globs: "**/*.{ts,tsx,js,jsx}"
-priority: 1
-alwaysApply: true
+globs: ["**/*"]
+priority: 100
+category: core
 ---
 
 # General Development Guidelines
+
+## CRITICAL RULES - ALWAYS FOLLOW
+
+1. **✅ ALWAYS review all applicable rules before taking action**
+   - Read through relevant Cursor rules before starting work
+   - Understand project-specific guidelines and constraints
+   - When in doubt, ask for clarification
+
+2. **✅ NEVER run servers without explicit permission**
+   - Do not run `npm run dev` or any server unless specifically asked
+   - Use curl and static analysis for debugging instead of running servers
+   - If server testing is necessary, propose it first with clear justification
+
+3. **✅ ALWAYS provide clear plans before implementing changes**
+   - Outline your approach before writing code
+   - Get explicit agreement on the plan
+   - Document any deviations from the approved plan
+
+4. **✅ ALWAYS make minimal, focused changes**
+   - Make the smallest change necessary to achieve the goal
+   - Avoid refactoring unrelated code
+   - Keep changes focused on solving the specific issue
 
 ## Core Principles
 
@@ -70,6 +92,12 @@ alwaysApply: true
    - Keep secrets in environment variables or secure storage
    - Do not hardcode API keys, passwords, or tokens
    - Check for accidentally committed secrets before pushing
+
+4. **✅ NEVER run development servers without explicit request**
+   - Do not run `npm run dev` unless specifically asked
+   - Always get confirmation before starting any server
+   - Prefer analyzing code over running it when possible
+   - For debugging authentication/API issues, use curl or similar tools instead
 
 ## Communication Guidelines
 

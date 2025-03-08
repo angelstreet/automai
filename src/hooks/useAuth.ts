@@ -8,6 +8,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     // Create Supabase client
@@ -16,17 +17,46 @@ export function useAuth() {
     // Get initial session and user
     const initializeAuth = async () => {
       try {
+        setIsLoading(true);
+        
         // Get session
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          throw sessionError;
+        }
+        
+        // Debug session data
+        console.log('Session data in useAuth:', sessionData);
+        
+        setSession(sessionData.session);
         
         // Get user if session exists
-        if (session) {
-          const { data: { user } } = await supabase.auth.getUser();
-          setUser(user);
+        if (sessionData.session) {
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          
+          if (userError) {
+            throw userError;
+          }
+          
+          setUser(userData.user);
+          console.log('User loaded in useAuth:', userData.user);
+        } else {
+          console.log('No session found in useAuth');
+          
+          // Try to refresh the session
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError && refreshData.session) {
+            console.log('Session refreshed successfully:', refreshData.session);
+            setSession(refreshData.session);
+            setUser(refreshData.user);
+          } else if (refreshError) {
+            console.log('Failed to refresh session:', refreshError);
+          }
         }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+        setError(err instanceof Error ? err : new Error('Unknown authentication error'));
       } finally {
         setIsLoading(false);
       }
@@ -36,10 +66,31 @@ export function useAuth() {
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, newSession) => {
         console.log('Auth state changed:', event);
-        setSession(session);
-        setUser(session?.user || null);
+        
+        setSession(newSession);
+        
+        if (newSession) {
+          try {
+            // Explicitly get the user to ensure we have the latest data
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            
+            if (userError) {
+              throw userError;
+            }
+            
+            setUser(userData.user);
+            console.log('User updated in auth state change:', userData.user);
+          } catch (err) {
+            console.error('Error getting user after auth state change:', err);
+            setError(err instanceof Error ? err : new Error('Failed to get user data'));
+          }
+        } else {
+          setUser(null);
+          console.log('Session cleared in auth state change');
+        }
+        
         setIsLoading(false);
       }
     );
@@ -55,5 +106,6 @@ export function useAuth() {
     session,
     isLoading,
     isAuthenticated: !!user,
+    error,
   };
 } 
