@@ -3,80 +3,40 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { 
-  getRepositories, 
-  createRepository, 
+  getRepository,
   updateRepository, 
   deleteRepository, 
   syncRepository 
 } from '@/app/actions/repositories';
 import { Repository } from '@/types/repositories';
 
-export function useRepositories(initialProviderId?: string) {
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [loading, setLoading] = useState(true);
+export function useRepository(initialRepositoryId?: string) {
+  const [repository, setRepository] = useState<Repository | null>(null);
+  const [loading, setLoading] = useState(initialRepositoryId ? true : false);
   const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
 
-  const fetchRepositories = useCallback(async (providerId?: string) => {
+  const fetchRepository = useCallback(async (id: string) => {
     try {
       setLoading(true);
       setError(null);
       
-      const filter = providerId ? { providerId } : undefined;
-      const result = await getRepositories(filter);
+      const result = await getRepository(id);
       
       if (!result.success) {
-        setError(new Error(result.error || 'Failed to fetch repositories'));
+        setError(new Error(result.error || 'Failed to fetch repository'));
         toast({
           title: 'Error',
-          description: result.error || 'Failed to fetch repositories',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      setRepositories(result.data || []);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch repositories';
-      setError(err instanceof Error ? err : new Error(errorMessage));
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
-  const addRepository = useCallback(async (data: Partial<Repository>) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const result = await createRepository(data);
-      
-      if (!result.success) {
-        setError(new Error(result.error || 'Failed to create repository'));
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to create repository',
+          description: result.error || 'Failed to fetch repository',
           variant: 'destructive',
         });
         return null;
       }
       
-      // Update local state optimistically
-      setRepositories(prev => [result.data!, ...prev]);
-      
-      toast({
-        title: 'Success',
-        description: 'Repository created successfully',
-      });
-      
+      setRepository(result.data || null);
       return result.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create repository';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch repository';
       setError(err instanceof Error ? err : new Error(errorMessage));
       toast({
         title: 'Error',
@@ -89,12 +49,23 @@ export function useRepositories(initialProviderId?: string) {
     }
   }, [toast]);
 
-  const updateRepo = useCallback(async (id: string, updates: Partial<Repository>) => {
+  const updateRepositoryDetails = useCallback(async (
+    updates: Partial<Repository>
+  ) => {
+    if (!repository?.id) {
+      toast({
+        title: 'Error',
+        description: 'No repository selected',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      const result = await updateRepository(id, updates);
+      const result = await updateRepository(repository.id, updates);
       
       if (!result.success) {
         setError(new Error(result.error || 'Failed to update repository'));
@@ -106,10 +77,7 @@ export function useRepositories(initialProviderId?: string) {
         return null;
       }
       
-      // Update local state optimistically
-      setRepositories(prev => 
-        prev.map(repo => repo.id === id ? result.data! : repo)
-      );
+      setRepository(result.data || null);
       
       toast({
         title: 'Success',
@@ -129,14 +97,23 @@ export function useRepositories(initialProviderId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [repository, toast]);
 
-  const removeRepository = useCallback(async (id: string) => {
+  const removeRepository = useCallback(async () => {
+    if (!repository?.id) {
+      toast({
+        title: 'Error',
+        description: 'No repository selected',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      const result = await deleteRepository(id);
+      const result = await deleteRepository(repository.id);
       
       if (!result.success) {
         setError(new Error(result.error || 'Failed to delete repository'));
@@ -148,8 +125,7 @@ export function useRepositories(initialProviderId?: string) {
         return false;
       }
       
-      // Update local state optimistically
-      setRepositories(prev => prev.filter(repo => repo.id !== id));
+      setRepository(null);
       
       toast({
         title: 'Success',
@@ -169,14 +145,23 @@ export function useRepositories(initialProviderId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [repository, toast]);
 
-  const syncRepo = useCallback(async (id: string) => {
+  const syncRepositoryData = useCallback(async () => {
+    if (!repository?.id) {
+      toast({
+        title: 'Error',
+        description: 'No repository selected',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      const result = await syncRepository(id);
+      const result = await syncRepository(repository.id);
       
       if (!result.success) {
         setError(new Error(result.error || 'Failed to sync repository'));
@@ -188,10 +173,7 @@ export function useRepositories(initialProviderId?: string) {
         return null;
       }
       
-      // Update local state optimistically
-      setRepositories(prev => 
-        prev.map(repo => repo.id === id ? result.data! : repo)
-      );
+      setRepository(result.data || null);
       
       toast({
         title: 'Success',
@@ -211,21 +193,23 @@ export function useRepositories(initialProviderId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [repository, toast]);
 
-  // Fetch repositories on mount
+  // Fetch repository on mount if initialRepositoryId is provided
   useEffect(() => {
-    fetchRepositories(initialProviderId);
-  }, [fetchRepositories, initialProviderId]);
+    if (initialRepositoryId) {
+      fetchRepository(initialRepositoryId);
+    }
+  }, [initialRepositoryId, fetchRepository]);
 
   return {
-    repositories,
+    repository,
     loading,
     error,
-    fetchRepositories,
-    addRepository,
-    updateRepository: updateRepo,
+    fetchRepository,
+    updateRepository: updateRepositoryDetails,
     deleteRepository: removeRepository,
-    syncRepository: syncRepo
+    syncRepository: syncRepositoryData,
+    isLoaded: !loading && repository !== null
   };
-}
+} 

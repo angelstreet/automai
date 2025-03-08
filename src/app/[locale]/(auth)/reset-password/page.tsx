@@ -1,23 +1,32 @@
 'use client';
 
-import Link from 'next/link';
+import * as React from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import * as React from 'react';
-
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { createBrowserClient } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const { locale } = useParams();
   const t = useTranslations('Auth');
+  
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  
+  // Use the auth hook
+  const { error: authError, updatePassword, loading } = useAuth();
+
+  // Set error from auth hook if present
+  React.useEffect(() => {
+    if (authError) {
+      setError(authError.message);
+    }
+  }, [authError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +34,7 @@ export default function ResetPasswordPage() {
     setSuccess(false);
     setIsSubmitting(true);
 
+    // Validate that passwords match
     if (password !== confirmPassword) {
       setError(t('passwordsDoNotMatch') || 'Passwords do not match');
       setIsSubmitting(false);
@@ -32,20 +42,16 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const supabase = await createBrowserClient();
-
-      // Update the user's password
-      const { error } = await supabase.auth.updateUser({ password });
-
-      if (error) {
-        setError(error.message);
-        return;
+      const result = await updatePassword(password);
+      
+      if (result) {
+        setSuccess(true);
+        
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          router.push(`/${locale}/login`);
+        }, 2000);
       }
-
-      setSuccess(true);
-      setTimeout(() => {
-        router.push(`/${locale}/login`);
-      }, 3000);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
     } finally {
@@ -65,81 +71,79 @@ export default function ResetPasswordPage() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="h-8 w-8 text-primary"
+            className="h-6 w-6"
           >
             <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
           </svg>
-          <span className="text-2xl font-bold text-primary">Automai</span>
+          <span className="text-xl font-bold">AutomAI</span>
         </div>
       </div>
-
-      <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
-        <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {t('resetPassword') || 'Reset Password'}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {t('resetPasswordDescription') || 'Enter your new password below.'}
+      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">{t('resetPassword')}</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            {t('enterNewPassword')}
           </p>
         </div>
 
         {success ? (
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md text-center">
-            <p className="text-green-700 dark:text-green-300">
-              {t('passwordResetSuccess') ||
-                'Your password has been reset successfully. You will be redirected to login.'}
-            </p>
+          <div className="bg-green-100 dark:bg-green-900 p-4 rounded-md text-green-800 dark:text-green-100">
+            {t('passwordResetSuccess')}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-2">
-              <div className="grid gap-1">
-                <Input
-                  id="password"
-                  placeholder={t('newPasswordPlaceholder') || 'New password'}
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="h-11"
-                />
-              </div>
-              <div className="grid gap-1">
-                <Input
-                  id="confirmPassword"
-                  placeholder={t('confirmPasswordPlaceholder') || 'Confirm password'}
-                  type="password"
-                  autoComplete="new-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="h-11"
-                />
-              </div>
-              {error && (
-                <div className="text-sm text-red-500 text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                  {error}
-                </div>
-              )}
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium">
+                {t('newPassword')}
+              </label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="mt-1"
+              />
             </div>
 
-            <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
-              {isSubmitting
-                ? t('resetting') || 'Resetting...'
-                : t('resetPasswordButton') || 'Reset Password'}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium">
+                {t('confirmPassword')}
+              </label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="mt-1"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-100 dark:bg-red-900 p-3 rounded-md text-red-800 dark:text-red-100 text-sm">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isSubmitting || loading}
+            >
+              {isSubmitting || loading ? t('resetting') : t('resetPassword')}
             </Button>
+
+            <div className="text-center mt-4">
+              <a
+                href={`/${locale}/login`}
+                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                {t('backToLogin')}
+              </a>
+            </div>
           </form>
         )}
-
-        <div className="text-sm text-muted-foreground text-center">
-          <Link
-            href={`/${locale}/login`}
-            className="text-primary underline-offset-4 hover:underline font-medium"
-          >
-            {t('backToLogin')}
-          </Link>
-        </div>
       </div>
     </div>
   );

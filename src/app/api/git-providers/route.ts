@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createClient } from '@/lib/supabase/server';
-import { listGitProviders, createGitProvider } from '@/lib/services/repositories';
-import { GitProviderType } from '@/types/repositories';
+import { createGitProvider } from '@/app/actions/git-providers';
 import { createGithubOauthUrl, createGitlabOauthUrl } from '@/lib/services/oauth';
+import { getGitProviders } from '@/app/actions/git-providers';
 
 // Schema validation for creating a git provider
 const GitProviderCreateSchema = z.object({
@@ -14,175 +14,66 @@ const GitProviderCreateSchema = z.object({
   token: z.string().optional(),
 });
 
-// GET /api/git-providers
+/**
+ * GET /api/git-providers
+ * Get all git providers for the current user
+ */
 export async function GET() {
   try {
-    // Get the session using the Supabase client
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
+    // Call the server action to get git providers
+    const result = await getGitProviders();
     
-    if (!supabase) {
-      console.error('Failed to create Supabase client');
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Service unavailable', details: 'Authentication service not available' },
-        { status: 503 }
+        { error: result.error || 'Failed to fetch git providers' },
+        { status: 400 }
       );
     }
     
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-    if (sessionError) {
-      console.error('Session error:', sessionError);
-      return NextResponse.json(
-        { error: 'Authentication error', details: sessionError.message },
-        { status: 500 }
-      );
-    }
-
-    if (!session?.user) {
-      console.log('No session found');
-      return NextResponse.json(
-        { error: 'Unauthorized', details: 'No active session found' },
-        { status: 401 }
-      );
-    }
-
-    const providers = await listGitProviders(session.user.id);
-    return NextResponse.json(providers);
-    
+    return NextResponse.json(result.data);
   } catch (error) {
-    console.error('Error fetching git providers:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error in GET /api/git-providers:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch git providers', details: errorMessage },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
-// POST /api/git-providers
-export async function POST(request: Request) {
+/**
+ * POST /api/git-providers
+ * Create a new git provider
+ */
+export async function POST(request: NextRequest) {
   try {
-    // Get the session using the Supabase client
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
-    
-    if (!supabase) {
-      console.error('Failed to create Supabase client');
-      return NextResponse.json(
-        { error: 'Service unavailable', details: 'Authentication service not available' },
-        { status: 503 }
-      );
-    }
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-    if (sessionError) {
-      console.error('Session error:', sessionError);
-      return NextResponse.json(
-        { error: 'Authentication error', details: sessionError.message },
-        { status: 500 }
-      );
-    }
-
-    if (!session?.user) {
-      console.log('No session found');
-      return NextResponse.json(
-        { error: 'Unauthorized', details: 'No active session found' },
-        { status: 401 }
-      );
-    }
-
+    // Parse request body
     const body = await request.json();
-    console.log('Received provider data:', JSON.stringify(body));
-
-    // Validate request body
-    const validation = GitProviderCreateSchema.safeParse(body);
-
-    if (!validation.success) {
-      console.error('Validation error:', validation.error);
+    
+    // Call the server action to create git provider
+    const result = await createGitProvider(body);
+    
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Invalid request body', details: validation.error.format() },
-        { status: 400 },
+        { error: result.error || 'Failed to create git provider' },
+        { status: 400 }
       );
     }
-
-    const data = validation.data;
-
-    try {
-      // For Gitea, require a server URL and token
-      if (data.type === 'gitea') {
-        if (!data.serverUrl || !data.token) {
-          return NextResponse.json(
-            { error: 'Server URL and token are required for Gitea' },
-            { status: 400 },
-          );
-        }
-
-        // Create the Gitea provider
-        const provider = await createGitProvider(session.user.id, {
-          name: data.type,
-          type: data.type,
-          displayName: data.displayName,
-          serverUrl: data.serverUrl,
-          accessToken: data.token,
-        });
-
-        return NextResponse.json(provider);
-      }
-
-      // For GitHub and GitLab, generate an OAuth URL
-      if (data.type === 'github') {
-        // Save the provider without token for now
-        const provider = await createGitProvider(session.user.id, {
-          name: data.type,
-          type: data.type,
-          displayName: data.displayName,
-        });
-
-        const oauthUrl = createGithubOauthUrl(provider.id);
-        return NextResponse.json({ id: provider.id, authUrl: oauthUrl });
-      }
-
-      if (data.type === 'gitlab') {
-        // Save the provider without token for now
-        const provider = await createGitProvider(session.user.id, {
-          name: data.type,
-          type: data.type,
-          displayName: data.displayName,
-        });
-
-        const oauthUrl = createGitlabOauthUrl(provider.id);
-        return NextResponse.json({ id: provider.id, authUrl: oauthUrl });
-      }
-
-      return NextResponse.json({ error: 'Unsupported provider type' }, { status: 400 });
-    } catch (error) {
-      console.error('Error creating git provider:', error);
-      if (error instanceof Error) {
-        console.error(`Error details: ${error.message}`);
-        console.error(`Error stack: ${error.stack}`);
-      }
-      return NextResponse.json(
-        {
-          error: 'Failed to create git provider',
-          details: error instanceof Error ? error.message : undefined,
-        },
-        { status: 500 },
-      );
+    
+    // If authUrl is provided, return it along with the provider data
+    if (result.authUrl) {
+      return NextResponse.json({
+        id: result.data.id,
+        authUrl: result.authUrl
+      });
     }
+    
+    // Otherwise, just return the provider data
+    return NextResponse.json(result.data, { status: 201 });
   } catch (error) {
-    console.error('Error processing request:', error);
-    if (error instanceof Error) {
-      console.error(`Error details: ${error.message}`);
-      console.error(`Error stack: ${error.stack}`);
-    }
+    console.error('Error in POST /api/git-providers:', error);
     return NextResponse.json(
-      {
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : undefined,
-      },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }

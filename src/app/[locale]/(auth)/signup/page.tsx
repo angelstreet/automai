@@ -8,7 +8,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { createBrowserClient } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -21,6 +21,20 @@ export default function SignUpPage() {
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const { user, loading, error: authError, signUp, signInWithOAuth } = useAuth();
+
+  React.useEffect(() => {
+    if (user && !loading) {
+      router.push(`/${locale}/${user.user_metadata?.tenant_id || 'default'}/dashboard`);
+    }
+  }, [user, loading, router, locale]);
+
+  React.useEffect(() => {
+    if (authError) {
+      setError(authError.message);
+    }
+  }, [authError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,48 +49,24 @@ export default function SignUpPage() {
     }
 
     try {
-      // Create user with Supabase
-      const supabase = createBrowserClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/${locale}/auth-redirect`,
-          data: {
-            name: name,
-          }
-        }
-      });
+      // Create user with our auth hook
+      const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
+      const result = await signUp(email, password, name, redirectUrl);
 
-      if (signUpError) {
-        setError(signUpError.message);
-        return;
-      }
-
-      // Check if email confirmation is required
-      if (data?.user && data.session) {
+      if (result?.session) {
         // Email confirmation not required, user is signed in
         setSuccess(true);
 
-        // Also create a record in our database with additional metadata
-        try {
-          // User is created in the database via Supabase webhook/trigger
-
-          // For now, we'll just show success and redirect
-          setTimeout(() => {
-            router.push(`/${locale}/auth-redirect`);
-          }, 2000);
-        } catch (dbError: any) {
-          console.error('Error creating user record:', dbError);
-        }
-      } else if (data?.user) {
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          router.push(`/${locale}/${result.user?.user_metadata?.tenant_id || 'default'}/dashboard`);
+        }, 2000);
+      } else if (result?.user) {
         // Email confirmation required
         setSuccess(true);
-      } else {
-        setError('Something went wrong. Please try again.');
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign up');
+      setError(err.message || 'An error occurred');
     } finally {
       setIsSubmitting(false);
     }
@@ -84,30 +74,16 @@ export default function SignUpPage() {
 
   const handleOAuthSignUp = async (provider: 'google' | 'github') => {
     try {
-      // Use Supabase OAuth
-      const supabase = createBrowserClient();
-      const { error, data } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/${locale}/auth-redirect`,
-          scopes: provider === 'github' ? 'repo,user' : 'email profile',
-          skipBrowserRedirect: true,
-        }
-      });
-
-      if (error) {
-        console.error('OAuth error:', error);
-        setError(error.message);
-        return;
-      }
+      // Use our auth hook for OAuth
+      const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
+      const result = await signInWithOAuth(provider, redirectUrl);
       
-      // Redirect to the OAuth provider's authorization page
-      if (data?.url) {
-        window.location.href = data.url;
+      if (result?.url) {
+        // Redirect to OAuth provider
+        window.location.href = result.url;
       }
-    } catch (error) {
-      console.error('OAuth error:', error);
-      setError('Authentication service unavailable');
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
     }
   };
 

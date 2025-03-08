@@ -20,18 +20,21 @@ These guidelines cover how to properly integrate with Supabase services includin
 
 ## Three-Layer Architecture
 
-We use a three-layer architecture for all Supabase database operations:
+We use a strict three-layer architecture for all Supabase database operations:
 
 1. **Server DB Layer** (Core)
    - Lives in `/src/lib/supabase/db.ts`
    - Contains ALL actual Supabase database calls
+   - Only this layer should create Supabase clients using `createServerClient`
    - Uses server-side Supabase client with cookies()
    - Never imported directly by client components
+   - Handles database connection, queries, and raw data formatting
 
 2. **Server Actions Layer** (Bridge)
    - Lives in `/src/app/actions/*.ts`
    - Server-only functions marked with 'use server'
-   - Calls the Server DB Layer functions
+   - MUST NOT create Supabase clients directly
+   - MUST import and call functions from the Server DB Layer
    - Adds error handling, validation, and business logic
    - Provides a clean API for client components
    - Returns data in a consistent format (e.g., {success, data, error})
@@ -39,7 +42,8 @@ We use a three-layer architecture for all Supabase database operations:
 3. **Client Hooks Layer** (Interface)
    - Lives in `/src/hooks/*.ts`
    - Client-side React hooks marked with 'use client'
-   - Calls Server Actions (not Server DB directly)
+   - MUST NOT create Supabase clients directly
+   - MUST call Server Actions (not Server DB directly)
    - Manages loading states, errors, and data caching
    - Provides a React-friendly interface for components
 
@@ -47,6 +51,12 @@ We use a three-layer architecture for all Supabase database operations:
 
 1. Client Component → Client Hook → Server Action → Server DB → Supabase
 2. Server Component → Server DB → Supabase (direct access)
+
+### Key Restrictions
+
+- Only the Server DB Layer should create Supabase clients
+- Server Actions should never directly access Supabase
+- Client Hooks should never directly access Supabase or the Server DB Layer
 
 ## Detailed Rules
 

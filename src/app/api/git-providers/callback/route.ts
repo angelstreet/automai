@@ -1,25 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { handleOAuthCallback } from '@/app/actions/git-providers';
 
-import { createClient } from '@/lib/supabase/server';
-
-import db from '@/lib/supabase/db';
-import * as repositoryService from '@/lib/services/repositories';
-import { GitProviderType } from '@/types/repositories';
-
-// GET /api/git-providers/callback
-export async function GET(request: Request) {
+/**
+ * GET /api/git-providers/callback
+ * Handle OAuth callback for git providers
+ */
+export async function GET(request: NextRequest) {
   try {
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     const state = searchParams.get('state');
@@ -39,49 +26,27 @@ export async function GET(request: Request) {
       );
     }
 
-    // Parse the state parameter
-    let stateData;
-    try {
-      stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-    } catch (e) {
+    // Call the server action to handle the OAuth callback
+    const result = await handleOAuthCallback(code, state);
+    
+    if (!result.success) {
       return NextResponse.json(
-        { success: false, message: 'Invalid state parameter' },
-        { status: 400 },
+        { success: false, message: result.error || 'Failed to process OAuth callback' },
+        { status: 400 }
       );
     }
-
-    const { providerId, redirectUri } = stateData;
-
-    // Get the provider
-    const provider = await db.gitProvider.findUnique({
-      where: { id: providerId },
-    });
-
-    if (!provider || provider.userId !== session.user.id) {
-      return NextResponse.json(
-        { success: false, message: 'Provider not found or not authorized' },
-        { status: 403 },
-      );
-    }
-
-    // Get the appropriate provider service
-    const providerService = repositoryService.getGitProviderService(
-      provider.name as GitProviderType,
-    );
-
-    // Exchange the code for an access token
-    const tokenData = await providerService.exchangeCodeForToken(code, redirectUri);
-
-    // Update the provider with the token data
-    const updatedProvider = await repositoryService.updateGitProvider(providerId, tokenData);
-
+    
     // Redirect to the repositories page
-    return NextResponse.redirect(new URL(`/repositories?provider=${providerId}`, request.url));
+    if (result.redirectUrl) {
+      return NextResponse.redirect(new URL(result.redirectUrl, request.url));
+    }
+    
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error handling OAuth callback:', error);
+    console.error('Error in GET /api/git-providers/callback:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to process OAuth callback' },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }

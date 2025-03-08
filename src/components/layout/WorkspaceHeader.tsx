@@ -1,8 +1,6 @@
 'use client';
 
-import Cookies from 'js-cookie';
 import { ChevronUp, Bell, Search } from 'lucide-react';
-import { useParams } from 'next/navigation';
 import * as React from 'react';
 import { User } from '@supabase/supabase-js';
 import Link from 'next/link';

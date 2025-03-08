@@ -1,58 +1,34 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { syncRepository } from '@/app/actions/repositories';
 
-import { createClient } from '@/lib/supabase/server';
+type Props = {
+  params: { id: string };
+};
 
-import db from '@/lib/supabase/db';
-import * as repositoryService from '@/lib/services/repositories';
-
-// Helper to check if user has access to the repository
-async function checkRepositoryAccess(id: string, userId: string) {
-  const repository = await db.repository.findUnique({
-    where: { id },
-    include: {
-      provider: true,
-    },
-  });
-
-  if (!repository) {
-    return { success: false, message: 'Repository not found', status: 404 };
-  }
-
-  if (repository.provider.userId !== userId) {
-    return { success: false, message: 'Not authorized to access this repository', status: 403 };
-  }
-
-  return { success: true, repository };
-}
-
-// POST /api/repositories/sync/[id]
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+/**
+ * POST /api/repositories/sync/[id]
+ * Sync a repository by ID
+ */
+export async function POST(request: NextRequest, { params }: Props) {
   try {
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    const { id } = params;
+    
+    // Call the server action to sync repository
+    const result = await syncRepository(id);
+    
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to sync repository' },
+        { status: 400 }
+      );
     }
-
-    const { success, message, status } = await checkRepositoryAccess(params.id, session.user.id);
-
-    if (!success) {
-      return NextResponse.json({ success, message }, { status: status });
-    }
-
-    const repository = await repositoryService.syncRepository(params.id);
-
-    return NextResponse.json(repository);
+    
+    return NextResponse.json(result.data);
   } catch (error) {
-    console.error('Error syncing repository:', error);
+    console.error('Error in POST /api/repositories/sync/[id]:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to sync repository' },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }

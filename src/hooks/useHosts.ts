@@ -8,7 +8,8 @@ import {
   addHost, 
   deleteHost as deleteHostAction, 
   testConnection as testConnectionAction,
-  testAllHosts 
+  testAllHosts,
+  updateHost
 } from '@/app/actions/hosts';
 
 export function useHosts(initialHosts: Host[] = []) {
@@ -22,8 +23,18 @@ export function useHosts(initialHosts: Host[] = []) {
   const fetchHosts = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await getHosts();
-      setHosts(data);
+      const result = await getHosts();
+      
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to fetch hosts',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      setHosts(result.data || []);
     } catch (error) {
       console.error('Error fetching hosts:', error);
       toast({
@@ -38,8 +49,18 @@ export function useHosts(initialHosts: Host[] = []) {
 
   const addNewHost = useCallback(async (data: Omit<Host, 'id'>) => {
     try {
-      const newHost = await addHost(data);
-      setHosts(prev => [...prev, newHost]);
+      const result = await addHost(data);
+      
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to add host',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      setHosts(prev => [...prev, result.data!]);
       toast({
         title: 'Success',
         description: 'Host added successfully',
@@ -56,15 +77,56 @@ export function useHosts(initialHosts: Host[] = []) {
     }
   }, [toast]);
 
+  const updateHostDetails = useCallback(async (id: string, updates: Partial<Omit<Host, 'id'>>) => {
+    try {
+      const result = await updateHost(id, updates);
+      
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to update host',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      setHosts(prev => prev.map(host => host.id === id ? result.data! : host));
+      toast({
+        title: 'Success',
+        description: 'Host updated successfully',
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating host:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update host',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [toast]);
+
   const deleteHost = useCallback(async (id: string) => {
     try {
       setIsDeleting(true);
-      await deleteHostAction(id);
+      const result = await deleteHostAction(id);
+      
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to delete host',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
       setHosts(prev => prev.filter(host => host.id !== id));
       toast({
         title: 'Success',
         description: 'Host deleted successfully',
       });
+      return true;
     } catch (error) {
       console.error('Error deleting host:', error);
       toast({
@@ -72,7 +134,7 @@ export function useHosts(initialHosts: Host[] = []) {
         description: 'Failed to delete host',
         variant: 'destructive',
       });
-      throw error;
+      return false;
     } finally {
       setIsDeleting(false);
     }
@@ -89,7 +151,7 @@ export function useHosts(initialHosts: Host[] = []) {
           return {
             ...host,
             status: result.success ? 'connected' : 'failed',
-            errorMessage: !result.success ? result.message : undefined,
+            errorMessage: !result.success ? result.error : undefined,
             lastConnected: result.success ? new Date() : host.lastConnected,
           };
         }
@@ -99,15 +161,16 @@ export function useHosts(initialHosts: Host[] = []) {
       if (result.success) {
         toast({
           title: 'Success',
-          description: 'Connection test successful',
+          description: result.message || 'Connection test successful',
         });
       } else {
         toast({
           title: 'Error',
-          description: result.message || 'Connection test failed',
+          description: result.error || 'Connection test failed',
           variant: 'destructive',
         });
       }
+      return result.success;
     } catch (error) {
       console.error('Error testing connection:', error);
       toast({
@@ -115,6 +178,7 @@ export function useHosts(initialHosts: Host[] = []) {
         description: 'Failed to test connection',
         variant: 'destructive',
       });
+      return false;
     } finally {
       setIsTesting(null);
     }
@@ -123,15 +187,25 @@ export function useHosts(initialHosts: Host[] = []) {
   const refreshConnections = useCallback(async () => {
     try {
       setIsRefreshing(true);
-      const freshHosts = await getHosts();
-      setHosts(freshHosts);
+      const hostsResult = await getHosts();
+      
+      if (!hostsResult.success) {
+        toast({
+          title: 'Error',
+          description: hostsResult.error || 'Failed to fetch hosts',
+          variant: 'destructive',
+        });
+        return false;
+      }
+      
+      setHosts(hostsResult.data || []);
 
       // Test all connections
       const testResults = await testAllHosts();
-      if (testResults.success) {
+      if (testResults.success && testResults.results) {
         const now = new Date();
         setHosts(prev => prev.map(host => {
-          const result = testResults.results.find(r => r.id === host.id);
+          const result = testResults.results?.find(r => r.id === host.id);
           if (result) {
             return {
               ...host,
@@ -142,12 +216,20 @@ export function useHosts(initialHosts: Host[] = []) {
           }
           return host;
         }));
+        
+        toast({
+          title: 'Success',
+          description: 'Hosts refreshed successfully',
+        });
+        return true;
+      } else {
+        toast({
+          title: 'Error',
+          description: testResults.error || 'Failed to test connections',
+          variant: 'destructive',
+        });
+        return false;
       }
-
-      toast({
-        title: 'Success',
-        description: 'Hosts refreshed successfully',
-      });
     } catch (error) {
       console.error('Error refreshing connections:', error);
       toast({
@@ -155,6 +237,7 @@ export function useHosts(initialHosts: Host[] = []) {
         description: 'Failed to refresh connections',
         variant: 'destructive',
       });
+      return false;
     } finally {
       setIsRefreshing(false);
     }
@@ -172,6 +255,7 @@ export function useHosts(initialHosts: Host[] = []) {
     isDeleting,
     isTesting,
     addHost: addNewHost,
+    updateHost: updateHostDetails,
     deleteHost,
     refreshConnections,
     testConnection,

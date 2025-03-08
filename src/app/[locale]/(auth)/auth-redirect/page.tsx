@@ -1,6 +1,8 @@
-import { createClient } from '@/lib/supabase';
+'use client';
 
-import { redirect } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 
 // Add error boundary component
 function ErrorFallback({ error, locale }: { error: Error; locale: string }) {
@@ -26,106 +28,66 @@ function ErrorFallback({ error, locale }: { error: Error; locale: string }) {
 function LoadingState() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center space-y-4 text-foreground">
-        <div className="flex items-center justify-center space-x-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-8 w-8 text-primary animate-pulse"
-          >
-            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-          </svg>
-          <h2 className="text-2xl font-bold">Authenticating...</h2>
-        </div>
-        <p>Please wait while we complete your authentication.</p>
+      <div className="text-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+        <p className="text-foreground">Completing authentication...</p>
       </div>
     </div>
   );
 }
 
-export default async function AuthRedirectPage({
-  params,
-  searchParams,
-}: {
-  params: { locale: string };
-  searchParams: { code?: string; error?: string; error_description?: string };
-}) {
-  // Properly await params and searchParams
-  const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
+export default function AuthRedirectPage() {
+  const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const { user, loading, error, refreshUser } = useAuth();
+  const [authError, setAuthError] = useState<Error | null>(null);
+  const locale = params.locale as string;
   
-  // Default locale if undefined
-  const locale = resolvedParams?.locale || 'en';
-  
-  try {
-    // Safely access search params
-    const code = resolvedSearchParams?.code;
-    const error = resolvedSearchParams?.error;
-    const errorDescription = resolvedSearchParams?.error_description;
-    
-    // Log the search params (debug)
-    console.log('Auth redirect page searchParams:', {
-      code: code ? `${code.substring(0, 6)}...` : undefined,
-      error,
-      errorDescription
-    });
-    
-    // Check for errors in search params
-    if (error) {
-      console.error('OAuth error in redirect:', {
-        error,
-        description: errorDescription
-      });
-      redirect(`/${locale}/login?error=${encodeURIComponent(errorDescription || error)}`);
-      // Return loading state to prevent rendering issues while redirect happens
-      return <LoadingState />;
+  // Get search params
+  const code = searchParams.get('code');
+  const errorParam = searchParams.get('error');
+  const errorDescription = searchParams.get('error_description');
+
+  useEffect(() => {
+    async function handleAuthRedirect() {
+      try {
+        // If there's an error in the URL, show it
+        if (errorParam) {
+          setAuthError(new Error(errorDescription || errorParam));
+          return;
+        }
+
+        // If no code is present, this isn't an auth callback
+        if (!code) {
+          setAuthError(new Error('No authentication code provided'));
+          return;
+        }
+
+        // Refresh the user data to get the latest session
+        await refreshUser();
+        
+        // If we have a user, redirect to their dashboard
+        if (user) {
+          const tenantId = user.user_metadata?.tenant_id || 'default';
+          router.push(`/${locale}/${tenantId}/dashboard`);
+        }
+      } catch (err) {
+        console.error('Error in auth redirect:', err);
+        setAuthError(err instanceof Error ? err : new Error('Authentication failed'));
+      }
     }
-    
-    // If no code is provided, redirect to login
-    if (!code) {
-      console.error('No code provided in auth redirect');
-      redirect(`/${locale}/login?error=No authentication code provided`);
-      // Return loading state to prevent rendering issues while redirect happens
-      return <LoadingState />;
+
+    if (!loading) {
+      handleAuthRedirect();
     }
-    
-    // Create Supabase client
-    const supabase = await createClient();
-    
-    // Check for existing session first
-    const { data: sessionData } = await supabase.auth.getSession();
-    
-    // If we already have a session, redirect to dashboard
-    if (sessionData?.session) {
-      console.log('User already has a valid session');
-      const tenant = sessionData.session.user.user_metadata?.tenant_name || 'trial';
-      const dashboardUrl = `/${locale}/${tenant}/dashboard`;
-      redirect(dashboardUrl);
-      return <LoadingState />;
-    }
-    
-    // No need to exchange the code - the middleware will handle this automatically
-    // Just redirect to the dashboard and let the middleware handle the session
-    console.log('Redirecting to dashboard, middleware will handle session');
-    redirect(`/${locale}/trial/dashboard`);
-    return <LoadingState />;
-  } catch (error) {
-    // Don't catch NEXT_REDIRECT errors
-    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
-      throw error; // Rethrow to allow the redirect to happen
-    }
-    
-    console.error('Unexpected error in auth-redirect:', error);
-    
-    // Return error component instead of redirecting to prevent redirect loops
-    return <ErrorFallback error={error instanceof Error ? error : new Error('Unknown authentication error')} locale={locale} />;
+  }, [code, errorParam, errorDescription, loading, user, refreshUser, router, locale]);
+
+  // Show error if there is one
+  if (authError) {
+    return <ErrorFallback error={authError} locale={locale} />;
   }
-  
-  // This should never be reached, but provide a fallback UI just in case
+
+  // Show loading state while processing
   return <LoadingState />;
 }

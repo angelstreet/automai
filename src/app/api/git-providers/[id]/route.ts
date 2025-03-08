@@ -1,86 +1,62 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import db from '@/lib/supabase/db';
-import * as repositoryService from '@/lib/services/repositories';
+import { NextRequest, NextResponse } from 'next/server';
+import { getGitProvider, deleteGitProvider } from '@/app/actions/git-providers';
 
-// Helper to check if user has access to the provider
-async function checkProviderAccess(id: string, userId: string) {
-  const provider = await db.gitProvider.findUnique({
-    where: { id },
-  });
+type Props = {
+  params: { id: string };
+};
 
-  if (!provider) {
-    return { success: false, message: 'Provider not found', status: 404 };
-  }
-
-  if (provider.userId !== userId) {
-    return { success: false, message: 'Not authorized to access this provider', status: 403 };
-  }
-
-  return { success: true, provider };
-}
-
-// GET /api/git-providers/[id]
-export async function GET(request: Request, context: { params: { id: string } }) {
+/**
+ * GET /api/git-providers/[id]
+ * Get a git provider by ID
+ */
+export async function GET(request: NextRequest, { params }: Props) {
   try {
-    const { params } = context;
-    const supabase = await createClient();
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    const { id } = params;
+    
+    // Call the server action to get git provider
+    const result = await getGitProvider(id);
+    
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to fetch git provider' },
+        { status: 400 }
+      );
     }
-
-    const { success, provider, message, status } = await checkProviderAccess(
-      params.id,
-      session.user.id,
-    );
-
-    if (!success) {
-      return NextResponse.json({ success, message }, { status: status });
-    }
-
-    return NextResponse.json(provider);
+    
+    return NextResponse.json(result.data);
   } catch (error) {
-    console.error('Error fetching git provider:', error);
+    console.error('Error in GET /api/git-providers/[id]:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch git provider' },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
 
-// DELETE /api/git-providers/[id]
-export async function DELETE(request: Request, context: { params: { id: string } }) {
+/**
+ * DELETE /api/git-providers/[id]
+ * Delete a git provider by ID
+ */
+export async function DELETE(request: NextRequest, { params }: Props) {
   try {
-    const { params } = context;
-    const supabase = await createClient();
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    const { id } = params;
+    
+    // Call the server action to delete git provider
+    const result = await deleteGitProvider(id);
+    
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to delete git provider' },
+        { status: 400 }
+      );
     }
-
-    const { success, message, status } = await checkProviderAccess(params.id, session.user.id);
-
-    if (!success) {
-      return NextResponse.json({ success, message }, { status: status });
-    }
-
-    await repositoryService.deleteGitProvider(params.id);
-
-    return NextResponse.json({ success: true, message: 'Provider deleted successfully' });
+    
+    return NextResponse.json({ success: true, message: 'Git provider deleted successfully' });
   } catch (error) {
-    console.error('Error deleting git provider:', error);
+    console.error('Error in DELETE /api/git-providers/[id]:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to delete git provider' },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }

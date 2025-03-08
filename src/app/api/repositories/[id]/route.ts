@@ -1,6 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { 
+  getRepository, 
+  updateRepository, 
+  deleteRepository 
+} from '@/app/actions/repositories';
 
-import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 import db from '@/lib/supabase/db';
@@ -34,123 +38,93 @@ async function checkRepositoryAccess(id: string, userId: string) {
   return { success: true, repository };
 }
 
-// GET /api/repositories/[id]
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+type Props = {
+  params: { id: string };
+};
+
+/**
+ * GET /api/repositories/[id]
+ * Get a repository by ID
+ */
+export async function GET(request: NextRequest, { params }: Props) {
   try {
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { success, repository, message, status } = await checkRepositoryAccess(
-      params.id,
-      session.user.id,
-    );
-
-    if (!success) {
-      return NextResponse.json({ success, message }, { status: status });
-    }
-
-    return NextResponse.json(repository);
-  } catch (error) {
-    console.error('Error fetching repository:', error);
-    return NextResponse.json(
-      { success: false, message: 'Failed to fetch repository' },
-      { status: 500 },
-    );
-  }
-}
-
-// PATCH /api/repositories/[id]
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { success, message, status } = await checkRepositoryAccess(params.id, session.user.id);
-
-    if (!success) {
-      return NextResponse.json({ success, message }, { status: status });
-    }
-
-    const body = await request.json();
-    const validatedData = RepositoryUpdateSchema.parse(body);
-
-    // If projectId is provided, verify that the project belongs to the user
-    if (validatedData.projectId) {
-      const project = await db.project.findUnique({
-        where: { id: validatedData.projectId },
-      });
-
-      if (!project || project.ownerId !== session.user.id) {
-        return NextResponse.json(
-          { success: false, message: 'Project not found or not authorized' },
-          { status: 403 },
-        );
-      }
-    }
-
-    const repository = await repositoryService.updateRepository(params.id, validatedData);
-
-    return NextResponse.json(repository);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
+    const { id } = params;
+    
+    // Call the server action to get repository
+    const result = await getRepository(id);
+    
+    if (!result.success) {
       return NextResponse.json(
-        { success: false, message: 'Invalid request data', errors: error.errors },
-        { status: 400 },
+        { error: result.error || 'Failed to fetch repository' },
+        { status: 400 }
       );
     }
-
-    console.error('Error updating repository:', error);
+    
+    return NextResponse.json(result.data);
+  } catch (error) {
+    console.error('Error in GET /api/repositories/[id]:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to update repository' },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
 
-// DELETE /api/repositories/[id]
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+/**
+ * PATCH /api/repositories/[id]
+ * Update a repository by ID
+ */
+export async function PATCH(request: NextRequest, { params }: Props) {
   try {
-    const cookieStore = cookies();
-    const supabase = await createClient(cookieStore);
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+    const { id } = params;
+    
+    // Parse request body
+    const body = await request.json();
+    
+    // Call the server action to update repository
+    const result = await updateRepository(id, body);
+    
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to update repository' },
+        { status: 400 }
+      );
     }
+    
+    return NextResponse.json(result.data);
+  } catch (error) {
+    console.error('Error in PATCH /api/repositories/[id]:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
 
-    const { success, message, status } = await checkRepositoryAccess(params.id, session.user.id);
-
-    if (!success) {
-      return NextResponse.json({ success, message }, { status: status });
+/**
+ * DELETE /api/repositories/[id]
+ * Delete a repository by ID
+ */
+export async function DELETE(request: NextRequest, { params }: Props) {
+  try {
+    const { id } = params;
+    
+    // Call the server action to delete repository
+    const result = await deleteRepository(id);
+    
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Failed to delete repository' },
+        { status: 400 }
+      );
     }
-
-    await repositoryService.deleteRepository(params.id);
-
+    
     return NextResponse.json({ success: true, message: 'Repository deleted successfully' });
   } catch (error) {
-    console.error('Error deleting repository:', error);
+    console.error('Error in DELETE /api/repositories/[id]:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to delete repository' },
-      { status: 500 },
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }

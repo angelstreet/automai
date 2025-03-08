@@ -29,7 +29,8 @@ import {
   TestTube,
   BarChart,
   Menu,
-  X
+  X,
+  FolderKanban
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -59,6 +60,12 @@ export function AppSidebar({ user, tenant, locale }: AppSidebarProps) {
       name: t('Dashboard.title'),
       href: `/${locale}/${tenant}/dashboard`,
       icon: LayoutDashboard,
+      roles: ['user', 'admin'],
+    },
+    {
+      name: t('Projects.projects'),
+      href: `/${locale}/${tenant}/projects`,
+      icon: FolderKanban,
       roles: ['user', 'admin'],
     },
     {
