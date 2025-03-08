@@ -7,7 +7,7 @@ import {
   getHost, 
   updateHost, 
   deleteHost, 
-  testConnection 
+  testHostConnection as testHostConnectionApi
 } from '@/app/actions/hosts';
 
 export function useHost(initialHostId?: string) {
@@ -162,7 +162,7 @@ export function useHost(initialHostId?: string) {
       setIsTesting(true);
       setError(null);
       
-      const result = await testConnection(host.id);
+      const result = await testHostConnectionApi(host.id);
       
       if (!result.success) {
         setError(new Error(result.error || 'Failed to test connection'));
@@ -191,8 +191,7 @@ export function useHost(initialHostId?: string) {
         return {
           ...prev,
           status: 'connected',
-          errorMessage: undefined,
-          lastConnected: new Date()
+          errorMessage: undefined
         };
       });
       
@@ -202,7 +201,7 @@ export function useHost(initialHostId?: string) {
       });
       
       return true;
-    } catch (err) {
+    } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to test connection';
       setError(err instanceof Error ? err : new Error(errorMessage));
       toast({

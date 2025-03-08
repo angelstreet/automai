@@ -7,7 +7,7 @@ import {
   getHosts, 
   addHost, 
   deleteHost as deleteHostAction, 
-  testConnection as testConnectionAction,
+  testHostConnection as testConnectionAction,
   testAllHosts,
   updateHost
 } from '@/app/actions/hosts';

@@ -26,21 +26,25 @@ export function useTenants() {
 
     try {
       setIsLoading(true);
-      const data = await getTenants(user.id);
+      const response = await getTenants(user.id);
       
-      // Map database tenants to UI tenants
-      const mappedTenants = data.map(tenant => ({
-        id: tenant.id,
-        name: tenant.name,
-        iconName: 'building',
-      }));
+      if (response.success && response.data) {
+        // Map database tenants to UI tenants
+        const mappedTenants = response.data.map((tenant: { id: string; name: string }) => ({
+          id: tenant.id,
+          name: tenant.name,
+          iconName: 'building',
+        }));
 
-      setTenants(mappedTenants);
+        setTenants(mappedTenants);
 
-      // Set current tenant from user metadata or first available tenant
-      const currentTenantId = user.user_metadata?.tenant_id || mappedTenants[0]?.id;
-      const current = mappedTenants.find(t => t.id === currentTenantId) || mappedTenants[0];
-      setCurrentTenant(current);
+        // Set current tenant from user metadata or first available tenant
+        const currentTenantId = user.user_metadata?.tenant_id || mappedTenants[0]?.id;
+        const current = mappedTenants.find((t: Tenant) => t.id === currentTenantId) || mappedTenants[0];
+        setCurrentTenant(current);
+      } else {
+        throw new Error(response.error || 'Failed to fetch tenants');
+      }
     } catch (error) {
       console.error('Error fetching tenants:', error);
       toast({

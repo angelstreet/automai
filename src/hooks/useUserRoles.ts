@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { 
   getUserRoles,
@@ -8,16 +9,15 @@ import {
   deleteUserRole,
   getCurrentUserRoles,
   UserRole,
-  UserRoleFilter
 } from '@/app/actions/user';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Code2, Building2, Factory } from 'lucide-react';
+import { Building2, Code2, Factory } from 'lucide-react';
 
 interface Role {
   id: string;
   name: string;
-  icon?: React.ReactNode;
+  icon?: string;
 }
 
 export function useUserRoles() {
@@ -35,16 +35,20 @@ export function useUserRoles() {
 
     try {
       setIsLoading(true);
-      const data = await getUserRoles(user.id);
+      const response = await getUserRoles(user.id);
       
-      // Map database roles to UI roles with icons
-      const rolesWithIcons = data.map(role => ({
-        id: role.id,
-        name: role.name,
-        icon: getRoleIcon(role.name),
-      }));
+      if (response.success && response.data) {
+        // Map database roles to UI roles with icons
+        const rolesWithIcons = response.data.map(role => ({
+          id: role.id,
+          name: role.name,
+          icon: getRoleIcon(role.name),
+        }));
 
-      setRoles(rolesWithIcons);
+        setRoles(rolesWithIcons);
+      } else {
+        throw new Error(response.error || 'Failed to fetch user roles');
+      }
     } catch (error) {
       console.error('Error fetching user roles:', error);
       toast({
@@ -54,8 +58,8 @@ export function useUserRoles() {
       });
       // Set default roles if fetch fails
       setRoles([
-        { id: 'user', name: 'User', icon: <Code2 className="h-4 w-4" /> },
-        { id: 'admin', name: 'Admin', icon: <Building2 className="h-4 w-4" /> },
+        { id: 'user', name: 'User', icon: getRoleIcon('user') },
+        { id: 'admin', name: 'Admin', icon: getRoleIcon('admin') },
       ]);
     } finally {
       setIsLoading(false);
@@ -66,13 +70,13 @@ export function useUserRoles() {
   const getRoleIcon = (roleName: string) => {
     switch (roleName.toLowerCase()) {
       case 'admin':
-        return <Building2 className="h-4 w-4" />;
+        return 'admin-icon';
       case 'developer':
-        return <Code2 className="h-4 w-4" />;
+        return 'developer-icon';
       case 'operator':
-        return <Factory className="h-4 w-4" />;
+        return 'operator-icon';
       default:
-        return <Code2 className="h-4 w-4" />;
+        return 'user-icon';
     }
   };
 
@@ -83,9 +87,18 @@ export function useUserRoles() {
 
   const create = async (data: Partial<UserRole>) => {
     try {
-      const newRole = await createUserRole(data);
-      setRoles(prev => [newRole, ...prev]);
-      return newRole;
+      const response = await createUserRole(data);
+      if (response.success && response.data) {
+        const newRole = {
+          id: response.data.id,
+          name: response.data.name,
+          icon: getRoleIcon(response.data.name)
+        };
+        setRoles(prev => [newRole, ...prev]);
+        return newRole;
+      } else {
+        throw new Error(response.error || 'Failed to create user role');
+      }
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to create user role');
     }
@@ -93,11 +106,20 @@ export function useUserRoles() {
 
   const update = async (id: string, data: Partial<UserRole>) => {
     try {
-      const updatedRole = await updateUserRole(id, data);
-      setRoles(prev => 
-        prev.map(role => role.id === id ? updatedRole : role)
-      );
-      return updatedRole;
+      const response = await updateUserRole(id, data);
+      if (response.success && response.data) {
+        const updatedRole = {
+          id: response.data.id,
+          name: response.data.name,
+          icon: getRoleIcon(response.data.name)
+        };
+        setRoles(prev => 
+          prev.map(role => role.id === id ? updatedRole : role)
+        );
+        return updatedRole;
+      } else {
+        throw new Error(response.error || 'Failed to update user role');
+      }
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to update user role');
     }
@@ -115,19 +137,23 @@ export function useUserRoles() {
   // Hook to get current user's roles
   const useCurrentUserRoles = () => {
     const [currentRoles, setCurrentRoles] = useState<UserRole[]>([]);
-    const [currentLoading, setCurrentLoading] = useState(true);
+    const [isCurrentLoading, setIsCurrentLoading] = useState(true);
     const [currentError, setCurrentError] = useState<Error | null>(null);
 
     const fetchCurrentRoles = useCallback(async () => {
       try {
-        setCurrentLoading(true);
+        setIsCurrentLoading(true);
         setCurrentError(null);
-        const data = await getCurrentUserRoles();
-        setCurrentRoles(data);
+        const response = await getCurrentUserRoles();
+        if (response.success && response.data) {
+          setCurrentRoles(response.data);
+        } else {
+          throw new Error(response.error || 'Failed to fetch current user roles');
+        }
       } catch (err) {
         setCurrentError(err instanceof Error ? err : new Error('Failed to fetch current user roles'));
       } finally {
-        setCurrentLoading(false);
+        setIsCurrentLoading(false);
       }
     }, []);
 
@@ -137,7 +163,7 @@ export function useUserRoles() {
 
     return {
       currentRoles,
-      currentLoading,
+      isCurrentLoading,
       currentError,
       refreshCurrentRoles: fetchCurrentRoles
     };

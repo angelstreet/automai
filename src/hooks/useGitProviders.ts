@@ -19,8 +19,12 @@ export function useGitProviders() {
   const fetchProviders = useCallback(async () => {
     try {
       setIsLoading(true);
-      const data = await getGitProviders();
-      setProviders(data);
+      const response = await getGitProviders();
+      if (response.success && response.data) {
+        setProviders(response.data);
+      } else {
+        throw new Error(response.error || 'Failed to fetch git providers');
+      }
     } catch (error) {
       console.error('Error fetching git providers:', error);
       toast({
