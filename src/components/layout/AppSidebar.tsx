@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
@@ -12,6 +13,7 @@ import {
 } from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
 import { useAuth } from '@/hooks/useAuth';
+import { Role } from '@/types/user';
 
 import { sidebarData } from './data/sidebarData';
 
@@ -19,25 +21,65 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const { role } = useRole();
 
-  if (!user) return null;
+  // Add debugging to help identify issues
+  useEffect(() => {
+    console.log('AppSidebar - Current user:', user);
+    console.log('AppSidebar - Current role:', role);
+  }, [user, role]);
+
+  // If user is not loaded yet, return a loading state
+  if (!user) {
+    console.log('AppSidebar - User not loaded yet, showing loading state');
+    return (
+      <Sidebar collapsible="icon" variant="floating" {...props}>
+        <SidebarHeader>
+          <div className="h-10 w-full animate-pulse bg-gray-200 rounded"></div>
+        </SidebarHeader>
+        <SidebarContent>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-8 w-full animate-pulse bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </SidebarContent>
+        <SidebarFooter>
+          <div className="h-10 w-full animate-pulse bg-gray-200 rounded"></div>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+    );
+  }
+
+  // Ensure role is a valid Role type
+  const userRole = role as Role;
+  console.log('AppSidebar - Using role:', userRole);
 
   // Filter out empty sections based on user role
   const filteredNavGroups = sidebarData.navGroups.filter((group) => {
     // Filter items in each group based on user role
     const accessibleItems = group.items.filter((item) => {
       if (!item.roles) return true;
-      return item.roles.includes(role);
+      const hasAccess = item.roles.includes(userRole);
+      console.log(`AppSidebar - Item "${item.title}" access:`, hasAccess, 'for role:', userRole);
+      return hasAccess;
     });
 
     // Only include groups that have at least one accessible item
     return accessibleItems.length > 0;
   });
 
+  console.log('AppSidebar - Filtered nav groups:', filteredNavGroups.map(g => g.title));
+
   // Get user avatar from metadata
   const avatarUrl = user.user_metadata && (user.user_metadata as any).avatar_url;
 
   return (
-    <Sidebar collapsible="icon" variant="floating" {...props}>
+    <Sidebar 
+      collapsible="icon" 
+      variant="floating" 
+      className="fixed left-0 top-0 z-30"
+      {...props}
+    >
       <SidebarHeader>
         <TeamSwitcher />
       </SidebarHeader>

@@ -50,6 +50,12 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent multiple submissions
+    if (isSubmitting || loading || isAuthenticating) {
+      return;
+    }
+    
     setError('');
     setIsSubmitting(true);
     setIsAuthenticating(true);
@@ -60,6 +66,10 @@ export default function LoginPage() {
       if (result?.session) {
         // Redirect to dashboard
         router.push(`/${locale}/${result.user?.user_metadata?.tenant_id || 'default'}/dashboard`);
+      } else {
+        // If no session but no error thrown, still reset the submission state
+        setIsSubmitting(false);
+        setIsAuthenticating(false);
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');

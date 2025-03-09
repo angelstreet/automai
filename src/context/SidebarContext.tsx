@@ -1,33 +1,66 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
-interface SidebarContextType {
-  isOpen: boolean;
-  toggle: () => void;
-  setIsOpen: (isOpen: boolean) => void;
-}
+import { SidebarContext as SidebarContextType } from '@/types/sidebar';
 
-const SidebarContext = createContext<SidebarContextType>({
-  isOpen: true,
-  toggle: () => null,
-  setIsOpen: () => null,
-});
+export const SidebarContext = createContext<SidebarContextType | null>(null);
 
 interface SidebarProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
 }
 
-export function SidebarProvider({ children }: SidebarProviderProps) {
-  const [isOpen, setIsOpen] = useState(true);
+export function SidebarProvider({ children, defaultOpen = true }: SidebarProviderProps) {
+  const [open, setOpen] = useState(defaultOpen);
+  const [openMobile, setOpenMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [state, setState] = useState<'expanded' | 'collapsed'>(
+    defaultOpen ? 'expanded' : 'collapsed',
+  );
 
-  const toggle = () => setIsOpen(!isOpen);
+  useEffect(() => {
+    const checkIsMobile = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth < 768);
+      }
+    };
+
+    checkIsMobile();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', checkIsMobile);
+      return () => window.removeEventListener('resize', checkIsMobile);
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setOpen(!open);
+    setState(!open ? 'expanded' : 'collapsed');
+  };
 
   return (
-    <SidebarContext.Provider value={{ isOpen, toggle, setIsOpen }}>
+    <SidebarContext.Provider
+      value={{
+        state,
+        open,
+        setOpen,
+        openMobile,
+        setOpenMobile,
+        isMobile,
+        toggleSidebar,
+      }}
+    >
       {children}
     </SidebarContext.Provider>
   );
 }
 
-export const useSidebar = () => useContext(SidebarContext); 
+export const useSidebar = () => {
+  const context = useContext(SidebarContext);
+
+  if (!context) {
+    throw new Error('useSidebar must be used within a SidebarProvider');
+  }
+
+  return context;
+};

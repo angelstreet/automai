@@ -38,7 +38,7 @@ interface NavGroupProps {
 export function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
-  const { currentRole } = useRole();
+  const { role } = useRole();
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
   const isActive = (href: string) => {
@@ -55,7 +55,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
   // Filter items based on role
   const filteredItems = items.filter((item) => {
     if (!item.roles) return true;
-    return item.roles.includes(currentRole);
+    return item.roles.includes(role);
   });
 
   return (
@@ -75,7 +75,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
               // Filter submenu items based on role
               const filteredSubItems = item.items?.filter((subItem) => {
                 if (!subItem.roles) return true;
-                return subItem.roles.includes(currentRole);
+                return subItem.roles.includes(role);
               });
 
               // Skip rendering if no accessible submenu items

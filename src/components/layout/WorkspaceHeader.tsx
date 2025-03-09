@@ -43,7 +43,9 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
   return (
     <>
       {headerVisible ? (
-        <header className={`sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b ${className}`}>
+        <header 
+          className={`sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b ${className}`}
+        >
           <div className="flex h-14 items-center">
             {/* Left section */}
             <div className="flex items-center px-4 h-full">

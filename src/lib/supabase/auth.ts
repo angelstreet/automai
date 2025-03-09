@@ -2,6 +2,9 @@ import { cookies } from 'next/headers';
 import { createClient } from './server';
 import db from './db';
 
+// Flag to track if we've already logged auth session missing errors
+let authSessionMissingErrorLogged = false;
+
 // Check if we're in an environment where Supabase auth is available
 const isUsingSupabase = () => {
   return process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -172,7 +175,18 @@ export const supabaseAuth = {
       const { data, error } = await supabase.auth.getUser();
 
       if (error) {
-        console.error('Error getting user:', error);
+        // Don't log Auth session missing errors as they're expected on login pages
+        if (error.message !== 'Auth session missing!' || !authSessionMissingErrorLogged) {
+          if (error.message === 'Auth session missing!') {
+            // Only log this error once per session
+            authSessionMissingErrorLogged = true;
+          }
+          
+          if (error.message !== 'Auth session missing!') {
+            console.error('Error getting user:', error);
+          }
+        }
+        
         return { 
           success: false, 
           error: error.message 

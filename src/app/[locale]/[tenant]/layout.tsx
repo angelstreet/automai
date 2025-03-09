@@ -1,113 +1,111 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
+import Cookies from 'js-cookie';
+import * as React from 'react';
 import { AppSidebar } from '@/components/layout/AppSidebar';
-import { useTranslations } from 'next-intl';
-import React from 'react';
-import { ThemeProviders } from '@/components/providers';
-import { User } from '@supabase/supabase-js';
+import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
+import { SidebarProvider } from '@/components/sidebar';
+import { TooltipProvider } from '@/components/shadcn/tooltip';
+import { useAuth } from '@/hooks/useAuth';
+import { ToasterProvider } from '@/components/shadcn/toaster';
+import { RoleProvider } from '@/context/RoleContext';
 
-interface TenantLayoutProps {
+// Cache session check timestamp to reduce API calls
+const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+let lastSessionCheck = 0;
+
+export default function TenantLayout({
+  children,
+  params,
+}: {
   children: React.ReactNode;
-  params: Promise<{
-    locale: string;
-    tenant: string;
-  }>;
-}
+  params: Promise<{ tenant: string; locale: string }>;
+}) {
+  const { tenant, locale } = React.use(params);
+  const { user, loading: isLoading, error, refreshUser } = useAuth();
+  const [loadingError, setLoadingError] = React.useState<string | null>(null);
 
-export default function TenantLayout({ children, params }: TenantLayoutProps) {
-  // Use React.use to unwrap the params Promise
-  const resolvedParams = React.use(params);
-  const { locale, tenant } = resolvedParams;
-  
-  const { user, loading, error } = useAuth();
-  const router = useRouter();
-  const t = useTranslations();
-  const [state, setState] = useState({
-    isLoading: true,
-    hasUser: false,
-    error: null as string | null,
-    tenant,
-    locale
-  });
-
-  useEffect(() => {
-    // Update state based on auth status
-    setState(prev => ({
-      ...prev,
-      isLoading: loading,
-      hasUser: !!user,
-      error: error ? error.message : null
-    }));
-
-    console.log('TenantLayout state:', {
-      isLoading: loading,
-      hasUser: !!user,
-      error: error ? error.message : null,
-      tenant,
-      locale
-    });
-
-    // If not loading and no user, redirect to login
-    if (!loading && !user && !error) {
-      console.log('No user found in TenantLayout, redirecting to login');
-      router.push(`/${locale}/login?callbackUrl=/${locale}/${tenant}/dashboard`);
+  // Check session only at intervals to reduce API calls
+  React.useEffect(() => {
+    const now = Date.now();
+    if (now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
+      try {
+        refreshUser();
+        lastSessionCheck = now;
+      } catch (err) {
+        console.error('Error checking session:', err);
+        setLoadingError('Failed to check session');
+      }
     }
-  }, [loading, user, error, locale, tenant, router]);
+  }, [refreshUser]);
 
-  // Show loading state
-  if (state.isLoading) {
+  // Log important state for debugging
+  React.useEffect(() => {
+    console.log('TenantLayout state:', {
+      isLoading,
+      hasUser: !!user,
+      error,
+      tenant,
+      locale,
+    });
+  }, [isLoading, user, error, tenant, locale]);
+
+  // Only show loading state while user data is being fetched
+  if (isLoading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-lg">{t('Common.loading')}</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  // Show error state
-  if (state.error) {
+  // Show error state if there's an error
+  if (error || loadingError) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="text-center max-w-md p-6 bg-destructive/10 rounded-lg border border-destructive">
-          <h2 className="text-xl font-semibold text-destructive mb-2">Authentication Error</h2>
-          <p className="mb-4">{state.error}</p>
-          <button 
-            onClick={() => router.push(`/${locale}/login`)}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-          >
-            Return to Login
-          </button>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="text-red-500 mb-4">Error: {error?.message || loadingError}</div>
+        <button
+          className="px-4 py-2 bg-primary text-white rounded"
+          onClick={() => {
+            window.location.href = `/${locale}/login`;
+          }}
+        >
+          Go to Login
+        </button>
       </div>
     );
   }
 
-  // If we have a user, render the layout
+  // Even if no user yet, we can still render the layout
+  // This prevents the layout from being null during SSR or when user data is still loading
+  // RouteGuard will handle redirections appropriately
+  if (!user) {
+    console.log('No user found in TenantLayout, continuing to render with fallback data');
+    // Continue rendering instead of returning null
+  }
+
+  const sidebarState = Cookies.get('sidebar:state') !== 'false';
+
   return (
-    <ThemeProviders>
-      <div className="flex h-screen overflow-hidden">
-        <AppSidebar 
-          user={user as any} 
-          tenant={tenant} 
-          locale={locale} 
-        />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <WorkspaceHeader 
-            user={user as any} 
-            tenant={tenant} 
-            locale={locale} 
-          />
-          <main className="flex-1 overflow-auto p-4 md:p-6">
-            {children}
-          </main>
-        </div>
-      </div>
-    </ThemeProviders>
+    <RoleProvider>
+      <SidebarProvider defaultOpen={sidebarState}>
+        <TooltipProvider>
+          <ToasterProvider />
+          <div className="relative flex min-h-screen w-full">
+            <AppSidebar />
+            <div 
+              className="flex-1 flex flex-col min-w-0 w-full overflow-hidden transition-all duration-200"
+              style={{ 
+                marginLeft: 'var(--sidebar-width-offset, 0)',
+                width: 'calc(100% - var(--sidebar-width-offset, 0))'
+              }}
+            >
+              <WorkspaceHeader tenant={tenant} />
+              <main className="flex-1 p-4 w-full max-w-full">{children}</main>
+            </div>
+          </div>
+        </TooltipProvider>
+      </SidebarProvider>
+    </RoleProvider>
   );
 }

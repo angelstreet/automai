@@ -11,7 +11,7 @@ export interface UserRoleFilter {
 }
 
 // Role type used in RoleContext
-export type Role = 'admin' | 'user' | 'developer' | 'operator';
+export type Role = 'admin' | 'tester' | 'developer' | 'viewer';
 
 // Interface for the UI representation of a role
 export interface UIRole {

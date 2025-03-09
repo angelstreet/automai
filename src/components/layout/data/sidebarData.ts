@@ -14,6 +14,7 @@ import {
   Server,
   GitBranch,
 } from 'lucide-react';
+import { Role } from '@/types/user';
 
 export type SidebarData = {
   user: {
@@ -32,11 +33,12 @@ export type SidebarData = {
       title: string;
       href: string;
       icon: any;
-      roles?: string[];
+      roles?: Role[];
       items?: {
         title: string;
         href: string;
         icon: any;
+        roles?: Role[];
       }[];
     }[];
   }[];
@@ -85,8 +87,18 @@ export const sidebarData: SidebarData = {
           icon: Code2,
           roles: ['admin', 'developer'],
           items: [
-            { title: 'Projects', href: '/development/projects', icon: FileCode },
-            { title: 'Use Cases', href: '/development/usecases', icon: TestTube },
+            { 
+              title: 'Projects', 
+              href: '/development/projects', 
+              icon: FileCode,
+              roles: ['admin', 'developer'],
+            },
+            { 
+              title: 'Use Cases', 
+              href: '/development/usecases', 
+              icon: TestTube,
+              roles: ['admin', 'developer'],
+            },
           ],
         },
         {

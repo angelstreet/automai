@@ -17,11 +17,16 @@ import { useRole } from '@/context/RoleContext';
 export function useUserRoles() {
   const [roles, setRoles] = useState<UIRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { role: currentRole, setRole: setCurrentRole } = useRole();
   const { toast } = useToast();
 
   const fetchRoles = useCallback(async () => {
+    // Don't try to fetch roles if auth is still loading or user is null
+    if (authLoading) {
+      return;
+    }
+    
     if (!user) {
       setRoles([]);
       setIsLoading(false);
@@ -47,15 +52,25 @@ export function useUserRoles() {
           setCurrentRole(response.data[0].name as any);
         }
       } else {
-        throw new Error(response.error || 'Failed to fetch user roles');
+        // Set default role if fetch fails with "User not found"
+        if (response.error === 'User not found') {
+          setRoles([
+            { id: user.id, name: 'user', icon: getRoleIcon('user') },
+          ]);
+        } else {
+          throw new Error(response.error || 'Failed to fetch user roles');
+        }
       }
     } catch (error) {
       console.error('Error fetching user roles:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch user roles',
-        variant: 'destructive',
-      });
+      // Don't show toast for expected errors like "User not found"
+      if (error instanceof Error && error.message !== 'User not found') {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch user roles',
+          variant: 'destructive',
+        });
+      }
       // Set default role if fetch fails
       setRoles([
         { id: user.id, name: 'user', icon: getRoleIcon('user') },
@@ -63,7 +78,7 @@ export function useUserRoles() {
     } finally {
       setIsLoading(false);
     }
-  }, [user, toast, currentRole, setCurrentRole]);
+  }, [user, authLoading, toast, currentRole, setCurrentRole]);
 
   // Helper function to get role icon
   const getRoleIcon = (roleName: string) => {
@@ -79,10 +94,12 @@ export function useUserRoles() {
     }
   };
 
-  // Fetch roles on mount or when user changes
+  // Fetch roles on mount or when user changes or auth loading state changes
   useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
+    if (!authLoading) {
+      fetchRoles();
+    }
+  }, [fetchRoles, authLoading]);
 
   const create = async (data: Partial<UserRole>) => {
     try {

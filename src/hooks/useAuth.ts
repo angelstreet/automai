@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { 
   signOut as signOutAction, 
   updateProfile as updateProfileAction, 
@@ -15,25 +15,58 @@ import {
 } from '@/app/actions/auth';
 import { supabaseAuth } from '@/lib/supabase/auth';
 
+// Cache time in milliseconds (5 minutes)
+const AUTH_CACHE_TIME = 5 * 60 * 1000;
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  
+  // Add refs to track last fetch time and if we're on a login page
+  const lastFetchTime = useRef<number>(0);
+  const isAuthPage = useRef<boolean>(false);
+  
+  // Check if we're on an auth page (login, signup, etc.)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      isAuthPage.current = path.includes('/login') || 
+                           path.includes('/signup') || 
+                           path.includes('/auth-redirect') ||
+                           path.includes('/forgot-password');
+    }
+  }, []);
 
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (force = false) => {
+    // Skip fetching on auth pages unless forced
+    if (isAuthPage.current && !force) {
+      setLoading(false);
+      return;
+    }
+    
+    // Check if we've fetched recently and can use cached data
+    const now = Date.now();
+    if (!force && now - lastFetchTime.current < AUTH_CACHE_TIME && user !== undefined) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
       const data = await getCurrentUser();
       setUser(data);
+      lastFetchTime.current = now;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch user'));
       setUser(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
+  // Only fetch user on initial load
   useEffect(() => {
     fetchUser();
   }, [fetchUser]);
@@ -41,6 +74,9 @@ export function useAuth() {
   const handleSignOut = async (formData: FormData) => {
     try {
       await signOutAction(formData);
+      // Clear user data immediately on sign out
+      setUser(null);
+      lastFetchTime.current = 0;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to sign out'));
     }
@@ -106,7 +142,8 @@ export function useAuth() {
         return null;
       }
       
-      await fetchUser(); // Refresh user data after sign in
+      // Force refresh user data after sign in
+      await fetchUser(true);
       return result.data;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to sign in'));
@@ -157,7 +194,7 @@ export function useAuth() {
   };
 
   const refreshUser = useCallback(async () => {
-    await fetchUser();
+    await fetchUser(true);
   }, [fetchUser]);
 
   const exchangeCodeForSession = useCallback(async () => {

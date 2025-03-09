@@ -24,6 +24,22 @@ export type ProfileUpdateData = {
 // Track if we've already logged a "No active session" error
 let noSessionErrorLogged = false;
 
+// Cache for user data to reduce redundant checks
+let userCache: {
+  data: any | null;
+  timestamp: number;
+  error: string | null;
+} | null = null;
+
+// Cache expiration time (30 seconds)
+const CACHE_EXPIRATION = 30 * 1000;
+
+// Add a function to invalidate the cache when needed
+export async function invalidateUserCache() {
+  userCache = null;
+  return { success: true };
+}
+
 /**
  * Handle OAuth callback from Supabase Auth
  * This follows the three-layer architecture: server action → server db
@@ -77,10 +93,13 @@ export async function handleAuthCallback(url: string) {
 }
 
 /**
- * Sign up a new user
+ * Sign up with email and password
  */
 export async function signUp(email: string, password: string, name: string, redirectUrl: string) {
   try {
+    // Invalidate user cache before sign up
+    await invalidateUserCache();
+    
     const result = await supabaseAuth.signUp(email, password, {
       redirectTo: redirectUrl,
       data: { name }
@@ -102,6 +121,9 @@ export async function signUp(email: string, password: string, name: string, redi
  */
 export async function signInWithPassword(email: string, password: string) {
   try {
+    // Invalidate user cache before sign in
+    await invalidateUserCache();
+    
     const result = await supabaseAuth.signInWithPassword(email, password);
     
     return { 
@@ -110,7 +132,10 @@ export async function signInWithPassword(email: string, password: string) {
       data: result.data || null 
     };
   } catch (error: any) {
-    console.error('Error signing in with password:', error);
+    // Don't log Auth session missing errors as they're expected during login
+    if (error.message !== 'Auth session missing!') {
+      console.error('Error signing in with password:', error);
+    }
     return { success: false, error: error.message || 'Failed to sign in', data: null };
   }
 }
@@ -140,11 +165,14 @@ export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl
  */
 export async function updatePassword(password: string) {
   try {
+    // Invalidate user cache before updating password
+    await invalidateUserCache();
+    
     const result = await supabaseAuth.updatePassword(password);
     
-    return {
-      success: result.success,
-      error: result.error || null
+    return { 
+      success: result.success, 
+      error: result.error || null 
     };
   } catch (error: any) {
     console.error('Error updating password:', error);
@@ -174,13 +202,16 @@ export async function resetPasswordForEmail(email: string, redirectUrl: string) 
  */
 export async function signOut(formData: FormData) {
   try {
+    // Invalidate user cache on sign out
+    await invalidateUserCache();
+    
     const result = await supabaseAuth.signOut();
     
     if (!result.success) {
       throw new Error(result.error || 'Failed to sign out');
     }
     
-    // Get locale from form data or default to 'en'
+    // Get the locale from the form data
     const locale = formData.get('locale') as string || 'en';
     
     // Redirect to login page
@@ -192,12 +223,15 @@ export async function signOut(formData: FormData) {
 }
 
 /**
- * Update the current user's profile
+ * Update user profile
  */
 export async function updateProfile(formData: FormData) {
   try {
     const name = formData.get('name') as string;
     const locale = formData.get('locale') as string || 'en';
+    
+    // Invalidate user cache before updating profile
+    await invalidateUserCache();
     
     // Update user metadata
     const result = await supabaseAuth.updateProfile({ name });
@@ -218,8 +252,29 @@ export async function updateProfile(formData: FormData) {
  * Get the current authenticated user
  */
 export async function getCurrentUser() {
+  // Check if we have a valid cache
+  const now = Date.now();
+  if (userCache && (now - userCache.timestamp < CACHE_EXPIRATION)) {
+    // Return cached data if available and not expired
+    if (userCache.error) {
+      // If the cached error is a session missing error, just return null
+      if (userCache.error === 'No active session' || userCache.error === 'Auth session missing!') {
+        return null;
+      }
+      throw new Error(userCache.error);
+    }
+    return userCache.data;
+  }
+
   try {
     const result = await supabaseAuth.getUser();
+    
+    // Update cache
+    userCache = {
+      data: result.success ? result.data : null,
+      timestamp: Date.now(),
+      error: result.success ? null : result.error || null
+    };
     
     if (!result.success || !result.data) {
       // For "No active session" errors or "Auth session missing!" errors, just return null instead of throwing an error
@@ -239,6 +294,13 @@ export async function getCurrentUser() {
     noSessionErrorLogged = false;
     return result.data as AuthUser;
   } catch (error) {
+    // Update cache with error
+    userCache = {
+      data: null,
+      timestamp: Date.now(),
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+    
     // Only log if we haven't logged this specific error before
     if (error instanceof Error && 
         (error.message === 'No active session' || error.message === 'Auth session missing!') && 

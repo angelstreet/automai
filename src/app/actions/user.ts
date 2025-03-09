@@ -108,6 +108,18 @@ export async function getCurrentUserRoles(): Promise<UserRoleResponse> {
     const userResult = await supabaseAuth.getUser();
     
     if (!userResult.success || !userResult.data) {
+      // Return a default role for unauthenticated users instead of an error
+      if (userResult.error === 'Auth session missing!' || userResult.error === 'No active session') {
+        return { 
+          success: true, 
+          data: [{ 
+            id: 'guest', 
+            name: 'guest',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }] 
+        };
+      }
       return { success: false, error: 'No user found' };
     }
     
