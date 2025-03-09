@@ -41,65 +41,9 @@ export async function invalidateUserCache() {
   return { success: true };
 }
 
-// Helper function to ensure user exists in database
-async function ensureUserInDatabase(authData: any): Promise<void> {
-  try {
-    if (!authData || !authData.user) {
-      console.error('No auth data provided to ensureUserInDatabase');
-      return;
-    }
-
-    const userId = authData.user.id;
-    
-    // Check if user already exists in database
-    const existingUser = await db.user.findUnique({
-      where: { id: userId }
-    });
-    
-    if (existingUser) {
-      // User exists, optionally update their metadata
-      console.log('User exists in database, no need to create:', userId);
-      return;
-    }
-    
-    // Extract metadata from auth user
-    const userData = {
-      id: userId,
-      email: authData.user.email,
-      name: authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'User',
-      user_role: authData.user.user_metadata?.role || 'viewer', // Use user_role column
-      tenant_id: authData.user.user_metadata?.tenant_id || 'trial',
-      provider: authData.user.app_metadata?.provider || 'email',
-    };
-    
-    // Create default tenant if it doesn't exist
-    let tenant = await db.tenant.findUnique({
-      where: { id: 'trial' }
-    });
-    
-    if (!tenant) {
-      console.log('Creating default trial tenant');
-      tenant = await db.tenant.create({
-        data: {
-          id: 'trial',
-          name: 'Trial',
-          plan: 'free',
-        }
-      });
-    }
-    
-    // Create user record in database
-    console.log('Creating new user record in database:', userData.email);
-    await db.user.create({
-      data: userData
-    });
-    
-    console.log('User record created successfully');
-  } catch (error) {
-    console.error('Error ensuring user in database:', error);
-    // Don't fail the authentication process if this fails
-  }
-}
+// User creation is now handled directly in the handleAuthCallback function
+// This ensures users are only created in the database during their first sign-in
+// rather than on every authentication attempt
 
 /**
  * Handle OAuth callback from Supabase Auth
@@ -122,12 +66,69 @@ export async function handleAuthCallback(url: string) {
     const result = await supabaseAuth.handleOAuthCallback(code);
     
     if (result.success && result.data) {
-      // Ensure user exists in database after successful authentication
-      await ensureUserInDatabase(result.data);
-      
-      // Get the tenant ID for redirection
+      // Get user info from the session
       const userData = result.data.session?.user;
-      const tenantId = userData?.user_metadata?.tenant_id || 'trial';
+      
+      if (!userData) {
+        throw new Error('No user data in session');
+      }
+      
+      const userId = userData.id;
+      
+      // First check if this user already exists in our database
+      console.log('Checking if user exists in database:', userId);
+      const existingUser = await db.user.findUnique({
+        where: { id: userId }
+      });
+      
+      // Only create the user if this is their first sign-in (user doesn't exist in our database yet)
+      if (!existingUser) {
+        console.log('First-time sign-in detected, creating user record...');
+        
+        try {
+          // Create default tenant if it doesn't exist
+          let tenant = await db.tenant.findUnique({
+            where: { id: 'trial' }
+          });
+          
+          if (!tenant) {
+            console.log('Creating default trial tenant');
+            tenant = await db.tenant.create({
+              data: {
+                id: 'trial',
+                name: 'Trial',
+                plan: 'free',
+              }
+            });
+          }
+          
+          // Extract user data for database record
+          const userDataForDb = {
+            id: userId,
+            email: userData.email,
+            name: userData.user_metadata?.name || userData.email?.split('@')[0] || 'User',
+            user_role: userData.user_metadata?.role || 'viewer',
+            tenant_id: userData.user_metadata?.tenant_id || 'trial',
+            provider: userData.app_metadata?.provider || 'email',
+          };
+          
+          // Create the user record
+          console.log('Creating new user record in database:', userDataForDb.email);
+          await db.user.create({
+            data: userDataForDb
+          });
+          
+          console.log('User record created successfully during first sign-in');
+        } catch (dbError) {
+          // Log the error but don't fail the authentication
+          console.error('Error creating user during first-time sign-in:', dbError);
+        }
+      } else {
+        console.log('User already exists in database:', userId);
+      }
+      
+      // Get the tenant ID for redirection - use from existing user if available, or default
+      const tenantId = existingUser?.tenant_id || userData.user_metadata?.tenant_id || 'trial';
       
       // Get the locale from URL or default to 'en'
       const pathParts = url.split('/');
@@ -172,10 +173,7 @@ export async function signUp(email: string, password: string, name: string, redi
       data: { name }
     });
     
-    if (result.success && result.data) {
-      // Ensure user exists in database after successful signup
-      await ensureUserInDatabase(result.data);
-    }
+    // Removed call to ensureUserInDatabase - will be handled during auth redirect
     
     return { 
       success: result.success, 
@@ -198,10 +196,7 @@ export async function signInWithPassword(email: string, password: string) {
     
     const result = await supabaseAuth.signInWithPassword(email, password);
     
-    if (result.success && result.data) {
-      // Ensure user exists in database after successful authentication
-      await ensureUserInDatabase(result.data);
-    }
+    // Removed call to ensureUserInDatabase - will be handled during auth redirect
     
     return { 
       success: result.success, 
