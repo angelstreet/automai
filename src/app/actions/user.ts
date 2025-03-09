@@ -20,9 +20,9 @@ export async function getUserRoles(userId: string): Promise<UserRoleResponse> {
     // Create a UserRole object from the user's role
     const userRole: UserRole = {
       id: userId, // Using userId as the role ID for simplicity
-      name: user.role || 'user', // Default to 'user' if role is not set
-      created_at: user.createdAt || new Date().toISOString(),
-      updated_at: user.updatedAt || new Date().toISOString()
+      name: user.user_role || 'user', // Changed from role to user_role - Default to 'user' if role is not set
+      created_at: user.created_at || new Date().toISOString(),
+      updated_at: user.updated_at || new Date().toISOString()
     };
     
     return { success: true, data: [userRole] };
@@ -41,7 +41,7 @@ export async function createUserRole(data: Partial<UserRole>): Promise<SingleUse
     
     const result = await db.user.update({
       where: { id: data.id },
-      data: { role: data.name }
+      data: { user_role: data.name } // Changed from role to user_role
     });
     
     if (!result) {
@@ -51,8 +51,8 @@ export async function createUserRole(data: Partial<UserRole>): Promise<SingleUse
     const userRole: UserRole = {
       id: data.id,
       name: data.name || 'user',
-      created_at: result.createdAt || new Date().toISOString(),
-      updated_at: result.updatedAt || new Date().toISOString()
+      created_at: result.created_at || new Date().toISOString(),
+      updated_at: result.updated_at || new Date().toISOString()
     };
     
     return { success: true, data: userRole };
@@ -67,7 +67,7 @@ export async function updateUserRole(id: string, updates: Partial<UserRole>): Pr
     // This function would update the user's role in the users table
     const result = await db.user.update({
       where: { id },
-      data: { role: updates.name }
+      data: { user_role: updates.name } // Changed from role to user_role
     });
     
     if (!result) {
@@ -76,9 +76,9 @@ export async function updateUserRole(id: string, updates: Partial<UserRole>): Pr
     
     const userRole: UserRole = {
       id,
-      name: updates.name || result.role || 'user',
-      created_at: result.createdAt || new Date().toISOString(),
-      updated_at: result.updatedAt || new Date().toISOString()
+      name: updates.name || result.user_role || 'user', // Changed from result.role to result.user_role
+      created_at: result.created_at || new Date().toISOString(),
+      updated_at: result.updated_at || new Date().toISOString()
     };
     
     return { success: true, data: userRole };
@@ -93,7 +93,7 @@ export async function deleteUserRole(id: string): Promise<{ success: boolean; er
     // Instead of deleting, we'll reset the role to 'user'
     await db.user.update({
       where: { id },
-      data: { role: 'user' }
+      data: { user_role: 'user' }
     });
     
     return { success: true };

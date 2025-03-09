@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { supabaseAuth} from '@/lib/supabase/auth';
+import db from '@/lib/supabase/db';
 
 export type AuthUser = {
   id: string;
@@ -40,6 +41,66 @@ export async function invalidateUserCache() {
   return { success: true };
 }
 
+// Helper function to ensure user exists in database
+async function ensureUserInDatabase(authData: any): Promise<void> {
+  try {
+    if (!authData || !authData.user) {
+      console.error('No auth data provided to ensureUserInDatabase');
+      return;
+    }
+
+    const userId = authData.user.id;
+    
+    // Check if user already exists in database
+    const existingUser = await db.user.findUnique({
+      where: { id: userId }
+    });
+    
+    if (existingUser) {
+      // User exists, optionally update their metadata
+      console.log('User exists in database, no need to create:', userId);
+      return;
+    }
+    
+    // Extract metadata from auth user
+    const userData = {
+      id: userId,
+      email: authData.user.email,
+      name: authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'User',
+      user_role: authData.user.user_metadata?.role || 'viewer', // Use user_role column
+      tenant_id: authData.user.user_metadata?.tenant_id || 'trial',
+      provider: authData.user.app_metadata?.provider || 'email',
+    };
+    
+    // Create default tenant if it doesn't exist
+    let tenant = await db.tenant.findUnique({
+      where: { id: 'trial' }
+    });
+    
+    if (!tenant) {
+      console.log('Creating default trial tenant');
+      tenant = await db.tenant.create({
+        data: {
+          id: 'trial',
+          name: 'Trial',
+          plan: 'free',
+        }
+      });
+    }
+    
+    // Create user record in database
+    console.log('Creating new user record in database:', userData.email);
+    await db.user.create({
+      data: userData
+    });
+    
+    console.log('User record created successfully');
+  } catch (error) {
+    console.error('Error ensuring user in database:', error);
+    // Don't fail the authentication process if this fails
+  }
+}
+
 /**
  * Handle OAuth callback from Supabase Auth
  * This follows the three-layer architecture: server action → server db
@@ -47,47 +108,53 @@ export async function invalidateUserCache() {
 export async function handleAuthCallback(url: string) {
   try {
     // Parse the URL to get the code
-    const requestUrl = new URL(url);
-    const code = requestUrl.searchParams.get('code');
+    const { searchParams } = new URL(url);
+    const code = searchParams.get('code');
     
-    // If there's no code, return an error
     if (!code) {
-      return { 
-        success: false, 
-        error: 'No authentication code provided',
-        redirectUrl: null
-      };
+      throw new Error('No code provided in URL');
     }
     
-    // Use the server DB layer (supabaseAuth service)
+    // Invalidate user cache before processing callback
+    await invalidateUserCache();
+    
+    // Handle the OAuth callback
     const result = await supabaseAuth.handleOAuthCallback(code);
     
-    if (!result.success || !result.data?.session) {
-      return { 
-        success: false, 
-        error: result.error || 'Authentication failed',
-        redirectUrl: null
+    if (result.success && result.data) {
+      // Ensure user exists in database after successful authentication
+      await ensureUserInDatabase(result.data);
+      
+      // Get the tenant ID for redirection
+      const userData = result.data.session?.user;
+      const tenantId = userData?.user_metadata?.tenant_id || 'trial';
+      
+      // Get the locale from URL or default to 'en'
+      const pathParts = url.split('/');
+      const localeIndex = pathParts.findIndex(part => part === 'auth-redirect') - 1;
+      const locale = localeIndex >= 0 ? pathParts[localeIndex] : 'en';
+      
+      // Redirect URL for after authentication
+      const redirectUrl = `/${locale}/${tenantId}/dashboard`;
+      
+      return {
+        success: true,
+        redirectUrl
       };
     }
     
-    // Determine the redirect URL
-    // Check if we have a locale in the URL
-    const locale = requestUrl.pathname.split('/')[1] || 'en';
-    const tenant = result.data.user.user_metadata?.tenant_id || 'default';
-    const redirectUrl = `/${locale}/${tenant}/dashboard`;
-    
-    return {
-      success: true,
-      error: null,
-      redirectUrl,
-      data: result.data
+    // Handle authentication failure
+    return { 
+      success: false, 
+      error: result.error || 'Failed to authenticate', 
+      redirectUrl: '/login?error=Authentication+failed'
     };
   } catch (error: any) {
     console.error('Error in handleAuthCallback:', error);
     return { 
       success: false, 
-      error: error.message || 'Authentication failed',
-      redirectUrl: null
+      error: error.message || 'Authentication failed', 
+      redirectUrl: '/login?error=Authentication+failed'
     };
   }
 }
@@ -104,6 +171,11 @@ export async function signUp(email: string, password: string, name: string, redi
       redirectTo: redirectUrl,
       data: { name }
     });
+    
+    if (result.success && result.data) {
+      // Ensure user exists in database after successful signup
+      await ensureUserInDatabase(result.data);
+    }
     
     return { 
       success: result.success, 
@@ -125,6 +197,11 @@ export async function signInWithPassword(email: string, password: string) {
     await invalidateUserCache();
     
     const result = await supabaseAuth.signInWithPassword(email, password);
+    
+    if (result.success && result.data) {
+      // Ensure user exists in database after successful authentication
+      await ensureUserInDatabase(result.data);
+    }
     
     return { 
       success: result.success, 
