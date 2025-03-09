@@ -142,6 +142,7 @@
   },
   "Profile": {
     "title": "Profile",
+    "profile": "Profile",
     "settings": "Profile Settings",
     "edit": "Edit Profile",
     "save": "Save Changes",
@@ -183,6 +184,25 @@
     "free": "Free",
     "pro": "Pro",
     "team": "Team"
+  },
+  "Projects": {
+    "projects": "Projects",
+    "title": "Projects",
+    "description": "Manage your projects",
+    "create": "Create Project",
+    "edit": "Edit Project",
+    "delete": "Delete Project",
+    "noProjects": "No projects found"
+  },
+  "Menu": {
+    "title": "Menu",
+    "dashboard": "Dashboard",
+    "projects": "Projects",
+    "hosts": "Hosts",
+    "repositories": "Repositories",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout"
   },
   "repositories": {
     "repositories": "Repositories",

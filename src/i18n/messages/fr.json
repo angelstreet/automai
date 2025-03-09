@@ -142,6 +142,7 @@
   },
   "Profile": {
     "title": "Profil",
+    "profile": "Profil",
     "settings": "Paramètres du profil",
     "edit": "Modifier le profil",
     "save": "Enregistrer les modifications",
@@ -154,8 +155,8 @@
     "removeAvatar": "Supprimer l'avatar",
     "accountSettings": "Paramètres du compte",
     "manageSettings": "Gérer les paramètres",
-    "upgradePlan": "Mettre à niveau",
-    "workspaceInfo": "Informations de l'espace de travail",
+    "upgradePlan": "Mettre à niveau le forfait",
+    "workspaceInfo": "Informations sur l'espace de travail",
     "manageTeam": "Gérer l'équipe",
     "sessionExpired": "Session expirée",
     "pleaseLogin": "Veuillez vous reconnecter pour continuer",
@@ -163,7 +164,7 @@
     "updating": "Mise à jour...",
     "update": "Mettre à jour",
     "enterName": "Entrez votre nom",
-    "plan": "Plan"
+    "plan": "Forfait"
   },
   "billing": {
     "title": "Facturation & Plans",
@@ -236,5 +237,24 @@
     "removeUser": "Supprimer",
     "confirmRemove": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
     "noMembers": "Aucun membre d'équipe trouvé"
+  },
+  "Projects": {
+    "projects": "Projets",
+    "title": "Projets",
+    "description": "Gérer vos projets",
+    "create": "Créer un projet",
+    "edit": "Modifier le projet",
+    "delete": "Supprimer le projet",
+    "noProjects": "Aucun projet trouvé"
+  },
+  "Menu": {
+    "title": "Menu",
+    "dashboard": "Tableau de bord",
+    "projects": "Projets",
+    "hosts": "Hôtes",
+    "repositories": "Dépôts",
+    "settings": "Paramètres",
+    "profile": "Profil",
+    "logout": "Déconnexion"
   }
 }

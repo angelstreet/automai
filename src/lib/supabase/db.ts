@@ -195,6 +195,36 @@ const db = {
       return data;
     },
     
+    async findMany(options: any = {}) {
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      
+      let builder = supabase.from('tenants').select();
+      
+      // Apply filters if provided
+      if (options.where) {
+        Object.entries(options.where).forEach(([key, value]) => {
+          builder = builder.eq(key, value);
+        });
+      }
+      
+      // Apply ordering
+      if (options.orderBy) {
+        Object.entries(options.orderBy).forEach(([key, value]) => {
+          builder = builder.order(key, { ascending: value === 'asc' });
+        });
+      }
+      
+      const { data, error } = await builder;
+      
+      if (error) {
+        console.error('Error finding tenants:', error);
+        return [];
+      }
+      
+      return data || [];
+    },
+    
     async create({ data }: { data: any }) {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);

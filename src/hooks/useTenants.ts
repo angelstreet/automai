@@ -28,7 +28,7 @@ export function useTenants() {
       setIsLoading(true);
       const response = await getTenants(user.id);
       
-      if (response.success && response.data) {
+      if (response.success && response.data && response.data.length > 0) {
         // Map database tenants to UI tenants
         const mappedTenants = response.data.map((tenant: { id: string; name: string }) => ({
           id: tenant.id,
@@ -43,7 +43,14 @@ export function useTenants() {
         const current = mappedTenants.find((t: Tenant) => t.id === currentTenantId) || mappedTenants[0];
         setCurrentTenant(current);
       } else {
-        throw new Error(response.error || 'Failed to fetch tenants');
+        // No tenants found or error occurred, create a default tenant
+        const defaultTenant = {
+          id: 'default',
+          name: 'Default',
+          iconName: 'building',
+        };
+        setTenants([defaultTenant]);
+        setCurrentTenant(defaultTenant);
       }
     } catch (error) {
       console.error('Error fetching tenants:', error);
@@ -52,14 +59,6 @@ export function useTenants() {
         description: 'Failed to fetch tenants',
         variant: 'destructive',
       });
-      // Set default tenant if fetch fails
-      const defaultTenant = {
-        id: 'default',
-        name: 'Default',
-        iconName: 'building',
-      };
-      setTenants([defaultTenant]);
-      setCurrentTenant(defaultTenant);
     } finally {
       setIsLoading(false);
     }
