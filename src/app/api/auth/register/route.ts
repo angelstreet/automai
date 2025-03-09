@@ -3,18 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import db from '@/lib/supabase/db';
-
-// Dynamically import supabaseAuthService to prevent errors when Supabase isn't available
-let supabaseAuthService: any;
-try {
-  const supabaseAuth = require('@/lib/services/supabase-auth');
-  supabaseAuthService = supabaseAuth.supabaseAuthService;
-} catch (error) {
-  console.warn('Supabase auth service not available');
-  supabaseAuthService = {
-    signUpWithEmail: () => ({ success: false, error: 'Supabase auth service not available' }),
-  };
-}
+import { supabaseAuth } from '@/lib/supabase/auth';
 
 // Schema for validation
 const userSchema = z.object({
@@ -89,7 +78,9 @@ export async function POST(request: NextRequest) {
 
     // If using Supabase in production, register with Supabase first
     
-    const supabaseResult = await supabaseAuthService.signUpWithEmail(email, password);
+    const supabaseResult = await supabaseAuth.signUp(email, password, {
+      data: { name }
+    });
 
     if (!supabaseResult.success) {
       return NextResponse.json(
