@@ -30,6 +30,7 @@ export function ProfileDropdown() {
   // Create a wrapper function for signOut
   const handleSignOut = () => {
     const formData = new FormData();
+    formData.append('locale', locale);
     signOut(formData);
   };
 

@@ -81,6 +81,14 @@ export function useAuth() {
       // Clear user data immediately on sign out
       setUser(null);
       lastFetchTime.current = 0;
+      
+      // Get the locale from the form data
+      const locale = formData.get('locale') as string || 'en';
+      
+      // Client-side redirect to login page
+      if (typeof window !== 'undefined') {
+        window.location.href = `/${locale}/login`;
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to sign out'));
     }

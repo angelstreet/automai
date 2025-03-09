@@ -208,14 +208,13 @@ export async function signOut(formData: FormData) {
     const result = await supabaseAuth.signOut();
     
     if (!result.success) {
+      console.error('Error signing out:', result.error);
       throw new Error(result.error || 'Failed to sign out');
     }
     
-    // Get the locale from the form data
-    const locale = formData.get('locale') as string || 'en';
-    
-    // Redirect to login page
-    redirect(`/${locale}/login`);
+    // Return success instead of redirecting
+    // Let the client handle the redirect
+    return { success: true };
   } catch (error) {
     console.error('Error signing out:', error);
     throw new Error('Failed to sign out');

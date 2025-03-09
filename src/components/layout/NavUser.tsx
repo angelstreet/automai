@@ -35,6 +35,7 @@ export function NavUser({ user }: NavUserProps) {
 
   const handleSignOut = async () => {
     const formData = new FormData();
+    formData.append('locale', locale);
     signOut(formData);
   };
 

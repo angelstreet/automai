@@ -7,7 +7,7 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
-export default function Page({ params }: { params: { locale: string } }) {
+export default async function Page({ params }: { params: { locale: string } }) {
   // Redirect to the trial tenant dashboard
   redirect(`/${params.locale}/trial/dashboard`);
 }

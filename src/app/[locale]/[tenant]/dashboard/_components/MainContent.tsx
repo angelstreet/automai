@@ -11,8 +11,35 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/shadcn/card';
+import { useEffect, useState } from 'react';
+import { getTasks, getRecentActivity, getTeamChat } from '../actions';
 
 export function MainContent() {
+  const [tasks, setTasks] = useState([]);
+  const [teamChat, setTeamChat] = useState([]);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Make API calls with component name in logs
+        console.log('[MainContent] Fetching tasks');
+        const tasksData = await getTasks();
+        setTasks(tasksData);
+        
+        console.log('[MainContent] Fetching team chat');
+        const chatData = await getTeamChat();
+        setTeamChat(chatData);
+        
+        console.log('[MainContent] Fetching recent activity');
+        await getRecentActivity(); // Fetching this but not using it yet
+      } catch (error) {
+        console.error('[MainContent] Error fetching data:', error);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
   return (
     <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
       {/* Left Column - Chart and Tasks */}
@@ -34,33 +61,17 @@ export function MainContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Update test cases for login flow</p>
-                  <p className="text-xs text-muted-foreground">Due in 2 days</p>
+              {tasks.map((task) => (
+                <div key={task.id} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{task.title}</p>
+                    <p className="text-xs text-muted-foreground">{task.dueDate}</p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    View
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm">
-                  View
-                </Button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Review automation scripts</p>
-                  <p className="text-xs text-muted-foreground">Due tomorrow</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  View
-                </Button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Prepare test report</p>
-                  <p className="text-xs text-muted-foreground">Due next week</p>
-                </div>
-                <Button variant="outline" size="sm">
-                  View
-                </Button>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -85,45 +96,21 @@ export function MainContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/avatars/01.svg" />
-                  <AvatarFallback>JD</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">John Doe</p>
-                  <p className="text-sm text-muted-foreground">
-                    Updated the test suite configuration
-                  </p>
-                  <p className="text-xs text-muted-foreground">2 hours ago</p>
+              {teamChat.map((chat) => (
+                <div key={chat.id} className="flex items-start gap-4">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={chat.avatar} />
+                    <AvatarFallback>{chat.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{chat.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {chat.message}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{chat.time}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/avatars/02.svg" />
-                  <AvatarFallback>JS</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Jane Smith</p>
-                  <p className="text-sm text-muted-foreground">
-                    Added new test cases for payment flow
-                  </p>
-                  <p className="text-xs text-muted-foreground">5 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src="/avatars/03.svg" />
-                  <AvatarFallback>RJ</AvatarFallback>
-                </Avatar>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Robert Johnson</p>
-                  <p className="text-sm text-muted-foreground">
-                    Fixed failing tests in CI pipeline
-                  </p>
-                  <p className="text-xs text-muted-foreground">Yesterday</p>
-                </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>

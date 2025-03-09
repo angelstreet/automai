@@ -17,7 +17,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
-import { signOut } from '@/app/actions';
 
 interface UserProfileProps {
   tenant?: string;
@@ -26,7 +25,7 @@ interface UserProfileProps {
 export function UserProfile({ tenant }: UserProfileProps) {
   const router = useRouter();
   const params = useParams();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const locale = params.locale as string || 'en';
   const [imageError, setImageError] = React.useState(false);
 
@@ -78,15 +77,14 @@ export function UserProfile({ tenant }: UserProfileProps) {
           <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <form action={signOut}>
-          <input type="hidden" name="locale" value={locale} />
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full text-left cursor-pointer">
-              Log out
-              <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-            </button>
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem onClick={() => {
+          const formData = new FormData();
+          formData.append('locale', locale);
+          signOut(formData);
+        }}>
+          Log out
+          <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
