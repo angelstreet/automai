@@ -20,49 +20,50 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProviderProps) {
-  // Initialize with defaultTheme, but this will be updated in useEffect
   const [theme, setTheme] = useState<Theme>(defaultTheme);
-  const [mounted, setMounted] = useState(false);
 
-  // Initialize theme from localStorage on mount
   useEffect(() => {
-    // Mark component as mounted to avoid hydration mismatch
-    setMounted(true);
-    
-    if (typeof window !== 'undefined') {
-      // Get theme from localStorage (set by our ThemeScript)
-      const savedTheme = localStorage.getItem('theme') as Theme;
-      
-      // If we have a saved theme, update our state
-      if (savedTheme) {
-        setTheme(savedTheme);
-      }
+    const root = document.documentElement;
+    // Read the initial theme from the server-rendered classList
+    const initialIsDark = root.classList.contains('dark');
+    const savedTheme = localStorage.getItem('theme') as Theme;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    // Determine the effective theme
+    let effectiveTheme: Theme;
+    if (savedTheme) {
+      effectiveTheme = savedTheme;
+    } else if (initialIsDark) {
+      effectiveTheme = 'dark';
+    } else {
+      effectiveTheme = defaultTheme;
     }
-  }, []);
+
+    // Apply the theme and sync with system preferences if needed
+    const isDark =
+      effectiveTheme === 'dark' ||
+      (effectiveTheme === 'system' && prefersDark);
+
+    root.classList.toggle('dark', isDark);
+    setTheme(effectiveTheme);
+
+    // Save to localStorage and cookie for SSR consistency
+    localStorage.setItem('theme', effectiveTheme);
+    document.cookie = `theme=${effectiveTheme}; path=/; max-age=31536000`; // 1 year expiry
+  }, [defaultTheme]);
 
   const handleSetTheme = (newTheme: Theme) => {
-    // Update state
+    const root = document.documentElement;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark =
+      newTheme === 'dark' ||
+      (newTheme === 'system' && prefersDark);
+
+    root.classList.toggle('dark', isDark);
     setTheme(newTheme);
-    
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('theme', newTheme);
-      
-      // Apply theme to document
-      const root = window.document.documentElement;
-      const isDark =
-        newTheme === 'dark' ||
-        (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-      // Update class
-      root.classList.toggle('dark', isDark);
-    }
+    localStorage.setItem('theme', newTheme);
+    document.cookie = `theme=${newTheme}; path=/; max-age=31536000`;
   };
-
-  // Avoid hydration mismatch by only rendering children after mounting
-  if (!mounted) {
-    return <>{children}</>;
-  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme }}>
@@ -71,4 +72,4 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
   );
 }
 
-export const useTheme = () => useContext(ThemeContext); 
+export const useTheme = () => useContext(ThemeContext);

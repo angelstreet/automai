@@ -23,10 +23,26 @@ export function ThemeToggle() {
   // Determine which theme API to use (prefer next-themes)
   const theme = nextThemes.theme || customTheme.theme;
 
-  // Wait for client-side hydration to prevent SSR issues
+  // Synchronize themes on mount
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    if (typeof window !== 'undefined') {
+      // Get theme from localStorage
+      const savedTheme = localStorage.getItem('theme');
+      
+      // If there's a saved theme, make sure both providers are using it
+      if (savedTheme && savedTheme !== theme) {
+        // Update next-themes if available
+        if (nextThemes.setTheme) {
+          nextThemes.setTheme(savedTheme);
+        }
+        
+        // Update custom theme provider if available
+        if (customTheme.setTheme) {
+          customTheme.setTheme(savedTheme as any);
+        }
+      }
+    }
+  }, [mounted, nextThemes, customTheme, theme]);
 
   // Function to set theme in both providers for maximum compatibility
   const setTheme = (newTheme: string) => {
@@ -40,19 +56,28 @@ export function ThemeToggle() {
       customTheme.setTheme(newTheme as any);
     }
 
-    // Save theme in localStorage for persistence
+    // Optionally, manually set the theme class on html element as a fallback
     if (typeof window !== 'undefined') {
-      localStorage.setItem('theme', newTheme);
-      
-      // Apply theme to document directly for immediate effect
       const root = window.document.documentElement;
       const isDark =
         newTheme === 'dark' ||
         (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-      root.classList.toggle('dark', isDark);
+      if (isDark) {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+
+      // Save theme in localStorage for persistence
+      localStorage.setItem('theme', newTheme);
     }
   };
+
+  // Wait for client-side hydration to prevent SSR issues
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Don't render anything until mounted to prevent hydration mismatch
   if (!mounted) {
