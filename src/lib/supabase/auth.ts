@@ -198,7 +198,9 @@ export const supabaseAuth = {
       const supabase = await createClient(cookieStore);
 
       // Use getUser instead of getSession for better security
+      console.log('SUPABASE-AUTH: Calling supabase.auth.getUser()');
       const { data, error } = await supabase.auth.getUser();
+      console.log('SUPABASE-AUTH: Raw getUser response:', JSON.stringify(data, null, 2));
 
       if (error) {
         // Don't log Auth session missing errors as they're expected on login pages
@@ -219,12 +221,16 @@ export const supabaseAuth = {
         };
       }
 
-      if (!data.user) {
+      // Fix for incorrect handling of data structure
+      if (!data || !data.user || !data.user.id) {
+        console.log('SUPABASE-AUTH: No user data found in response');
         return {
           success: false,
           error: 'No authenticated user',
         };
       }
+      
+      console.log('SUPABASE-AUTH: User found in response');
 
       // Extract user data
       const user = data.user;

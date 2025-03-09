@@ -365,40 +365,34 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   }
 
   try {
-    // Create a new session
-    const { data, error } = await supabaseAuth.getSession();
-
-    if (error) {
-      // Don't log "No active session" error too many times
-      if (error === 'No active session' && noSessionErrorLogged) {
-        // Already logged once, don't flood logs
-      } else if (error === 'No active session') {
-        console.log('[Auth] No active session. User not authenticated.');
-        noSessionErrorLogged = true;
-      } else {
-        console.error('[Auth] Error getting user session:', error);
-      }
-
-      // Cache the error to avoid repeated API calls
-      userCache = {
-        data: null,
-        timestamp: Date.now(),
-        error: error,
-      };
-
+    // Use getUser directly as recommended by Supabase
+    console.log('[Auth] DEBUG: Using direct getUser call');
+    const result = await supabaseAuth.getUser();
+    
+    // Check if the result was successful
+    if (!result.success) {
+      console.log(`[Auth] getUser failed: ${result.error}`);
       return null;
     }
+    
+    // Extract data from result
+    const { data, error } = { data: result.data, error: result.error };
 
+    // We already checked for errors in the result object
     // Reset the flag when we get a valid session
     noSessionErrorLogged = false;
+    
+    console.log('[Auth] Successfully retrieved user data');
 
-    // Get the user data - handle type safely
-    // Check if data is defined and has a session object with user
-    const sessionData = data as unknown as { session?: { user?: AuthUser } };
-    const user = sessionData?.session?.user || null;
-
+    // The direct supabaseAuth.getUser already returns the processed user data
+    // from our UserSession type
+    console.log('[Auth] Using data directly from supabaseAuth.getUser result');
+    
+    // The data is already the user
+    const user = data;
+    
     if (!user) {
-      console.log('[Auth] No user found in session');
+      console.log('[Auth] No user data returned from supabaseAuth.getUser');
       
       // Cache the result
       userCache = {
@@ -409,12 +403,12 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       
       return null;
     }
-
-    // Log the raw user data to inspect metadata structure
-    console.log('[Auth] Raw user data from session:', JSON.stringify(user, null, 2));
     
-    // Enhance the user object with processed metadata for easier access
-    if (user.user_metadata) {
+    console.log('[Auth] User data successfully retrieved:', JSON.stringify(user, null, 2));
+    
+    // The supabaseAuth.getUser() result should already have processed the name field
+    // But let's make sure it's there in case the function implementation changed
+    if (!user.name && user.user_metadata) {
       // Extract name from various possible metadata fields
       const metadata = user.user_metadata;
       user.name = metadata.name || 
@@ -423,6 +417,10 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
                  metadata.preferred_username ||
                  user.email?.split('@')[0] || 
                  null;
+      
+      console.log('[Auth] Had to set name from metadata:', user.name);
+    } else {
+      console.log('[Auth] Name already present in user object:', user.name);
     }
 
     // Cache the result

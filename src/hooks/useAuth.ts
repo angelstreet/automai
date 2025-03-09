@@ -43,6 +43,7 @@ export function useAuth() {
     // Only skip fetching on auth pages if we're not forcing it
     // This ensures we still check auth state when needed
     if (isAuthPage.current && !force) {
+      console.log('🔄 AUTH HOOK: Skipping fetch on auth page');
       setLoading(false);
       return;
     }
@@ -50,14 +51,26 @@ export function useAuth() {
     // Check if we've fetched recently and can use cached data
     const now = Date.now();
     if (!force && now - lastFetchTime.current < AUTH_CACHE_TIME && user !== undefined) {
+      console.log('🔄 AUTH HOOK: Using cached user data');
       setLoading(false);
       return;
     }
+    
+    console.log('🔄 AUTH HOOK: Fetching user data - VERSION 2025-03-09');
     
     try {
       setLoading(true);
       setError(null);
       const data = await getCurrentUser();
+      
+      // Enhanced debug logging
+      console.log('🔄 AUTH HOOK: User data received:', data);
+      if (data) {
+        console.log('🔄 AUTH HOOK: User name from data:', data.name);
+        console.log('🔄 AUTH HOOK: User metadata:', data.user_metadata);
+        console.log('🔄 AUTH HOOK: Name in metadata:', data.user_metadata?.name);
+      }
+      
       setUser(data);
       lastFetchTime.current = now;
     } catch (err) {
@@ -263,18 +276,18 @@ export function useAuth() {
     }
   }, [fetchUser]);
 
+  // Return the authentication state and functions
   return {
     user,
     loading,
     error,
-    signOut: handleSignOut,
-    updateProfile: handleUpdateProfile,
-    updatePassword: handleUpdatePassword,
     signUp: handleSignUp,
     signInWithPassword: handleSignInWithPassword,
     signInWithOAuth: handleSignInWithOAuth,
+    signOut: handleSignOut,
     resetPassword: handleResetPassword,
+    updatePassword: handleUpdatePassword,
+    updateProfile: handleUpdateProfile,
     refreshUser,
-    exchangeCodeForSession
   };
 }

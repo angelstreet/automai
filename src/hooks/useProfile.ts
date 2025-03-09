@@ -26,18 +26,31 @@ export function useProfile() {
 
     try {
       setIsUpdating(true);
+      console.log('🔄 PROFILE HOOK - UPDATED 2025-03-09: Updating profile with data:', 
+        data instanceof FormData 
+        ? Object.fromEntries(data.entries()) 
+        : data);
       
       // Handle either FormData or direct object
+      let profileData;
       if (data instanceof FormData) {
-        await updateUserProfile({
+        profileData = {
           name: data.get('name') as string,
           avatar_url: data.get('avatar_url') as string || undefined
-        });
+        };
+        await updateUserProfile(profileData);
       } else {
+        profileData = data;
         await updateUserProfile(data);
       }
       
+      console.log('🔄 PROFILE HOOK: Profile updated with name:', profileData.name);
+      console.log('🔄 PROFILE HOOK: Forcing user data refresh...');
+      
+      // Force refresh user data
       await refreshUser();
+      
+      console.log('🔄 PROFILE HOOK: User data refreshed after profile update');
       toast({
         title: 'Success',
         description: 'Profile updated successfully',

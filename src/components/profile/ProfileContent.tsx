@@ -3,7 +3,7 @@
 import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -11,33 +11,69 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 
 export function ProfileContent() {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
   const { updateProfile, isUpdating } = useProfile();
   const t = useTranslations('Profile');
   const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string | undefined;
-  
-  // Enhanced metadata handling
-  const metadata = user?.user_metadata || {};
-  
-  // Try all possible name fields
-  const initialName = 
-    // Try direct metadata fields
-    metadata.name || 
-    metadata.full_name || 
-    // Try raw metadata if nested
-    (metadata as any)?.raw_user_meta_data?.name ||
-    // Try preferred_username which some providers use
-    metadata.preferred_username ||
-    // Users with name directly on user object (from our enhancements)
-    user?.name ||
-    // Fall back to email username
-    user?.email?.split('@')[0] || 
-    '';
-  
-  const [name, setName] = useState(initialName);
+  const [name, setName] = useState('');
   const router = useRouter();
+
+  // Update name state when user data becomes available
+  useEffect(() => {
+    if (user) {
+      // Extended debug logging - VERSION 2025-03-09
+      console.log('🔍 PROFILE COMPONENT: Full user object:', user);
+      console.log('🔍 PROFILE COMPONENT: User metadata:', user.user_metadata);
+      console.log('🔍 PROFILE COMPONENT: Direct name on metadata:', user.user_metadata?.name);
+      console.log('🔍 PROFILE COMPONENT: Direct name on user:', user.name);
+      
+      // Check all possible name locations
+      const possibleNames = {
+        'user.name': user.name,
+        'user.user_metadata.name': user.user_metadata?.name,
+        'user.user_metadata.full_name': user.user_metadata?.full_name,
+        'user.user_metadata.raw_user_meta_data?.name': (user.user_metadata as any)?.raw_user_meta_data?.name,
+        'user.user_metadata.preferred_username': user.user_metadata?.preferred_username,
+        'email username': user.email?.split('@')[0]
+      };
+      
+      console.log('🔍 PROFILE COMPONENT: All possible name values:', possibleNames);
+      
+      // Use any available name with priority order
+      const userName = user?.name || user?.user_metadata?.name || user?.user_metadata?.full_name || 
+                      (user.user_metadata as any)?.raw_user_meta_data?.name || 
+                      user?.user_metadata?.preferred_username || 
+                      user?.email?.split('@')[0] || '';
+      
+      console.log('🔍 PROFILE COMPONENT: Selected username:', userName);
+      setName(userName);
+    }
+  }, [user]);
+
+  // Force refresh user data on component mount
+  useEffect(() => {
+    if (refreshUser) {
+      console.log('Refreshing user data...');
+      refreshUser();
+    }
+  }, [refreshUser]);
+
+  const handleUpdateName = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('locale', locale);
+      await updateProfile(formData);
+      if (refreshUser) {
+        // Refresh user data after update
+        await refreshUser();
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -53,87 +89,103 @@ export function ProfileContent() {
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-4">{t('sessionExpired')}</h2>
           <p className="text-muted-foreground mb-4">{t('pleaseLogin')}</p>
-          <Button onClick={() => (window.location.href = `/${locale}/login`)}>{t('logIn')}</Button>
+          <Button onClick={() => {
+            // Clear any stale authentication data
+            document.cookie.split(";").forEach((c) => {
+              document.cookie = c
+                .replace(/^ +/, "")
+                .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
+            });
+            window.location.href = `/${locale}/login`;
+          }}>{t('logIn')}</Button>
         </div>
       </div>
     );
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Create FormData object with the name field
-    const formData = new FormData();
-    formData.append('name', name);
-    formData.append('locale', locale);
-    
-    // Call the server action with the FormData
-    const success = await updateProfile(formData);
-    if (success) {
-      router.back();
-    }
-  };
-
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-2xl mx-auto">
-        <Button
-          variant="ghost"
-          className="mb-6"
-          onClick={() => router.back()}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          {t('back')}
-        </Button>
-
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-2xl font-bold">{t('title')}</h2>
-            <p className="text-muted-foreground">{t('description')}</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-2">
-                {t('name')}
-              </label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('namePlaceholder')}
-              />
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-2">
-                {t('email')}
-              </label>
-              <Input
-                id="email"
-                value={user.email}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="plan" className="block text-sm font-medium mb-2">
-                {t('plan')}
-              </label>
-              <Input
-                id="plan"
-                value={(user.user_metadata as any)?.plan || 'TRIAL'}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-
-            <Button type="submit" disabled={isUpdating}>
-              {isUpdating ? t('saving') : t('save')}
-            </Button>
-          </form>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-8 w-8">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
         </div>
+      </div>
+
+      <div className="grid gap-6">
+        {/* Personal Information */}
+        <div className="p-6 bg-card rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">{t('personalInfo')}</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">{t('name')}</label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t('enterName')}
+                  className="max-w-md"
+                />
+                <Button 
+                  onClick={handleUpdateName} 
+                  disabled={isUpdating || name === (user.name || user.user_metadata?.name || '')}
+                >
+                  {isUpdating ? t('updating') : t('update')}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium">{t('email')}</label>
+              <p className="text-muted-foreground">{user.email}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">{t('plan')}</label>
+              <p className="text-muted-foreground">{(user.user_metadata as any)?.plan || 'TRIAL'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Account Settings */}
+        <div className="p-6 bg-card rounded-lg shadow">
+          <h2 className="text-xl font-semibold mb-4">{t('accountSettings')}</h2>
+          <div className="space-y-4">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/${locale}/${tenant || 'default'}/settings`)}
+            >
+              {t('manageSettings')}
+            </Button>
+            {((user.user_metadata as any)?.plan !== 'ENTERPRISE') && (
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/${locale}/${tenant || 'default'}/billing`)}
+              >
+                {t('upgradePlan')}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Tenant Information (Enterprise only) */}
+        {((user.user_metadata as any)?.plan === 'ENTERPRISE') && tenant && (
+          <div className="p-6 bg-card rounded-lg shadow">
+            <h2 className="text-xl font-semibold mb-4">{t('workspaceInfo')}</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Workspace ID</label>
+                <p className="text-muted-foreground">{tenant}</p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => (window.location.href = `/${locale}/${tenant}/team`)}
+              >
+                {t('manageTeam')}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
