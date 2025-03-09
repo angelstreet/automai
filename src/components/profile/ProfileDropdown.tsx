@@ -38,8 +38,26 @@ export function ProfileDropdown() {
 
   // Get user avatar image
   const userImage = (user.user_metadata as any)?.avatar_url || '/avatars/01.svg';
-  // Get user display name
-  const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+  
+  // Get user metadata with better handling of different structures
+  const metadata = user.user_metadata || {};
+  
+  // Get user display name using various possible fields
+  const userName = 
+    // Try direct metadata fields
+    metadata.name || 
+    metadata.full_name || 
+    // Try raw metadata if nested
+    (metadata as any)?.raw_user_meta_data?.name ||
+    // Try preferred_username which some providers use
+    metadata.preferred_username ||
+    // Users with name directly on user object (from our enhancements)
+    user.name ||
+    // Fall back to email username
+    user.email?.split('@')[0] || 
+    // Final fallback
+    'Guest';
+  
   // Get user initials for avatar fallback
   const userInitials = userName
     .split(' ')

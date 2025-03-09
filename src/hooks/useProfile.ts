@@ -14,7 +14,7 @@ export function useProfile() {
   const { user, refreshUser } = useAuth();
   const { toast } = useToast();
 
-  const updateProfile = useCallback(async (data: ProfileData) => {
+  const updateProfile = useCallback(async (data: ProfileData | FormData) => {
     if (!user) {
       toast({
         title: 'Error',
@@ -26,7 +26,17 @@ export function useProfile() {
 
     try {
       setIsUpdating(true);
-      await updateUserProfile(data);
+      
+      // Handle either FormData or direct object
+      if (data instanceof FormData) {
+        await updateUserProfile({
+          name: data.get('name') as string,
+          avatar_url: data.get('avatar_url') as string || undefined
+        });
+      } else {
+        await updateUserProfile(data);
+      }
+      
       await refreshUser();
       toast({
         title: 'Success',

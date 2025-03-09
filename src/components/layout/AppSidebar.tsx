@@ -60,14 +60,33 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
   }, [user, userRole, sidebarData.navGroups]);
 
   // Get user avatar from metadata
-  const avatarUrl = user?.user_metadata && (user.user_metadata as any).avatar_url;
+  const avatarUrl = user?.user_metadata && (user.user_metadata as any)?.avatar_url || '';
 
+  // Debug - log user object to console to inspect metadata structure
+  console.log('User object:', user);
+  
   // Prepare user data for NavUser - memoize this calculation
   const userData = useMemo(() => {
-    if (!user) return { name: 'User', email: '', avatar: undefined };
+    if (!user) return { name: 'Guest', email: '', avatar: undefined };
+    
+    // Handle different possible metadata structures from Supabase
+    const userMetadata = user.user_metadata || {};
+    const userName = 
+      // Try direct access
+      userMetadata.name || 
+      // Try full_name which is sometimes used by OAuth providers
+      userMetadata.full_name || 
+      // Try to get it from raw metadata if it's nested
+      (userMetadata as any)?.raw_user_meta_data?.name ||
+      // Try preferred_username which some providers use
+      userMetadata.preferred_username ||
+      // Fall back to email username
+      user.email?.split('@')[0] || 
+      // Final fallback
+      'Guest';
     
     return {
-      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+      name: userName,
       email: user.email || '',
       avatar: avatarUrl,
     };

@@ -74,14 +74,27 @@ export const supabaseAuth = {
 
       // Extract user data
       const user = data.session.user;
+      
+      // Log the raw user data for debugging
+      console.log('Raw Supabase session user data:', JSON.stringify(user, null, 2));
+      
+      // Extract name from various possible metadata fields
+      const metadata = user.user_metadata || {};
+      const name = metadata.name || 
+                  metadata.full_name || 
+                  (metadata as any)?.raw_user_meta_data?.name ||
+                  metadata.preferred_username ||
+                  user.email?.split('@')[0] || 
+                  null;
+      
       const userData: UserSession = {
         id: user.id,
         email: user.email,
-        name: user.user_metadata?.name || user.user_metadata?.full_name,
-        image: user.user_metadata?.avatar_url,
-        role: user.user_metadata?.role || 'user',
-        tenant_id: user.user_metadata?.tenant_id,
-        tenant_name: user.user_metadata?.tenant_name,
+        name: name,
+        image: metadata.avatar_url,
+        role: metadata.role || 'user',
+        tenant_id: metadata.tenant_id,
+        tenant_name: metadata.tenant_name,
       };
 
       return {
@@ -128,14 +141,27 @@ export const supabaseAuth = {
       }
 
       const user = data.user;
+      
+      // Log the raw user data for debugging
+      console.log('Raw Supabase token user data:', JSON.stringify(user, null, 2));
+      
+      // Extract name from various possible metadata fields
+      const metadata = user.user_metadata || {};
+      const name = metadata.name || 
+                  metadata.full_name || 
+                  (metadata as any)?.raw_user_meta_data?.name ||
+                  metadata.preferred_username ||
+                  user.email?.split('@')[0] || 
+                  null;
+      
       const userData: UserSession = {
         id: user.id,
         email: user.email,
-        name: user.user_metadata?.name || user.user_metadata?.full_name,
-        image: user.user_metadata?.avatar_url,
-        role: user.user_metadata?.role || 'user',
-        tenant_id: user.user_metadata?.tenant_id,
-        tenant_name: user.user_metadata?.tenant_name,
+        name: name,
+        image: metadata.avatar_url,
+        role: metadata.role || 'user',
+        tenant_id: metadata.tenant_id,
+        tenant_name: metadata.tenant_name,
       };
 
       return {
@@ -202,14 +228,27 @@ export const supabaseAuth = {
 
       // Extract user data
       const user = data.user;
+      
+      // Log the raw user data for debugging
+      console.log('Raw Supabase user data:', JSON.stringify(user, null, 2));
+      
+      // Extract name from various possible metadata fields
+      const metadata = user.user_metadata || {};
+      const name = metadata.name || 
+                  metadata.full_name || 
+                  (metadata as any)?.raw_user_meta_data?.name ||
+                  metadata.preferred_username ||
+                  user.email?.split('@')[0] || 
+                  null;
+      
       const userData: UserSession = {
         id: user.id,
         email: user.email,
-        name: user.user_metadata?.name || user.user_metadata?.full_name,
-        image: user.user_metadata?.avatar_url,
-        role: user.user_metadata?.role || 'user',
-        tenant_id: user.user_metadata?.tenant_id,
-        tenant_name: user.user_metadata?.tenant_name,
+        name: name,
+        image: metadata.avatar_url,
+        role: metadata.role || 'user',
+        tenant_id: metadata.tenant_id,
+        tenant_name: metadata.tenant_name,
       };
 
       return {

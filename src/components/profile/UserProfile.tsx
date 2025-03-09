@@ -41,9 +41,26 @@ export function UserProfile({ tenant: propTenant }: UserProfileProps) {
       .toUpperCase();
   };
 
-  // If there's no user object yet, show a placeholder avatar
-  const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
-  const avatarSrc = user && (user.user_metadata as any)?.avatar_url || '/avatars/default.svg';
+  // Enhanced metadata handling
+  const metadata = user?.user_metadata || {};
+  
+  // Try all possible name fields
+  const userName = 
+    // Try direct metadata fields
+    metadata.name || 
+    metadata.full_name || 
+    // Try raw metadata if nested
+    (metadata as any)?.raw_user_meta_data?.name ||
+    // Try preferred_username which some providers use
+    metadata.preferred_username ||
+    // Users with name directly on user object (from our enhancements)
+    user?.name ||
+    // Fall back to email username
+    user?.email?.split('@')[0] || 
+    // Final fallback
+    'Guest';
+  
+  const avatarSrc = user && (metadata as any)?.avatar_url || '/avatars/default.svg';
   
   const handleSignOut = () => {
     const formData = new FormData();

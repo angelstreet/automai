@@ -2,7 +2,6 @@
 
 import { redirect } from 'next/navigation';
 import { supabaseAuth} from '@/lib/supabase/auth';
-import db from '@/lib/supabase/db';
 
 export type AuthUser = {
   id: string;
@@ -77,46 +76,66 @@ export async function handleAuthCallback(url: string) {
       
       // First check if this user already exists in our database
       console.log('Checking if user exists in database:', userId);
-      const existingUser = await db.user.findUnique({
-        where: { id: userId }
-      });
+      
+      // Import the admin client with elevated permissions
+      const { createAdminClient } = await import('@/lib/supabase');
+      const adminClient = createAdminClient();
+      
+      // Use admin client to check if user exists (bypasses RLS)
+      const { data: existingUser, error: findError } = await adminClient
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (findError && findError.code !== 'PGRST116') {
+        console.error('Error finding user:', findError);
+      }
       
       // Only create the user if this is their first sign-in (user doesn't exist in our database yet)
       if (!existingUser) {
         console.log('First-time sign-in detected, creating user record...');
         
         try {
-          // Create default tenant if it doesn't exist
-          let tenant = await db.tenant.findUnique({
-            where: { id: 'trial' }
-          });
-          
-          if (!tenant) {
-            console.log('Creating default trial tenant');
-            tenant = await db.tenant.create({
-              data: {
-                id: 'trial',
-                name: 'Trial',
-                plan: 'free',
-              }
-            });
-          }
-          
           // Extract user data for database record
           const userDataForDb = {
             id: userId,
             email: userData.email,
             name: userData.user_metadata?.name || userData.email?.split('@')[0] || 'User',
-            user_role: userData.user_metadata?.role || 'viewer',
-            tenant_id: userData.user_metadata?.tenant_id || 'trial',
+            user_role: 'pro',
+            tenant_id: 'a317a10a-776a-47de-9347-81806b36a03e', // Use the existing tenant ID
             provider: userData.app_metadata?.provider || 'email',
           };
           
-          // Create the user record
+          // Create the user record with admin client
           console.log('Creating new user record in database:', userDataForDb.email);
-          await db.user.create({
-            data: userDataForDb
-          });
+          const { data: newUser, error: createUserError } = await adminClient
+            .from('users')
+            .insert(userDataForDb)
+            .select()
+            .single();
+            
+          if (createUserError) {
+            console.error('Error creating user:', createUserError);
+            throw createUserError;
+          }
+          
+          // Update the user's metadata to include their name
+          const { error: updateError } = await adminClient.auth.admin.updateUserById(
+            userId,
+            { 
+              user_metadata: { 
+                name: userDataForDb.name,
+                tenant_id: userDataForDb.tenant_id
+              } 
+            }
+          );
+          
+          if (updateError) {
+            console.error('Error updating user metadata:', updateError);
+          } else {
+            console.log('User metadata updated with name and tenant_id');
+          }
           
           console.log('User record created successfully during first sign-in');
         } catch (dbError) {
@@ -128,7 +147,7 @@ export async function handleAuthCallback(url: string) {
       }
       
       // Get the tenant ID for redirection - use from existing user if available, or default
-      const tenantId = existingUser?.tenant_id || userData.user_metadata?.tenant_id || 'trial';
+      const tenantId = existingUser?.tenant_id || 'a317a10a-776a-47de-9347-81806b36a03e';
       
       // Get the locale from URL or default to 'en'
       const pathParts = url.split('/');
@@ -296,10 +315,20 @@ export async function signOut(formData: FormData) {
 /**
  * Update user profile
  */
-export async function updateProfile(formData: FormData) {
+export async function updateProfile(formData: FormData | ProfileUpdateData) {
   try {
-    const name = formData.get('name') as string;
-    const locale = formData.get('locale') as string || 'en';
+    // Extract data - handle both FormData and direct objects
+    let name, locale;
+    
+    if (formData instanceof FormData) {
+      name = formData.get('name') as string;
+      locale = formData.get('locale') as string || 'en';
+    } else {
+      name = formData.name;
+      locale = formData.locale || 'en';
+    }
+    
+    console.log('Updating profile with name:', name);
     
     // Invalidate user cache before updating profile
     await invalidateUserCache();
@@ -308,8 +337,11 @@ export async function updateProfile(formData: FormData) {
     const result = await supabaseAuth.updateProfile({ name });
     
     if (!result.success) {
+      console.error('Failed to update profile:', result.error);
       throw new Error(result.error || 'Failed to update profile');
     }
+    
+    console.log('Profile updated successfully');
     
     // Redirect back to profile page
     redirect(`/${locale}/profile`);
@@ -378,7 +410,22 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       return null;
     }
 
-    // Cache the user data
+    // Log the raw user data to inspect metadata structure
+    console.log('[Auth] Raw user data from session:', JSON.stringify(user, null, 2));
+    
+    // Enhance the user object with processed metadata for easier access
+    if (user.user_metadata) {
+      // Extract name from various possible metadata fields
+      const metadata = user.user_metadata;
+      user.name = metadata.name || 
+                 metadata.full_name || 
+                 (metadata as any)?.raw_user_meta_data?.name ||
+                 metadata.preferred_username ||
+                 user.email?.split('@')[0] || 
+                 null;
+    }
+
+    // Cache the result
     userCache = {
       data: user,
       timestamp: Date.now(),
@@ -386,16 +433,16 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     };
 
     return user;
-  } catch (error: any) {
-    console.error('[Auth] Error in getCurrentUser:', error.message);
+  } catch (err) {
+    console.error('[Auth] Error getting current user:', err);
     
-    // Cache the error
+    // Cache the error to avoid repeated API calls
     userCache = {
       data: null,
       timestamp: Date.now(),
-      error: error.message,
+      error: err instanceof Error ? err.message : 'Unknown error',
     };
     
-    throw error;
+    return null;
   }
 } 
