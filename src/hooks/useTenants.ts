@@ -41,20 +41,20 @@ export function useTenants() {
         console.log('Mapped tenants:', mappedTenants);
         setTenants(mappedTenants);
 
-        // Get tenant_id from user metadata
-        const currentTenantId = user.user_metadata?.tenant_id || mappedTenants[0]?.id;
-        console.log('Current tenant ID from metadata:', currentTenantId);
+        // Get tenant_name from user metadata
+        const currentTenantName = user.user_metadata?.tenant_name || 'trial';
+        console.log('Current tenant name from metadata:', currentTenantName);
         
-        // Find tenant by ID
-        const current = mappedTenants.find((t: Tenant) => t.id === currentTenantId) || mappedTenants[0];
+        // Find tenant by name
+        const current = mappedTenants.find((t: Tenant) => t.name === currentTenantName) || mappedTenants[0];
         console.log('Setting current tenant:', current);
         setCurrentTenant(current);
       } else {
         console.log('No tenants found, using default');
         // No tenants found or error occurred, create a default tenant
         const defaultTenant = {
-          id: 'default',
-          name: 'Default',
+          id: 'trial',
+          name: 'trial',
           iconName: 'building',
         };
         setTenants([defaultTenant]);
@@ -72,10 +72,10 @@ export function useTenants() {
     }
   }, [user, toast]);
 
-  const switchTenant = useCallback(async (tenantId: string) => {
+  const switchTenant = useCallback(async (tenantName: string) => {
     try {
-      await switchTenantAction(tenantId);
-      const newTenant = tenants.find(t => t.id === tenantId);
+      await switchTenantAction(tenantName);
+      const newTenant = tenants.find(t => t.name === tenantName);
       if (newTenant) {
         setCurrentTenant(newTenant);
         toast({

@@ -162,64 +162,13 @@ export async function getTenants(userId: string): Promise<{ success: boolean; er
   }
 }
 
-export async function switchTenant(tenantId: string): Promise<{ success: boolean; error?: string }> {
+export async function switchTenant(tenantName: string): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('switchTenant: Switching to tenant ID:', tenantId);
+    console.log('switchTenant: Switching to tenant:', tenantName);
     
-    // Import the admin client for elevated permissions
-    const { createClient: createAdminClient } = await import('@/lib/supabase/admin');
-    const adminClient = createAdminClient();
-    
-    // Get the tenant name from the database using admin client
-    let tenant;
-    const { data, error } = await adminClient
-      .from('tenants')
-      .select('*')
-      .eq('id', tenantId)
-      .single();
-    
-    if (error) {
-      console.error('switchTenant: Error fetching tenant with admin client:', error);
-    } else if (data) {
-      tenant = data;
-      console.log('switchTenant: Found tenant with admin client:', tenant);
-    }
-    
-    // If tenant doesn't exist, create it using admin client
-    if (!tenant) {
-      console.log('switchTenant: Tenant not found, creating it with admin client');
-      try {
-        const { data: newTenant, error: createError } = await adminClient
-          .from('tenants')
-          .insert({
-            id: tenantId,
-            name: tenantId.toLowerCase(),
-            plan: 'free',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-        
-        if (createError) {
-          console.error('switchTenant: Failed to create missing tenant with admin client:', createError);
-          // Continue with just tenant_id, and use the ID as name
-          tenant = { id: tenantId, name: tenantId.toLowerCase() };
-        } else {
-          tenant = newTenant;
-          console.log('switchTenant: Successfully created missing tenant with admin client:', tenant);
-        }
-      } catch (createError) {
-        console.error('switchTenant: Exception creating missing tenant:', createError);
-        // Continue with just tenant_id, and use the ID as name
-        tenant = { id: tenantId, name: tenantId.toLowerCase() };
-      }
-    }
-    
-    // Update the user profile with both tenant_id and tenant_name
+    // Update the user profile with tenant_name only
     const result = await supabaseAuth.updateProfile({ 
-      tenant_id: tenantId,
-      tenant_name: tenant.name
+      tenant_name: tenantName
     });
     
     return { 

@@ -12,8 +12,7 @@ export default async function Page({ params }: { params: { locale: string } }) {
   // Try to get the authenticated user
   const userResult = await getUser();
   
-  // If we have a user with tenant_name, use it for redirection
-  // Otherwise fall back to the trial tenant
+  // Use tenant_name if available, otherwise default to 'trial'
   const tenantName = userResult.success && userResult.data?.tenant_name 
     ? userResult.data.tenant_name 
     : 'trial';

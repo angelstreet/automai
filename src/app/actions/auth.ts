@@ -71,11 +71,8 @@ export async function handleAuthCallback(url: string) {
       // Get the tenant information for redirection
       const userData = result.data.session?.user;
       
-      // Use tenant_name if available, otherwise fall back to tenant_id or the default
-      // This prioritizes the tenant_name stored in user metadata
-      const tenantName = userData?.user_metadata?.tenant_name || 
-                         userData?.user_metadata?.tenant_id || 
-                         'a317a10a-776a-47de-9347-81806b36a03e';
+      // Use tenant_name or default to 'trial'
+      const tenantName = userData?.user_metadata?.tenant_name || 'trial';
       
       // Get the locale from URL or default to 'en'
       const pathParts = url.split('/');
@@ -326,8 +323,8 @@ async function ensureUserInDatabase(authData: any): Promise<void> {
       email: authData.user.email,
       name: authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'User',
       user_role: authData.user.user_metadata?.role || 'admin', // Use user_role column
-      tenant_id: authData.user.user_metadata?.tenant_id || 'a317a10a-776a-47de-9347-81806b36a03e',
-      provider: authData.user.app_metadata?.provider || 'email',
+      tenant_name: authData.user.app_metadata?.tenant_name || 'trial', // Always use a readable name instead of UUID
+      provider: authData.user.app_metadata?.provider ||'email',
     };
     
     // Create user record in database

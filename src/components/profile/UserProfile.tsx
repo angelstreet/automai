@@ -30,7 +30,7 @@ export function UserProfile({ tenant: propTenant }: UserProfileProps) {
   const [imageError, setImageError] = React.useState(false);
   
   // Use tenant from props if available, otherwise use from URL params as fallback
-  const tenant = propTenant || (params.tenant as string) || 'default';
+  const tenant = propTenant || (params.tenant as string) || 'trial';
   
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {

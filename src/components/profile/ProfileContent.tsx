@@ -153,14 +153,14 @@ export function ProfileContent() {
           <div className="space-y-4">
             <Button
               variant="outline"
-              onClick={() => router.push(`/${locale}/${tenant || 'default'}/settings`)}
+              onClick={() => router.push(`/${locale}/${tenant || 'trial'}/settings`)}
             >
               {t('manageSettings')}
             </Button>
             {((user.user_metadata as any)?.plan !== 'ENTERPRISE') && (
               <Button
                 variant="outline"
-                onClick={() => router.push(`/${locale}/${tenant || 'default'}/billing`)}
+                onClick={() => router.push(`/${locale}/${tenant || 'trial'}/billing`)}
               >
                 {t('upgradePlan')}
               </Button>
