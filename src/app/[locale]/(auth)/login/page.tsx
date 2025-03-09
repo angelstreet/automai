@@ -24,7 +24,13 @@ export default function LoginPage() {
   // Redirect if user is already logged in
   React.useEffect(() => {
     if (user && !loading) {
-      router.push(`/${locale}/${user.user_metadata?.tenant_id || 'default'}/dashboard`);
+      // Use tenant_name if available, otherwise fall back to tenant_id or default
+      const tenantName = user.user_metadata?.tenant_name || 
+                         user.user_metadata?.tenant_id || 
+                         'default';
+      
+      console.log('Login page redirecting to tenant:', tenantName);
+      router.push(`/${locale}/${tenantName}/dashboard`);
     }
   }, [user, loading, router, locale]);
 
@@ -64,8 +70,14 @@ export default function LoginPage() {
       const result = await signInWithPassword(email, password);
       
       if (result?.session) {
+        // Use tenant_name if available, otherwise fall back to tenant_id or default
+        const tenantName = result.user?.user_metadata?.tenant_name || 
+                           result.user?.user_metadata?.tenant_id || 
+                           'default';
+        
+        console.log('Login submission redirecting to tenant:', tenantName);
         // Redirect to dashboard
-        router.push(`/${locale}/${result.user?.user_metadata?.tenant_id || 'default'}/dashboard`);
+        router.push(`/${locale}/${tenantName}/dashboard`);
       } else {
         // If no session but no error thrown, still reset the submission state
         setIsSubmitting(false);

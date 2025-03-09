@@ -90,70 +90,12 @@ export const supabaseAuth = {
       // Get tenant_id from metadata
       const tenant_id = metadata.tenant_id;
       
-      // If we have a tenant_id but no tenant_name, fetch it from the database
-      let tenant_name = metadata.tenant_name;
-      if (tenant_id && !tenant_name) {
-        try {
-          console.log('SUPABASE-AUTH: Fetching tenant name for tenant_id:', tenant_id);
-          
-          // Import the admin client for elevated permissions
-          const { createClient: createAdminClient } = await import('./admin');
-          const adminClient = createAdminClient();
-          
-          // Try with admin client that has elevated permissions
-          console.log(`SUPABASE-AUTH: Executing query with admin client to find tenant with id = '${tenant_id}'`);
-          const { data, error } = await adminClient
-            .from('tenants')
-            .select('*')
-            .eq('id', tenant_id);
-            
-          if (error) {
-            console.error('SUPABASE-AUTH: Error with admin client query:', error);
-          } else if (data && data.length > 0) {
-            console.log('SUPABASE-AUTH: Found tenant with admin client query:', data[0]);
-            tenant_name = data[0].name;
-          } else {
-            console.log('SUPABASE-AUTH: No results from admin client, trying to create tenant');
-            
-            // Attempt to create the tenant using admin client
-            try {
-              const { data: newTenant, error: createError } = await adminClient
-                .from('tenants')
-                .insert({
-                  id: tenant_id,
-                  name: tenant_id.toLowerCase(),
-                  plan: 'free',
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                })
-                .select()
-                .single();
-                
-              if (createError) {
-                console.error('SUPABASE-AUTH: Error creating tenant with admin client:', createError);
-                // Use fallback name
-                tenant_name = tenant_id.toLowerCase();
-              } else if (newTenant) {
-                console.log('SUPABASE-AUTH: Successfully created tenant with admin client:', newTenant);
-                tenant_name = newTenant.name;
-              }
-            } catch (createErr) {
-              console.error('SUPABASE-AUTH: Exception creating tenant with admin client:', createErr);
-              // Use fallback name
-              tenant_name = tenant_id.toLowerCase();
-            }
-          }
-        } catch (err) {
-          console.error('SUPABASE-AUTH: Error fetching tenant name with admin client:', err);
-          // Use tenant_id as fallback if tenant not found
-          tenant_name = tenant_id.toLowerCase();
-        }
-      }
+      // Simplified approach: Just use tenant_name from metadata or fallback to tenant_id
+      // No need to query the database for tenant information anymore
+      let tenant_name = metadata.tenant_name || tenant_id;
       
-      // Ensure we always have a tenant_name if we have a tenant_id
-      if (tenant_id && !tenant_name) {
-        tenant_name = tenant_id.toLowerCase();
-      }
+      // Log for debugging
+      console.log('SUPABASE-AUTH: Using tenant_name from metadata:', tenant_name);
       
       const userData: UserSession = {
         id: user.id,
@@ -225,70 +167,12 @@ export const supabaseAuth = {
       // Get tenant_id from metadata
       const tenant_id = metadata.tenant_id;
       
-      // If we have a tenant_id but no tenant_name, fetch it from the database
-      let tenant_name = metadata.tenant_name;
-      if (tenant_id && !tenant_name) {
-        try {
-          console.log('SUPABASE-AUTH: Fetching tenant name for tenant_id:', tenant_id);
-          
-          // Import the admin client for elevated permissions
-          const { createClient: createAdminClient } = await import('./admin');
-          const adminClient = createAdminClient();
-          
-          // Try with admin client that has elevated permissions
-          console.log(`SUPABASE-AUTH: Executing query with admin client to find tenant with id = '${tenant_id}'`);
-          const { data, error } = await adminClient
-            .from('tenants')
-            .select('*')
-            .eq('id', tenant_id);
-            
-          if (error) {
-            console.error('SUPABASE-AUTH: Error with admin client query:', error);
-          } else if (data && data.length > 0) {
-            console.log('SUPABASE-AUTH: Found tenant with admin client query:', data[0]);
-            tenant_name = data[0].name;
-          } else {
-            console.log('SUPABASE-AUTH: No results from admin client, trying to create tenant');
-            
-            // Attempt to create the tenant using admin client
-            try {
-              const { data: newTenant, error: createError } = await adminClient
-                .from('tenants')
-                .insert({
-                  id: tenant_id,
-                  name: tenant_id.toLowerCase(),
-                  plan: 'free',
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                })
-                .select()
-                .single();
-                
-              if (createError) {
-                console.error('SUPABASE-AUTH: Error creating tenant with admin client:', createError);
-                // Use fallback name
-                tenant_name = tenant_id.toLowerCase();
-              } else if (newTenant) {
-                console.log('SUPABASE-AUTH: Successfully created tenant with admin client:', newTenant);
-                tenant_name = newTenant.name;
-              }
-            } catch (createErr) {
-              console.error('SUPABASE-AUTH: Exception creating tenant with admin client:', createErr);
-              // Use fallback name
-              tenant_name = tenant_id.toLowerCase();
-            }
-          }
-        } catch (err) {
-          console.error('SUPABASE-AUTH: Error fetching tenant name with admin client:', err);
-          // Use tenant_id as fallback if tenant not found
-          tenant_name = tenant_id.toLowerCase();
-        }
-      }
+      // Simplified approach: Just use tenant_name from metadata or fallback to tenant_id
+      // No need to query the database for tenant information anymore
+      let tenant_name = metadata.tenant_name || tenant_id;
       
-      // Ensure we always have a tenant_name if we have a tenant_id
-      if (tenant_id && !tenant_name) {
-        tenant_name = tenant_id.toLowerCase();
-      }
+      // Log for debugging
+      console.log('SUPABASE-AUTH: Using tenant_name from metadata:', tenant_name);
       
       const userData: UserSession = {
         id: user.id,
@@ -386,70 +270,12 @@ export const supabaseAuth = {
       // Get tenant_id from metadata
       const tenant_id = metadata.tenant_id;
       
-      // If we have a tenant_id but no tenant_name, fetch it from the database
-      let tenant_name = metadata.tenant_name;
-      if (tenant_id && !tenant_name) {
-        try {
-          console.log('SUPABASE-AUTH: Fetching tenant name for tenant_id:', tenant_id);
-          
-          // Import the admin client for elevated permissions
-          const { createClient: createAdminClient } = await import('./admin');
-          const adminClient = createAdminClient();
-          
-          // Try with admin client that has elevated permissions
-          console.log(`SUPABASE-AUTH: Executing query with admin client to find tenant with id = '${tenant_id}'`);
-          const { data, error } = await adminClient
-            .from('tenants')
-            .select('*')
-            .eq('id', tenant_id);
-            
-          if (error) {
-            console.error('SUPABASE-AUTH: Error with admin client query:', error);
-          } else if (data && data.length > 0) {
-            console.log('SUPABASE-AUTH: Found tenant with admin client query:', data[0]);
-            tenant_name = data[0].name;
-          } else {
-            console.log('SUPABASE-AUTH: No results from admin client, trying to create tenant');
-            
-            // Attempt to create the tenant using admin client
-            try {
-              const { data: newTenant, error: createError } = await adminClient
-                .from('tenants')
-                .insert({
-                  id: tenant_id,
-                  name: tenant_id.toLowerCase(),
-                  plan: 'free',
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                })
-                .select()
-                .single();
-                
-              if (createError) {
-                console.error('SUPABASE-AUTH: Error creating tenant with admin client:', createError);
-                // Use fallback name
-                tenant_name = tenant_id.toLowerCase();
-              } else if (newTenant) {
-                console.log('SUPABASE-AUTH: Successfully created tenant with admin client:', newTenant);
-                tenant_name = newTenant.name;
-              }
-            } catch (createErr) {
-              console.error('SUPABASE-AUTH: Exception creating tenant with admin client:', createErr);
-              // Use fallback name
-              tenant_name = tenant_id.toLowerCase();
-            }
-          }
-        } catch (err) {
-          console.error('SUPABASE-AUTH: Error fetching tenant name with admin client:', err);
-          // Use tenant_id as fallback if tenant not found
-          tenant_name = tenant_id.toLowerCase();
-        }
-      }
+      // Simplified approach: Just use tenant_name from metadata or fallback to tenant_id
+      // No need to query the database for tenant information anymore
+      let tenant_name = metadata.tenant_name || tenant_id;
       
-      // Ensure we always have a tenant_name if we have a tenant_id
-      if (tenant_id && !tenant_name) {
-        tenant_name = tenant_id.toLowerCase();
-      }
+      // Log for debugging
+      console.log('SUPABASE-AUTH: Using tenant_name from metadata:', tenant_name);
       
       const userData: UserSession = {
         id: user.id,

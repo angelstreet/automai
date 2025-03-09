@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { locales } from '@/config';
+import { getUser } from '@/lib/supabase/auth';
 
 export const dynamic = 'force-static';
 
@@ -8,6 +9,18 @@ export async function generateStaticParams() {
 }
 
 export default async function Page({ params }: { params: { locale: string } }) {
-  // Redirect to the trial tenant dashboard
-  redirect(`/${params.locale}/trial/dashboard`);
+  // Try to get the authenticated user
+  const userResult = await getUser();
+  
+  // If we have a user with tenant_name, use it for redirection
+  // Otherwise fall back to the trial tenant
+  const tenantName = userResult.success && userResult.data?.tenant_name 
+    ? userResult.data.tenant_name 
+    : 'trial';
+  
+  // Log for debugging
+  console.log('Root page redirect using tenant:', tenantName);
+  
+  // Redirect to the appropriate tenant dashboard
+  redirect(`/${params.locale}/${tenantName}/dashboard`);
 }

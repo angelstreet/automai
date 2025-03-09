@@ -94,6 +94,10 @@ export default async function middleware(request: NextRequest) {
     return response;
   }
   
+  // Access user session info from cookies if needed for debugging (non-invasive)
+  // We don't actually extract the data here to avoid breaking anything
+  console.log('Middleware: Processing authenticated request');
+  
   // 5. Apply internationalization middleware for non-redirect responses
   const intl = await getIntlMiddleware();
   return intl(response);

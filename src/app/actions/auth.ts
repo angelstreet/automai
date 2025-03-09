@@ -68,17 +68,25 @@ export async function handleAuthCallback(url: string) {
       // Ensure user exists in database after successful authentication
       await ensureUserInDatabase(result.data);
       
-      // Get the tenant ID for redirection
+      // Get the tenant information for redirection
       const userData = result.data.session?.user;
-      const tenantId = userData?.user_metadata?.tenant_id || 'a317a10a-776a-47de-9347-81806b36a03e';
+      
+      // Use tenant_name if available, otherwise fall back to tenant_id or the default
+      // This prioritizes the tenant_name stored in user metadata
+      const tenantName = userData?.user_metadata?.tenant_name || 
+                         userData?.user_metadata?.tenant_id || 
+                         'a317a10a-776a-47de-9347-81806b36a03e';
       
       // Get the locale from URL or default to 'en'
       const pathParts = url.split('/');
       const localeIndex = pathParts.findIndex(part => part === 'auth-redirect') - 1;
       const locale = localeIndex >= 0 ? pathParts[localeIndex] : 'en';
       
+      // Log for debugging
+      console.log('Auth callback redirect using tenant:', tenantName);
+      
       // Redirect URL for after authentication
-      const redirectUrl = `/${locale}/${tenantId}/dashboard`;
+      const redirectUrl = `/${locale}/${tenantName}/dashboard`;
       
       return {
         success: true,
