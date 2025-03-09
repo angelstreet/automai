@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { testConnection } from '@/app/actions/git-providers';
+import { testGitProviderConnection } from '@/app/actions/git-providers';
 
 /**
  * POST /api/repositories/test-connection
@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     // Call the server action to test connection
-    const result = await testConnection(body);
+    const result = await testGitProviderConnection(body);
     
     if (!result.success) {
       return NextResponse.json(
