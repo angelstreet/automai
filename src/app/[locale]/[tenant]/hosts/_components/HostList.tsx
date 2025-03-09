@@ -192,13 +192,18 @@ export default function HostContainer() {
 
   const handleSaveHost = async () => {
     try {
+      console.log('Creating new host with form data:', {
+        ...formData,
+        password: '***' // Mask password in logs
+      });
+      
       const newHost = await hostsApi.createHost({
         name: formData.name,
         description: formData.description,
         type: formData.type,
         ip: formData.ip,
         port: parseInt(formData.port),
-        user: formData.username,
+        username: formData.username, // This is fine now because our API handles it
         password: formData.password,
         status: 'connected',
       });
@@ -222,9 +227,15 @@ export default function HostContainer() {
         username: '',
         password: '',
       });
+
+      toast.success('Host created successfully');
     } catch (error) {
-      console.error('Error saving host:', error);
-      toast.error('Failed to create host');
+      console.error('Error creating host:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'An unknown error occurred while creating the host';
+      
+      toast.error(errorMessage);
     }
   };
 

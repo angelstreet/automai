@@ -135,7 +135,7 @@ export const hostsApi = {
    * @param {string} data.type - Required: Host type (ssh, docker, portainer)
    * @param {string} data.ip - Required: Host IP address
    * @param {number} data.port - Optional: Host port (defaults to 22 for SSH)
-   * @param {string} data.user - Required for SSH: Username
+   * @param {string} data.user - Required for SSH: Username (can also be provided as 'username')
    * @param {string} data.password - Required for SSH: Password
    * @param {string} data.status - Optional: Initial status (defaults to 'pending')
    * @returns {Promise<Host>} Created host
@@ -146,23 +146,55 @@ export const hostsApi = {
     type: string;
     ip: string;
     port: number;
-    user: string;
+    user?: string;
+    username?: string; // Allow either user or username
     password: string;
     status: string;
   }) => {
-    const response = await fetch(`${getBaseUrl()}/api/hosts`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
+    try {
+      // Normalize the data to ensure we have 'user' property
+      const normalizedData = {
+        name: data.name,
+        description: data.description,
+        type: data.type,
+        ip: data.ip,
+        port: data.port,
+        user: data.user || data.username, // Use user if available, otherwise fallback to username
+        password: data.password,
+        status: data.status,
+      };
 
-    if (!response.ok) {
-      throw new Error('Failed to create host');
+      console.log('Creating host with data:', {
+        ...normalizedData,
+        password: '***' // Mask password in logs
+      });
+
+      const response = await fetch(`${getBaseUrl()}/api/hosts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(normalizedData),
+      });
+
+      if (!response.ok) {
+        // Try to extract detailed error information
+        try {
+          const errorData = await response.json();
+          console.error('Error creating host:', errorData);
+          throw new Error(errorData.message || errorData.error || 'Failed to create host');
+        } catch (parseError) {
+          // If we can't parse the error JSON, fall back to generic error
+          console.error('Error creating host:', response.status, response.statusText);
+          throw new Error(`Failed to create host: ${response.status} ${response.statusText}`);
+        }
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Host creation error:', error);
+      throw error; // Re-throw the error to be caught by the caller
     }
-
-    return response.json();
   },
 
   /**
