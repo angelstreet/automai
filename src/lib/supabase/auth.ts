@@ -156,19 +156,59 @@ export const supabaseAuth = {
    * Get the current user
    */
   async getUser(): Promise<AuthResult<UserSession>> {
-    const sessionResult = await this.getSession();
-    
-    if (!sessionResult.success) {
+    if (!isUsingSupabase()) {
       return {
         success: false,
-        error: sessionResult.error,
+        error: 'Supabase auth not available in this environment',
       };
     }
-    
-    return {
-      success: true,
-      data: sessionResult.data!.user,
-    };
+
+    try {
+      // Get cookies and create client
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+
+      // Use getUser instead of getSession for better security
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error('Error getting user:', error);
+        return { 
+          success: false, 
+          error: error.message 
+        };
+      }
+
+      if (!data.user) {
+        return {
+          success: false,
+          error: 'No authenticated user',
+        };
+      }
+
+      // Extract user data
+      const user = data.user;
+      const userData: UserSession = {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.name || user.user_metadata?.full_name,
+        image: user.user_metadata?.avatar_url,
+        role: user.user_metadata?.role || 'user',
+        tenant_id: user.user_metadata?.tenant_id,
+        tenant_name: user.user_metadata?.tenant_name,
+      };
+
+      return {
+        success: true,
+        data: userData,
+      };
+    } catch (error) {
+      console.error('Error in getUser:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   },
 
   /**
@@ -309,6 +349,7 @@ export const supabaseAuth = {
 
   /**
    * Handle OAuth callback
+   * This is part of the server DB layer that directly interacts with Supabase
    */
   async handleOAuthCallback(code: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {

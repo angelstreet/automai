@@ -40,8 +40,10 @@ export default function AuthRedirectPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { user, loading, error, refreshUser } = useAuth();
+  const { loading, exchangeCodeForSession } = useAuth();
   const [authError, setAuthError] = useState<Error | null>(null);
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [hasRedirected, setHasRedirected] = useState(false);
   const locale = params.locale as string;
   
   // Get search params
@@ -49,39 +51,48 @@ export default function AuthRedirectPage() {
   const errorParam = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
+  // Handle the authentication process
   useEffect(() => {
-    async function handleAuthRedirect() {
+    // Skip if we've already processed or there's no code
+    if (hasRedirected || !code) {
+      setIsProcessing(false);
+      return;
+    }
+
+    async function processAuth() {
       try {
         // If there's an error in the URL, show it
         if (errorParam) {
           setAuthError(new Error(errorDescription || errorParam));
+          setIsProcessing(false);
           return;
         }
 
-        // If no code is present, this isn't an auth callback
-        if (!code) {
-          setAuthError(new Error('No authentication code provided'));
-          return;
-        }
-
-        // Refresh the user data to get the latest session
-        await refreshUser();
+        // Process authentication using the hook
+        // This follows the three-layer architecture: client component → client hook → server action → server db
+        const result = await exchangeCodeForSession();
         
-        // If we have a user, redirect to their dashboard
-        if (user) {
-          const tenantId = user.user_metadata?.tenant_id || 'default';
-          router.push(`/${locale}/${tenantId}/dashboard`);
+        if (!result.success) {
+          setAuthError(new Error(result.error || 'Authentication failed'));
+          setIsProcessing(false);
+          return;
+        }
+        
+        // Handle redirect using Next.js router for client-side navigation
+        // The redirect URL is determined by the server action
+        if (result.redirectUrl) {
+          setHasRedirected(true);
+          router.push(result.redirectUrl);
         }
       } catch (err) {
-        console.error('Error in auth redirect:', err);
+        console.error('Error in auth process:', err);
         setAuthError(err instanceof Error ? err : new Error('Authentication failed'));
+        setIsProcessing(false);
       }
     }
 
-    if (!loading) {
-      handleAuthRedirect();
-    }
-  }, [code, errorParam, errorDescription, loading, user, refreshUser, router, locale]);
+    processAuth();
+  }, [code, errorParam, errorDescription, exchangeCodeForSession, hasRedirected, router]);
 
   // Show error if there is one
   if (authError) {
@@ -89,5 +100,10 @@ export default function AuthRedirectPage() {
   }
 
   // Show loading state while processing
+  if (isProcessing || loading) {
+    return <LoadingState />;
+  }
+
+  // Fallback for any other case - should rarely be seen as the action should redirect
   return <LoadingState />;
 }

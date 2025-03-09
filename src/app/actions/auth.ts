@@ -26,6 +26,7 @@ let noSessionErrorLogged = false;
 
 /**
  * Handle OAuth callback from Supabase Auth
+ * This follows the three-layer architecture: server action → server db
  */
 export async function handleAuthCallback(url: string) {
   try {
@@ -42,7 +43,7 @@ export async function handleAuthCallback(url: string) {
       };
     }
     
-    // Use the consolidated auth service
+    // Use the server DB layer (supabaseAuth service)
     const result = await supabaseAuth.handleOAuthCallback(code);
     
     if (!result.success || !result.data?.session) {
@@ -59,10 +60,11 @@ export async function handleAuthCallback(url: string) {
     const tenant = result.data.user.user_metadata?.tenant_id || 'default';
     const redirectUrl = `/${locale}/${tenant}/dashboard`;
     
-    return { 
-      success: true, 
+    return {
+      success: true,
       error: null,
-      redirectUrl
+      redirectUrl,
+      data: result.data
     };
   } catch (error: any) {
     console.error('Error in handleAuthCallback:', error);

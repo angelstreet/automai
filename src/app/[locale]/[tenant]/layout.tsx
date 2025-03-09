@@ -7,7 +7,8 @@ import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { Providers } from '@/components/providers';
+import { ThemeProviders } from '@/components/providers';
+import { User } from '@supabase/supabase-js';
 
 interface TenantLayoutProps {
   children: React.ReactNode;
@@ -22,7 +23,7 @@ export default function TenantLayout({ children, params }: TenantLayoutProps) {
   const resolvedParams = React.use(params);
   const { locale, tenant } = resolvedParams;
   
-  const { user, isLoading, error } = useAuth();
+  const { user, loading, error } = useAuth();
   const router = useRouter();
   const t = useTranslations();
   const [state, setState] = useState({
@@ -37,13 +38,13 @@ export default function TenantLayout({ children, params }: TenantLayoutProps) {
     // Update state based on auth status
     setState(prev => ({
       ...prev,
-      isLoading,
+      isLoading: loading,
       hasUser: !!user,
       error: error ? error.message : null
     }));
 
     console.log('TenantLayout state:', {
-      isLoading,
+      isLoading: loading,
       hasUser: !!user,
       error: error ? error.message : null,
       tenant,
@@ -51,11 +52,11 @@ export default function TenantLayout({ children, params }: TenantLayoutProps) {
     });
 
     // If not loading and no user, redirect to login
-    if (!isLoading && !user && !error) {
+    if (!loading && !user && !error) {
       console.log('No user found in TenantLayout, redirecting to login');
       router.push(`/${locale}/login?callbackUrl=/${locale}/${tenant}/dashboard`);
     }
-  }, [isLoading, user, error, locale, tenant, router]);
+  }, [loading, user, error, locale, tenant, router]);
 
   // Show loading state
   if (state.isLoading) {
@@ -89,16 +90,16 @@ export default function TenantLayout({ children, params }: TenantLayoutProps) {
 
   // If we have a user, render the layout
   return (
-    <Providers>
+    <ThemeProviders>
       <div className="flex h-screen overflow-hidden">
         <AppSidebar 
-          user={user} 
+          user={user as any} 
           tenant={tenant} 
           locale={locale} 
         />
         <div className="flex flex-col flex-1 overflow-hidden">
           <WorkspaceHeader 
-            user={user} 
+            user={user as any} 
             tenant={tenant} 
             locale={locale} 
           />
@@ -107,6 +108,6 @@ export default function TenantLayout({ children, params }: TenantLayoutProps) {
           </main>
         </div>
       </div>
-    </Providers>
+    </ThemeProviders>
   );
 }

@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isAuthenticating, setIsAuthenticating] = React.useState(false);
   
   // Use the auth hook
   const { user, loading, error: authError, signInWithPassword, signInWithOAuth } = useAuth();
@@ -31,13 +32,27 @@ export default function LoginPage() {
   React.useEffect(() => {
     if (authError) {
       setError(authError.message);
+      setIsAuthenticating(false);
     }
   }, [authError]);
+
+  // Check if we were redirected back to login page after an OAuth attempt
+  React.useEffect(() => {
+    // If we have an error in the URL, it means we were redirected back after a failed OAuth attempt
+    const urlParams = new URLSearchParams(window.location.search);
+    const errorParam = urlParams.get('error');
+    
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      setIsAuthenticating(false);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+    setIsAuthenticating(true);
 
     try {
       const result = await signInWithPassword(email, password);
@@ -48,24 +63,35 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
-    } finally {
       setIsSubmitting(false);
+      setIsAuthenticating(false);
     }
   };
 
   const handleOAuthLogin = async (provider: 'google' | 'github') => {
     try {
+      setIsAuthenticating(true);
+      setError('');
+      
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
       const result = await signInWithOAuth(provider, redirectUrl);
       
       if (result?.url) {
         // Redirect to OAuth provider
         window.location.href = result.url;
+      } else {
+        // If no URL is returned, something went wrong
+        setError('Failed to initiate login');
+        setIsAuthenticating(false);
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
+      setIsAuthenticating(false);
     }
   };
+
+  // Determine if buttons should be disabled
+  const isButtonDisabled = isSubmitting || loading || isAuthenticating;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -107,6 +133,8 @@ export default function LoginPage() {
               required
               className="mt-1"
               placeholder="you@example.com"
+              autoComplete="username"
+              disabled={isButtonDisabled}
             />
           </div>
 
@@ -129,6 +157,8 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               className="mt-1"
+              autoComplete="current-password"
+              disabled={isButtonDisabled}
             />
           </div>
 
@@ -141,7 +171,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             className="w-full"
-            disabled={isSubmitting || loading}
+            disabled={isButtonDisabled}
           >
             {isSubmitting || loading ? t('signingIn') : t('signIn')}
           </Button>
@@ -163,6 +193,7 @@ export default function LoginPage() {
               variant="outline"
               onClick={() => handleOAuthLogin('google')}
               className="flex items-center justify-center"
+              disabled={isButtonDisabled}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
@@ -190,6 +221,7 @@ export default function LoginPage() {
               variant="outline"
               onClick={() => handleOAuthLogin('github')}
               className="flex items-center justify-center"
+              disabled={isButtonDisabled}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path

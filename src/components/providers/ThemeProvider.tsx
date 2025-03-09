@@ -35,4 +35,4 @@ export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvi
       </ThemeProvider>
     </NextThemesProvider>
   );
-}
+} 

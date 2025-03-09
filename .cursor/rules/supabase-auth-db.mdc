@@ -20,15 +20,16 @@ These guidelines cover how to properly integrate with Supabase services includin
 
 ## Three-Layer Architecture
 
-We use a strict three-layer architecture for all Supabase database operations:
+We use a strict three-layer architecture for all Supabase operations:
 
 1. **Server DB Layer** (Core)
-   - Lives in `/src/lib/supabase/db.ts`
-   - Contains ALL actual Supabase database calls
-   - Only this layer should create Supabase clients using `createServerClient`
+   - Lives in `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
+   - Contains ALL actual Supabase database and auth calls
+   - Only this layer should create Supabase clients using `createClient`
    - Uses server-side Supabase client with cookies()
    - Never imported directly by client components
    - Handles database connection, queries, and raw data formatting
+   - Returns data in a consistent format: `{success, error, data}`
 
 2. **Server Actions Layer** (Bridge)
    - Lives in `/src/app/actions/*.ts`
@@ -37,7 +38,7 @@ We use a strict three-layer architecture for all Supabase database operations:
    - MUST import and call functions from the Server DB Layer
    - Adds error handling, validation, and business logic
    - Provides a clean API for client components
-   - Returns data in a consistent format (e.g., {success, data, error})
+   - Returns data in a consistent format: `{success, error, data, ...additionalProps}`
 
 3. **Client Hooks Layer** (Interface)
    - Lives in `/src/hooks/*.ts`
@@ -46,224 +47,464 @@ We use a strict three-layer architecture for all Supabase database operations:
    - MUST call Server Actions (not Server DB directly)
    - Manages loading states, errors, and data caching
    - Provides a React-friendly interface for components
+   - Returns React-specific values like state and handlers
 
 ### Data Flow
 
 1. Client Component → Client Hook → Server Action → Server DB → Supabase
-2. Server Component → Server DB → Supabase (direct access)
+2. Server Component → Server Action → Server DB → Supabase
 
-### Key Restrictions
+## Authentication Guidelines
 
-- Only the Server DB Layer should create Supabase clients
-- Server Actions should never directly access Supabase
-- Client Hooks should never directly access Supabase or the Server DB Layer
+### Authentication Flow Architecture
 
-## Detailed Rules
+For authentication flows, follow these specific patterns:
 
-### Supabase Client Usage
+1. **Server DB Layer** (`/src/lib/supabase/auth.ts`)
+   - Contains all direct Supabase auth calls
+   - Methods like `signInWithPassword`, `signInWithOAuth`, `handleOAuthCallback`, etc.
+   - Returns consistent `AuthResult` objects: `{success, error, data}`
+   - Example:
+     ```typescript
+     async handleOAuthCallback(code: string): Promise<AuthResult> {
+       // Create Supabase client
+       const cookieStore = await cookies();
+       const supabase = await createClient(cookieStore);
+       
+       // Call Supabase API
+       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+       
+       // Return standardized result
+       if (error) {
+         return { success: false, error: error.message };
+       }
+       return { success: true, data };
+     }
+     ```
 
-#### Client Architecture
+2. **Server Actions Layer** (`/src/app/actions/auth.ts`)
+   - Calls the Server DB Layer methods
+   - Adds business logic like redirect URL determination
+   - Returns enhanced results with additional properties
+   - Example:
+     ```typescript
+     export async function handleAuthCallback(url: string) {
+       // Parse URL to get code
+       const requestUrl = new URL(url);
+       const code = requestUrl.searchParams.get('code');
+       
+       // Call Server DB Layer
+       const result = await supabaseAuth.handleOAuthCallback(code);
+       
+       // Add redirect URL based on user data
+       if (result.success) {
+         const locale = requestUrl.pathname.split('/')[1] || 'en';
+         const tenant = result.data.user.user_metadata?.tenant_id || 'default';
+         return {
+           success: true,
+           error: null,
+           redirectUrl: `/${locale}/${tenant}/dashboard`,
+           data: result.data
+         };
+       }
+       
+       return { 
+         success: false, 
+         error: result.error, 
+         redirectUrl: null 
+       };
+     }
+     ```
 
-- Use centralized clients from `/src/lib/supabase`:
-  - `createBrowserClient()` - For client components
-  - `createServerClient()` - For server components
-  - `createMiddlewareClient()` - For middleware
-  - `createAdminClient()` - For privileged operations with service role
+3. **Client Hooks Layer** (`/src/hooks/useAuth.ts`)
+   - Calls Server Actions
+   - Manages loading and error states
+   - Provides methods for components to use
+   - Example:
+     ```typescript
+     const exchangeCodeForSession = useCallback(async () => {
+       try {
+         setLoading(true);
+         setError(null);
+         
+         // Call Server Action
+         const url = window.location.href;
+         const result = await handleAuthCallbackAction(url);
+         
+         if (result.success) {
+           await fetchUser();
+           return { success: true, redirectUrl: result.redirectUrl };
+         }
+         
+         setError(new Error(result.error));
+         return { success: false, error: result.error };
+       } catch (err) {
+         setError(err instanceof Error ? err : new Error('Authentication failed'));
+         return { success: false, error: 'Authentication failed' };
+       } finally {
+         setLoading(false);
+       }
+     }, [fetchUser]);
+     ```
 
-- Never import directly from:
-  - `@supabase/supabase-js`
-  - `@supabase/ssr`
-  - The old implementation in `/src/utils/supabase`
+### OAuth Authentication Flow
 
-#### Client Components
+For OAuth authentication (GitHub, Google, etc.), follow this specific flow:
 
+1. **Initiate OAuth Flow**:
+   - Client Component calls hook method: `signInWithOAuth('github', redirectUrl)`
+   - Hook calls Server Action: `signInWithOAuthAction('github', redirectUrl)`
+   - Server Action calls Server DB: `supabaseAuth.signInWithOAuth('github', {redirectTo})`
+   - User is redirected to OAuth provider
+
+2. **Handle OAuth Callback**:
+   - OAuth provider redirects back to your callback URL with a code
+   - Client Component (`auth-redirect/page.tsx`) calls hook method: `exchangeCodeForSession()`
+   - Hook calls Server Action: `handleAuthCallbackAction(url)`
+   - Server Action calls Server DB: `supabaseAuth.handleOAuthCallback(code)`
+   - Server Action determines redirect URL based on user data
+   - Client redirects user to the appropriate page
+
+### Error Handling for Authentication
+
+Always follow these error handling patterns:
+
+1. **Server DB Layer**:
+   - Catch all Supabase errors
+   - Return standardized objects: `{success: false, error: 'Error message'}`
+   - Log detailed errors on the server
+
+2. **Server Actions Layer**:
+   - Handle specific error cases with appropriate messages
+   - Return standardized objects: `{success: false, error: 'User-friendly message'}`
+   - Add additional context if needed
+
+3. **Client Hooks Layer**:
+   - Set error state for component use
+   - Return user-friendly error messages
+   - Provide methods to clear errors
+
+## Database Guidelines
+
+### Database Access Pattern
+
+For database operations, follow this pattern:
+
+1. **Server DB Layer** (`/src/lib/supabase/db.ts`)
+   - Contains all direct Supabase database calls
+   - Organized by table/entity
+   - Example:
+     ```typescript
+     const db = {
+       projects: {
+         async findMany(options = {}) {
+           const cookieStore = await cookies();
+           const supabase = await createClient(cookieStore);
+           
+           let query = supabase.from('projects').select('*');
+           
+           // Apply tenant isolation
+           if (options.tenant_id) {
+             query = query.eq('tenant_id', options.tenant_id);
+           }
+           
+           const { data, error } = await query;
+           
+           if (error) {
+             console.error('Error fetching projects:', error);
+             return [];
+           }
+           
+           return data || [];
+         }
+       }
+     };
+     ```
+
+2. **Server Actions Layer** (`/src/app/actions/*.ts`)
+   - Calls the Server DB Layer methods
+   - Adds business logic and validation
+   - Example:
+     ```typescript
+     export async function getProjects(filters = {}) {
+       try {
+         const user = await getCurrentUser();
+         if (!user) {
+           return { success: false, error: 'Unauthorized' };
+         }
+         
+         const projects = await db.projects.findMany({
+           ...filters,
+           tenant_id: user.tenant_id
+         });
+         
+         return { success: true, data: projects };
+       } catch (error) {
+         return { success: false, error: 'Failed to fetch projects' };
+       }
+     }
+     ```
+
+3. **Client Hooks Layer** (`/src/hooks/*.ts`)
+   - Calls Server Actions
+   - Manages loading and error states
+   - Example:
+     ```typescript
+     export function useProjects() {
+       const [projects, setProjects] = useState([]);
+       const [loading, setLoading] = useState(true);
+       const [error, setError] = useState(null);
+       
+       async function fetchProjects() {
+         setLoading(true);
+         const result = await getProjectsAction();
+         
+         if (result.success) {
+           setProjects(result.data);
+         } else {
+           setError(result.error);
+         }
+         
+         setLoading(false);
+       }
+       
+       useEffect(() => {
+         fetchProjects();
+       }, []);
+       
+       return { projects, loading, error, refetch: fetchProjects };
+     }
+     ```
+
+### Tenant Isolation
+
+Always enforce tenant boundaries in database operations:
+
+1. **Server DB Layer**:
+   - Accept tenant_id as a parameter
+   - Apply tenant_id filter to all queries
+
+2. **Server Actions Layer**:
+   - Get tenant_id from the current user
+   - Pass tenant_id to the Server DB Layer
+   - Never allow cross-tenant access
+
+## Common Pitfalls
+
+- **Bypassing the Three-Layer Architecture** - Never call Server DB directly from Client Hooks
+- **Missing Tenant Isolation** - Always include tenant_id in database queries
+- **Direct Supabase Usage** - Never import Supabase clients directly in components or hooks
+- **Not Awaiting Async APIs** - Remember to await all async operations
+- **Exposing Supabase Keys** - Never expose service role keys in client code
+- **Inconsistent Error Handling** - Always use the standardized error format
+- **Using React.use() with Promises in Client Components** - Never use React.use() in client components
+- **Using Incorrect Client** - Use the appropriate client for each context
+
+## Examples
+
+### Complete Authentication Flow Example
+
+**1. Server DB Layer** (`/src/lib/supabase/auth.ts`):
 ```typescript
-// In client components
-import { createBrowserClient } from '@/lib/supabase';
-
-function ProfileButton() {
-  const handleLogout = async () => {
-    const supabase = createBrowserClient();
-    await supabase.auth.signOut();
-  };
-  
-  return <button onClick={handleLogout}>Sign out</button>;
-}
-```
-
-#### Server Components
-
-```typescript
-// In server components
-import { createServerClient } from '@/lib/supabase';
-
-async function ProfilePage() {
-  const supabase = await createServerClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  // Use session data
-}
-```
-
-### Database Access
-
-#### Three-Layer Pattern Examples
-
-**1. Server DB Layer (Core)**
-
-```typescript
-// src/lib/supabase/db.ts
-import { createServerClient } from '@/lib/supabase';
-import { cookies } from 'next/headers';
-
-const db = {
-  host: {
-    async findMany(options: any = {}) {
+export const supabaseAuth = {
+  async signInWithOAuth(provider, options) {
+    try {
       const cookieStore = await cookies();
-      const supabase = await createServerClient(cookieStore);
+      const supabase = await createClient(cookieStore);
       
-      let builder = supabase.from('hosts').select('*');
-      
-      // Apply tenant isolation
-      if (options.tenant_id) {
-        builder = builder.eq('tenant_id', options.tenant_id);
-      }
-      
-      // Apply filters
-      if (options.where) {
-        Object.entries(options.where).forEach(([key, value]) => {
-          builder = builder.eq(key, value);
-        });
-      }
-      
-      const { data, error } = await builder;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options
+      });
       
       if (error) {
-        console.error('Error fetching hosts:', error);
-        return [];
+        return { success: false, error: error.message };
       }
       
-      return data || [];
-    },
-    
-    // Other host methods...
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: 'Failed to sign in with OAuth' };
+    }
   },
   
-  // Other tables...
+  async handleOAuthCallback(code) {
+    try {
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: 'Failed to process OAuth callback' };
+    }
+  }
 };
-
-export default db;
 ```
 
-**2. Server Actions Layer (Bridge)**
-
+**2. Server Actions Layer** (`/src/app/actions/auth.ts`):
 ```typescript
-// src/app/actions/hosts.ts
-'use server';
-
-import db from '@/lib/supabase/db';
-import { getUser } from '@/auth';
-
-export async function getHosts(filters = {}) {
+export async function signInWithOAuth(provider, redirectUrl) {
   try {
-    // Get the current user to enforce tenant isolation
-    const user = await getUser();
-    if (!user) {
-      return { success: false, error: 'Unauthorized' };
-    }
-    
-    // Add tenant_id to ensure tenant isolation
-    const hosts = await db.host.findMany({
-      ...filters,
-      tenant_id: user.tenant_id
+    const result = await supabaseAuth.signInWithOAuth(provider, { 
+      redirectTo: redirectUrl 
     });
     
-    return { success: true, data: hosts };
+    return { 
+      success: result.success, 
+      error: result.error, 
+      data: result.data 
+    };
   } catch (error) {
-    console.error('Error in getHosts action:', error);
-    return { success: false, error: 'Failed to fetch hosts' };
+    return { success: false, error: 'Failed to sign in', data: null };
   }
 }
 
-// Other host actions...
+export async function handleAuthCallback(url) {
+  try {
+    const requestUrl = new URL(url);
+    const code = requestUrl.searchParams.get('code');
+    
+    if (!code) {
+      return { success: false, error: 'No authentication code provided', redirectUrl: null };
+    }
+    
+    const result = await supabaseAuth.handleOAuthCallback(code);
+    
+    if (!result.success) {
+      return { success: false, error: result.error, redirectUrl: null };
+    }
+    
+    const locale = requestUrl.pathname.split('/')[1] || 'en';
+    const tenant = result.data.user.user_metadata?.tenant_id || 'default';
+    const redirectUrl = `/${locale}/${tenant}/dashboard`;
+    
+    return { success: true, error: null, redirectUrl, data: result.data };
+  } catch (error) {
+    return { success: false, error: 'Authentication failed', redirectUrl: null };
+  }
+}
 ```
 
-**3. Client Hooks Layer (Interface)**
-
+**3. Client Hooks Layer** (`/src/hooks/useAuth.ts`):
 ```typescript
-// src/hooks/useHosts.ts
-'use client';
-
-import { useState, useEffect } from 'react';
-import { getHosts, createHost } from '@/app/actions/hosts';
-
-export function useHosts(initialFilters = {}) {
-  const [hosts, setHosts] = useState([]);
+export function useAuth() {
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  async function fetchHosts(filters = initialFilters) {
-    setLoading(true);
-    const result = await getHosts(filters);
-    
-    if (result.success) {
-      setHosts(result.data);
+  const fetchUser = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getCurrentUser();
+      setUser(data);
       setError(null);
-    } else {
-      setError(result.error);
+    } catch (err) {
+      setError('Failed to fetch user');
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
-  }
-  
-  // Other functions...
-  
-  useEffect(() => {
-    fetchHosts();
   }, []);
   
+  const signInWithOAuth = useCallback(async (provider, redirectUrl) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await signInWithOAuthAction(provider, redirectUrl);
+      
+      if (!result.success) {
+        setError(result.error);
+        return null;
+      }
+      
+      return result.data;
+    } catch (err) {
+      setError('Failed to sign in');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  const exchangeCodeForSession = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const url = window.location.href;
+      const result = await handleAuthCallbackAction(url);
+      
+      if (!result.success) {
+        setError(result.error);
+        return { success: false, error: result.error };
+      }
+      
+      await fetchUser();
+      return { success: true, redirectUrl: result.redirectUrl };
+    } catch (err) {
+      setError('Authentication failed');
+      return { success: false, error: 'Authentication failed' };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchUser]);
+  
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+  
   return {
-    hosts,
+    user,
     loading,
     error,
-    refetch: fetchHosts,
-    addHost
+    signInWithOAuth,
+    exchangeCodeForSession,
+    // Other auth methods...
   };
 }
 ```
 
-**4. Client Component Usage**
-
+**4. Client Component Usage** (`/src/app/[locale]/(auth)/auth-redirect/page.tsx`):
 ```typescript
-// src/components/hosts/HostList.tsx
-'use client';
-
-import { useHosts } from '@/hooks/useHosts';
-
-export default function HostList() {
-  const { hosts, loading, error } = useHosts();
+export default function AuthRedirectPage() {
+  const router = useRouter();
+  const { loading, exchangeCodeForSession } = useAuth();
+  const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(true);
   
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  useEffect(() => {
+    async function processAuth() {
+      try {
+        const result = await exchangeCodeForSession();
+        
+        if (result.success && result.redirectUrl) {
+          router.push(result.redirectUrl);
+        } else {
+          setError(result.error || 'Authentication failed');
+          setIsProcessing(false);
+        }
+      } catch (err) {
+        setError('Authentication failed');
+        setIsProcessing(false);
+      }
+    }
+    
+    processAuth();
+  }, [exchangeCodeForSession, router]);
   
-  return (
-    <div>
-      <h1>Hosts</h1>
-      {hosts.map(host => (
-        <div key={host.id}>{host.name}</div>
-      ))}
-    </div>
-  );
+  if (error) {
+    return <ErrorDisplay message={error} />;
+  }
+  
+  if (isProcessing || loading) {
+    return <LoadingSpinner />;
+  }
+  
+  return <LoadingSpinner />;
 }
-```
-
-### Common Pitfalls
-
-- **Bypassing the Three-Layer Architecture** - Always follow the server-db → server-actions → client-hooks pattern
-- **Missing Tenant Isolation** - Always include tenant_id in database queries
-- **Direct Supabase Usage** - Use the centralized clients instead of direct Supabase imports
-- **Not Awaiting Async APIs** - Remember to await createServerClient() and other async APIs
-- **Exposing Supabase Keys** - Never expose service role keys in client code
-- **Inconsistent Error Handling** - Standardize how Supabase errors are handled
-- **Using React.use() with Promises in Client Components** - Never use React.use() to unwrap promises in client components
-- **Using Incorrect Client** - Never use createBrowserClient() in server components or createServerClient() in client components 
+``` 

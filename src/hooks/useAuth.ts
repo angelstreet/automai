@@ -2,16 +2,18 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { 
-  signOut, 
-  updateProfile, 
+  signOut as signOutAction, 
+  updateProfile as updateProfileAction, 
   getCurrentUser,
   signUp as signUpAction,
   signInWithOAuth as signInWithOAuthAction,
   resetPasswordForEmail as resetPasswordAction,
   signInWithPassword as signInWithPasswordAction,
   updatePassword as updatePasswordAction,
+  handleAuthCallback as handleAuthCallbackAction,
   AuthUser,
 } from '@/app/actions/auth';
+import { supabaseAuth } from '@/lib/supabase/auth';
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -38,7 +40,7 @@ export function useAuth() {
 
   const handleSignOut = async (formData: FormData) => {
     try {
-      await signOut(formData);
+      await signOutAction(formData);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to sign out'));
     }
@@ -46,7 +48,7 @@ export function useAuth() {
 
   const handleUpdateProfile = async (formData: FormData) => {
     try {
-      await updateProfile(formData);
+      await updateProfileAction(formData);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to update profile'));
     }
@@ -158,6 +160,37 @@ export function useAuth() {
     await fetchUser();
   }, [fetchUser]);
 
+  const exchangeCodeForSession = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Use the auth action to handle the callback
+      // This follows the three-layer architecture: client hook → server action → server db
+      const url = typeof window !== 'undefined' ? window.location.href : '';
+      const result = await handleAuthCallbackAction(url);
+      
+      if (!result.success) {
+        setError(new Error(result.error || 'Failed to authenticate'));
+        return { success: false, error: result.error };
+      }
+      
+      // Refresh user data after successful authentication
+      await fetchUser();
+      
+      return { 
+        success: true, 
+        redirectUrl: result.redirectUrl 
+      };
+    } catch (err) {
+      console.error('Error in authentication:', err);
+      setError(err instanceof Error ? err : new Error('Authentication failed'));
+      return { success: false, error: 'Authentication failed' };
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchUser]);
+
   return {
     user,
     loading,
@@ -169,6 +202,7 @@ export function useAuth() {
     signInWithPassword: handleSignInWithPassword,
     signInWithOAuth: handleSignInWithOAuth,
     resetPassword: handleResetPassword,
-    refreshUser
+    refreshUser,
+    exchangeCodeForSession
   };
 }
