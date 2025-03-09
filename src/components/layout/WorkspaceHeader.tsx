@@ -24,7 +24,7 @@ const HEADER_COOKIE_NAME = 'header:state';
 const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
-  const { currentRole, setCurrentRole } = useRole();
+  const { role, setRole } = useRole();
   const params = useParams();
   const locale = params.locale as string;
   const [headerVisible, setHeaderVisible] = React.useState(
@@ -43,7 +43,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
   return (
     <>
       {headerVisible ? (
-        <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className={`sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b ${className}`}>
           <div className="flex h-14 items-center">
             {/* Left section */}
             <div className="flex items-center px-4 h-full">
@@ -55,7 +55,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
 
             {/* Right section */}
             <div className="flex items-center gap-2 px-4 h-full">
-              <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+              <RoleSwitcher />
               <Search className="w-[240px]" />
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <ThemeToggle />

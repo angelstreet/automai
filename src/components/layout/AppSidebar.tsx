@@ -11,13 +11,13 @@ import {
   SidebarRail,
 } from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
-import { useUser } from '@/context/UserContext';
+import { useAuth } from '@/hooks/useAuth';
 
 import { sidebarData } from './data/sidebarData';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useUser();
-  const { currentRole } = useRole();
+  const { user } = useAuth();
+  const { role } = useRole();
 
   if (!user) return null;
 
@@ -26,29 +26,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     // Filter items in each group based on user role
     const accessibleItems = group.items.filter((item) => {
       if (!item.roles) return true;
-      return item.roles.includes(currentRole);
+      return item.roles.includes(role);
     });
 
     // Only include groups that have at least one accessible item
     return accessibleItems.length > 0;
   });
 
+  // Get user avatar from metadata
+  const avatarUrl = user.user_metadata && (user.user_metadata as any).avatar_url;
+
   return (
     <Sidebar collapsible="icon" variant="floating" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={sidebarData.teams} />
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        {filteredNavGroups.map((props) => (
-          <NavGroup key={props.title} {...props} />
+        {filteredNavGroups.map((group) => (
+          <NavGroup key={group.title} {...group} />
         ))}
       </SidebarContent>
       <SidebarFooter>
         <NavUser
           user={{
-            name: user.name || 'User',
+            name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
             email: user.email || '',
-            avatar: user.image || undefined,
+            avatar: avatarUrl,
           }}
         />
       </SidebarFooter>

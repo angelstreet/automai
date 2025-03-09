@@ -2,8 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/shadcn/button';
-import { useUser } from '@/context/UserContext';
-import { getUpgradeMessage } from '@/lib/features';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UpgradePromptProps {
   feature: string;
@@ -11,20 +10,25 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({ feature, className = '' }: UpgradePromptProps) {
-  const { user } = useUser();
+  const { user } = useAuth();
   const router = useRouter();
 
   if (!user) return null;
 
-  const message = getUpgradeMessage(user.plan, feature as any);
-  if (!message) return null;
+  // Get the user's plan from metadata
+  const userPlan = (user.user_metadata as any)?.plan || 'free';
+  
+  // Simple message based on feature
+  const message = {
+    title: `Upgrade to access ${feature}`,
+    description: `This feature is only available on higher plans. Upgrade now to unlock ${feature} and more premium features.`
+  };
 
   return (
-    <div className={`bg-muted/50 p-4 rounded-lg ${className}`}>
-      <p className="text-sm text-muted-foreground mb-2">{message}</p>
-      <Button variant="outline" size="sm" onClick={() => router.push('/pricing')}>
-        View Plans
-      </Button>
+    <div className={`p-4 bg-muted/50 rounded-lg ${className}`}>
+      <h3 className="text-lg font-semibold mb-2">{message.title}</h3>
+      <p className="text-sm text-muted-foreground mb-4">{message.description}</p>
+      <Button onClick={() => router.push('/billing')}>Upgrade Now</Button>
     </div>
   );
 }

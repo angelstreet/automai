@@ -222,13 +222,13 @@ export async function getCurrentUser() {
     const result = await supabaseAuth.getUser();
     
     if (!result.success || !result.data) {
-      // For "No active session" errors, just return null instead of throwing an error
-      if (result.error === 'No active session') {
+      // For "No active session" errors or "Auth session missing!" errors, just return null instead of throwing an error
+      if (result.error === 'No active session' || result.error === 'Auth session missing!') {
         return null;
       }
       
       // Reset the flag when we get a new error
-      if (result.error !== 'No active session') {
+      if (result.error !== 'No active session' && result.error !== 'Auth session missing!') {
         noSessionErrorLogged = false;
       }
       
@@ -240,17 +240,21 @@ export async function getCurrentUser() {
     return result.data as AuthUser;
   } catch (error) {
     // Only log if we haven't logged this specific error before
-    if (error instanceof Error && error.message === 'No active session' && !noSessionErrorLogged) {
+    if (error instanceof Error && 
+        (error.message === 'No active session' || error.message === 'Auth session missing!') && 
+        !noSessionErrorLogged) {
       console.error('Error getting current user:', error);
       noSessionErrorLogged = true;
-      return null; // Return null instead of throwing for "No active session"
-    } else if (!(error instanceof Error) || error.message !== 'No active session') {
+      return null; // Return null instead of throwing for session-related errors
+    } else if (!(error instanceof Error) || 
+              (error.message !== 'No active session' && error.message !== 'Auth session missing!')) {
       // Always log other types of errors
       console.error('Error getting current user:', error);
     }
     
-    // Only throw for errors other than "No active session"
-    if (error instanceof Error && error.message === 'No active session') {
+    // Only throw for errors other than session-related errors
+    if (error instanceof Error && 
+        (error.message === 'No active session' || error.message === 'Auth session missing!')) {
       return null;
     }
     
