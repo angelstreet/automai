@@ -40,7 +40,8 @@ export function useAuth() {
   }, []);
 
   const fetchUser = useCallback(async (force = false) => {
-    // Skip fetching on auth pages unless forced
+    // Only skip fetching on auth pages if we're not forcing it
+    // This ensures we still check auth state when needed
     if (isAuthPage.current && !force) {
       setLoading(false);
       return;
@@ -60,6 +61,7 @@ export function useAuth() {
       setUser(data);
       lastFetchTime.current = now;
     } catch (err) {
+      console.error('Error fetching user:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch user'));
       setUser(null);
     } finally {
@@ -67,11 +69,31 @@ export function useAuth() {
     }
   }, [user]);
 
-  // Only fetch user on initial load and ensure it only runs once
+  // Fetch user on initial load and ensure it only runs once
   useEffect(() => {
     if (!hasInitialized.current) {
       hasInitialized.current = true;
-      fetchUser();
+      // Always fetch user data on initial load, regardless of page type
+      fetchUser(true);
+    }
+  }, [fetchUser]);
+
+  // Add an effect to refresh the user data whenever the pathname changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Force refresh when the URL changes (page navigation)
+      const handleRouteChange = () => {
+        console.log('Route changed, refreshing user data');
+        fetchUser(true);
+      };
+
+      // Listen for pathname changes
+      window.addEventListener('popstate', handleRouteChange);
+      
+      // Clean up
+      return () => {
+        window.removeEventListener('popstate', handleRouteChange);
+      };
     }
   }, [fetchUser]);
 
@@ -205,8 +227,9 @@ export function useAuth() {
     }
   };
 
-  const refreshUser = useCallback(async () => {
-    await fetchUser(true);
+  // Add a refresh function that components can call to force a refresh of user data
+  const refreshUser = useCallback(() => {
+    return fetchUser(true);
   }, [fetchUser]);
 
   const exchangeCodeForSession = useCallback(async () => {

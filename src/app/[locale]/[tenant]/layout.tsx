@@ -1,14 +1,13 @@
 'use client';
 
 import * as React from 'react';
+import { useParams } from 'next/navigation';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { SidebarProvider } from '@/components/sidebar';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { ToasterProvider } from '@/components/shadcn/toaster';
 import { RoleProvider } from '@/context/RoleContext';
-
-
 
 export default function TenantLayout({
   children,
@@ -17,6 +16,9 @@ export default function TenantLayout({
   children: React.ReactNode;
   _params: Promise<{ tenant: string; locale: string }>;
 }) {
+  const params = useParams();
+  const tenant = params.tenant as string;
+  
   return (
     <RoleProvider>
       <SidebarProvider>
@@ -31,7 +33,7 @@ export default function TenantLayout({
                 width: 'calc(100% - var(--sidebar-width-offset, 0))'
               }}
             >
-              <WorkspaceHeader />
+              <WorkspaceHeader tenant={tenant} />
               <main className="flex-1 px-3 py-4 w-full max-w-full border border-gray-200 rounded-md">{children}</main>
             </div>
           </div>

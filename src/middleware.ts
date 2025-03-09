@@ -88,7 +88,13 @@ export default async function middleware(request: NextRequest) {
   // This will handle session validation and token refresh
   const response = await updateSession(request);
   
-  // 5. Apply internationalization middleware
+  // If the response is a redirect (unauthenticated), return it directly
+  if (response.headers.has('location')) {
+    console.log('Redirecting to:', response.headers.get('location'));
+    return response;
+  }
+  
+  // 5. Apply internationalization middleware for non-redirect responses
   const intl = await getIntlMiddleware();
   return intl(response);
 }

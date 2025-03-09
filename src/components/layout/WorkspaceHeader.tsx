@@ -1,7 +1,7 @@
 'use client';
 
 import Cookies from 'js-cookie';
-import { ChevronUp, User } from 'lucide-react';
+import { ChevronUp } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import * as React from 'react';
 
@@ -14,8 +14,6 @@ import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 import { useRole } from '@/context/RoleContext';
 import { useSidebar } from '@/hooks/useSidebar';
-import { useAuth } from '@/hooks/useAuth';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 
 interface WorkspaceHeaderProps {
   className?: string;
@@ -32,7 +30,6 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
   const isCollapsed = !open;
   const params = useParams();
   const locale = params.locale as string;
-  const { user } = useAuth();
   const [headerVisible, setHeaderVisible] = React.useState(
     Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
   );
@@ -72,7 +69,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <ThemeToggle />
               <Separator orientation="vertical" className="h-6 opacity-10" />
-              {user && <UserProfile tenant={tenant} />}
+              <UserProfile tenant={tenant} />
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <Button
                 variant="outline"

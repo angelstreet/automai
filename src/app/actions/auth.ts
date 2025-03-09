@@ -327,75 +327,80 @@ export async function updateProfile(formData: FormData) {
 /**
  * Get the current authenticated user
  */
-export async function getCurrentUser() {
-  // Check if we have a valid cache
-  const now = Date.now();
-  if (userCache && (now - userCache.timestamp < CACHE_EXPIRATION)) {
-    // Return cached data if available and not expired
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  if (userCache && (Date.now() - userCache.timestamp < CACHE_EXPIRATION)) {
+    // Return cached data if it's fresh
     if (userCache.error) {
-      // If the cached error is a session missing error, just return null
-      if (userCache.error === 'No active session' || userCache.error === 'Auth session missing!') {
-        return null;
-      }
+      // If there was an error, throw it again
       throw new Error(userCache.error);
     }
     return userCache.data;
   }
 
   try {
-    const result = await supabaseAuth.getUser();
-    
-    // Update cache
-    userCache = {
-      data: result.success ? result.data : null,
-      timestamp: Date.now(),
-      error: result.success ? null : result.error || null
-    };
-    
-    if (!result.success || !result.data) {
-      // For "No active session" errors or "Auth session missing!" errors, just return null instead of throwing an error
-      if (result.error === 'No active session' || result.error === 'Auth session missing!') {
-        return null;
+    // Create a new session
+    const { data, error } = await supabaseAuth.getSession();
+
+    if (error) {
+      // Don't log "No active session" error too many times
+      if (error === 'No active session' && noSessionErrorLogged) {
+        // Already logged once, don't flood logs
+      } else if (error === 'No active session') {
+        console.log('[Auth] No active session. User not authenticated.');
+        noSessionErrorLogged = true;
+      } else {
+        console.error('[Auth] Error getting user session:', error);
       }
-      
-      // Reset the flag when we get a new error
-      if (result.error !== 'No active session' && result.error !== 'Auth session missing!') {
-        noSessionErrorLogged = false;
-      }
-      
-      throw new Error(result.error || 'Not authenticated');
+
+      // Cache the error to avoid repeated API calls
+      userCache = {
+        data: null,
+        timestamp: Date.now(),
+        error: error,
+      };
+
+      return null;
     }
-    
-    // Reset the flag when successful
+
+    // Reset the flag when we get a valid session
     noSessionErrorLogged = false;
-    return result.data as AuthUser;
-  } catch (error) {
-    // Update cache with error
+
+    // Get the user data - handle type safely
+    // Check if data is defined and has a session object with user
+    const sessionData = data as unknown as { session?: { user?: AuthUser } };
+    const user = sessionData?.session?.user || null;
+
+    if (!user) {
+      console.log('[Auth] No user found in session');
+      
+      // Cache the result
+      userCache = {
+        data: null,
+        timestamp: Date.now(),
+        error: null,
+      };
+      
+      return null;
+    }
+
+    // Cache the user data
+    userCache = {
+      data: user,
+      timestamp: Date.now(),
+      error: null,
+    };
+
+    return user;
+  } catch (error: any) {
+    console.error('[Auth] Error in getCurrentUser:', error.message);
+    
+    // Cache the error
     userCache = {
       data: null,
       timestamp: Date.now(),
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error.message,
     };
     
-    // Only log if we haven't logged this specific error before
-    if (error instanceof Error && 
-        (error.message === 'No active session' || error.message === 'Auth session missing!') && 
-        !noSessionErrorLogged) {
-      console.error('Error getting current user:', error);
-      noSessionErrorLogged = true;
-      return null; // Return null instead of throwing for session-related errors
-    } else if (!(error instanceof Error) || 
-              (error.message !== 'No active session' && error.message !== 'Auth session missing!')) {
-      // Always log other types of errors
-      console.error('Error getting current user:', error);
-    }
-    
-    // Only throw for errors other than session-related errors
-    if (error instanceof Error && 
-        (error.message === 'No active session' || error.message === 'Auth session missing!')) {
-      return null;
-    }
-    
-    throw new Error('Failed to get current user');
+    throw error;
   }
 } 
