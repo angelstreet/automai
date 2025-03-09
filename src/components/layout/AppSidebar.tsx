@@ -82,7 +82,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
     const userMetadata = user.user_metadata || {};
     
     // First check for name directly on user object (might be added by our code)
-    let userName = user.name || '';
+    let userName = user.name;
     
     // If no name directly on user, try various metadata locations
     if (!userName) {
@@ -90,11 +90,11 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
         // Try direct access to metadata
         userMetadata.name || 
         // Try full_name which is sometimes used by OAuth providers
-        (userMetadata as any)?.full_name || 
+        userMetadata.full_name || 
         // Try to get it from raw metadata if it's nested
         (userMetadata as any)?.raw_user_meta_data?.name ||
         // Try preferred_username which some providers use
-        (userMetadata as any)?.preferred_username ||
+        userMetadata.preferred_username ||
         // Fall back to email username
         user.email?.split('@')[0] || 
         // Final fallback
@@ -104,19 +104,19 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
     console.log('Resolved userName:', userName);
     
     return {
-      name: userName || 'Guest', // Ensure name is never undefined
+      name: userName,
       email: user.email || '',
       avatar: avatarUrl,
     };
   }, [user, avatarUrl]);
 
   // Always render the sidebar with content, no more loading state for unauthenticated users
-  // Updated version
+  // Updated version - March 9, 2025
   return (
     <Sidebar 
       collapsible="icon" 
       variant="floating" 
-      className="fixed left-0 top-0 z-30 transition-all duration-200"
+      className="fixed left-0 top-0 z-30"
       {...props}
     >
       {!isCollapsed && (

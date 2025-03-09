@@ -65,89 +65,12 @@ export async function handleAuthCallback(url: string) {
     const result = await supabaseAuth.handleOAuthCallback(code);
     
     if (result.success && result.data) {
-      // Get user info from the session
+      // Ensure user exists in database after successful authentication
+      await ensureUserInDatabase(result.data);
+      
+      // Get the tenant ID for redirection
       const userData = result.data.session?.user;
-      
-      if (!userData) {
-        throw new Error('No user data in session');
-      }
-      
-      const userId = userData.id;
-      
-      // First check if this user already exists in our database
-      console.log('Checking if user exists in database:', userId);
-      
-      // Import the admin client with elevated permissions
-      const { createAdminClient } = await import('@/lib/supabase');
-      const adminClient = createAdminClient();
-      
-      // Use admin client to check if user exists (bypasses RLS)
-      const { data: existingUser, error: findError } = await adminClient
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      if (findError && findError.code !== 'PGRST116') {
-        console.error('Error finding user:', findError);
-      }
-      
-      // Only create the user if this is their first sign-in (user doesn't exist in our database yet)
-      if (!existingUser) {
-        console.log('First-time sign-in detected, creating user record...');
-        
-        try {
-          // Extract user data for database record
-          const userDataForDb = {
-            id: userId,
-            email: userData.email,
-            name: userData.user_metadata?.name || userData.email?.split('@')[0] || 'User',
-            user_role: 'pro',
-            tenant_id: 'a317a10a-776a-47de-9347-81806b36a03e', // Use the existing tenant ID
-            provider: userData.app_metadata?.provider || 'email',
-          };
-          
-          // Create the user record with admin client
-          console.log('Creating new user record in database:', userDataForDb.email);
-          const { data: newUser, error: createUserError } = await adminClient
-            .from('users')
-            .insert(userDataForDb)
-            .select()
-            .single();
-            
-          if (createUserError) {
-            console.error('Error creating user:', createUserError);
-            throw createUserError;
-          }
-          
-          // Update the user's metadata to include their name
-          const { error: updateError } = await adminClient.auth.admin.updateUserById(
-            userId,
-            { 
-              user_metadata: { 
-                name: userDataForDb.name,
-                tenant_id: userDataForDb.tenant_id
-              } 
-            }
-          );
-          
-          if (updateError) {
-            console.error('Error updating user metadata:', updateError);
-          } else {
-            console.log('User metadata updated with name and tenant_id');
-          }
-          
-          console.log('User record created successfully during first sign-in');
-        } catch (dbError) {
-          // Log the error but don't fail the authentication
-          console.error('Error creating user during first-time sign-in:', dbError);
-        }
-      } else {
-        console.log('User already exists in database:', userId);
-      }
-      
-      // Get the tenant ID for redirection - use from existing user if available, or default
-      const tenantId = existingUser?.tenant_id || 'a317a10a-776a-47de-9347-81806b36a03e';
+      const tenantId = userData?.user_metadata?.tenant_id || 'a317a10a-776a-47de-9347-81806b36a03e';
       
       // Get the locale from URL or default to 'en'
       const pathParts = url.split('/');
@@ -192,7 +115,10 @@ export async function signUp(email: string, password: string, name: string, redi
       data: { name }
     });
     
-    // Removed call to ensureUserInDatabase - will be handled during auth redirect
+    if (result.success && result.data) {
+      // Ensure user exists in database after successful signup
+      await ensureUserInDatabase(result.data);
+    }
     
     return { 
       success: result.success, 
@@ -215,7 +141,10 @@ export async function signInWithPassword(email: string, password: string) {
     
     const result = await supabaseAuth.signInWithPassword(email, password);
     
-    // Removed call to ensureUserInDatabase - will be handled during auth redirect
+    if (result.success && result.data) {
+      // Ensure user exists in database after successful authentication
+      await ensureUserInDatabase(result.data);
+    }
     
     return { 
       success: result.success, 
@@ -351,96 +280,141 @@ export async function updateProfile(formData: FormData | ProfileUpdateData) {
   }
 }
 
+// Helper function to ensure user exists in database
+async function ensureUserInDatabase(authData: any): Promise<void> {
+  try {
+    if (!authData || !authData.user) {
+      console.error('No auth data provided to ensureUserInDatabase');
+      return;
+    }
+
+    const userId = authData.user.id;
+    
+    // Check if user already exists in database
+    // Import the admin client with elevated permissions
+    const { createAdminClient } = await import('@/lib/supabase');
+    const adminClient = createAdminClient();
+    
+    // Use admin client to check if user exists (bypasses RLS)
+    const { data: existingUser, error: findError } = await adminClient
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+      
+    if (findError && findError.code !== 'PGRST116') {
+      console.error('Error finding user:', findError);
+    }
+    
+    if (existingUser) {
+      // User exists, optionally update their metadata
+      console.log('User exists in database, no need to create:', userId);
+      return;
+    }
+    
+    // Extract user data for database record
+    const userData = {
+      id: userId,
+      email: authData.user.email,
+      name: authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'User',
+      user_role: authData.user.user_metadata?.role || 'admin', // Use user_role column
+      tenant_id: authData.user.user_metadata?.tenant_id || 'a317a10a-776a-47de-9347-81806b36a03e',
+      provider: authData.user.app_metadata?.provider || 'email',
+    };
+    
+    // Create user record in database
+    console.log('Creating new user record in database:', userData.email);
+    const { data: newUser, error: createUserError } = await adminClient
+      .from('users')
+      .insert(userData)
+      .select()
+      .single();
+      
+    if (createUserError) {
+      console.error('Error creating user:', createUserError);
+      throw createUserError;
+    }
+    
+    console.log('User record created successfully');
+  } catch (error) {
+    console.error('Error ensuring user in database:', error);
+    // Don't fail the authentication process if this fails
+  }
+}
+
 /**
  * Get the current authenticated user
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  if (userCache && (Date.now() - userCache.timestamp < CACHE_EXPIRATION)) {
-    // Return cached data if it's fresh
+  // Check if we have a valid cache
+  const now = Date.now();
+  if (userCache && (now - userCache.timestamp < CACHE_EXPIRATION)) {
+    // Return cached data if available and not expired
     if (userCache.error) {
-      // If there was an error, throw it again
+      // If the cached error is a session missing error, just return null
+      if (userCache.error === 'No active session' || userCache.error === 'Auth session missing!') {
+        return null;
+      }
       throw new Error(userCache.error);
     }
     return userCache.data;
   }
 
   try {
-    // Use getUser directly as recommended by Supabase
     console.log('[Auth] DEBUG: Using direct getUser call');
     const result = await supabaseAuth.getUser();
     
-    // Check if the result was successful
-    if (!result.success) {
-      console.log(`[Auth] getUser failed: ${result.error}`);
-      return null;
-    }
-    
-    // Extract data from result
-    const { data, error } = { data: result.data, error: result.error };
-
-    // We already checked for errors in the result object
-    // Reset the flag when we get a valid session
-    noSessionErrorLogged = false;
-    
-    console.log('[Auth] Successfully retrieved user data');
-
-    // The direct supabaseAuth.getUser already returns the processed user data
-    // from our UserSession type
-    console.log('[Auth] Using data directly from supabaseAuth.getUser result');
-    
-    // The data is already the user
-    const user = data;
-    
-    if (!user) {
-      console.log('[Auth] No user data returned from supabaseAuth.getUser');
-      
-      // Cache the result
-      userCache = {
-        data: null,
-        timestamp: Date.now(),
-        error: null,
-      };
-      
-      return null;
-    }
-    
-    console.log('[Auth] User data successfully retrieved:', JSON.stringify(user, null, 2));
-    
-    // The supabaseAuth.getUser() result should already have processed the name field
-    // But let's make sure it's there in case the function implementation changed
-    if (!user.name && user.user_metadata) {
-      // Extract name from various possible metadata fields
-      const metadata = user.user_metadata;
-      user.name = metadata.name || 
-                 metadata.full_name || 
-                 (metadata as any)?.raw_user_meta_data?.name ||
-                 metadata.preferred_username ||
-                 user.email?.split('@')[0] || 
-                 null;
-      
-      console.log('[Auth] Had to set name from metadata:', user.name);
-    } else {
-      console.log('[Auth] Name already present in user object:', user.name);
-    }
-
-    // Cache the result
+    // Update cache
     userCache = {
-      data: user,
+      data: result.success ? result.data : null,
       timestamp: Date.now(),
-      error: null,
+      error: result.success ? null : result.error || null
     };
-
-    return user;
-  } catch (err) {
-    console.error('[Auth] Error getting current user:', err);
     
-    // Cache the error to avoid repeated API calls
+    if (!result.success || !result.data) {
+      // For "No active session" errors or "Auth session missing!" errors, just return null instead of throwing an error
+      if (result.error === 'No active session' || result.error === 'Auth session missing!') {
+        return null;
+      }
+      
+      // Reset the flag when we get a new error
+      if (result.error !== 'No active session' && result.error !== 'Auth session missing!') {
+        noSessionErrorLogged = false;
+      }
+      
+      throw new Error(result.error || 'Not authenticated');
+    }
+    
+    // Reset the flag when successful
+    noSessionErrorLogged = false;
+    return result.data as AuthUser;
+  } catch (error) {
+    // Update cache with error
     userCache = {
       data: null,
       timestamp: Date.now(),
-      error: err instanceof Error ? err.message : 'Unknown error',
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
     
-    return null;
+    // Only log if we haven't logged this specific error before
+    if (error instanceof Error && 
+        (error.message === 'No active session' || error.message === 'Auth session missing!') && 
+        !noSessionErrorLogged) {
+      console.error('Error getting current user:', error);
+      noSessionErrorLogged = true;
+      return null; // Return null instead of throwing for session-related errors
+    } else if (!(error instanceof Error) || 
+              (error.message !== 'No active session' && error.message !== 'Auth session missing!')) {
+      // Always log other types of errors
+      console.error('Error getting current user:', error);
+    }
+    
+    // Only throw for errors other than session-related errors
+    if (error instanceof Error && 
+        (error.message === 'No active session' || error.message === 'Auth session missing!')) {
+      return null;
+    }
+    
+    throw new Error('Failed to get current user');
   }
 } 

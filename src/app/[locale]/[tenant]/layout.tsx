@@ -27,17 +27,14 @@ export default function TenantLayout({
           <div className="relative flex min-h-screen w-full">
             <AppSidebar />
             <div 
-              className="flex-1 flex flex-col min-w-0 will-change-transform"
+              className="flex-1 flex flex-col min-w-0 w-full overflow-hidden transition-all duration-200"
               style={{ 
                 marginLeft: 'var(--sidebar-width-offset, 0)',
-                width: 'calc(100% - var(--sidebar-width-offset, 0))',
-                transition: 'margin-left 0.2s ease, width 0.2s ease'
+                width: 'calc(100% - var(--sidebar-width-offset, 0))'
               }}
             >
               <WorkspaceHeader tenant={tenant} />
-              <main className="flex-1 px-3 py-4 w-full max-w-full overflow-hidden border border-gray-200 rounded-md">
-                {children}
-              </main>
+              <main className="flex-1 px-3 py-4 w-full max-w-full border border-gray-200 rounded-md">{children}</main>
             </div>
           </div>
         </TooltipProvider>
