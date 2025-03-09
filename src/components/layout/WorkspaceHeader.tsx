@@ -48,10 +48,10 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
       {headerVisible ? (
         <header 
           className={`sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b ${className}`}
-          style={isCollapsed ? { 
+          style={{ 
             marginLeft: 'var(--sidebar-width-offset, 0)',
             width: 'calc(100% - var(--sidebar-width-offset, 0))'
-          } : undefined}
+          }}
         >
           <div className="flex h-14 items-center">
             {/* Left section */}
@@ -87,10 +87,10 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
       ) : (
         <div 
           className="sticky top-0 z-50 flex justify-end px-4 py-1 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
-          style={isCollapsed ? { 
+          style={{ 
             marginLeft: 'var(--sidebar-width-offset, 0)',
             width: 'calc(100% - var(--sidebar-width-offset, 0))'
-          } : undefined}
+          }}
         >
           <Button
             variant="outline"
