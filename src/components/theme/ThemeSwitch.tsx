@@ -1,3 +1,5 @@
+'use client';
+
 import { IconCheck, IconMoon, IconSun } from '@tabler/icons-react';
 import { useEffect } from 'react';
 

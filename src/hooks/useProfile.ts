@@ -1,3 +1,4 @@
+'use client';
 import { useState, useCallback } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useAuth } from '@/hooks/useAuth';

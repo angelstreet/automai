@@ -2,7 +2,6 @@ import { hash } from 'bcrypt';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { isUsingSupabase } from '@/lib/env';
 import db from '@/lib/supabase/db';
 
 // Dynamically import supabaseAuthService to prevent errors when Supabase isn't available
@@ -89,15 +88,15 @@ export async function POST(request: NextRequest) {
     }
 
     // If using Supabase in production, register with Supabase first
-    if (isUsingSupabase()) {
-      const supabaseResult = await supabaseAuthService.signUpWithEmail(email, password);
+    
+    const supabaseResult = await supabaseAuthService.signUpWithEmail(email, password);
 
-      if (!supabaseResult.success) {
-        return NextResponse.json(
-          { error: supabaseResult.error || 'Failed to register with Supabase' },
-          { status: 500 },
-        );
-      }
+    if (!supabaseResult.success) {
+      return NextResponse.json(
+        { error: supabaseResult.error || 'Failed to register with Supabase' },
+        { status: 500 },
+      );
+      
 
       // Successfully registered with Supabase
       console.log('User registered with Supabase:', supabaseResult.data?.user?.id);

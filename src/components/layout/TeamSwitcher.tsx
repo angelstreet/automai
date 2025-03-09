@@ -19,7 +19,7 @@ import { useTenants } from '@/hooks/useTenants';
 export function TeamSwitcher() {
   const { user } = useAuth();
   const { tenants, isLoading, currentTenant, switchTenant } = useTenants();
-  const { collapsed } = useSidebar();
+  const { isOpen } = useSidebar();
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;
@@ -33,7 +33,7 @@ export function TeamSwitcher() {
     router.push(`/${locale}/${tenantId}/dashboard`);
   };
 
-  return collapsed ? (
+  return !isOpen ? (
     <SidebarMenu>
       <SidebarMenuButton>
         {currentTenant?.icon || <Building2 className="h-4 w-4" />}

@@ -26,8 +26,7 @@ interface NavUserProps {
 
 export function NavUser({ user }: NavUserProps) {
   const router = useRouter();
-  const paramsPromise = useParams();
-  const params = React.use(paramsPromise);
+  const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string;
 

@@ -7,10 +7,7 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.string().transform(Number).default('3000'),
 
-    // Database - optional when using Supabase
-    DATABASE_URL: z.string().url().optional(),
 
-    // Supabase - only required in production
     NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
@@ -18,16 +15,11 @@ const envSchema = z
     // Authentication
     JWT_SECRET: z.string().min(1),
 
-    // Elasticsearch
-    ELASTICSEARCH_URL: z.string().url().optional(),
   })
   .refine(
     // Supabase credentials are required in production environment
     (data) => {
-      if (data.NODE_ENV === 'production') {
-        return !!data.NEXT_PUBLIC_SUPABASE_URL && !!data.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      }
-      return true;
+      return !!data.NEXT_PUBLIC_SUPABASE_URL && !!data.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     },
     {
       message: 'Supabase credentials are required in production environment',
@@ -39,12 +31,10 @@ const envSchema = z
 const processEnv = {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
-  DATABASE_URL: process.env.DATABASE_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   JWT_SECRET: process.env.JWT_SECRET,
-  ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL,
 };
 
 // Detect if we're in a browser environment
@@ -80,7 +70,6 @@ export const isCodespace = () => {
 };
 export const isDevelopment = () => process.env.NODE_ENV === 'development';
 export const isProduction = () => process.env.NODE_ENV === 'production';
-export const isTest = () => process.env.NODE_ENV === 'test';
 
 // Helper to check if we're using Supabase
 export const isUsingSupabase = () => {
@@ -109,9 +98,4 @@ export const getSiteUrl = () => {
   
   // Development fallback
   return 'http://localhost:3000';
-};
-
-// For backward compatibility - uses the new getSiteUrl function
-export const getBaseUrl = () => {
-  return getSiteUrl();
 };

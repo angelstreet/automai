@@ -1,3 +1,5 @@
+'use client';
+
 import { IconArrowRightDashed, IconDeviceLaptop, IconMoon, IconSun } from '@tabler/icons-react';
 import { useNavigate } from '@tanstack/react-router';
 import React from 'react';

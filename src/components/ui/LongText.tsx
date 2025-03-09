@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef, useState } from 'react';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';

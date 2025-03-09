@@ -11,7 +11,6 @@ import {
   signInWithPassword as signInWithPasswordAction,
   updatePassword as updatePasswordAction,
   AuthUser,
-  ProfileUpdateData
 } from '@/app/actions/auth';
 
 export function useAuth() {

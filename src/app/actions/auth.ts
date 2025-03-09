@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { supabaseAuth, UserSession as AuthUserBase } from '@/lib/supabase/auth';
+import { supabaseAuth} from '@/lib/supabase/auth';
 
 export type AuthUser = {
   id: string;

@@ -9,6 +9,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  SidebarProvider,
 } from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -125,49 +126,58 @@ export function AppSidebar({ user, tenant, locale }: AppSidebarProps) {
   ].filter(item => item.roles.includes(role));
 
   return (
-    <Sidebar open={isOpen} onOpenChange={setIsOpen}>
-      <SidebarHeader>
-        <div className="flex items-center justify-between px-4">
-          <Link
-            href={`/${locale}/${tenant}/dashboard`}
-            className="flex items-center space-x-2"
-          >
-            <span className="font-bold">AutomAI</span>
-          </Link>
-          <button onClick={toggleSidebar} className="lg:hidden">
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
-        </div>
-        <TeamSwitcher />
-      </SidebarHeader>
-      <SidebarContent>
-        <NavGroup
-          title={t('Menu.title')}
-          items={sidebarItems.map(item => ({
-            title: item.name,
-            href: item.href,
-            icon: item.icon,
-            active: pathname === item.href,
-          }))}
-        />
-      </SidebarContent>
-      <SidebarFooter>
-        <NavUser user={user} tenant={tenant} locale={locale} />
-      </SidebarFooter>
-      <SidebarRail>
-        {sidebarItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              'flex h-12 w-12 items-center justify-center rounded-lg hover:bg-accent',
-              pathname === item.href && 'bg-accent',
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-          </Link>
-        ))}
-      </SidebarRail>
-    </Sidebar>
+    <SidebarProvider open={isOpen} onOpenChange={setIsOpen}>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center justify-between px-4">
+            <Link
+              href={`/${locale}/${tenant}/dashboard`}
+              className="flex items-center space-x-2"
+            >
+              <span className="font-bold">AutomAI</span>
+            </Link>
+            <button onClick={toggleSidebar} className="lg:hidden">
+              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
+          <TeamSwitcher />
+        </SidebarHeader>
+        <SidebarContent>
+          <NavGroup
+            title={t('Menu.title')}
+            items={sidebarItems.map(item => ({
+              title: item.name,
+              href: item.href,
+              icon: item.icon,
+              active: pathname === item.href,
+            }))}
+          />
+        </SidebarContent>
+        <SidebarFooter>
+          {user && (
+            <NavUser 
+              user={{ 
+                name: user.user_metadata?.name || user.email || 'User', 
+                email: user.email || '' 
+              }} 
+            />
+          )}
+        </SidebarFooter>
+        <SidebarRail>
+          {sidebarItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex h-12 w-12 items-center justify-center rounded-lg hover:bg-accent',
+                pathname === item.href && 'bg-accent',
+              )}
+            >
+              <item.icon className="h-5 w-5" />
+            </Link>
+          ))}
+        </SidebarRail>
+      </Sidebar>
+    </SidebarProvider>
   );
 }

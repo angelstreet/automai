@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { GitProvider } from '@/types/repositories';
