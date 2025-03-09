@@ -30,7 +30,9 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
 
   // Log the current role for debugging
   React.useEffect(() => {
-    console.log('Current role from RoleContext:', currentRole);
+    console.log('RoleSwitcher: Current role from RoleContext:', currentRole);
+    console.log('RoleSwitcher: Available roles:', roles);
+    
     // If we have a role, we're no longer loading
     if (currentRole) {
       setIsLoading(false);
@@ -52,10 +54,10 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   // Ensure the current role is valid according to the Role type
   useEffect(() => {
     const isValidRole = roles.some(role => role.value === currentRole);
-    console.log('Is current role valid?', isValidRole, currentRole);
+    console.log('RoleSwitcher: Is current role valid?', isValidRole, currentRole);
     if (!isValidRole && roles.length > 0) {
       // If current role is not valid, set it to the first valid role
-      console.log('Setting to default role:', roles[0].value);
+      console.log('RoleSwitcher: Setting to default role:', roles[0].value);
       setRole(roles[0].value);
     }
   }, [currentRole, setRole]);

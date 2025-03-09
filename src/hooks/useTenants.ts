@@ -26,6 +26,8 @@ export function useTenants() {
 
     try {
       setIsLoading(true);
+      console.log('Fetching tenants for user:', user.id);
+      console.log('User metadata:', user.user_metadata);
       const response = await getTenants(user.id);
       
       if (response.success && response.data && response.data.length > 0) {
@@ -36,13 +38,19 @@ export function useTenants() {
           iconName: 'building',
         }));
 
+        console.log('Mapped tenants:', mappedTenants);
         setTenants(mappedTenants);
 
-        // Set current tenant from user metadata or first available tenant
+        // Get tenant_id from user metadata
         const currentTenantId = user.user_metadata?.tenant_id || mappedTenants[0]?.id;
+        console.log('Current tenant ID from metadata:', currentTenantId);
+        
+        // Find tenant by ID
         const current = mappedTenants.find((t: Tenant) => t.id === currentTenantId) || mappedTenants[0];
+        console.log('Setting current tenant:', current);
         setCurrentTenant(current);
       } else {
+        console.log('No tenants found, using default');
         // No tenants found or error occurred, create a default tenant
         const defaultTenant = {
           id: 'default',

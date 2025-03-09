@@ -21,8 +21,10 @@ export async function getTenants(userId: string): Promise<{ success: boolean; er
     
     // Get the tenant_id from user metadata
     const tenantId = user.data.tenant_id;
+    console.log('getTenants: User tenant_id from metadata:', tenantId);
     
     if (!tenantId) {
+      console.log('getTenants: No tenant_id in metadata, getting all tenants');
       // If no tenant_id in metadata, get all tenants (or default)
       const data = await db.tenant.findMany({
         orderBy: { created_at: 'desc' }
@@ -32,11 +34,13 @@ export async function getTenants(userId: string): Promise<{ success: boolean; er
     }
     
     // Get the specific tenant
+    console.log('getTenants: Getting specific tenant by ID:', tenantId);
     const tenant = await db.tenant.findUnique({
       where: { id: tenantId }
     });
     
     if (!tenant) {
+      console.log('getTenants: Tenant not found, getting all tenants');
       // If tenant not found, get all tenants
       const data = await db.tenant.findMany({
         orderBy: { created_at: 'desc' }
@@ -45,6 +49,7 @@ export async function getTenants(userId: string): Promise<{ success: boolean; er
       return { success: true, data };
     }
     
+    console.log('getTenants: Found tenant:', tenant);
     // Return the tenant as an array
     return { success: true, data: [tenant] };
   } catch (error: any) {
@@ -55,7 +60,25 @@ export async function getTenants(userId: string): Promise<{ success: boolean; er
 
 export async function switchTenant(tenantId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const result = await supabaseAuth.updateProfile({ tenant_id: tenantId });
+    console.log('switchTenant: Switching to tenant ID:', tenantId);
+    
+    // Get the tenant name from the database
+    const tenant = await db.tenant.findUnique({
+      where: { id: tenantId }
+    });
+    
+    if (!tenant) {
+      console.log('switchTenant: Tenant not found');
+      return { success: false, error: 'Tenant not found' };
+    }
+    
+    console.log('switchTenant: Found tenant:', tenant);
+    
+    // Update the user profile with both tenant_id and tenant_name
+    const result = await supabaseAuth.updateProfile({ 
+      tenant_id: tenantId,
+      tenant_name: tenant.name
+    });
     
     return { 
       success: result.success, 

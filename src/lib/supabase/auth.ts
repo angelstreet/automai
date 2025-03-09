@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createClient } from './server';
-import db from './db';
+import db from '@/lib/supabase/db';
 
 // Flag to track if we've already logged auth session missing errors
 let authSessionMissingErrorLogged = false;
@@ -87,14 +87,35 @@ export const supabaseAuth = {
                   user.email?.split('@')[0] || 
                   null;
       
+      // Get tenant_id from metadata
+      const tenant_id = metadata.tenant_id;
+      
+      // If we have a tenant_id but no tenant_name, fetch it from the database
+      let tenant_name = metadata.tenant_name;
+      if (tenant_id && !tenant_name) {
+        try {
+          console.log('Fetching tenant name for tenant_id:', tenant_id);
+          const tenant = await db.tenant.findUnique({
+            where: { id: tenant_id }
+          });
+          
+          if (tenant) {
+            tenant_name = tenant.name;
+            console.log('Found tenant name:', tenant_name);
+          }
+        } catch (err) {
+          console.error('Error fetching tenant name:', err);
+        }
+      }
+      
       const userData: UserSession = {
         id: user.id,
         email: user.email,
         name: name,
         image: metadata.avatar_url,
         role: metadata.role || 'user',
-        tenant_id: metadata.tenant_id,
-        tenant_name: metadata.tenant_name,
+        tenant_id: tenant_id,
+        tenant_name: tenant_name,
       };
 
       return {
@@ -154,14 +175,35 @@ export const supabaseAuth = {
                   user.email?.split('@')[0] || 
                   null;
       
+      // Get tenant_id from metadata
+      const tenant_id = metadata.tenant_id;
+      
+      // If we have a tenant_id but no tenant_name, fetch it from the database
+      let tenant_name = metadata.tenant_name;
+      if (tenant_id && !tenant_name) {
+        try {
+          console.log('Fetching tenant name for tenant_id:', tenant_id);
+          const tenant = await db.tenant.findUnique({
+            where: { id: tenant_id }
+          });
+          
+          if (tenant) {
+            tenant_name = tenant.name;
+            console.log('Found tenant name:', tenant_name);
+          }
+        } catch (err) {
+          console.error('Error fetching tenant name:', err);
+        }
+      }
+      
       const userData: UserSession = {
         id: user.id,
         email: user.email,
         name: name,
         image: metadata.avatar_url,
         role: metadata.role || 'user',
-        tenant_id: metadata.tenant_id,
-        tenant_name: metadata.tenant_name,
+        tenant_id: tenant_id,
+        tenant_name: tenant_name,
       };
 
       return {
@@ -247,14 +289,35 @@ export const supabaseAuth = {
                   user.email?.split('@')[0] || 
                   null;
       
+      // Get tenant_id from metadata
+      const tenant_id = metadata.tenant_id;
+      
+      // If we have a tenant_id but no tenant_name, fetch it from the database
+      let tenant_name = metadata.tenant_name;
+      if (tenant_id && !tenant_name) {
+        try {
+          console.log('SUPABASE-AUTH: Fetching tenant name for tenant_id:', tenant_id);
+          const tenant = await db.tenant.findUnique({
+            where: { id: tenant_id }
+          });
+          
+          if (tenant) {
+            tenant_name = tenant.name;
+            console.log('SUPABASE-AUTH: Found tenant name:', tenant_name);
+          }
+        } catch (err) {
+          console.error('SUPABASE-AUTH: Error fetching tenant name:', err);
+        }
+      }
+      
       const userData: UserSession = {
         id: user.id,
         email: user.email,
         name: name,
         image: metadata.avatar_url,
         role: metadata.role || 'user',
-        tenant_id: metadata.tenant_id,
-        tenant_name: metadata.tenant_name,
+        tenant_id: tenant_id,
+        tenant_name: tenant_name,
       };
 
       return {
