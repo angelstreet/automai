@@ -289,5 +289,6 @@ export function useAuth() {
     updatePassword: handleUpdatePassword,
     updateProfile: handleUpdateProfile,
     refreshUser,
+    exchangeCodeForSession
   };
 }
