@@ -12,14 +12,13 @@ export class GiteaProviderService implements GitProviderService {
   }
 
   // For Gitea, we don't need OAuth flow as we're using direct access token
-  getAuthorizationUrl(redirectUri: string, _state: string): string {
+  getAuthorizationUrl(): string {
     return '';
   }
 
   // For Gitea, we use the provided token directly
   async exchangeCodeForToken(
-    code: string,
-    redirectUri: string,
+    code: string
   ): Promise<{
     accessToken: string;
     refreshToken?: string;
@@ -117,7 +116,7 @@ export class GiteaProviderService implements GitProviderService {
     }
   }
 
-  async getRepository(_provider: GitProvider, repoName: string): Promise<Repository> {
+  async getRepository(nameOrId: string): Promise<Repository | null> {
     throw new Error('Method not implemented.');
   }
 
@@ -131,5 +130,29 @@ export class GiteaProviderService implements GitProviderService {
     expiresAt?: Date;
   }> {
     throw new Error('Method not implemented.');
+  }
+
+  async getUserRepositories(): Promise<Repository[]> {
+    throw new Error('Method not implemented.');
+  }
+
+  async testConnection(): Promise<boolean> {
+    if (!this.accessToken || !this.serverUrl) {
+      return false;
+    }
+    
+    try {
+      // Simple check to see if we can access the API
+      const response = await fetch(`${this.serverUrl}/api/v1/user`, {
+        headers: {
+          Authorization: `token ${this.accessToken}`,
+        },
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Error testing Gitea connection:', error);
+      return false;
+    }
   }
 }

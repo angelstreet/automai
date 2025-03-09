@@ -40,6 +40,7 @@ export interface Host {
 
   // SSH specific fields
   user?: string;
+  password?: string;
 
   // Status fields
   status: 'connected' | 'failed' | 'pending';

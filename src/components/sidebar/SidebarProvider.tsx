@@ -83,7 +83,7 @@ const SidebarProvider = React.forwardRef<HTMLDivElement, SidebarProviderProps>(
     );
 
     return (
-      <ContextSidebarProvider defaultOpen={defaultOpen}>
+      <ContextSidebarProvider>
         <TooltipProvider delayDuration={0}>
           <div
             style={

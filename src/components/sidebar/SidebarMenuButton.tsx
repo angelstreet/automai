@@ -5,6 +5,7 @@ import * as React from 'react';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
 import { useSidebar } from '@/hooks/useSidebar';
+import { useIsMobile } from '@/hooks/useMobile';
 import { cn } from '@/lib/utils';
 
 const sidebarMenuButtonVariants = cva(
@@ -50,7 +51,8 @@ export const SidebarMenuButton = React.forwardRef<
     ref,
   ) => {
     const Comp = asChild ? Slot : 'button';
-    const { isMobile, state } = useSidebar();
+    const { isOpen } = useSidebar();
+    const isMobile = useIsMobile();
 
     const button = (
       <Comp
@@ -79,7 +81,7 @@ export const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== 'collapsed' || isMobile}
+          hidden={isOpen || isMobile}
           {...tooltip}
         />
       </Tooltip>

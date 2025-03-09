@@ -43,7 +43,7 @@ export function UserProfile({ tenant }: UserProfileProps) {
 
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
   
-  const avatarSrc = user.user_metadata?.avatar_url || '/avatars/default.svg';
+  const avatarSrc = (user.user_metadata as any)?.avatar_url || '/avatars/default.svg';
 
   return (
     <DropdownMenu>

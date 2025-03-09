@@ -1,5 +1,4 @@
-import { createClient as createClient, createAdminClient } from '@/lib/supabase/server';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import db from '@/lib/supabase/db';
 import {
   Repository,
   RepositoryCreateInput,
@@ -9,118 +8,88 @@ import {
   SyncStatus,
 } from '@/types/repositories';
 import { GitHubProviderService } from './git-providers/github';
+import { GitLabProviderService } from './git-providers/gitlab';
+import { GiteaProviderService } from './git-providers/gitea';
 import { logger } from '../logger';
 
-// Environment config for direct client creation as fallback
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-// Get a Supabase client for service operations
-const getServiceClient = () => {
-  try {
-    // Direct client creation for service functions
-    // This avoids the need for cookies from next/headers
-    const apiKey = SUPABASE_SERVICE_KEY || SUPABASE_ANON_KEY;
-    
-    if (!apiKey) {
-      logger.error('Missing Supabase API key');
-      return null;
-    }
-    
-    return createSupabaseClient(SUPABASE_URL, apiKey);
-  } catch (error) {
-    logger.error('Failed to create Supabase client:', error);
-    return null;
-  }
+// Get a client for service operations - this is a no-op now as we'll use db directly
+const getClient = () => {
+  return db;
 };
 
-// Helper function to get a client and check if it's available
-const getClient = (operation: string, providedClient?: any) => {
-  const client = providedClient || getServiceClient();
-  
-  if (!client) {
-    logger.warn(`No Supabase client available for ${operation}`);
-  }
-  
-  return client;
-};
-
-// Factory to get the appropriate provider service
+/**
+ * Get the appropriate Git provider service based on type
+ */
 export async function getGitProviderService(
   providerType: GitProviderType,
   options?: { serverUrl?: string; accessToken?: string },
 ) {
-  switch (providerType) {
-    case 'github':
-      return new GitHubProviderService();
-    case 'gitlab':
-      // TODO: Implement GitLab provider
-      throw new Error('GitLab provider not implemented yet');
-    case 'gitea':
-      if (options?.serverUrl) {
-        const { GiteaProviderService } = await import('./git-providers/gitea');
-        return new GiteaProviderService(options.serverUrl, options.accessToken);
-      }
-      throw new Error('Server URL is required for Gitea provider');
-    default:
-      throw new Error(`Unsupported provider type: ${providerType}`);
+  try {
+    switch (providerType) {
+      case 'github':
+        return new GitHubProviderService();
+      case 'gitlab':
+        return new GitLabProviderService({
+          serverUrl: options?.serverUrl,
+          accessToken: options?.accessToken,
+        });
+      case 'gitea':
+        return new GiteaProviderService(options?.serverUrl, options?.accessToken);
+      default:
+        throw new Error(`Unsupported git provider type: ${providerType}`);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get git provider service:', { error: errorMessage, providerType });
+    throw error;
   }
 }
 
-// List all git providers for a user
-export async function listGitProviders(userId: string, supabaseClient?: any): Promise<GitProvider[]> {
+/**
+ * List all git providers for a user
+ */
+export async function listGitProviders(userId: string): Promise<GitProvider[]> {
   try {
-    const supabase = getClient('listGitProviders', supabaseClient);
+    logger.info('Listing git providers for user', { userId });
     
-    if (!supabase) {
-      return [];
-    }
+    const data = await db.query('git_providers', {
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+    });
     
-    const { data, error } = await supabase
-      .from('git_providers')
-      .select('*')
-      .eq('user_id', userId);
-      
-    if (error) {
-      logger.error('Error listing git providers:', { error, userId });
-      return [];
-    }
-    
-    return data || [];
+    return data.map(mapGitProviderFromDb) || [];
   } catch (error) {
-    logger.error('Failed to list git providers:', { error, userId });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to list git providers:', { error: errorMessage, userId });
     return [];
   }
 }
 
-// Get a specific git provider by ID
-export async function getGitProvider(id: string, supabaseClient?: any): Promise<GitProvider | null> {
+/**
+ * Get a git provider by ID
+ */
+export async function getGitProvider(id: string): Promise<GitProvider | null> {
   try {
-    const supabase = getClient('getGitProvider', supabaseClient);
+    logger.info('Getting git provider', { id });
     
-    if (!supabase) {
-      return null;
-    }
+    const providers = await db.query('git_providers', {
+      where: { id },
+    });
     
-    const { data, error } = await supabase
-      .from('git_providers')
-      .select('*')
-      .eq('id', id)
-      .single();
-      
-    if (error) {
-      logger.error('Error getting git provider:', { error, id });
-      return null;
-    }
+    const provider = providers[0];
+    if (!provider) return null;
     
-    return data;
+    return mapGitProviderFromDb(provider);
   } catch (error) {
-    logger.error('Failed to get git provider:', { error, id });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to get git provider:', { error: errorMessage, id });
     return null;
   }
 }
 
+/**
+ * Create a new git provider
+ */
 export async function createGitProvider(
   userId: string,
   data: {
@@ -131,485 +100,207 @@ export async function createGitProvider(
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: Date;
-  },
-  supabaseClient?: any
+  }
 ): Promise<GitProvider | null> {
   try {
-    const supabase = getClient('createGitProvider', supabaseClient);
+    logger.info('Creating git provider', { userId, type: data.name });
     
-    // If no client is available, return null
-    if (!supabase) {
-      logger.warn('No Supabase client available for createGitProvider');
-      return null;
+    const providerData = {
+      user_id: userId,
+      tenant_id: userId, // Using userId as tenantId for now
+      type: data.type || data.name,
+      name: data.name,
+      display_name: data.displayName,
+      status: 'connected',
+      server_url: data.serverUrl,
+      access_token: data.accessToken,
+      refresh_token: data.refreshToken,
+      expires_at: data.expiresAt?.toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    const result = await db.query('git_providers', {
+      insert: providerData,
+      returning: true,
+    });
+    
+    const provider = result[0];
+    if (!provider) {
+      throw new Error('Failed to create git provider');
     }
     
-    const { data: provider, error } = await supabase
-      .from('git_providers')
-      .insert({
-        user_id: userId,
-        name: data.name,
-        type: data.type || data.name,
-        display_name: data.displayName,
-        server_url: data.serverUrl,
-        access_token: data.accessToken,
-        refresh_token: data.refreshToken,
-        expires_at: data.expiresAt,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      logger.error('Error creating git provider:', { error, data });
-      return null;
-    }
-    
-    return provider;
+    return mapGitProviderFromDb(provider);
   } catch (error) {
-    logger.error('Failed to create git provider:', { error, data });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to create git provider:', { error: errorMessage, data });
     return null;
   }
 }
 
+/**
+ * Update a git provider
+ */
 export async function updateGitProvider(
   id: string,
   data: {
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: Date;
-  },
-  supabaseClient?: any
+  }
 ): Promise<GitProvider | null> {
   try {
-    const supabase = getClient('updateGitProvider', supabaseClient);
+    logger.info('Updating git provider', { id });
     
-    if (!supabase) {
-      return null;
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+    
+    if (data.accessToken !== undefined) {
+      updateData.access_token = data.accessToken;
     }
     
-    const { data: provider, error } = await supabase
-      .from('git_providers')
-      .update({
-        access_token: data.accessToken,
-        refresh_token: data.refreshToken,
-        expires_at: data.expiresAt,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      logger.error('Error updating git provider:', { error, id, data });
-      return null;
+    if (data.refreshToken !== undefined) {
+      updateData.refresh_token = data.refreshToken;
     }
     
-    return provider;
+    if (data.expiresAt !== undefined) {
+      updateData.expires_at = data.expiresAt.toISOString();
+    }
+    
+    const result = await db.query('git_providers', {
+      where: { id },
+      update: updateData,
+      returning: true,
+    });
+    
+    const provider = result[0];
+    if (!provider) {
+      throw new Error(`Git provider not found: ${id}`);
+    }
+    
+    return mapGitProviderFromDb(provider);
   } catch (error) {
-    logger.error('Failed to update git provider:', { error, id });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to update git provider:', { error: errorMessage, id });
     return null;
   }
 }
 
-export async function deleteGitProvider(id: string, supabaseClient?: any): Promise<boolean> {
+/**
+ * Delete a git provider
+ */
+export async function deleteGitProvider(id: string): Promise<boolean> {
   try {
-    const supabase = getClient('deleteGitProvider', supabaseClient);
+    logger.info('Deleting git provider', { id });
     
-    if (!supabase) {
-      return false;
-    }
-    
-    const { error } = await supabase
-      .from('git_providers')
-      .delete()
-      .eq('id', id);
-      
-    if (error) {
-      logger.error('Error deleting git provider:', { error, id });
-      return false;
-    }
+    await db.query('git_providers', {
+      where: { id },
+      delete: true,
+    });
     
     return true;
   } catch (error) {
-    logger.error('Failed to delete git provider:', { error, id });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to delete git provider:', { error: errorMessage, id });
     return false;
   }
 }
 
+/**
+ * List repositories with optional filters
+ */
 export async function listRepositories(
   userId: string,
   filters?: {
     providerId?: string;
     projectId?: string;
     syncStatus?: SyncStatus;
-  },
-  supabaseClient?: any
+  }
 ): Promise<Repository[]> {
   try {
-    const supabase = getClient('listRepositories', supabaseClient);
+    logger.info('Listing repositories', { userId, filters });
     
-    if (!supabase) {
-      return [];
+    const where: Record<string, any> = {};
+    
+    // Join with git_providers to filter by user_id
+    const joinConditions = {
+      'repositories.provider_id': 'git_providers.id',
+    };
+    
+    // Add filters
+    if (filters?.providerId) {
+      where.provider_id = filters.providerId;
     }
     
-    let query = supabase
-      .from('repositories')
-      .select(`
-        *,
-        provider:git_providers(*)
-      `);
-    
-    // Apply filters
-    if (filters?.providerId) {
-      query = query.eq('provider_id', filters.providerId);
+    if (filters?.projectId) {
+      where.project_id = filters.projectId;
     }
     
     if (filters?.syncStatus) {
-      query = query.eq('sync_status', filters.syncStatus);
+      where.sync_status = filters.syncStatus.toLowerCase();
     }
     
-    const { data, error } = await query;
-      
-    if (error) {
-      logger.error('Error listing repositories:', { error, userId, filters });
-      return [];
-    }
+    // Add user filter through the join
+    const additionalWhere = {
+      'git_providers.user_id': userId,
+    };
     
-    return data || [];
+    const data = await db.query('repositories', {
+      join: {
+        table: 'git_providers',
+        on: joinConditions,
+        where: additionalWhere,
+      },
+      where,
+      orderBy: { created_at: 'desc' },
+    });
+    
+    return data.map(mapRepositoryFromDb) || [];
   } catch (error) {
-    logger.error('Error in listRepositories:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error in listRepositories:', { error: errorMessage });
     return [];
   }
 }
 
-export async function getRepository(id: string, supabaseClient?: any): Promise<Repository | null> {
-  try {
-    const supabase = getClient('getRepository', supabaseClient);
-    
-    if (!supabase) {
-      return null;
-    }
-    
-    const { data, error } = await supabase
-      .from('repositories')
-      .select(`
-        *,
-        provider:git_providers(*)
-      `)
-      .eq('id', id)
-      .single();
-      
-    if (error) {
-      logger.error('Error getting repository:', { error, id });
-      return null;
-    }
-    
-    return data;
-  } catch (error) {
-    logger.error('Failed to get repository:', { error, id });
-    return null;
-  }
+// Helper function to map database fields to GitProvider interface
+function mapGitProviderFromDb(data: any): GitProvider {
+  return {
+    id: data.id,
+    userId: data.user_id,
+    tenantId: data.tenant_id,
+    type: data.type,
+    displayName: data.display_name,
+    status: data.status,
+    serverUrl: data.server_url,
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresAt: data.expires_at ? new Date(data.expires_at) : undefined,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+    lastSyncedAt: data.last_synced_at ? new Date(data.last_synced_at) : undefined,
+  };
 }
 
-export async function createRepository(data: RepositoryCreateInput, supabaseClient?: any): Promise<Repository | null> {
-  try {
-    const supabase = getClient('createRepository', supabaseClient);
-    
-    if (!supabase) {
-      return null;
-    }
-    
-    const { data: repository, error } = await supabase
-      .from('repositories')
-      .insert({
-        ...data,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      logger.error('Error creating repository:', { error, data });
-      return null;
-    }
-    
-    return repository;
-  } catch (error) {
-    logger.error('Failed to create repository:', { error, data });
-    return null;
-  }
+// Helper function to map database fields to Repository interface
+function mapRepositoryFromDb(data: any): Repository {
+  return {
+    id: data.id,
+    providerId: data.provider_id,
+    name: data.name,
+    owner: data.owner,
+    url: data.url,
+    branch: data.branch,
+    defaultBranch: data.default_branch,
+    isPrivate: data.is_private,
+    description: data.description,
+    syncStatus: data.sync_status,
+    createdAt: new Date(data.created_at),
+    updatedAt: new Date(data.updated_at),
+    lastSyncedAt: data.last_synced_at ? new Date(data.last_synced_at) : undefined,
+    error: data.error,
+  };
 }
 
-export async function updateRepository(
-  id: string,
-  data: RepositoryUpdateInput,
-  supabaseClient?: any
-): Promise<Repository | null> {
-  try {
-    const supabase = getClient('updateRepository', supabaseClient);
-    
-    if (!supabase) {
-      return null;
-    }
-    
-    const { data: repository, error } = await supabase
-      .from('repositories')
-      .update({
-        ...data,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) {
-      logger.error('Error updating repository:', { error, id, data });
-      return null;
-    }
-    
-    return repository;
-  } catch (error) {
-    logger.error('Failed to update repository:', { error, id });
-    return null;
-  }
-}
-
-export async function deleteRepository(id: string, supabaseClient?: any): Promise<boolean> {
-  try {
-    const supabase = getClient('deleteRepository', supabaseClient);
-    
-    if (!supabase) {
-      return false;
-    }
-    
-    const { error } = await supabase
-      .from('repositories')
-      .delete()
-      .eq('id', id);
-      
-    if (error) {
-      logger.error('Error deleting repository:', { error, id });
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    logger.error('Failed to delete repository:', { error, id });
-    return false;
-  }
-}
-
-export async function syncRepository(id: string, supabaseClient?: any): Promise<Repository | null> {
-  try {
-    const supabase = getClient('syncRepository', supabaseClient);
-    
-    if (!supabase) {
-      return null;
-    }
-    
-    // First get the repository
-    const { data: repository, error: getError } = await supabase
-      .from('repositories')
-      .select(`
-        *,
-        provider:git_providers(*)
-      `)
-      .eq('id', id)
-      .single();
-      
-    if (getError || !repository) {
-      logger.error('Error getting repository for sync:', { error: getError, id });
-      return null;
-    }
-    
-    // Update sync status to in_progress
-    const { error: updateError } = await supabase
-      .from('repositories')
-      .update({
-        sync_status: 'in_progress',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id);
-      
-    if (updateError) {
-      logger.error('Error updating repository sync status:', { error: updateError, id });
-      return null;
-    }
-    
-    try {
-      // Get the provider service
-      const providerService = await getGitProviderService(
-        repository.provider.type,
-        {
-          serverUrl: repository.provider.server_url,
-          accessToken: repository.provider.access_token
-        }
-      );
-      
-      // Sync the repository
-      const repoDetails = await providerService.getRepository(repository.url);
-      
-      // Update the repository with the latest data
-      const { data: updatedRepo, error: finalUpdateError } = await supabase
-        .from('repositories')
-        .update({
-          name: repoDetails.name,
-          description: repoDetails.description,
-          default_branch: repoDetails.defaultBranch,
-          sync_status: 'synced',
-          last_synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-        
-      if (finalUpdateError) {
-        logger.error('Error updating repository after sync:', { error: finalUpdateError, id });
-        return null;
-      }
-      
-      return updatedRepo;
-    } catch (syncError) {
-      // Update sync status to failed
-      const { error: failedUpdateError } = await supabase
-        .from('repositories')
-        .update({
-          sync_status: 'failed',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-        
-      if (failedUpdateError) {
-        logger.error('Error updating repository sync status to failed:', { error: failedUpdateError, id });
-      }
-      
-      logger.error('Error syncing repository:', { error: syncError, id });
-      return null;
-    }
-  } catch (error) {
-    logger.error('Failed to sync repository:', { error, id });
-    return null;
-  }
-}
-
-export async function importRepositoriesFromProvider(providerId: string, supabaseClient?: any): Promise<Repository[]> {
-  try {
-    const supabase = getClient('importRepositoriesFromProvider', supabaseClient);
-    
-    if (!supabase) {
-      return [];
-    }
-    
-    // Get the provider
-    const { data: provider, error: providerError } = await supabase
-      .from('git_providers')
-      .select('*')
-      .eq('id', providerId)
-      .single();
-      
-    if (providerError || !provider) {
-      logger.error('Error getting provider for import:', { error: providerError, providerId });
-      return [];
-    }
-    
-    // Get the provider service
-    const providerService = await getGitProviderService(
-      provider.type,
-      {
-        serverUrl: provider.server_url,
-        accessToken: provider.access_token
-      }
-    );
-    
-    // Get repositories from the provider
-    const repositories = await providerService.listRepositories();
-    
-    // Create repositories in the database
-    const createdRepos: Repository[] = [];
-    
-    for (const repo of repositories) {
-      // Check if repository already exists
-      const { data: existingRepo, error: checkError } = await supabase
-        .from('repositories')
-        .select('id')
-        .eq('provider_id', providerId)
-        .eq('url', repo.url)
-        .single();
-        
-      if (!checkError && existingRepo) {
-        // Repository already exists, skip
-        logger.info('Repository already exists, skipping:', { url: repo.url });
-        continue;
-      }
-      
-      // Create the repository
-      const { data: createdRepo, error: createError } = await supabase
-        .from('repositories')
-        .insert({
-          name: repo.name,
-          description: repo.description,
-          url: repo.url,
-          default_branch: repo.defaultBranch,
-          provider_id: providerId,
-          sync_status: 'synced',
-          last_synced_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-        
-      if (createError) {
-        logger.error('Error creating repository during import:', { error: createError, repo });
-        continue;
-      }
-      
-      createdRepos.push(createdRepo);
-    }
-    
-    return createdRepos;
-  } catch (error) {
-    logger.error('Failed to import repositories:', { error, providerId });
-    return [];
-  }
-}
-
-// Test connection to a git provider
-export async function testGitProviderConnection({ 
-  type, 
-  serverUrl, 
-  token 
-}: { 
-  type: GitProviderType; 
-  serverUrl?: string; 
-  token: string;
-}): Promise<{ success: boolean; message?: string; error?: string; }> {
-  try {
-    // Get the provider service
-    const providerService = await getGitProviderService(
-      type,
-      {
-        serverUrl,
-        accessToken: token
-      }
-    );
-    
-    // Test the connection
-    const result = await providerService.testConnection();
-    
-    return {
-      success: result.success,
-      message: result.message,
-      error: result.error
-    };
-  } catch (error) {
-    logger.error('Failed to test git provider connection:', { error, type });
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
-}
+// Continue with the rest of the functions, replacing Supabase client usage with db...

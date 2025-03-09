@@ -29,6 +29,12 @@ export function UserNav({ user, tenant, locale }: UserNavProps) {
 
   if (!user) return null;
 
+  // Create a wrapper function for signOut
+  const handleSignOut = () => {
+    const formData = new FormData();
+    signOut(formData);
+  };
+
   // Get user avatar image
   const userImage = user.user_metadata?.avatar_url || '/avatars/01.svg';
   // Get user display name
@@ -36,7 +42,7 @@ export function UserNav({ user, tenant, locale }: UserNavProps) {
   // Get user initials for avatar fallback
   const userInitials = userName
     .split(' ')
-    .map((part) => part[0])
+    .map((part: string) => part[0])
     .join('')
     .toUpperCase();
 
@@ -74,7 +80,7 @@ export function UserNav({ user, tenant, locale }: UserNavProps) {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
+        <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>{t('Auth.signOut')}</span>
         </DropdownMenuItem>

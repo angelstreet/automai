@@ -15,7 +15,10 @@ export class GitHubProviderService implements GitProviderService {
     }
   }
 
-  getAuthorizationUrl(redirectUri: string, state: string): string {
+  getAuthorizationUrl(): string {
+    const redirectUri = process.env.GITHUB_REDIRECT_URI || '';
+    const state = Math.random().toString(36).substring(2, 15);
+    
     const params = new URLSearchParams({
       client_id: this.clientId,
       redirect_uri: redirectUri,
@@ -27,37 +30,42 @@ export class GitHubProviderService implements GitProviderService {
   }
 
   async exchangeCodeForToken(
-    code: string,
-    redirectUri: string,
+    code: string
   ): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresAt?: Date;
   }> {
-    const response = await fetch('https://github.com/login/oauth/access_token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        code,
-        redirect_uri: redirectUri,
-      }),
-    });
+    const redirectUri = process.env.GITHUB_REDIRECT_URI || '';
+    
+    try {
+      const response = await fetch('https://github.com/login/oauth/access_token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          code,
+          redirect_uri: redirectUri,
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data.error) {
-      throw new Error(`GitHub OAuth error: ${data.error_description || data.error}`);
+      if (data.error) {
+        throw new Error(`GitHub OAuth error: ${data.error_description || data.error}`);
+      }
+
+      return {
+        accessToken: data.access_token,
+        // GitHub doesn't provide refresh tokens in the standard OAuth flow
+      };
+    } catch (error) {
+      throw error;
     }
-
-    return {
-      accessToken: data.access_token,
-      // GitHub doesn't provide refresh tokens in the standard OAuth flow
-    };
   }
 
   async getUserInfo(accessToken: string): Promise<{
@@ -109,58 +117,91 @@ export class GitHubProviderService implements GitProviderService {
       defaultBranch: repo.default_branch,
       providerId: provider.id,
       lastSyncedAt: new Date(),
-      syncStatus: 'SYNCED' as SyncStatus,
+      syncStatus: 'SYNCED',
       createdAt: new Date(repo.created_at),
       updatedAt: new Date(repo.updated_at),
     }));
   }
 
-  async getRepository(provider: GitProvider, repoName: string): Promise<Repository> {
-    // Get user info to get the username
-    const userInfo = await this.getUserInfo(provider.accessToken || '');
-
-    const response = await fetch(`https://api.github.com/repos/${userInfo.login}/${repoName}`, {
-      headers: {
-        Authorization: `token ${provider.accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.statusText}`);
+  async getRepository(nameOrId: string): Promise<Repository | null> {
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error('GitHub OAuth credentials not configured');
     }
-
-    const repo = await response.json();
-
-    return {
-      id: repo.id.toString(),
-      name: repo.name,
-      description: repo.description,
-      url: repo.html_url,
-      defaultBranch: repo.default_branch,
-      providerId: provider.id,
-      lastSyncedAt: new Date(),
-      syncStatus: 'SYNCED' as SyncStatus,
-      createdAt: new Date(repo.created_at),
-      updatedAt: new Date(repo.updated_at),
-    };
+    
+    try {
+      // Parse nameOrId which should be in format "owner/repo"
+      const [owner, repo] = nameOrId.split('/');
+      
+      if (!owner || !repo) {
+        throw new Error('Invalid repository identifier. Expected format: owner/repo');
+      }
+      
+      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`GitHub API error: ${response.statusText}`);
+      }
+      
+      const repoData = await response.json();
+      
+      return {
+        id: repoData.id.toString(),
+        name: repoData.name,
+        description: repoData.description,
+        url: repoData.html_url,
+        defaultBranch: repoData.default_branch,
+        providerId: '', // This would need to be set by the caller
+        owner: repoData.owner.login,
+        isPrivate: repoData.private,
+        syncStatus: 'PENDING',
+        createdAt: new Date(repoData.created_at),
+        updatedAt: new Date(repoData.updated_at),
+      };
+    } catch (error) {
+      console.error('Error fetching GitHub repository:', error);
+      return null;
+    }
   }
 
   async syncRepository(repository: Repository): Promise<Repository> {
-    const provider = repository.provider;
-
-    if (!provider || !provider.accessToken) {
-      throw new Error('Provider not available or not authenticated');
+    // We need to get the provider separately since it's not part of the Repository type
+    // This would need to be implemented based on how providers are stored/retrieved in your system
+    const providerId = repository.providerId;
+    
+    // This is a placeholder - in a real implementation, you would fetch the provider using the providerId
+    if (!providerId) {
+      throw new Error('Provider ID not available');
     }
-
-    // Get updated repository data
-    const updatedRepo = await this.getRepository(provider, repository.name);
-
-    return {
-      ...repository,
-      ...updatedRepo,
-      lastSyncedAt: new Date(),
-      syncStatus: 'SYNCED' as SyncStatus,
-    };
+    
+    try {
+      // Get updated repository data
+      const updatedRepo = await this.getRepository(`${repository.owner}/${repository.name}`);
+      
+      if (!updatedRepo) {
+        throw new Error(`Repository not found: ${repository.name}`);
+      }
+      
+      return {
+        ...repository,
+        ...updatedRepo,
+        lastSyncedAt: new Date(),
+        syncStatus: 'SYNCED',
+      };
+    } catch (error) {
+      console.error('Error syncing GitHub repository:', error);
+      return {
+        ...repository,
+        syncStatus: 'ERROR',
+        lastSyncedAt: new Date(),
+      };
+    }
   }
 
   async validateAccessToken(accessToken: string): Promise<boolean> {
@@ -184,5 +225,31 @@ export class GitHubProviderService implements GitProviderService {
   }> {
     // GitHub doesn't support refresh tokens in the standard OAuth flow
     throw new Error('GitHub does not support token refresh in the standard OAuth flow');
+  }
+
+  async getUserRepositories(): Promise<Repository[]> {
+    // This is a wrapper around listRepositories for compatibility with the interface
+    // In a real implementation, you would need to get the provider from somewhere
+    throw new Error('Method requires a provider - use listRepositories instead');
+  }
+
+  async testConnection(): Promise<boolean> {
+    if (!this.clientId || !this.clientSecret) {
+      return false;
+    }
+    
+    try {
+      // Simple check to see if we can access the API
+      const response = await fetch('https://api.github.com/rate_limit', {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Error testing GitHub connection:', error);
+      return false;
+    }
   }
 }

@@ -16,7 +16,7 @@ export function UpgradePrompt({ feature, className = '' }: UpgradePromptProps) {
 
   if (!user) return null;
 
-  const userPlan = user.user_metadata?.plan || 'TRIAL';
+  const userPlan = (user.user_metadata as any)?.plan || 'TRIAL';
   const message = getUpgradeMessage(userPlan, feature as any);
   if (!message) return null;
 

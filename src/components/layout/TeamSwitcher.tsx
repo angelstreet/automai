@@ -36,15 +36,15 @@ export function TeamSwitcher() {
   return !isOpen ? (
     <SidebarMenu>
       <SidebarMenuButton>
-        {currentTenant?.icon || <Building2 className="h-4 w-4" />}
+        {currentTenant?.iconName ? getIconComponent(currentTenant.iconName) : <Building2 className="h-4 w-4" />}
       </SidebarMenuButton>
       {tenants.map((tenant) => (
         <SidebarMenuItem
           key={tenant.id}
           onClick={() => handleTenantSwitch(tenant.id)}
-          active={tenant.id === currentTenant?.id}
+          className={tenant.id === currentTenant?.id ? "bg-accent" : ""}
         >
-          {tenant.icon || <Building2 className="h-4 w-4" />}
+          {tenant.iconName ? getIconComponent(tenant.iconName) : <Building2 className="h-4 w-4" />}
         </SidebarMenuItem>
       ))}
     </SidebarMenu>
@@ -53,25 +53,39 @@ export function TeamSwitcher() {
       <DropdownMenuTrigger asChild>
         <button className="flex w-full items-center justify-between rounded-lg border p-4 hover:bg-accent">
           <div className="flex items-center gap-3">
-            {currentTenant?.icon || <Building2 className="h-4 w-4" />}
+            {currentTenant?.iconName ? getIconComponent(currentTenant.iconName) : <Building2 className="h-4 w-4" />}
             <span className="text-sm font-medium">{currentTenant?.name || 'Default'}</span>
           </div>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="start" side="right" forceMount>
-        <DropdownMenuLabel>Switch tenant</DropdownMenuLabel>
+        <DropdownMenuLabel>Switch team</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {tenants.map((tenant) => (
           <DropdownMenuItem
             key={tenant.id}
             onClick={() => handleTenantSwitch(tenant.id)}
           >
-            {tenant.icon || <Building2 className="mr-2 h-4 w-4" />}
+            {tenant.iconName ? getIconComponent(tenant.iconName) : <Building2 className="mr-2 h-4 w-4" />}
             <span>{tenant.name}</span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+// Helper function to get icon component based on iconName
+function getIconComponent(iconName: string) {
+  switch (iconName) {
+    case 'building':
+      return <Building2 className="h-4 w-4" />;
+    case 'code':
+      return <Code2 className="h-4 w-4" />;
+    case 'factory':
+      return <Factory className="h-4 w-4" />;
+    default:
+      return <Building2 className="h-4 w-4" />;
+  }
 }

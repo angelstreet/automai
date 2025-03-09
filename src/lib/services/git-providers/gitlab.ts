@@ -1,4 +1,4 @@
-import { Repository } from '@/types/repositories';
+import { GitProvider, Repository } from '@/types/repositories';
 import { GitProviderService, GitProviderConfig } from './base';
 
 export class GitLabProviderService implements GitProviderService {
@@ -37,9 +37,13 @@ export class GitLabProviderService implements GitProviderService {
         description: repo.description,
         url: repo.web_url,
         defaultBranch: repo.default_branch,
-        private: repo.visibility !== 'public',
+        isPrivate: repo.visibility !== 'public',
         id: repo.id.toString(),
-        externalId: repo.id.toString(),
+        providerId: '',
+        owner: repo.namespace?.path || '',
+        syncStatus: 'PENDING',
+        createdAt: new Date(),
+        updatedAt: new Date()
       }));
     } catch (error) {
       console.error('Error fetching GitLab repositories:', error);
@@ -74,9 +78,13 @@ export class GitLabProviderService implements GitProviderService {
         description: repo.description,
         url: repo.web_url,
         defaultBranch: repo.default_branch,
-        private: repo.visibility !== 'public',
+        isPrivate: repo.visibility !== 'public',
         id: repo.id.toString(),
-        externalId: repo.id.toString(),
+        providerId: '',
+        owner: repo.namespace?.path || '',
+        syncStatus: 'PENDING',
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
     } catch (error) {
       console.error('Error fetching GitLab repository:', error);
@@ -109,24 +117,24 @@ export class GitLabProviderService implements GitProviderService {
     return `${baseUrl}/api/git-providers/callback/gitlab`;
   }
 
-  getAuthorizationUrl(state: string): string {
+  getAuthorizationUrl(): string {
     const clientId = process.env.GITLAB_CLIENT_ID;
     if (!clientId) {
       throw new Error('GitLab client ID is not configured');
     }
-
-    const redirectUri = this.getRedirectUrl();
-    const scope = 'api read_api read_user read_repository';
-
+    
+    const redirectUri = process.env.GITLAB_REDIRECT_URI || '';
+    const state = Math.random().toString(36).substring(2, 15);
+    
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
       state,
-      scope,
+      scope: 'api',
     });
 
-    return `https://gitlab.com/oauth/authorize?${params.toString()}`;
+    return `${this.baseUrl}/oauth/authorize?${params.toString()}`;
   }
 
   async exchangeCodeForToken(code: string): Promise<{
@@ -174,5 +182,130 @@ export class GitLabProviderService implements GitProviderService {
       refreshToken: data.refresh_token,
       expiresAt,
     };
+  }
+
+  async getUserInfo(accessToken: string): Promise<{
+    id: string;
+    login: string;
+    name: string;
+    email: string;
+    avatarUrl: string;
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/user`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user info: ${response.statusText}`);
+      }
+
+      const user = await response.json();
+
+      return {
+        id: user.id.toString(),
+        login: user.username,
+        name: user.name,
+        email: user.email,
+        avatarUrl: user.avatar_url,
+      };
+    } catch (error) {
+      console.error('Error fetching GitLab user info:', error);
+      throw error;
+    }
+  }
+
+  async listRepositories(provider: GitProvider): Promise<Repository[]> {
+    if (!this.token) {
+      throw new Error('Access token is required');
+    }
+
+    try {
+      const response = await fetch(`${this.baseUrl}/projects?membership=true`, {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repositories: ${response.statusText}`);
+      }
+
+      const repos = await response.json();
+
+      return repos.map((repo: any) => ({
+        id: repo.id.toString(),
+        name: repo.name,
+        description: repo.description,
+        url: repo.web_url,
+        defaultBranch: repo.default_branch,
+        isPrivate: repo.visibility !== 'public',
+        providerId: provider.id,
+        owner: repo.namespace?.path || '',
+        syncStatus: 'PENDING',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+    } catch (error) {
+      console.error('Error fetching GitLab repositories:', error);
+      throw error;
+    }
+  }
+
+  async syncRepository(repository: Repository): Promise<Repository> {
+    if (!this.token) {
+      throw new Error('Access token is required');
+    }
+
+    try {
+      // Get updated repository data
+      const updatedRepo = await this.getRepository(repository.id);
+      
+      if (!updatedRepo) {
+        throw new Error(`Repository not found: ${repository.id}`);
+      }
+
+      return {
+        ...repository,
+        ...updatedRepo,
+        lastSyncedAt: new Date(),
+        syncStatus: 'SYNCED',
+      };
+    } catch (error) {
+      console.error('Error syncing GitLab repository:', error);
+      return {
+        ...repository,
+        syncStatus: 'ERROR',
+        lastSyncedAt: new Date(),
+      };
+    }
+  }
+
+  async validateAccessToken(accessToken: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/user`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: 'application/json',
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async refreshAccessToken(refreshToken: string): Promise<{
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt?: Date;
+  }> {
+    // GitLab doesn't support refresh tokens in the standard OAuth flow
+    throw new Error('GitLab does not support refreshing tokens');
   }
 }

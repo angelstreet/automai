@@ -20,7 +20,7 @@ export function RoleSwitcher() {
   const { user } = useAuth();
   const { role, setRole } = useRole();
   const { roles, isLoading } = useUserRoles();
-  const { collapsed } = useSidebar();
+  const { isOpen } = useSidebar();
 
   if (!user || isLoading || roles.length === 0) {
     return null;
@@ -28,7 +28,7 @@ export function RoleSwitcher() {
 
   const currentRole = roles.find(r => r.id === role);
 
-  return collapsed ? (
+  return !isOpen ? (
     <SidebarMenu>
       <SidebarMenuButton>
         {currentRole?.icon || <Code2 className="h-4 w-4" />}
@@ -36,8 +36,8 @@ export function RoleSwitcher() {
       {roles.map((item) => (
         <SidebarMenuItem
           key={item.id}
-          onClick={() => setRole(item.id)}
-          active={item.id === role}
+          onClick={() => setRole(item.id as 'admin' | 'user' | 'developer' | 'operator')}
+          className={item.id === role ? "bg-accent" : ""}
         >
           {item.icon || <Code2 className="h-4 w-4" />}
         </SidebarMenuItem>
@@ -60,7 +60,7 @@ export function RoleSwitcher() {
         {roles.map((item) => (
           <DropdownMenuItem
             key={item.id}
-            onClick={() => setRole(item.id)}
+            onClick={() => setRole(item.id as 'admin' | 'user' | 'developer' | 'operator')}
           >
             {item.icon || <Code2 className="mr-2 h-4 w-4" />}
             <span>{item.name}</span>

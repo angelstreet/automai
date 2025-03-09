@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 
 export function ProfileContent() {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const { updateProfile, isUpdating } = useProfile();
   const t = useTranslations('Profile');
   const params = useParams();
@@ -20,7 +20,7 @@ export function ProfileContent() {
   const [name, setName] = useState(user?.user_metadata?.name || '');
   const router = useRouter();
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -97,7 +97,7 @@ export function ProfileContent() {
               </label>
               <Input
                 id="plan"
-                value={user.user_metadata?.plan || 'TRIAL'}
+                value={(user.user_metadata as any)?.plan || 'TRIAL'}
                 disabled
                 className="bg-muted"
               />

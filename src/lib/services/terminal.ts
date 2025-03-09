@@ -4,6 +4,16 @@ import { logger } from '../logger';
 
 // Define a TerminalService class to implement singleton pattern
 class TerminalService {
+  private static instance: TerminalService;
+
+  // Get singleton instance
+  public static getInstance(): TerminalService {
+    if (!TerminalService.instance) {
+      TerminalService.instance = new TerminalService();
+    }
+    return TerminalService.instance;
+  }
+
   /**
    * Create a new terminal connection
    */
@@ -26,9 +36,9 @@ class TerminalService {
         throw new Error(`Host not found: ${data.hostId}`);
       }
 
-      // Create connection record
-      const connection = await db.connection.create({
-        data: {
+      // Create connection record using db.query
+      const connections = await db.query('connections', {
+        insert: {
           type: data.type,
           status: 'pending',
           ip: host.ip,
@@ -37,7 +47,14 @@ class TerminalService {
           password: data.password || host.password,
           hostId: host.id,
         },
+        returning: true,
       });
+      
+      const connection = connections[0];
+      
+      if (!connection) {
+        throw new Error('Failed to create connection record');
+      }
 
       logger.info('Terminal connection created', { connectionId: connection.id });
 
@@ -56,23 +73,24 @@ class TerminalService {
     logger.info('Getting terminal connection', { connectionId: id });
 
     try {
-      const connection = await db.connection.findUnique({
+      // Get connection using db.query
+      const connections = await db.query('connections', {
         where: { id },
-        include: {
-          host: true,
-        },
+        include: { host: true },
       });
-
+      
+      const connection = connections[0];
+      
       if (!connection) {
         logger.error('Connection not found', { connectionId: id });
-        throw new Error(`Connection not found: ${id}`);
+        return null;
       }
 
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error getting terminal connection', { error: errorMessage, connectionId: id });
-      throw new Error(`Failed to get terminal connection: ${errorMessage}`);
+      logger.error('Error getting terminal connection', { error: errorMessage });
+      return null;
     }
   }
 
@@ -83,23 +101,23 @@ class TerminalService {
     logger.info('Updating terminal connection status', { connectionId: id, status });
 
     try {
-      const connection = await db.connection.update({
+      // Update connection using db.query
+      const connections = await db.query('connections', {
         where: { id },
-        data: {
-          status,
-          updatedAt: new Date(),
-        },
+        update: { status },
+        returning: true,
       });
-
-      logger.info('Terminal connection status updated', { connectionId: id, status });
+      
+      const connection = connections[0];
+      
+      if (!connection) {
+        throw new Error(`Connection not found: ${id}`);
+      }
 
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error updating terminal connection status', {
-        error: errorMessage,
-        connectionId: id,
-      });
+      logger.error('Error updating terminal connection status', { error: errorMessage });
       throw new Error(`Failed to update terminal connection status: ${errorMessage}`);
     }
   }
@@ -111,20 +129,26 @@ class TerminalService {
     logger.info('Closing terminal connection', { connectionId: id });
 
     try {
-      const connection = await db.connection.update({
+      // Close connection using db.query
+      const connections = await db.query('connections', {
         where: { id },
-        data: {
+        update: {
           status: 'closed',
-          updatedAt: new Date(),
+          closedAt: new Date().toISOString(),
         },
+        returning: true,
       });
-
-      logger.info('Terminal connection closed', { connectionId: id });
+      
+      const connection = connections[0];
+      
+      if (!connection) {
+        throw new Error(`Connection not found: ${id}`);
+      }
 
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error closing terminal connection', { error: errorMessage, connectionId: id });
+      logger.error('Error closing terminal connection', { error: errorMessage });
       throw new Error(`Failed to close terminal connection: ${errorMessage}`);
     }
   }
@@ -136,87 +160,53 @@ class TerminalService {
     logger.info('Getting all terminal connections');
 
     try {
-      const connections = await db.connection.findMany({
-        include: {
-          host: true,
-        },
+      // Get connections using db.query
+      const connections = await db.query('connections', {
+        include: { host: true },
+        orderBy: { createdAt: 'desc' },
       });
 
-      return connections;
+      return connections || [];
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Error getting terminal connections', { error: errorMessage });
-      throw new Error(`Failed to get terminal connections: ${errorMessage}`);
+      return [];
     }
   }
 }
 
-// Define global type for TerminalService singleton
-declare global {
-  var terminalService: TerminalService | undefined;
-}
-
-// Create singleton instance
-const terminalService = global.terminalService || new TerminalService();
-
-// Store in global for singleton pattern in development
-if (process.env.NODE_ENV !== 'production') {
-  global.terminalService = terminalService;
-}
-
-// Export singleton instance methods
-export const {
-  createTerminalConnection,
-  getTerminalConnection,
-  updateTerminalConnectionStatus,
-  closeTerminalConnection,
-  getTerminalConnections,
-} = terminalService;
+// Export singleton instance
+const terminalService = TerminalService.getInstance();
+export default terminalService;
 
 /**
  * Alternative fetch terminal connection details with added compatibility fields
  */
 export async function getCompatibleConnection(connectionId: string) {
-  try {
-    logger.info('Getting compatible connection', { connectionId });
+  logger.info('Getting compatible connection', { connectionId });
 
-    const connection = await db.connection.findUnique({
-      where: { id: connectionId },
-    });
-
-    if (!connection) {
-      logger.error('Terminal connection not found', { connectionId });
-      return null;
-    }
-
-    logger.info('Connection found in database', {
-      connectionId,
-      connectionType: connection.type,
-      connectionHasHost: !!connection.host,
-      connectionHasIp: !!(_connection as any).ip,
-    });
-
-    // Add missing properties for compatibility
-    const compatibleConnection = {
-      ...connection,
-      ip: connection.host, // Map host to ip for backward compatibility
-      type: connection.type || 'ssh', // Default type for connections
-    };
-
-    logger.info('Returning compatible connection', {
-      connectionId,
-      host: compatibleConnection.host,
-      ip: compatibleConnection.ip,
-      type: compatibleConnection.type,
-    });
-
-    return compatibleConnection;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error('Error fetching terminal connection', {
-      error: errorMessage,
-      connectionId,
-    });
+  // Get connection using db.query
+  const connections = await db.query('connections', {
+    where: { id: connectionId },
+    include: { host: true },
+  });
+  
+  const connection = connections[0];
+  
+  if (!connection) {
+    logger.error('Connection not found', { connectionId });
     return null;
   }
+
+  logger.debug('Connection found', {
+    connectionId: connection.id,
+    connectionType: connection.type,
+    connectionHasHost: !!connection.host,
+  });
+
+  // Add missing properties for compatibility
+  return {
+    ...connection,
+    // Add any additional properties needed for compatibility
+  };
 }

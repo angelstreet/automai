@@ -27,10 +27,16 @@ export function ProfileDropdown() {
   const tenant = params.tenant as string;
   const t = useTranslations();
 
+  // Create a wrapper function for signOut
+  const handleSignOut = () => {
+    const formData = new FormData();
+    signOut(formData);
+  };
+
   if (!user) return null;
 
   // Get user avatar image
-  const userImage = user.user_metadata?.avatar_url || '/avatars/01.svg';
+  const userImage = (user.user_metadata as any)?.avatar_url || '/avatars/01.svg';
   // Get user display name
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
   // Get user initials for avatar fallback
@@ -71,7 +77,7 @@ export function ProfileDropdown() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
+        <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>{t('Auth.signOut')}</span>
           <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
