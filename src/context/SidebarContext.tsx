@@ -1,8 +1,9 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect } from 'react';
-
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import Cookies from 'js-cookie';
 import { SidebarContext as SidebarContextType } from '@/types/sidebar';
+import { SIDEBAR_COOKIE_NAME } from '@/components/sidebar/constants';
 
 export const SidebarContext = createContext<SidebarContextType | null>(null);
 
@@ -12,44 +13,69 @@ interface SidebarProviderProps {
 }
 
 export function SidebarProvider({ children, defaultOpen = true }: SidebarProviderProps) {
-  const [open, setOpen] = useState(defaultOpen);
+  // Initialize state from cookie if available, otherwise use defaultOpen
+  const initialOpen = typeof window !== 'undefined' 
+    ? Cookies.get(SIDEBAR_COOKIE_NAME) !== 'false' 
+    : defaultOpen;
+    
+  const [open, setOpen] = useState(initialOpen);
   const [openMobile, setOpenMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [state, setState] = useState<'expanded' | 'collapsed'>(
-    defaultOpen ? 'expanded' : 'collapsed',
+    initialOpen ? 'expanded' : 'collapsed',
   );
 
-  useEffect(() => {
-    const checkIsMobile = () => {
-      if (typeof window !== 'undefined') {
-        setIsMobile(window.innerWidth < 768);
-      }
-    };
-
-    checkIsMobile();
+  // Use useCallback for the resize handler to prevent recreation on each render
+  const checkIsMobile = useCallback(() => {
     if (typeof window !== 'undefined') {
-      window.addEventListener('resize', checkIsMobile);
-      return () => window.removeEventListener('resize', checkIsMobile);
+      setIsMobile(window.innerWidth < 768);
     }
   }, []);
 
-  const toggleSidebar = () => {
-    setOpen(!open);
-    setState(!open ? 'expanded' : 'collapsed');
+  useEffect(() => {
+    checkIsMobile();
+    
+    if (typeof window !== 'undefined') {
+      // Use a debounced resize handler to prevent excessive updates
+      let resizeTimer: NodeJS.Timeout;
+      const handleResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(checkIsMobile, 100);
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+        clearTimeout(resizeTimer);
+      };
+    }
+  }, [checkIsMobile]);
+
+  // Use useCallback for toggleSidebar to prevent recreation on each render
+  const toggleSidebar = useCallback(() => {
+    const newOpen = !open;
+    setOpen(newOpen);
+    setState(newOpen ? 'expanded' : 'collapsed');
+    
+    // Update cookie
+    if (typeof window !== 'undefined') {
+      Cookies.set(SIDEBAR_COOKIE_NAME, String(newOpen), { path: '/' });
+    }
+  }, [open]);
+
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = {
+    state,
+    open,
+    setOpen,
+    openMobile,
+    setOpenMobile,
+    isMobile,
+    toggleSidebar,
   };
 
   return (
-    <SidebarContext.Provider
-      value={{
-        state,
-        open,
-        setOpen,
-        openMobile,
-        setOpenMobile,
-        isMobile,
-        toggleSidebar,
-      }}
-    >
+    <SidebarContext.Provider value={contextValue}>
       {children}
     </SidebarContext.Provider>
   );

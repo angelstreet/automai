@@ -15,8 +15,8 @@ import {
 } from '@/app/actions/auth';
 import { supabaseAuth } from '@/lib/supabase/auth';
 
-// Cache time in milliseconds (5 minutes)
-const AUTH_CACHE_TIME = 5 * 60 * 1000;
+// Increase cache time to 30 minutes to reduce API calls
+const AUTH_CACHE_TIME = 30 * 60 * 1000;
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -26,6 +26,7 @@ export function useAuth() {
   // Add refs to track last fetch time and if we're on a login page
   const lastFetchTime = useRef<number>(0);
   const isAuthPage = useRef<boolean>(false);
+  const hasInitialized = useRef<boolean>(false);
   
   // Check if we're on an auth page (login, signup, etc.)
   useEffect(() => {
@@ -66,9 +67,12 @@ export function useAuth() {
     }
   }, [user]);
 
-  // Only fetch user on initial load
+  // Only fetch user on initial load and ensure it only runs once
   useEffect(() => {
-    fetchUser();
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      fetchUser();
+    }
   }, [fetchUser]);
 
   const handleSignOut = async (formData: FormData) => {

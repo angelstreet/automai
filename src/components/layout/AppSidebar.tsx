@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
@@ -15,24 +15,54 @@ import {
 import { useRole } from '@/context/RoleContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Role } from '@/types/user';
+import * as React from 'react';
 
 import { sidebarData } from './data/sidebarData';
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+// Wrap the component with React.memo to prevent unnecessary re-renders
+const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const { role } = useRole();
   const { open } = useSidebar();
   const isCollapsed = !open;
 
-  // Add debugging to help identify issues
-  useEffect(() => {
-    console.log('AppSidebar - Current user:', user);
-    console.log('AppSidebar - Current role:', role);
-  }, [user, role]);
+  // Always call useMemo hooks in the same order, regardless of conditions
+  // Create empty/default values for the memoized data when user is not available
+  const userRole = role as Role;
+  
+  // Filter out empty sections based on user role - memoize this calculation
+  const filteredNavGroups = useMemo(() => {
+    if (!user) return [];
+    
+    return sidebarData.navGroups.filter((group) => {
+      // Filter items in each group based on user role
+      const accessibleItems = group.items.filter((item) => {
+        if (!item.roles) return true;
+        const hasAccess = item.roles.includes(userRole);
+        return hasAccess;
+      });
+
+      // Only include groups that have at least one accessible item
+      return accessibleItems.length > 0;
+    });
+  }, [user, userRole, sidebarData.navGroups]);
+
+  // Get user avatar from metadata
+  const avatarUrl = user?.user_metadata && (user.user_metadata as any).avatar_url;
+
+  // Prepare user data for NavUser - memoize this calculation
+  const userData = useMemo(() => {
+    if (!user) return { name: 'User', email: '', avatar: undefined };
+    
+    return {
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+      email: user.email || '',
+      avatar: avatarUrl,
+    };
+  }, [user, avatarUrl]);
 
   // If user is not loaded yet, return a loading state
   if (!user) {
-    console.log('AppSidebar - User not loaded yet, showing loading state');
     return (
       <Sidebar 
         collapsible="icon" 
@@ -58,29 +88,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     );
   }
 
-  // Ensure role is a valid Role type
-  const userRole = role as Role;
-  console.log('AppSidebar - Using role:', userRole);
-
-  // Filter out empty sections based on user role
-  const filteredNavGroups = sidebarData.navGroups.filter((group) => {
-    // Filter items in each group based on user role
-    const accessibleItems = group.items.filter((item) => {
-      if (!item.roles) return true;
-      const hasAccess = item.roles.includes(userRole);
-      console.log(`AppSidebar - Item "${item.title}" access:`, hasAccess, 'for role:', userRole);
-      return hasAccess;
-    });
-
-    // Only include groups that have at least one accessible item
-    return accessibleItems.length > 0;
-  });
-
-  console.log('AppSidebar - Filtered nav groups:', filteredNavGroups.map(g => g.title));
-
-  // Get user avatar from metadata
-  const avatarUrl = user.user_metadata && (user.user_metadata as any).avatar_url;
-
   return (
     <Sidebar 
       collapsible="icon" 
@@ -89,25 +96,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {...props}
     >
       {!isCollapsed && (
-        <SidebarHeader className="p-2">
+        <SidebarHeader className="p-1.5">
           <TeamSwitcher />
         </SidebarHeader>
       )}
-      <SidebarContent className={isCollapsed ? "pt-4" : ""}>
+      <SidebarContent className={isCollapsed ? "pt-4" : "pt-2"}>
         {filteredNavGroups.map((group) => (
           <NavGroup key={group.title} {...group} />
         ))}
       </SidebarContent>
       <SidebarFooter className="pb-2">
-        <NavUser
-          user={{
-            name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-            email: user.email || '',
-            avatar: avatarUrl,
-          }}
-        />
+        <NavUser user={userData} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
-}
+});
+
+// Export the memoized component
+export { AppSidebar };

@@ -9,10 +9,14 @@ import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { useAuth } from '@/hooks/useAuth';
 import { ToasterProvider } from '@/components/shadcn/toaster';
 import { RoleProvider } from '@/context/RoleContext';
+import { SIDEBAR_COOKIE_NAME } from '@/components/sidebar/constants';
 
-// Cache session check timestamp to reduce API calls
-const SESSION_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
-let lastSessionCheck = 0;
+// Get the initial sidebar state from cookies during module initialization
+// This helps prevent hydration mismatches and flickering
+const getInitialSidebarState = () => {
+  if (typeof window === 'undefined') return true; // Default to open during SSR
+  return Cookies.get(SIDEBAR_COOKIE_NAME) !== 'false';
+};
 
 export default function TenantLayout({
   children,
@@ -22,33 +26,11 @@ export default function TenantLayout({
   params: Promise<{ tenant: string; locale: string }>;
 }) {
   const { tenant, locale } = React.use(params);
-  const { user, loading: isLoading, error, refreshUser } = useAuth();
+  const { user, loading: isLoading, error } = useAuth();
   const [loadingError, setLoadingError] = React.useState<string | null>(null);
-
-  // Check session only at intervals to reduce API calls
-  React.useEffect(() => {
-    const now = Date.now();
-    if (now - lastSessionCheck > SESSION_CHECK_INTERVAL) {
-      try {
-        refreshUser();
-        lastSessionCheck = now;
-      } catch (err) {
-        console.error('Error checking session:', err);
-        setLoadingError('Failed to check session');
-      }
-    }
-  }, [refreshUser]);
-
-  // Log important state for debugging
-  React.useEffect(() => {
-    console.log('TenantLayout state:', {
-      isLoading,
-      hasUser: !!user,
-      error,
-      tenant,
-      locale,
-    });
-  }, [isLoading, user, error, tenant, locale]);
+  
+  // Use a ref to store the initial sidebar state to prevent re-renders
+  const initialSidebarState = React.useRef(getInitialSidebarState()).current;
 
   // Only show loading state while user data is being fetched
   if (isLoading) {
@@ -77,18 +59,14 @@ export default function TenantLayout({
   }
 
   // Even if no user yet, we can still render the layout
-  // This prevents the layout from being null during SSR or when user data is still loading
   // RouteGuard will handle redirections appropriately
   if (!user) {
-    console.log('No user found in TenantLayout, continuing to render with fallback data');
     // Continue rendering instead of returning null
   }
 
-  const sidebarState = Cookies.get('sidebar:state') !== 'false';
-
   return (
     <RoleProvider>
-      <SidebarProvider defaultOpen={sidebarState}>
+      <SidebarProvider defaultOpen={initialSidebarState}>
         <TooltipProvider>
           <ToasterProvider />
           <div className="relative flex min-h-screen w-full">
@@ -101,7 +79,7 @@ export default function TenantLayout({
               }}
             >
               <WorkspaceHeader tenant={tenant} />
-              <main className="flex-1 p-4 w-full max-w-full">{children}</main>
+              <main className="flex-1 px-3 py-4 w-full max-w-full">{children}</main>
             </div>
           </div>
         </TooltipProvider>

@@ -51,19 +51,19 @@ export const sidebarData: SidebarData = {
   },
   teams: [
     {
-      name: 'Automai',
+      name: 'TeamA',
       logo: Code2,
-      plan: 'Trial',
+      plan: 'fr',
     },
     {
-      name: 'Acme Corp',
+      name: 'Team B',
       logo: Building,
-      plan: 'Pro',
+      plan: 'swi',
     },
     {
-      name: 'Monsters Inc',
+      name: 'Team C',
       logo: Factory,
-      plan: 'Enterprise',
+      plan: 'us',
     },
   ],
   navGroups: [

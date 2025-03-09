@@ -36,46 +36,54 @@ interface NavGroupProps {
   }[];
 }
 
-export function NavGroup({ title, items }: NavGroupProps) {
+// Wrap the component with React.memo to prevent unnecessary re-renders
+const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
   const { role } = useRole();
   const { open } = useSidebar();
   const isCollapsed = !open;
-  const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
-
-  const isActive = (href: string) => {
+  
+  // Use useRef for expandedItems to avoid unnecessary re-renders
+  const expandedItemsRef = React.useRef<Record<string, boolean>>({});
+  
+  const isActive = React.useCallback((href: string) => {
     return pathname === `/${params.locale as string}/${params.tenant as string}${href}`;
-  };
+  }, [pathname, params.locale, params.tenant]);
 
-  const toggleSubmenu = (href: string) => {
-    setExpandedItems((prev) => ({
-      ...prev,
-      [href]: !prev[href],
-    }));
-  };
+  const toggleSubmenu = React.useCallback((href: string) => {
+    expandedItemsRef.current = {
+      ...expandedItemsRef.current,
+      [href]: !expandedItemsRef.current[href],
+    };
+    // Force update to reflect changes
+    setForceUpdate(prev => !prev);
+  }, []);
+  
+  // Use a state to force update when expandedItems changes
+  const [forceUpdate, setForceUpdate] = React.useState(false);
 
-  // Filter items based on role
-  const filteredItems = items.filter((item) => {
+  // Filter items based on role - memoize this calculation
+  const filteredItems = React.useMemo(() => items.filter((item) => {
     if (!item.roles) return true;
     return item.roles.includes(role);
-  });
+  }), [items, role]);
 
   return (
     <SidebarGroup>
       {!isCollapsed && (
-        <SidebarGroupLabel className="text-gray-500 font-medium px-2 py-0.5">
+        <SidebarGroupLabel className="text-gray-500 font-medium px-2 py-0.5 text-xs">
           {title}
         </SidebarGroupLabel>
       )}
-      <SidebarGroupContent className={cn("py-0.5", isCollapsed && "mt-2")}>
+      <SidebarGroupContent className={cn("py-0.5", isCollapsed && "mt-1.5")}>
         <ScrollArea className="h-full">
           <SidebarMenu>
             {filteredItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               const hasSubmenu = item.items && item.items.length > 0;
-              const isExpanded = expandedItems[item.href];
+              const isExpanded = expandedItemsRef.current[item.href];
 
               // Filter submenu items based on role
               const filteredSubItems = item.items?.filter((subItem) => {
@@ -159,4 +167,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
       </SidebarGroupContent>
     </SidebarGroup>
   );
-}
+});
+
+// Export the memoized component
+export { NavGroup };
