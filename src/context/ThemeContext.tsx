@@ -16,14 +16,21 @@ const ThemeContext = createContext<ThemeContextType>({
 
 interface ThemeProviderProps {
   children: ReactNode;
+  defaultTheme?: Theme;
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>('system');
+export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [mounted, setMounted] = useState(false);
 
+  // Apply the theme class on the server
   useEffect(() => {
+    // Mark component as mounted to avoid hydration mismatch
+    setMounted(true);
+    
     // Load theme from localStorage on client side
-    const savedTheme = localStorage.getItem('theme') as Theme;
+    const savedTheme = (document.documentElement.classList.contains('dark') ? 'dark' : 'light') as Theme;
+
     if (savedTheme) {
       setTheme(savedTheme);
     }
@@ -57,6 +64,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       root.classList.remove('dark');
     }
   };
+
+  // Avoid hydration mismatch by only rendering children after mounting
+  if (!mounted) {
+    return <>{children}</>;
+  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme }}>

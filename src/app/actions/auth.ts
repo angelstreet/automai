@@ -21,6 +21,9 @@ export type ProfileUpdateData = {
   locale?: string;
 };
 
+// Track if we've already logged a "No active session" error
+let noSessionErrorLogged = false;
+
 /**
  * Handle OAuth callback from Supabase Auth
  */
@@ -217,12 +220,27 @@ export async function getCurrentUser() {
     const result = await supabaseAuth.getUser();
     
     if (!result.success || !result.data) {
+      // Reset the flag when we get a new error
+      if (result.error !== 'No active session') {
+        noSessionErrorLogged = false;
+      }
+      
       throw new Error(result.error || 'Not authenticated');
     }
     
+    // Reset the flag when successful
+    noSessionErrorLogged = false;
     return result.data as AuthUser;
   } catch (error) {
-    console.error('Error getting current user:', error);
+    // Only log if we haven't logged this specific error before
+    if (error instanceof Error && error.message === 'No active session' && !noSessionErrorLogged) {
+      console.error('Error getting current user:', error);
+      noSessionErrorLogged = true;
+    } else if (!(error instanceof Error) || error.message !== 'No active session') {
+      // Always log other types of errors
+      console.error('Error getting current user:', error);
+    }
+    
     throw new Error('Failed to get current user');
   }
 } 
