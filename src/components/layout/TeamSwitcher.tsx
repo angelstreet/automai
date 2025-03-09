@@ -12,19 +12,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useAuth } from '@/hooks/useAuth';
+import { useRole } from '@/context/RoleContext';
 import { cn } from '@/lib/utils';
 
+// Define team type for consistency
+type Team = {
+  name: string;
+  logo: React.ElementType;
+  plan: string;
+};
+
 interface TeamSwitcherProps {
-  teams?: {
-    name: string;
-    logo: React.ElementType;
-    plan: string;
-  }[];
+  teams?: Team[];
 }
 
 // Default teams if none provided
-const defaultTeams = [
+const defaultTeams: Team[] = [
   {
     name: 'Acme Inc',
     logo: Building2,
@@ -44,13 +47,18 @@ const defaultTeams = [
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
-  const [activeTeam, setActiveTeam] = React.useState(teams[0]);
   const { open } = useSidebar();
-  const { user } = useAuth();
-  const Icon = activeTeam.logo;
+  const { role } = useRole();
   const isCollapsed = !open;
+  
+  // Simply use the teams passed as props or the default teams
+  const teamsToDisplay = teams || defaultTeams;
+  
+  // Set active team
+  const [activeTeam, setActiveTeam] = React.useState<Team>(teamsToDisplay[0]);
+  const Icon = activeTeam.logo;
 
-  if (!user) return null;
+  // We don't need any auth check - just always display the component
   
   // Show different UI based on sidebar state
   if (isCollapsed) {
@@ -79,7 +87,7 @@ const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: 
       <DropdownMenuContent className="w-56" align="start" side="right" forceMount>
         <DropdownMenuLabel>Switch team</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {teams.map((team) => (
+        {teamsToDisplay.map((team: Team) => (
           <DropdownMenuItem
             key={team.name}
             onClick={() => setActiveTeam(team)}

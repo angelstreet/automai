@@ -32,8 +32,20 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
   
   // Filter out empty sections based on user role - memoize this calculation
   const filteredNavGroups = useMemo(() => {
-    if (!user) return [];
+    // If no user, show nav items that an admin would see
+    if (!user) {
+      return sidebarData.navGroups.filter((group) => {
+        // Show items accessible to admins
+        const accessibleItems = group.items.filter((item) => {
+          if (!item.roles) return true;
+          // Show if admin has access
+          return item.roles.includes('admin');
+        });
+        return accessibleItems.length > 0;
+      });
+    }
     
+    // Existing logic for authenticated users
     return sidebarData.navGroups.filter((group) => {
       // Filter items in each group based on user role
       const accessibleItems = group.items.filter((item) => {
@@ -61,33 +73,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
     };
   }, [user, avatarUrl]);
 
-  // If user is not loaded yet, return a loading state
-  if (!user) {
-    return (
-      <Sidebar 
-        collapsible="icon" 
-        variant="floating"
-        className="fixed left-0 top-0 z-30"
-        {...props}
-      >
-        <SidebarHeader className="p-2">
-          <div className="h-12 w-full animate-pulse bg-accent/20 rounded-lg"></div>
-        </SidebarHeader>
-        <SidebarContent>
-          <div className="space-y-4 p-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-8 w-full animate-pulse bg-accent/20 rounded-lg"></div>
-            ))}
-          </div>
-        </SidebarContent>
-        <SidebarFooter>
-          <div className="h-12 w-full animate-pulse bg-accent/20 rounded-lg m-2"></div>
-        </SidebarFooter>
-        <SidebarRail />
-      </Sidebar>
-    );
-  }
-
+  // Always render the sidebar with content, no more loading state for unauthenticated users
   return (
     <Sidebar 
       collapsible="icon" 
