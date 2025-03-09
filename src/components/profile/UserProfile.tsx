@@ -54,14 +54,17 @@ export function UserProfile({ tenant: propTenant }: UserProfileProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
+        <Button 
+          variant="ghost" 
+          className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground"
+        >
+          <Avatar className="h-8 w-8 border border-border dark:border-gray-600 shadow-sm">
             <AvatarImage
               src={avatarSrc}
               alt={userName}
               onError={() => setImageError(true)}
             />
-            <AvatarFallback>
+            <AvatarFallback className="bg-accent text-accent-foreground dark:bg-gray-700 dark:text-gray-200">
               {userName ? getInitials(userName) : <UserIcon className="h-4 w-4" />}
             </AvatarFallback>
           </Avatar>
