@@ -14,6 +14,7 @@ import {
   SidebarMenuButton,
   SidebarMenuSub,
   SidebarMenuSubButton,
+  useSidebar,
 } from '@/components/sidebar';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { useRole } from '@/context/RoleContext';
@@ -39,6 +40,8 @@ export function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
   const { role } = useRole();
+  const { open } = useSidebar();
+  const isCollapsed = !open;
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
   const isActive = (href: string) => {
@@ -60,10 +63,12 @@ export function NavGroup({ title, items }: NavGroupProps) {
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="text-gray-500 font-medium px-2 py-0.5">
-        {title}
-      </SidebarGroupLabel>
-      <SidebarGroupContent className="py-0.5">
+      {!isCollapsed && (
+        <SidebarGroupLabel className="text-gray-500 font-medium px-2 py-0.5">
+          {title}
+        </SidebarGroupLabel>
+      )}
+      <SidebarGroupContent className={cn("py-0.5", isCollapsed && "mt-2")}>
         <ScrollArea className="h-full">
           <SidebarMenu>
             {filteredItems.map((item) => {

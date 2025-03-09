@@ -194,6 +194,11 @@
     "delete": "Delete Project",
     "noProjects": "No projects found"
   },
+  "Reports": {
+    "title": "Reports",
+    "reportsList": "Reports List",
+    "description": "View and analyze test execution reports and metrics"
+  },
   "Menu": {
     "title": "Menu",
     "dashboard": "Dashboard",

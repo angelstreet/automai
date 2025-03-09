@@ -10,6 +10,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  useSidebar,
 } from '@/components/sidebar';
 import { useRole } from '@/context/RoleContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +21,8 @@ import { sidebarData } from './data/sidebarData';
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useAuth();
   const { role } = useRole();
+  const { open } = useSidebar();
+  const isCollapsed = !open;
 
   // Add debugging to help identify issues
   useEffect(() => {
@@ -85,15 +88,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       className="fixed left-0 top-0 z-30"
       {...props}
     >
-      <SidebarHeader className="p-2">
-        <TeamSwitcher />
-      </SidebarHeader>
-      <SidebarContent>
+      {!isCollapsed && (
+        <SidebarHeader className="p-2">
+          <TeamSwitcher />
+        </SidebarHeader>
+      )}
+      <SidebarContent className={isCollapsed ? "pt-4" : ""}>
         {filteredNavGroups.map((group) => (
           <NavGroup key={group.title} {...group} />
         ))}
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="pb-2">
         <NavUser
           user={{
             name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',

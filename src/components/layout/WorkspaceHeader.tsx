@@ -1,7 +1,7 @@
 'use client';
 
 import Cookies from 'js-cookie';
-import { ChevronUp } from 'lucide-react';
+import { ChevronUp, User } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import * as React from 'react';
 
@@ -13,6 +13,9 @@ import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 import { useRole } from '@/context/RoleContext';
+import { useSidebar } from '@/hooks/useSidebar';
+import { useAuth } from '@/hooks/useAuth';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 
 interface WorkspaceHeaderProps {
   className?: string;
@@ -25,8 +28,11 @@ const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
   const { role, setRole } = useRole();
+  const { open } = useSidebar();
+  const isCollapsed = !open;
   const params = useParams();
   const locale = params.locale as string;
+  const { user } = useAuth();
   const [headerVisible, setHeaderVisible] = React.useState(
     Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
   );
@@ -45,6 +51,10 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
       {headerVisible ? (
         <header 
           className={`sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b ${className}`}
+          style={isCollapsed ? { 
+            marginLeft: 'var(--sidebar-width-offset, 0)',
+            width: 'calc(100% - var(--sidebar-width-offset, 0))'
+          } : undefined}
         >
           <div className="flex h-14 items-center">
             {/* Left section */}
@@ -62,7 +72,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <ThemeToggle />
               <Separator orientation="vertical" className="h-6 opacity-10" />
-              <UserProfile tenant={tenant} />
+              {user && <UserProfile tenant={tenant} />}
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <Button
                 variant="outline"
@@ -78,7 +88,13 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
           </div>
         </header>
       ) : (
-        <div className="sticky top-0 z-50 flex justify-end px-4 py-1 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div 
+          className="sticky top-0 z-50 flex justify-end px-4 py-1 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
+          style={isCollapsed ? { 
+            marginLeft: 'var(--sidebar-width-offset, 0)',
+            width: 'calc(100% - var(--sidebar-width-offset, 0))'
+          } : undefined}
+        >
           <Button
             variant="outline"
             size="icon"

@@ -50,26 +50,19 @@ export function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
   const isCollapsed = !open;
 
   if (!user) return null;
+  
+  // Show different UI based on sidebar state
+  if (isCollapsed) {
+    return (
+      <div className="flex items-center justify-center p-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background">
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    );
+  }
 
-  return isCollapsed ? (
-    <SidebarMenu>
-      <SidebarMenuButton className="flex items-center justify-center">
-        <Icon className="h-5 w-5" />
-      </SidebarMenuButton>
-      {teams.map((team) => (
-        <SidebarMenuItem
-          key={team.name}
-          onClick={() => setActiveTeam(team)}
-          className={cn(
-            "flex items-center justify-center",
-            team.name === activeTeam.name ? "bg-accent text-accent-foreground" : ""
-          )}
-        >
-          {team.logo && <team.logo className="h-4 w-4" />}
-        </SidebarMenuItem>
-      ))}
-    </SidebarMenu>
-  ) : (
+  return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex w-full items-center justify-between rounded-lg border border-border p-3 hover:bg-accent transition-colors">

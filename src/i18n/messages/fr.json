@@ -247,6 +247,11 @@
     "delete": "Supprimer le projet",
     "noProjects": "Aucun projet trouvé"
   },
+  "Reports": {
+    "title": "Rapports",
+    "reportsList": "Liste des rapports",
+    "description": "Consultez et analysez les rapports et métriques d'exécution des tests"
+  },
   "Menu": {
     "title": "Menu",
     "dashboard": "Tableau de bord",
