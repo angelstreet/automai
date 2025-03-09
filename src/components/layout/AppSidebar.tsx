@@ -31,19 +31,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   if (!user) {
     console.log('AppSidebar - User not loaded yet, showing loading state');
     return (
-      <Sidebar collapsible="icon" variant="floating" {...props}>
-        <SidebarHeader>
-          <div className="h-10 w-full animate-pulse bg-gray-200 rounded"></div>
+      <Sidebar 
+        collapsible="icon" 
+        variant="floating"
+        className="fixed left-0 top-0 z-30"
+        {...props}
+      >
+        <SidebarHeader className="p-2">
+          <div className="h-12 w-full animate-pulse bg-accent/20 rounded-lg"></div>
         </SidebarHeader>
         <SidebarContent>
-          <div className="space-y-4">
+          <div className="space-y-4 p-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-8 w-full animate-pulse bg-gray-200 rounded"></div>
+              <div key={i} className="h-8 w-full animate-pulse bg-accent/20 rounded-lg"></div>
             ))}
           </div>
         </SidebarContent>
         <SidebarFooter>
-          <div className="h-10 w-full animate-pulse bg-gray-200 rounded"></div>
+          <div className="h-12 w-full animate-pulse bg-accent/20 rounded-lg m-2"></div>
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -80,7 +85,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       className="fixed left-0 top-0 z-30"
       {...props}
     >
-      <SidebarHeader>
+      <SidebarHeader className="p-2">
         <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>

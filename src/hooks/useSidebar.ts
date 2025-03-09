@@ -12,6 +12,15 @@ export function useSidebar() {
       const root = document.documentElement;
       const offset = sidebarContext.open ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
       root.style.setProperty('--sidebar-width-offset', offset);
+      
+      // Also set a class on the body to help with responsive styling
+      if (sidebarContext.open) {
+        document.body.classList.add('sidebar-expanded');
+        document.body.classList.remove('sidebar-collapsed');
+      } else {
+        document.body.classList.add('sidebar-collapsed');
+        document.body.classList.remove('sidebar-expanded');
+      }
     }
   }, [sidebarContext.open]);
   

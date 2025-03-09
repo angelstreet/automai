@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
 
 interface TeamSwitcherProps {
   teams?: {
@@ -43,23 +44,26 @@ const defaultTeams = [
 
 export function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
   const [activeTeam, setActiveTeam] = React.useState(teams[0]);
-  const { isOpen } = useSidebar();
+  const { open } = useSidebar();
   const { user } = useAuth();
   const Icon = activeTeam.logo;
-  const isCollapsed = !isOpen;
+  const isCollapsed = !open;
 
   if (!user) return null;
 
   return isCollapsed ? (
     <SidebarMenu>
-      <SidebarMenuButton>
-        <Icon className="h-4 w-4" />
+      <SidebarMenuButton className="flex items-center justify-center">
+        <Icon className="h-5 w-5" />
       </SidebarMenuButton>
       {teams.map((team) => (
         <SidebarMenuItem
           key={team.name}
           onClick={() => setActiveTeam(team)}
-          className={team.name === activeTeam.name ? "bg-accent" : ""}
+          className={cn(
+            "flex items-center justify-center",
+            team.name === activeTeam.name ? "bg-accent text-accent-foreground" : ""
+          )}
         >
           {team.logo && <team.logo className="h-4 w-4" />}
         </SidebarMenuItem>
@@ -68,9 +72,11 @@ export function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
   ) : (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex w-full items-center justify-between rounded-lg border p-4 hover:bg-accent">
+        <button className="flex w-full items-center justify-between rounded-lg border border-border p-3 hover:bg-accent transition-colors">
           <div className="flex items-center gap-3">
-            <Icon className="h-4 w-4" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+              <Icon className="h-4 w-4" />
+            </div>
             <span className="text-sm font-medium">{activeTeam.name}</span>
           </div>
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -83,9 +89,18 @@ export function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
           <DropdownMenuItem
             key={team.name}
             onClick={() => setActiveTeam(team)}
+            className={cn(
+              "cursor-pointer",
+              team.name === activeTeam.name ? "bg-accent text-accent-foreground" : ""
+            )}
           >
-            <team.logo className="mr-2 h-4 w-4" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-background mr-2">
+              <team.logo className="h-4 w-4" />
+            </div>
             <span>{team.name}</span>
+            {team.plan && (
+              <span className="ml-auto text-xs text-muted-foreground">{team.plan}</span>
+            )}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
