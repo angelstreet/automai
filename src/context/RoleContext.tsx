@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-type Role = 'admin' | 'user' | 'developer' | 'operator';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { Role } from '@/types/user';
 
 interface RoleContextType {
   role: Role;
@@ -20,6 +20,15 @@ interface RoleProviderProps {
 
 export function RoleProvider({ children }: RoleProviderProps) {
   const [role, setRole] = useState<Role>('user');
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (user && !loading) {
+      // Get the role from the user object
+      const userRole = user.user_metadata?.role || user.role || 'user';
+      setRole(userRole as Role);
+    }
+  }, [user, loading]);
 
   return (
     <RoleContext.Provider value={{ role, setRole }}>

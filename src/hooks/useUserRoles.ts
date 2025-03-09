@@ -8,22 +8,17 @@ import {
   updateUserRole,
   deleteUserRole,
   getCurrentUserRoles,
-  UserRole,
 } from '@/app/actions/user';
+import { UserRole, UIRole } from '@/types/user';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Building2, Code2, Factory } from 'lucide-react';
-
-interface Role {
-  id: string;
-  name: string;
-  icon?: string;
-}
+import { useRole } from '@/context/RoleContext';
 
 export function useUserRoles() {
-  const [roles, setRoles] = useState<Role[]>([]);
+  const [roles, setRoles] = useState<UIRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const { role: currentRole, setRole: setCurrentRole } = useRole();
   const { toast } = useToast();
 
   const fetchRoles = useCallback(async () => {
@@ -46,6 +41,11 @@ export function useUserRoles() {
         }));
 
         setRoles(rolesWithIcons);
+        
+        // Update the current role in context if needed
+        if (response.data.length > 0 && response.data[0].name !== currentRole) {
+          setCurrentRole(response.data[0].name as any);
+        }
       } else {
         throw new Error(response.error || 'Failed to fetch user roles');
       }
@@ -56,15 +56,14 @@ export function useUserRoles() {
         description: 'Failed to fetch user roles',
         variant: 'destructive',
       });
-      // Set default roles if fetch fails
+      // Set default role if fetch fails
       setRoles([
-        { id: 'user', name: 'User', icon: getRoleIcon('user') },
-        { id: 'admin', name: 'Admin', icon: getRoleIcon('admin') },
+        { id: user.id, name: 'user', icon: getRoleIcon('user') },
       ]);
     } finally {
       setIsLoading(false);
     }
-  }, [user, toast]);
+  }, [user, toast, currentRole, setCurrentRole]);
 
   // Helper function to get role icon
   const getRoleIcon = (roleName: string) => {
@@ -87,14 +86,21 @@ export function useUserRoles() {
 
   const create = async (data: Partial<UserRole>) => {
     try {
-      const response = await createUserRole(data);
+      // Ensure the user ID is set
+      const roleData = { ...data, id: user?.id };
+      
+      const response = await createUserRole(roleData);
       if (response.success && response.data) {
-        const newRole = {
+        const newRole: UIRole = {
           id: response.data.id,
           name: response.data.name,
           icon: getRoleIcon(response.data.name)
         };
-        setRoles(prev => [newRole, ...prev]);
+        setRoles([newRole]);
+        
+        // Update the current role in context
+        setCurrentRole(response.data.name as any);
+        
         return newRole;
       } else {
         throw new Error(response.error || 'Failed to create user role');
@@ -108,14 +114,16 @@ export function useUserRoles() {
     try {
       const response = await updateUserRole(id, data);
       if (response.success && response.data) {
-        const updatedRole = {
+        const updatedRole: UIRole = {
           id: response.data.id,
           name: response.data.name,
           icon: getRoleIcon(response.data.name)
         };
-        setRoles(prev => 
-          prev.map(role => role.id === id ? updatedRole : role)
-        );
+        setRoles([updatedRole]);
+        
+        // Update the current role in context
+        setCurrentRole(response.data.name as any);
+        
         return updatedRole;
       } else {
         throw new Error(response.error || 'Failed to update user role');
@@ -128,7 +136,13 @@ export function useUserRoles() {
   const remove = async (id: string) => {
     try {
       await deleteUserRole(id);
-      setRoles(prev => prev.filter(role => role.id !== id));
+      
+      // Reset to default role
+      const defaultRole: UIRole = { id: user?.id || 'default', name: 'user', icon: getRoleIcon('user') };
+      setRoles([defaultRole]);
+      
+      // Update the current role in context
+      setCurrentRole('user');
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to delete user role');
     }
@@ -175,6 +189,7 @@ export function useUserRoles() {
     create,
     update,
     remove,
-    useCurrentUserRoles
+    useCurrentUserRoles,
+    refreshRoles: fetchRoles
   };
 }

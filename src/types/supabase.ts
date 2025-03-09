@@ -249,6 +249,7 @@ export type Database = {
           role?: string
           tenant_id?: string | null
           updated_at?: string
+          user_role?: string
         }
         Update: {
           created_at?: string
@@ -262,6 +263,7 @@ export type Database = {
           role?: string
           tenant_id?: string | null
           updated_at?: string
+          user_role?: string
         }
         Relationships: [
           {

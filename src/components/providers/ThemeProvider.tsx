@@ -6,6 +6,7 @@ import { RoleProvider } from '@/context/RoleContext';
 import { SearchProvider } from '@/context/SearchContext';
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { TooltipProvider } from '@/components/shadcn/tooltip';
 // UserProvider is no longer needed with server-side auth
 
 type Theme = 'light' | 'dark' | 'system';
@@ -28,7 +29,9 @@ export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvi
         <FontProvider>
           <RoleProvider>
             <SidebarProvider>
-              <SearchProvider>{children}</SearchProvider>
+              <TooltipProvider>
+                <SearchProvider>{children}</SearchProvider>
+              </TooltipProvider>
             </SidebarProvider>
           </RoleProvider>
         </FontProvider>

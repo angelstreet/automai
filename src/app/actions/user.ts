@@ -2,63 +2,86 @@
 
 import db from '@/lib/supabase/db';
 import { supabaseAuth } from '@/lib/supabase/auth';
+import { UserRole, UserRoleResponse, SingleUserRoleResponse, UserRoleFilter } from '@/types/user';
 
-export interface UserRole {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface UserRoleFilter {
-  userId?: string;
-}
-
-export async function getUserRoles(userId: string): Promise<{ success: boolean; error?: string; data?: UserRole[] }> {
+export async function getUserRoles(userId: string): Promise<UserRoleResponse> {
   try {
-    const data = await db.query('user_roles', {
-      where: { user_id: userId },
-      orderBy: { created_at: 'desc' }
+    // Get the user from the users table
+    const users = await db.query('users', {
+      where: { id: userId }
     });
     
-    return { success: true, data };
+    if (!users || users.length === 0) {
+      return { success: false, error: 'User not found' };
+    }
+    
+    const user = users[0];
+    
+    // Create a UserRole object from the user's role
+    const userRole: UserRole = {
+      id: userId, // Using userId as the role ID for simplicity
+      name: user.role || 'user', // Default to 'user' if role is not set
+      created_at: user.createdAt || new Date().toISOString(),
+      updated_at: user.updatedAt || new Date().toISOString()
+    };
+    
+    return { success: true, data: [userRole] };
   } catch (error: any) {
     console.error('Error in getUserRoles:', error);
     return { success: false, error: error.message || 'Failed to fetch user roles' };
   }
 }
 
-export async function createUserRole(data: Partial<UserRole>): Promise<{ success: boolean; error?: string; data?: UserRole }> {
+export async function createUserRole(data: Partial<UserRole>): Promise<SingleUserRoleResponse> {
   try {
-    // Note: We're using a simplified approach since user_roles doesn't have a specific model in db.ts
-    const result = await db.query('user_roles_insert', {
-      data
-    });
-    
-    if (!result || !result[0]) {
-      return { success: false, error: 'Failed to create user role' };
+    // This function would update the user's role in the users table
+    if (!data.id) {
+      return { success: false, error: 'User ID is required' };
     }
     
-    return { success: true, data: result[0] };
+    const result = await db.user.update({
+      where: { id: data.id },
+      data: { role: data.name }
+    });
+    
+    if (!result) {
+      return { success: false, error: 'Failed to update user role' };
+    }
+    
+    const userRole: UserRole = {
+      id: data.id,
+      name: data.name || 'user',
+      created_at: result.createdAt || new Date().toISOString(),
+      updated_at: result.updatedAt || new Date().toISOString()
+    };
+    
+    return { success: true, data: userRole };
   } catch (error: any) {
     console.error('Error in createUserRole:', error);
     return { success: false, error: error.message || 'Failed to create user role' };
   }
 }
 
-export async function updateUserRole(id: string, updates: Partial<UserRole>): Promise<{ success: boolean; error?: string; data?: UserRole }> {
+export async function updateUserRole(id: string, updates: Partial<UserRole>): Promise<SingleUserRoleResponse> {
   try {
-    // Note: Using query directly since user_roles doesn't have a specific model
-    const result = await db.query('user_roles_update', {
+    // This function would update the user's role in the users table
+    const result = await db.user.update({
       where: { id },
-      data: updates
+      data: { role: updates.name }
     });
     
-    if (!result || !result[0]) {
+    if (!result) {
       return { success: false, error: 'Failed to update user role' };
     }
     
-    return { success: true, data: result[0] };
+    const userRole: UserRole = {
+      id,
+      name: updates.name || result.role || 'user',
+      created_at: result.createdAt || new Date().toISOString(),
+      updated_at: result.updatedAt || new Date().toISOString()
+    };
+    
+    return { success: true, data: userRole };
   } catch (error: any) {
     console.error('Error in updateUserRole:', error);
     return { success: false, error: error.message || 'Failed to update user role' };
@@ -67,8 +90,10 @@ export async function updateUserRole(id: string, updates: Partial<UserRole>): Pr
 
 export async function deleteUserRole(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    await db.query('user_roles_delete', {
-      where: { id }
+    // Instead of deleting, we'll reset the role to 'user'
+    await db.user.update({
+      where: { id },
+      data: { role: 'user' }
     });
     
     return { success: true };
@@ -78,7 +103,7 @@ export async function deleteUserRole(id: string): Promise<{ success: boolean; er
   }
 }
 
-export async function getCurrentUserRoles(): Promise<{ success: boolean; error?: string; data?: UserRole[] }> {
+export async function getCurrentUserRoles(): Promise<UserRoleResponse> {
   try {
     const userResult = await supabaseAuth.getUser();
     

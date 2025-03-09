@@ -1,6 +1,11 @@
 import { locales } from '@/config';
+import * as React from 'react';
 
-import { HomePage } from './_components/HomePage';
+import { Footer } from '@/components/layout/Footer';
+import { SiteHeader } from '@/components/layout/SiteHeader';
+
+import { Features } from './(marketing)/_components/Features';
+import { Hero } from './(marketing)/_components/Hero';
 
 export const dynamic = 'force-static';
 
@@ -9,5 +14,14 @@ export function generateStaticParams() {
 }
 
 export default function Page() {
-  return <HomePage />;
+  return (
+    <div className="relative flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        <Hero />
+        <Features />
+      </main>
+      <Footer />
+    </div>
+  );
 }

@@ -44,139 +44,132 @@ interface AppSidebarProps {
 export function AppSidebar({ user, tenant, locale }: AppSidebarProps) {
   const t = useTranslations();
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
   const { role } = useRole();
 
-  // If no user is provided, show a minimal sidebar with limited functionality
+  // If no user is provided, return null
   if (!user) {
     console.warn('AppSidebar: No user data provided');
+    return null;
   }
 
-  const toggleSidebar = () => {
-    setIsOpen(!isOpen);
+  // Define sidebar navigation items
+  const sidebarData = {
+    navGroups: [
+      {
+        title: t('Menu.title'),
+        items: [
+          {
+            title: t('Dashboard.title'),
+            href: `/${locale}/${tenant}/dashboard`,
+            icon: LayoutDashboard,
+            active: pathname === `/${locale}/${tenant}/dashboard`,
+            roles: ['user', 'admin'],
+          },
+          {
+            title: t('Projects.projects'),
+            href: `/${locale}/${tenant}/projects`,
+            icon: FolderKanban,
+            active: pathname === `/${locale}/${tenant}/projects`,
+            roles: ['user', 'admin'],
+          },
+          {
+            title: t('Common.hosts'),
+            href: `/${locale}/${tenant}/hosts`,
+            icon: Server,
+            active: pathname === `/${locale}/${tenant}/hosts`,
+            roles: ['user', 'admin'],
+          },
+          {
+            title: t('Common.terminal'),
+            href: `/${locale}/${tenant}/terminals`,
+            icon: Terminal,
+            active: pathname === `/${locale}/${tenant}/terminals`,
+            roles: ['user', 'admin'],
+          },
+          {
+            title: t('repositories.repositories'),
+            href: `/${locale}/${tenant}/repositories`,
+            icon: GitBranch,
+            active: pathname === `/${locale}/${tenant}/repositories`,
+            roles: ['user', 'admin'],
+          },
+          {
+            title: 'Scripts',
+            href: `/${locale}/${tenant}/scripts`,
+            icon: FileCode,
+            active: pathname === `/${locale}/${tenant}/scripts`,
+            roles: ['user', 'admin'],
+          },
+          {
+            title: 'Tests',
+            href: `/${locale}/${tenant}/tests`,
+            icon: TestTube,
+            active: pathname === `/${locale}/${tenant}/tests`,
+            roles: ['user', 'admin'],
+          },
+          {
+            title: 'Reports',
+            href: `/${locale}/${tenant}/reports`,
+            icon: BarChart,
+            active: pathname === `/${locale}/${tenant}/reports`,
+            roles: ['user', 'admin'],
+          },
+          {
+            title: t('Team.title'),
+            href: `/${locale}/${tenant}/team`,
+            icon: Users,
+            active: pathname === `/${locale}/${tenant}/team`,
+            roles: ['admin'],
+          },
+          {
+            title: t('billing.title'),
+            href: `/${locale}/${tenant}/billing`,
+            icon: CreditCard,
+            active: pathname === `/${locale}/${tenant}/billing`,
+            roles: ['admin'],
+          },
+          {
+            title: t('Settings.title'),
+            href: `/${locale}/${tenant}/settings`,
+            icon: Settings,
+            active: pathname === `/${locale}/${tenant}/settings`,
+            roles: ['user', 'admin'],
+          },
+        ],
+      },
+    ],
   };
 
-  const sidebarItems = [
-    {
-      name: t('Dashboard.title'),
-      href: `/${locale}/${tenant}/dashboard`,
-      icon: LayoutDashboard,
-      roles: ['user', 'admin'],
-    },
-    {
-      name: t('Projects.projects'),
-      href: `/${locale}/${tenant}/projects`,
-      icon: FolderKanban,
-      roles: ['user', 'admin'],
-    },
-    {
-      name: t('Common.hosts'),
-      href: `/${locale}/${tenant}/hosts`,
-      icon: Server,
-      roles: ['user', 'admin'],
-    },
-    {
-      name: t('Common.terminal'),
-      href: `/${locale}/${tenant}/terminals`,
-      icon: Terminal,
-      roles: ['user', 'admin'],
-    },
-    {
-      name: t('repositories.repositories'),
-      href: `/${locale}/${tenant}/repositories`,
-      icon: GitBranch,
-      roles: ['user', 'admin'],
-    },
-    {
-      name: 'Scripts',
-      href: `/${locale}/${tenant}/scripts`,
-      icon: FileCode,
-      roles: ['user', 'admin'],
-    },
-    {
-      name: 'Tests',
-      href: `/${locale}/${tenant}/tests`,
-      icon: TestTube,
-      roles: ['user', 'admin'],
-    },
-    {
-      name: 'Reports',
-      href: `/${locale}/${tenant}/reports`,
-      icon: BarChart,
-      roles: ['user', 'admin'],
-    },
-    {
-      name: t('Team.title'),
-      href: `/${locale}/${tenant}/team`,
-      icon: Users,
-      roles: ['admin'],
-    },
-    {
-      name: t('billing.title'),
-      href: `/${locale}/${tenant}/billing`,
-      icon: CreditCard,
-      roles: ['admin'],
-    },
-    {
-      name: t('Settings.title'),
-      href: `/${locale}/${tenant}/settings`,
-      icon: Settings,
-      roles: ['user', 'admin'],
-    },
-  ].filter(item => item.roles.includes(role));
+  // Filter out items based on user role
+  const filteredNavGroups = sidebarData.navGroups.map(group => {
+    const filteredItems = group.items.filter(item => {
+      if (!item.roles) return true;
+      return item.roles.includes(role);
+    });
+    return { ...group, items: filteredItems };
+  }).filter(group => group.items.length > 0);
 
   return (
-    <SidebarProvider open={isOpen} onOpenChange={setIsOpen}>
-      <Sidebar>
+    <SidebarProvider>
+      <Sidebar collapsible="icon" variant="floating">
         <SidebarHeader>
-          <div className="flex items-center justify-between px-4">
-            <Link
-              href={`/${locale}/${tenant}/dashboard`}
-              className="flex items-center space-x-2"
-            >
-              <span className="font-bold">AutomAI</span>
-            </Link>
-            <button onClick={toggleSidebar} className="lg:hidden">
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          </div>
           <TeamSwitcher />
         </SidebarHeader>
         <SidebarContent>
-          <NavGroup
-            title={t('Menu.title')}
-            items={sidebarItems.map(item => ({
-              title: item.name,
-              href: item.href,
-              icon: item.icon,
-              active: pathname === item.href,
-            }))}
-          />
+          {filteredNavGroups.map((props) => (
+            <NavGroup key={props.title} {...props} />
+          ))}
         </SidebarContent>
         <SidebarFooter>
-          {user && (
-            <NavUser 
-              user={{ 
-                name: user.user_metadata?.name || user.email || 'User', 
-                email: user.email || '' 
-              }} 
-            />
-          )}
+          <NavUser
+            user={{
+              name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+              email: user.email || '',
+              avatar: user.user_metadata?.avatar_url || undefined,
+            }}
+          />
         </SidebarFooter>
-        <SidebarRail>
-          {sidebarItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex h-12 w-12 items-center justify-center rounded-lg hover:bg-accent',
-                pathname === item.href && 'bg-accent',
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-            </Link>
-          ))}
-        </SidebarRail>
+        <SidebarRail />
       </Sidebar>
     </SidebarProvider>
   );
