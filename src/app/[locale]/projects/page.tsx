@@ -6,8 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Main } from '@/components/layout/Main';
-import { DashboardShell } from '@/components/layout/DashboardShell';
-import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Input } from '@/components/shadcn/input';
