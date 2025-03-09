@@ -23,6 +23,8 @@
     "loginDescription": "Enter your email and password to sign in",
     "loginButton": "Sign in",
     "loggingIn": "Signing in...",
+    "signingIn": "Signing in...",
+    "signInToYourAccount": "Sign in to your account",
     "loginHeroText": "Automate your testing workflow with AI-powered solutions.",
     "signupTitle": "Create account",
     "signupDescription": "Enter your details to create your account",

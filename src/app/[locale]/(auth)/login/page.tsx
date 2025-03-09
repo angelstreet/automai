@@ -105,7 +105,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1"
+              className="mt-1 rounded-md"
               placeholder="you@example.com"
             />
           </div>
@@ -128,7 +128,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1"
+              className="mt-1 rounded-md"
             />
           </div>
 

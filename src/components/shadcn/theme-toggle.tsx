@@ -23,6 +23,11 @@ export function ThemeToggle() {
   // Determine which theme API to use (prefer next-themes)
   const theme = nextThemes.theme || customTheme.theme;
 
+  // Wait for client-side hydration to prevent SSR issues
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Function to set theme in both providers for maximum compatibility
   const setTheme = (newTheme: string) => {
     // Set theme in next-themes provider
@@ -35,28 +40,19 @@ export function ThemeToggle() {
       customTheme.setTheme(newTheme as any);
     }
 
-    // Optionally, manually set the theme class on html element as a fallback
+    // Save theme in localStorage for persistence
     if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', newTheme);
+      
+      // Apply theme to document directly for immediate effect
       const root = window.document.documentElement;
       const isDark =
         newTheme === 'dark' ||
         (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-
-      // Save theme in localStorage for persistence
-      localStorage.setItem('theme', newTheme);
+      root.classList.toggle('dark', isDark);
     }
   };
-
-  // Wait for client-side hydration to prevent SSR issues
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Don't render anything until mounted to prevent hydration mismatch
   if (!mounted) {

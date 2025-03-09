@@ -220,6 +220,11 @@ export async function getCurrentUser() {
     const result = await supabaseAuth.getUser();
     
     if (!result.success || !result.data) {
+      // For "No active session" errors, just return null instead of throwing an error
+      if (result.error === 'No active session') {
+        return null;
+      }
+      
       // Reset the flag when we get a new error
       if (result.error !== 'No active session') {
         noSessionErrorLogged = false;
@@ -236,9 +241,15 @@ export async function getCurrentUser() {
     if (error instanceof Error && error.message === 'No active session' && !noSessionErrorLogged) {
       console.error('Error getting current user:', error);
       noSessionErrorLogged = true;
+      return null; // Return null instead of throwing for "No active session"
     } else if (!(error instanceof Error) || error.message !== 'No active session') {
       // Always log other types of errors
       console.error('Error getting current user:', error);
+    }
+    
+    // Only throw for errors other than "No active session"
+    if (error instanceof Error && error.message === 'No active session') {
+      return null;
     }
     
     throw new Error('Failed to get current user');

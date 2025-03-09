@@ -23,6 +23,8 @@
     "loginDescription": "Entrez votre email et mot de passe pour vous connecter",
     "loginButton": "Se connecter",
     "loggingIn": "Connexion en cours...",
+    "signingIn": "Connexion en cours...",
+    "signInToYourAccount": "Connectez-vous à votre compte",
     "loginHeroText": "Automatisez votre flux de travail de test avec des solutions alimentées par l'IA.",
     "signupTitle": "Créer un compte",
     "signupDescription": "Entrez vos informations pour créer votre compte",

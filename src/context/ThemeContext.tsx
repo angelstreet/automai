@@ -20,48 +20,42 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProviderProps) {
+  // Initialize with defaultTheme, but this will be updated in useEffect
   const [theme, setTheme] = useState<Theme>(defaultTheme);
   const [mounted, setMounted] = useState(false);
 
-  // Apply the theme class on the server
+  // Initialize theme from localStorage on mount
   useEffect(() => {
     // Mark component as mounted to avoid hydration mismatch
     setMounted(true);
     
-    // Load theme from localStorage on client side
-    const savedTheme = (document.documentElement.classList.contains('dark') ? 'dark' : 'light') as Theme;
-
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-
-    // Apply theme to document
-    const root = window.document.documentElement;
-    const isDark =
-      savedTheme === 'dark' ||
-      (savedTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    if (isDark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+    if (typeof window !== 'undefined') {
+      // Get theme from localStorage (set by our ThemeScript)
+      const savedTheme = localStorage.getItem('theme') as Theme;
+      
+      // If we have a saved theme, update our state
+      if (savedTheme) {
+        setTheme(savedTheme);
+      }
     }
   }, []);
 
   const handleSetTheme = (newTheme: Theme) => {
+    // Update state
     setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme', newTheme);
+      
+      // Apply theme to document
+      const root = window.document.documentElement;
+      const isDark =
+        newTheme === 'dark' ||
+        (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-    // Apply theme to document
-    const root = window.document.documentElement;
-    const isDark =
-      newTheme === 'dark' ||
-      (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    if (isDark) {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
+      // Update class
+      root.classList.toggle('dark', isDark);
     }
   };
 
