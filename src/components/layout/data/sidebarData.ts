@@ -9,7 +9,7 @@ import {
   FileCode,
   TestTube,
   Users,
-  Building2,
+  Building,
   Factory,
   Server,
   GitBranch,
@@ -55,7 +55,7 @@ export const sidebarData: SidebarData = {
     },
     {
       name: 'Acme Corp',
-      logo: Building2,
+      logo: Building,
       plan: 'Pro',
     },
     {
@@ -150,7 +150,7 @@ export const sidebarData: SidebarData = {
         {
           title: 'Billing',
           href: '/billing',
-          icon: Building2,
+          icon: Building,
           roles: ['admin'],
         },
       ],

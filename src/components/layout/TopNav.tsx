@@ -8,7 +8,7 @@ import { sidebarData } from '@/components/layout/data/sidebarData';
 export function TopNav() {
   return (
     <div className="fixed top-0 left-0 right-0 z-50 flex h-16 items-center border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <TeamSwitcher />
+      <TeamSwitcher teams={sidebarData.teams} />
       <div className="flex flex-1" />
     </div>
   );

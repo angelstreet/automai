@@ -38,14 +38,11 @@ interface NavGroupProps {
 export function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
-  const locale = params.locale as string;
-  const tenant = params.tenant as string;
-  
-  const { role } = useRole();
+  const { currentRole } = useRole();
   const [expandedItems, setExpandedItems] = React.useState<Record<string, boolean>>({});
 
   const isActive = (href: string) => {
-    return pathname === `/${locale}/${tenant}${href}`;
+    return pathname === `/${params.locale as string}/${params.tenant as string}${href}`;
   };
 
   const toggleSubmenu = (href: string) => {
@@ -58,7 +55,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
   // Filter items based on role
   const filteredItems = items.filter((item) => {
     if (!item.roles) return true;
-    return item.roles.includes(role);
+    return item.roles.includes(currentRole);
   });
 
   return (
@@ -78,7 +75,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
               // Filter submenu items based on role
               const filteredSubItems = item.items?.filter((subItem) => {
                 if (!subItem.roles) return true;
-                return subItem.roles.includes(role);
+                return subItem.roles.includes(currentRole);
               });
 
               // Skip rendering if no accessible submenu items
@@ -112,7 +109,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                       className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
                       <Link
-                        href={`/${locale}/${tenant}${item.href}`}
+                        href={`/${params.locale as string}/${params.tenant as string}${item.href}`}
                       >
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>
@@ -139,7 +136,7 @@ export function NavGroup({ title, items }: NavGroupProps) {
                             className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                           >
                             <Link
-                              href={`/${locale}/${tenant}${subItem.href}`}
+                              href={`/${params.locale as string}/${params.tenant as string}${subItem.href}`}
                             >
                               <SubIcon className="h-4 w-4" />
                               <span>{subItem.title}</span>

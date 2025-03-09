@@ -1,46 +1,35 @@
 'use client';
 
 import Cookies from 'js-cookie';
-import { ChevronUp, Bell, Search } from 'lucide-react';
+import { ChevronUp } from 'lucide-react';
+import { useParams } from 'next/navigation';
 import * as React from 'react';
-import { User } from '@supabase/supabase-js';
 
 import { SidebarTrigger } from '@/components/sidebar';
 import { UserProfile } from '@/components/profile/UserProfile';
 import { Button } from '@/components/shadcn/button';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
+import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 import { useRole } from '@/context/RoleContext';
-import { UserNav } from './UserNav';
 
 interface WorkspaceHeaderProps {
-  user: User | null;
-  tenant: string;
-  locale: string;
+  className?: string;
+  fixed?: boolean;
+  tenant?: string;
 }
 
 const HEADER_COOKIE_NAME = 'header:state';
 const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-export function WorkspaceHeader({ user, tenant, locale }: WorkspaceHeaderProps) {
-  const { role } = useRole();
+export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
+  const { currentRole, setCurrentRole } = useRole();
+  const params = useParams();
+  const locale = params.locale as string;
   const [headerVisible, setHeaderVisible] = React.useState(
     Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
   );
-
-  // If no user is provided, show a minimal header
-  if (!user) {
-    console.warn('WorkspaceHeader: No user data provided');
-    return (
-      <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="flex h-14 items-center px-4">
-          <SidebarTrigger />
-          <div className="flex-1" />
-        </div>
-      </header>
-    );
-  }
 
   const toggleHeader = React.useCallback(() => {
     const newState = !headerVisible;
@@ -54,7 +43,7 @@ export function WorkspaceHeader({ user, tenant, locale }: WorkspaceHeaderProps) 
   return (
     <>
       {headerVisible ? (
-        <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-14 items-center">
             {/* Left section */}
             <div className="flex items-center px-4 h-full">
@@ -66,28 +55,12 @@ export function WorkspaceHeader({ user, tenant, locale }: WorkspaceHeaderProps) 
 
             {/* Right section */}
             <div className="flex items-center gap-2 px-4 h-full">
-              <RoleSwitcher />
-              <div className="relative w-full max-w-sm">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="search"
-                  placeholder="Search..."
-                  className="w-full rounded-md border border-input bg-background pl-8 pr-4 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-              <Separator orientation="vertical" className="h-6 opacity-10" />
-              <button className="rounded-full p-2 hover:bg-accent">
-                <Bell className="h-5 w-5" />
-                <span className="sr-only">Notifications</span>
-              </button>
+              <RoleSwitcher currentRole={currentRole} onRoleChange={setCurrentRole} />
+              <Search className="w-[240px]" />
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <ThemeToggle />
               <Separator orientation="vertical" className="h-6 opacity-10" />
-              <UserNav 
-                user={user} 
-                tenant={tenant} 
-                locale={locale} 
-              />
+              <UserProfile tenant={tenant} />
               <Separator orientation="vertical" className="h-6 opacity-10" />
               <Button
                 variant="outline"
