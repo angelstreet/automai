@@ -32,7 +32,7 @@ import {
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { AlertCircle, CheckCircle2, Loader2, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
-import { testGitProviderConnection } from '@/lib/services/repositories';
+import { testGitProviderConnection } from '@/app/actions/git-providers';
 
 // Create a constant object for use in the form
 export const GitProviderTypes = {

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useProjects } from '@/hooks/useProjects';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Main } from '@/components/layout/Main';
 import { DashboardShell } from '@/components/layout/DashboardShell';
 import { DashboardHeader } from '@/components/layout/DashboardHeader';
 import { Button } from '@/components/shadcn/button';
@@ -138,17 +140,17 @@ export default function ProjectsPage() {
   };
 
   return (
-    <DashboardShell>
-      <DashboardHeader
-        heading={t('projects')}
-        text={t('manageYourProjects')}
+    <Main>
+      <PageHeader
+        title={t('projects')}
+        description={t('manageYourProjects')}
       >
         <Button onClick={() => setIsDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> {t('createProject')}
         </Button>
-      </DashboardHeader>
+      </PageHeader>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
         {renderProjects()}
       </div>
 
@@ -190,6 +192,6 @@ export default function ProjectsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardShell>
+    </Main>
   );
 } 

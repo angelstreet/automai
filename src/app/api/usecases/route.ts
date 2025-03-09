@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/auth';
+import { getSession } from '@/lib/supabase/auth';
 import db from '@/lib/supabase/db';
 
 // Find the next available number for a prefix

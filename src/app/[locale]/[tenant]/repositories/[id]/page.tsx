@@ -3,8 +3,8 @@
 import { RepositoryDetail } from '@/components/repositories/RepositoryDetail';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { DashboardShell } from '@/components/layout/DashboardShell';
-import { DashboardHeader } from '@/components/layout/DashboardHeader';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Main } from '@/components/layout/Main';
 
 export default function RepositoryPage() {
   const params = useParams();
@@ -19,14 +19,14 @@ export default function RepositoryPage() {
   };
 
   return (
-    <DashboardShell>
-      <DashboardHeader
-        heading={t('repositoryDetails')}
-        text={t('viewAndManageRepository')}
+    <Main>
+      <PageHeader 
+        title={t('repositoryDetails')}
+        description={t('viewAndManageRepository')}
       />
-      <div className="grid gap-8">
+      <div className="grid gap-8 mt-6">
         <RepositoryDetail repositoryId={repositoryId} onBack={handleBack} />
       </div>
-    </DashboardShell>
+    </Main>
   );
 } 

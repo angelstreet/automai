@@ -3,8 +3,8 @@
 import { HostDetail } from '@/components/hosts/HostDetail';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { DashboardShell } from '@/components/layout/DashboardShell';
-import { DashboardHeader } from '@/components/layout/DashboardHeader';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Main } from '@/components/layout/Main';
 
 export default function HostPage() {
   const params = useParams();
@@ -19,14 +19,14 @@ export default function HostPage() {
   };
 
   return (
-    <DashboardShell>
-      <DashboardHeader
-        heading={t('hostDetails')}
-        text={t('viewAndManageHost')}
+    <Main>
+      <PageHeader 
+        title={t('hostDetails')}
+        description={t('viewAndManageHost')}
       />
-      <div className="grid gap-8">
+      <div className="grid gap-8 mt-6">
         <HostDetail hostId={hostId} onBack={handleBack} />
       </div>
-    </DashboardShell>
+    </Main>
   );
 } 
