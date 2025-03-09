@@ -1,69 +1,47 @@
-'use client';
+import './globals.css';
+import { Inter } from 'next/font/google';
+import { Metadata } from 'next';
+import { ThemeProviders } from '@/components/providers';
+import { cookies } from 'next/headers';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-
-type Theme = 'light' | 'dark' | 'system';
-
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-}
-
-const ThemeContext = createContext<ThemeContextType>({
-  theme: 'system',
-  setTheme: () => null,
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', 'sans-serif'],
+  adjustFontFallback: true,
 });
 
-interface ThemeProviderProps {
-  children: ReactNode;
-  defaultTheme?: Theme;
-}
+export const metadata: Metadata = {
+  title: {
+    default: 'AutomAI',
+    template: '%s | AutomAI',
+  },
+  description: 'Automate your development workflow with AI',
+  icons: {
+    icon: '/favicon.ico',
+  },
+};
 
-export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    // Get the initial theme from the server-rendered classList
-    const initialIsDark = root.classList.contains('dark');
-    const savedTheme = localStorage.getItem('theme') as Theme;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    // Determine effective theme
-    const effectiveTheme = savedTheme || (initialIsDark ? 'dark' : 'light') || defaultTheme;
-    const isDark =
-      effectiveTheme === 'dark' ||
-      (effectiveTheme === 'system' && prefersDark);
-
-    // Sync the DOM with the effective theme
-    root.classList.toggle('dark', isDark);
-    setTheme(effectiveTheme);
-
-    // Save to localStorage and cookie for consistency
-    if (!savedTheme) {
-      localStorage.setItem('theme', effectiveTheme);
-      document.cookie = `theme=${effectiveTheme}; path=/; max-age=31536000`; // 1 year
-    }
-  }, [defaultTheme]);
-
-  const handleSetTheme = (newTheme: Theme) => {
-    const root = document.documentElement;
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark =
-      newTheme === 'dark' ||
-      (newTheme === 'system' && prefersDark);
-
-    root.classList.toggle('dark', isDark);
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.cookie = `theme=${newTheme}; path=/; max-age=31536000`;
-  };
-
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  // Get theme from cookies for server-side rendering
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get('theme');
+  const theme = (themeCookie?.value ?? 'system') as 'light' | 'dark' | 'system';
+  
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme }}>
-      {children}
-    </ThemeContext.Provider>
+    <html lang="en" className={inter.className} suppressHydrationWarning>
+      <head>
+        <meta name="theme-color" content="#ffffff" />
+        {/* next-themes will handle theme flashing with suppressHydrationWarning */}
+      </head>
+      <body>
+        <ThemeProviders defaultTheme={theme}>{children}</ThemeProviders>
+      </body>
+    </html>
   );
 }
-
-export const useTheme = () => useContext(ThemeContext);

@@ -8,15 +8,23 @@ import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 // UserProvider is no longer needed with server-side auth
 
-interface ProvidersProps {
+type Theme = 'light' | 'dark' | 'system';
+
+interface ThemeProvidersProps {
   children: React.ReactNode;
+  defaultTheme?: Theme;
 }
 
-export function Providers({ children }: ProvidersProps) {
+export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvidersProps) {
   return (
     // Use both theme providers, with next-themes as the outer one
-    <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
-      <ThemeProvider>
+    <NextThemesProvider 
+      attribute="class" 
+      defaultTheme={defaultTheme} 
+      enableSystem 
+      disableTransitionOnChange
+    >
+      <ThemeProvider defaultTheme={defaultTheme}>
         <FontProvider>
           <RoleProvider>
             <SidebarProvider>

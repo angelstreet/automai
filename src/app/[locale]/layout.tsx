@@ -3,11 +3,9 @@ import { Inter } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { ToasterProvider } from '@/components/shadcn/toaster';
-import { ThemeProvider } from '@/context/ThemeContext';
-import { locales } from '@/config';
 import { RoleProvider } from '@/context/RoleContext';
+import { locales } from '@/config';
 import { getMessages } from '@/i18n';
-import { cookies } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,21 +40,12 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Fetch messages for the valid locale
   const messages = await getMessages(validLocale);
 
-  // Get theme from cookies
-  const cookieList = await cookies();
-  const themeCookie = cookieList.get('theme');
-  const theme = (themeCookie?.value ?? 'system') as 'light' | 'dark' | 'system';
-
   return (
-    <>
-      <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
-        <ThemeProvider defaultTheme={theme}>
-          <RoleProvider>
-            {children}
-            <ToasterProvider />
-          </RoleProvider>
-        </ThemeProvider>
-      </NextIntlClientProvider>
-    </>
+    <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
+      <RoleProvider>
+        {children}
+        <ToasterProvider />
+      </RoleProvider>
+    </NextIntlClientProvider>
   );
 }
