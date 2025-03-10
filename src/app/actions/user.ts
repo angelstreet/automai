@@ -727,7 +727,7 @@ async function ensureUserInDatabase(authData: any): Promise<void> {
       id: userId,
       email: authData.user.email,
       name: authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'User',
-      role: authData.user.user_metadata?.role || 'admin',
+      role: authData.user.user_metadata?.role || 'viewer',
       tenant_name: authData.user.app_metadata?.tenant_name || 'trial',
       provider: authData.user.app_metadata?.provider || 'email',
     };

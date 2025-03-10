@@ -17,7 +17,7 @@ import {
 import { Role, AuthUser } from '@/types/user';
 
 // Default role
-const DEFAULT_ROLE: Role = 'admin';
+const DEFAULT_ROLE: Role = 'viewer';
 
 // SWR configuration - disable all automatic revalidation
 const SWR_CONFIG = {
