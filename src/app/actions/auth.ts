@@ -208,6 +208,9 @@ export async function resetPasswordForEmail(email: string, redirectUrl: string) 
  */
 export async function signOut(formData: FormData) {
   try {
+    // Get locale from form data for redirect
+    const locale = formData.get('locale') as string || 'en';
+    
     // Invalidate user cache on sign out
     await invalidateUserCache();
     
@@ -218,9 +221,11 @@ export async function signOut(formData: FormData) {
       throw new Error(result.error || 'Failed to sign out');
     }
     
-    // Return success instead of redirecting
-    // Let the client handle the redirect
-    return { success: true };
+    // Return success and redirect URL
+    return { 
+      success: true,
+      redirectUrl: `/${locale}/login`
+    };
   } catch (error) {
     console.error('Error signing out:', error);
     throw new Error('Failed to sign out');

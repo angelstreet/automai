@@ -13,15 +13,16 @@ const DEFAULT_ROLE: Role = 'viewer';
 
 // SWR configuration - optimized for authenticated routes
 const SWR_CONFIG = {
-  revalidateOnFocus: false,
-  revalidateIfStale: false,
-  revalidateOnReconnect: false,
-  dedupingInterval: 5000,     // Cache requests for 5s to prevent duplicates
-  refreshInterval: 0,
-  shouldRetryOnError: true,
-  errorRetryCount: 2,         // Allow 2 retries for network issues
-  loadingTimeout: 4000,       // Timeout after 4s
-  focusThrottleInterval: 5000 // Prevent rapid focus triggers
+  revalidateOnFocus: true,     // Allow revalidation on focus for session changes
+  revalidateIfStale: true,     // Revalidate stale data in background
+  revalidateOnReconnect: true, // Revalidate on network reconnection
+  dedupingInterval: 5000,      // Cache requests for 5s to prevent duplicates
+  refreshInterval: 0,          // Don't auto-refresh
+  shouldRetryOnError: true,    // Retry on network errors
+  errorRetryCount: 2,          // Allow 2 retries for network issues
+  loadingTimeout: 4000,        // Timeout after 4s
+  focusThrottleInterval: 5000, // Prevent rapid focus triggers
+  keepPreviousData: true       // Keep showing old data while fetching new data
 };
 
 // Enhanced user type with all metadata fields
@@ -59,52 +60,55 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // Fetch user data only if we have a session
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
     try {
-      // Only fetch if we're in an authenticated route (tenant layout)
+      // Check for existing session before making API call
       const userData = await getCurrentUser();
+      
+      // Early return if no session/user data
       if (!userData) {
-        console.log('No user data found in session');
         return null;
       }
+      
       return userData;
     } catch (err) {
-      console.error('Error fetching user:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch user'));
       return null;
     }
   }, []);
   
-  // Use SWR for user data with the no-revalidation config
+  // Use SWR for user data with optimized config and error boundary
   const { 
     data: user, 
     isLoading: loading, 
-    mutate: mutateUser 
-  } = useSWR<AuthUser | null>('user-data', fetchUserData, SWR_CONFIG);
+    mutate: mutateUser,
+    error: swrError
+  } = useSWR<AuthUser | null>(
+    'user-data', 
+    fetchUserData, 
+    {
+      ...SWR_CONFIG,
+      onError: (err) => {
+        setError(err instanceof Error ? err : new Error('Failed to fetch user'));
+      },
+      onSuccess: () => {
+        setError(null);
+      }
+    }
+  );
   
   // Function to extract and normalize user data from Supabase user object
   const extractUserData = useCallback((userData: AuthUser | null): EnhancedUser | null => {
     if (!userData) return null;
     
     // Extract role - ONLY use user_role (not Supabase's role property)
-    let userRole: Role;
+    const userRole = (
+      ((userData as any).user_role && isValidRole((userData as any).user_role) && (userData as any).user_role) ||
+      (userData.user_metadata?.user_role && isValidRole(userData.user_metadata.user_role) && userData.user_metadata.user_role) ||
+      DEFAULT_ROLE
+    ) as Role;
     
-    // First check if user_role exists at the root level
-    if ((userData as any).user_role && isValidRole((userData as any).user_role)) {
-      userRole = (userData as any).user_role as Role;
-    }
-    // If not at root, check in metadata
-    else if (userData.user_metadata?.user_role && isValidRole(userData.user_metadata.user_role)) {
-      userRole = userData.user_metadata.user_role as Role;
-    }
-    // If neither exists or is valid, use default
-    else {
-      userRole = DEFAULT_ROLE;
-    }
-    
-    // Extract other metadata fields
+    // Extract other metadata fields with fallbacks
     const tenantId = (userData as any).tenant_id || userData.user_metadata?.tenant_id || null;
     const tenantName = (userData as any).tenant_name || userData.user_metadata?.tenant_name || 'trial';
-    
-    // Extract or derive name
     const name = userData.name || 
                 userData.user_metadata?.name || 
                 userData.user_metadata?.full_name || 
@@ -114,19 +118,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Return enhanced user object with all extracted data
     const enhancedUser = {
       ...userData,
-      user_role: userRole, // Renamed from 'role' to 'user_role' for clarity
+      user_role: userRole,
       tenant_id: tenantId,
       tenant_name: tenantName,
       name
     } as EnhancedUser;
-    
-    // Only log when we successfully create an enhanced user
-    console.log('User data processed:', { 
-      id: enhancedUser.id,
-      email: enhancedUser.email,
-      role: enhancedUser.user_role,
-      tenant: enhancedUser.tenant_name
-    });
     
     return enhancedUser;
   }, []);
@@ -134,18 +130,28 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // Get enhanced user with all metadata extracted
   const enhancedUser = user ? extractUserData(user) : null;
   
-  // Simple user refresh - explicitly called when needed
+  // Optimized user refresh with error handling and caching
   const refreshUser = useCallback(async (): Promise<EnhancedUser | null> => {
     try {
-      // Explicitly call fetchUserData to get the latest user data
-      // This avoids type issues with mutateUser's return value
-      await mutateUser(); // Trigger revalidation
-      const freshUserData = await fetchUserData();
+      // Use SWR's mutate to handle revalidation and caching
+      const freshUserData = await mutateUser(
+        // Fetch function
+        async () => {
+          const data = await fetchUserData();
+          return data;
+        },
+        // SWR options for this specific mutation
+        {
+          revalidate: true,
+          populateCache: true,
+          rollbackOnError: true
+        }
+      );
       
-      // Process the fresh user data
-      return extractUserData(freshUserData);
+      // Process and return the fresh user data
+      return freshUserData ? extractUserData(freshUserData) : null;
     } catch (error) {
-      console.error('Error refreshing user:', error);
+      // Keep existing user data on error
       return enhancedUser;
     }
   }, [mutateUser, fetchUserData, extractUserData, enhancedUser]);

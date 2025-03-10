@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/context/UserContext';
+import { signOut } from '@/app/actions/auth';
 
 interface UserProfileProps {
   tenant?: string;
@@ -25,7 +26,7 @@ interface UserProfileProps {
 export function UserProfile({ tenant: propTenant }: UserProfileProps) {
   const router = useRouter();
   const params = useParams();
-  const { user, signOut } = useUser();
+  const { user } = useUser();
   const locale = params.locale as string || 'en';
   const [imageError, setImageError] = React.useState(false);
   
@@ -45,10 +46,20 @@ export function UserProfile({ tenant: propTenant }: UserProfileProps) {
   const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
   const avatarSrc = user?.user_metadata?.avatar_url || '/avatars/default.svg';
   
-  const handleSignOut = () => {
-    const formData = new FormData();
-    formData.append('locale', locale);
-    signOut(formData);
+  const handleSignOut = async () => {
+    try {
+      // Use the server action directly
+      const formData = new FormData();
+      formData.append('locale', locale);
+      const result = await signOut(formData);
+      
+      // Let the server action handle the redirect
+      if (result.success && result.redirectUrl) {
+        router.push(result.redirectUrl);
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (
