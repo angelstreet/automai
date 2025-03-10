@@ -6,6 +6,11 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
+import { 
+  signInWithOAuth as signInWithOAuthAction,
+  signInWithPassword as signInWithPasswordAction,
+  resetPasswordForEmail as resetPasswordAction
+} from '@/app/actions/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,8 +23,8 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isAuthenticating, setIsAuthenticating] = React.useState(false);
   
-  // Use the user hook
-  const { user, loading, error: authError, signInWithPassword, signInWithOAuth } = useUser();
+  // Use the user hook only for user data and loading state
+  const { user, loading, error: authError } = useUser();
 
   // Redirect if user is already logged in
   React.useEffect(() => {
@@ -83,17 +88,19 @@ export default function LoginPage() {
     setIsAuthenticating(true);
 
     try {
-      const result = await signInWithPassword(email, password);
+      // Use the server action directly instead of going through UserContext
+      const result = await signInWithPasswordAction(email, password);
       
-      if (result?.session) {
+      if (result.success && result.data?.session) {
         // tenant_name is directly on the user object (not in user_metadata)
-        const tenantName = result.user?.tenant_name || 'trial';
+        const tenantName = result.data.user?.tenant_name || 'trial';
         
         console.log('Login submission redirecting to tenant:', tenantName);
         // Redirect to dashboard
         router.push(`/${locale}/${tenantName}/dashboard`);
       } else {
-        // If no session but no error thrown, still reset the submission state
+        // If authentication failed, show the error
+        setError(result.error || 'Failed to sign in');
         setIsSubmitting(false);
         setIsAuthenticating(false);
       }
@@ -110,14 +117,15 @@ export default function LoginPage() {
       setError('');
       
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
-      const result = await signInWithOAuth(provider, redirectUrl);
+      // Use the server action directly instead of going through UserContext
+      const result = await signInWithOAuthAction(provider, redirectUrl);
       
-      if (result?.url) {
+      if (result.success && result.data?.url) {
         // Redirect to OAuth provider
-        window.location.href = result.url;
+        window.location.href = result.data.url;
       } else {
         // If no URL is returned, something went wrong
-        setError('Failed to initiate login');
+        setError(result.error || 'Failed to initiate login');
         setIsAuthenticating(false);
       }
     } catch (err: any) {

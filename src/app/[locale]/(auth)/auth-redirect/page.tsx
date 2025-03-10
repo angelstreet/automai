@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useUser } from '@/context/UserContext';
+import { exchangeCodeForSession } from '@/app/actions/auth';
 
 // Add error boundary component
 function ErrorFallback({ error, locale }: { error: Error; locale: string }) {
@@ -40,10 +40,10 @@ export default function AuthRedirectPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { loading, exchangeCodeForSession } = useUser();
   const [authError, setAuthError] = useState<Error | null>(null);
   const [isProcessing, setIsProcessing] = useState(true);
   const [hasRedirected, setHasRedirected] = useState(false);
+  const [loading, setLoading] = useState(false);
   const locale = params.locale as string;
   
   // Get search params
@@ -68,9 +68,11 @@ export default function AuthRedirectPage() {
           return;
         }
 
-        // Process authentication using the hook
-        // This follows the three-layer architecture: client component → client hook → server action → server db
-        const result = await exchangeCodeForSession();
+        // Process authentication using the server action directly
+        // Get the full URL for the auth callback
+        const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
+        setLoading(true);
+        const result = await exchangeCodeForSession(fullUrl);
         
         if (!result.success) {
           setAuthError(new Error(result.error || 'Authentication failed'));
@@ -92,7 +94,7 @@ export default function AuthRedirectPage() {
     }
 
     processAuth();
-  }, [code, errorParam, errorDescription, exchangeCodeForSession, hasRedirected, router]);
+  }, [code, errorParam, errorDescription, hasRedirected, router, locale]);
 
   // Show error if there is one
   if (authError) {

@@ -37,8 +37,8 @@ export default function TenantLayout({
               <main className="flex-1 px-3 py-4 w-full max-w-full border border-gray-200 rounded-md">{children}</main>
             </div>
           </div>
-        </TooltipProvider>
-      </SidebarProvider>
-    </UserProvider>
+          </TooltipProvider>
+        </SidebarProvider>
+      </UserProvider>
   );
 }

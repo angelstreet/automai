@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
+import { updatePassword } from '@/app/actions/auth';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -18,8 +19,8 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
-  // Use the auth hook
-  const { error: authError, updatePassword, loading } = useUser();
+  // Use the auth hook only for loading state
+  const { error: authError, loading } = useUser();
 
   // Set error from auth hook if present
   React.useEffect(() => {
@@ -42,15 +43,18 @@ export default function ResetPasswordPage() {
     }
 
     try {
+      // Use the server action directly instead of going through UserContext
       const result = await updatePassword(password);
       
-      if (result) {
+      if (result.success) {
         setSuccess(true);
         
         // Redirect to login after a short delay
         setTimeout(() => {
           router.push(`/${locale}/login`);
         }, 2000);
+      } else {
+        setError(result.error || 'Failed to update password');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');

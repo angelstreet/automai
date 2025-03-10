@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
+import { resetPasswordForEmail } from '@/app/actions/auth';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -16,8 +17,8 @@ export default function ForgotPasswordPage() {
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
-  // Use the auth hook
-  const { error: authError, resetPassword, loading } = useUser();
+  // Use the auth hook only for loading state
+  const { error: authError, loading } = useUser();
 
   // Set error from auth hook if present
   React.useEffect(() => {
@@ -34,10 +35,13 @@ export default function ForgotPasswordPage() {
 
     try {
       const redirectUrl = `${window.location.origin}/${locale}/reset-password`;
-      const result = await resetPassword(email, redirectUrl);
+      // Use the server action directly instead of going through UserContext
+      const result = await resetPasswordForEmail(email, redirectUrl);
       
-      if (result) {
+      if (result.success) {
         setSuccess(true);
+      } else {
+        setError(result.error || 'Failed to send password reset email');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');

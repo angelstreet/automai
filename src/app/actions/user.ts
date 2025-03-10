@@ -713,7 +713,7 @@ export async function switchTenant(tenantName: string): Promise<{ success: boole
  ********************************************/
 
 // Helper function to ensure user exists in database
-async function ensureUserInDatabase(authData: any): Promise<void> {
+export async function ensureUserInDatabase(authData: any): Promise<void> {
   try {
     if (!authData || !authData.user) {
       console.error('No auth data provided to ensureUserInDatabase');

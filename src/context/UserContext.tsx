@@ -3,15 +3,8 @@
 import React, { createContext, useContext, useCallback, useState } from 'react';
 import useSWR from 'swr';
 import { 
-  signOut as signOutAction, 
   updateProfile as updateProfileAction, 
-  getCurrentUser,
-  signUp as signUpAction,
-  signInWithOAuth as signInWithOAuthAction,
-  resetPasswordForEmail as resetPasswordAction,
-  signInWithPassword as signInWithPasswordAction,
-  updatePassword as updatePasswordAction,
-  handleAuthCallback as handleAuthCallbackAction,
+  getCurrentUser
 } from '@/app/actions/user';
 import { Role, AuthUser } from '@/types/user';
 
@@ -43,34 +36,16 @@ interface UserContextType {
   user: EnhancedUser | null; // EnhancedUser already contains role, tenant_id, tenant_name
   loading: boolean;
   error: Error | null;
-  signUp: (email: string, password: string, name: string, redirectUrl: string) => Promise<any>;
-  signInWithPassword: (email: string, password: string) => Promise<any>;
-  signInWithOAuth: (provider: 'google' | 'github', redirectUrl: string) => Promise<any>;
-  signOut: (formData: FormData) => Promise<void>;
-  resetPassword: (email: string, redirectUrl: string) => Promise<boolean>;
-  updatePassword: (password: string) => Promise<boolean>;
   updateProfile: (formData: FormData) => Promise<void>;
   refreshUser: () => Promise<EnhancedUser | null>;
-  exchangeCodeForSession: () => Promise<{
-    success: boolean;
-    error?: string;
-    redirectUrl?: string;
-  }>;
 }
 
 const UserContext = createContext<UserContextType>({
   user: null,
   loading: false,
   error: null,
-  signUp: async () => null,
-  signInWithPassword: async () => null,
-  signInWithOAuth: async () => null,
-  signOut: async () => {},
-  resetPassword: async () => false,
-  updatePassword: async () => false,
   updateProfile: async () => {},
   refreshUser: async () => null,
-  exchangeCodeForSession: async () => ({ success: false }),
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -177,20 +152,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   
 
   
-  // Auth operations
-  const handleSignOut = async (formData: FormData) => {
-    try {
-      await signOutAction(formData);
-      await mutateUser(null, false);
-      
-      const locale = formData.get('locale') as string || 'en';
-      if (typeof window !== 'undefined') {
-        window.location.href = `/${locale}/login`;
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to sign out'));
-    }
-  };
+  // Auth operations have been moved to server actions in /app/actions/auth.ts
   
   const handleUpdateProfile = async (formData: FormData) => {
     try {
@@ -201,119 +163,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   };
   
-  const handleUpdatePassword = async (password: string) => {
-    try {
-      setError(null);
-      const result = await updatePasswordAction(password);
-      if (!result.success) {
-        setError(new Error(result.error || 'Failed to update password'));
-        return false;
-      }
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to update password'));
-      return false;
-    }
-  };
-  
-  const handleSignUp = async (email: string, password: string, name: string, redirectUrl: string) => {
-    try {
-      setError(null);
-      const result = await signUpAction(email, password, name, redirectUrl);
-      if (!result.success) {
-        setError(new Error(result.error || 'Failed to sign up'));
-        return null;
-      }
-      return result.data;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to sign up'));
-      return null;
-    }
-  };
-  
-  const handleSignInWithPassword = async (email: string, password: string) => {
-    try {
-      setError(null);
-      const result = await signInWithPasswordAction(email, password);
-      if (!result.success) {
-        setError(new Error(result.error || 'Failed to sign in'));
-        return null;
-      }
-      await refreshUser();
-      return result.data;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to sign in'));
-      return null;
-    }
-  };
-  
-  const handleSignInWithOAuth = async (provider: 'google' | 'github', redirectUrl: string) => {
-    try {
-      setError(null);
-      const result = await signInWithOAuthAction(provider, redirectUrl);
-      if (!result.success) {
-        setError(new Error(result.error || 'Failed to sign in'));
-        return null;
-      }
-      return result.data;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to sign in'));
-      return null;
-    }
-  };
-  
-  const handleResetPassword = async (email: string, redirectUrl: string) => {
-    try {
-      setError(null);
-      const result = await resetPasswordAction(email, redirectUrl);
-      if (!result.success) {
-        setError(new Error(result.error || 'Failed to reset password'));
-        return false;
-      }
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to reset password'));
-      return false;
-    }
-  };
-  
-  const exchangeCodeForSession = useCallback(async () => {
-    try {
-      setError(null);
-      const url = typeof window !== 'undefined' ? window.location.href : '';
-      const result = await handleAuthCallbackAction(url);
-      if (!result.success) {
-        setError(new Error(result.error || 'Failed to authenticate'));
-        return { success: false, error: result.error };
-      }
-      await refreshUser();
-      return { success: true, redirectUrl: result.redirectUrl };
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Authentication failed'));
-      return { success: false, error: 'Authentication failed' };
-    }
-  }, [refreshUser]);
+  // Auth callback handling has been moved to server actions in /app/actions/auth.ts
   
   // Create context value
   const contextValue = React.useMemo(() => ({
     user: enhancedUser, // EnhancedUser already contains role, tenant_id, tenant_name
     loading,
     error,
-    signUp: handleSignUp,
-    signInWithPassword: handleSignInWithPassword,
-    signInWithOAuth: handleSignInWithOAuth,
-    signOut: handleSignOut,
-    resetPassword: handleResetPassword,
-    updatePassword: handleUpdatePassword,
     updateProfile: handleUpdateProfile,
     refreshUser,
-    exchangeCodeForSession,
   }), [
     enhancedUser,
     loading, 
     error,
-    refreshUser,
-    exchangeCodeForSession
+    refreshUser
   ]);
   
   return (
