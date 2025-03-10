@@ -40,10 +40,29 @@ export function RoleProvider({ children }: RoleProviderProps) {
     if (user && !loading) {
       console.log('RoleContext: Initializing user role from user data:', user);
       
-      // First try to get the role from user metadata
-      const metadata = user.user_metadata as any;
+      // Check for role directly on user object first (new format)
+      if (user.role) {
+        console.log('RoleContext: Found role directly on user object:', user.role);
+        
+        // If admin role is found, prioritize it
+        if (user.role === 'admin') {
+          console.log('RoleContext: Setting admin role from user object');
+          setRoleState('admin');
+          return;
+        }
+        
+        // Ensure the role is a valid Role type
+        if (isValidRole(user.role)) {
+          console.log('RoleContext: Setting validated role from user object:', user.role);
+          setRoleState(user.role as Role);
+          return;
+        }
+      }
+      
+      // Then try to get the role from user metadata (legacy format)
+      const metadata = user.user_metadata || {};
       console.log('RoleContext: User metadata:', metadata);
-      const metadataRole = metadata?.role || metadata?.user_role;
+      const metadataRole = metadata.role || metadata.user_role;
       console.log('RoleContext: Found role in metadata:', metadataRole);
       
       if (metadataRole) {
@@ -55,42 +74,50 @@ export function RoleProvider({ children }: RoleProviderProps) {
         }
         
         // Ensure the role is a valid Role type
-        const validRole = isValidRole(metadataRole) ? metadataRole : DEFAULT_ROLE;
-        console.log('RoleContext: Setting validated role from metadata:', validRole);
-        setRoleState(validRole);
-      } else {
-        // If not found in metadata, fetch from the database
-        const fetchRoleFromDB = async () => {
-          try {
-            console.log('RoleContext: Fetching role from database');
-            const response = await getCurrentUserRoles();
-            console.log('RoleContext: Database role response:', response);
-            
-            if (response.success && response.data && response.data.length > 0) {
-              const dbRole = response.data[0].name;
-              console.log('RoleContext: Role from database:', dbRole);
-              
-              // If admin role is found in DB, prioritize it
-              if (dbRole === 'admin') {
-                console.log('RoleContext: Setting admin role from database');
-                setRoleState('admin');
-                return;
-              }
-              
-              // Ensure the role from DB is a valid Role type
-              const validRole = isValidRole(dbRole) ? dbRole as Role : DEFAULT_ROLE;
-              console.log('RoleContext: Setting validated role from database:', validRole);
-              setRoleState(validRole);
-            }
-          } catch (error) {
-            console.error('RoleContext: Error fetching user role:', error);
-            // Default to DEFAULT_ROLE if there's an error
-            setRoleState(DEFAULT_ROLE);
-          }
-        };
-        
-        fetchRoleFromDB();
+        if (isValidRole(metadataRole)) {
+          console.log('RoleContext: Setting validated role from metadata:', metadataRole);
+          setRoleState(metadataRole as Role);
+          return;
+        }
       }
+      
+      // If not found in metadata or user object, fetch from the database
+      const fetchRoleFromDB = async () => {
+        try {
+          console.log('RoleContext: Fetching role from database');
+          const response = await getCurrentUserRoles();
+          console.log('RoleContext: Database role response:', response);
+          
+          if (response.success && response.data && response.data.length > 0) {
+            const dbRole = response.data[0].name;
+            console.log('RoleContext: Role from database:', dbRole);
+            
+            // If admin role is found in DB, prioritize it
+            if (dbRole === 'admin') {
+              console.log('RoleContext: Setting admin role from database');
+              setRoleState('admin');
+              return;
+            }
+            
+            // Ensure the role from DB is a valid Role type
+            if (isValidRole(dbRole)) {
+              console.log('RoleContext: Setting validated role from database:', dbRole);
+              setRoleState(dbRole as Role);
+              return;
+            }
+          }
+          
+          // If we get here, use the default role
+          console.log('RoleContext: No valid role found, using default:', DEFAULT_ROLE);
+          setRoleState(DEFAULT_ROLE);
+        } catch (error) {
+          console.error('RoleContext: Error fetching user role:', error);
+          // Default to DEFAULT_ROLE if there's an error
+          setRoleState(DEFAULT_ROLE);
+        }
+      };
+      
+      fetchRoleFromDB();
     }
   }, [user, loading]);
 
