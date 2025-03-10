@@ -12,7 +12,6 @@ import {
   signInWithPassword as signInWithPasswordAction,
   updatePassword as updatePasswordAction,
   handleAuthCallback as handleAuthCallbackAction,
-  getCurrentUserRoles
 } from '@/app/actions/user';
 import { Role, AuthUser } from '@/types/user';
 
@@ -30,9 +29,12 @@ const SWR_CONFIG = {
   errorRetryCount: 0,
 };
 
-// Keep original user type with role to maintain compatibility
-interface EnhancedUser extends AuthUser {
-  role?: Role;
+// Enhanced user type with all metadata fields
+interface EnhancedUser extends Omit<AuthUser, 'tenant_id'> {
+  role: Role;
+  tenant_id?: string | null;
+  tenant_name: string;
+  name: string;
 }
 
 interface UserContextType {
@@ -47,7 +49,6 @@ interface UserContextType {
   resetPassword: (email: string, redirectUrl: string) => Promise<boolean>;
   updatePassword: (password: string) => Promise<boolean>;
   updateProfile: (formData: FormData) => Promise<void>;
-  setRole: (role: Role) => void;
   refreshUser: () => Promise<EnhancedUser | null>;
   exchangeCodeForSession: () => Promise<{
     success: boolean;
@@ -68,7 +69,6 @@ const UserContext = createContext<UserContextType>({
   resetPassword: async () => false,
   updatePassword: async () => false,
   updateProfile: async () => {},
-  setRole: () => {},
   refreshUser: async () => null,
   exchangeCodeForSession: async () => ({ success: false }),
 });
@@ -82,7 +82,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
   
   // Fetch user data once on mount
-  const fetchUserData = useCallback(async () => {
+  const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
     try {
       return await getCurrentUser();
     } catch (err) {
@@ -97,56 +97,64 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     data: user, 
     isLoading: loading, 
     mutate: mutateUser 
-  } = useSWR('user-data', fetchUserData, SWR_CONFIG);
+  } = useSWR<AuthUser | null>('user-data', fetchUserData, SWR_CONFIG);
   
-  // Get role from DB when user is available
-  const fetchUserRole = useCallback(async () => {
-    if (!user) return DEFAULT_ROLE;
+  // Function to extract and normalize user data from Supabase user object
+  const extractUserData = useCallback((userData: AuthUser | null): EnhancedUser | null => {
+    if (!userData) return null;
     
-    try {
-      // Check if user_role is in user_metadata
-      if (user.user_metadata?.user_role && isValidRole(user.user_metadata.user_role)) {
-        return user.user_metadata.user_role as Role;
-      }
-      
-      // Otherwise get from API
-      const response = await getCurrentUserRoles();
-      if (response.success && response.data && response.data.length > 0) {
-        const dbRole = response.data[0].name;
-        if (isValidRole(dbRole)) return dbRole as Role;
-      }
-      
-      return DEFAULT_ROLE;
-    } catch (error) {
-      return DEFAULT_ROLE;
-    }
-  }, [user]);
+    // Extract role from user metadata
+    const userRole = userData.user_metadata?.user_role && isValidRole(userData.user_metadata.user_role)
+      ? userData.user_metadata.user_role as Role
+      : DEFAULT_ROLE;
+    
+    // Extract other metadata fields
+    const tenantId = userData.user_metadata?.tenant_id || null;
+    const tenantName = userData.user_metadata?.tenant_name || 'trial';
+    
+    // Extract or derive name
+    const name = userData.name || 
+                userData.user_metadata?.name || 
+                userData.user_metadata?.full_name || 
+                userData.email?.split('@')[0] || 
+                'Guest';
+    
+    // Return enhanced user object with all extracted data
+    return {
+      ...userData,
+      role: userRole,
+      tenant_id: tenantId,
+      tenant_name: tenantName,
+      name
+    } as EnhancedUser; // Cast to EnhancedUser to ensure type safety
+  }, []);
   
-  // Use SWR for role with the no-revalidation config
-  const { 
-    data: role = DEFAULT_ROLE, 
-    mutate: mutateRole 
-  } = useSWR(
-    user ? 'user-role' : null, 
-    fetchUserRole,
-    SWR_CONFIG
-  );
+  // Get enhanced user with all metadata extracted
+  // Ensure we're passing a valid AuthUser | null to extractUserData
+  const enhancedUser = user ? extractUserData(user) : null;
+  
+  // Get role for context
+  const role = enhancedUser?.role || DEFAULT_ROLE;
+  
+
   
   // Simple user refresh - explicitly called when needed
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (): Promise<EnhancedUser | null> => {
     try {
-      const userData = await mutateUser();
-      if (userData) await mutateRole();
-      return userData ? { ...userData, role } : null;
+      // Explicitly call fetchUserData to get the latest user data
+      // This avoids type issues with mutateUser's return value
+      await mutateUser(); // Trigger revalidation
+      const freshUserData = await fetchUserData();
+      
+      // Process the fresh user data
+      return extractUserData(freshUserData);
     } catch (error) {
-      return user ? { ...user, role } : null;
+      console.error('Error refreshing user:', error);
+      return enhancedUser;
     }
-  }, [mutateUser, mutateRole, user, role]);
+  }, [mutateUser, fetchUserData, extractUserData, enhancedUser]);
   
-  // Set role - just updates the cache
-  const setRole = useCallback((newRole: Role) => {
-    if (role !== newRole) mutateRole(newRole, false);
-  }, [role, mutateRole]);
+
   
   // Auth operations
   const handleSignOut = async (formData: FormData) => {
@@ -265,19 +273,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshUser]);
   
-  // Add role and ensure name is available for component compatibility
-  const enhancedUser = user ? { 
-    ...user, 
-    role,
-    // Ensure name is directly available on user object (for simpler component access)
-    name: user.name || 
-          user.user_metadata?.name || 
-          user.user_metadata?.full_name || 
-          user.email?.split('@')[0] || 
-          'Guest',
-    // Ensure tenant_name is available (needed by login page)
-    tenant_name: user.user_metadata?.tenant_name || 'trial'
-  } : null;
+
+  
+
   
   // Create context value
   const contextValue = React.useMemo(() => ({
@@ -292,7 +290,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     resetPassword: handleResetPassword,
     updatePassword: handleUpdatePassword,
     updateProfile: handleUpdateProfile,
-    setRole,
     refreshUser,
     exchangeCodeForSession,
   }), [
@@ -300,7 +297,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     role, 
     loading, 
     error,
-    setRole,
     refreshUser,
     exchangeCodeForSession
   ]);
