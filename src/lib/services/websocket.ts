@@ -3,7 +3,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { logger } from '../logger';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
-import { handleSshConnection, WebSocketConnection } from './ssh';
+import { handleSshConnection } from './ssh';
+import { WebSocketConnection } from '@/types/ssh';
 
 // Define custom WebSocket interface with isAlive property
 interface ExtendedWebSocket extends WebSocket {

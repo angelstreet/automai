@@ -1,5 +1,5 @@
 import { GitProvider, Repository } from '@/types/repositories';
-import { GitProviderService, GitProviderConfig } from './base';
+import { GitProviderService, GitProviderConfig } from '@/types/git-providers';
 
 export class GitLabProviderService implements GitProviderService {
   private baseUrl: string;

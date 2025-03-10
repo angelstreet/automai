@@ -1,6 +1,5 @@
 import { GitProvider, Repository, SyncStatus } from '@/types/repositories';
-
-import { GitProviderService } from './base';
+import { GitProviderService } from '@/types/git-providers';
 
 export class GitHubProviderService implements GitProviderService {
   private clientId: string;

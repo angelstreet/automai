@@ -1,13 +1,7 @@
-export type PlanType = 'TRIAL' | 'PRO' | 'ENTERPRISE';
+import { PlanType, PlanFeatures } from '@/types/features';
 
-export interface PlanFeatures {
-  maxProjects: number;
-  maxUseCases: number;
-  maxCampaigns: number;
-  environments: ('web' | 'mobile' | 'desktop' | 'vision')[];
-  teamManagement: boolean;
-  multiTenant: boolean;
-}
+// Re-export types for backward compatibility
+export type { PlanType, PlanFeatures };
 
 export const PLAN_FEATURES: Record<PlanType, PlanFeatures> = {
   TRIAL: {

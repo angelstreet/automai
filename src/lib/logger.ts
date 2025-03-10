@@ -2,23 +2,7 @@
  * Logger utility for backend interactions
  * Provides consistent logging format and levels
  */
-
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-export interface LogOptions {
-  userId?: string;
-  tenantId?: string;
-  ip?: string;
-  action?: string;
-  connectionId?: string;
-  data?: Record<string, any>;
-  pathname?: string;
-  connectionType?: string;
-  type?: string;
-  error?: string | Error;
-  path?: string;
-  [key: string]: any; // Allow any additional properties
-}
+import { LogLevel, LogOptions, Logger } from '@/types/logger';
 
 // Environment-based logging (more verbose in development)
 const isDev = process.env.NODE_ENV === 'development';
@@ -59,7 +43,7 @@ export function log(level: LogLevel, message: string, options: LogOptions = {}):
 /**
  * Convenience methods for different log levels
  */
-export const logger = {
+export const logger: Logger = {
   debug: (message: string, options?: LogOptions) => log('debug', message, options),
   info: (message: string, options?: LogOptions) => log('info', message, options),
   warn: (message: string, options?: LogOptions) => log('warn', message, options),

@@ -1,6 +1,5 @@
 import { GitProvider, Repository } from '@/types/repositories';
-
-import { GitProviderService } from './base';
+import { GitProviderService } from '@/types/git-providers';
 
 export class GiteaProviderService implements GitProviderService {
   private serverUrl: string | null = null;

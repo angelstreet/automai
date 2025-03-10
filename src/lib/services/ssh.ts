@@ -2,31 +2,7 @@
 import { Client } from 'ssh2';
 import { WebSocket } from 'ws';
 import { logger } from '../logger';
-
-// Define WebSocketConnection type
-export type WebSocketConnection = WebSocket & {
-  isAlive?: boolean;
-  authTimeout?: NodeJS.Timeout;
-};
-
-// Define a more specific type for authData
-interface SSHAuthData {
-  ssh_username?: string;
-  ssh_password?: string;
-  ssh_host?: string;
-  ssh_port?: number;
-  is_windows?: boolean;
-  username?: string;
-  password?: string;
-  host?: string;
-  port?: number;
-}
-
-// Add SSH error interface
-interface SSHError extends Error {
-  code?: string;
-  level?: string;
-}
+import { WebSocketConnection, SSHAuthData, SSHError } from '@/types/ssh';
 
 /**
  * Handle SSH connection for a WebSocket client
