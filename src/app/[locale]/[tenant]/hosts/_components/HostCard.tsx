@@ -127,6 +127,54 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
     const locale = pathSegments[1] || 'en';
     const tenant = pathSegments[2] || 'default';
 
+    // Set current host for terminal to use
+    try {
+      // Data should already be in sessionStorage, so just logging and confirming
+      // that we're accessing this host
+      console.log('Accessing terminal for host:', {
+        name: host.name,
+        id: host.id,
+        is_windows: host.is_windows === true,
+        os_type: host.os_type || 'unknown'
+      });
+      
+      // Still store current host reference for direct access
+      sessionStorage.setItem('currentHost', `host_${host.id}`);
+      sessionStorage.setItem('currentHostLastAccessed', Date.now().toString());
+      
+      // For debugging - check if the host was properly stored earlier
+      const storedHost = sessionStorage.getItem(`host_${host.id}`);
+      const storedHostByName = sessionStorage.getItem(`host_name_${host.name.toLowerCase()}`);
+      
+      if (!storedHost && !storedHostByName) {
+        console.warn('Warning: Host not found in sessionStorage, storing it now');
+        
+        // Ensure is_windows is explicitly included and is a boolean
+        const hostWithExplicitWindows = {
+          ...host,
+          is_windows: host.is_windows === true,
+        };
+        
+        // Store it now as a fallback
+        sessionStorage.setItem(`host_${host.id}`, JSON.stringify(hostWithExplicitWindows));
+        sessionStorage.setItem(`host_name_${host.name.toLowerCase()}`, JSON.stringify(hostWithExplicitWindows));
+        sessionStorage.setItem('currentHost_full', JSON.stringify(hostWithExplicitWindows));
+      } else {
+        console.log('Host found in sessionStorage:', {
+          byId: !!storedHost,
+          byName: !!storedHostByName
+        });
+        
+        // For debugging - also store the full object directly
+        sessionStorage.setItem('currentHost_full', JSON.stringify({
+          ...host,
+          is_windows: host.is_windows === true
+        }));
+      }
+    } catch (e) {
+      console.error('Error processing host for terminal:', e);
+    }
+
     // Build the correct path with locale and tenant
     const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
     console.log(`Redirecting to terminal: ${terminalPath}`);

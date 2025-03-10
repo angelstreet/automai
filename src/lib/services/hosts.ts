@@ -40,11 +40,26 @@ export async function getHosts() {
     });
     console.log('Supabase returned hosts successfully');
 
-    // Add the is_windows field with a default value
-    return hosts.map((host) => ({
-      ...host,
-      is_windows: false, // Default value until the database is updated
-    }));
+    console.log('Raw hosts from database:', hosts.slice(0, 2).map(h => ({
+      id: h.id,
+      name: h.name,
+      is_windows: h.is_windows,
+      type: typeof h.is_windows
+    })));
+    
+    // Map hosts and ensure is_windows is properly set
+    return hosts.map((host) => {
+      // Check if is_windows is explicitly defined in the database
+      const explicitIsWindows = host.is_windows === true;
+      const hasOsType = typeof host.os_type === 'string' && host.os_type.toLowerCase().includes('windows');
+      
+      // Return host with is_windows properly set
+      return {
+        ...host,
+        // Prioritize database field, fall back to OS detection
+        is_windows: explicitIsWindows || hasOsType
+      };
+    });
   } catch (error) {
     console.error('Error in getHosts service:', error);
     throw error;
@@ -302,9 +317,13 @@ export async function testHostConnection(data: {
             data: {
               status: result.success ? 'connected' : 'failed',
               is_windows: detectedWindows,
+              // Using updated_at instead of updatedAt - snake_case vs camelCase
+              updated_at: new Date().toISOString(),
             },
           });
         } catch (schemaError) {
+          console.error('Error updating host:', schemaError);
+          
           // If the update fails due to missing is_windows field, update without it
           if (
             (schemaError as Error).message &&
@@ -317,6 +336,7 @@ export async function testHostConnection(data: {
               where: { id: data.hostId },
               data: {
                 status: result.success ? 'connected' : 'failed',
+                updated_at: new Date().toISOString(),
                 // is_windows field is omitted
               },
             });

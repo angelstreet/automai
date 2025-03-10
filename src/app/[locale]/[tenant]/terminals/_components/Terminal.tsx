@@ -36,7 +36,21 @@ export function Terminal({ connection }: TerminalProps) {
   const [isConnecting, setIsConnecting] = useState<boolean>(true);
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
-  const [windowsMode, setWindowsMode] = useState<boolean | null>(null);
+
+  // Before component unmounts, store connection info to avoid reload
+  useEffect(() => {
+    return () => {
+      // Cache the current connection data for navigation back
+      if (connection) {
+        try {
+          // Store the current timestamp to validate the cache later
+          sessionStorage.setItem('terminal_exit_timestamp', Date.now().toString());
+        } catch (e) {
+          console.error('Error storing terminal data on exit:', e);
+        }
+      }
+    };
+  }, [connection]);
 
   useEffect(() => {
     const initializeTerminal = async () => {
@@ -106,13 +120,37 @@ export function Terminal({ connection }: TerminalProps) {
         `\x1B[1;3;33mInitializing terminal for ${connection?.name || 'unknown'} (${connection?.ip || 'unknown'})...\x1B[0m\r\n`,
       );
 
-      // Auto-detect Windows from os_type or allow manual override
-      const autoDetectedWindows = connection.os_type?.toLowerCase()?.includes('windows') || false;
-      const isWindows = windowsMode !== null ? windowsMode : autoDetectedWindows;
+      // Auto-detect Windows from is_windows field or os_type
+      // Deep inspect the connection object to understand what's happening with is_windows
+      console.log('Connection data for Windows detection:', {
+        is_windows_field: connection.is_windows,
+        is_windows_type: typeof connection.is_windows,
+        os_type: connection.os_type,
+        // Log the full connection object keys for debugging
+        connection_keys: Object.keys(connection),
+        // Try to stringify is_windows to see its true value
+        stringify_is_windows: JSON.stringify(connection.is_windows),
+        // Check if connection.is_windows is truthy
+        is_windows_truthy: !!connection.is_windows,
+      });
+      
+      // Explicitly check is_windows field, ensure it's treated as boolean
+      // First convert to boolean with !! then compare strictly with === true
+      // This handles all edge cases (undefined, null, string 'true', etc.)
+      const explicitIsWindows = !!connection.is_windows === true;
+      const osTypeIsWindows = typeof connection.os_type === 'string' && 
+                              connection.os_type.toLowerCase().includes('windows');
+      
+      const isWindows = explicitIsWindows || osTypeIsWindows;
+      console.log('[Terminal] Initial Windows detection:', {
+        is_windows: isWindows,
+        is_windows_field: connection.is_windows,
+        os_type: connection.os_type,
+      });
 
       if (isWindows) {
         term.write(
-          `\x1B[1;3;36mWindows system detected or selected, will use special connection mode\x1B[0m\r\n`,
+          `\x1B[1;3;36mWindows system detected, will use special connection mode\x1B[0m\r\n`,
         );
       }
 
@@ -234,18 +272,32 @@ export function Terminal({ connection }: TerminalProps) {
 
           term.write(`\x1B[1;3;33mWebSocket connected, authenticating...\x1B[0m\r\n`);
 
-          // Detect if target is likely Windows
-          const is_windows =
-            windowsMode !== null
-              ? windowsMode
-              : connection.os_type?.toLowerCase()?.includes('windows') || false;
+          // Get Windows flag from connection info - prioritizing is_windows field
+          console.log('WebSocket connection data for Windows detection:', {
+            is_windows_field: connection.is_windows,
+            is_windows_type: typeof connection.is_windows,
+            os_type: connection.os_type,
+            stringify_is_windows: JSON.stringify(connection.is_windows),
+            is_windows_truthy: !!connection.is_windows,
+          });
+          
+          // Use the same logic for consistency throughout the component
+          const explicitIsWindows = !!connection.is_windows === true;
+          const osTypeIsWindows = typeof connection.os_type === 'string' && 
+                                 connection.os_type.toLowerCase().includes('windows');
+          
+          const is_windows = explicitIsWindows || osTypeIsWindows;
+          console.log('[Terminal] Windows detection result:', {
+            is_windows: is_windows,
+            is_windows_field: connection.is_windows,
+            os_type: connection.os_type,
+          });
 
           // Additional logging for Windows detection
           if (is_windows) {
-            console.log('[Terminal] Windows OS detected or selected, will use cmd.exe', {
+            console.log('[Terminal] Windows OS detected, will use cmd.exe', {
               os_type: connection.os_type,
               ip: connection.ip,
-              manuallySelected: windowsMode !== null,
             });
             term.write(
               `\x1B[1;3;33mWindows system detected, will connect using cmd.exe...\x1B[0m\r\n`,
@@ -521,29 +573,6 @@ export function Terminal({ connection }: TerminalProps) {
           <div className="flex flex-col items-center space-y-4">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             <p className="text-sm text-muted-foreground">Initializing terminal connection...</p>
-
-            {/* Windows mode toggle - only show during connection */}
-            <div className="flex items-center mt-4 gap-2">
-              <span className="text-sm text-muted-foreground">Windows Mode:</span>
-              <button
-                className={`px-3 py-1 text-xs rounded ${windowsMode === true ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                onClick={() => setWindowsMode(true)}
-              >
-                ON
-              </button>
-              <button
-                className={`px-3 py-1 text-xs rounded ${windowsMode === false ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                onClick={() => setWindowsMode(false)}
-              >
-                OFF
-              </button>
-              <button
-                className={`px-3 py-1 text-xs rounded ${windowsMode === null ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
-                onClick={() => setWindowsMode(null)}
-              >
-                Auto
-              </button>
-            </div>
           </div>
         </div>
       )}

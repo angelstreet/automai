@@ -43,19 +43,29 @@ export default function TerminalPage() {
   // Fetch host by name
   const fetchMachineByName = async (name: string) => {
     try {
-      // First check if we have the host data in session storage
+      // First check if we have the host data in session storage (prioritize this)
       if (typeof window !== 'undefined') {
         const storedHost = sessionStorage.getItem('currentHost');
         if (storedHost) {
-          const parsedHost = JSON.parse(storedHost);
-          // Verify this is the correct host
-          if (parsedHost.name.toLowerCase() === name.toLowerCase()) {
-            console.log('Using host data from session storage');
-            return parsedHost;
+          try {
+            const parsedHost = JSON.parse(storedHost);
+            // Verify this is the correct host
+            if (parsedHost.name.toLowerCase() === name.toLowerCase()) {
+              console.log('Using host data from session storage');
+              
+              // Store the last access timestamp
+              sessionStorage.setItem('currentHost_accessed', Date.now().toString());
+              
+              return parsedHost;
+            }
+          } catch (e) {
+            console.error('Error parsing stored host:', e);
+            // Continue to fetch if parsing fails
           }
         }
       }
 
+      // If no valid cached data, fetch from API
       console.log(`Fetching host by name: ${name}`);
 
       // Fetch from the standardized lowercase route
@@ -78,6 +88,17 @@ export default function TerminalPage() {
 
       if (!hostData) {
         throw new Error(`Failed to fetch host with name: ${name}`);
+      }
+
+      // Cache the result for future use
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('currentHost', JSON.stringify(hostData));
+          sessionStorage.setItem('currentHost_accessed', Date.now().toString());
+          console.log('Host data cached in sessionStorage');
+        } catch (e) {
+          console.error('Error caching host data:', e);
+        }
       }
 
       console.log('Host data fetched successfully:', hostData.name);
@@ -121,6 +142,91 @@ export default function TerminalPage() {
     try {
       // For single terminal case
       if (terminalCount === 1) {
+        // First try to get the full host data from sessionStorage
+        // With our new approach, we have multiple ways to retrieve it
+        if (typeof window !== 'undefined') {
+          // First check if we have a reference to the current host
+          const currentHostRef = sessionStorage.getItem('currentHost');
+          
+          // Try different approaches to get the host data
+          let hostData = null;
+          
+          // 1. Try to get the host using the reference (most efficient)
+          if (currentHostRef && !currentHostRef.startsWith('{')) {
+            // This is a reference like "host_123", not a full JSON object
+            try {
+              const storedHostData = sessionStorage.getItem(currentHostRef);
+              if (storedHostData) {
+                const parsedHost = JSON.parse(storedHostData);
+                if (parsedHost && parsedHost.name.toLowerCase() === hostName.toLowerCase()) {
+                  console.log('Found host using reference from sessionStorage:', currentHostRef);
+                  hostData = parsedHost;
+                }
+              }
+            } catch (e) {
+              console.error('Error retrieving host from reference:', e);
+            }
+          }
+          
+          // 2. Try direct storage as full object (backward compatibility)
+          if (!hostData && currentHostRef) {
+            try {
+              // Try parsing it directly in case it's a full JSON object
+              const parsedHost = JSON.parse(currentHostRef);
+              if (parsedHost && parsedHost.name && 
+                  parsedHost.name.toLowerCase() === hostName.toLowerCase()) {
+                console.log('Found host stored as full JSON object');
+                hostData = parsedHost;
+              }
+            } catch (e) {
+              // Not a JSON object, which is expected with the new approach
+            }
+          }
+          
+          // 3. Try by name directly
+          if (!hostData) {
+            try {
+              const storedHostByName = sessionStorage.getItem(`host_name_${hostName.toLowerCase()}`);
+              if (storedHostByName) {
+                const parsedHost = JSON.parse(storedHostByName);
+                console.log('Found host by name in sessionStorage');
+                hostData = parsedHost;
+              }
+            } catch (e) {
+              console.error('Error retrieving host by name:', e);
+            }
+          }
+          
+          // 4. Try the backup full object we stored for debugging
+          if (!hostData) {
+            try {
+              const fullHost = sessionStorage.getItem('currentHost_full');
+              if (fullHost) {
+                const parsedHost = JSON.parse(fullHost);
+                if (parsedHost && parsedHost.name.toLowerCase() === hostName.toLowerCase()) {
+                  console.log('Found host in backup currentHost_full storage');
+                  hostData = parsedHost;
+                }
+              }
+            } catch (e) {
+              console.error('Error retrieving backup host data:', e);
+            }
+          }
+          
+          // If we found host data through any method, use it
+          if (hostData) {
+            console.log('Using host data from sessionStorage without API calls:', {
+              name: hostData.name,
+              is_windows: hostData.is_windows,
+              os_type: hostData.os_type
+            });
+            setConnections([hostData]);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Only fetch if we don't have the data in sessionStorage
         const host = await fetchMachineByName(hostName);
         if (!host) {
           throw new Error(`Host not found: ${hostName}`);

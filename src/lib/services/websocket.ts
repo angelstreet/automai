@@ -243,6 +243,7 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
         ws_connectionId: ws_connectionId,
         connectionType: data.connectionType,
         ssh_username: data.username || data.ssh_username,
+        is_windows: data.is_windows,
       });
 
       console.log('DEBUG: WebSocket connectionId:', ws_connectionId);
@@ -253,6 +254,7 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
           ssh_username: data.username || data.ssh_username,
           ssh_hasPassword: !!(data.password || data.ssh_password),
           ssh_host: data.host || data.ssh_host,
+          is_windows: data.is_windows,
         }),
       );
 
@@ -264,6 +266,7 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
           ssh_password: data.password || data.ssh_password,
           ssh_host: data.host || data.ssh_host,
           ssh_port: data.port || data.ssh_port,
+          is_windows: data.is_windows,
         });
       } else {
         logger.error('Unsupported connection type', { type: data.connectionType });

@@ -51,6 +51,37 @@ export default function HostContainer() {
         lastConnected: host.lastConnected || host.created_at,
       }));
 
+      // Cache the hosts data in sessionStorage
+      try {
+        // Store entire hosts array
+        sessionStorage.setItem('hosts_cache', JSON.stringify(processedHosts));
+        sessionStorage.setItem('hosts_cache_timestamp', Date.now().toString());
+        
+        // Also store each host individually for direct access
+        processedHosts.forEach(host => {
+          // Ensure is_windows is explicitly set as a boolean
+          const hostWithExplicitWindows = {
+            ...host,
+            is_windows: host.is_windows === true
+          };
+          
+          // Store by host ID
+          sessionStorage.setItem(`host_${host.id}`, JSON.stringify(hostWithExplicitWindows));
+          
+          // Also store by host name (lowercase for case-insensitive lookup)
+          if (host.name) {
+            sessionStorage.setItem(`host_name_${host.name.toLowerCase()}`, JSON.stringify(hostWithExplicitWindows));
+          }
+          
+          // Log Windows flag for debugging
+          console.log(`Stored host "${host.name}" with is_windows:`, host.is_windows);
+        });
+        
+        console.log('Hosts data cached in sessionStorage (both array and individual hosts)');
+      } catch (e) {
+        console.error('Error caching hosts in sessionStorage:', e);
+      }
+
       setHosts(processedHosts);
 
       return processedHosts;
@@ -143,14 +174,47 @@ export default function HostContainer() {
     let isMounted = true;
 
     const loadHostsAndTest = async () => {
+      // Check if we have hosts data in sessionStorage
+      const cachedHosts = sessionStorage.getItem('hosts_cache');
+      const timestamp = sessionStorage.getItem('hosts_cache_timestamp');
+      const now = Date.now();
+      const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+      
+      // Use cached data if available and not expired
+      if (cachedHosts && timestamp && (now - parseInt(timestamp)) < CACHE_EXPIRY) {
+        try {
+          const parsedHosts = JSON.parse(cachedHosts);
+          console.log('Using cached hosts data from sessionStorage');
+          setHosts(parsedHosts);
+          setLoading(false);
+          return;
+        } catch (e) {
+          console.error('Error parsing cached hosts:', e);
+          // Fall through to fetching fresh data
+        }
+      }
+      
+      // Fetch fresh data if cache missing or expired
       const fetchedHosts = await fetchHosts();
 
       // Only proceed if component is still mounted
       if (!isMounted) return;
 
       if (fetchedHosts.length > 0) {
-        // Test all fetched hosts
-        await testAllHostsSequentially(fetchedHosts);
+        // Cache the hosts data
+        try {
+          sessionStorage.setItem('hosts_cache', JSON.stringify(fetchedHosts));
+          sessionStorage.setItem('hosts_cache_timestamp', now.toString());
+        } catch (e) {
+          console.error('Error caching hosts data:', e);
+        }
+        
+        // Limit to just one test connection call when loading the page initially
+        // Test only hosts that don't have a status yet
+        const hostsToTest = fetchedHosts.filter(host => !host.status || host.status === 'pending');
+        if (hostsToTest.length > 0) {
+          await testAllHostsSequentially(hostsToTest);
+        }
       }
     };
 
@@ -160,12 +224,9 @@ export default function HostContainer() {
     return () => {
       isMounted = false;
     };
-  }, []); // Only depend on locale
+  }, [fetchHosts]); // Depend on fetchHosts which has all dependencies
 
   const handleDelete = async (id: string) => {
-    // Store the host being deleted in case we need to restore it
-    const hostToDelete = hosts.find((host) => host.id === id);
-
     // Optimistically update UI first
     setHosts((currentHosts) => currentHosts.filter((host) => host.id !== id));
 
@@ -176,12 +237,12 @@ export default function HostContainer() {
       // Then perform the actual deletion in the background
       await hostsApi.deleteHost(id);
     } catch (error) {
-      // If deletion fails, restore the host and show error
+      // If deletion fails, show error but don't restore
       console.error('Error deleting host:', error);
-      if (hostToDelete) {
-        setHosts((currentHosts) => [...currentHosts, hostToDelete]);
-      }
-      toast.error('Failed to delete host. The host has been restored.');
+      toast.error('Failed to delete host on server. UI has been updated anyway.');
+      
+      // Refresh hosts in background to get fresh data
+      fetchHosts().catch(e => console.error('Error refreshing hosts:', e));
     }
   };
 

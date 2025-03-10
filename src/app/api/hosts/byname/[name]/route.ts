@@ -8,7 +8,8 @@ import db from '@/lib/supabase/db';
 export async function GET(request: NextRequest, context: { params: { name: string } }) {
   try {
     console.log('API route called: /api/hosts/byname/[name]');
-    const { name } = context.params;
+    const params = await context.params;
+    const { name } = params;
 
     if (!name) {
       console.log('No name provided in params');
@@ -30,6 +31,13 @@ export async function GET(request: NextRequest, context: { params: { name: strin
     const host = hosts.find(h => h.name.toLowerCase() === name.toLowerCase());
 
     console.log('Database query completed');
+    
+    if (host) {
+      // Log the is_windows field value if it exists
+      console.log('Host is_windows field:', host.is_windows, 
+                  'Type:', typeof host.is_windows, 
+                  'OS Type:', host.os_type);
+    }
 
     if (!host) {
       console.log(`Host not found with name: ${name}`);

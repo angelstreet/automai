@@ -33,6 +33,9 @@ export async function handleSshConnection(
   // Function to attempt SSH connection with specified mode
   const attemptConnection = (useWindowsMode: boolean) => {
     is_windows = useWindowsMode;
+    
+    // Store Windows value on the client socket for reference in client messages
+    (clientSocket as any).is_windows = is_windows;
 
     logger.info('Attempting SSH connection', {
       connectionId,
