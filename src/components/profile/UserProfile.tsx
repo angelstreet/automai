@@ -16,7 +16,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 
 interface UserProfileProps {
   tenant?: string;
@@ -25,7 +25,7 @@ interface UserProfileProps {
 export function UserProfile({ tenant: propTenant }: UserProfileProps) {
   const router = useRouter();
   const params = useParams();
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useUser();
   const locale = params.locale as string || 'en';
   const [imageError, setImageError] = React.useState(false);
   

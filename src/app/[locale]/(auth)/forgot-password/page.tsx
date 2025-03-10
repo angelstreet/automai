@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
   // Use the auth hook
-  const { error: authError, resetPassword, loading } = useAuth();
+  const { error: authError, resetPassword, loading } = useUser();
 
   // Set error from auth hook if present
   React.useEffect(() => {

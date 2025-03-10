@@ -91,27 +91,22 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // createClient and getUser() - this ensures proper token validation
   const { data, error } = await supabase.auth.getUser();
 
-  // Enhanced logging for debugging
+  // Reduced logging for better performance - only log errors
   if (error) {
     console.log('🔍 AUTH MIDDLEWARE ERROR:', error.message);
     console.log('🔍 Request URL:', request.nextUrl.pathname);
-    console.log('🔍 Auth cookies present:', request.cookies.getAll()
-      .filter(c => c.name.startsWith('sb-') || c.name.includes('supabase'))
-      .map(c => c.name));
   } else if (data.user) {
+    // Just log minimal user info
     console.log('🔍 AUTH MIDDLEWARE: User authenticated', data.user.id);
-    console.log('🔍 User email:', data.user.email);
-    console.log('🔍 User metadata:', JSON.stringify(data.user.user_metadata));
   }
 
   // If no user is found or there's an error, redirect to login
   if (error || !data.user) {
     console.log('No authenticated user found. Redirecting to login page.');
-    console.log('Auth error details:', error?.message);
-    console.log('Request cookies:', request.cookies.getAll()
-      .filter(c => c.name.startsWith('sb-') || c.name.includes('supabase'))
-      .map(c => c.name)
-      .join(', '));
+    // Reduce logging to essential information only
+    if (error) {
+      console.log('Auth error details:', error?.message);
+    }
     
     // Check if there are some auth cookies present even though we couldn't get a user
     // This might indicate a cookie-related issue rather than truly unauthenticated

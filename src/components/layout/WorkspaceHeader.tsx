@@ -12,7 +12,7 @@ import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
-import { useRole } from '@/context/RoleContext';
+import { useUser } from '@/context/UserContext';
 import { useSidebar } from '@/hooks/useSidebar';
 
 interface WorkspaceHeaderProps {
@@ -25,7 +25,7 @@ const HEADER_COOKIE_NAME = 'header:state';
 const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
-  const { role, setRole } = useRole();
+  const { role, setRole } = useUser();
   const { open } = useSidebar();
   const isCollapsed = !open;
   const params = useParams();

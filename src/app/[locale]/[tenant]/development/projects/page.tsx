@@ -33,9 +33,9 @@ import {
 } from '@/components/shadcn/table';
 import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
-import { User } from '@/types/auth';
+import { User } from '@/types/user';
 
 
 type Project = {
@@ -63,7 +63,7 @@ export default function ProjectsPage() {
   const locale = params.locale as string;
   const tenant = params.tenant as string;
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   // Fetch projects on mount
   useEffect(() => {

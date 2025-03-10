@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useRef, ReactNode, useState } from 'react';
 import useSWR from 'swr';
 import { 
   signOut as signOutAction, 
@@ -12,12 +12,16 @@ import {
   signInWithPassword as signInWithPasswordAction,
   updatePassword as updatePasswordAction,
   handleAuthCallback as handleAuthCallbackAction,
-  AuthUser,
-} from '@/app/actions/auth';
-import { supabaseAuth } from '@/lib/supabase/auth';
+  getCurrentUserRoles
+} from '@/app/actions/user';
+import { Role, AuthUser } from '@/types/user';
 
-// Unique key for our SWR cache
-const AUTH_USER_KEY = 'auth-user';
+// Unique keys for SWR cache
+const USER_KEY = 'user-data';
+const USER_ROLE_KEY = 'user-role';
+
+// Default role
+const DEFAULT_ROLE: Role = 'viewer';
 
 // SWR configuration
 const SWR_CONFIG = {
@@ -30,14 +34,73 @@ const SWR_CONFIG = {
   errorRetryCount: 0,           // No error retries
 };
 
-export function useAuth() {
+// Enhanced user type that includes role
+interface EnhancedUser extends AuthUser {
+  role?: Role;
+}
+
+interface UserContextType {
+  // User state
+  user: EnhancedUser | null;
+  role: Role;
+  loading: boolean;
+  error: Error | null;
+  
+  // Auth operations
+  signUp: (email: string, password: string, name: string, redirectUrl: string) => Promise<any>;
+  signInWithPassword: (email: string, password: string) => Promise<any>;
+  signInWithOAuth: (provider: 'google' | 'github', redirectUrl: string) => Promise<any>;
+  signOut: (formData: FormData) => Promise<void>;
+  resetPassword: (email: string, redirectUrl: string) => Promise<boolean>;
+  updatePassword: (password: string) => Promise<boolean>;
+  updateProfile: (formData: FormData) => Promise<void>;
+  
+  // Role operations
+  setRole: (role: Role) => void;
+  
+  // Refresh functions
+  refreshUser: () => Promise<EnhancedUser | null>;
+  
+  // Other operations
+  exchangeCodeForSession: () => Promise<{
+    success: boolean;
+    error?: string;
+    redirectUrl?: string;
+  }>;
+}
+
+const UserContext = createContext<UserContextType>({
+  // User state
+  user: null,
+  role: DEFAULT_ROLE,
+  loading: false,
+  error: null,
+  
+  // Auth operations
+  signUp: async () => null,
+  signInWithPassword: async () => null,
+  signInWithOAuth: async () => null,
+  signOut: async () => {},
+  resetPassword: async () => false,
+  updatePassword: async () => false,
+  updateProfile: async () => {},
+  
+  // Role operations
+  setRole: () => {},
+  
+  // Refresh functions
+  refreshUser: async () => null,
+  
+  // Other operations
+  exchangeCodeForSession: async () => ({ success: false }),
+});
+
+export function UserProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
   const isAuthPage = useRef<boolean>(false);
-  
-  // Use ref to track if we've forced a refresh
   const forcedRefresh = useRef<boolean>(false);
   
-  // Check if we're on an auth page (login, signup, etc.)
+  // Check if we're on an auth page
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
@@ -48,43 +111,49 @@ export function useAuth() {
     }
   }, []);
   
-  // Create a fetcher function that can be used with SWR
+  // Helper function to check if a role is valid
+  const isValidRole = (role: string): role is Role => {
+    return ['admin', 'tester', 'developer', 'viewer'].includes(role);
+  };
+  
+  // Function to extract role from user object
+  const getUserRoleFromUserObj = (user: AuthUser | null): Role | null => {
+    if (!user) return null;
+    
+    // Look in user_metadata first (where it's typically stored)
+    if (user.user_metadata) {
+      // Extract role from user metadata (using any as a workaround)
+      const metadataRole = (user.user_metadata as any).role;
+      if (metadataRole && isValidRole(metadataRole)) {
+        return metadataRole as Role;
+      }
+    }
+    
+    return null;
+  };
+  
+  // Fetcher function for user data
   const fetchUserData = useCallback(async () => {
     if (isAuthPage.current && !forcedRefresh.current) {
-      console.log('🔄 AUTH HOOK (SWR): Skipping fetch on auth page');
+      console.log('🔄 USER CONTEXT: Skipping fetch on auth page');
       return null;
     }
     
-    console.log('🔄 AUTH HOOK (SWR): Fetching user data - VERSION 2025-03-10');
-    
-    // Debug cookie information on client side
-    if (typeof document !== 'undefined') {
-      console.log('🍪 Cookies present:', document.cookie
-        .split(';')
-        .map(c => c.trim().split('=')[0])
-        .filter(name => name.startsWith('sb-') || name.includes('supabase'))
-        .join(', '));
-    }
+    console.log('🔄 USER CONTEXT: Fetching user data');
     
     try {
-      const data = await getCurrentUser();
+      const userData = await getCurrentUser();
       
-      // Enhanced debug logging
-      console.log('🔄 AUTH HOOK (SWR): User data received:', data);
-      if (data) {
-        console.log('🔄 AUTH HOOK (SWR): User ID:', data.id);
-        console.log('🔄 AUTH HOOK (SWR): User email:', data.email);
-        console.log('🔄 AUTH HOOK (SWR): User name:', data.name);
-        console.log('🔄 AUTH HOOK (SWR): User tenant:', data.tenant_name);
-        console.log('🔄 AUTH HOOK (SWR): User role:', data.role);
+      if (userData) {
+        console.log('🔄 USER CONTEXT: User data received:', userData.id);
       } else {
-        console.log('🔄 AUTH HOOK (SWR): No user data received - not authenticated');
+        console.log('🔄 USER CONTEXT: No user data received - not authenticated');
       }
       
       // Reset the forced refresh flag
       forcedRefresh.current = false;
       
-      return data;
+      return userData;
     } catch (err) {
       console.error('Error fetching user:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch user'));
@@ -92,10 +161,77 @@ export function useAuth() {
     }
   }, []);
   
-  // Use SWR for data fetching with caching and deduplication
-  const { data: user, isLoading: loading, mutate } = useSWR(
-    AUTH_USER_KEY, 
-    fetchUserData,
+  // Use SWR for user data fetching
+  const { 
+    data: user, 
+    isLoading: loading, 
+    mutate: mutateUser 
+  } = useSWR(USER_KEY, fetchUserData, SWR_CONFIG);
+  
+  // Fetcher function for role data
+  const fetchUserRole = useCallback(async () => {
+    // Skip fetching if we don't have a user yet
+    if (!user) {
+      console.log('🔄 USER CONTEXT: Skipping role fetch - no user');
+      return DEFAULT_ROLE;
+    }
+    
+    console.log('🔄 USER CONTEXT: Fetching user role');
+    
+    // If we have user data with role, use it first
+    const userRole = getUserRoleFromUserObj(user);
+    if (userRole) {
+      console.log('🔄 USER CONTEXT: Found role directly on user object:', userRole);
+      
+      // If admin role is found, prioritize it
+      if (userRole === 'admin') {
+        console.log('🔄 USER CONTEXT: Using admin role from user object');
+        return 'admin' as Role;
+      }
+      
+      console.log('🔄 USER CONTEXT: Using validated role from user object:', userRole);
+      return userRole;
+    }
+    
+    // Fetch from the database as fallback
+    try {
+      console.log('🔄 USER CONTEXT: Fetching role from database');
+      const response = await getCurrentUserRoles();
+      
+      if (response.success && response.data && response.data.length > 0) {
+        const dbRole = response.data[0].name;
+        console.log('🔄 USER CONTEXT: Role from database:', dbRole);
+        
+        // If admin role is found in DB, prioritize it
+        if (dbRole === 'admin') {
+          console.log('🔄 USER CONTEXT: Using admin role from database');
+          return 'admin' as Role;
+        }
+        
+        // Ensure the role from DB is a valid Role type
+        if (isValidRole(dbRole)) {
+          console.log('🔄 USER CONTEXT: Using validated role from database:', dbRole);
+          return dbRole as Role;
+        }
+      }
+      
+      // If we get here, use the default role
+      console.log('🔄 USER CONTEXT: No valid role found, using default:', DEFAULT_ROLE);
+      return DEFAULT_ROLE;
+    } catch (error) {
+      console.error('🔄 USER CONTEXT: Error fetching user role:', error);
+      // Default to DEFAULT_ROLE if there's an error
+      return DEFAULT_ROLE;
+    }
+  }, [user, getUserRoleFromUserObj, isValidRole]);
+  
+  // Use SWR for role data fetching
+  const { 
+    data: role = DEFAULT_ROLE, 
+    mutate: mutateRole 
+  } = useSWR(
+    user ? USER_ROLE_KEY : null, // Only fetch when user is available
+    fetchUserRole,
     SWR_CONFIG
   );
   
@@ -117,21 +253,37 @@ export function useAuth() {
       };
     }
   }, []);
-
-  // Add a refresh function that components can call to force a refresh of user data
-  const refreshUser = useCallback(() => {
-    console.log('🔄 AUTH HOOK (SWR): Forcing refresh of user data');
+  
+  // Function to refresh user data
+  const refreshUser = useCallback(async () => {
+    console.log('🔄 USER CONTEXT: Forcing refresh of user data');
     forcedRefresh.current = true;
-    return mutate();
-  }, [mutate]);
-
+    const userData = await mutateUser();
+    
+    // Also refresh role data when user data is refreshed
+    if (userData) {
+      await mutateRole();
+    }
+    
+    return userData;
+  }, [mutateUser, mutateRole]);
+  
+  // Function to set role and update SWR cache
+  const setRole = useCallback((newRole: Role) => {
+    if (role !== newRole) {
+      console.log('🔄 USER CONTEXT: Updating role to', newRole);
+      mutateRole(newRole, false); // Update cache without revalidation
+    }
+  }, [role, mutateRole]);
+  
+  // Auth operation: Sign Out
   const handleSignOut = async (formData: FormData) => {
     try {
       console.log('🔐 LOGOUT - Starting logout process');
       await signOutAction(formData);
       
       // Clear user data immediately on sign out
-      await mutate(null, false);
+      await mutateUser(null, false);
       
       // Get the locale from the form data
       const locale = formData.get('locale') as string || 'en';
@@ -146,7 +298,8 @@ export function useAuth() {
       setError(err instanceof Error ? err : new Error('Failed to sign out'));
     }
   };
-
+  
+  // Auth operation: Update Profile
   const handleUpdateProfile = async (formData: FormData) => {
     try {
       console.log('🔐 PROFILE - Updating user profile');
@@ -160,7 +313,8 @@ export function useAuth() {
       setError(err instanceof Error ? err : new Error('Failed to update profile'));
     }
   };
-
+  
+  // Auth operation: Update Password
   const handleUpdatePassword = async (password: string) => {
     try {
       console.log('🔐 PASSWORD - Updating user password');
@@ -174,7 +328,6 @@ export function useAuth() {
         return false;
       }
       
-      // No need to refresh user data for password update
       return true;
     } catch (err) {
       console.error('🔐 PASSWORD ERROR:', err);
@@ -182,7 +335,8 @@ export function useAuth() {
       return false;
     }
   };
-
+  
+  // Auth operation: Sign Up
   const handleSignUp = async (email: string, password: string, name: string, redirectUrl: string) => {
     try {
       console.log('🔐 SIGNUP - Starting sign up process');
@@ -204,45 +358,19 @@ export function useAuth() {
       return null;
     }
   };
-
+  
+  // Auth operation: Sign In With Password
   const handleSignInWithPassword = async (email: string, password: string) => {
     try {
       console.log('🔐 LOGIN - Starting password login process');
       setError(null);
       
-      // Check cookies before login attempt
-      if (typeof document !== 'undefined') {
-        console.log('🔐 LOGIN - Cookies before login:', document.cookie
-          .split(';')
-          .map(c => c.trim().split('=')[0])
-          .filter(name => name.startsWith('sb-') || name.includes('supabase'))
-          .join(', '));
-      }
-      
-      console.log('🔐 LOGIN - Calling signInWithPasswordAction');
       const result = await signInWithPasswordAction(email, password);
-      
-      console.log('🔐 LOGIN - Result received:', result.success ? 'SUCCESS' : 'FAILED');
       
       if (!result.success) {
         console.error('🔐 LOGIN ERROR:', result.error);
         setError(new Error(result.error || 'Failed to sign in'));
         return null;
-      }
-      
-      // Check cookies after successful login
-      if (typeof document !== 'undefined') {
-        console.log('🔐 LOGIN - Cookies after login:', document.cookie
-          .split(';')
-          .map(c => c.trim().split('=')[0])
-          .filter(name => name.startsWith('sb-') || name.includes('supabase'))
-          .join(', '));
-      }
-      
-      console.log('🔐 LOGIN - Session data:', result.data ? 'PRESENT' : 'MISSING');
-      if (result.data?.session) {
-        console.log('🔐 LOGIN - User ID:', result.data.session.user.id);
-        console.log('🔐 LOGIN - User email:', result.data.session.user.email);
       }
       
       // Force refresh user data after sign in
@@ -255,7 +383,8 @@ export function useAuth() {
       return null;
     }
   };
-
+  
+  // Auth operation: Sign In With OAuth
   const handleSignInWithOAuth = async (provider: 'google' | 'github', redirectUrl: string) => {
     try {
       console.log('🔐 OAUTH - Starting OAuth login process');
@@ -277,7 +406,8 @@ export function useAuth() {
       return null;
     }
   };
-
+  
+  // Auth operation: Reset Password
   const handleResetPassword = async (email: string, redirectUrl: string) => {
     try {
       console.log('🔐 RESET - Starting password reset process');
@@ -299,44 +429,23 @@ export function useAuth() {
       return false;
     }
   };
-
+  
+  // Auth operation: Exchange Code For Session
   const exchangeCodeForSession = useCallback(async () => {
     try {
       setError(null);
       
       console.log('🔑 EXCHANGE CODE - Starting code exchange process');
       
-      // Debug current cookies before exchange
-      if (typeof document !== 'undefined') {
-        console.log('🔑 EXCHANGE CODE - Cookies before exchange:', document.cookie
-          .split(';')
-          .map(c => c.trim().split('=')[0])
-          .filter(name => name.startsWith('sb-') || name.includes('supabase'))
-          .join(', '));
-      }
-      
-      // Use the auth action to handle the callback
-      // This follows the three-layer architecture: client hook → server action → server db
       const url = typeof window !== 'undefined' ? window.location.href : '';
       console.log('🔑 EXCHANGE CODE - Calling handleAuthCallbackAction with URL:', url);
       
       const result = await handleAuthCallbackAction(url);
       
-      console.log('🔑 EXCHANGE CODE - Result received:', result.success ? 'SUCCESS' : 'FAILED');
-      
       if (!result.success) {
         console.error('🔑 EXCHANGE CODE ERROR:', result.error);
         setError(new Error(result.error || 'Failed to authenticate'));
         return { success: false, error: result.error };
-      }
-      
-      // Debug cookies after successful exchange
-      if (typeof document !== 'undefined') {
-        console.log('🔑 EXCHANGE CODE - Cookies after exchange:', document.cookie
-          .split(';')
-          .map(c => c.trim().split('=')[0])
-          .filter(name => name.startsWith('sb-') || name.includes('supabase'))
-          .join(', '));
       }
       
       // Refresh user data after successful authentication
@@ -353,12 +462,19 @@ export function useAuth() {
       return { success: false, error: 'Authentication failed' };
     }
   }, [refreshUser]);
-
-  // Return the authentication state and functions
-  return {
-    user,
+  
+  // Create user with role for components
+  const enhancedUser = user ? { ...user, role } : null;
+  
+  // Create a memoized context value to prevent unnecessary re-renders
+  const contextValue = React.useMemo(() => ({
+    // User state
+    user: enhancedUser,
+    role,
     loading,
     error,
+    
+    // Auth operations
     signUp: handleSignUp,
     signInWithPassword: handleSignInWithPassword,
     signInWithOAuth: handleSignInWithOAuth,
@@ -366,7 +482,30 @@ export function useAuth() {
     resetPassword: handleResetPassword,
     updatePassword: handleUpdatePassword,
     updateProfile: handleUpdateProfile,
+    
+    // Role operations
+    setRole,
+    
+    // Refresh functions
     refreshUser,
+    
+    // Other operations
     exchangeCodeForSession,
-  };
+  }), [
+    enhancedUser, 
+    role, 
+    loading, 
+    error,
+    setRole,
+    refreshUser,
+    exchangeCodeForSession
+  ]);
+  
+  return (
+    <UserContext.Provider value={contextValue}>
+      {children}
+    </UserContext.Provider>
+  );
 }
+
+export const useUser = () => useContext(UserContext);

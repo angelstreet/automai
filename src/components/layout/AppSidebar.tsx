@@ -12,8 +12,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/sidebar';
-import { useRole } from '@/context/RoleContext';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 import { Role } from '@/types/user';
 import * as React from 'react';
 
@@ -21,8 +20,7 @@ import { sidebarData } from './data/sidebarData';
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth();
-  const { role } = useRole();
+  const { user, role } = useUser();
   const { open } = useSidebar();
   const isCollapsed = !open;
 

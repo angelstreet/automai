@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleAuthCallback } from '@/app/actions/auth';
+import { handleAuthCallback } from '@/app/actions/user';
 
 // Add this interface at the top of the file
 interface SupabaseError extends Error {

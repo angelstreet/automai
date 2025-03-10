@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 
 // Add error boundary component
 function ErrorFallback({ error, locale }: { error: Error; locale: string }) {
@@ -40,7 +40,7 @@ export default function AuthRedirectPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { loading, exchangeCodeForSession } = useAuth();
+  const { loading, exchangeCodeForSession } = useUser();
   const [authError, setAuthError] = useState<Error | null>(null);
   const [isProcessing, setIsProcessing] = useState(true);
   const [hasRedirected, setHasRedirected] = useState(false);

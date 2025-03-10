@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 
 export default function UseCasesPage() {
   const router = useRouter();
@@ -13,7 +13,7 @@ export default function UseCasesPage() {
   const params = React.use(paramsPromise);
   const locale = params.locale as string;
   const tenant = params.tenant as string;
-  const { user, isLoading: userLoading } = useAuth();
+  const { user, isLoading: userLoading } = useUser();
 
   // Redirect if not authenticated
   useEffect(() => {

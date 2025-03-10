@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,8 +18,8 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isAuthenticating, setIsAuthenticating] = React.useState(false);
   
-  // Use the auth hook
-  const { user, loading, error: authError, signInWithPassword, signInWithOAuth } = useAuth();
+  // Use the user hook
+  const { user, loading, error: authError, signInWithPassword, signInWithOAuth } = useUser();
 
   // Redirect if user is already logged in
   React.useEffect(() => {

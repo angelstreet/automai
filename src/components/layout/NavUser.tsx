@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 import { cn } from '@/lib/utils';
 
 interface NavUserProps {
@@ -29,7 +29,7 @@ export function NavUser({ user }: NavUserProps) {
   const params = useParams();
   const locale = params.locale as string;
   const tenant = params.tenant as string;
-  const { signOut } = useAuth();
+  const { signOut } = useUser();
   const { open } = useSidebar();
   const isCollapsed = !open;
 

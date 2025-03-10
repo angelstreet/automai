@@ -2,10 +2,16 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { useEffect, useState } from 'react';
-import { getDashboardStats } from '../actions';
 
 export function StatsCards() {
-  const [stats, setStats] = useState({
+  type DashboardStats = {
+    projects: number;
+    testCases: number;
+    testsRun: number;
+    successRate: number;
+  };
+  
+  const [stats, setStats] = useState<DashboardStats>({
     projects: 0,
     testCases: 0,
     testsRun: 0,
@@ -13,18 +19,15 @@ export function StatsCards() {
   });
 
   useEffect(() => {
-    // Add component name to reference
-    const fetchData = async () => {
-      try {
-        console.log('[StatsCards] Fetching dashboard stats');
-        const data = await getDashboardStats();
-        setStats(data);
-      } catch (error) {
-        console.error('[StatsCards] Error fetching dashboard stats:', error);
-      }
+    // Using static demo data instead of server calls
+    const staticStats = {
+      projects: 12,
+      testCases: 180,
+      testsRun: 1023,
+      successRate: 92,
     };
-
-    fetchData();
+    
+    setStats(staticStats);
   }, []);
 
   return (

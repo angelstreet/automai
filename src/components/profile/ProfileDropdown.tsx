@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
@@ -20,7 +20,7 @@ import {
 import { LogOut, Settings, User } from 'lucide-react';
 
 export function ProfileDropdown() {
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useUser();
   const router = useRouter();
   const params = useParams();
   const locale = params.locale as string;

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkTenantExists } from '@/app/actions/tenants';
 
 /**
  * This is a debugging endpoint to check if a tenant exists
@@ -12,6 +11,9 @@ export async function GET(
   try {
     const tenantId = params.id;
     console.log('Debug API: Checking tenant with ID:', tenantId);
+    
+    // This endpoint is deprecated after the consolidation of tenant functions
+    // into the user actions file
     
     // Check if the tenant exists
     const result = await checkTenantExists(tenantId);

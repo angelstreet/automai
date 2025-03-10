@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/shadcn/button';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 
 interface UpgradePromptProps {
   feature: string;
@@ -10,7 +10,7 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({ feature, className = '' }: UpgradePromptProps) {
-  const { user } = useAuth();
+  const { user } = useUser();
   const router = useRouter();
 
   if (!user) return null;

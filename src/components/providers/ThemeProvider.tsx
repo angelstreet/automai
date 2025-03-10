@@ -2,7 +2,7 @@
 
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { FontProvider } from '@/context/FontContext';
-import { RoleProvider } from '@/context/RoleContext';
+// Role context is now part of UserContext - no need to import
 import { SearchProvider } from '@/context/SearchContext';
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -27,13 +27,11 @@ export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvi
     >
       <ThemeProvider defaultTheme={defaultTheme}>
         <FontProvider>
-          <RoleProvider>
-            <SidebarProvider>
-              <TooltipProvider>
-                <SearchProvider>{children}</SearchProvider>
-              </TooltipProvider>
-            </SidebarProvider>
-          </RoleProvider>
+          <SidebarProvider>
+            <TooltipProvider>
+              <SearchProvider>{children}</SearchProvider>
+            </TooltipProvider>
+          </SidebarProvider>
         </FontProvider>
       </ThemeProvider>
     </NextThemesProvider>

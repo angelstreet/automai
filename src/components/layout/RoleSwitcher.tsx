@@ -9,7 +9,7 @@ import {
 } from '@/components/shadcn/select';
 import { cn } from '@/lib/utils';
 import { Role } from '@/types/user';
-import { useRole } from '@/context/RoleContext';
+import { useUser } from '@/context/UserContext';
 import { Loader2 } from 'lucide-react';
 
 // Define roles based on the Role type definition
@@ -25,12 +25,12 @@ interface RoleSwitcherProps {
 }
 
 function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
-  const { role: currentRole, setRole } = useRole();
+  const { role: currentRole, setRole } = useUser();
   const [isLoading, setIsLoading] = useState(true);
 
   // Log the current role for debugging
   React.useEffect(() => {
-    console.log('RoleSwitcher: Current role from RoleContext:', currentRole);
+    console.log('RoleSwitcher: Current role from UserContext:', currentRole);
     console.log('RoleSwitcher: Available roles:', roles);
     
     // If we have a role, we're no longer loading

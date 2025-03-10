@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useRole } from '@/context/RoleContext';
+import { useUser } from '@/context/UserContext';
 import { cn } from '@/lib/utils';
 
 // Define team type for consistency
@@ -48,7 +48,7 @@ const defaultTeams: Team[] = [
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
   const { open } = useSidebar();
-  const { role } = useRole();
+  const { role } = useUser();
   const isCollapsed = !open;
   
   // Simply use the teams passed as props or the default teams

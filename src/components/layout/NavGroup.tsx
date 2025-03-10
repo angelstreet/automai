@@ -17,7 +17,7 @@ import {
   useSidebar,
 } from '@/components/sidebar';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
-import { useRole } from '@/context/RoleContext';
+import { useUser } from '@/context/UserContext';
 import { cn } from '@/lib/utils';
 
 interface NavGroupProps {
@@ -40,7 +40,7 @@ interface NavGroupProps {
 const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
-  const { role } = useRole();
+  const { role } = useUser();
   const { open } = useSidebar();
   const isCollapsed = !open;
   

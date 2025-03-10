@@ -8,7 +8,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function SignUpPage() {
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const { user, loading, error: authError, signUp, signInWithOAuth } = useAuth();
+  const { user, loading, error: authError, signUp, signInWithOAuth } = useUser();
 
   React.useEffect(() => {
     if (user && !loading) {

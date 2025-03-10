@@ -7,11 +7,11 @@ import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 import { useProfile } from '@/hooks/useProfile';
 
 export function ProfileContent() {
-  const { user, loading, refreshUser } = useAuth();
+  const { user, loading, refreshUser } = useUser();
   const { updateProfile, isUpdating } = useProfile();
   const t = useTranslations('Profile');
   const params = useParams();

@@ -12,32 +12,71 @@ import {
   CardDescription,
 } from '@/components/shadcn/card';
 import { useEffect, useState } from 'react';
-import { getTasks, getRecentActivity, getTeamChat } from '../actions';
 
 export function MainContent() {
-  const [tasks, setTasks] = useState([]);
-  const [teamChat, setTeamChat] = useState([]);
+  type Task = {
+    id: string;
+    title: string;
+    dueDate: string;
+  };
+  
+  type ChatMessage = {
+    id: string;
+    name: string;
+    avatar: string;
+    message: string;
+    time: string;
+  };
+  
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [teamChat, setTeamChat] = useState<ChatMessage[]>([]);
   
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Make API calls with component name in logs
-        console.log('[MainContent] Fetching tasks');
-        const tasksData = await getTasks();
-        setTasks(tasksData);
-        
-        console.log('[MainContent] Fetching team chat');
-        const chatData = await getTeamChat();
-        setTeamChat(chatData);
-        
-        console.log('[MainContent] Fetching recent activity');
-        await getRecentActivity(); // Fetching this but not using it yet
-      } catch (error) {
-        console.error('[MainContent] Error fetching data:', error);
-      }
-    };
+    // Using static demo data instead of server calls
+    const staticTasks = [
+      {
+        id: '1',
+        title: 'Update test cases for login flow',
+        dueDate: 'Due in 2 days',
+      },
+      {
+        id: '2',
+        title: 'Review automation scripts',
+        dueDate: 'Due tomorrow',
+      },
+      {
+        id: '3',
+        title: 'Prepare test report',
+        dueDate: 'Due next week',
+      },
+    ];
     
-    fetchData();
+    const staticChat = [
+      {
+        id: '1',
+        name: 'John Doe',
+        avatar: '/avatars/01.svg',
+        message: 'Updated the test suite configuration',
+        time: '2 hours ago',
+      },
+      {
+        id: '2',
+        name: 'Jane Smith',
+        avatar: '/avatars/02.svg',
+        message: 'Added new test cases for payment flow',
+        time: '5 hours ago',
+      },
+      {
+        id: '3',
+        name: 'Robert Johnson',
+        avatar: '/avatars/03.svg',
+        message: 'Fixed failing tests in CI pipeline',
+        time: 'Yesterday',
+      },
+    ];
+    
+    setTasks(staticTasks);
+    setTeamChat(staticChat);
   }, []);
 
   return (
@@ -100,7 +139,7 @@ export function MainContent() {
                 <div key={chat.id} className="flex items-start gap-4">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={chat.avatar} />
-                    <AvatarFallback>{chat.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>{chat.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{chat.name}</p>

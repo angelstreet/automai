@@ -1,10 +1,8 @@
 import { cookies } from 'next/headers';
 import { createClient } from './server';
 import { createClient as createAdminClient } from './admin';
-import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/auth';
+import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/user';
 
-// Flag to track if we've already logged auth session missing errors
-let authSessionMissingErrorLogged = false;
 
 // Check if we're in an environment where Supabase auth is available
 const isUsingSupabase = () => {

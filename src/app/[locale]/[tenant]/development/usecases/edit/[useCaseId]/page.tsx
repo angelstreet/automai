@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@/context/UserContext';
 
 export default function UseCaseEditPage() {
   const router = useRouter();
@@ -14,7 +14,7 @@ export default function UseCaseEditPage() {
   const locale = params.locale as string;
   const tenant = params.tenant as string;
   const useCaseId = params.useCaseId as string;
-  const { user, isLoading: userLoading } = useAuth();
+  const { user, isLoading: userLoading } = useUser();
 
   // Redirect if not authenticated
   useEffect(() => {
