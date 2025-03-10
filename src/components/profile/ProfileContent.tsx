@@ -52,14 +52,7 @@ export function ProfileContent() {
     }
   }, [user]);
 
-  // Force refresh user data on component mount - but only once
-  useEffect(() => {
-    if (refreshUser) {
-      console.log('Refreshing user data...');
-      // Do not auto-refresh since it can create a loop
-      // Only refresh when manually triggered by user actions
-    }
-  }, []);
+  // No need to auto-refresh on mount - would cause infinite loop
 
   const handleUpdateName = async () => {
     try {
@@ -67,10 +60,8 @@ export function ProfileContent() {
       formData.append('name', name);
       formData.append('locale', locale);
       await updateProfile(formData);
-      if (refreshUser) {
-        // Refresh user data after update
-        await refreshUser();
-      }
+      // Refresh user data after update
+      await refreshUser();
     } catch (error) {
       console.error('Error updating profile:', error);
     }

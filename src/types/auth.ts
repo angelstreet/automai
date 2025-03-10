@@ -20,10 +20,18 @@ export interface AuthSession {
 export interface CustomSupabaseUser extends SupabaseUser {
   user_metadata: {
     name?: string;
+    full_name?: string;
+    preferred_username?: string;
+    avatar_url?: string;
     user_role?: string;
     tenant_id?: string;
     tenant_name?: string;
     plan?: string;
+    raw_user_meta_data?: {
+      name?: string;
+      full_name?: string;
+      preferred_username?: string;
+    };
   };
 }
 

@@ -12,7 +12,15 @@ export type AuthUser = {
   updated_at: string;
   user_metadata?: {
     name?: string;
+    full_name?: string;
+    preferred_username?: string;
+    avatar_url?: string;
     tenant_id?: string;
+    raw_user_meta_data?: {
+      name?: string;
+      full_name?: string;
+      preferred_username?: string;
+    };
   };
 };
 
