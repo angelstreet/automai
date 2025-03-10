@@ -37,13 +37,14 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     ".next",
     "tests",
-    "src/components/shadcn",
     "supabase",
-    "src/i18n"
+    "src/i18n",
+    "src/components/shadcn/**/*"
   ]
 }

@@ -108,7 +108,7 @@
     "@types/ws": "8.5.14",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "10.4.21",
     "class-variance-authority": "0.7.1",
     "cross-env": "^7.0.3",
     "electron": "^35.0.0",
