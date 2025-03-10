@@ -1,4 +1,5 @@
 import { launch, Browser, Page } from 'puppeteer';
+import { beforeAll, afterAll } from '@jest/globals';
 
 let browser: Browser;
 let page: Page;
@@ -7,7 +8,7 @@ let page: Page;
 beforeAll(async () => {
   // Launch browser
   browser = await launch({
-    headless: 'new', // Use new headless mode
+    headless: true, // Run in headless mode
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
   });
 

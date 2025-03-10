@@ -2,7 +2,7 @@ export const isElectron = (): boolean => {
   if (
     typeof window !== 'undefined' &&
     typeof window.process === 'object' &&
-    window.process.type === 'renderer'
+    (window.process as any).type === 'renderer'
   ) {
     return true;
   }

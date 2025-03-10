@@ -1,8 +1,6 @@
 import db from '@/lib/supabase/db';
 import {
   Repository,
-  RepositoryCreateInput,
-  RepositoryUpdateInput,
   GitProvider,
   GitProviderType,
   SyncStatus,

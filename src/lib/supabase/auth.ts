@@ -10,7 +10,7 @@ const isUsingSupabase = () => {
 };
 
 export const supabaseAuth = {
-  async getUserById(userId: string): Promise<AuthResult<any>> {
+  async getUserById(userId: string): Promise<AuthResult<UserSession>> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
     }
@@ -28,7 +28,26 @@ export const supabaseAuth = {
         return { success: false, error: 'User not found' };
       }
       
-      return { success: true, data: data.user };
+      // Extract user data with metadata
+      const user = data.user;
+      const metadata = user.user_metadata || {};
+      
+      // Format user data to match UserSession type
+      return { 
+        success: true, 
+        data: {
+          id: user.id,
+          email: user.email,
+          name: metadata.name || metadata.full_name || user.email?.split('@')[0] || null,
+          image: metadata.avatar_url || null,
+          role: metadata.role || 'user',
+          tenant_id: metadata.tenant_id || 'trial',
+          tenant_name: metadata.tenant_name || 'Trial',
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+          user_metadata: user.user_metadata
+        }
+      };
     } catch (error) {
       console.error('Error getting user by ID:', error);
       return {
@@ -148,6 +167,9 @@ export const supabaseAuth = {
             role: metadata.role || 'user',
             tenant_id,
             tenant_name,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+            user_metadata: user.user_metadata
           },
           accessToken: access_token,
           expires: expires_at ? new Date(expires_at * 1000).toISOString() : '',
