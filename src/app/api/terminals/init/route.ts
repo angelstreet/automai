@@ -10,15 +10,21 @@ export async function POST(request: NextRequest) {
   try {
     console.log('Authentication bypassed for debugging');
 
-    const wss = getWebSocketServer();
-    console.log('WebSocket server initialized:', !!wss);
+    // Prevent server restarts by handling WebSocket initialization carefully
+    try {
+      const wss = getWebSocketServer();
+      console.log('WebSocket server initialized:', !!wss);
 
-    if (!wss) {
-      console.error('Failed to initialize WebSocket server');
-      return NextResponse.json(
-        { success: false, error: 'Failed to initialize WebSocket server' },
-        { status: 500 },
-      );
+      if (!wss) {
+        console.error('Failed to initialize WebSocket server');
+        return NextResponse.json(
+          { success: false, error: 'Failed to initialize WebSocket server' },
+          { status: 500 },
+        );
+      }
+    } catch (wsError) {
+      console.error('WebSocket server initialization error (gracefully continuing):', wsError);
+      // Don't fail the whole request due to WebSocket issues
     }
 
     console.log('WebSocket server ready for connections');

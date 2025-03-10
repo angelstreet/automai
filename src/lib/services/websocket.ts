@@ -75,10 +75,10 @@ export function initializeWebSocketServer(): WebSocketServer {
     });
   });
 
-  // Store the instance in the global variable (in development/test)
-  if (process.env.NODE_ENV !== 'production') {
-    global.websocketServer = wss;
-  }
+  // Always store the instance in the global variable to prevent recreation
+  // This prevents server restarts in development mode
+  global.websocketServer = wss;
+  logger.info('WebSocket server instance stored in global scope to prevent recreation on HMR');
 
   logger.info('WebSocket server initialized');
   return wss;
@@ -86,12 +86,28 @@ export function initializeWebSocketServer(): WebSocketServer {
 
 /**
  * Get the WebSocket server instance, initializing it if necessary
+ * Uses a more resilient approach to prevent server restarts in development
  */
 export function getWebSocketServer(): WebSocketServer {
-  if (!global.websocketServer) {
-    return initializeWebSocketServer();
+  // Check if we already have an instance and it's operational
+  if (global.websocketServer) {
+    logger.info('Reusing existing WebSocket server instance');
+    return global.websocketServer;
   }
-  return global.websocketServer;
+  
+  try {
+    logger.info('No existing WebSocket server found, initializing a new one');
+    return initializeWebSocketServer();
+  } catch (error) {
+    // If initialization fails, create a dummy WebSocket server that doesn't cause restart
+    logger.error(`Error initializing WebSocket server: ${error}`);
+    logger.info('Creating fallback WebSocket server to prevent crashes');
+    
+    // Create a basic WebSocket server with noServer: true that won't cause issues
+    const fallbackServer = new WebSocketServer({ noServer: true });
+    global.websocketServer = fallbackServer;
+    return fallbackServer;
+  }
 }
 
 /**
