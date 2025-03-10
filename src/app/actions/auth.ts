@@ -62,18 +62,40 @@ export async function handleAuthCallback(url: string) {
     const { searchParams } = new URL(url);
     const code = searchParams.get('code');
     
+    console.log('⭐ AUTH CALLBACK - Processing code from URL');
+    
     if (!code) {
+      console.error('⭐ AUTH CALLBACK ERROR - No code provided in URL');
       throw new Error('No code provided in URL');
     }
     
     // Invalidate user cache before processing callback
     await invalidateUserCache();
+    console.log('⭐ AUTH CALLBACK - User cache invalidated');
     
     // Handle the OAuth callback
+    console.log('⭐ AUTH CALLBACK - Exchanging code for session');
     const result = await supabaseAuth.handleOAuthCallback(code);
     
+    if (result.error) {
+      console.error('⭐ AUTH CALLBACK ERROR - Failed to exchange code:', result.error);
+    }
+    
     if (result.success && result.data) {
+      console.log('⭐ AUTH CALLBACK SUCCESS - Session obtained');
+      
+      // Log session details for debugging
+      const session = result.data.session;
+      console.log('⭐ AUTH CALLBACK - Session present:', !!session);
+      
+      if (session) {
+        console.log('⭐ AUTH CALLBACK - Session expires at:', new Date(session.expires_at * 1000).toISOString());
+        console.log('⭐ AUTH CALLBACK - User ID:', session.user.id);
+        console.log('⭐ AUTH CALLBACK - User email:', session.user.email);
+      }
+      
       // Ensure user exists in database after successful authentication
+      console.log('⭐ AUTH CALLBACK - Ensuring user in database');
       await ensureUserInDatabase(result.data);
       
       // Get the tenant information for redirection
@@ -88,7 +110,7 @@ export async function handleAuthCallback(url: string) {
       const locale = localeIndex >= 0 ? pathParts[localeIndex] : 'en';
       
       // Log for debugging
-      console.log('Auth callback redirect using tenant:', tenantName);
+      console.log('⭐ AUTH CALLBACK - Redirect using tenant:', tenantName);
       
       // Redirect URL for after authentication
       const redirectUrl = `/${locale}/${tenantName}/dashboard`;
@@ -100,13 +122,14 @@ export async function handleAuthCallback(url: string) {
     }
     
     // Handle authentication failure
+    console.error('⭐ AUTH CALLBACK ERROR - Authentication failed:', result.error);
     return { 
       success: false, 
       error: result.error || 'Failed to authenticate', 
       redirectUrl: '/login?error=Authentication+failed'
     };
   } catch (error: any) {
-    console.error('Error in handleAuthCallback:', error);
+    console.error('⭐ AUTH CALLBACK ERROR - Exception:', error);
     return { 
       success: false, 
       error: error.message || 'Authentication failed', 

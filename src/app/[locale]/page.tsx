@@ -9,6 +9,9 @@ export async function generateStaticParams() {
 }
 
 export default async function Page({ params }: { params: { locale: string } }) {
+  // Await params to ensure they're fully resolved
+  const { locale } = await params;
+  
   // Try to get the authenticated user
   const userResult = await getUser();
   
@@ -21,5 +24,5 @@ export default async function Page({ params }: { params: { locale: string } }) {
   console.log('Root page redirect using tenant:', tenantName);
   
   // Redirect to the appropriate tenant dashboard
-  redirect(`/${params.locale}/${tenantName}/dashboard`);
+  redirect(`/${locale}/${tenantName}/dashboard`);
 }

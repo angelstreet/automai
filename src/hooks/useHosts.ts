@@ -1,61 +1,110 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import useSWR from 'swr';
 import { Host } from '@/types/hosts';
-import { 
-  getHosts, 
-  addHost, 
-  deleteHost as deleteHostAction, 
-  testHostConnection as testConnectionAction,
-  testAllHosts,
-  updateHost
-} from '@/app/actions/hosts';
+import { hostsApi } from '@/lib/api/hosts';
 
-// SWR fetcher function
+// Define a SWR fetcher function for hosts with request throttling
+const requestTimestamps: number[] = [];
+const REQUEST_LIMIT = 5; // Max requests in window
+const REQUEST_WINDOW = 10000; // 10 second window
+
 const hostsFetcher = async () => {
-  const result = await getHosts();
-  if (!result.success) {
-    throw new Error(result.error || 'Failed to fetch hosts');
+  const now = Date.now();
+  
+  // Add current timestamp and remove old ones
+  requestTimestamps.push(now);
+  const recentRequests = requestTimestamps.filter(ts => now - ts < REQUEST_WINDOW);
+  requestTimestamps.length = 0;
+  requestTimestamps.push(...recentRequests);
+  
+  // If too many requests in window, throw error to prevent rate limit
+  if (requestTimestamps.length > REQUEST_LIMIT) {
+    console.warn(`Too many API requests (${requestTimestamps.length}) in ${REQUEST_WINDOW/1000}s window. Throttling.`);
+    throw new Error('Request throttled');
   }
-  return result.data || [];
+  
+  // Fetch hosts with normal flow
+  const hosts = await hostsApi.getHosts();
+  
+  // Process hosts for consistency
+  return hosts.map((host: Host) => ({
+    ...host,
+    status: host.status || 'pending',
+    lastConnected: host.lastConnected || host.created_at,
+  }));
 };
 
 export function useHosts(initialHosts: Host[] = []) {
-  const { data, error, isLoading, isValidating, mutate } = useSWR<Host[]>(
-    'hosts',
-    hostsFetcher,
+  // Use a stable key to prevent multiple fetches
+  const HOSTS_CACHE_KEY = 'global-hosts-key';
+  const lastRequestTimeRef = useRef<number>(0);
+  const MIN_REQUEST_INTERVAL = 3000; // Minimum 3 seconds between requests
+  
+  // Wrap the fetcher with request throttling
+  const throttledFetcher = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastRequestTimeRef.current < MIN_REQUEST_INTERVAL) {
+      console.log(`Request throttled, last request was ${now - lastRequestTimeRef.current}ms ago`);
+      // Return existing data from cache
+      return initialHosts;
+    }
+    
+    // Record the request time
+    lastRequestTimeRef.current = now;
+    return hostsFetcher();
+  }, [initialHosts]);
+  
+  const { data, error, isLoading: swrIsLoading, isValidating, mutate } = useSWR(
+    HOSTS_CACHE_KEY, 
+    throttledFetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      dedupingInterval: 5000, // 5 seconds between identical requests
-      fallbackData: initialHosts
+      dedupingInterval: 120000, // 2 minutes between identical requests
+      fallbackData: initialHosts,
+      revalidateIfStale: false, // Don't revalidate stale data automatically
+      revalidateOnMount: true, // Only fetch on initial mount
+      focusThrottleInterval: 180000, // 3 minutes between focus revalidations
+      errorRetryCount: 0, // No automatic retries
+      shouldRetryOnError: false, // Don't retry on errors
+      loadingTimeout: 10000, // 10 seconds before timeout
+      onLoadingSlow: () => console.warn('Slow loading of hosts data'),
+      isPaused: () => false, // Never pause to ensure only one request is active
     }
   );
   
+  const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTesting, setIsTesting] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Update local state when SWR data changes
+  useEffect(() => {
+    setIsLoading(swrIsLoading);
+  }, [swrIsLoading]);
   
   const hosts = data || [];
 
   // Add a new host
   const addNewHost = useCallback(async (hostData: Omit<Host, 'id'>) => {
     try {
-      const result = await addHost(hostData);
-      
-      if (!result.success) {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to add host',
-          variant: 'destructive',
-        });
-        return false;
-      }
+      // Create new host
+      const newHost = await hostsApi.createHost({
+        name: hostData.name,
+        description: hostData.description || '',
+        type: hostData.type,
+        ip: hostData.ip,
+        port: hostData.port || 22,
+        username: hostData.username || hostData.user,
+        password: hostData.password || '',
+        status: 'pending'
+      });
       
       // Update cache with the new host
-      mutate(currentHosts => [...(currentHosts || []), result.data!], false);
+      mutate(currentHosts => [...(currentHosts || []), newHost], false);
       
       toast({
         title: 'Success',
@@ -66,14 +115,14 @@ export function useHosts(initialHosts: Host[] = []) {
       console.error('Error adding host:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add host',
+        description: error instanceof Error ? error.message : 'Failed to add host',
         variant: 'destructive',
       });
       return false;
     }
   }, [toast, mutate]);
 
-  // Update an existing host
+  // Update an existing host - implement this when the API has update functionality
   const updateHostDetails = useCallback(async (id: string, updates: Partial<Omit<Host, 'id'>>) => {
     try {
       // Optimistic update
@@ -84,22 +133,8 @@ export function useHosts(initialHosts: Host[] = []) {
         false
       );
       
-      const result = await updateHost(id, updates);
-      
-      if (!result.success) {
-        // Revert changes on failure
-        mutate();
-        
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to update host',
-          variant: 'destructive',
-        });
-        return false;
-      }
-      
-      // Update with actual server data
-      mutate();
+      // TODO: Implement API call when the update endpoint is available
+      // For now, just use the optimistic update
       
       toast({
         title: 'Success',
@@ -132,19 +167,8 @@ export function useHosts(initialHosts: Host[] = []) {
         false
       );
       
-      const result = await deleteHostAction(id);
-      
-      if (!result.success) {
-        // Rollback on failure
-        mutate();
-        
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to delete host',
-          variant: 'destructive',
-        });
-        return false;
-      }
+      // Use the API client to delete the host
+      await hostsApi.deleteHost(id);
       
       toast({
         title: 'Success',
@@ -159,7 +183,7 @@ export function useHosts(initialHosts: Host[] = []) {
       
       toast({
         title: 'Error',
-        description: 'Failed to delete host',
+        description: error instanceof Error ? error.message : 'Failed to delete host',
         variant: 'destructive',
       });
       return false;
@@ -173,34 +197,47 @@ export function useHosts(initialHosts: Host[] = []) {
     try {
       setIsTesting(id);
       
+      // Find the host
+      const host = hosts.find(host => host.id === id);
+      if (!host) {
+        throw new Error('Host not found');
+      }
+      
       // Optimistic update
       mutate(
         currentHosts => 
-          currentHosts?.map(host => 
-            host.id === id 
-              ? { ...host, status: 'testing' } 
-              : host
+          currentHosts?.map(h => 
+            h.id === id 
+              ? { ...h, status: 'testing' } 
+              : h
           ),
         false
       );
       
-      const result = await testConnectionAction(id);
+      const result = await hostsApi.testConnection({
+        type: host.type,
+        ip: host.ip,
+        port: host.port,
+        username: host.user, // Host interface uses 'user' field
+        password: host.password,
+        hostId: host.id
+      });
       
       // Update with test results
       mutate(
         currentHosts => {
           if (!currentHosts) return [];
           
-          return currentHosts.map(host => {
-            if (host.id === id) {
+          return currentHosts.map(h => {
+            if (h.id === id) {
               return {
-                ...host,
+                ...h,
                 status: result.success ? 'connected' : 'failed',
-                errorMessage: !result.success ? result.error : undefined,
-                updated_at: result.success ? new Date() : host.updated_at
+                errorMessage: !result.success ? result.message : undefined,
+                updated_at: result.success ? new Date() : h.updated_at
               };
             }
-            return host;
+            return h;
           });
         },
         false
@@ -236,36 +273,65 @@ export function useHosts(initialHosts: Host[] = []) {
     }
   }, [toast, mutate]);
 
-  // Refresh all host connections
+  // Refresh all host connections with throttling
+  const lastRefreshTimeRef = useRef<number>(0);
+  const MIN_REFRESH_INTERVAL = 5000; // 5 seconds minimum between refreshes
+  
   const refreshConnections = useCallback(async () => {
+    // Check if we're trying to refresh too frequently
+    const now = Date.now();
+    if (now - lastRefreshTimeRef.current < MIN_REFRESH_INTERVAL) {
+      console.log(`Refresh throttled, last refresh was ${now - lastRefreshTimeRef.current}ms ago`);
+      toast({
+        title: 'Info',
+        description: 'Please wait a few seconds before refreshing again',
+      });
+      return false;
+    }
+    
+    // Update the last refresh time
+    lastRefreshTimeRef.current = now;
+    
     try {
-      // First refresh the hosts list
-      await mutate();
+      // Use mutate to refresh the hosts list, but don't cause a refetch if we already have data
+      // Instead, let our throttling mechanism determine if we need fresh data
+      if (hosts.length === 0) {
+        await mutate();
+      }
       
-      // Then test all connections
-      const testResults = await testAllHosts();
+      // Then test all connections, but only if we have hosts
+      if (hosts.length === 0) {
+        toast({
+          title: 'Info',
+          description: 'No hosts found to refresh',
+        });
+        return false;
+      }
       
-      if (testResults.success && testResults.results) {
-        // Update the status of each host
+      // API call to test all connections
+      const results = await hostsApi.testAllHosts();
+      
+      if (results.success) {
+        // Update the status of each host without causing a refetch
         mutate(
           currentHosts => {
-            if (!currentHosts) return [];
+            if (!currentHosts || currentHosts.length === 0) return hosts;
             
             const now = new Date();
             return currentHosts.map(host => {
-              const result = testResults.results?.find(r => r.id === host.id);
+              const result = results.results?.find(r => r.hostId === host.id);
               if (result) {
                 return {
                   ...host,
-                  status: result.success ? 'connected' : 'failed',
-                  errorMessage: !result.success ? result.message : undefined,
-                  updated_at: result.success ? now : host.updated_at
+                  status: result.result.success ? 'connected' : 'failed',
+                  errorMessage: !result.result.success ? result.result.message : undefined,
+                  updated_at: result.result.success ? now : host.updated_at
                 };
               }
               return host;
             });
           },
-          false
+          false // Don't revalidate
         );
         
         toast({
@@ -276,7 +342,7 @@ export function useHosts(initialHosts: Host[] = []) {
       } else {
         toast({
           title: 'Warning',
-          description: testResults.error || 'Failed to test some connections',
+          description: 'Failed to test some connections',
           variant: 'default',
         });
         return false;
@@ -285,16 +351,12 @@ export function useHosts(initialHosts: Host[] = []) {
       console.error('Error refreshing connections:', error);
       toast({
         title: 'Error',
-        description: 'Failed to refresh connections',
+        description: error instanceof Error ? error.message : 'Failed to refresh connections',
         variant: 'destructive',
       });
-      
-      // Force a fresh revalidation in case of error
-      mutate();
-      
       return false;
     }
-  }, [toast, mutate]);
+  }, [toast, mutate, hosts]);
 
   return {
     hosts,

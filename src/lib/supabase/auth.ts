@@ -189,16 +189,40 @@ export const supabaseAuth = {
       return { success: false, error: 'Supabase auth not available in this environment' };
     }
     try {
+      console.log('🔐 AUTH_SERVICE: Starting OAuth code exchange for code:', code.substring(0, 6) + '...');
+      
+      // Get cookies before exchange
       const cookieStore = await cookies();
+      const cookiesBefore = cookieStore.getAll().filter(c => 
+        c.name.startsWith('sb-') || c.name.includes('supabase')
+      );
+      console.log('🔐 AUTH_SERVICE: Cookies before exchange:', 
+        cookiesBefore.map(c => c.name));
+      
+      // Create client and exchange code
       const supabase = await createClient(cookieStore);
+      console.log('🔐 AUTH_SERVICE: Calling exchangeCodeForSession');
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      
       if (error) {
-        console.error('Error exchanging code for session:', error);
+        console.error('🔐 AUTH_SERVICE ERROR: Error exchanging code for session:', error);
         return { success: false, error: error.message };
       }
+      
+      // Get cookies after exchange to verify they were set
+      const cookiesAfter = (await cookies()).getAll().filter(c => 
+        c.name.startsWith('sb-') || c.name.includes('supabase')
+      );
+      console.log('🔐 AUTH_SERVICE: Cookies after exchange:', 
+        cookiesAfter.map(c => c.name));
+      
+      console.log('🔐 AUTH_SERVICE: Exchange successful:', 
+        !!data?.session, 
+        data?.session?.user?.id || 'no user id');
+      
       return { success: true, data };
     } catch (error) {
-      console.error('Error handling OAuth callback:', error);
+      console.error('🔐 AUTH_SERVICE ERROR: Error handling OAuth callback:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to process OAuth callback',

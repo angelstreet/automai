@@ -1,7 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
-import { ThemeProviders } from '@/components/providers';
+import { ThemeProviders, SWRProvider } from '@/components/providers';
 import { cookies } from 'next/headers';
 
 const inter = Inter({
@@ -40,7 +40,11 @@ export default async function RootLayout({
         {/* next-themes will handle theme flashing with suppressHydrationWarning */}
       </head>
       <body>
-        <ThemeProviders defaultTheme={theme}>{children}</ThemeProviders>
+        <ThemeProviders defaultTheme={theme}>
+          <SWRProvider>
+            {children}
+          </SWRProvider>
+        </ThemeProviders>
       </body>
     </html>
   );

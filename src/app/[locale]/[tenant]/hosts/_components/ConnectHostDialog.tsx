@@ -28,8 +28,7 @@ interface ConnectHostDialogProps {
 
 export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHostDialogProps) {
   const t = useTranslations('Common');
-  const paramsPromise = useParams();
-  const params = React.use(paramsPromise);
+  const params = useParams();
   const locale = params.locale as string;
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
