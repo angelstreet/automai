@@ -13,4 +13,4 @@ export {
     updateProfile,
   } from '@/lib/supabase/auth';
   
-  export type { UserSession, SessionData, AuthResult } from '@/lib/supabase/auth';
+  export type { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/auth';

@@ -20,9 +20,34 @@ export interface AuthSession {
 export interface CustomSupabaseUser extends SupabaseUser {
   user_metadata: {
     name?: string;
-    role?: string;
+    user_role?: string;
     tenant_id?: string;
     tenant_name?: string;
     plan?: string;
   };
 }
+
+// Types for Supabase auth module
+export interface UserSession {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+  role?: string;
+  tenant_id?: string;
+  tenant_name?: string | null;
+}
+
+export interface SessionData {
+  user: UserSession;
+  accessToken: string;
+  expires: string;
+}
+
+export interface AuthResult<T = any> {
+  success: boolean;
+  error?: string;
+  data?: T;
+}
+
+export type OAuthProvider = 'google' | 'github' | 'gitlab';

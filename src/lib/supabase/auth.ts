@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { createClient } from './server';
 import { createClient as createAdminClient } from './admin';
+import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/auth';
 
 // Flag to track if we've already logged auth session missing errors
 let authSessionMissingErrorLogged = false;
@@ -9,29 +10,6 @@ let authSessionMissingErrorLogged = false;
 const isUsingSupabase = () => {
   return process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 };
-
-// Types for Supabase auth
-export interface UserSession {
-  id: string;
-  email?: string | null;
-  name?: string | null;
-  image?: string | null;
-  role?: string;
-  tenant_id?: string;
-  tenant_name?: string | null;
-}
-
-export interface SessionData {
-  user: UserSession;
-  accessToken: string;
-  expires: string;
-}
-
-export interface AuthResult<T = any> {
-  success: boolean;
-  error?: string;
-  data?: T;
-}
 
 export const supabaseAuth = {
   async getSession(): Promise<AuthResult<SessionData>> {
@@ -182,7 +160,7 @@ export const supabaseAuth = {
   },
 
   async signInWithOAuth(
-    provider: 'google' | 'github' | 'gitlab',
+    provider: OAuthProvider,
     options?: { redirectTo?: string }
   ): Promise<AuthResult> {
     if (!isUsingSupabase()) {
@@ -332,7 +310,7 @@ export const signUp = (
   options?: { redirectTo?: string; data?: Record<string, any> }
 ) => supabaseAuth.signUp(email, password, options);
 export const signInWithOAuth = (
-  provider: 'google' | 'github' | 'gitlab',
+  provider: OAuthProvider,
   options?: { redirectTo?: string }
 ) => supabaseAuth.signInWithOAuth(provider, options);
 export const handleOAuthCallback = (code: string) => supabaseAuth.handleOAuthCallback(code);
