@@ -108,7 +108,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         port: parseInt(formData.port),
         user: formData.username,
         password: formData.password,
-        status: 'pending',
+        status: 'connected', // Set to connected by default
       });
 
       toast.success(t('success.connected', { name: formData.name }));

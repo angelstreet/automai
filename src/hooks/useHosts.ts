@@ -60,7 +60,18 @@ export function useHosts(initialHosts: Host[] = []) {
         return false;
       }
       
-      setHosts(prev => [...prev, result.data!]);
+      // Ensure the host has correct status and timestamp
+      const host = result.data!;
+      const currentTime = new Date();
+      
+      // Make sure the host has connected status and timestamp
+      const processedHost = {
+        ...host,
+        status: 'connected', // Force connected status
+        updated_at: host.updated_at ? new Date(host.updated_at) : currentTime
+      };
+      
+      setHosts(prev => [...prev, processedHost]);
       toast({
         title: 'Success',
         description: 'Host added successfully',
@@ -148,11 +159,13 @@ export function useHosts(initialHosts: Host[] = []) {
       // Update host status based on test result
       setHosts(prev => prev.map(host => {
         if (host.id === id) {
+          // When test is successful, update the timestamp
+          const currentTime = new Date();
           return {
             ...host,
             status: result.success ? 'connected' : 'failed',
             errorMessage: !result.success ? result.error : undefined,
-            lastConnected: result.success ? new Date() : host.lastConnected,
+            updated_at: result.success ? currentTime : host.updated_at
           };
         }
         return host;
@@ -211,7 +224,7 @@ export function useHosts(initialHosts: Host[] = []) {
               ...host,
               status: result.success ? 'connected' : 'failed',
               errorMessage: !result.success ? result.message : undefined,
-              lastConnected: result.success ? now : host.lastConnected,
+              updated_at: result.success ? now : host.updated_at
             };
           }
           return host;

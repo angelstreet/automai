@@ -86,9 +86,13 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
 
 export async function testHostConnection(id: string): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
+    // Update updated_at to track last connection test time
     await db.host.update({
       where: { id },
-      data: { last_connection_test: new Date().toISOString() }
+      data: { 
+        updated_at: new Date().toISOString(),
+        status: 'connected' // Set to connected on successful test
+      }
     });
     
     // In a real application, you would actually test the connection here

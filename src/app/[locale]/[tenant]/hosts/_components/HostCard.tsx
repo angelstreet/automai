@@ -199,9 +199,9 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               {t('terminal')}
             </Button>
             <p className="text-xs mt-1 text-muted-foreground">
-              {host.lastConnected
-                ? `${t('lastConnected')}: ${new Date(host.lastConnected).toLocaleDateString()}`
-                : `${t('lastConnected')}: ${t('never')}`}
+              {host.updated_at
+                ? `${t('updated_at')}: ${new Date(host.updated_at).toLocaleDateString()}`
+                : `${t('updated_at')}: ${t('never')}`}
             </p>
           </div>
         </CardContent>
@@ -224,8 +224,8 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
             </div>
             <div className="text-sm text-muted-foreground">
               <p>
-                {t('lastConnected')}:{' '}
-                {host.lastConnected ? new Date(host.lastConnected).toLocaleString() : t('never')}
+                {t('updated_at')}:{' '}
+                {host.updated_at ? new Date(host.updated_at).toLocaleString() : t('never')}
               </p>
             </div>
           </div>
