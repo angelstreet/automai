@@ -8,7 +8,7 @@ Automai is a multi-tenant SaaS platform designed for end-to-end test automation 
 npx eslint . --ext .ts,.tsx --quiet
 # Restart next.js frontend
 npx supabase gen types typescript --project-id wexkgcszrwxqsthahfyq > src/types/supabase.ts
-
+code2prompt ../src --exclude="*.txt,*.md,*.mdc" --output=output.txt --line-number 
 
 # Kill running process node
  pkill -f "node"
