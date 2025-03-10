@@ -203,9 +203,9 @@ export default function HostContainer() {
         type: formData.type,
         ip: formData.ip,
         port: parseInt(formData.port),
-        username: formData.username, // This is fine now because our API handles it
+        username: formData.username,
         password: formData.password,
-        status: 'connected',
+        status: 'pending', // Set to pending instead of connected since we're not testing
       });
 
       setShowAddHost(false);
@@ -213,7 +213,7 @@ export default function HostContainer() {
       // Add lastConnected field for UI display purposes
       const hostWithLastConnected = {
         ...newHost,
-        lastConnected: new Date(),
+        lastConnected: null, // Set to null since we haven't tested the connection
       };
 
       setHosts((currentHosts) => [hostWithLastConnected, ...currentHosts]);
@@ -318,10 +318,6 @@ export default function HostContainer() {
             formData={formData}
             onChange={setFormData}
             onSave={handleSaveHost}
-            onTestSuccess={() => {
-              // Do nothing special on test success
-              // The save button will be enabled
-            }}
           />
         </DialogContent>
       </Dialog>
