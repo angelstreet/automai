@@ -40,7 +40,8 @@ export function RoleProvider({ children }: RoleProviderProps) {
     if (user && !loading) {
       console.log('RoleContext: Initializing user role from user data:', user);
       
-      // Check for role directly on user object first (new format)
+      // Role and other metadata fields are already extracted 
+      // into the top-level user object in auth.ts
       if (user.role) {
         console.log('RoleContext: Found role directly on user object:', user.role);
         
@@ -59,29 +60,7 @@ export function RoleProvider({ children }: RoleProviderProps) {
         }
       }
       
-      // Then try to get the role from user metadata (legacy format)
-      const metadata = user.user_metadata || {};
-      console.log('RoleContext: User metadata:', metadata);
-      const metadataRole = metadata.role || metadata.user_role;
-      console.log('RoleContext: Found role in metadata:', metadataRole);
-      
-      if (metadataRole) {
-        // If admin role is found, prioritize it
-        if (metadataRole === 'admin') {
-          console.log('RoleContext: Setting admin role from metadata');
-          setRoleState('admin');
-          return;
-        }
-        
-        // Ensure the role is a valid Role type
-        if (isValidRole(metadataRole)) {
-          console.log('RoleContext: Setting validated role from metadata:', metadataRole);
-          setRoleState(metadataRole as Role);
-          return;
-        }
-      }
-      
-      // If not found in metadata or user object, fetch from the database
+      // Fetch from the database as fallback
       const fetchRoleFromDB = async () => {
         try {
           console.log('RoleContext: Fetching role from database');
@@ -117,6 +96,7 @@ export function RoleProvider({ children }: RoleProviderProps) {
         }
       };
       
+      // If we didn't find a valid role on the user object, fetch from DB
       fetchRoleFromDB();
     }
   }, [user, loading]);

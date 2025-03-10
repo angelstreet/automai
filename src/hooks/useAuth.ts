@@ -74,6 +74,9 @@ export function useAuth() {
       if (data) {
         console.log('🔄 AUTH HOOK (SWR): User ID:', data.id);
         console.log('🔄 AUTH HOOK (SWR): User email:', data.email);
+        console.log('🔄 AUTH HOOK (SWR): User name:', data.name);
+        console.log('🔄 AUTH HOOK (SWR): User tenant:', data.tenant_name);
+        console.log('🔄 AUTH HOOK (SWR): User role:', data.role);
       } else {
         console.log('🔄 AUTH HOOK (SWR): No user data received - not authenticated');
       }

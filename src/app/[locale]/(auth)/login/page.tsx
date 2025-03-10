@@ -36,8 +36,8 @@ export default function LoginPage() {
     });
     
     if (user && !loading) {
-      // Use tenant_name or default to 'trial'
-      const tenantName = user.user_metadata?.tenant_name || 'trial';
+      // tenant_name is directly on the user object (not in user_metadata)
+      const tenantName = user.tenant_name || 'trial';
       
       console.log('🔒 LOGIN PAGE: Redirecting to tenant dashboard:', tenantName);
       router.push(`/${locale}/${tenantName}/dashboard`);
@@ -86,8 +86,8 @@ export default function LoginPage() {
       const result = await signInWithPassword(email, password);
       
       if (result?.session) {
-        // Use tenant_name or default to 'trial'
-        const tenantName = result.user?.user_metadata?.tenant_name || 'trial';
+        // tenant_name is directly on the user object (not in user_metadata)
+        const tenantName = result.user?.tenant_name || 'trial';
         
         console.log('Login submission redirecting to tenant:', tenantName);
         // Redirect to dashboard

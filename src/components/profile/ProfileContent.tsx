@@ -23,29 +23,13 @@ export function ProfileContent() {
   // Update name state when user data becomes available
   useEffect(() => {
     if (user) {
-      // Extended debug logging - VERSION 2025-03-09
+      // In auth.ts, user_metadata fields are already extracted to the top-level user object
       console.log('🔍 PROFILE COMPONENT: Full user object:', user);
-      console.log('🔍 PROFILE COMPONENT: User metadata:', user.user_metadata);
-      console.log('🔍 PROFILE COMPONENT: Direct name on metadata:', user.user_metadata?.name);
       console.log('🔍 PROFILE COMPONENT: Direct name on user:', user.name);
       
-      // Check all possible name locations
-      const possibleNames = {
-        'user.name': user.name,
-        'user.user_metadata.name': user.user_metadata?.name,
-        'user.user_metadata.full_name': user.user_metadata?.full_name,
-        'user.user_metadata.raw_user_meta_data?.name': (user.user_metadata as any)?.raw_user_meta_data?.name,
-        'user.user_metadata.preferred_username': user.user_metadata?.preferred_username,
-        'email username': user.email?.split('@')[0]
-      };
-      
-      console.log('🔍 PROFILE COMPONENT: All possible name values:', possibleNames);
-      
-      // Use any available name with priority order
-      const userName = user?.name || user?.user_metadata?.name || user?.user_metadata?.full_name || 
-                      (user.user_metadata as any)?.raw_user_meta_data?.name || 
-                      user?.user_metadata?.preferred_username || 
-                      user?.email?.split('@')[0] || '';
+      // Use the name directly from the user object
+      // The auth service already extracts name from metadata
+      const userName = user.name || user.email?.split('@')[0] || '';
       
       console.log('🔍 PROFILE COMPONENT: Selected username:', userName);
       setName(userName);
@@ -122,7 +106,7 @@ export function ProfileContent() {
                 />
                 <Button 
                   onClick={handleUpdateName} 
-                  disabled={isUpdating || name === (user.name || user.user_metadata?.name || '')}
+                  disabled={isUpdating || name === user.name}
                 >
                   {isUpdating ? t('updating') : t('update')}
                 </Button>
@@ -134,7 +118,7 @@ export function ProfileContent() {
             </div>
             <div>
               <label className="text-sm font-medium">{t('plan')}</label>
-              <p className="text-muted-foreground">{(user.user_metadata as any)?.plan || 'TRIAL'}</p>
+              <p className="text-muted-foreground">{user.plan || 'TRIAL'}</p>
             </div>
           </div>
         </div>
@@ -149,7 +133,7 @@ export function ProfileContent() {
             >
               {t('manageSettings')}
             </Button>
-            {((user.user_metadata as any)?.plan !== 'ENTERPRISE') && (
+            {(user.plan !== 'ENTERPRISE') && (
               <Button
                 variant="outline"
                 onClick={() => router.push(`/${locale}/${tenant || 'trial'}/billing`)}
@@ -161,7 +145,7 @@ export function ProfileContent() {
         </div>
 
         {/* Tenant Information (Enterprise only) */}
-        {((user.user_metadata as any)?.plan === 'ENTERPRISE') && tenant && (
+        {(user.plan === 'ENTERPRISE') && tenant && (
           <div className="p-6 bg-card rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">{t('workspaceInfo')}</h2>
             <div className="space-y-4">

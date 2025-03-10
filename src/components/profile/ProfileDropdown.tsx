@@ -36,22 +36,13 @@ export function ProfileDropdown() {
 
   if (!user) return null;
 
-  // Get user avatar image
-  const userImage = (user.user_metadata as any)?.avatar_url || '/avatars/01.svg';
+  // Get user avatar image - in auth.ts, avatar_url is extracted into the user.image field
+  const userImage = user.image || '/avatars/01.svg';
   
-  // Get user metadata with better handling of different structures
-  const metadata = user.user_metadata || {};
-  
-  // Get user display name using various possible fields
+  // Get user display name
+  // All metadata fields are already extracted to the top-level user object in auth.ts
   const userName = 
-    // Try direct metadata fields
-    metadata.name || 
-    metadata.full_name || 
-    // Try raw metadata if nested
-    (metadata as any)?.raw_user_meta_data?.name ||
-    // Try preferred_username which some providers use
-    metadata.preferred_username ||
-    // Users with name directly on user object (from our enhancements)
+    // Name directly on user object (extracted from metadata by auth service)
     user.name ||
     // Fall back to email username
     user.email?.split('@')[0] || 

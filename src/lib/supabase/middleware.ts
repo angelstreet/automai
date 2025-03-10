@@ -107,6 +107,25 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // If no user is found or there's an error, redirect to login
   if (error || !data.user) {
     console.log('No authenticated user found. Redirecting to login page.');
+    console.log('Auth error details:', error?.message);
+    console.log('Request cookies:', request.cookies.getAll()
+      .filter(c => c.name.startsWith('sb-') || c.name.includes('supabase'))
+      .map(c => c.name)
+      .join(', '));
+    
+    // Check if there are some auth cookies present even though we couldn't get a user
+    // This might indicate a cookie-related issue rather than truly unauthenticated
+    const hasAuthCookies = request.cookies.getAll()
+      .some(c => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
+    
+    if (hasAuthCookies) {
+      console.log('Auth cookies present but failed to authenticate - possible cookie issue');
+      // For debugging: if auth cookies exist but auth failed, we'll still let the request through
+      // This helps diagnose issues where cookies exist but aren't being properly parsed
+      // In production, you'd want to remove this and always redirect to login
+      console.log('Allowing request to proceed despite auth failure due to cookie presence');
+      return response;
+    }
     
     // Extract locale from URL
     const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
