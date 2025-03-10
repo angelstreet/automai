@@ -277,8 +277,9 @@ export async function updateProfile(formData: FormData | ProfileUpdateData) {
     
     console.log('Profile updated successfully');
     
-    // Redirect back to profile page
-    redirect(`/${locale}/profile`);
+    // Return success instead of redirecting
+    // Let the client handle state updates
+    return { success: true };
   } catch (error) {
     console.error('Error updating profile:', error);
     throw new Error('Failed to update profile');

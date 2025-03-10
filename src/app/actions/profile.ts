@@ -16,6 +16,24 @@ export async function updateUserProfile(data: ProfileData): Promise<{ success: b
       return { success: false, error: 'No data provided for update' };
     }
     
+    // Get current user to compare values
+    const currentUser = await supabaseAuth.getUser();
+    if (!currentUser.success || !currentUser.data) {
+      return { success: false, error: 'Could not retrieve current user data' };
+    }
+    
+    // Check if there are actual changes
+    const user = currentUser.data;
+    const currentName = user.name || user.user_metadata?.name || '';
+    const currentAvatar = user.image || user.user_metadata?.avatar_url || '';
+    
+    // Skip update if no actual changes
+    if ((data.name && data.name === currentName) && 
+        (data.avatar_url && data.avatar_url === currentAvatar)) {
+      console.log('No changes detected, skipping profile update');
+      return { success: true };
+    }
+    
     // Build user_metadata object
     const metadata: Record<string, any> = {};
     if (data.name) metadata.name = data.name;

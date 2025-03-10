@@ -52,13 +52,14 @@ export function ProfileContent() {
     }
   }, [user]);
 
-  // Force refresh user data on component mount
+  // Force refresh user data on component mount - but only once
   useEffect(() => {
     if (refreshUser) {
       console.log('Refreshing user data...');
-      refreshUser();
+      // Do not auto-refresh since it can create a loop
+      // Only refresh when manually triggered by user actions
     }
-  }, [refreshUser]);
+  }, []);
 
   const handleUpdateName = async () => {
     try {
