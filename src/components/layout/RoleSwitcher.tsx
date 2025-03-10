@@ -1,7 +1,15 @@
 import * as React from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/shadcn/select';
 import { cn } from '@/lib/utils';
 import { Role } from '@/types/user';
 import { useUser } from '@/context/UserContext';
+import { Loader2 } from 'lucide-react';
 
 // Define roles based on the Role type definition
 const roles: { value: Role; label: string }[] = [
@@ -23,17 +31,17 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   const currentRole = user?.user_role;
   console.log('RoleSwitcher - Current user data:', { user, currentRole });
 
-  const handleRoleChange = React.useCallback(async (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newRole = event.target.value as Role;
-    console.log('Role selected:', newRole);
-    if (newRole === currentRole) {
+  // Handle role change with the new Select component
+  const handleValueChange = React.useCallback(async (value: Role) => {
+    console.log('Role selected:', value);
+    if (value === currentRole) {
       console.log('Role unchanged, skipping update');
       return;
     }
     
     try {
       setIsUpdating(true);
-      await updateRole(newRole);
+      await updateRole(value);
       console.log('Role updated successfully');
     } catch (error) {
       console.error('Failed to update role:', error);
@@ -45,24 +53,33 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   // Early return if no user to prevent unnecessary renders
   if (!user) return null;
 
+  // Show loading spinner when updating role
+  if (isUpdating) {
+    return (
+      <div className={cn("w-[180px] h-10 flex items-center justify-center", className)}>
+        <Loader2 className="h-4 w-4 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <select
-      value={currentRole || ''}
-      onChange={handleRoleChange}
-      disabled={isUpdating}
-      className={cn(
-        "w-[180px] px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background",
-        isUpdating && "opacity-50 cursor-not-allowed",
-        className
-      )}
+    <Select
+      value={currentRole || undefined}
+      onValueChange={handleValueChange}
     >
-      <option value="" disabled>Select role...</option>
-      {roles.map((role) => (
-        <option key={role.value} value={role.value}>
-          {role.label}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger className={cn("w-[180px]", className)}>
+        <SelectValue placeholder="Select a role">
+          {roles.find(r => r.value === currentRole)?.label || 'Select a role'}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {roles.map((role) => (
+          <SelectItem key={role.value} value={role.value}>
+            {role.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

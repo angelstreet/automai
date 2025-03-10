@@ -54,11 +54,6 @@ const UserContext = createContext<UserContextType>({
 export function UserProvider({ children }: { children: React.ReactNode }) {
   console.log('UserContext - Provider mounting');
   const [error, setError] = useState<Error | null>(null);
-
-  // Log when user data changes
-  React.useEffect(() => {
-    console.log('UserContext - User data changed in SWR:', { user });
-  }, [user]);
   
   // Helper function to check if a role is valid
   const isValidRole = (role: string): role is Role => {
@@ -105,6 +100,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
     }
   );
+  
+  // Log when user data changes - moved after user is defined
+  React.useEffect(() => {
+    console.log('UserContext - User data changed in SWR:', { user });
+  }, [user]);
   
   // Function to extract and normalize user data from Supabase user object
   // No need for useCallback since this doesn't depend on any props or state
