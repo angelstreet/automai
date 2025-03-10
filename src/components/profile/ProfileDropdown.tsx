@@ -36,8 +36,8 @@ export function ProfileDropdown() {
 
   if (!user) return null;
 
-  // Get user avatar image - in auth.ts, avatar_url is extracted into the user.image field
-  const userImage = user.image || '/avatars/01.svg';
+  // Get user avatar from user_metadata if available
+  const userImage = user.user_metadata?.avatar_url || '/avatars/01.svg';
   
   // Get user display name
   // All metadata fields are already extracted to the top-level user object in auth.ts

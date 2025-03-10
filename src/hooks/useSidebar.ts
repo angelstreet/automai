@@ -28,5 +28,9 @@ export function useSidebar() {
     }
   }, [sidebarContext.open]);
   
-  return sidebarContext;
+  return {
+    ...sidebarContext,
+    // Ensure isOpen is available for backward compatibility
+    isOpen: sidebarContext.open
+  };
 }

@@ -8,11 +8,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
-import { useProfile } from '@/hooks/useProfile';
 
 export function ProfileContent() {
-  const { user, loading, refreshUser } = useUser();
-  const { updateProfile, isUpdating } = useProfile();
+  const { user, loading, refreshUser, updateProfile } = useUser();
+  const [isUpdating, setIsUpdating] = useState(false);
   const t = useTranslations('Profile');
   const params = useParams();
   const locale = params.locale as string;
@@ -40,14 +39,17 @@ export function ProfileContent() {
 
   const handleUpdateName = async () => {
     try {
+      setIsUpdating(true);
       const formData = new FormData();
       formData.append('name', name);
       formData.append('locale', locale);
       await updateProfile(formData);
       // Refresh user data after update
       await refreshUser();
+      setIsUpdating(false);
     } catch (error) {
       console.error('Error updating profile:', error);
+      setIsUpdating(false);
     }
   };
 
@@ -118,7 +120,7 @@ export function ProfileContent() {
             </div>
             <div>
               <label className="text-sm font-medium">{t('plan')}</label>
-              <p className="text-muted-foreground">{user.plan || 'TRIAL'}</p>
+              <p className="text-muted-foreground">{'TRIAL'}</p>
             </div>
           </div>
         </div>
@@ -133,19 +135,17 @@ export function ProfileContent() {
             >
               {t('manageSettings')}
             </Button>
-            {(user.plan !== 'ENTERPRISE') && (
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/${locale}/${tenant || 'trial'}/billing`)}
-              >
-                {t('upgradePlan')}
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/${locale}/${tenant || 'trial'}/billing`)}
+            >
+              {t('upgradePlan')}
+            </Button>
           </div>
         </div>
 
-        {/* Tenant Information (Enterprise only) */}
-        {(user.plan === 'ENTERPRISE') && tenant && (
+        {/* Tenant Information */}
+        {tenant && (
           <div className="p-6 bg-card rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">{t('workspaceInfo')}</h2>
             <div className="space-y-4">

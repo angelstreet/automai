@@ -102,7 +102,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
     console.log('Resolved userName:', userName);
     
     return {
-      name: userName,
+      name: userName || 'Guest', // Ensure name is never undefined
       email: user.email || '',
       avatar: avatarUrl,
     };
