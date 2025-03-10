@@ -3,15 +3,12 @@
 import db from '@/lib/supabase/db';
 import { Host } from '@/types/hosts';
 import { logger } from '@/lib/logger';
+// Import getBaseUrl from utils instead
+import { getBaseUrl } from '@/lib/utils';
 
 export interface HostFilter {
   status?: string;
 }
-
-// Helper to get the base URL for client-side use
-export const getBaseUrl = () => {
-  return typeof window !== 'undefined' ? window.location.origin : '';
-};
 
 export async function getHosts(filter?: HostFilter): Promise<{ success: boolean; error?: string; data?: Host[] }> {
   try {

@@ -21,3 +21,8 @@ export function debounce<T extends (...args: any[]) => any>(
     }, wait);
   };
 }
+
+// Helper to get the base URL for client-side use
+export function getBaseUrl() {
+  return typeof window !== 'undefined' ? window.location.origin : '';
+}
