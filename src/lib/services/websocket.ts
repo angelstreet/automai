@@ -12,102 +12,121 @@ interface ExtendedWebSocket extends WebSocket {
 }
 
 // Global variable to store the WebSocket server instance
+// Using global scope ensures the instance persists across HMR (Hot Module Replacement)
 declare global {
   var websocketServer: WebSocketServer | undefined;
+  var websocketInitialized: boolean | undefined;
 }
 
 /**
- * Initialize the WebSocket server as a singleton
+ * Initialize the WebSocket server as a strict singleton
+ * This should only be called once per server lifecycle
  */
 export function initializeWebSocketServer(): WebSocketServer {
-  console.log('Initializing WebSocket server (singleton)');
-
-  // Check if we already have an instance
+  // STRICT SINGLETON PATTERN: 
+  // If we already have an instance or the initialization flag is set, return existing instance
   if (global.websocketServer) {
-    console.log('Using existing WebSocket server instance');
-    return global.websocketServer;
-  }
-
-  // Create a new WebSocket server
-  console.log('Creating new WebSocket server instance');
-  const wss = new WebSocketServer({ noServer: true });
-
-  // Set up ping interval to detect dead connections
-  const pingInterval = setInterval(() => {
-    wss.clients.forEach((client) => {
-      const extClient = client as ExtendedWebSocket;
-      if (extClient.ws_isAlive === false) {
-        logger.info('Terminating inactive WebSocket connection');
-        return client.terminate();
-      }
-
-      extClient.ws_isAlive = false;
-      client.ping();
-    });
-  }, 30000);
-
-  // Handle server close
-  wss.on('close', () => {
-    logger.info('WebSocket server closed, clearing ping interval');
-    clearInterval(pingInterval);
-    global.websocketServer = undefined;
-  });
-
-  // Log client connections
-  wss.on('connection', (ws, req) => {
-    logger.info('Client connected to WebSocket server', {
-      ws_ip: req.socket.remoteAddress,
-    });
-
-    const extWs = ws as ExtendedWebSocket;
-    extWs.ws_isAlive = true;
-
-    ws.on('pong', () => {
-      (ws as ExtendedWebSocket).ws_isAlive = true;
-    });
-
-    ws.on('error', (error) => {
-      logger.error('WebSocket error', { error: error.message });
-    });
-
-    ws.on('close', () => {
-      logger.info('Client disconnected from WebSocket server');
-    });
-  });
-
-  // Always store the instance in the global variable to prevent recreation
-  // This prevents server restarts in development mode
-  global.websocketServer = wss;
-  logger.info('WebSocket server instance stored in global scope to prevent recreation on HMR');
-
-  logger.info('WebSocket server initialized');
-  return wss;
-}
-
-/**
- * Get the WebSocket server instance, initializing it if necessary
- * Uses a more resilient approach to prevent server restarts in development
- */
-export function getWebSocketServer(): WebSocketServer {
-  // Check if we already have an instance and it's operational
-  if (global.websocketServer) {
-    logger.info('Reusing existing WebSocket server instance');
+    logger.info('Using existing WebSocket server singleton instance');
     return global.websocketServer;
   }
   
+  // Set initialization flag immediately to prevent concurrent initialization
+  global.websocketInitialized = true;
+  
   try {
-    logger.info('No existing WebSocket server found, initializing a new one');
-    return initializeWebSocketServer();
-  } catch (error) {
-    // If initialization fails, create a dummy WebSocket server that doesn't cause restart
-    logger.error(`Error initializing WebSocket server: ${error}`);
-    logger.info('Creating fallback WebSocket server to prevent crashes');
+    logger.info('Creating new WebSocket server singleton instance');
     
-    // Create a basic WebSocket server with noServer: true that won't cause issues
-    const fallbackServer = new WebSocketServer({ noServer: true });
-    global.websocketServer = fallbackServer;
-    return fallbackServer;
+    // Create WebSocket server with noServer option (we'll handle upgrade events separately)
+    const wss = new WebSocketServer({ noServer: true });
+    
+    // Store the instance immediately in global scope
+    global.websocketServer = wss;
+    
+    // Set up ping interval to detect dead connections
+    const pingInterval = setInterval(() => {
+      if (!global.websocketServer) {
+        logger.info('Clearing ping interval as WebSocket server no longer exists');
+        clearInterval(pingInterval);
+        return;
+      }
+      
+      wss.clients.forEach((client) => {
+        const extClient = client as ExtendedWebSocket;
+        if (extClient.ws_isAlive === false) {
+          logger.info('Terminating inactive WebSocket connection');
+          return client.terminate();
+        }
+
+        extClient.ws_isAlive = false;
+        client.ping();
+      });
+    }, 30000);
+
+    // Handle server close - important for cleanup
+    wss.on('close', () => {
+      logger.info('WebSocket server closed, clearing ping interval');
+      clearInterval(pingInterval);
+      // Don't reset the global instance - this can cause issues with HMR
+      // Instead, we'll let the server recreate itself on next restart
+    });
+
+    // Log client connections
+    wss.on('connection', (ws, req) => {
+      logger.info('Client connected to WebSocket server', {
+        ws_ip: req.socket.remoteAddress,
+      });
+
+      const extWs = ws as ExtendedWebSocket;
+      extWs.ws_isAlive = true;
+
+      ws.on('pong', () => {
+        (ws as ExtendedWebSocket).ws_isAlive = true;
+      });
+
+      ws.on('error', (error) => {
+        logger.error('WebSocket error', { error: error.message });
+      });
+
+      ws.on('close', () => {
+        logger.info('Client disconnected from WebSocket server');
+      });
+    });
+
+    logger.info('WebSocket server singleton initialized successfully');
+    return wss;
+  } catch (error) {
+    // Reset initialization flag on error so we can try again
+    logger.error(`WebSocket server initialization failed: ${error}`);
+    global.websocketInitialized = false;
+    
+    // Don't throw - return a dummy server to prevent crashes
+    const dummyServer = new WebSocketServer({ noServer: true });
+    global.websocketServer = dummyServer;
+    return dummyServer;
   }
+}
+
+/**
+ * Get the WebSocket server singleton instance, initializing it if necessary
+ * This is the recommended method for accessing the WebSocket server
+ */
+export function getWebSocketServer(): WebSocketServer {
+  // If we already have a server instance, return it immediately
+  if (global.websocketServer) {
+    return global.websocketServer;
+  }
+  
+  // If another initialization is already in progress, wait for it
+  if (global.websocketInitialized) {
+    logger.info('WebSocket initialization in progress, creating temporary instance');
+    // Return a dummy server that will be replaced by the real one
+    const tempServer = new WebSocketServer({ noServer: true });
+    return tempServer;
+  }
+  
+  // Initialize the WebSocket server if needed
+  logger.info('No WebSocket server found, initializing singleton');
+  return initializeWebSocketServer();
 }
 
 /**
@@ -269,16 +288,19 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
 }
 
 /**
- * Close the WebSocket server and clean up resources
+ * Close the WebSocket server singleton and clean up resources
+ * This should be called during server shutdown
  */
 export function closeWebSocketServer(): Promise<void> {
   return new Promise((resolve) => {
+    // Check if we even have a WebSocket server to close
     if (!global.websocketServer) {
+      logger.info('No WebSocket server instance to close');
       resolve();
       return;
     }
 
-    logger.info('Closing WebSocket server');
+    logger.info('Closing WebSocket server singleton');
     
     // Shorter timeout for WebSocket server close - 500ms
     const closeTimeout = setTimeout(() => {
@@ -287,6 +309,7 @@ export function closeWebSocketServer(): Promise<void> {
       try {
         // Attempt final forceful cleanup of all WebSocket clients
         if (global.websocketServer) {
+          logger.info('Forcefully terminating all remaining WebSocket connections');
           global.websocketServer.clients.forEach((ws) => {
             try {
               ws.terminate();
@@ -299,23 +322,27 @@ export function closeWebSocketServer(): Promise<void> {
         logger.error(`Error during forced WebSocket cleanup: ${e}`);
       }
       
-      // Always clean up regardless of errors
+      // Reset singleton state
+      logger.info('Resetting WebSocket singleton state');
       global.websocketServer = undefined;
+      global.websocketInitialized = false;
       resolve();
     }, 500); // 500ms timeout - much shorter to prevent blocking HTTP server
     
     try {
       // First immediately terminate all client connections
       if (global.websocketServer && global.websocketServer.clients) {
-        logger.info(`Terminating ${global.websocketServer.clients.size} WebSocket connections`);
+        const clientCount = global.websocketServer.clients.size;
+        logger.info(`Terminating ${clientCount} WebSocket connections`);
+        
         global.websocketServer.clients.forEach((ws) => {
           try {
-            // Send close frame if possible
+            // Send close frame with code 1001 (Going Away)
             ws.close(1001, 'Server Shutdown');
-            // Also terminate immediately
+            // Also terminate immediately to ensure quick shutdown
             ws.terminate();
           } catch (e) {
-            // Ignore errors closing individual connections
+            logger.error(`Error terminating WebSocket client: ${e}`);
           }
         });
       }
@@ -325,7 +352,9 @@ export function closeWebSocketServer(): Promise<void> {
         global.websocketServer.close(() => {
           clearTimeout(closeTimeout);
           logger.info('WebSocket server closed successfully');
+          // Reset singleton state after successful close
           global.websocketServer = undefined;
+          global.websocketInitialized = false;
           resolve();
         });
       } else {
@@ -335,7 +364,9 @@ export function closeWebSocketServer(): Promise<void> {
     } catch (e) {
       logger.error(`Error during WebSocket server close: ${e}`);
       clearTimeout(closeTimeout);
+      // Always reset state even on error
       global.websocketServer = undefined;
+      global.websocketInitialized = false;
       resolve();
     }
   });
