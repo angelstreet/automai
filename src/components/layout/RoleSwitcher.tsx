@@ -18,27 +18,38 @@ const roles: { value: Role; label: string }[] = [
   { value: 'viewer', label: 'Viewer' },
 ];
 
+// Declare the global debug role for TypeScript
+declare global {
+  interface Window {
+    __debugRole: Role | null;
+  }
+}
+
 interface RoleSwitcherProps {
   className?: string;
 }
 
-// Create a custom event for role changes
-const dispatchRoleChangeEvent = (role: Role) => {
-  // Create and dispatch a custom event
-  const event = new CustomEvent('debug:roleChange', { 
-    detail: { role },
-    bubbles: true 
+// Create a global variable to store the current debug role
+// This is a hack for debugging purposes only
+if (typeof window !== 'undefined' && !window.hasOwnProperty('__debugRole')) {
+  Object.defineProperty(window, '__debugRole', {
+    value: null,
+    writable: true,
+    configurable: true
   });
-  window.dispatchEvent(event);
-  console.log('Debug role change event dispatched:', role);
-};
+}
 
 function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   // Get user from context
   const { user } = useUser();
   
   // Local state for the selected role (for debugging)
-  const [selectedRole, setSelectedRole] = React.useState<Role>(user?.user_role || 'viewer');
+  const [selectedRole, setSelectedRole] = React.useState<Role>(
+    // Initialize from window.__debugRole if available, otherwise from user
+    typeof window !== 'undefined' && window.__debugRole ? 
+      window.__debugRole : 
+      user?.user_role || 'viewer'
+  );
   
   // Handle role change
   const handleValueChange = React.useCallback((value: Role) => {
@@ -47,8 +58,21 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
     // Update local state
     setSelectedRole(value);
     
+    // Set the global debug role
+    if (typeof window !== 'undefined') {
+      window.__debugRole = value;
+    }
+    
     // Dispatch custom event for debugging
-    dispatchRoleChangeEvent(value);
+    const event = new CustomEvent('debug:roleChange', { 
+      detail: { role: value },
+      bubbles: true 
+    });
+    window.dispatchEvent(event);
+    
+    // Force reload the page to ensure all components pick up the new role
+    // This is a hack for debugging purposes only
+    window.location.reload();
   }, []);
 
   return (

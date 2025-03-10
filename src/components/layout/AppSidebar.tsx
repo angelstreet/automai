@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
+import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import {
   Sidebar,
   SidebarContent,
@@ -18,6 +19,13 @@ import * as React from 'react';
 
 import { sidebarData } from './data/sidebarData';
 
+// Declare the global debug role for TypeScript
+declare global {
+  interface Window {
+    __debugRole: Role | null;
+  }
+}
+
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUser();
@@ -25,7 +33,10 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
   const isCollapsed = !open;
 
   // Add debug state for role override
-  const [debugRole, setDebugRole] = useState<Role | null>(null);
+  const [debugRole, setDebugRole] = useState<Role | null>(
+    // Initialize from window.__debugRole if available
+    typeof window !== 'undefined' ? window.__debugRole : null
+  );
 
   // Listen for debug role change events
   useEffect(() => {
@@ -46,8 +57,15 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
   // Get the user role from debug override, user.user_role, or use a default role
   const userRole = debugRole || user?.user_role || 'viewer';
   
+  // Log the current role being used for debugging
+  useEffect(() => {
+    console.log('AppSidebar - Current role being used:', userRole);
+  }, [userRole]);
+
   // Filter out empty sections based on user role - memoize this calculation
   const filteredNavGroups = useMemo(() => {
+    console.log('AppSidebar - Filtering nav groups for role:', userRole);
+    
     // If no user, show nav items that an admin would see
     if (!user) {
       return sidebarData.navGroups.filter((group) => {

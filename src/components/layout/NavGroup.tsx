@@ -19,6 +19,7 @@ import {
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { useUser } from '@/context/UserContext';
 import { cn } from '@/lib/utils';
+import { Role } from '@/types/user';
 
 interface NavGroupProps {
   title: string;
@@ -44,8 +45,15 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
   const { open } = useSidebar();
   const isCollapsed = !open;
   
-  // Get the user role from user.user_role or use a default role
-  const userRole = user?.user_role || 'viewer';
+  // Get the user role from debug override, user.user_role, or use a default role
+  const userRole = (typeof window !== 'undefined' && window.__debugRole) || 
+                   user?.user_role || 
+                   'viewer';
+  
+  // Log the current role being used for debugging
+  React.useEffect(() => {
+    console.log('NavGroup - Current role being used:', userRole);
+  }, [userRole]);
   
   // Use useRef for expandedItems to avoid unnecessary re-renders
   const expandedItemsRef = React.useRef<Record<string, boolean>>({});
