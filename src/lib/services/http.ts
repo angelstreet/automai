@@ -286,15 +286,28 @@ export async function startServer(options: {
 export async function stopServer(): Promise<void> {
   return new Promise(async (resolve, reject) => {
     if (!httpServer) {
+      logger.info('No HTTP server to stop, already shut down');
       resolve();
       return;
     }
 
-    logger.info('Stopping server');
+    const startTime = Date.now();
+    logger.info('Starting server shutdown process');
 
-    // Set a timeout for the entire shutdown process
+    // Count active connections for diagnostics
+    let activeConnections = 0;
+    if (httpServer && typeof httpServer.getConnections === 'function') {
+      activeConnections = await new Promise<number>((res) => {
+        httpServer!.getConnections((_, count) => res(count || 0));
+      });
+    }
+    
+    logger.info(`Server shutdown: ${activeConnections} active connections`);
+
+    // Set a timeout for the entire shutdown process - increased to 5 seconds
     const shutdownTimeout = setTimeout(() => {
-      logger.warn('Server shutdown timed out after 1 second, forcing exit');
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      logger.warn(`Server shutdown timed out after ${elapsed}s, forcing exit`);
 
       // Remove all listeners to prevent memory leaks
       if (httpServer) {
@@ -303,47 +316,60 @@ export async function stopServer(): Promise<void> {
 
       httpServer = null;
       resolve();
-    }, 1000);
+    }, 5000);
 
-    // First close WebSocket server if initialized
+    // Handle WebSocket server shutdown in parallel without blocking the HTTP server shutdown
     if (isWebSocketInitialized) {
+      logger.info('Starting WebSocket server shutdown (non-blocking)');
       try {
+        // Initialize WebSocket close but don't await it
         const { closeWebSocketServer } = await import('./websocket');
-        await closeWebSocketServer();
         isWebSocketInitialized = false;
+        
+        // Run WebSocket shutdown in parallel but don't block HTTP server shutdown
+        closeWebSocketServer().then(() => {
+          logger.info('WebSocket server successfully shut down in background');
+        }).catch(wsErr => {
+          logger.error(`Background WebSocket server close error: ${wsErr}`);
+        });
       } catch (err) {
-        logger.error(`Error closing WebSocket server: ${err}`);
+        logger.error(`Error initiating WebSocket server close: ${err}`);
       }
     }
 
     // Remove all upgrade listeners to prevent memory leaks
     if (httpServer) {
+      logger.info('Removing HTTP server upgrade listeners');
       httpServer.removeAllListeners('upgrade');
     }
 
     // Force close all connections
+    logger.info('Forcefully closing all HTTP connections');
     httpServer.closeAllConnections();
 
-    // Then close HTTP server with a short timeout
+    // Then close HTTP server with a longer timeout (2 seconds)
     const serverCloseTimeout = setTimeout(() => {
-      logger.warn('HTTP server close timed out, forcing close');
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      logger.warn(`HTTP server close timed out after ${elapsed}s, forcing close`);
       httpServer = null;
       clearTimeout(shutdownTimeout);
       resolve();
-    }, 500);
+    }, 2000);
 
+    logger.info('Gracefully closing HTTP server');
     httpServer.close((err) => {
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
       clearTimeout(serverCloseTimeout);
       clearTimeout(shutdownTimeout);
 
       if (err) {
-        logger.error(`Error stopping server: ${err.message}`);
+        logger.error(`Error stopping server after ${elapsed}s: ${err.message}`);
         reject(err);
         return;
       }
 
       httpServer = null;
-      logger.info('HTTP server closed successfully');
+      logger.info(`HTTP server closed successfully in ${elapsed}s`);
       resolve();
     });
   });

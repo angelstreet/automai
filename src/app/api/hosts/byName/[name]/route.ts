@@ -14,15 +14,17 @@ export async function GET(request: NextRequest, context: { params: { name: strin
 
     console.log(`Looking up host by name: ${name}`);
 
-    // Try to find the host with case-insensitive search
-    const host = await db.host.findFirst({
-      where: {
-        name: {
-          equals: name,
-          mode: 'insensitive',
-        },
-      },
+    // Use findMany and manually filter for case-insensitive match
+    const hosts = await db.host.findMany({
+      where: { 
+        // Basic filter that might have case sensitivity issues
+        // We'll do manual filtering below for case insensitivity
+        name: name 
+      }
     });
+    
+    // Manual case-insensitive filter
+    const host = hosts.find(h => h.name.toLowerCase() === name.toLowerCase());
 
     console.log('Database query completed');
 

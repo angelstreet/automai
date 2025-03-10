@@ -100,10 +100,6 @@ export default function TerminalPage() {
 
   // Initialize terminals
   const initializeTerminals = useCallback(async () => {
-    if (error) {
-      initializationAttemptedRef.current = false;
-    }
-
     // Prevent duplicate initialization
     if (initializationAttemptedRef.current) {
       console.log('Preventing duplicate terminal initialization');
@@ -147,10 +143,14 @@ export default function TerminalPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';
       setError(message);
+      console.error('Terminal initialization error:', message);
+      
+      // Important: Don't reset initializationAttemptedRef here to prevent infinite loop
+      // initializationAttemptedRef.current = false;
     } finally {
       setLoading(false);
     }
-  }, [hostName, terminalCount, fetchMachineByName, fetchMachineDetails, error]);
+  }, [hostName, terminalCount, fetchMachineByName, fetchMachineDetails]);
 
   useEffect(() => {
     initializeTerminals();
@@ -165,22 +165,12 @@ export default function TerminalPage() {
             <AlertTitle>Connection Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
-          <div className="flex justify-center space-x-4">
+          <div className="flex justify-center">
             <button
               className="px-4 py-2 bg-secondary text-secondary-foreground rounded hover:bg-secondary/90"
               onClick={() => router.back()}
             >
-              Cancel
-            </button>
-            <button
-              className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-              onClick={() => {
-                setError(null);
-                setLoading(true);
-                initializeTerminals();
-              }}
-            >
-              Retry
+              Go Back
             </button>
           </div>
         </div>

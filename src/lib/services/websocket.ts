@@ -263,25 +263,64 @@ export function closeWebSocketServer(): Promise<void> {
     }
 
     logger.info('Closing WebSocket server');
-
-    // Close all connections with a timeout
+    
+    // Shorter timeout for WebSocket server close - 500ms
     const closeTimeout = setTimeout(() => {
       logger.warn('WebSocket server close timed out, forcing close');
+      
+      try {
+        // Attempt final forceful cleanup of all WebSocket clients
+        if (global.websocketServer) {
+          global.websocketServer.clients.forEach((ws) => {
+            try {
+              ws.terminate();
+            } catch (e) {
+              // Ignore errors terminating individual clients
+            }
+          });
+        }
+      } catch (e) {
+        logger.error(`Error during forced WebSocket cleanup: ${e}`);
+      }
+      
+      // Always clean up regardless of errors
       global.websocketServer = undefined;
       resolve();
-    }, 2000); // 2 second timeout
-
-    // Close all connections
-    global.websocketServer.clients.forEach((ws) => {
-      ws.terminate();
-    });
-
-    // Close the server
-    global.websocketServer.close(() => {
+    }, 500); // 500ms timeout - much shorter to prevent blocking HTTP server
+    
+    try {
+      // First immediately terminate all client connections
+      if (global.websocketServer && global.websocketServer.clients) {
+        logger.info(`Terminating ${global.websocketServer.clients.size} WebSocket connections`);
+        global.websocketServer.clients.forEach((ws) => {
+          try {
+            // Send close frame if possible
+            ws.close(1001, 'Server Shutdown');
+            // Also terminate immediately
+            ws.terminate();
+          } catch (e) {
+            // Ignore errors closing individual connections
+          }
+        });
+      }
+      
+      // Then try to close the server gracefully
+      if (global.websocketServer) {
+        global.websocketServer.close(() => {
+          clearTimeout(closeTimeout);
+          logger.info('WebSocket server closed successfully');
+          global.websocketServer = undefined;
+          resolve();
+        });
+      } else {
+        clearTimeout(closeTimeout);
+        resolve();
+      }
+    } catch (e) {
+      logger.error(`Error during WebSocket server close: ${e}`);
       clearTimeout(closeTimeout);
-      logger.info('WebSocket server closed');
       global.websocketServer = undefined;
       resolve();
-    });
+    }
   });
 }
