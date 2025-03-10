@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import useSWR from 'swr';
 import { Host } from '@/types/hosts';
-import { hostsApi } from '@/lib/api/hosts';
+import { hostsApi } from '@/app/actions/hosts';
 
 // Define a SWR fetcher function for hosts with request throttling
 const requestTimestamps: number[] = [];

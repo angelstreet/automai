@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
-import { hostsApi } from '@/lib/api/hosts';
+import { hostsApi } from '@/app/actions/hosts';
 
 export interface FormData {
   name: string;
