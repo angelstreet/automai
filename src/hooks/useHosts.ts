@@ -12,6 +12,12 @@ import {
   updateHost
 } from '@/app/actions/hosts';
 
+// Cache keys
+const HOSTS_CACHE_KEY = 'automai_hosts_cache';
+const HOSTS_CACHE_TIMESTAMP_KEY = 'automai_hosts_cache_timestamp';
+// Cache expiry time - 5 minutes (in milliseconds)
+const CACHE_EXPIRY_TIME = 5 * 60 * 1000;
+
 export function useHosts(initialHosts: Host[] = []) {
   const [hosts, setHosts] = useState<Host[]>(initialHosts);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,32 +26,98 @@ export function useHosts(initialHosts: Host[] = []) {
   const [isTesting, setIsTesting] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const fetchHosts = useCallback(async () => {
+  // Helper function to save hosts to cache
+  const saveHostsToCache = useCallback((hostsData: Host[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(HOSTS_CACHE_KEY, JSON.stringify(hostsData));
+      localStorage.setItem(HOSTS_CACHE_TIMESTAMP_KEY, Date.now().toString());
+    } catch (error) {
+      console.error('Error saving hosts to cache:', error);
+    }
+  }, []);
+
+  // Helper function to get hosts from cache
+  const getHostsFromCache = useCallback((): { hosts: Host[] | null, isFresh: boolean } => {
+    if (typeof window === 'undefined') return { hosts: null, isFresh: false };
+    
+    try {
+      const cachedHosts = localStorage.getItem(HOSTS_CACHE_KEY);
+      const timestamp = localStorage.getItem(HOSTS_CACHE_TIMESTAMP_KEY);
+      
+      if (!cachedHosts || !timestamp) {
+        return { hosts: null, isFresh: false };
+      }
+      
+      const isFresh = (Date.now() - parseInt(timestamp)) < CACHE_EXPIRY_TIME;
+      return { 
+        hosts: JSON.parse(cachedHosts) as Host[], 
+        isFresh 
+      };
+    } catch (error) {
+      console.error('Error reading hosts from cache:', error);
+      return { hosts: null, isFresh: false };
+    }
+  }, []);
+
+  const fetchHosts = useCallback(async (forceRefresh = false) => {
     try {
       setIsLoading(true);
-      const result = await getHosts();
       
-      if (!result.success) {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to fetch hosts',
-          variant: 'destructive',
-        });
+      // Check if we have fresh cached data
+      const { hosts: cachedHosts, isFresh } = getHostsFromCache();
+      
+      // Use cached data if available and not forcing a refresh
+      if (!forceRefresh && cachedHosts && isFresh) {
+        console.log('Using cached hosts data');
+        setHosts(cachedHosts);
+        setIsLoading(false);
         return;
       }
       
-      setHosts(result.data || []);
+      // Otherwise fetch from API
+      console.log('Fetching hosts from API');
+      const result = await getHosts();
+      
+      if (!result.success) {
+        // If API fails but we have cached data, use it regardless of freshness
+        if (cachedHosts) {
+          console.log('API fetch failed, falling back to cached data');
+          setHosts(cachedHosts);
+        } else {
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to fetch hosts',
+            variant: 'destructive',
+          });
+        }
+        return;
+      }
+      
+      const fetchedHosts = result.data || [];
+      setHosts(fetchedHosts);
+      
+      // Update the cache with fresh data
+      saveHostsToCache(fetchedHosts);
     } catch (error) {
       console.error('Error fetching hosts:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch hosts',
-        variant: 'destructive',
-      });
+      
+      // Attempt to use cached data as fallback
+      const { hosts: cachedHosts } = getHostsFromCache();
+      if (cachedHosts) {
+        console.log('Error fetching, using cached hosts data');
+        setHosts(cachedHosts);
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch hosts',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, getHostsFromCache, saveHostsToCache]);
 
   const addNewHost = useCallback(async (data: Omit<Host, 'id'>) => {
     try {
@@ -71,7 +143,11 @@ export function useHosts(initialHosts: Host[] = []) {
         updated_at: host.updated_at ? new Date(host.updated_at) : currentTime
       };
       
-      setHosts(prev => [...prev, processedHost]);
+      // Update state and cache
+      const updatedHosts = [...hosts, processedHost];
+      setHosts(updatedHosts);
+      saveHostsToCache(updatedHosts);
+      
       toast({
         title: 'Success',
         description: 'Host added successfully',
@@ -86,7 +162,7 @@ export function useHosts(initialHosts: Host[] = []) {
       });
       return false;
     }
-  }, [toast]);
+  }, [toast, hosts, saveHostsToCache]);
 
   const updateHostDetails = useCallback(async (id: string, updates: Partial<Omit<Host, 'id'>>) => {
     try {
@@ -101,7 +177,11 @@ export function useHosts(initialHosts: Host[] = []) {
         return false;
       }
       
-      setHosts(prev => prev.map(host => host.id === id ? result.data! : host));
+      // Update state and cache
+      const updatedHosts = hosts.map(host => host.id === id ? result.data! : host);
+      setHosts(updatedHosts);
+      saveHostsToCache(updatedHosts);
+      
       toast({
         title: 'Success',
         description: 'Host updated successfully',
@@ -116,7 +196,7 @@ export function useHosts(initialHosts: Host[] = []) {
       });
       return false;
     }
-  }, [toast]);
+  }, [toast, hosts, saveHostsToCache]);
 
   const deleteHost = useCallback(async (id: string) => {
     try {
@@ -132,7 +212,11 @@ export function useHosts(initialHosts: Host[] = []) {
         return false;
       }
       
-      setHosts(prev => prev.filter(host => host.id !== id));
+      // Update state and cache
+      const updatedHosts = hosts.filter(host => host.id !== id);
+      setHosts(updatedHosts);
+      saveHostsToCache(updatedHosts);
+      
       toast({
         title: 'Success',
         description: 'Host deleted successfully',
@@ -149,7 +233,7 @@ export function useHosts(initialHosts: Host[] = []) {
     } finally {
       setIsDeleting(false);
     }
-  }, [toast]);
+  }, [toast, hosts, saveHostsToCache]);
 
   const testConnection = useCallback(async (id: string) => {
     try {
@@ -157,7 +241,7 @@ export function useHosts(initialHosts: Host[] = []) {
       const result = await testConnectionAction(id);
       
       // Update host status based on test result
-      setHosts(prev => prev.map(host => {
+      const updatedHosts = hosts.map(host => {
         if (host.id === id) {
           // When test is successful, update the timestamp
           const currentTime = new Date();
@@ -169,7 +253,11 @@ export function useHosts(initialHosts: Host[] = []) {
           };
         }
         return host;
-      }));
+      });
+      
+      // Update state and cache
+      setHosts(updatedHosts);
+      saveHostsToCache(updatedHosts);
 
       if (result.success) {
         toast({
@@ -195,11 +283,13 @@ export function useHosts(initialHosts: Host[] = []) {
     } finally {
       setIsTesting(null);
     }
-  }, [toast]);
+  }, [toast, hosts, saveHostsToCache]);
 
   const refreshConnections = useCallback(async () => {
     try {
       setIsRefreshing(true);
+      
+      // Always force refresh from API when explicitly refreshing
       const hostsResult = await getHosts();
       
       if (!hostsResult.success) {
@@ -211,13 +301,14 @@ export function useHosts(initialHosts: Host[] = []) {
         return false;
       }
       
+      // Set hosts without saving to cache yet (we'll save after updating statuses)
       setHosts(hostsResult.data || []);
 
       // Test all connections
       const testResults = await testAllHosts();
       if (testResults.success && testResults.results) {
         const now = new Date();
-        setHosts(prev => prev.map(host => {
+        const updatedHosts = hostsResult.data.map(host => {
           const result = testResults.results?.find(r => r.id === host.id);
           if (result) {
             return {
@@ -228,7 +319,11 @@ export function useHosts(initialHosts: Host[] = []) {
             };
           }
           return host;
-        }));
+        });
+        
+        // Update state and cache with the updated statuses
+        setHosts(updatedHosts);
+        saveHostsToCache(updatedHosts);
         
         toast({
           title: 'Success',
@@ -236,10 +331,13 @@ export function useHosts(initialHosts: Host[] = []) {
         });
         return true;
       } else {
+        // Save the hosts data to cache even if connection tests failed
+        saveHostsToCache(hostsResult.data || []);
+        
         toast({
-          title: 'Error',
-          description: testResults.error || 'Failed to test connections',
-          variant: 'destructive',
+          title: 'Warning',
+          description: testResults.error || 'Failed to test connections, but hosts were refreshed',
+          variant: 'default',
         });
         return false;
       }
@@ -254,11 +352,15 @@ export function useHosts(initialHosts: Host[] = []) {
     } finally {
       setIsRefreshing(false);
     }
-  }, [toast]);
+  }, [toast, saveHostsToCache]);
 
-  // Fetch hosts on mount
+  // Fetch hosts on mount, using cached data if available
   useEffect(() => {
-    fetchHosts();
+    const initializeHosts = async () => {
+      await fetchHosts(false);  // false = use cache if available
+    };
+    
+    initializeHosts();
   }, [fetchHosts]);
 
   return {
@@ -272,5 +374,6 @@ export function useHosts(initialHosts: Host[] = []) {
     deleteHost,
     refreshConnections,
     testConnection,
+    forceRefresh: () => fetchHosts(true),  // Force refresh from API
   };
 }

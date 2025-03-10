@@ -57,23 +57,31 @@ export default function TerminalPage() {
       }
 
       console.log(`Fetching host by name: ${name}`);
-      // If not in session storage, fetch from API
-      const response = await fetch(`/api/hosts/byName/${name}`);
 
+      // Fetch from the standardized lowercase route
+      console.log(`Fetching from /api/hosts/byname/${name}`);
+      const response = await fetch(`/api/hosts/byname/${name}`);
+      
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error response from API:', errorData);
         throw new Error(errorData.error || 'Failed to fetch host');
       }
-
+      
       const data = await response.json();
       if (!data.success || !data.data) {
         console.error('Invalid host data returned:', data);
         throw new Error('Invalid host data');
       }
+      
+      const hostData = data.data;
 
-      console.log('Host data fetched successfully:', data.data.name);
-      return data.data;
+      if (!hostData) {
+        throw new Error(`Failed to fetch host with name: ${name}`);
+      }
+
+      console.log('Host data fetched successfully:', hostData.name);
+      return hostData;
     } catch (error) {
       console.error('Error fetching host:', error);
       throw error;

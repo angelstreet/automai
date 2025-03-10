@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+// Standardized lowercase route for host lookup by name
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 import db from '@/lib/supabase/db';
 
 export async function GET(request: NextRequest, context: { params: { name: string } }) {
   try {
-    console.log('API route called: /api/hosts/byName/[name]');
+    console.log('API route called: /api/hosts/byname/[name]');
     const { name } = context.params;
 
     if (!name) {

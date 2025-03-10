@@ -80,9 +80,9 @@ async function shutdown(signal: string) {
 
   // Set a timeout to force exit if shutdown takes too long
   const forceExitTimeout = setTimeout(() => {
-    console.error('Shutdown timed out after 1s, forcing exit');
+    console.error('Shutdown timed out after 6s, forcing exit');
     process.exit(0);
-  }, 1000);
+  }, 6000); // 6 seconds to account for HTTP service's 5-second timeout
 
   try {
     await stopServer();
