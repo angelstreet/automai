@@ -38,8 +38,8 @@ export async function GET(request: NextRequest, context: { params: { name: strin
         port: 22,
         username: 'admin',
         password: 'password123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
       };
 
       console.log('Returning mock host for debugging:', mockHost);

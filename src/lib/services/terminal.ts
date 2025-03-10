@@ -163,7 +163,7 @@ class TerminalService {
       // Get connections using db.query
       const connections = await db.query('connections', {
         include: { host: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { created_at: 'desc' },
       });
 
       return connections || [];

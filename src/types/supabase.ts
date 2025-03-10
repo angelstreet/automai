@@ -73,7 +73,7 @@ export type Database = {
           refresh_token: string | null
           server_url: string | null
           type: string
-          updatedAt: string
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -86,7 +86,7 @@ export type Database = {
           refresh_token?: string | null
           server_url?: string | null
           type: string
-          updatedAt?: string
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -99,7 +99,7 @@ export type Database = {
           refresh_token?: string | null
           server_url?: string | null
           type?: string
-          updatedAt?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -151,7 +151,7 @@ export type Database = {
       }
       repositories: {
         Row: {
-          createdAt: string
+          created_at: string
           default_branch: string | null
           description: string | null
           id: string
@@ -163,7 +163,7 @@ export type Database = {
           url: string | null
         }
         Insert: {
-          createdAt?: string
+          created_at?: string
           default_branch?: string | null
           description?: string | null
           id?: string
@@ -175,7 +175,7 @@ export type Database = {
           url?: string | null
         }
         Update: {
-          createdAt?: string
+          created_at?: string
           default_branch?: string | null
           description?: string | null
           id?: string

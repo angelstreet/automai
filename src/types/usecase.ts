@@ -11,7 +11,7 @@ export type UseCase = {
   projectId: string;
   project_id?: string;
   steps: { platform: string; code: string };
-  createdAt: string;
+  created_at: string;
   lastModified?: string;
   author?: string;
   status?: string;

@@ -42,7 +42,7 @@ type Project = {
   id: string;
   name: string;
   description?: string;
-  createdAt: string;
+  created_at: string;
   ownerId: string;
   owner?: {
     id: string;
@@ -111,10 +111,10 @@ export default function ProjectsPage() {
       cell: ({ row }: { row: Row<Project> }) => row.original.description || '-',
     },
     {
-      accessorKey: 'createdAt',
+      accessorKey: 'created_at',
       header: 'Created At',
       cell: ({ row }: { row: Row<Project> }) =>
-        new Date(row.getValue('createdAt')).toLocaleDateString(),
+        new Date(row.getValue('created_at')).toLocaleDateString(),
       enableSorting: true,
     },
     {

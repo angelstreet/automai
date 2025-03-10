@@ -37,7 +37,7 @@ export function UseCaseList({
         <button onClick={() => onSort('steps.platform')}>
           Platform {getSortIcon('steps.platform')}
         </button>
-        <button onClick={() => onSort('createdAt')}>Created {getSortIcon('createdAt')}</button>
+        <button onClick={() => onSort('created_at')}>Created {getSortIcon('created_at')}</button>
         <button onClick={() => onSort('lastModified')}>
           Modified {getSortIcon('lastModified')}
         </button>
@@ -55,7 +55,7 @@ export function UseCaseList({
           <div>{useCase.shortId}</div>
           <div>{useCase.name}</div>
           <div>{useCase.steps.platform}</div>
-          <div>{new Date(useCase.createdAt).toLocaleDateString()}</div>
+          <div>{new Date(useCase.created_at).toLocaleDateString()}</div>
           <div>
             {useCase.lastModified ? new Date(useCase.lastModified).toLocaleDateString() : '-'}
           </div>

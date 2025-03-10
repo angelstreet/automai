@@ -36,7 +36,7 @@ export async function getHosts() {
     console.log('Calling db.host.findMany...');
     // Use a client-side projection to avoid requesting the is_windows field directly
     const hosts = await db.host.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { created_at: 'desc' },
     });
     console.log('Supabase returned hosts successfully');
 

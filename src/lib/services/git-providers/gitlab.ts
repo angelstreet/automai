@@ -42,8 +42,8 @@ export class GitLabProviderService implements GitProviderService {
         providerId: '',
         owner: repo.namespace?.path || '',
         syncStatus: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       }));
     } catch (error) {
       console.error('Error fetching GitLab repositories:', error);
@@ -83,8 +83,8 @@ export class GitLabProviderService implements GitProviderService {
         providerId: '',
         owner: repo.namespace?.path || '',
         syncStatus: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       };
     } catch (error) {
       console.error('Error fetching GitLab repository:', error);
@@ -247,8 +247,8 @@ export class GitLabProviderService implements GitProviderService {
         providerId: provider.id,
         owner: repo.namespace?.path || '',
         syncStatus: 'PENDING',
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        created_at: new Date(),
+        updated_at: new Date(),
       }));
     } catch (error) {
       console.error('Error fetching GitLab repositories:', error);

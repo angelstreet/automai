@@ -17,8 +17,8 @@ export interface GitProvider {
   accessToken?: string;
   refreshToken?: string;
   expiresAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
   lastSyncedAt?: Date;
 }
 
@@ -33,8 +33,8 @@ export interface Repository {
   isPrivate: boolean;
   description?: string;
   syncStatus: 'SYNCED' | 'PENDING' | 'ERROR';
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
   lastSyncedAt?: Date;
   error?: string;
 }
@@ -87,8 +87,8 @@ export const GitProviderSchema = z.object({
   accessToken: z.string().optional(),
   refreshToken: z.string().optional(),
   expiresAt: z.date().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  created_at: z.date(),
+  updated_at: z.date(),
   lastSyncedAt: z.date().optional(),
 });
 
@@ -102,8 +102,8 @@ export const RepositorySchema = z.object({
   isPrivate: z.boolean(),
   description: z.string().optional(),
   syncStatus: z.enum(['SYNCED', 'PENDING', 'ERROR']),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  created_at: z.date(),
+  updated_at: z.date(),
   lastSyncedAt: z.date().optional(),
   error: z.string().optional(),
 });

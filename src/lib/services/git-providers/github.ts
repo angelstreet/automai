@@ -117,8 +117,8 @@ export class GitHubProviderService implements GitProviderService {
       providerId: provider.id,
       lastSyncedAt: new Date(),
       syncStatus: 'SYNCED',
-      createdAt: new Date(repo.created_at),
-      updatedAt: new Date(repo.updated_at),
+      created_at: new Date(repo.created_at),
+      updated_at: new Date(repo.updated_at),
     }));
   }
 
@@ -160,8 +160,8 @@ export class GitHubProviderService implements GitProviderService {
         owner: repoData.owner.login,
         isPrivate: repoData.private,
         syncStatus: 'PENDING',
-        createdAt: new Date(repoData.created_at),
-        updatedAt: new Date(repoData.updated_at),
+        created_at: new Date(repoData.created_at),
+        updated_at: new Date(repoData.updated_at),
       };
     } catch (error) {
       console.error('Error fetching GitHub repository:', error);

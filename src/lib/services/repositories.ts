@@ -152,25 +152,25 @@ export async function updateGitProvider(
   try {
     logger.info('Updating git provider', { id });
     
-    const updateData: Record<string, any> = {
+    const updated_ata: Record<string, any> = {
       updated_at: new Date().toISOString(),
     };
     
     if (data.accessToken !== undefined) {
-      updateData.access_token = data.accessToken;
+      updated_ata.access_token = data.accessToken;
     }
     
     if (data.refreshToken !== undefined) {
-      updateData.refresh_token = data.refreshToken;
+      updated_ata.refresh_token = data.refreshToken;
     }
     
     if (data.expiresAt !== undefined) {
-      updateData.expires_at = data.expiresAt.toISOString();
+      updated_ata.expires_at = data.expiresAt.toISOString();
     }
     
     const result = await db.query('git_providers', {
       where: { id },
-      update: updateData,
+      update: updated_ata,
       returning: true,
     });
     
@@ -277,8 +277,8 @@ function mapGitProviderFromDb(data: any): GitProvider {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: data.expires_at ? new Date(data.expires_at) : undefined,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
+    created_at: new Date(data.created_at),
+    updated_at: new Date(data.updated_at),
     lastSyncedAt: data.last_synced_at ? new Date(data.last_synced_at) : undefined,
   };
 }
@@ -296,8 +296,8 @@ function mapRepositoryFromDb(data: any): Repository {
     isPrivate: data.is_private,
     description: data.description,
     syncStatus: data.sync_status,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
+    created_at: new Date(data.created_at),
+    updated_at: new Date(data.updated_at),
     lastSyncedAt: data.last_synced_at ? new Date(data.last_synced_at) : undefined,
     error: data.error,
   };

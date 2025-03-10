@@ -36,8 +36,8 @@ export async function getRepositories(filter?: RepositoryFilter): Promise<{ succ
       isPrivate: Boolean(repo.is_private),
       description: repo.description ? String(repo.description) : undefined,
       syncStatus: String(repo.sync_status) as Repository['syncStatus'],
-      createdAt: new Date(repo.created_at),
-      updatedAt: new Date(repo.updated_at),
+      created_at: new Date(repo.created_at),
+      updated_at: new Date(repo.updated_at),
       lastSyncedAt: repo.last_synced_at ? new Date(repo.last_synced_at) : undefined,
       error: repo.error ? String(repo.error) : undefined
     }));

@@ -24,7 +24,7 @@ export type AuthUser = {
   };
 };
 
-export type ProfileUpdateData = {
+export type Profileupdated_ata = {
   name?: string;
   locale?: string;
 };
@@ -257,7 +257,7 @@ export async function signOut(formData: FormData) {
 /**
  * Update user profile
  */
-export async function updateProfile(formData: FormData | ProfileUpdateData) {
+export async function updateProfile(formData: FormData | Profileupdated_ata) {
   try {
     // Extract data - handle both FormData and direct objects
     let name, locale;

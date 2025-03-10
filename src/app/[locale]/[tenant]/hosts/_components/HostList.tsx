@@ -47,8 +47,8 @@ export default function HostContainer() {
         ...host,
         // Ensure status is set
         status: host.status || 'pending',
-        // For UI display: use existing lastConnected or set to createdAt date
-        lastConnected: host.lastConnected || host.createdAt,
+        // For UI display: use existing lastConnected or set to created_at date
+        lastConnected: host.lastConnected || host.created_at,
       }));
 
       setHosts(processedHosts);

@@ -61,7 +61,7 @@ export async function GET(request: Request) {
         project: true,
         executions: {
           orderBy: {
-            createdAt: 'desc',
+            created_at: 'desc',
           },
           take: 1,
         },

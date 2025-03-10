@@ -93,8 +93,8 @@ export class GiteaProviderService implements GitProviderService {
       defaultBranch: repo.default_branch || 'main',
       providerId: provider.id,
       syncStatus: 'IDLE',
-      createdAt: new Date(repo.created_at),
-      updatedAt: new Date(repo.updated_at),
+      created_at: new Date(repo.created_at),
+      updated_at: new Date(repo.updated_at),
     }));
   }
 
