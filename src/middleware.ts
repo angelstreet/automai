@@ -106,7 +106,12 @@ export default async function middleware(request: NextRequest) {
         const locale = pathParts.length > 0 && locales.includes(pathParts[0] as any)
           ? pathParts[0]
           : defaultLocale;
-        return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
+        
+        // Get tenant from user metadata or default to 'trial'
+        const tenantName = data.user.user_metadata?.tenant_name || 'trial';
+        
+        // Redirect to tenant-specific dashboard
+        return NextResponse.redirect(new URL(`/${locale}/${tenantName}/dashboard`, request.url));
       }
       
       // User not logged in, continue to login page
