@@ -1,6 +1,7 @@
-import { redirect } from 'next/navigation';
+import { Hero } from './(marketing)/_components/Hero';
+import { Features } from './(marketing)/_components/Features';
+import { SiteHeader } from '@/components/layout/SiteHeader';
 import { locales } from '@/config';
-import { getUser } from '@/lib/supabase/auth';
 
 export const dynamic = 'force-static';
 
@@ -9,20 +10,15 @@ export async function generateStaticParams() {
 }
 
 export default async function Page({ params }: { params: { locale: string } }) {
-  // Await params to ensure they're fully resolved
-  const { locale } = await params;
-  
-  // Try to get the authenticated user
-  const userResult = await getUser();
-  
-  // Use tenant_name if available, otherwise default to 'trial'
-  const tenantName = userResult.success && userResult.data?.tenant_name 
-    ? userResult.data.tenant_name 
-    : 'trial';
-  
-  // Log for debugging
-  console.log('Root page redirect using tenant:', tenantName);
-  
-  // Redirect to the appropriate tenant dashboard
-  redirect(`/${locale}/${tenantName}/dashboard`);
+  return (
+    <div className="relative min-h-screen flex flex-col">
+      <SiteHeader />
+      <main className="flex-1">
+        <div className="flex flex-col">
+          <Hero />
+          <Features />
+        </div>
+      </main>
+    </div>
+  );
 }
