@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { createClient } from './server';
-import db from '@/lib/supabase/db';
+import { createClient as createAdminClient } from './admin';
 
 // Flag to track if we've already logged auth session missing errors
 let authSessionMissingErrorLogged = false;
@@ -33,610 +33,311 @@ export interface AuthResult<T = any> {
   data?: T;
 }
 
-/**
- * Centralized Supabase Authentication Service
- * This combines functionality from both src/auth.ts and src/lib/services/supabase-auth.ts
- */
 export const supabaseAuth = {
-  /**
-   * Get the current session from Supabase
-   */
   async getSession(): Promise<AuthResult<SessionData>> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available' };
     }
-
     try {
-      // Get cookies and create client
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
-      // Try to get the session
       const { data, error } = await supabase.auth.getSession();
-
       if (error) {
         console.error('Error getting session:', error);
-        return { 
-          success: false, 
-          error: error.message 
-        };
+        return { success: false, error: error.message };
       }
-
       if (!data.session) {
-        return {
-          success: false,
-          error: 'No active session',
-        };
+        return { success: false, error: 'No active session' };
       }
-
-      // Extract user data
-      const user = data.session.user;
-      
-      // Log the raw user data for debugging
-      console.log('Raw Supabase session user data:', JSON.stringify(user, null, 2));
-      
-      // Extract name from various possible metadata fields
+      const { user, access_token, expires_at } = data.session;
       const metadata = user.user_metadata || {};
-      const name = metadata.name || 
-                  metadata.full_name || 
-                  (metadata as any)?.raw_user_meta_data?.name ||
-                  metadata.preferred_username ||
-                  user.email?.split('@')[0] || 
-                  null;
-      
-      // Get tenant_id from metadata
-      const tenant_id = metadata.tenant_id;
-      
-      // Simplified approach: Just use tenant_name from metadata or fallback to tenant_id
-      // No need to query the database for tenant information anymore
-      let tenant_name = metadata.tenant_name || tenant_id;
-      
-      // Log for debugging
-      console.log('SUPABASE-AUTH: Using tenant_name from metadata:', tenant_name);
-      
-      const userData: UserSession = {
-        id: user.id,
-        email: user.email,
-        name: name,
-        image: metadata.avatar_url,
-        role: metadata.role || 'user',
-        tenant_id: tenant_id,
-        tenant_name: tenant_name,
-      };
-
+      const name =
+        metadata.name ||
+        metadata.full_name ||
+        (metadata as any)?.raw_user_meta_data?.name ||
+        metadata.preferred_username ||
+        user.email?.split('@')[0] ||
+        null;
+      const tenant_id = metadata.tenant_id || metadata.tenantId || 'trial';
+      const tenant_name = metadata.tenant_name || metadata.tenantName || tenant_id;
       return {
         success: true,
         data: {
-          user: userData,
-          accessToken: data.session.access_token,
-          expires: data.session.expires_at?.toString() || '',
+          user: {
+            id: user.id,
+            email: user.email,
+            name,
+            image: metadata.avatar_url,
+            role: metadata.role || 'user',
+            tenant_id,
+            tenant_name,
+          },
+          accessToken: access_token,
+          expires: expires_at ? new Date(expires_at * 1000).toISOString() : '',
         },
       };
     } catch (error) {
       console.error('Error in getSession:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
-  /**
-   * Extract session from Authorization header
-   */
   async extractSessionFromHeader(authHeader: string | null): Promise<AuthResult<SessionData>> {
-    if (!isUsingSupabase() || !authHeader) {
-      return {
-        success: false,
-        error: !authHeader ? 'No authorization header provided' : 'Supabase auth not available',
-      };
+    if (!isUsingSupabase() || !authHeader || !authHeader.startsWith('Bearer ')) {
+      return { success: false, error: 'Invalid or missing authorization header' };
     }
-
     try {
-      // Create a Supabase client
-      const supabase = await createClient();
-
-      // Get the user from the token
-      const token = authHeader.replace('Bearer ', '');
+      const token = authHeader.substring(7);
+      const supabase = createAdminClient();
       const { data, error } = await supabase.auth.getUser(token);
-
       if (error || !data.user) {
-        return {
-          success: false,
-          error: error?.message || 'Invalid token',
-        };
+        console.error('Error getting user from token:', error?.message);
+        return { success: false, error: error?.message || 'Invalid token' };
       }
-
       const user = data.user;
-      
-      // Log the raw user data for debugging
-      console.log('Raw Supabase token user data:', JSON.stringify(user, null, 2));
-      
-      // Extract name from various possible metadata fields
       const metadata = user.user_metadata || {};
-      const name = metadata.name || 
-                  metadata.full_name || 
-                  (metadata as any)?.raw_user_meta_data?.name ||
-                  metadata.preferred_username ||
-                  user.email?.split('@')[0] || 
-                  null;
-      
-      // Get tenant_id from metadata
-      const tenant_id = metadata.tenant_id;
-      
-      // Simplified approach: Just use tenant_name from metadata or fallback to tenant_id
-      // No need to query the database for tenant information anymore
-      let tenant_name = metadata.tenant_name || tenant_id;
-      
-      // Log for debugging
-      console.log('SUPABASE-AUTH: Using tenant_name from metadata:', tenant_name);
-      
-      const userData: UserSession = {
-        id: user.id,
-        email: user.email,
-        name: name,
-        image: metadata.avatar_url,
-        role: metadata.role || 'user',
-        tenant_id: tenant_id,
-        tenant_name: tenant_name,
-      };
-
+      const name =
+        metadata.name ||
+        metadata.full_name ||
+        (metadata as any)?.raw_user_meta_data?.name ||
+        metadata.preferred_username ||
+        user.email?.split('@')[0] ||
+        null;
+      const tenant_id = metadata.tenant_id || metadata.tenantId || 'trial';
+      const tenant_name = metadata.tenant_name || metadata.tenantName || tenant_id;
       return {
         success: true,
         data: {
-          user: userData,
+          user: {
+            id: user.id,
+            email: user.email,
+            name,
+            image: metadata.avatar_url,
+            role: metadata.role || 'user',
+            tenant_id,
+            tenant_name,
+          },
           accessToken: token,
-          expires: '', // We don't have expiry info from getUser
+          expires: new Date(Date.now() + 3600 * 1000).toISOString(),
         },
       };
     } catch (error) {
       console.error('Error extracting session from header:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
-  /**
-   * Get the current user
-   */
   async getUser(): Promise<AuthResult<UserSession>> {
-    if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+    const sessionResult = await this.getSession();
+    if (!sessionResult.success || !sessionResult.data) {
+      return { success: false, error: sessionResult.error || 'No user found' };
     }
-
-    try {
-      // Get cookies and create client
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-
-      // Use getUser instead of getSession for better security
-      console.log('SUPABASE-AUTH: Calling supabase.auth.getUser()');
-      const { data, error } = await supabase.auth.getUser();
-      console.log('SUPABASE-AUTH: Raw getUser response:', JSON.stringify(data, null, 2));
-
-      if (error) {
-        // Don't log Auth session missing errors as they're expected on login pages
-        if (error.message !== 'Auth session missing!' || !authSessionMissingErrorLogged) {
-          if (error.message === 'Auth session missing!') {
-            // Only log this error once per session
-            authSessionMissingErrorLogged = true;
-          }
-          
-          if (error.message !== 'Auth session missing!') {
-            console.error('Error getting user:', error);
-          }
-        }
-        
-        return { 
-          success: false, 
-          error: error.message 
-        };
-      }
-
-      // Fix for incorrect handling of data structure
-      if (!data || !data.user || !data.user.id) {
-        console.log('SUPABASE-AUTH: No user data found in response');
-        return {
-          success: false,
-          error: 'No authenticated user',
-        };
-      }
-      
-      console.log('SUPABASE-AUTH: User found in response');
-
-      // Extract user data
-      const user = data.user;
-      
-      // Log the raw user data for debugging
-      console.log('Raw Supabase user data:', JSON.stringify(user, null, 2));
-      
-      // Extract name from various possible metadata fields
-      const metadata = user.user_metadata || {};
-      const name = metadata.name || 
-                  metadata.full_name || 
-                  (metadata as any)?.raw_user_meta_data?.name ||
-                  metadata.preferred_username ||
-                  user.email?.split('@')[0] || 
-                  null;
-      
-      // Get tenant_id from metadata
-      const tenant_id = metadata.tenant_id;
-      
-      // Simplified approach: Just use tenant_name from metadata or fallback to tenant_id
-      // No need to query the database for tenant information anymore
-      let tenant_name = metadata.tenant_name || tenant_id;
-      
-      // Log for debugging
-      console.log('SUPABASE-AUTH: Using tenant_name from metadata:', tenant_name);
-      
-      const userData: UserSession = {
-        id: user.id,
-        email: user.email,
-        name: name,
-        image: metadata.avatar_url,
-        role: metadata.role || 'user',
-        tenant_id: tenant_id,
-        tenant_name: tenant_name,
-      };
-
-      return {
-        success: true,
-        data: userData,
-      };
-    } catch (error) {
-      console.error('Error in getUser:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+    return { success: true, data: sessionResult.data.user };
   },
 
-  /**
-   * Check if the user is authenticated
-   */
   async isAuthenticated(): Promise<boolean> {
     const sessionResult = await this.getSession();
     return sessionResult.success;
   },
 
-  /**
-   * Sign in with email and password
-   */
   async signInWithPassword(email: string, password: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available in this environment' };
     }
-
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
-
-      return {
-        success: true,
-        data: data.session,
-      };
+      return { success: true, data: data.session };
     } catch (error) {
       console.error('Error signing in:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   },
 
-  /**
-   * Sign up with email and password
-   */
-  async signUp(email: string, password: string, options?: { 
-    redirectTo?: string; 
-    data?: Record<string, any>; 
-  }): Promise<AuthResult> {
+  async signUp(
+    email: string,
+    password: string,
+    options?: { redirectTo?: string; data?: Record<string, any> }
+  ): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available in this environment' };
     }
-
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options
-      });
-
+      const { data, error } = await supabase.auth.signUp({ email, password, options });
       if (error) {
         console.error('Error signing up:', error);
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
-
-      return {
-        success: true,
-        data,
-      };
-    } catch (error: any) {
+      return { success: true, data };
+    } catch (error) {
       console.error('Error signing up:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to sign up',
-      };
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to sign up' };
     }
   },
 
-  /**
-   * Sign in with OAuth provider
-   */
-  async signInWithOAuth(provider: 'google' | 'github' | 'gitlab', options?: { 
-    redirectTo?: string;
-  }): Promise<AuthResult> {
+  async signInWithOAuth(
+    provider: 'google' | 'github' | 'gitlab',
+    options?: { redirectTo?: string }
+  ): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available in this environment' };
     }
-
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options
-      });
-
+      const { data, error } = await supabase.auth.signInWithOAuth({ provider, options });
       if (error) {
         console.error('Error signing in with OAuth:', error);
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
-
-      return {
-        success: true,
-        data,
-      };
-    } catch (error: any) {
+      return { success: true, data };
+    } catch (error) {
       console.error('Error signing in with OAuth:', error);
       return {
         success: false,
-        error: error.message || 'Failed to sign in with OAuth',
+        error: error instanceof Error ? error.message : 'Failed to sign in with OAuth',
       };
     }
   },
 
-  /**
-   * Handle OAuth callback
-   * This is part of the server DB layer that directly interacts with Supabase
-   */
   async handleOAuthCallback(code: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available in this environment' };
     }
-
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
       if (error) {
         console.error('Error exchanging code for session:', error);
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
-
-      return {
-        success: true,
-        data,
-      };
-    } catch (error: any) {
+      return { success: true, data };
+    } catch (error) {
       console.error('Error handling OAuth callback:', error);
       return {
         success: false,
-        error: error.message || 'Failed to process OAuth callback',
+        error: error instanceof Error ? error.message : 'Failed to process OAuth callback',
       };
     }
   },
 
-  /**
-   * Sign out the current user
-   */
   async signOut(): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available in this environment' };
     }
-
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
       const { error } = await supabase.auth.signOut();
-
       if (error) {
         console.error('Error signing out:', error);
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
-
-      return {
-        success: true,
-      };
-    } catch (error: any) {
+      return { success: true };
+    } catch (error) {
       console.error('Error signing out:', error);
       return {
         success: false,
-        error: error.message || 'Failed to sign out',
+        error: error instanceof Error ? error.message : 'Failed to sign out',
       };
     }
   },
 
-  /**
-   * Update user password
-   */
   async updatePassword(password: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available in this environment' };
     }
-
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
-      const { data, error } = await supabase.auth.updateUser({
-        password,
-      });
-
+      const { data, error } = await supabase.auth.updateUser({ password });
       if (error) {
         console.error('Error updating password:', error);
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
-
-      return {
-        success: true,
-        data,
-      };
-    } catch (error: any) {
+      return { success: true, data };
+    } catch (error) {
       console.error('Error updating password:', error);
       return {
         success: false,
-        error: error.message || 'Failed to update password',
+        error: error instanceof Error ? error.message : 'Failed to update password',
       };
     }
   },
 
-  /**
-   * Reset password for email
-   */
   async resetPasswordForEmail(email: string, redirectTo?: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available in this environment' };
     }
-
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
-      const options = redirectTo 
-        ? { redirectTo } 
-        : undefined;
-
+      const options = redirectTo ? { redirectTo } : undefined;
       const { error } = await supabase.auth.resetPasswordForEmail(email, options);
-
       if (error) {
         console.error('Error resetting password:', error);
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
-
-      return {
-        success: true,
-      };
-    } catch (error: any) {
+      return { success: true };
+    } catch (error) {
       console.error('Error resetting password:', error);
       return {
         success: false,
-        error: error.message || 'Failed to reset password',
+        error: error instanceof Error ? error.message : 'Failed to reset password',
       };
     }
   },
 
-  /**
-   * Update user profile
-   */
   async updateProfile(data: Record<string, any>): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return {
-        success: false,
-        error: 'Supabase auth not available in this environment',
-      };
+      return { success: false, error: 'Supabase auth not available in this environment' };
     }
-
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-
-      const { data: userData, error } = await supabase.auth.updateUser({
-        data,
-      });
-
+      const { data: userData, error } = await supabase.auth.updateUser({ data });
       if (error) {
         console.error('Error updating profile:', error);
-        return {
-          success: false,
-          error: error.message,
-        };
+        return { success: false, error: error.message };
       }
-
-      return {
-        success: true,
-        data: userData,
-      };
-    } catch (error: any) {
+      return { success: true, data: userData };
+    } catch (error) {
       console.error('Error updating profile:', error);
       return {
         success: false,
-        error: error.message || 'Failed to update profile',
+        error: error instanceof Error ? error.message : 'Failed to update profile',
       };
     }
   },
 };
 
-// Export a simplified direct access to commonly used functions
+// Export simplified direct access
 export const getSession = () => supabaseAuth.getSession();
+export const extractSessionFromHeader = (header: string | null) =>
+  supabaseAuth.extractSessionFromHeader(header);
 export const getUser = () => supabaseAuth.getUser();
 export const isAuthenticated = () => supabaseAuth.isAuthenticated();
-export const extractSessionFromHeader = (header: string | null) => 
-  supabaseAuth.extractSessionFromHeader(header);
+export const signInWithPassword = (email: string, password: string) =>
+  supabaseAuth.signInWithPassword(email, password);
+export const signUp = (
+  email: string,
+  password: string,
+  options?: { redirectTo?: string; data?: Record<string, any> }
+) => supabaseAuth.signUp(email, password, options);
+export const signInWithOAuth = (
+  provider: 'google' | 'github' | 'gitlab',
+  options?: { redirectTo?: string }
+) => supabaseAuth.signInWithOAuth(provider, options);
+export const handleOAuthCallback = (code: string) => supabaseAuth.handleOAuthCallback(code);
+export const signOut = () => supabaseAuth.signOut();
+export const updatePassword = (password: string) => supabaseAuth.updatePassword(password);
+export const resetPasswordForEmail = (email: string, redirectTo?: string) =>
+  supabaseAuth.resetPasswordForEmail(email, redirectTo);
+export const updateProfile = (data: Record<string, any>) => supabaseAuth.updateProfile(data);
