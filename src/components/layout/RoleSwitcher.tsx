@@ -22,42 +22,43 @@ interface RoleSwitcherProps {
   className?: string;
 }
 
+// Create a custom event for role changes
+const dispatchRoleChangeEvent = (role: Role) => {
+  // Create and dispatch a custom event
+  const event = new CustomEvent('debug:roleChange', { 
+    detail: { role },
+    bubbles: true 
+  });
+  window.dispatchEvent(event);
+  console.log('Debug role change event dispatched:', role);
+};
+
 function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
-  console.log('RoleSwitcher - Component mounting');
-  
-  // Get user from context but we'll override the role locally
+  // Get user from context
   const { user } = useUser();
   
-  // Use local state for the role instead of the user context
-  const [currentRole, setCurrentRole] = React.useState<Role>(user?.user_role || 'viewer');
+  // Local state for the selected role (for debugging)
+  const [selectedRole, setSelectedRole] = React.useState<Role>(user?.user_role || 'viewer');
   
-  console.log('RoleSwitcher - Current user data:', { user, currentRole });
-
-  // Update the role locally without making API calls
+  // Handle role change
   const handleValueChange = React.useCallback((value: Role) => {
-    console.log('Role selected:', value);
-    if (value === currentRole) {
-      console.log('Role unchanged, skipping update');
-      return;
-    }
+    console.log('Debug: Changing role to:', value);
     
-    // Update role immediately
-    setCurrentRole(value);
-    console.log('Role updated locally to:', value);
+    // Update local state
+    setSelectedRole(value);
     
-    // Dispatch a custom event when the role changes (for any components that might be listening)
-    const event = new CustomEvent('roleChange', { detail: value });
-    window.dispatchEvent(event);
-  }, [currentRole]);
+    // Dispatch custom event for debugging
+    dispatchRoleChangeEvent(value);
+  }, []);
 
   return (
     <Select
-      value={currentRole}
+      value={selectedRole}
       onValueChange={handleValueChange}
     >
-      <SelectTrigger className={cn("w-[180px]", className)}>
+      <SelectTrigger className={cn("w-full", className)}>
         <SelectValue placeholder="Select a role">
-          {roles.find(r => r.value === currentRole)?.label || 'Select a role'}
+          {roles.find(r => r.value === selectedRole)?.label || 'Select a role'}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
@@ -20,13 +20,31 @@ import { sidebarData } from './data/sidebarData';
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user, role } = useUser();
+  const { user } = useUser();
   const { open } = useSidebar();
   const isCollapsed = !open;
 
-  // Always call useMemo hooks in the same order, regardless of conditions
-  // Create empty/default values for the memoized data when user is not available
-  const userRole = role as Role;
+  // Add debug state for role override
+  const [debugRole, setDebugRole] = useState<Role | null>(null);
+
+  // Listen for debug role change events
+  useEffect(() => {
+    const handleDebugRoleChange = (event: CustomEvent<{ role: Role }>) => {
+      console.log('AppSidebar - Debug role change event received:', event.detail.role);
+      setDebugRole(event.detail.role);
+    };
+
+    // Add event listener
+    window.addEventListener('debug:roleChange', handleDebugRoleChange as EventListener);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('debug:roleChange', handleDebugRoleChange as EventListener);
+    };
+  }, []);
+
+  // Get the user role from debug override, user.user_role, or use a default role
+  const userRole = debugRole || user?.user_role || 'viewer';
   
   // Filter out empty sections based on user role - memoize this calculation
   const filteredNavGroups = useMemo(() => {
@@ -80,7 +98,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
       {...props}
     >
       {!isCollapsed && (
-        <SidebarHeader className="p-1.5">
+        <SidebarHeader className="p-1.5 flex flex-col gap-2">
           <TeamSwitcher />
         </SidebarHeader>
       )}

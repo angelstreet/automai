@@ -40,9 +40,12 @@ interface NavGroupProps {
 const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
   const pathname = usePathname();
   const params = useParams();
-  const { role } = useUser();
+  const { user } = useUser();
   const { open } = useSidebar();
   const isCollapsed = !open;
+  
+  // Get the user role from user.user_role or use a default role
+  const userRole = user?.user_role || 'viewer';
   
   // Use useRef for expandedItems to avoid unnecessary re-renders
   const expandedItemsRef = React.useRef<Record<string, boolean>>({});
@@ -66,8 +69,8 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
   // Filter items based on role - memoize this calculation
   const filteredItems = React.useMemo(() => items.filter((item) => {
     if (!item.roles) return true;
-    return item.roles.includes(role);
-  }), [items, role]);
+    return item.roles.includes(userRole);
+  }), [items, userRole]);
 
   return (
     <SidebarGroup>
@@ -88,7 +91,7 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
               // Filter submenu items based on role
               const filteredSubItems = item.items?.filter((subItem) => {
                 if (!subItem.roles) return true;
-                return subItem.roles.includes(role);
+                return subItem.roles.includes(userRole);
               });
 
               // Skip rendering if no accessible submenu items
