@@ -29,6 +29,8 @@ export type AuthUser = {
     avatar_url?: string;
     tenant_id?: string;
     role?: string;
+    user_role?: string;
+    tenant_name?: string;
     raw_user_meta_data?: {
       name?: string;
       full_name?: string;

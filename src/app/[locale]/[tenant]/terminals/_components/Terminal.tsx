@@ -21,6 +21,7 @@ interface Connection {
   host?: string;
   user?: string;
   os_type?: string;
+  is_windows?: boolean;
 }
 
 interface TerminalProps {

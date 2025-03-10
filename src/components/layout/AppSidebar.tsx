@@ -58,55 +58,17 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
   }, [user, userRole, sidebarData.navGroups]);
 
   // Get user avatar from metadata
-  const avatarUrl = user?.user_metadata && (user.user_metadata as any)?.avatar_url || '';
-
-  // IMPORTANT: Debug with unique timestamp to avoid cache issues - 2025-03-09-23:45
-  console.log('🔍 DEBUG USER DATA - UNIQUE LOG');
-  console.log('User object:', user);
-  console.log('User metadata:', user?.user_metadata);
-  if (user?.user_metadata) {
-    console.log('Direct name in metadata:', user.user_metadata.name);
-    console.log('Full name in metadata:', user.user_metadata.full_name);
-    console.log('Raw user meta data:', (user.user_metadata as any)?.raw_user_meta_data);
-    console.log('Preferred username:', user.user_metadata.preferred_username);
-  }
-  console.log('Name field directly on user:', user?.name);
-  
   // Prepare user data for NavUser - memoize this calculation
   const userData = useMemo(() => {
     if (!user) return { name: 'Guest', email: '', avatar: undefined };
     
-    // Handle different possible metadata structures from Supabase
-    const userMetadata = user.user_metadata || {};
-    
-    // First check for name directly on user object (might be added by our code)
-    let userName = user.name;
-    
-    // If no name directly on user, try various metadata locations
-    if (!userName) {
-      userName = 
-        // Try direct access to metadata
-        userMetadata.name || 
-        // Try full_name which is sometimes used by OAuth providers
-        userMetadata.full_name || 
-        // Try to get it from raw metadata if it's nested
-        (userMetadata as any)?.raw_user_meta_data?.name ||
-        // Try preferred_username which some providers use
-        userMetadata.preferred_username ||
-        // Fall back to email username
-        user.email?.split('@')[0] || 
-        // Final fallback
-        'Guest';
-    }
-    
-    console.log('Resolved userName:', userName);
-    
+    // Simple and direct access to user properties
     return {
-      name: userName || 'Guest', // Ensure name is never undefined
+      name: user.name || user.email?.split('@')[0] || 'Guest',
       email: user.email || '',
-      avatar: avatarUrl,
+      avatar: user.user_metadata?.avatar_url || '',
     };
-  }, [user, avatarUrl]);
+  }, [user]);
 
   // Always render the sidebar with content, no more loading state for unauthenticated users
   // Updated version - March 9, 2025

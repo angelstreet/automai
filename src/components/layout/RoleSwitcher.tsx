@@ -28,22 +28,17 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   const { role: currentRole, setRole } = useUser();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Log the current role for debugging
+  // Stop loading when we have a role
   React.useEffect(() => {
-    console.log('RoleSwitcher: Current role from UserContext:', currentRole);
-    console.log('RoleSwitcher: Available roles:', roles);
-    
-    // If we have a role, we're no longer loading
     if (currentRole) {
       setIsLoading(false);
     }
   }, [currentRole]);
 
-  // Use useCallback to memoize the handler function
+  // Handle role change
   const handleValueChange = useCallback((value: Role) => {
     // Only update if the role actually changed
     if (value !== currentRole) {
-      console.log('Changing role from', currentRole, 'to', value);
       // Dispatch a custom event when the role changes
       const event = new CustomEvent('roleChange', { detail: value });
       window.dispatchEvent(event);
@@ -51,16 +46,14 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
     }
   }, [currentRole, setRole]);
 
-  // Ensure the current role is valid according to the Role type
+  // Ensure the current role is valid
   useEffect(() => {
     const isValidRole = roles.some(role => role.value === currentRole);
-    console.log('RoleSwitcher: Is current role valid?', isValidRole, currentRole);
     if (!isValidRole && roles.length > 0) {
       // If current role is not valid, set it to the first valid role
-      console.log('RoleSwitcher: Setting to default role:', roles[0].value);
       setRole(roles[0].value);
     }
-  }, [currentRole, setRole]);
+  }, [currentRole, setRole, roles]);
 
   // Set a timeout to stop loading after a reasonable time
   useEffect(() => {

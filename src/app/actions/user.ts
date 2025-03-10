@@ -620,8 +620,8 @@ export async function getCurrentUserRoles(): Promise<UserRoleResponse> {
       return { success: false, error: 'No user found' };
     }
     
-    // Extract role from user metadata
-    const role = userResult.data.user_metadata?.role || 'user';
+    // Extract role from user metadata - only check for user_role
+    const role = userResult.data.user_metadata?.user_role || 'user';
     
     // Create a UserRole object
     const userRole: UserRole = {
