@@ -7,7 +7,7 @@ import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { SidebarProvider } from '@/components/sidebar';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { ToasterProvider } from '@/components/shadcn/toaster';
-// Role context is now part of UserContext - no need to import
+import { UserProvider } from '@/context/UserContext';
 
 export default function TenantLayout({
   children,
@@ -20,8 +20,9 @@ export default function TenantLayout({
   const tenant = params.tenant as string;
   
   return (
-    <SidebarProvider>
-      <TooltipProvider>
+    <UserProvider>
+      <SidebarProvider>
+        <TooltipProvider>
           <ToasterProvider />
           <div className="relative flex min-h-screen w-full">
             <AppSidebar />
@@ -38,5 +39,6 @@ export default function TenantLayout({
           </div>
         </TooltipProvider>
       </SidebarProvider>
+    </UserProvider>
   );
 }

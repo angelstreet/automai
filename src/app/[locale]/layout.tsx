@@ -3,7 +3,6 @@ import { Inter } from 'next/font/google';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { ToasterProvider } from '@/components/shadcn/toaster';
-import { UserProvider } from '@/context/UserContext';
 import { locales } from '@/config';
 import { getMessages } from '@/i18n';
 
@@ -42,10 +41,8 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider locale={validLocale} messages={messages} timeZone="UTC">
-      <UserProvider>
-        {children}
-        <ToasterProvider />
-      </UserProvider>
+      {children}
+      <ToasterProvider />
     </NextIntlClientProvider>
   );
 }

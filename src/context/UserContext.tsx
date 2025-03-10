@@ -18,15 +18,17 @@ import { Role, AuthUser } from '@/types/user';
 // Default role
 const DEFAULT_ROLE: Role = 'viewer';
 
-// SWR configuration - disable all automatic revalidation
+// SWR configuration - optimized for authenticated routes
 const SWR_CONFIG = {
   revalidateOnFocus: false,
   revalidateIfStale: false,
   revalidateOnReconnect: false,
-  dedupingInterval: 5000,
+  dedupingInterval: 5000,     // Cache requests for 5s to prevent duplicates
   refreshInterval: 0,
-  shouldRetryOnError: false,
-  errorRetryCount: 0,
+  shouldRetryOnError: true,
+  errorRetryCount: 2,         // Allow 2 retries for network issues
+  loadingTimeout: 4000,       // Timeout after 4s
+  focusThrottleInterval: 5000 // Prevent rapid focus triggers
 };
 
 // Enhanced user type with all metadata fields
@@ -79,10 +81,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return ['admin', 'tester', 'developer', 'viewer'].includes(role);
   };
   
-  // Fetch user data once on mount
+  // Fetch user data only if we have a session
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
     try {
-      return await getCurrentUser();
+      // Only fetch if we're in an authenticated route (tenant layout)
+      const userData = await getCurrentUser();
+      if (!userData) {
+        console.log('No user data found in session');
+        return null;
+      }
+      return userData;
     } catch (err) {
       console.error('Error fetching user:', err);
       setError(err instanceof Error ? err : new Error('Failed to fetch user'));
@@ -101,28 +109,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const extractUserData = useCallback((userData: AuthUser | null): EnhancedUser | null => {
     if (!userData) return null;
     
-    // Debug: Log the user data to see what's available
-    console.log('User data:', userData);
-    console.log('Root user_role:', (userData as any).user_role);
-    console.log('Metadata user_role:', userData.user_metadata?.user_role);
-    
     // Extract role - ONLY use user_role (not Supabase's role property)
     let userRole: Role;
     
-    // First check if user_role exists at the root level (as shown in your JSON)
+    // First check if user_role exists at the root level
     if ((userData as any).user_role && isValidRole((userData as any).user_role)) {
       userRole = (userData as any).user_role as Role;
-      console.log('Using root-level user_role:', userRole);
     }
     // If not at root, check in metadata
     else if (userData.user_metadata?.user_role && isValidRole(userData.user_metadata.user_role)) {
       userRole = userData.user_metadata.user_role as Role;
-      console.log('Using metadata user_role:', userRole);
     }
     // If neither exists or is valid, use default
     else {
       userRole = DEFAULT_ROLE;
-      console.log('Using default role:', userRole);
     }
     
     // Extract other metadata fields
@@ -145,18 +145,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       name
     } as EnhancedUser;
     
-    // Debug: Log the final enhanced user object
-    console.log('Enhanced user role:', enhancedUser.user_role);
+    // Only log when we successfully create an enhanced user
+    console.log('User data processed:', { 
+      id: enhancedUser.id,
+      email: enhancedUser.email,
+      role: enhancedUser.user_role,
+      tenant: enhancedUser.tenant_name
+    });
     
     return enhancedUser;
   }, []);
   
   // Get enhanced user with all metadata extracted
-  // Ensure we're passing a valid AuthUser | null to extractUserData
   const enhancedUser = user ? extractUserData(user) : null;
-  
-  // Debug: Log the enhanced user to verify it contains the correct role
-  console.log('Final enhanced user:', enhancedUser);
   
   // Simple user refresh - explicitly called when needed
   const refreshUser = useCallback(async (): Promise<EnhancedUser | null> => {
