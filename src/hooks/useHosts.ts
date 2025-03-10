@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import useSWR from 'swr';
 import { Host } from '@/types/hosts';
@@ -13,110 +13,37 @@ import {
   updateHost
 } from '@/app/actions/hosts';
 
-// Cache keys
-const HOSTS_CACHE_KEY = 'automai_hosts_cache';
-const HOSTS_CACHE_TIMESTAMP_KEY = 'automai_hosts_cache_timestamp';
-// Cache expiry time - 5 minutes (in milliseconds)
-const CACHE_EXPIRY_TIME = 5 * 60 * 1000;
-
-// SWR fetcher function that handles errors
+// SWR fetcher function
 const hostsFetcher = async () => {
-  console.log('SWR fetcher: Fetching hosts data');
   const result = await getHosts();
   if (!result.success) {
     throw new Error(result.error || 'Failed to fetch hosts');
   }
-  
-  console.log(`SWR fetcher: Successfully fetched ${result.data?.length || 0} hosts`);
   return result.data || [];
 };
 
 export function useHosts(initialHosts: Host[] = []) {
-  // Use SWR for data fetching with proper caching and deduplication
-  const { data, error, isLoading: swrLoading, isValidating, mutate } = useSWR<Host[]>(
+  const { data, error, isLoading, isValidating, mutate } = useSWR<Host[]>(
     'hosts',
     hostsFetcher,
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 5000, // 5 seconds between identical requests
-      fallbackData: initialHosts,
-      onSuccess: (data) => {
-        console.log(`SWR: Data updated with ${data.length} hosts`);
-        // Update local cache on success
-        saveHostsToCache(data);
-      },
-      onError: (err) => {
-        console.error('SWR error fetching hosts:', err);
-      }
+      fallbackData: initialHosts
     }
   );
-
-  // Keep state variables for backwards compatibility
+  
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTesting, setIsTesting] = useState<string | null>(null);
   const { toast } = useToast();
   
-  // Use SWR data instead of local state
   const hosts = data || [];
 
-  // Helper function to save hosts to cache
-  const saveHostsToCache = useCallback((hostsData: Host[]) => {
-    if (typeof window === 'undefined') return;
+  // Add a new host
+  const addNewHost = useCallback(async (hostData: Omit<Host, 'id'>) => {
     try {
-      localStorage.setItem(HOSTS_CACHE_KEY, JSON.stringify(hostsData));
-      localStorage.setItem(HOSTS_CACHE_TIMESTAMP_KEY, Date.now().toString());
-    } catch (error) {
-      console.error('Error saving hosts to cache:', error);
-    }
-  }, []);
-
-  // Helper function to get hosts from cache
-  const getHostsFromCache = useCallback((): { hosts: Host[] | null, isFresh: boolean } => {
-    if (typeof window === 'undefined') return { hosts: null, isFresh: false };
-    
-    try {
-      const cachedHosts = localStorage.getItem(HOSTS_CACHE_KEY);
-      const timestamp = localStorage.getItem(HOSTS_CACHE_TIMESTAMP_KEY);
-      
-      if (!cachedHosts || !timestamp) {
-        return { hosts: null, isFresh: false };
-      }
-      
-      const isFresh = (Date.now() - parseInt(timestamp)) < CACHE_EXPIRY_TIME;
-      return { 
-        hosts: JSON.parse(cachedHosts) as Host[], 
-        isFresh 
-      };
-    } catch (error) {
-      console.error('Error reading hosts from cache:', error);
-      return { hosts: null, isFresh: false };
-    }
-  }, []);
-
-  // We no longer need fetchHosts since SWR handles this
-  // This function is kept for backwards compatibility
-  const fetchHosts = useCallback(async (forceRefresh = false) => {
-    console.log(`fetchHosts called (forceRefresh: ${forceRefresh})`);
-    
-    try {
-      if (forceRefresh) {
-        // Use SWR's mutate function to force a refresh
-        await mutate();
-      }
-    } catch (error) {
-      console.error('Error in fetchHosts:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch hosts',
-        variant: 'destructive',
-      });
-    }
-  }, [mutate, toast]);
-
-  const addNewHost = useCallback(async (data: Omit<Host, 'id'>) => {
-    try {
-      const result = await addHost(data);
+      const result = await addHost(hostData);
       
       if (!result.success) {
         toast({
@@ -127,25 +54,8 @@ export function useHosts(initialHosts: Host[] = []) {
         return false;
       }
       
-      // Ensure the host has correct status and timestamp
-      const host = result.data!;
-      const currentTime = new Date();
-      
-      // Make sure the host has connected status and timestamp
-      const processedHost = {
-        ...host,
-        status: 'connected', // Force connected status
-        updated_at: host.updated_at ? new Date(host.updated_at) : currentTime
-      };
-      
-      // Update SWR cache with the new host
-      mutate(currentHosts => {
-        console.log('Adding new host to SWR cache');
-        const newHosts = [...(currentHosts || []), processedHost];
-        // Also update local cache
-        saveHostsToCache(newHosts);
-        return newHosts;
-      }, false);
+      // Update cache with the new host
+      mutate(currentHosts => [...(currentHosts || []), result.data!], false);
       
       toast({
         title: 'Success',
@@ -161,8 +71,9 @@ export function useHosts(initialHosts: Host[] = []) {
       });
       return false;
     }
-  }, [toast, mutate, saveHostsToCache]);
+  }, [toast, mutate]);
 
+  // Update an existing host
   const updateHostDetails = useCallback(async (id: string, updates: Partial<Omit<Host, 'id'>>) => {
     try {
       // Optimistic update
@@ -187,19 +98,8 @@ export function useHosts(initialHosts: Host[] = []) {
         return false;
       }
       
-      // Update with actual result data
-      mutate(
-        currentHosts => {
-          const updatedHosts = currentHosts?.map(host => 
-            host.id === id ? result.data! : host
-          ) || [];
-          
-          // Also update local cache
-          saveHostsToCache(updatedHosts);
-          return updatedHosts;
-        },
-        false
-      );
+      // Update with actual server data
+      mutate();
       
       toast({
         title: 'Success',
@@ -219,8 +119,9 @@ export function useHosts(initialHosts: Host[] = []) {
       });
       return false;
     }
-  }, [toast, mutate, saveHostsToCache]);
+  }, [toast, mutate]);
 
+  // Delete a host
   const deleteHost = useCallback(async (id: string) => {
     try {
       setIsDeleting(true);
@@ -234,7 +135,7 @@ export function useHosts(initialHosts: Host[] = []) {
       const result = await deleteHostAction(id);
       
       if (!result.success) {
-        // Rollback on failure by revalidating
+        // Rollback on failure
         mutate();
         
         toast({
@@ -245,9 +146,6 @@ export function useHosts(initialHosts: Host[] = []) {
         return false;
       }
       
-      // Save to local cache
-      saveHostsToCache(hosts);
-      
       toast({
         title: 'Success',
         description: 'Host deleted successfully',
@@ -256,7 +154,7 @@ export function useHosts(initialHosts: Host[] = []) {
     } catch (error) {
       console.error('Error deleting host:', error);
       
-      // Rollback on error by revalidating
+      // Rollback on error
       mutate();
       
       toast({
@@ -268,13 +166,14 @@ export function useHosts(initialHosts: Host[] = []) {
     } finally {
       setIsDeleting(false);
     }
-  }, [toast, hosts, saveHostsToCache, mutate]);
+  }, [toast, mutate]);
 
+  // Test host connection
   const testConnection = useCallback(async (id: string) => {
     try {
       setIsTesting(id);
       
-      // Optimistically update UI
+      // Optimistic update
       mutate(
         currentHosts => 
           currentHosts?.map(host => 
@@ -282,36 +181,30 @@ export function useHosts(initialHosts: Host[] = []) {
               ? { ...host, status: 'testing' } 
               : host
           ),
-        // Don't revalidate yet
         false
       );
       
       const result = await testConnectionAction(id);
       
-      // Update cache with the test results
+      // Update with test results
       mutate(
         currentHosts => {
           if (!currentHosts) return [];
           
           return currentHosts.map(host => {
             if (host.id === id) {
-              const currentTime = new Date();
               return {
                 ...host,
                 status: result.success ? 'connected' : 'failed',
                 errorMessage: !result.success ? result.error : undefined,
-                updated_at: result.success ? currentTime : host.updated_at
+                updated_at: result.success ? new Date() : host.updated_at
               };
             }
             return host;
           });
         },
-        // Don't revalidate since we already have fresh data
         false
       );
-      
-      // Save to local cache
-      saveHostsToCache(hosts);
 
       if (result.success) {
         toast({
@@ -334,49 +227,46 @@ export function useHosts(initialHosts: Host[] = []) {
         variant: 'destructive',
       });
       
-      // Revalidate to refresh the data
+      // Refresh data on error
       mutate();
       
       return false;
     } finally {
       setIsTesting(null);
     }
-  }, [toast, hosts, saveHostsToCache, mutate]);
+  }, [toast, mutate]);
 
+  // Refresh all host connections
   const refreshConnections = useCallback(async () => {
     try {
-      // Show refreshing state
-      mutate(undefined, { revalidate: false }); // Start loading state
-      
-      // First refresh the hosts list with SWR
+      // First refresh the hosts list
       await mutate();
       
       // Then test all connections
       const testResults = await testAllHosts();
       
       if (testResults.success && testResults.results) {
-        // Update the status of each host in the cache
-        mutate(currentHosts => {
-          if (!currentHosts) return [];
-          
-          const now = new Date();
-          const updatedHosts = currentHosts.map(host => {
-            const result = testResults.results?.find(r => r.id === host.id);
-            if (result) {
-              return {
-                ...host,
-                status: result.success ? 'connected' : 'failed',
-                errorMessage: !result.success ? result.message : undefined,
-                updated_at: result.success ? now : host.updated_at
-              };
-            }
-            return host;
-          });
-          
-          // Save to local cache as well
-          saveHostsToCache(updatedHosts);
-          return updatedHosts;
-        }, false);
+        // Update the status of each host
+        mutate(
+          currentHosts => {
+            if (!currentHosts) return [];
+            
+            const now = new Date();
+            return currentHosts.map(host => {
+              const result = testResults.results?.find(r => r.id === host.id);
+              if (result) {
+                return {
+                  ...host,
+                  status: result.success ? 'connected' : 'failed',
+                  errorMessage: !result.success ? result.message : undefined,
+                  updated_at: result.success ? now : host.updated_at
+                };
+              }
+              return host;
+            });
+          },
+          false
+        );
         
         toast({
           title: 'Success',
@@ -404,41 +294,20 @@ export function useHosts(initialHosts: Host[] = []) {
       
       return false;
     }
-  }, [toast, saveHostsToCache, mutate]);
-
-  // Run only once on mount, SWR handles the data fetching
-  useEffect(() => {
-    console.log('useHosts hook mounted - SWR will handle data fetching');
-    
-    // Handle edge cases with localStorage fallback during SWR loading
-    const { hosts: cachedHosts, isFresh } = getHostsFromCache();
-    if (cachedHosts && isFresh && !data && !error) {
-      console.log('Using cached hosts while SWR loads');
-      // This won't trigger a new fetch, just a temporary display
-      mutate(cachedHosts, false);
-    }
-  }, []);
+  }, [toast, mutate]);
 
   return {
     hosts,
-    isLoading: swrLoading,
+    isLoading,
     isRefreshing: isValidating,
     isDeleting,
     isTesting,
     addHost: addNewHost,
     updateHost: updateHostDetails,
     deleteHost,
-    refreshConnections: () => {
-      console.log('refreshConnections called');
-      // Set validating state manually first for immediate UI feedback
-      mutate(undefined, { revalidate: false });
-      return refreshConnections();
-    },
+    refreshConnections,
     testConnection,
-    forceRefresh: () => {
-      console.log('forceRefresh called');
-      return mutate();
-    },
+    forceRefresh: () => mutate(),
     error: error ? (error as Error).message : undefined
   };
 }
