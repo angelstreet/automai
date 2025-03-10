@@ -1,6 +1,6 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { updateSession } from '@/lib/supabase/middleware';
+import { updateSession, createClient } from '@/lib/supabase/middleware';
 
 import { locales, defaultLocale, pathnames } from './config';
 
@@ -45,7 +45,6 @@ export default async function middleware(request: NextRequest) {
   // 3. Define public paths that bypass auth checks
   const publicPaths = [
     '/',
-    '/login',
     '/signup',
     '/register',
     '/forgot-password',
@@ -57,30 +56,69 @@ export default async function middleware(request: NextRequest) {
     '/favicon.ico',
   ];
 
-  // Add locale-based paths to public paths
+  // Define auth-only paths that should redirect to dashboard if already authenticated
+  const authOnlyPaths = [
+    '/login',
+    '/signup',
+    '/forgot-password',
+    '/reset-password',
+    '/auth-redirect'
+  ];
+
+  // Add locale-based paths to public and auth-only paths
   locales.forEach((locale) => {
+    // Public paths with locale (pages anyone can access)
     publicPaths.push(`/${locale}`);
     publicPaths.push(`/${locale}/`);
-    publicPaths.push(`/${locale}/login`);
-    publicPaths.push(`/${locale}/signup`);
-    publicPaths.push(`/${locale}/forgot-password`);
-    publicPaths.push(`/${locale}/reset-password`);
-    publicPaths.push(`/${locale}/auth-redirect`);
+    
+    // Auth-only paths with locale (pages that should redirect to dashboard if authenticated)
+    authOnlyPaths.push(`/${locale}/login`);
+    authOnlyPaths.push(`/${locale}/signup`);
+    authOnlyPaths.push(`/${locale}/forgot-password`);
+    authOnlyPaths.push(`/${locale}/reset-password`);
+    authOnlyPaths.push(`/${locale}/auth-redirect`);
   });
 
   // Check if it's a public path
   const isPublicPath =
     publicPaths.some((path) => request.nextUrl.pathname === path) ||
-    request.nextUrl.pathname === '/' ||
-    request.nextUrl.pathname.includes('auth-redirect') ||
+    request.nextUrl.pathname === '/';
+
+  // Check if it's an auth-only path (like login)
+  const isAuthOnlyPath = 
+    authOnlyPaths.some((path) => request.nextUrl.pathname === path) ||
     (pathParts.length >= 2 &&
      locales.includes(pathParts[0] as any) &&
      ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(
-       pathParts[1],
+       pathParts[1]
      ));
 
+  // For auth-only paths like login, we need to check if the user is already authenticated
+  // If they are, redirect them to dashboard
+  if (isAuthOnlyPath) {
+    // Import from supabase/middleware.ts
+    const { supabase, response } = createClient(request);
+    try {
+      const { data } = await supabase.auth.getUser();
+      
+      if (data?.user) {
+        // User is already logged in, redirect to dashboard
+        const locale = pathParts.length > 0 && locales.includes(pathParts[0] as any)
+          ? pathParts[0]
+          : defaultLocale;
+        return NextResponse.redirect(new URL(`/${locale}/dashboard`, request.url));
+      }
+      
+      // User not logged in, continue to login page
+      return NextResponse.next();
+    } catch (error) {
+      console.error('Error checking authentication for auth-only path:', error);
+      return NextResponse.next();
+    }
+  }
+
+  // For regular public paths, just continue without auth check
   if (isPublicPath) {
-    // For public paths, just continue without auth check
     return NextResponse.next();
   }
 
