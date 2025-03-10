@@ -9,7 +9,6 @@ import {
 import { cn } from '@/lib/utils';
 import { Role } from '@/types/user';
 import { useUser } from '@/context/UserContext';
-import { Loader2 } from 'lucide-react';
 
 // Define roles based on the Role type definition
 const roles: { value: Role; label: string }[] = [
@@ -26,45 +25,34 @@ interface RoleSwitcherProps {
 function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   console.log('RoleSwitcher - Component mounting');
   
-  const { user, updateRole } = useUser();
-  const [isUpdating, setIsUpdating] = React.useState(false);
-  const currentRole = user?.user_role;
+  // Get user from context but we'll override the role locally
+  const { user } = useUser();
+  
+  // Use local state for the role instead of the user context
+  const [currentRole, setCurrentRole] = React.useState<Role>(user?.user_role || 'viewer');
+  
   console.log('RoleSwitcher - Current user data:', { user, currentRole });
 
-  // Handle role change with the new Select component
-  const handleValueChange = React.useCallback(async (value: Role) => {
+  // Update the role locally without making API calls
+  const handleValueChange = React.useCallback((value: Role) => {
     console.log('Role selected:', value);
     if (value === currentRole) {
       console.log('Role unchanged, skipping update');
       return;
     }
     
-    try {
-      setIsUpdating(true);
-      await updateRole(value);
-      console.log('Role updated successfully');
-    } catch (error) {
-      console.error('Failed to update role:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [currentRole, updateRole]);
-
-  // Early return if no user to prevent unnecessary renders
-  if (!user) return null;
-
-  // Show loading spinner when updating role
-  if (isUpdating) {
-    return (
-      <div className={cn("w-[180px] h-10 flex items-center justify-center", className)}>
-        <Loader2 className="h-4 w-4 animate-spin" />
-      </div>
-    );
-  }
+    // Update role immediately
+    setCurrentRole(value);
+    console.log('Role updated locally to:', value);
+    
+    // Dispatch a custom event when the role changes (for any components that might be listening)
+    const event = new CustomEvent('roleChange', { detail: value });
+    window.dispatchEvent(event);
+  }, [currentRole]);
 
   return (
     <Select
-      value={currentRole || undefined}
+      value={currentRole}
       onValueChange={handleValueChange}
     >
       <SelectTrigger className={cn("w-[180px]", className)}>

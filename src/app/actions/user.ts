@@ -350,19 +350,21 @@ export async function signOut(formData: FormData) {
 export async function updateProfile(formData: FormData | ProfileData) {
   try {
     // Extract data - handle both FormData and direct objects
-    let name, locale, avatar_url;
+    let name, locale, avatar_url, user_role;
     
     if (formData instanceof FormData) {
       name = formData.get('name') as string;
       locale = formData.get('locale') as string || 'en';
       avatar_url = formData.get('avatar_url') as string;
+      user_role = formData.get('user_role') as string;
     } else {
       name = formData.name;
       locale = formData.locale || 'en';
       avatar_url = formData.avatar_url;
+      user_role = (formData as any).user_role;
     }
     
-    console.log('Updating profile with name:', name);
+    console.log('Updating profile with name:', name, 'and role:', user_role);
     
     // Invalidate user cache before updating profile
     await invalidateUserCache();
@@ -372,6 +374,7 @@ export async function updateProfile(formData: FormData | ProfileData) {
     if (name) metadata.name = name;
     if (locale) metadata.locale = locale;
     if (avatar_url) metadata.avatar_url = avatar_url;
+    if (user_role) metadata.user_role = user_role;
     
     // Update user metadata
     const result = await supabaseAuth.updateProfile(metadata);

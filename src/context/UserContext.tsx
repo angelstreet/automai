@@ -16,13 +16,14 @@ const SWR_CONFIG = {
   revalidateOnFocus: false,    // Disable auto-revalidation on focus
   revalidateIfStale: false,    // Disable background revalidation
   revalidateOnReconnect: false,// Disable revalidation on reconnect
-  dedupingInterval: 30000,     // Increase deduping window to 30s
+  dedupingInterval: 60000,     // Increase deduping window to 60s
   refreshInterval: 0,          // Don't auto-refresh
   shouldRetryOnError: true,    // Retry on network errors
   errorRetryCount: 2,          // Allow 2 retries for network issues
   loadingTimeout: 4000,        // Timeout after 4s
-  focusThrottleInterval: 30000,// Increase focus throttle to 30s
-  keepPreviousData: true       // Keep showing old data while fetching new data
+  focusThrottleInterval: 60000,// Increase focus throttle to 60s
+  keepPreviousData: true,      // Keep showing old data while fetching new data
+  revalidateOnMount: true      // Only revalidate on initial mount
 };
 
 // Enhanced user type with all metadata fields
@@ -52,34 +53,77 @@ const UserContext = createContext<UserContextType>({
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  console.log('UserContext - Provider mounting');
+  // Reduce console logging in production
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (!isProduction) console.log('UserContext - Provider mounting');
+  
   const [error, setError] = useState<Error | null>(null);
+  // Add a ref to track if we've already fetched data
+  const dataFetchedRef = React.useRef(false);
   
   // Helper function to check if a role is valid
   const isValidRole = (role: string): role is Role => {
     return ['admin', 'tester', 'developer', 'viewer'].includes(role);
   };
   
-  // Fetch user data only if we have a session
+  // Fetch user data with localStorage caching
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
-    console.log('UserContext - Fetching user data');
+    // Skip fetching if we've already fetched data once and this is just a re-render
+    if (dataFetchedRef.current && !isProduction) {
+      console.log('UserContext - Skipping fetch, already have data');
+      return null;
+    }
+    
+    if (!isProduction) console.log('UserContext - Fetching user data');
+    
     try {
-      // Check for existing session before making API call
+      // Try to get data from localStorage first
+      if (typeof window !== 'undefined') {
+        const cachedData = localStorage.getItem('user-data-cache');
+        if (cachedData) {
+          try {
+            const { data, timestamp } = JSON.parse(cachedData);
+            // Check if cache is still valid (10 minutes)
+            if (Date.now() - timestamp < 10 * 60 * 1000) {
+              if (!isProduction) console.log('UserContext - Using cached data from localStorage');
+              dataFetchedRef.current = true;
+              return data;
+            } else {
+              // Cache expired, remove it
+              localStorage.removeItem('user-data-cache');
+            }
+          } catch (e) {
+            // Invalid cache, ignore and remove
+            localStorage.removeItem('user-data-cache');
+          }
+        }
+      }
+      
+      // No valid cache, fetch from API
       const userData = await getCurrentUser();
       
       // Early return if no session/user data
       if (!userData) {
-        console.log('UserContext - No user data found');
+        if (!isProduction) console.log('UserContext - No user data found');
         return null;
       }
       
-      console.log('UserContext - User data fetched:', userData);
+      // Cache the user data in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user-data-cache', JSON.stringify({
+          data: userData,
+          timestamp: Date.now()
+        }));
+      }
+      
+      if (!isProduction) console.log('UserContext - User data fetched');
+      dataFetchedRef.current = true;
       return userData;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch user'));
       return null;
     }
-  }, []);
+  }, [isProduction]);
   
   // Use SWR for user data with optimized config and error boundary
   const { 
@@ -101,22 +145,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   );
   
-  // Log when user data changes - moved after user is defined
-  React.useEffect(() => {
-    console.log('UserContext - User data changed in SWR:', { user });
-  }, [user]);
-  
   // Function to extract and normalize user data from Supabase user object
   // No need for useCallback since this doesn't depend on any props or state
   const extractUserData = (userData: AuthUser | null): EnhancedUser | null => {
     if (!userData) return null;
     
     // Extract role - ONLY use user_role (not Supabase's role property)
-    console.log('Raw userData for role extraction:', {
-      direct_user_role: (userData as any).user_role,
-      metadata_user_role: userData.user_metadata?.user_role,
-      full_metadata: userData.user_metadata
-    });
+    if (!isProduction) {
+      console.log('Raw userData for role extraction:', {
+        direct_user_role: (userData as any).user_role,
+        metadata_user_role: userData.user_metadata?.user_role,
+        full_metadata: userData.user_metadata
+      });
+    }
     
     const userRole = (
       ((userData as any).user_role && isValidRole((userData as any).user_role) && (userData as any).user_role) ||
@@ -124,7 +165,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       DEFAULT_ROLE
     ) as Role;
     
-    console.log('Extracted userRole:', userRole);
+    if (!isProduction) console.log('Extracted userRole:', userRole);
     
     // Extract other metadata fields with fallbacks
     const tenantId = (userData as any).tenant_id || userData.user_metadata?.tenant_id || null;
@@ -144,7 +185,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       name
     } as EnhancedUser;
     
-    console.log('Final enhanced user data:', enhancedUser);
+    if (!isProduction) console.log('Final enhanced user data:', enhancedUser);
     return enhancedUser;
   };
   
@@ -153,7 +194,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   
   // Optimized user refresh with error handling and caching
   const refreshUser = useCallback(async (): Promise<EnhancedUser | null> => {
+    // If we already have user data and it's not stale, just return it
+    if (enhancedUser && !loading) {
+      return enhancedUser;
+    }
+    
     try {
+      // Reset the dataFetchedRef to force a new fetch
+      dataFetchedRef.current = false;
+      
+      // Clear localStorage cache to force a fresh fetch
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user-data-cache');
+      }
+      
       // Use SWR's mutate to handle revalidation and caching
       const freshUserData = await mutateUser(
         // Fetch function
@@ -175,9 +229,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       // Keep existing user data on error
       return enhancedUser;
     }
-  }, [mutateUser, fetchUserData, extractUserData, enhancedUser]);
-  
-
+  }, [mutateUser, fetchUserData, extractUserData, enhancedUser, loading, isProduction]);
   
   // Auth operations have been moved to server actions in /app/actions/auth.ts
   
