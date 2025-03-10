@@ -3,7 +3,7 @@
 import db from '@/lib/supabase/db';
 import { GitProvider } from '@/types/repositories';
 import { z } from 'zod';
-import { supabaseAuth } from '@/lib/supabase/auth';
+import { getCurrentUser } from '@/app/actions/user';
 
 // Schema for testing a connection
 const testConnectionSchema = z.object({
@@ -27,17 +27,6 @@ const gitProviderCreateSchema = z.object({
 });
 
 type GitProviderCreateInput = z.infer<typeof gitProviderCreateSchema>;
-
-// Helper function to get the current user
-async function getCurrentUser() {
-  const result = await supabaseAuth.getUser();
-  
-  if (!result.success || !result.data) {
-    return null;
-  }
-  
-  return result.data;
-}
 
 /**
  * Test a connection to a git provider

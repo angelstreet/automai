@@ -10,6 +10,107 @@ const isUsingSupabase = () => {
 };
 
 export const supabaseAuth = {
+  async getUserById(userId: string): Promise<AuthResult<any>> {
+    if (!isUsingSupabase()) {
+      return { success: false, error: 'Supabase auth not available' };
+    }
+    try {
+      // Use the admin client to get user by ID (requires service role)
+      const adminClient = createAdminClient();
+      const { data, error } = await adminClient.auth.admin.getUserById(userId);
+      
+      if (error) {
+        console.error('Error getting user by ID:', error);
+        return { success: false, error: error.message };
+      }
+      
+      if (!data.user) {
+        return { success: false, error: 'User not found' };
+      }
+      
+      return { success: true, data: data.user };
+    } catch (error) {
+      console.error('Error getting user by ID:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get user by ID',
+      };
+    }
+  },
+  
+  async updateUserMetadata(userId: string, metadata: Record<string, any>): Promise<AuthResult<any>> {
+    if (!isUsingSupabase()) {
+      return { success: false, error: 'Supabase auth not available' };
+    }
+    try {
+      // Use the admin client to update user metadata (requires service role)
+      const adminClient = createAdminClient();
+      const { data, error } = await adminClient.auth.admin.updateUserById(
+        userId,
+        { user_metadata: metadata }
+      );
+      
+      if (error) {
+        console.error('Error updating user metadata:', error);
+        return { success: false, error: error.message };
+      }
+      
+      return { success: true, data: data.user };
+    } catch (error) {
+      console.error('Error updating user metadata:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update user metadata',
+      };
+    }
+  },
+  
+  async ensureUserInDb(userData: any): Promise<AuthResult<any>> {
+    if (!isUsingSupabase()) {
+      return { success: false, error: 'Supabase auth not available' };
+    }
+    try {
+      // Use admin client to check if user exists and create if not
+      const adminClient = createAdminClient();
+      
+      // Check if user already exists in the users table
+      const { data: existingUser, error: findError } = await adminClient
+        .from('users')
+        .select('*')
+        .eq('id', userData.id)
+        .single();
+        
+      if (findError && findError.code !== 'PGRST116') {
+        console.error('Error finding user:', findError);
+        return { success: false, error: findError.message };
+      }
+      
+      if (existingUser) {
+        // User exists, return success
+        return { success: true, data: existingUser };
+      }
+      
+      // Create user record in database
+      const { data: newUser, error: createError } = await adminClient
+        .from('users')
+        .insert(userData)
+        .select()
+        .single();
+        
+      if (createError) {
+        console.error('Error creating user:', createError);
+        return { success: false, error: createError.message };
+      }
+      
+      return { success: true, data: newUser };
+    } catch (error) {
+      console.error('Error ensuring user in database:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to ensure user in database',
+      };
+    }
+  },
   async getSession(): Promise<AuthResult<SessionData>> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };

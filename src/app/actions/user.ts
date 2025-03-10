@@ -2,6 +2,7 @@
 
 import { supabaseAuth } from '@/lib/supabase/auth';
 import { 
+  Role,
   UserRole, 
   UserRoleResponse, 
   SingleUserRoleResponse, 
@@ -411,8 +412,8 @@ export async function updateUserProfile(data: ProfileData): Promise<{ success: b
     
     // Check if there are actual changes
     const user = currentUser.data;
-    const currentName = user.name || user.user_metadata?.name || '';
-    const currentAvatar = user.image || user.user_metadata?.avatar_url || '';
+    const currentName = user.name || '';
+    const currentAvatar = user.image || '';
     
     // Skip update if no actual changes
     if ((data.name && data.name === currentName) && 

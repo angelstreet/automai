@@ -2,7 +2,6 @@
 
 import db from '@/lib/supabase/db';
 import { Host } from '@/types/hosts';
-import { Client } from 'ssh2';
 import { logger } from '@/lib/logger';
 
 export interface HostFilter {

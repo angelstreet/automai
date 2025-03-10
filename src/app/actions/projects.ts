@@ -1,7 +1,7 @@
 'use server';
 
 import db from '@/lib/supabase/db';
-import { supabaseAuth } from '@/lib/supabase/auth';
+import { getCurrentUser } from '@/app/actions/user';
 
 export interface Project {
   id: string;
@@ -10,17 +10,6 @@ export interface Project {
   tenant_id: string;
   created_at: string;
   updated_at: string;
-}
-
-// Helper function to get the current user
-async function getCurrentUser() {
-  const result = await supabaseAuth.getUser();
-  
-  if (!result.success || !result.data) {
-    return null;
-  }
-  
-  return result.data;
 }
 
 /**

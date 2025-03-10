@@ -135,6 +135,18 @@ export interface UserSession {
   role?: string;
   tenant_id?: string;
   tenant_name?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  user_metadata?: {
+    name?: string;
+    full_name?: string;
+    preferred_username?: string;
+    avatar_url?: string;
+    tenant_id?: string;
+    tenant_name?: string;
+    role?: string;
+    [key: string]: any;
+  };
 }
 
 export interface SessionData {
