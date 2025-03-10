@@ -16,16 +16,53 @@ interface RoleSwitcherProps {
 }
 
 function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
-  const { user } = useUser();
-  const currentRole = user?.user_role; // Updated to use user_role instead of role
+  console.log('RoleSwitcher - Component mounting');
   
-  // Find the role label for display
-  const roleLabel = roles.find(r => r.value === currentRole)?.label || 'Unknown Role';
+  const { user, updateRole } = useUser();
+  const [isUpdating, setIsUpdating] = React.useState(false);
+  const currentRole = user?.user_role;
+  console.log('RoleSwitcher - Current user data:', { user, currentRole });
+
+  const handleRoleChange = React.useCallback(async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newRole = event.target.value as Role;
+    console.log('Role selected:', newRole);
+    if (newRole === currentRole) {
+      console.log('Role unchanged, skipping update');
+      return;
+    }
+    
+    try {
+      setIsUpdating(true);
+      await updateRole(newRole);
+      console.log('Role updated successfully');
+    } catch (error) {
+      console.error('Failed to update role:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  }, [currentRole, updateRole]);
+
+  // Early return if no user to prevent unnecessary renders
+  if (!user) return null;
 
   return (
-    <div className={cn("w-[180px] px-3 py-2 flex items-center justify-between rounded-md border border-input bg-background text-sm ring-offset-background", className)}>
-      <span>{roleLabel}</span>
-    </div>
+    <select
+      value={currentRole || ''}
+      onChange={handleRoleChange}
+      disabled={isUpdating}
+      className={cn(
+        "w-[180px] px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background",
+        isUpdating && "opacity-50 cursor-not-allowed",
+        className
+      )}
+    >
+      <option value="" disabled>Select role...</option>
+      {roles.map((role) => (
+        <option key={role.value} value={role.value}>
+          {role.label}
+        </option>
+      ))}
+    </select>
   );
 }
 

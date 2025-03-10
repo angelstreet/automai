@@ -11,17 +11,17 @@ import { Role, AuthUser } from '@/types/user';
 // Default role
 const DEFAULT_ROLE: Role = 'viewer';
 
-// SWR configuration - optimized for authenticated routes
+// SWR configuration - optimized to reduce unnecessary fetches
 const SWR_CONFIG = {
-  revalidateOnFocus: true,     // Allow revalidation on focus for session changes
-  revalidateIfStale: true,     // Revalidate stale data in background
-  revalidateOnReconnect: true, // Revalidate on network reconnection
-  dedupingInterval: 5000,      // Cache requests for 5s to prevent duplicates
+  revalidateOnFocus: false,    // Disable auto-revalidation on focus
+  revalidateIfStale: false,    // Disable background revalidation
+  revalidateOnReconnect: false,// Disable revalidation on reconnect
+  dedupingInterval: 30000,     // Increase deduping window to 30s
   refreshInterval: 0,          // Don't auto-refresh
   shouldRetryOnError: true,    // Retry on network errors
   errorRetryCount: 2,          // Allow 2 retries for network issues
   loadingTimeout: 4000,        // Timeout after 4s
-  focusThrottleInterval: 5000, // Prevent rapid focus triggers
+  focusThrottleInterval: 30000,// Increase focus throttle to 30s
   keepPreviousData: true       // Keep showing old data while fetching new data
 };
 
@@ -39,6 +39,7 @@ interface UserContextType {
   error: Error | null;
   updateProfile: (formData: FormData) => Promise<void>;
   refreshUser: () => Promise<EnhancedUser | null>;
+  updateRole: (role: Role) => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -47,10 +48,17 @@ const UserContext = createContext<UserContextType>({
   error: null,
   updateProfile: async () => {},
   refreshUser: async () => null,
+  updateRole: async () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+  console.log('UserContext - Provider mounting');
   const [error, setError] = useState<Error | null>(null);
+
+  // Log when user data changes
+  React.useEffect(() => {
+    console.log('UserContext - User data changed in SWR:', { user });
+  }, [user]);
   
   // Helper function to check if a role is valid
   const isValidRole = (role: string): role is Role => {
@@ -59,15 +67,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   
   // Fetch user data only if we have a session
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
+    console.log('UserContext - Fetching user data');
     try {
       // Check for existing session before making API call
       const userData = await getCurrentUser();
       
       // Early return if no session/user data
       if (!userData) {
+        console.log('UserContext - No user data found');
         return null;
       }
       
+      console.log('UserContext - User data fetched:', userData);
       return userData;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch user'));
@@ -96,15 +107,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   );
   
   // Function to extract and normalize user data from Supabase user object
-  const extractUserData = useCallback((userData: AuthUser | null): EnhancedUser | null => {
+  // No need for useCallback since this doesn't depend on any props or state
+  const extractUserData = (userData: AuthUser | null): EnhancedUser | null => {
     if (!userData) return null;
     
     // Extract role - ONLY use user_role (not Supabase's role property)
+    console.log('Raw userData for role extraction:', {
+      direct_user_role: (userData as any).user_role,
+      metadata_user_role: userData.user_metadata?.user_role,
+      full_metadata: userData.user_metadata
+    });
+    
     const userRole = (
       ((userData as any).user_role && isValidRole((userData as any).user_role) && (userData as any).user_role) ||
       (userData.user_metadata?.user_role && isValidRole(userData.user_metadata.user_role) && userData.user_metadata.user_role) ||
       DEFAULT_ROLE
     ) as Role;
+    
+    console.log('Extracted userRole:', userRole);
     
     // Extract other metadata fields with fallbacks
     const tenantId = (userData as any).tenant_id || userData.user_metadata?.tenant_id || null;
@@ -124,8 +144,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       name
     } as EnhancedUser;
     
+    console.log('Final enhanced user data:', enhancedUser);
     return enhancedUser;
-  }, []);
+  };
   
   // Get enhanced user with all metadata extracted
   const enhancedUser = user ? extractUserData(user) : null;
@@ -171,6 +192,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   
   // Auth callback handling has been moved to server actions in /app/actions/auth.ts
   
+  // Handle role update
+  const handleRoleUpdate = async (role: Role) => {
+    try {
+      if (!user?.id) throw new Error('No user found');
+      
+      // Update the user's role using updateUserProfile
+      const formData = new FormData();
+      formData.append('user_role', role);
+      await handleUpdateProfile(formData);
+      
+      // Refresh user data to get updated role
+      await refreshUser();
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to update role'));
+      throw err;
+    }
+  };
+
   // Create context value
   const contextValue = React.useMemo(() => ({
     user: enhancedUser, // EnhancedUser already contains role, tenant_id, tenant_name
@@ -178,11 +217,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     error,
     updateProfile: handleUpdateProfile,
     refreshUser,
+    updateRole: handleRoleUpdate,
   }), [
     enhancedUser,
     loading, 
     error,
-    refreshUser
+    refreshUser,
+    handleRoleUpdate
   ]);
   
   return (
