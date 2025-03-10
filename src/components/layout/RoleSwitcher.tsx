@@ -16,7 +16,8 @@ interface RoleSwitcherProps {
 }
 
 function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
-  const { role: currentRole } = useUser();
+  const { user } = useUser();
+  const currentRole = user?.user_role; // Updated to use user_role instead of role
   
   // Find the role label for display
   const roleLabel = roles.find(r => r.value === currentRole)?.label || 'Unknown Role';

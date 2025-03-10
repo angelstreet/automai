@@ -31,15 +31,14 @@ const SWR_CONFIG = {
 
 // Enhanced user type with all metadata fields
 interface EnhancedUser extends Omit<AuthUser, 'tenant_id'> {
-  role: Role;
+  user_role: Role; // Renamed from 'role' for clarity and consistency
   tenant_id?: string | null;
   tenant_name: string;
   name: string;
 }
 
 interface UserContextType {
-  user: EnhancedUser | null;
-  role: Role;
+  user: EnhancedUser | null; // EnhancedUser already contains role, tenant_id, tenant_name
   loading: boolean;
   error: Error | null;
   signUp: (email: string, password: string, name: string, redirectUrl: string) => Promise<any>;
@@ -59,7 +58,6 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType>({
   user: null,
-  role: DEFAULT_ROLE,
   loading: false,
   error: null,
   signUp: async () => null,
@@ -103,14 +101,33 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const extractUserData = useCallback((userData: AuthUser | null): EnhancedUser | null => {
     if (!userData) return null;
     
-    // Extract role from user metadata
-    const userRole = userData.user_metadata?.user_role && isValidRole(userData.user_metadata.user_role)
-      ? userData.user_metadata.user_role as Role
-      : DEFAULT_ROLE;
+    // Debug: Log the user data to see what's available
+    console.log('User data:', userData);
+    console.log('Root user_role:', (userData as any).user_role);
+    console.log('Metadata user_role:', userData.user_metadata?.user_role);
+    
+    // Extract role - ONLY use user_role (not Supabase's role property)
+    let userRole: Role;
+    
+    // First check if user_role exists at the root level (as shown in your JSON)
+    if ((userData as any).user_role && isValidRole((userData as any).user_role)) {
+      userRole = (userData as any).user_role as Role;
+      console.log('Using root-level user_role:', userRole);
+    }
+    // If not at root, check in metadata
+    else if (userData.user_metadata?.user_role && isValidRole(userData.user_metadata.user_role)) {
+      userRole = userData.user_metadata.user_role as Role;
+      console.log('Using metadata user_role:', userRole);
+    }
+    // If neither exists or is valid, use default
+    else {
+      userRole = DEFAULT_ROLE;
+      console.log('Using default role:', userRole);
+    }
     
     // Extract other metadata fields
-    const tenantId = userData.user_metadata?.tenant_id || null;
-    const tenantName = userData.user_metadata?.tenant_name || 'trial';
+    const tenantId = (userData as any).tenant_id || userData.user_metadata?.tenant_id || null;
+    const tenantName = (userData as any).tenant_name || userData.user_metadata?.tenant_name || 'trial';
     
     // Extract or derive name
     const name = userData.name || 
@@ -120,23 +137,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                 'Guest';
     
     // Return enhanced user object with all extracted data
-    return {
+    const enhancedUser = {
       ...userData,
-      role: userRole,
+      user_role: userRole, // Renamed from 'role' to 'user_role' for clarity
       tenant_id: tenantId,
       tenant_name: tenantName,
       name
-    } as EnhancedUser; // Cast to EnhancedUser to ensure type safety
+    } as EnhancedUser;
+    
+    // Debug: Log the final enhanced user object
+    console.log('Enhanced user role:', enhancedUser.user_role);
+    
+    return enhancedUser;
   }, []);
   
   // Get enhanced user with all metadata extracted
   // Ensure we're passing a valid AuthUser | null to extractUserData
   const enhancedUser = user ? extractUserData(user) : null;
   
-  // Get role for context
-  const role = enhancedUser?.role || DEFAULT_ROLE;
-  
-
+  // Debug: Log the enhanced user to verify it contains the correct role
+  console.log('Final enhanced user:', enhancedUser);
   
   // Simple user refresh - explicitly called when needed
   const refreshUser = useCallback(async (): Promise<EnhancedUser | null> => {
@@ -273,14 +293,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshUser]);
   
-
-  
-
-  
   // Create context value
   const contextValue = React.useMemo(() => ({
-    user: enhancedUser,
-    role,
+    user: enhancedUser, // EnhancedUser already contains role, tenant_id, tenant_name
     loading,
     error,
     signUp: handleSignUp,
@@ -293,8 +308,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     refreshUser,
     exchangeCodeForSession,
   }), [
-    enhancedUser, 
-    role, 
+    enhancedUser,
     loading, 
     error,
     refreshUser,
