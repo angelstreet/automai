@@ -129,12 +129,11 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
     <Sidebar 
       collapsible="icon" 
       variant="floating" 
-      className={cn(
-        "fixed left-0 top-0 z-30",
-        // Add custom width styles that take into account the floating variant's padding
-        "[--sidebar-content-width:calc(var(--sidebar-width)_-_theme(spacing.4))]",
-        "group-data-[variant=floating]:w-[calc(var(--sidebar-width)_+_theme(spacing.4))]"
-      )}
+      className="fixed left-0 top-0 z-30"
+      style={{
+        '--sidebar-width': '260px',
+        '--sidebar-width-icon': '60px'
+      } as React.CSSProperties}
       {...props}
     >
       {!isCollapsed && (

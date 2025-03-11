@@ -25,7 +25,6 @@ const HEADER_COOKIE_NAME = 'header:state';
 const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
-  const { role, setRole } = useUser();
   const { open } = useSidebar();
   const isCollapsed = !open;
   const params = useParams();
@@ -55,7 +54,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
         >
           <div className="flex h-14 items-center">
             {/* Left section */}
-            <div className="flex items-center px-4 h-full">
+            <div className="flex items-center px-6 h-full">
               <SidebarTrigger />
             </div>
 
@@ -63,24 +62,30 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
             <div className="flex-1" />
 
             {/* Right section */}
-            <div className="flex items-center gap-2 px-4 h-full">
-              <RoleSwitcher />
-              <Search className="w-[240px]" />
-              <Separator orientation="vertical" className="h-6 opacity-10" />
-              <ThemeToggle />
-              <Separator orientation="vertical" className="h-6 opacity-10" />
-              <UserProfile tenant={tenant} />
-              <Separator orientation="vertical" className="h-6 opacity-10" />
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={toggleHeader}
-                title="Hide Header"
-              >
-                <ChevronUp className="h-4 w-4" />
-                <span className="sr-only">Hide Header</span>
-              </Button>
+            <div className="flex items-center gap-4 px-6 h-full">
+              <div className="flex-none w-[160px]">
+                <RoleSwitcher />
+              </div>
+              <div className="flex-1 max-w-[500px] min-w-[200px]">
+                <Search />
+              </div>
+              <div className="flex items-center gap-4">
+                <Separator orientation="vertical" className="h-8 opacity-10" />
+                <ThemeToggle />
+                <Separator orientation="vertical" className="h-8 opacity-10" />
+                <UserProfile tenant={tenant} />
+                <Separator orientation="vertical" className="h-8 opacity-10" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={toggleHeader}
+                  title="Hide Header"
+                >
+                  <ChevronUp className="h-4 w-4" />
+                  <span className="sr-only">Hide Header</span>
+                </Button>
+              </div>
             </div>
           </div>
         </header>
