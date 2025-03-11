@@ -79,6 +79,7 @@
     "addhost_description": "Connectez-vous à vos serveurs, conteneurs et instances cloud.",
     "note": "Ajoutez et gérez vos hôtes, accédez aux terminaux, surveillez les journaux et déployez des conteneurs, le tout en un seul endroit",
     "testConnection": "Tester la connexion",
+    "testing": "Test en cours...",
     "connected": "Connecté",
     "failed": "Échec",
     "pending": "En attente",

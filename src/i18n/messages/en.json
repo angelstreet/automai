@@ -79,6 +79,7 @@
     "addhost_description": "Connect to your servers, containers, and cloud instances.",
     "note": "Add and manage your hosts, access terminals, monitor logs, and deploy containers all in one place",
     "testConnection": "Test Connection",
+    "testing": "Testing Connection...",
     "connected": "Connected",
     "failed": "Failed",
     "pending": "Pending",
