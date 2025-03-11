@@ -1,0 +1,18 @@
+node_modules
+.next
+.env.development
+.env.production
+.env.local
+screenshot/
+src/i18n/.DS_Store
+src/.DS_Store
+src/app/.DS_Store
+docs/.DS_Store
+.DS_Store
+shadcn-admin/
+.vscode/settings.json
+docs/jenkins-infrastructure/
+code2prompt/
+# Auth test files with sensitive information
+public/test-auth.html
+.cursor/rules/mcp.json
