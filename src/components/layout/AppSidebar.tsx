@@ -15,7 +15,7 @@ import {
 import { useUser } from '@/context/UserContext';
 import { Role } from '@/types/user';
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { APP_SIDEBAR_WIDTH,APP_SIDEBAR_WIDTH_ICON } from '../sidebar/constants';
 
 import { sidebarData } from './data/sidebarData';
 
@@ -142,8 +142,8 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
       variant="floating" 
       className="fixed left-0 top-0 z-30"
       style={{
-        '--sidebar-width': '260px',
-        '--sidebar-width-icon': '60px'
+        '--sidebar-width': APP_SIDEBAR_WIDTH,
+        '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
       } as React.CSSProperties}
       {...props}
     >
