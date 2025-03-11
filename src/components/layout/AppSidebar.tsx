@@ -15,6 +15,7 @@ import {
 import { useUser } from '@/context/UserContext';
 import { Role } from '@/types/user';
 import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 import { sidebarData } from './data/sidebarData';
 
@@ -128,7 +129,12 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
     <Sidebar 
       collapsible="icon" 
       variant="floating" 
-      className="fixed left-0 top-0 z-30"
+      className={cn(
+        "fixed left-0 top-0 z-30",
+        // Add custom width styles that take into account the floating variant's padding
+        "[--sidebar-content-width:calc(var(--sidebar-width)_-_theme(spacing.4))]",
+        "group-data-[variant=floating]:w-[calc(var(--sidebar-width)_+_theme(spacing.4))]"
+      )}
       {...props}
     >
       {!isCollapsed && (

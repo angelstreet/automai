@@ -34,7 +34,7 @@ export default function TenantLayout({
               }}
             >
               <WorkspaceHeader tenant={tenant} />
-              <main className="flex-1 px-3 py-4 w-full max-w-full border border-gray-200 rounded-md">{children}</main>
+              <main className="flex-1 px-3 py-4 w-full max-w-full border border-gray-100 rounded-md">{children}</main>
             </div>
           </div>
           </TooltipProvider>
