@@ -127,7 +127,10 @@ export async function testAllHosts(): Promise<{ success: boolean; error?: string
       // First update the host to failed state (red)
       await db.host.update({
         where: { id: host.id },
-        data: { status: 'failed' }
+        data: { 
+          status: 'failed',
+          updated_at: new Date().toISOString()
+        }
       });
 
       // Small delay to show the red state
@@ -136,7 +139,10 @@ export async function testAllHosts(): Promise<{ success: boolean; error?: string
       // Then update to testing state
       await db.host.update({
         where: { id: host.id },
-        data: { status: 'testing' }
+        data: { 
+          status: 'testing',
+          updated_at: new Date().toISOString()
+        }
       });
 
       // Test the connection using the real SSH test
