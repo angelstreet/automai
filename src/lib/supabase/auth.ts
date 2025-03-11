@@ -1,25 +1,5 @@
-// DO NOT MODIFY THIS FILE (Assuming this is in a separate file)
-import { createBrowserClient } from '@supabase/ssr';
-
-let browserClientInstance: ReturnType<typeof createBrowserClient> | null = null;
-
-export const createClient = async () => {
-  if (typeof window === 'undefined') {
-    throw new Error('createClient should only be called in browser/client components');
-  }
-  if (browserClientInstance) {
-    return browserClientInstance;
-  }
-  browserClientInstance = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  return browserClientInstance;
-};
-
-// Main auth file
 import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/user';
-import { createClient } from './your-create-client-file'; // Adjust path to your createClient file
+import { createClient } from './server';
 
 // Check if we're in an environment where Supabase auth is available
 const isUsingSupabase = () => {
