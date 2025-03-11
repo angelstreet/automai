@@ -15,7 +15,7 @@ import {
 import { useUser } from '@/context/UserContext';
 import { Role } from '@/types/user';
 import * as React from 'react';
-import { APP_SIDEBAR_WIDTH,APP_SIDEBAR_WIDTH_ICON } from '../sidebar/constants';
+import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '../sidebar/constants';
 
 import { sidebarData } from './data/sidebarData';
 
@@ -27,7 +27,9 @@ declare global {
 }
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+const AppSidebar = React.memo(function AppSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
   const { user } = useUser();
   const { open } = useSidebar();
   const isCollapsed = !open;
@@ -35,7 +37,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
   // Add debug state for role override
   const [debugRole, setDebugRole] = useState<Role | null>(
     // Initialize from window.__debugRole if available
-    typeof window !== 'undefined' ? window.__debugRole : null
+    typeof window !== 'undefined' ? window.__debugRole : null,
   );
 
   // Add a force update state to trigger re-renders
@@ -43,34 +45,34 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
 
   // Force a re-render of the component
   const forceRerender = useCallback(() => {
-    setForceUpdate(prev => prev + 1);
+    setForceUpdate((prev) => prev + 1);
   }, []);
 
   // Listen for debug role change events
   useEffect(() => {
     console.log('[AppSidebar] Setting up role change event listeners');
-    
+
     const handleDebugRoleChange = (event: CustomEvent<{ role: Role }>) => {
       console.log('[AppSidebar] Debug role change event received:', event.detail.role);
-      
+
       // Update the debug role
       setDebugRole(event.detail.role);
-      
+
       // Force a re-render
       forceRerender();
-      
+
       // Update the global debug role to ensure consistency
       if (typeof window !== 'undefined') {
         window.__debugRole = event.detail.role;
       }
-      
+
       console.log('[AppSidebar] State updated - debugRole:', event.detail.role);
     };
 
     // Add event listener for the new event
     window.addEventListener('debug:roleChange:v2', handleDebugRoleChange as EventListener);
     console.log('[AppSidebar] Added debug:roleChange:v2 event listener');
-    
+
     // Clean up
     return () => {
       window.removeEventListener('debug:roleChange:v2', handleDebugRoleChange as EventListener);
@@ -80,20 +82,20 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
 
   // Get the user role from debug override, user.role, or use a default role
   const userRole = debugRole || user?.role || 'viewer';
-  
+
   // Log role changes
   useEffect(() => {
     console.log('[AppSidebar] Role changed:', {
       debugRole,
       userRole,
-      forceUpdateCount: forceUpdate
+      forceUpdateCount: forceUpdate,
     });
   }, [debugRole, userRole, forceUpdate]);
 
   // Filter out empty sections based on user role - memoize this calculation
   const filteredNavGroups = useMemo(() => {
     console.log('AppSidebar - Filtering nav groups for role:', userRole);
-    
+
     // If no user, show nav items that an admin would see
     if (!user) {
       return sidebarData.navGroups.filter((group) => {
@@ -106,7 +108,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
         return accessibleItems.length > 0;
       });
     }
-    
+
     // Existing logic for authenticated users
     return sidebarData.navGroups.filter((group) => {
       // Filter items in each group based on user role
@@ -125,7 +127,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
   // Prepare user data for NavUser - memoize this calculation
   const userData = useMemo(() => {
     if (!user) return { name: 'Guest', email: '', avatar: undefined };
-    
+
     // Simple and direct access to user properties
     return {
       name: user.name || user.email?.split('@')[0] || 'Guest',
@@ -137,14 +139,16 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
   // Always render the sidebar with content, no more loading state for unauthenticated users
   // Updated version - March 9, 2025
   return (
-    <Sidebar 
-      collapsible="icon" 
-      variant="floating" 
+    <Sidebar
+      collapsible="icon"
+      variant="floating"
       className="fixed left-0 top-0 z-30"
-      style={{
-        '--sidebar-width': APP_SIDEBAR_WIDTH,
-        '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
-      } as React.CSSProperties}
+      style={
+        {
+          '--sidebar-width': APP_SIDEBAR_WIDTH,
+          '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
+        } as React.CSSProperties
+      }
       {...props}
     >
       {!isCollapsed && (
@@ -152,7 +156,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
           <TeamSwitcher />
         </SidebarHeader>
       )}
-      <SidebarContent className={isCollapsed ? "pt-4" : "pt-2"}>
+      <SidebarContent className={isCollapsed ? 'pt-4' : 'pt-2'}>
         {filteredNavGroups.map((group) => (
           <NavGroup key={group.title} {...group} />
         ))}

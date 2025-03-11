@@ -24,7 +24,7 @@ export interface Host {
   password?: string;
 
   // Status fields
-  status: 'connected' | 'failed' | 'pending'; 
+  status: 'connected' | 'failed' | 'pending';
 
   created_at: Date;
   updated_at: Date;

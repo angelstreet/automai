@@ -20,13 +20,10 @@ export default function HostPage() {
 
   return (
     <Main>
-      <PageHeader 
-        title={t('hostDetails')}
-        description={t('viewAndManageHost')}
-      />
+      <PageHeader title={t('hostDetails')} description={t('viewAndManageHost')} />
       <div className="grid gap-8 mt-6">
         <HostDetail hostId={hostId} onBack={handleBack} />
       </div>
     </Main>
   );
-} 
+}

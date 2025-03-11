@@ -12,10 +12,7 @@ export default function SettingsLayout({ children }: SettingsLayoutProps) {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      <SettingsHeader
-        title={t('title')}
-        description={t('description')}
-      />
+      <SettingsHeader title={t('title')} description={t('description')} />
       <div className="space-y-6">{children}</div>
     </div>
   );

@@ -17,7 +17,10 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
-import { testConnection as testConnectionAction, verifyFingerprint as verifyFingerprintAction } from '@/app/actions/hosts';
+import {
+  testConnection as testConnectionAction,
+  verifyFingerprint as verifyFingerprintAction,
+} from '@/app/actions/hosts';
 
 export interface FormData {
   name: string;
@@ -102,9 +105,9 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
 
     // Set initial failed state (red)
     setTestStatus('error');
-    
+
     // Small delay to show the red state
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     try {
       const data = await testConnectionAction({
@@ -152,13 +155,13 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
 
     setTesting(true);
     setTestError(null);
-    
+
     try {
       if (!fingerprint) {
         setTestError('Fingerprint is required');
         return;
       }
-      
+
       setVerifyingFingerprint(true);
       const data = await verifyFingerprintAction({
         fingerprint: fingerprint,
@@ -325,7 +328,12 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
             </p>
             <p className="mb-4">Are you sure you want to continue connecting?</p>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={verifyHostFingerprint} disabled={testing}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={verifyHostFingerprint}
+                disabled={testing}
+              >
                 {testing ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (

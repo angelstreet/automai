@@ -12,7 +12,7 @@ function ErrorFallback({ error, locale }: { error: Error; locale: string }) {
         <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">Authentication Error</h2>
         <p className="text-sm">{error.message}</p>
         <div className="pt-4">
-          <a 
+          <a
             href={`/${locale}/login`}
             className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
           >
@@ -45,7 +45,7 @@ export default function AuthRedirectPage() {
   const [hasRedirected, setHasRedirected] = useState(false);
   const [loading, setLoading] = useState(false);
   const locale = params.locale as string;
-  
+
   // Get search params
   const code = searchParams.get('code');
   const errorParam = searchParams.get('error');
@@ -73,13 +73,13 @@ export default function AuthRedirectPage() {
         const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
         setLoading(true);
         const result = await exchangeCodeForSession(fullUrl);
-        
+
         if (!result.success) {
           setAuthError(new Error(result.error || 'Authentication failed'));
           setIsProcessing(false);
           return;
         }
-        
+
         // Handle redirect using Next.js router for client-side navigation
         // The redirect URL is determined by the server action
         if (result.redirectUrl) {

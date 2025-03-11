@@ -43,7 +43,7 @@ export class GitLabProviderService implements GitProviderService {
         owner: repo.namespace?.path || '',
         syncStatus: 'PENDING',
         created_at: new Date(),
-        updated_at: new Date()
+        updated_at: new Date(),
       }));
     } catch (error) {
       console.error('Error fetching GitLab repositories:', error);
@@ -84,7 +84,7 @@ export class GitLabProviderService implements GitProviderService {
         owner: repo.namespace?.path || '',
         syncStatus: 'PENDING',
         created_at: new Date(),
-        updated_at: new Date()
+        updated_at: new Date(),
       };
     } catch (error) {
       console.error('Error fetching GitLab repository:', error);
@@ -122,10 +122,10 @@ export class GitLabProviderService implements GitProviderService {
     if (!clientId) {
       throw new Error('GitLab client ID is not configured');
     }
-    
+
     const redirectUri = process.env.GITLAB_REDIRECT_URI || '';
     const state = Math.random().toString(36).substring(2, 15);
-    
+
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -264,7 +264,7 @@ export class GitLabProviderService implements GitProviderService {
     try {
       // Get updated repository data
       const updatedRepo = await this.getRepository(repository.id);
-      
+
       if (!updatedRepo) {
         throw new Error(`Repository not found: ${repository.id}`);
       }

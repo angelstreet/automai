@@ -50,16 +50,16 @@ const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: 
   const { open } = useSidebar();
   const { role } = useUser();
   const isCollapsed = !open;
-  
+
   // Simply use the teams passed as props or the default teams
   const teamsToDisplay = teams || defaultTeams;
-  
+
   // Set active team
   const [activeTeam, setActiveTeam] = React.useState<Team>(teamsToDisplay[0]);
   const Icon = activeTeam.logo;
 
   // We don't need any auth check - just always display the component
-  
+
   // Show different UI based on sidebar state
   if (isCollapsed) {
     return (
@@ -92,8 +92,8 @@ const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: 
             key={team.name}
             onClick={() => setActiveTeam(team)}
             className={cn(
-              "cursor-pointer",
-              team.name === activeTeam.name ? "bg-accent text-accent-foreground" : ""
+              'cursor-pointer',
+              team.name === activeTeam.name ? 'bg-accent text-accent-foreground' : '',
             )}
           >
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-background mr-2">

@@ -5,14 +5,37 @@ import { useHost } from '@/hooks/useHost';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/shadcn/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/shadcn/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { Edit, Save, Trash2, ArrowLeft, RefreshCw, Server, Wifi, WifiOff } from 'lucide-react';
 import { Badge } from '@/components/shadcn/badge';
 import { useTranslations } from 'next-intl';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shadcn/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/shadcn/select';
 
 interface HostDetailProps {
   hostId: string;
@@ -22,7 +45,8 @@ interface HostDetailProps {
 export function HostDetail({ hostId, onBack }: HostDetailProps) {
   const router = useRouter();
   const t = useTranslations('Hosts');
-  const { host, loading, error, isTesting, updateHost, deleteHost, testConnection } = useHost(hostId);
+  const { host, loading, error, isTesting, updateHost, deleteHost, testConnection } =
+    useHost(hostId);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -54,14 +78,16 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
   };
 
   const handleSave = async () => {
-    if (await updateHost({ 
-      name, 
-      description, 
-      type,
-      ip,
-      port,
-      user: user || undefined
-    })) {
+    if (
+      await updateHost({
+        name,
+        description,
+        type,
+        ip,
+        port,
+        user: user || undefined,
+      })
+    ) {
       setIsEditing(false);
     }
   };
@@ -82,14 +108,26 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
 
   const getStatusBadge = () => {
     if (!host) return null;
-    
+
     switch (host.status) {
       case 'connected':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><Wifi className="h-3 w-3 mr-1" /> {t('connected')}</Badge>;
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            <Wifi className="h-3 w-3 mr-1" /> {t('connected')}
+          </Badge>
+        );
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">{t('pending')}</Badge>;
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            {t('pending')}
+          </Badge>
+        );
       case 'failed':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200"><WifiOff className="h-3 w-3 mr-1" /> {t('failed')}</Badge>;
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            <WifiOff className="h-3 w-3 mr-1" /> {t('failed')}
+          </Badge>
+        );
       default:
         return null;
     }
@@ -155,9 +193,9 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
           {isEditing ? (
             <>
               <CardTitle>
-                <Input 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder={t('hostName')}
                   className="text-xl font-bold"
                 />
@@ -171,10 +209,11 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
                 {getStatusBadge()}
               </div>
               <CardDescription>
-                {host.ip}:{host.port || '22'} • {t('lastConnected', { 
-                  date: host.lastConnected 
-                    ? new Date(host.lastConnected).toLocaleDateString() 
-                    : t('never')
+                {host.ip}:{host.port || '22'} •{' '}
+                {t('lastConnected', {
+                  date: host.lastConnected
+                    ? new Date(host.lastConnected).toLocaleDateString()
+                    : t('never'),
                 })}
               </CardDescription>
             </>
@@ -192,17 +231,20 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
           <>
             <div className="space-y-2">
               <label htmlFor="description">{t('description')}</label>
-              <Textarea 
+              <Textarea
                 id="description"
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)} 
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder={t('hostDescriptionPlaceholder')}
                 className="min-h-[100px]"
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="type">{t('connectionType')}</label>
-              <Select value={type} onValueChange={(value) => setType(value as 'ssh' | 'docker' | 'portainer')}>
+              <Select
+                value={type}
+                onValueChange={(value) => setType(value as 'ssh' | 'docker' | 'portainer')}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={t('selectConnectionType')} />
                 </SelectTrigger>
@@ -215,30 +257,30 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
             </div>
             <div className="space-y-2">
               <label htmlFor="ip">{t('ipAddress')}</label>
-              <Input 
+              <Input
                 id="ip"
-                value={ip} 
-                onChange={(e) => setIp(e.target.value)} 
+                value={ip}
+                onChange={(e) => setIp(e.target.value)}
                 placeholder={t('ipAddressPlaceholder')}
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="port">{t('port')}</label>
-              <Input 
+              <Input
                 id="port"
                 type="number"
-                value={port?.toString() || ''} 
-                onChange={(e) => setPort(e.target.value ? parseInt(e.target.value) : undefined)} 
+                value={port?.toString() || ''}
+                onChange={(e) => setPort(e.target.value ? parseInt(e.target.value) : undefined)}
                 placeholder={t('portPlaceholder')}
               />
             </div>
             {type === 'ssh' && (
               <div className="space-y-2">
                 <label htmlFor="user">{t('username')}</label>
-                <Input 
+                <Input
                   id="user"
-                  value={user} 
-                  onChange={(e) => setUser(e.target.value)} 
+                  value={user}
+                  onChange={(e) => setUser(e.target.value)}
                   placeholder={t('usernamePlaceholder')}
                 />
               </div>
@@ -248,9 +290,7 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
           <>
             <div>
               <h3 className="text-sm font-medium">{t('description')}</h3>
-              <p className="text-muted-foreground mt-1">
-                {host.description || t('noDescription')}
-              </p>
+              <p className="text-muted-foreground mt-1">{host.description || t('noDescription')}</p>
             </div>
             <div>
               <h3 className="text-sm font-medium">{t('connectionType')}</h3>
@@ -278,9 +318,7 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
             {host.errorMessage && (
               <div>
                 <h3 className="text-sm font-medium text-red-600">{t('lastError')}</h3>
-                <p className="text-sm text-red-600 mt-1">
-                  {host.errorMessage}
-                </p>
+                <p className="text-sm text-red-600 mt-1">{host.errorMessage}</p>
               </div>
             )}
           </>
@@ -309,9 +347,7 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{t('areYouSure')}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('deleteHostConfirmation')}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{t('deleteHostConfirmation')}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
@@ -323,4 +359,4 @@ export function HostDetail({ hostId, onBack }: HostDetailProps) {
       </CardFooter>
     </Card>
   );
-} 
+}

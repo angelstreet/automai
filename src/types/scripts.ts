@@ -34,4 +34,4 @@ export interface ScriptFilter {
   status?: ScriptStatus;
   language?: ScriptLanguage;
   tags?: string[];
-} 
+}

@@ -17,11 +17,11 @@ export function UpgradePrompt({ feature, className = '' }: UpgradePromptProps) {
 
   // Get the user's plan from metadata
   const userPlan = (user.user_metadata as any)?.plan || 'free';
-  
+
   // Simple message based on feature
   const message = {
     title: `Upgrade to access ${feature}`,
-    description: `This feature is only available on higher plans. Upgrade now to unlock ${feature} and more premium features.`
+    description: `This feature is only available on higher plans. Upgrade now to unlock ${feature} and more premium features.`,
   };
 
   return (

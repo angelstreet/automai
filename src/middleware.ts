@@ -62,7 +62,7 @@ export default async function middleware(request: NextRequest) {
     '/signup',
     '/forgot-password',
     '/reset-password',
-    '/auth-redirect'
+    '/auth-redirect',
   ];
 
   // Add locale-based paths to public and auth-only paths
@@ -70,7 +70,7 @@ export default async function middleware(request: NextRequest) {
     // Public paths with locale (pages anyone can access)
     publicPaths.push(`/${locale}`);
     publicPaths.push(`/${locale}/`);
-    
+
     // Auth-only paths with locale (pages that should redirect to dashboard if authenticated)
     authOnlyPaths.push(`/${locale}/login`);
     authOnlyPaths.push(`/${locale}/signup`);
@@ -85,13 +85,13 @@ export default async function middleware(request: NextRequest) {
     request.nextUrl.pathname === '/';
 
   // Check if it's an auth-only path (like login)
-  const isAuthOnlyPath = 
+  const isAuthOnlyPath =
     authOnlyPaths.some((path) => request.nextUrl.pathname === path) ||
     (pathParts.length >= 2 &&
-     locales.includes(pathParts[0] as any) &&
-     ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(
-       pathParts[1]
-     ));
+      locales.includes(pathParts[0] as any) &&
+      ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(
+        pathParts[1],
+      ));
 
   // For auth-only paths like login, we need to check if the user is already authenticated
   // If they are, redirect them to dashboard
@@ -100,20 +100,21 @@ export default async function middleware(request: NextRequest) {
     const { supabase, response } = createClient(request);
     try {
       const { data } = await supabase.auth.getUser();
-      
+
       if (data?.user) {
         // User is already logged in, redirect to dashboard
-        const locale = pathParts.length > 0 && locales.includes(pathParts[0] as any)
-          ? pathParts[0]
-          : defaultLocale;
-        
+        const locale =
+          pathParts.length > 0 && locales.includes(pathParts[0] as any)
+            ? pathParts[0]
+            : defaultLocale;
+
         // Get tenant from user metadata or default to 'trial'
         const tenantName = data.user.user_metadata?.tenant_name || 'trial';
-        
+
         // Redirect to tenant-specific dashboard
         return NextResponse.redirect(new URL(`/${locale}/${tenantName}/dashboard`, request.url));
       }
-      
+
       // User not logged in, continue to login page
       return NextResponse.next();
     } catch (error) {
@@ -130,17 +131,17 @@ export default async function middleware(request: NextRequest) {
   // 4. For all other paths, use Supabase's updateSession
   // This will handle session validation and token refresh
   const response = await updateSession(request);
-  
+
   // If the response is a redirect (unauthenticated), return it directly
   if (response.headers.has('location')) {
     console.log('Redirecting to:', response.headers.get('location'));
     return response;
   }
-  
+
   // Access user session info from cookies if needed for debugging (non-invasive)
   // We don't actually extract the data here to avoid breaking anything
   console.log('Middleware: Processing authenticated request');
-  
+
   // 5. Apply internationalization middleware for non-redirect responses
   const intl = await getIntlMiddleware();
   return intl(response);

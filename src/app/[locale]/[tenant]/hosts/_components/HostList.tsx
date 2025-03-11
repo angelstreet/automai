@@ -103,12 +103,7 @@ export default function HostContainer() {
               <List className="h-4 w-4" />
             </Button>
           </div>
-          <Button 
-            onClick={refreshConnections} 
-            variant="outline" 
-            size="sm"
-            disabled={isRefreshing}
-          >
+          <Button onClick={refreshConnections} variant="outline" size="sm" disabled={isRefreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -138,10 +133,10 @@ export default function HostContainer() {
           onTestConnection={(host: Host) => testConnection(host.id)}
         />
       ) : (
-        <HostTable 
-          hosts={hosts} 
-          onDelete={deleteHost} 
-          onTestConnection={(host: Host) => testConnection(host.id)} 
+        <HostTable
+          hosts={hosts}
+          onDelete={deleteHost}
+          onTestConnection={(host: Host) => testConnection(host.id)}
         />
       )}
 
@@ -150,11 +145,7 @@ export default function HostContainer() {
           <DialogHeader>
             <DialogTitle>Add New Host</DialogTitle>
           </DialogHeader>
-          <ConnectionForm
-            formData={formData}
-            onChange={setFormData}
-            onSave={handleSaveHost}
-          />
+          <ConnectionForm formData={formData} onChange={setFormData} onSave={handleSaveHost} />
         </DialogContent>
       </Dialog>
     </div>

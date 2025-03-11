@@ -19,10 +19,10 @@ interface ThemeProvidersProps {
 export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvidersProps) {
   return (
     // Use both theme providers, with next-themes as the outer one
-    <NextThemesProvider 
-      attribute="class" 
-      defaultTheme={defaultTheme} 
-      enableSystem 
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme={defaultTheme}
+      enableSystem
       disableTransitionOnChange
     >
       <ThemeProvider defaultTheme={defaultTheme}>
@@ -36,4 +36,4 @@ export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvi
       </ThemeProvider>
     </NextThemesProvider>
   );
-} 
+}

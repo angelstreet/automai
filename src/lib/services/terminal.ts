@@ -13,7 +13,12 @@ class TerminalService {
     return TerminalService.instance;
   }
 
-  async createTerminalConnection(data: { hostId: string; type: string; username?: string; password?: string }) {
+  async createTerminalConnection(data: {
+    hostId: string;
+    type: string;
+    username?: string;
+    password?: string;
+  }) {
     logger.info('Creating terminal connection', { hostId: data.hostId, type: data.type });
     try {
       logger.debug('Fetching host from database', { hostId: data.hostId });
@@ -48,7 +53,10 @@ class TerminalService {
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error creating terminal connection', { error: errorMessage, hostId: data.hostId });
+      logger.error('Error creating terminal connection', {
+        error: errorMessage,
+        hostId: data.hostId,
+      });
       throw new Error(`Failed to create terminal connection: ${errorMessage}`);
     }
   }
@@ -97,7 +105,10 @@ class TerminalService {
       return connection;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Error updating terminal connection status', { error: errorMessage, connectionId: id });
+      logger.error('Error updating terminal connection status', {
+        error: errorMessage,
+        connectionId: id,
+      });
       throw new Error(`Failed to update terminal connection status: ${errorMessage}`);
     }
   }

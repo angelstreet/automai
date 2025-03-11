@@ -32,22 +32,25 @@ export async function GET(request: NextRequest) {
   try {
     // Process the auth callback using our server action
     const result = await handleAuthCallback(fixedUrl);
-    
+
     if (!result.success) {
       // If there was an error, redirect to login with error message
       const redirectUrl = new URL('/login', request.nextUrl.origin);
       redirectUrl.searchParams.set('error', result.error || 'Authentication failed');
       return NextResponse.redirect(redirectUrl);
     }
-    
+
     // If successful, redirect to the dashboard or specified redirect URL
     return NextResponse.redirect(new URL(result.redirectUrl || '/', request.nextUrl.origin));
   } catch (error) {
     console.error('Error in auth callback route:', error);
-    
+
     // Handle errors and redirect to login with error message
     const redirectUrl = new URL('/login', request.nextUrl.origin);
-    redirectUrl.searchParams.set('error', error instanceof Error ? error.message : 'Authentication failed');
+    redirectUrl.searchParams.set(
+      'error',
+      error instanceof Error ? error.message : 'Authentication failed',
+    );
     return NextResponse.redirect(redirectUrl);
   }
-} 
+}

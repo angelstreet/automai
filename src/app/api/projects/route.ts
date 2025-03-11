@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { 
-  getProjects, 
-  createProject,
-  updateProject,
-  deleteProject
-} from '@/app/actions/projects';
+import { getProjects, createProject, updateProject, deleteProject } from '@/app/actions/projects';
 
 /**
  * GET /api/projects
@@ -14,21 +9,18 @@ export async function GET() {
   try {
     // Call the server action to get projects
     const result = await getProjects();
-    
+
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Failed to fetch projects' },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     return NextResponse.json(result.data);
   } catch (error) {
     console.error('Error in GET /api/projects:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -40,31 +32,27 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    
+
     // Call the server action to create project
     const result = await createProject(body);
-    
+
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Failed to create project' },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     return NextResponse.json(result.data, { status: 201 });
   } catch (error) {
     console.error('Error in POST /api/projects:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 // PATCH /api/projects/[id]
 export async function PATCH(request: Request) {
   try {
-    
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
       return NextResponse.json(
@@ -122,7 +110,6 @@ export async function PATCH(request: Request) {
 // DELETE /api/projects/[id]
 export async function DELETE(request: Request) {
   try {
-
     // If Supabase client is null, fall back to a simple check
     if (!supabase) {
       return NextResponse.json(

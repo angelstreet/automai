@@ -3,11 +3,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { GitProvider } from '@/types/repositories';
-import { 
-  getGitProviders, 
-  addGitProvider, 
-  updateGitProvider, 
-  refreshGitProvider 
+import {
+  getGitProviders,
+  addGitProvider,
+  updateGitProvider,
+  refreshGitProvider,
 } from '@/app/actions/git-providers';
 
 export function useGitProviders() {
@@ -39,74 +39,83 @@ export function useGitProviders() {
     }
   }, [toast]);
 
-  const addProvider = useCallback(async (data: Omit<GitProvider, 'id'>) => {
-    try {
-      setIsAddingProvider(true);
-      const newProvider = await addGitProvider(data);
-      setProviders(prev => [...prev, newProvider]);
-      toast({
-        title: 'Success',
-        description: 'Git provider added successfully',
-      });
-      return true;
-    } catch (error) {
-      console.error('Error adding git provider:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add git provider',
-        variant: 'destructive',
-      });
-      return false;
-    } finally {
-      setIsAddingProvider(false);
-    }
-  }, [toast]);
+  const addProvider = useCallback(
+    async (data: Omit<GitProvider, 'id'>) => {
+      try {
+        setIsAddingProvider(true);
+        const newProvider = await addGitProvider(data);
+        setProviders((prev) => [...prev, newProvider]);
+        toast({
+          title: 'Success',
+          description: 'Git provider added successfully',
+        });
+        return true;
+      } catch (error) {
+        console.error('Error adding git provider:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to add git provider',
+          variant: 'destructive',
+        });
+        return false;
+      } finally {
+        setIsAddingProvider(false);
+      }
+    },
+    [toast],
+  );
 
-  const editProvider = useCallback(async (id: string, data: Partial<GitProvider>) => {
-    try {
-      const updatedProvider = await updateGitProvider(id, data);
-      setProviders(prev => 
-        prev.map(provider => provider.id === id ? updatedProvider : provider)
-      );
-      setEditingProvider(null);
-      toast({
-        title: 'Success',
-        description: 'Git provider updated successfully',
-      });
-      return true;
-    } catch (error) {
-      console.error('Error updating git provider:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update git provider',
-        variant: 'destructive',
-      });
-      return false;
-    }
-  }, [toast]);
+  const editProvider = useCallback(
+    async (id: string, data: Partial<GitProvider>) => {
+      try {
+        const updatedProvider = await updateGitProvider(id, data);
+        setProviders((prev) =>
+          prev.map((provider) => (provider.id === id ? updatedProvider : provider)),
+        );
+        setEditingProvider(null);
+        toast({
+          title: 'Success',
+          description: 'Git provider updated successfully',
+        });
+        return true;
+      } catch (error) {
+        console.error('Error updating git provider:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to update git provider',
+          variant: 'destructive',
+        });
+        return false;
+      }
+    },
+    [toast],
+  );
 
-  const refreshProvider = useCallback(async (id: string) => {
-    try {
-      setIsRefreshing(id);
-      const updatedProvider = await refreshGitProvider(id);
-      setProviders(prev => 
-        prev.map(provider => provider.id === id ? updatedProvider : provider)
-      );
-      toast({
-        title: 'Success',
-        description: 'Git provider refreshed successfully',
-      });
-    } catch (error) {
-      console.error('Error refreshing git provider:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh git provider',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRefreshing(null);
-    }
-  }, [toast]);
+  const refreshProvider = useCallback(
+    async (id: string) => {
+      try {
+        setIsRefreshing(id);
+        const updatedProvider = await refreshGitProvider(id);
+        setProviders((prev) =>
+          prev.map((provider) => (provider.id === id ? updatedProvider : provider)),
+        );
+        toast({
+          title: 'Success',
+          description: 'Git provider refreshed successfully',
+        });
+      } catch (error) {
+        console.error('Error refreshing git provider:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to refresh git provider',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsRefreshing(null);
+      }
+    },
+    [toast],
+  );
 
   // Fetch providers on mount
   useEffect(() => {
@@ -124,4 +133,4 @@ export function useGitProviders() {
     editingProvider,
     setEditingProvider,
   };
-} 
+}

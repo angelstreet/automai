@@ -77,7 +77,7 @@ export default function SignUpPage() {
       // Use our auth hook for OAuth
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
       const result = await signInWithOAuth(provider, redirectUrl);
-      
+
       if (result?.url) {
         // Redirect to OAuth provider
         window.location.href = result.url;

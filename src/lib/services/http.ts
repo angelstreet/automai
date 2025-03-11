@@ -301,7 +301,7 @@ export async function stopServer(forceFullShutdown: boolean = false): Promise<vo
         httpServer!.getConnections((_, count) => res(count || 0));
       });
     }
-    
+
     logger.info(`Server shutdown: ${activeConnections} active connections`);
 
     // Set a timeout for the entire shutdown process - increased to 5 seconds
@@ -326,7 +326,9 @@ export async function stopServer(forceFullShutdown: boolean = false): Promise<vo
     }
     if (forceFullShutdown) {
       httpServer.closeAllConnections();
-      httpServer.close((err) => { /* ... */ });
+      httpServer.close((err) => {
+        /* ... */
+      });
     } else {
       logger.info('Partial shutdown: Keeping HTTP server alive');
       resolve();

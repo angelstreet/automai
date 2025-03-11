@@ -16,9 +16,7 @@ export class GiteaProviderService implements GitProviderService {
   }
 
   // For Gitea, we use the provided token directly
-  async exchangeCodeForToken(
-    code: string
-  ): Promise<{
+  async exchangeCodeForToken(code: string): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresAt?: Date;
@@ -139,7 +137,7 @@ export class GiteaProviderService implements GitProviderService {
     if (!this.accessToken || !this.serverUrl) {
       return false;
     }
-    
+
     try {
       // Simple check to see if we can access the API
       const response = await fetch(`${this.serverUrl}/api/v1/user`, {
@@ -147,7 +145,7 @@ export class GiteaProviderService implements GitProviderService {
           Authorization: `token ${this.accessToken}`,
         },
       });
-      
+
       return response.ok;
     } catch (error) {
       console.error('Error testing Gitea connection:', error);

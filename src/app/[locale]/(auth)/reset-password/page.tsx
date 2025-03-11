@@ -12,13 +12,13 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const { locale } = useParams();
   const t = useTranslations('Auth');
-  
+
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  
+
   // Use the auth hook only for loading state
   const { error: authError, loading } = useUser();
 
@@ -45,10 +45,10 @@ export default function ResetPasswordPage() {
     try {
       // Use the server action directly instead of going through UserContext
       const result = await updatePassword(password);
-      
+
       if (result.success) {
         setSuccess(true);
-        
+
         // Redirect to login after a short delay
         setTimeout(() => {
           router.push(`/${locale}/login`);
@@ -85,9 +85,7 @@ export default function ResetPasswordPage() {
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{t('resetPassword')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t('enterNewPassword')}
-          </p>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('enterNewPassword')}</p>
         </div>
 
         {success ? (
@@ -130,11 +128,7 @@ export default function ResetPasswordPage() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting || loading}
-            >
+            <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
               {isSubmitting || loading ? t('resetting') : t('resetPassword')}
             </Button>
 

@@ -14,17 +14,17 @@ export const createClient = async () => {
   if (typeof window === 'undefined') {
     throw new Error('createClient should only be called in browser/client components');
   }
-  
+
   // Return cached instance if available
   if (browserClientInstance) {
     return browserClientInstance;
   }
-  
+
   // Create and cache the client
   browserClientInstance = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
-  
+
   return browserClientInstance;
 };

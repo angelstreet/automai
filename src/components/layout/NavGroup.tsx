@@ -41,13 +41,16 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
   const params = useParams();
   const { open } = useSidebar();
   const isCollapsed = !open;
-  
+
   // Use useRef for expandedItems to avoid unnecessary re-renders
   const expandedItemsRef = React.useRef<Record<string, boolean>>({});
-  
-  const isActive = React.useCallback((href: string) => {
-    return pathname === `/${params.locale as string}/${params.tenant as string}${href}`;
-  }, [pathname, params.locale, params.tenant]);
+
+  const isActive = React.useCallback(
+    (href: string) => {
+      return pathname === `/${params.locale as string}/${params.tenant as string}${href}`;
+    },
+    [pathname, params.locale, params.tenant],
+  );
 
   const toggleSubmenu = React.useCallback((href: string) => {
     expandedItemsRef.current = {
@@ -55,9 +58,9 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
       [href]: !expandedItemsRef.current[href],
     };
     // Force update to reflect changes
-    setForceUpdate(prev => !prev);
+    setForceUpdate((prev) => !prev);
   }, []);
-  
+
   // Use a state to force update when expandedItems changes
   const [forceUpdate, setForceUpdate] = React.useState(false);
 
@@ -68,7 +71,7 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
           {title}
         </SidebarGroupLabel>
       )}
-      <SidebarGroupContent className={cn("py-0.5", isCollapsed && "mt-1.5")}>
+      <SidebarGroupContent className={cn('py-0.5', isCollapsed && 'mt-1.5')}>
         <ScrollArea className="h-full">
           <SidebarMenu>
             {items.map((item) => {

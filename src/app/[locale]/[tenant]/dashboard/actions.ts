@@ -53,7 +53,7 @@ export async function getDashboardStats(): Promise<Stats> {
   if (statsCache && now - statsLastFetch < CACHE_DURATION) {
     return statsCache;
   }
-  
+
   // This is a placeholder for actual data fetching
   // In a real implementation, you would fetch data from your database
   const data: Stats = {
@@ -62,11 +62,11 @@ export async function getDashboardStats(): Promise<Stats> {
     testsRun: 0,
     successRate: 0,
   } as unknown as Stats; // Type assertion to match the Stats interface
-  
+
   // Update cache
   statsCache = data;
   statsLastFetch = now;
-  
+
   return data;
 }
 
@@ -83,14 +83,14 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
   if (activityCache && now - activityLastFetch < CACHE_DURATION) {
     return activityCache as ActivityItem[];
   }
-  
+
   // This is a placeholder for actual data fetching
   const data: ActivityItem[] = [];
-  
+
   // Update cache
   activityCache = data;
   activityLastFetch = now;
-  
+
   return data;
 }
 
@@ -100,33 +100,33 @@ export async function getTasks(): Promise<Task[]> {
   if (tasksCache && now - tasksLastFetch < CACHE_DURATION) {
     return tasksCache;
   }
-  
+
   // This is a placeholder for actual data fetching
   const data: Task[] = [
     {
       id: '1',
       title: 'Update test cases for login flow',
       dueDate: 'Due in 2 days',
-      priority: 'High'
+      priority: 'High',
     },
     {
       id: '2',
       title: 'Review automation scripts',
       dueDate: 'Due tomorrow',
-      priority: 'Medium'
+      priority: 'Medium',
     },
     {
       id: '3',
       title: 'Prepare test report',
       dueDate: 'Due next week',
-      priority: 'Low'
+      priority: 'Low',
     },
   ];
-  
+
   // Update cache
   tasksCache = data;
   tasksLastFetch = now;
-  
+
   return data;
 }
 
@@ -136,32 +136,32 @@ export async function getTeamChat(): Promise<ChatMessage[]> {
   if (chatCache && now - chatLastFetch < CACHE_DURATION) {
     return chatCache;
   }
-  
+
   // This is a placeholder for actual data fetching
   const data: ChatMessage[] = [
     {
       id: '1',
       name: 'John Doe',
       message: 'Updated the test suite configuration',
-      timestamp: Date.now() - 2 * 60 * 60 * 1000 // 2 hours ago
+      timestamp: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
     },
     {
       id: '2',
       name: 'Jane Smith',
       message: 'Added new test cases for payment flow',
-      timestamp: Date.now() - 5 * 60 * 60 * 1000 // 5 hours ago
+      timestamp: Date.now() - 5 * 60 * 60 * 1000, // 5 hours ago
     },
     {
       id: '3',
       name: 'Robert Johnson',
       message: 'Fixed failing tests in CI pipeline',
-      timestamp: Date.now() - 24 * 60 * 60 * 1000 // Yesterday
+      timestamp: Date.now() - 24 * 60 * 60 * 1000, // Yesterday
     },
   ];
-  
+
   // Update cache
   chatCache = data;
   chatLastFetch = now;
-  
+
   return data;
 }

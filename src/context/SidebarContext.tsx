@@ -14,10 +14,9 @@ interface SidebarProviderProps {
 
 export function SidebarProvider({ children, defaultOpen = true }: SidebarProviderProps) {
   // Initialize state from cookie if available, otherwise use defaultOpen
-  const initialOpen = typeof window !== 'undefined' 
-    ? Cookies.get(SIDEBAR_COOKIE_NAME) !== 'false' 
-    : defaultOpen;
-    
+  const initialOpen =
+    typeof window !== 'undefined' ? Cookies.get(SIDEBAR_COOKIE_NAME) !== 'false' : defaultOpen;
+
   const [open, setOpen] = useState(initialOpen);
   const [openMobile, setOpenMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -34,7 +33,7 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
 
   useEffect(() => {
     checkIsMobile();
-    
+
     if (typeof window !== 'undefined') {
       // Use a debounced resize handler to prevent excessive updates
       let resizeTimer: NodeJS.Timeout;
@@ -42,7 +41,7 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(checkIsMobile, 100);
       };
-      
+
       window.addEventListener('resize', handleResize);
       return () => {
         window.removeEventListener('resize', handleResize);
@@ -56,7 +55,7 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
     const newOpen = !open;
     setOpen(newOpen);
     setState(newOpen ? 'expanded' : 'collapsed');
-    
+
     // Update cookie
     if (typeof window !== 'undefined') {
       Cookies.set(SIDEBAR_COOKIE_NAME, String(newOpen), { path: '/' });
@@ -74,11 +73,7 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
     toggleSidebar,
   };
 
-  return (
-    <SidebarContext.Provider value={contextValue}>
-      {children}
-    </SidebarContext.Provider>
-  );
+  return <SidebarContext.Provider value={contextValue}>{children}</SidebarContext.Provider>;
 }
 
 export const useSidebar = () => {

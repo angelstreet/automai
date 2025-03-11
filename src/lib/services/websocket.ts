@@ -38,7 +38,9 @@ export function initializeWebSocketServer(): WebSocketServer {
       wss.clients.forEach((client) => {
         const extClient = client as ExtendedWebSocket;
         if (extClient.ws_isAlive === false) {
-          logger.info('Terminating inactive WebSocket connection', { ws_connectionId: (client as any).connectionId });
+          logger.info('Terminating inactive WebSocket connection', {
+            ws_connectionId: (client as any).connectionId,
+          });
           return client.terminate();
         }
         extClient.ws_isAlive = false;
@@ -70,12 +72,17 @@ export function initializeWebSocketServer(): WebSocketServer {
       });
 
       ws.on('error', (error) => {
-        logger.error('WebSocket error', { ws_connectionId: (ws as any).connectionId, error: error.message });
+        logger.error('WebSocket error', {
+          ws_connectionId: (ws as any).connectionId,
+          error: error.message,
+        });
       });
 
       // Send immediate confirmation
       ws.send(JSON.stringify({ type: 'connected', message: 'WebSocket established' }));
-      logger.debug('Sent connection confirmation to client', { ws_connectionId: (ws as any).connectionId });
+      logger.debug('Sent connection confirmation to client', {
+        ws_connectionId: (ws as any).connectionId,
+      });
     });
 
     logger.info('WebSocket server singleton initialized successfully');
@@ -206,7 +213,12 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
         });
       } else {
         logger.error('Unsupported connection type', { type: data.connectionType });
-        ws.send(JSON.stringify({ error: `Unsupported connection type: ${data.connectionType}`, errorType: 'UNSUPPORTED_CONNECTION_TYPE' }));
+        ws.send(
+          JSON.stringify({
+            error: `Unsupported connection type: ${data.connectionType}`,
+            errorType: 'UNSUPPORTED_CONNECTION_TYPE',
+          }),
+        );
       }
     } else {
       logger.warn('Unknown message type', { type: data.type });
@@ -214,7 +226,12 @@ export function handleMessage(ws: WebSocketConnection, message: string): void {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Error processing WebSocket message', { error: errorMessage });
-    ws.send(JSON.stringify({ error: 'Invalid message format: ' + errorMessage, errorType: 'INVALID_MESSAGE' }));
+    ws.send(
+      JSON.stringify({
+        error: 'Invalid message format: ' + errorMessage,
+        errorType: 'INVALID_MESSAGE',
+      }),
+    );
   }
 }
 

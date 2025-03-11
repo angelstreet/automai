@@ -8,7 +8,7 @@ const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffec
 
 export function useSidebar() {
   const sidebarContext = useContextSidebar();
-  
+
   // Use useLayoutEffect to set CSS variable for sidebar width offset before browser paint
   // This helps prevent layout shifts and flickering
   useIsomorphicLayoutEffect(() => {
@@ -16,7 +16,7 @@ export function useSidebar() {
       const root = document.documentElement;
       const offset = sidebarContext.open ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
       root.style.setProperty('--sidebar-width-offset', offset);
-      
+
       // Also set a class on the body to help with responsive styling
       if (sidebarContext.open) {
         document.body.classList.add('sidebar-expanded');
@@ -27,10 +27,10 @@ export function useSidebar() {
       }
     }
   }, [sidebarContext.open]);
-  
+
   return {
     ...sidebarContext,
     // Ensure isOpen is available for backward compatibility
-    isOpen: sidebarContext.open
+    isOpen: sidebarContext.open,
   };
 }

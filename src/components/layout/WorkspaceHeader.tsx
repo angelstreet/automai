@@ -42,20 +42,21 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
   return (
     <>
       {headerVisible ? (
-        <header 
+        <header
           className={`sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b ${className}`}
-          style={isCollapsed ? { 
-            marginLeft: 'var(--sidebar-width-offset, 0)',
-            width: 'calc(100% - var(--sidebar-width-offset, 0))'
-          } : undefined}
+          style={
+            isCollapsed
+              ? {
+                  marginLeft: 'var(--sidebar-width-offset, 0)',
+                  width: 'calc(100% - var(--sidebar-width-offset, 0))',
+                }
+              : undefined
+          }
         >
           <div className="flex h-14 items-center">
             {/* Left section */}
             <div className="relative flex items-center h-full">
-              <div className={cn(
-                "absolute",
-                isCollapsed ? "-ml-16" : "ml-1"
-              )}>
+              <div className={cn('absolute', isCollapsed ? '-ml-16' : 'ml-1')}>
                 <SidebarTrigger />
               </div>
             </div>
@@ -92,12 +93,16 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
           </div>
         </header>
       ) : (
-        <div 
+        <div
           className="sticky top-0 z-50 flex justify-end px-4 py-1 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
-          style={isCollapsed ? { 
-            marginLeft: 'var(--sidebar-width-offset, 0)',
-            width: 'calc(100% - var(--sidebar-width-offset, 0))'
-          } : undefined}
+          style={
+            isCollapsed
+              ? {
+                  marginLeft: 'var(--sidebar-width-offset, 0)',
+                  width: 'calc(100% - var(--sidebar-width-offset, 0))',
+                }
+              : undefined
+          }
         >
           <Button
             variant="outline"

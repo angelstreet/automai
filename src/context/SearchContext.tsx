@@ -30,10 +30,12 @@ export function SearchProvider({ children }: SearchProviderProps) {
   const [open, setOpen] = useState(false);
 
   return (
-    <SearchContext.Provider value={{ searchTerm, setSearchTerm, isSearchOpen, setIsSearchOpen, open, setOpen }}>
+    <SearchContext.Provider
+      value={{ searchTerm, setSearchTerm, isSearchOpen, setIsSearchOpen, open, setOpen }}
+    >
       {children}
     </SearchContext.Provider>
   );
 }
 
-export const useSearch = () => useContext(SearchContext); 
+export const useSearch = () => useContext(SearchContext);

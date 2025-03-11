@@ -6,23 +6,23 @@ import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
-import { 
+import {
   signInWithOAuth as signInWithOAuthAction,
   signInWithPassword as signInWithPasswordAction,
-  resetPasswordForEmail as resetPasswordAction
+  resetPasswordForEmail as resetPasswordAction,
 } from '@/app/actions/auth';
 
 export default function LoginPage() {
   const router = useRouter();
   const { locale } = useParams();
   const t = useTranslations('Auth');
-  
+
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isAuthenticating, setIsAuthenticating] = React.useState(false);
-  
+
   // Use the user hook only for user data and loading state
   const { user, loading, error: authError } = useUser();
 
@@ -32,24 +32,26 @@ export default function LoginPage() {
     // This is a workaround for cases where the session exists but isn't being detected
     const hasSbAccessToken = document.cookie.includes('sb-access-token');
     const hasSbRefreshToken = document.cookie.includes('sb-refresh-token');
-    
+
     console.log('🔒 LOGIN PAGE: Auth cookie check:', {
       hasSbAccessToken,
       hasSbRefreshToken,
       userLoaded: !!user,
-      isLoading: loading
+      isLoading: loading,
     });
-    
+
     if (user && !loading) {
       // tenant_name is directly on the user object (not in user_metadata)
       const tenantName = user.tenant_name || 'trial';
-      
+
       console.log('🔒 LOGIN PAGE: Redirecting to tenant dashboard:', tenantName);
       router.push(`/${locale}/${tenantName}/dashboard`);
-    } 
+    }
     // Fallback redirect if we have auth cookies but the user object isn't loading
     else if (hasSbAccessToken && hasSbRefreshToken && !loading) {
-      console.log('🔒 LOGIN PAGE: Auth cookies present but no user object, attempting fallback redirect');
+      console.log(
+        '🔒 LOGIN PAGE: Auth cookies present but no user object, attempting fallback redirect',
+      );
       // Use default tenant for fallback
       router.push(`/${locale}/trial/dashboard`);
     }
@@ -68,7 +70,7 @@ export default function LoginPage() {
     // If we have an error in the URL, it means we were redirected back after a failed OAuth attempt
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get('error');
-    
+
     if (errorParam) {
       setError(decodeURIComponent(errorParam));
       setIsAuthenticating(false);
@@ -77,12 +79,12 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Prevent multiple submissions
     if (isSubmitting || loading || isAuthenticating) {
       return;
     }
-    
+
     setError('');
     setIsSubmitting(true);
     setIsAuthenticating(true);
@@ -90,11 +92,11 @@ export default function LoginPage() {
     try {
       // Use the server action directly instead of going through UserContext
       const result = await signInWithPasswordAction(email, password);
-      
+
       if (result.success && result.data?.session) {
         // tenant_name is directly on the user object (not in user_metadata)
         const tenantName = result.data.user?.tenant_name || 'trial';
-        
+
         console.log('Login submission redirecting to tenant:', tenantName);
         // Redirect to dashboard
         router.push(`/${locale}/${tenantName}/dashboard`);
@@ -115,11 +117,11 @@ export default function LoginPage() {
     try {
       setIsAuthenticating(true);
       setError('');
-      
+
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
       // Use the server action directly instead of going through UserContext
       const result = await signInWithOAuthAction(provider, redirectUrl);
-      
+
       if (result.success && result.data?.url) {
         // Redirect to OAuth provider
         window.location.href = result.data.url;
@@ -159,9 +161,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{t('signIn')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t('signInToYourAccount')}
-          </p>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('signInToYourAccount')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
@@ -212,11 +212,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isButtonDisabled}
-          >
+          <Button type="submit" className="w-full" disabled={isButtonDisabled}>
             {isSubmitting || loading ? t('signingIn') : t('signIn')}
           </Button>
 

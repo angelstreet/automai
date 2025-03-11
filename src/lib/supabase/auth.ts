@@ -76,7 +76,9 @@ export const supabaseAuth = {
     }
     try {
       const supabase = await createClient();
-      const { data: authData, error: authError } = await supabase.auth.updateUser({ data: metadata });
+      const { data: authData, error: authError } = await supabase.auth.updateUser({
+        data: metadata,
+      });
 
       if (authError) {
         console.error('Error updating auth metadata:', authError);
@@ -138,7 +140,7 @@ export const supabaseAuth = {
   async signUp(
     email: string,
     password: string,
-    options?: { redirectTo?: string; data?: Record<string, any> }
+    options?: { redirectTo?: string; data?: Record<string, any> },
   ): Promise<AuthResult> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
@@ -163,7 +165,7 @@ export const supabaseAuth = {
 
   async signInWithOAuth(
     provider: OAuthProvider,
-    options?: { redirectTo?: string }
+    options?: { redirectTo?: string },
   ): Promise<AuthResult> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
@@ -192,7 +194,10 @@ export const supabaseAuth = {
     }
     try {
       const supabase = await createClient();
-      console.log('🔐 AUTH_SERVICE: Starting OAuth code exchange for code:', code.substring(0, 6) + '...');
+      console.log(
+        '🔐 AUTH_SERVICE: Starting OAuth code exchange for code:',
+        code.substring(0, 6) + '...',
+      );
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
@@ -200,7 +205,11 @@ export const supabaseAuth = {
         return { success: false, error: error.message };
       }
 
-      console.log('🔐 AUTH_SERVICE: Exchange successful:', !!data?.session, data?.session?.user?.id || 'no user id');
+      console.log(
+        '🔐 AUTH_SERVICE: Exchange successful:',
+        !!data?.session,
+        data?.session?.user?.id || 'no user id',
+      );
       return { success: true, data };
     } catch (error) {
       console.error('🔐 AUTH_SERVICE ERROR: Error handling OAuth callback:', error);
@@ -327,12 +336,10 @@ export const signInWithPassword = (email: string, password: string) =>
 export const signUp = (
   email: string,
   password: string,
-  options?: { redirectTo?: string; data?: Record<string, any> }
+  options?: { redirectTo?: string; data?: Record<string, any> },
 ) => supabaseAuth.signUp(email, password, options);
-export const signInWithOAuth = (
-  provider: OAuthProvider,
-  options?: { redirectTo?: string }
-) => supabaseAuth.signInWithOAuth(provider, options);
+export const signInWithOAuth = (provider: OAuthProvider, options?: { redirectTo?: string }) =>
+  supabaseAuth.signInWithOAuth(provider, options);
 export const handleOAuthCallback = (code: string) => supabaseAuth.handleOAuthCallback(code);
 export const signOut = () => supabaseAuth.signOut();
 export const updatePassword = (password: string) => supabaseAuth.updatePassword(password);

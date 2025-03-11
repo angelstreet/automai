@@ -5,9 +5,26 @@ import { useProject } from '@/hooks/useProject';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/shadcn/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/shadcn/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { Edit, Save, Trash2, ArrowLeft } from 'lucide-react';
 
@@ -112,9 +129,9 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
         {isEditing ? (
           <>
             <CardTitle>
-              <Input 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Project Name"
                 className="text-xl font-bold"
               />
@@ -132,9 +149,9 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
       </CardHeader>
       <CardContent>
         {isEditing ? (
-          <Textarea 
-            value={description} 
-            onChange={(e) => setDescription(e.target.value)} 
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Project Description"
             className="min-h-[100px]"
           />
@@ -168,8 +185,8 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete the project
-                  and all associated data.
+                  This action cannot be undone. This will permanently delete the project and all
+                  associated data.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -182,4 +199,4 @@ export function ProjectDetail({ projectId, onBack }: ProjectDetailProps) {
       </CardFooter>
     </Card>
   );
-} 
+}

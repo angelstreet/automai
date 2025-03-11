@@ -38,17 +38,17 @@ export function ProfileDropdown() {
 
   // Get user avatar from user_metadata if available
   const userImage = user.user_metadata?.avatar_url || '/avatars/01.svg';
-  
+
   // Get user display name
   // All metadata fields are already extracted to the top-level user object in auth.ts
-  const userName = 
+  const userName =
     // Name directly on user object (extracted from metadata by auth service)
     user.name ||
     // Fall back to email username
-    user.email?.split('@')[0] || 
+    user.email?.split('@')[0] ||
     // Final fallback
     'Guest';
-  
+
   // Get user initials for avatar fallback
   const userInitials = userName
     .split(' ')

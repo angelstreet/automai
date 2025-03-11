@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  
+
   // Use the auth hook only for loading state
   const { error: authError, loading } = useUser();
 
@@ -37,7 +37,7 @@ export default function ForgotPasswordPage() {
       const redirectUrl = `${window.location.origin}/${locale}/reset-password`;
       // Use the server action directly instead of going through UserContext
       const result = await resetPasswordForEmail(email, redirectUrl);
-      
+
       if (result.success) {
         setSuccess(true);
       } else {
@@ -72,9 +72,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{t('forgotPassword')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t('enterEmailToReset')}
-          </p>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t('enterEmailToReset')}</p>
         </div>
 
         {success ? (
@@ -104,11 +102,7 @@ export default function ForgotPasswordPage() {
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting || loading}
-            >
+            <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
               {isSubmitting || loading ? t('sending') : t('sendResetLink')}
             </Button>
 

@@ -49,7 +49,7 @@ export default function RepositoriesPage() {
     isLoading: isLoadingRepos,
     syncRepository,
     isSyncing,
-    refreshAll: refreshRepositories
+    refreshAll: refreshRepositories,
   } = useRepositories();
 
   const {
@@ -61,7 +61,7 @@ export default function RepositoriesPage() {
     isAddingProvider: isAddingProviderFromHooks,
     editProvider,
     editingProvider: editingProviderFromHooks,
-    setEditingProvider: setEditingProviderFromHooks
+    setEditingProvider: setEditingProviderFromHooks,
   } = useGitProviders();
 
   // Define fetchData outside of useEffect so it can be called from other places
@@ -88,7 +88,7 @@ export default function RepositoriesPage() {
       if (!providersResponse.ok) {
         // Handle error without redirecting
         console.log('Failed to fetch providers:', providersResponse.status);
-        
+
         if (providersResponse.status === 401) {
           toast({
             title: 'Authentication Error',
@@ -96,7 +96,7 @@ export default function RepositoriesPage() {
             variant: 'destructive',
           });
         }
-        
+
         setProviders([]);
         setRepositories([]);
         setIsLoading(false);
@@ -107,11 +107,12 @@ export default function RepositoriesPage() {
       // Process provider data
       const providersData = await providersResponse.json();
       setProviders(providersData);
-      
+
       // Step 2: Check if we have any providers with valid status
-      const hasValidProviders = providersData.length > 0 && 
-        providersData.some(provider => provider.status === 'connected');
-      
+      const hasValidProviders =
+        providersData.length > 0 &&
+        providersData.some((provider) => provider.status === 'connected');
+
       if (!hasValidProviders) {
         console.log('No valid providers found, skipping repository fetch');
         setRepositories([]);
@@ -119,7 +120,7 @@ export default function RepositoriesPage() {
         isFetchingRef.current = false;
         return; // Exit early if no valid providers
       }
-      
+
       // Step 3: Fetch repositories only if we have valid providers
       console.log('Fetching repositories for providers...');
       const reposResponse = await fetchWithAuth(
@@ -135,7 +136,7 @@ export default function RepositoriesPage() {
       if (!reposResponse.ok) {
         // Handle error without redirecting
         console.log('Failed to fetch repositories:', reposResponse.status);
-        
+
         if (reposResponse.status === 401) {
           toast({
             title: 'Authentication Error',
@@ -143,7 +144,7 @@ export default function RepositoriesPage() {
             variant: 'destructive',
           });
         }
-        
+
         setRepositories([]);
       } else {
         const reposData = await reposResponse.json();
@@ -339,8 +340,8 @@ export default function RepositoriesPage() {
         });
         return;
       }
-      
-      const hasValidProviders = providers.some(provider => provider.status === 'connected');
+
+      const hasValidProviders = providers.some((provider) => provider.status === 'connected');
       if (!hasValidProviders) {
         toast({
           title: 'No Connected Providers',
@@ -349,7 +350,7 @@ export default function RepositoriesPage() {
         });
         return;
       }
-      
+
       // Step 2: Call API to refresh all repositories
       console.log('Refreshing repositories for all providers...');
       const response = await fetchWithAuth('/api/fetch-all-repositories', {
@@ -380,10 +381,12 @@ export default function RepositoriesPage() {
   };
 
   // Filter repositories based on search and selected providers
-  const filteredRepositories = repositories.filter(repo => {
-    const matchesSearch = searchQuery.toLowerCase() === '' || 
+  const filteredRepositories = repositories.filter((repo) => {
+    const matchesSearch =
+      searchQuery.toLowerCase() === '' ||
       repo.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesProvider = selectedProviders.length === 0 || 
+    const matchesProvider =
+      selectedProviders.length === 0 ||
       (repo.provider && selectedProviders.includes(repo.provider.id));
     return matchesSearch && matchesProvider;
   });
@@ -436,7 +439,7 @@ export default function RepositoriesPage() {
           />
         );
       }
-      
+
       // If providers exist but no repositories, show repositories empty state
       if (repositories.length === 0) {
         return (
@@ -445,26 +448,24 @@ export default function RepositoriesPage() {
             description={t('no_repositories_description')}
             icon={<GitBranch className="h-6 w-6" />}
             action={
-              <Button onClick={() => setTabsValue('providers')}>
-                {t('view_providers')}
-              </Button>
+              <Button onClick={() => setTabsValue('providers')}>{t('view_providers')}</Button>
             }
           />
         );
       }
-      
+
       // If repositories exist but none match the filter, show filtered empty state
       if (filteredRepositories.length === 0) {
         return (
           <EmptyState
             title={t('no_repos_found')}
-            description={searchQuery || selectedProviders.length > 0 ? t('no_repos_found') : t('no_repositories_description')}
-            icon={<GitBranch className="h-6 w-6" />}
-            action={
-              <Button onClick={handleClearFilters}>
-                {t('clear_all')}
-              </Button>
+            description={
+              searchQuery || selectedProviders.length > 0
+                ? t('no_repos_found')
+                : t('no_repositories_description')
             }
+            icon={<GitBranch className="h-6 w-6" />}
+            action={<Button onClick={handleClearFilters}>{t('clear_all')}</Button>}
           />
         );
       }
@@ -516,10 +517,10 @@ export default function RepositoriesPage() {
             syncingRepoId={isSyncing}
             onSearchChange={setSearchQuery}
             onToggleProviderFilter={(providerId) => {
-              setSelectedProviders(prev =>
+              setSelectedProviders((prev) =>
                 prev.includes(providerId)
-                  ? prev.filter(id => id !== providerId)
-                  : [...prev, providerId]
+                  ? prev.filter((id) => id !== providerId)
+                  : [...prev, providerId],
               );
             }}
             onClearFilters={handleClearFilters}

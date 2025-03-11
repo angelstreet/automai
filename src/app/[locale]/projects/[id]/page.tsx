@@ -19,13 +19,10 @@ export default function ProjectPage() {
 
   return (
     <Main>
-      <PageHeader 
-        title={t('projectDetails')}
-        description={t('viewAndManageProject')}
-      />
+      <PageHeader title={t('projectDetails')} description={t('viewAndManageProject')} />
       <div className="grid gap-8 mt-6">
         <ProjectDetail projectId={projectId} onBack={handleBack} />
       </div>
     </Main>
   );
-} 
+}

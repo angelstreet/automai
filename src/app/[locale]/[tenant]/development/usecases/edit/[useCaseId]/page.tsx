@@ -42,10 +42,7 @@ export default function UseCaseEditPage() {
         <p className="text-gray-600 dark:text-gray-400 mb-6">
           This feature is currently under development and will be available in a future update.
         </p>
-        <Button
-          onClick={() => router.push(`/${locale}/${tenant}/dashboard`)}
-          variant="default"
-        >
+        <Button onClick={() => router.push(`/${locale}/${tenant}/dashboard`)} variant="default">
           Return to Dashboard
         </Button>
       </div>

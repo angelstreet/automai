@@ -40,9 +40,7 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
     }
 
     // Apply the theme and sync with system preferences if needed
-    const isDark =
-      effectiveTheme === 'dark' ||
-      (effectiveTheme === 'system' && prefersDark);
+    const isDark = effectiveTheme === 'dark' || (effectiveTheme === 'system' && prefersDark);
 
     root.classList.toggle('dark', isDark);
     setTheme(effectiveTheme);
@@ -55,9 +53,7 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
   const handleSetTheme = (newTheme: Theme) => {
     const root = document.documentElement;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark =
-      newTheme === 'dark' ||
-      (newTheme === 'system' && prefersDark);
+    const isDark = newTheme === 'dark' || (newTheme === 'system' && prefersDark);
 
     root.classList.toggle('dark', isDark);
     setTheme(newTheme);

@@ -149,41 +149,47 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
         name: host.name,
         id: host.id,
         is_windows: host.is_windows === true,
-        os_type: host.os_type || 'unknown'
+        os_type: host.os_type || 'unknown',
       });
-      
+
       // Still store current host reference for direct access
       sessionStorage.setItem('currentHost', `host_${host.id}`);
       sessionStorage.setItem('currentHostLastAccessed', Date.now().toString());
-      
+
       // For debugging - check if the host was properly stored earlier
       const storedHost = sessionStorage.getItem(`host_${host.id}`);
       const storedHostByName = sessionStorage.getItem(`host_name_${host.name.toLowerCase()}`);
-      
+
       if (!storedHost && !storedHostByName) {
         console.warn('Warning: Host not found in sessionStorage, storing it now');
-        
+
         // Ensure is_windows is explicitly included and is a boolean
         const hostWithExplicitWindows = {
           ...host,
           is_windows: host.is_windows === true,
         };
-        
+
         // Store it now as a fallback
         sessionStorage.setItem(`host_${host.id}`, JSON.stringify(hostWithExplicitWindows));
-        sessionStorage.setItem(`host_name_${host.name.toLowerCase()}`, JSON.stringify(hostWithExplicitWindows));
+        sessionStorage.setItem(
+          `host_name_${host.name.toLowerCase()}`,
+          JSON.stringify(hostWithExplicitWindows),
+        );
         sessionStorage.setItem('currentHost_full', JSON.stringify(hostWithExplicitWindows));
       } else {
         console.log('Host found in sessionStorage:', {
           byId: !!storedHost,
-          byName: !!storedHostByName
+          byName: !!storedHostByName,
         });
-        
+
         // For debugging - also store the full object directly
-        sessionStorage.setItem('currentHost_full', JSON.stringify({
-          ...host,
-          is_windows: host.is_windows === true
-        }));
+        sessionStorage.setItem(
+          'currentHost_full',
+          JSON.stringify({
+            ...host,
+            is_windows: host.is_windows === true,
+          }),
+        );
       }
     } catch (e) {
       console.error('Error processing host for terminal:', e);
@@ -242,11 +248,18 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                   <ScrollText className="mr-2 h-4 w-4" />
                   <span>{t('logs')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleRefreshClick} disabled={isRefreshing || isDeleting}>
+                <DropdownMenuItem
+                  onClick={handleRefreshClick}
+                  disabled={isRefreshing || isDeleting}
+                >
                   <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <span>{isRefreshing ? t('refreshing') : t('refresh')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} disabled={isDeleting} className="text-destructive">
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="text-destructive"
+                >
                   <XCircle className="mr-2 h-4 w-4" />
                   <span>{t('delete')}</span>
                 </DropdownMenuItem>

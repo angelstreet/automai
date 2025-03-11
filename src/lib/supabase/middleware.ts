@@ -16,7 +16,7 @@ export const createClient = (request: NextRequest) => {
       headers: request.headers,
     },
   });
-  
+
   // Create client with cookie handlers for middleware
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,7 +25,7 @@ export const createClient = (request: NextRequest) => {
       cookies: {
         getAll() {
           // Simply map the cookies to the expected format
-          return request.cookies.getAll().map(cookie => ({
+          return request.cookies.getAll().map((cookie) => ({
             name: cookie.name,
             value: cookie.value,
           }));
@@ -46,9 +46,9 @@ export const createClient = (request: NextRequest) => {
           });
         },
       },
-    }
+    },
   );
-  
+
   return { supabase, response };
 };
 
@@ -57,14 +57,10 @@ export const createClient = (request: NextRequest) => {
  */
 function clearAuthCookies(response: NextResponse): NextResponse {
   // Known Supabase auth cookie names
-  const authCookies = [
-    'sb-access-token',
-    'sb-refresh-token',
-    'supabase-auth-token'
-  ];
-  
+  const authCookies = ['sb-access-token', 'sb-refresh-token', 'supabase-auth-token'];
+
   // Clear each cookie
-  authCookies.forEach(name => {
+  authCookies.forEach((name) => {
     response.cookies.set({
       name,
       value: '',
@@ -72,7 +68,7 @@ function clearAuthCookies(response: NextResponse): NextResponse {
       path: '/',
     });
   });
-  
+
   return response;
 }
 
@@ -107,12 +103,13 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     if (error) {
       console.log('Auth error details:', error?.message);
     }
-    
+
     // Check if there are some auth cookies present even though we couldn't get a user
     // This might indicate a cookie-related issue rather than truly unauthenticated
-    const hasAuthCookies = request.cookies.getAll()
-      .some(c => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
-    
+    const hasAuthCookies = request.cookies
+      .getAll()
+      .some((c) => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
+
     if (hasAuthCookies) {
       console.log('Auth cookies present but failed to authenticate - possible cookie issue');
       // For debugging: if auth cookies exist but auth failed, we'll still let the request through
@@ -121,19 +118,18 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       console.log('Allowing request to proceed despite auth failure due to cookie presence');
       return response;
     }
-    
+
     // Extract locale from URL
     const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
-    const locale = pathParts.length > 0 && locales.includes(pathParts[0] as any) 
-      ? pathParts[0] 
-      : defaultLocale;
-    
+    const locale =
+      pathParts.length > 0 && locales.includes(pathParts[0] as any) ? pathParts[0] : defaultLocale;
+
     // Create a new URL for the redirect
     const redirectUrl = new URL(`/${locale}/login`, request.url);
-    
+
     // Create a redirect response
     const redirectResponse = NextResponse.redirect(redirectUrl, { status: 307 });
-    
+
     // Clear auth cookies in the redirect response
     return clearAuthCookies(redirectResponse);
   }

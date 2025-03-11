@@ -28,14 +28,14 @@ export function ThemeToggle() {
     if (typeof window !== 'undefined') {
       // Get theme from localStorage
       const savedTheme = localStorage.getItem('theme');
-      
+
       // If there's a saved theme, make sure both providers are using it
       if (savedTheme && savedTheme !== theme) {
         // Update next-themes if available
         if (nextThemes.setTheme) {
           nextThemes.setTheme(savedTheme);
         }
-        
+
         // Update custom theme provider if available
         if (customTheme.setTheme) {
           customTheme.setTheme(savedTheme as any);

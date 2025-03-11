@@ -20,23 +20,28 @@ export async function GET(request: NextRequest, context: { params: { name: strin
 
     // Use findMany and manually filter for case-insensitive match
     const hosts = await db.host.findMany({
-      where: { 
+      where: {
         // Basic filter that might have case sensitivity issues
         // We'll do manual filtering below for case insensitivity
-        name: name 
-      }
+        name: name,
+      },
     });
-    
+
     // Manual case-insensitive filter
-    const host = hosts.find(h => h.name.toLowerCase() === name.toLowerCase());
+    const host = hosts.find((h) => h.name.toLowerCase() === name.toLowerCase());
 
     console.log('Database query completed');
-    
+
     if (host) {
       // Log the is_windows field value if it exists
-      console.log('Host is_windows field:', host.is_windows, 
-                  'Type:', typeof host.is_windows, 
-                  'OS Type:', host.os_type);
+      console.log(
+        'Host is_windows field:',
+        host.is_windows,
+        'Type:',
+        typeof host.is_windows,
+        'OS Type:',
+        host.os_type,
+      );
     }
 
     if (!host) {

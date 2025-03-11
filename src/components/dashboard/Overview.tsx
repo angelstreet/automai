@@ -7,9 +7,9 @@ import { useEffect, useState, useMemo } from 'react';
 import '@/lib/chart';
 
 // Use dynamic import with ssr: false to prevent hydration issues
-const LineChart = dynamic(() => import('react-chartjs-2').then((mod) => mod.Line), { 
+const LineChart = dynamic(() => import('react-chartjs-2').then((mod) => mod.Line), {
   ssr: false,
-  loading: () => <div className="h-[350px] bg-muted/5 animate-pulse rounded-lg" />
+  loading: () => <div className="h-[350px] bg-muted/5 animate-pulse rounded-lg" />,
 });
 
 // Define chart options outside component to prevent recreation on each render
@@ -51,7 +51,7 @@ const initialData = {
       tension: 0.3,
       fill: false,
       pointRadius: 5,
-      pointHoverRadius: 7
+      pointHoverRadius: 7,
     },
   ],
 };
@@ -59,7 +59,7 @@ const initialData = {
 export function Overview() {
   // Use a single state variable for client-side rendering check
   const [mounted, setMounted] = useState(false);
-  
+
   // Use useMemo to create chart data only once
   const chartData = useMemo(() => initialData, []);
 

@@ -25,11 +25,11 @@ export function ProfileContent() {
       // In auth.ts, user_metadata fields are already extracted to the top-level user object
       console.log('🔍 PROFILE COMPONENT: Full user object:', user);
       console.log('🔍 PROFILE COMPONENT: Direct name on user:', user.name);
-      
+
       // Use the name directly from the user object
       // The auth service already extracts name from metadata
       const userName = user.name || user.email?.split('@')[0] || '';
-      
+
       console.log('🔍 PROFILE COMPONENT: Selected username:', userName);
       setName(userName);
     }
@@ -67,15 +67,19 @@ export function ProfileContent() {
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-4">{t('sessionExpired')}</h2>
           <p className="text-muted-foreground mb-4">{t('pleaseLogin')}</p>
-          <Button onClick={() => {
-            // Clear any stale authentication data
-            document.cookie.split(";").forEach((c) => {
-              document.cookie = c
-                .replace(/^ +/, "")
-                .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
-            });
-            window.location.href = `/${locale}/login`;
-          }}>{t('logIn')}</Button>
+          <Button
+            onClick={() => {
+              // Clear any stale authentication data
+              document.cookie.split(';').forEach((c) => {
+                document.cookie = c
+                  .replace(/^ +/, '')
+                  .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
+              });
+              window.location.href = `/${locale}/login`;
+            }}
+          >
+            {t('logIn')}
+          </Button>
         </div>
       </div>
     );
@@ -106,10 +110,7 @@ export function ProfileContent() {
                   placeholder={t('enterName')}
                   className="max-w-md"
                 />
-                <Button 
-                  onClick={handleUpdateName} 
-                  disabled={isUpdating || name === user.name}
-                >
+                <Button onClick={handleUpdateName} disabled={isUpdating || name === user.name}>
                   {isUpdating ? t('updating') : t('update')}
                 </Button>
               </div>

@@ -18,7 +18,7 @@ export default function TenantLayout({
 }) {
   const params = useParams();
   const tenant = params.tenant as string;
-  
+
   return (
     <UserProvider>
       <SidebarProvider>
@@ -26,19 +26,21 @@ export default function TenantLayout({
           <ToasterProvider />
           <div className="relative flex min-h-screen w-full">
             <AppSidebar />
-            <div 
+            <div
               className="flex-1 flex flex-col min-w-0 w-full overflow-hidden transition-all duration-200"
-              style={{ 
+              style={{
                 marginLeft: 'var(--sidebar-width-offset, 0)',
-                width: 'calc(100% - var(--sidebar-width-offset, 0))'
+                width: 'calc(100% - var(--sidebar-width-offset, 0))',
               }}
             >
               <WorkspaceHeader tenant={tenant} />
-              <main className="flex-1 px-3 py-4 w-full max-w-full border border-gray-100 rounded-md">{children}</main>
+              <main className="flex-1 px-3 py-4 w-full max-w-full border border-gray-100 rounded-md">
+                {children}
+              </main>
             </div>
           </div>
-          </TooltipProvider>
-        </SidebarProvider>
-      </UserProvider>
+        </TooltipProvider>
+      </SidebarProvider>
+    </UserProvider>
   );
 }

@@ -7,13 +7,38 @@ import { useTranslations } from 'next-intl';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Main } from '@/components/layout/Main';
 import { Button } from '@/components/shadcn/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/shadcn/card';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/shadcn/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/shadcn/dialog';
 import { Skeleton } from '@/components/shadcn/skeleton';
 import { Plus, Edit, Trash2, ExternalLink } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/shadcn/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/shadcn/alert-dialog';
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -25,12 +50,12 @@ export default function ProjectsPage() {
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
-    
+
     const result = await addProject({
       name: newProjectName,
-      description: newProjectDescription
+      description: newProjectDescription,
     });
-    
+
     if (result) {
       setNewProjectName('');
       setNewProjectDescription('');
@@ -44,21 +69,23 @@ export default function ProjectsPage() {
 
   const renderProjects = () => {
     if (loading) {
-      return Array(3).fill(0).map((_, i) => (
-        <Card key={i} className="w-full">
-          <CardHeader>
-            <Skeleton className="h-8 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-16 w-full" />
-          </CardContent>
-          <CardFooter>
-            <Skeleton className="h-10 w-24 mr-2" />
-            <Skeleton className="h-10 w-24" />
-          </CardFooter>
-        </Card>
-      ));
+      return Array(3)
+        .fill(0)
+        .map((_, i) => (
+          <Card key={i} className="w-full">
+            <CardHeader>
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-16 w-full" />
+            </CardContent>
+            <CardFooter>
+              <Skeleton className="h-10 w-24 mr-2" />
+              <Skeleton className="h-10 w-24" />
+            </CardFooter>
+          </Card>
+        ));
     }
 
     if (error) {
@@ -120,9 +147,7 @@ export default function ProjectsPage() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{t('areYouSure')}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('deleteProjectConfirmation')}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{t('deleteProjectConfirmation')}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
@@ -139,26 +164,19 @@ export default function ProjectsPage() {
 
   return (
     <Main>
-      <PageHeader
-        title={t('projects')}
-        description={t('manageYourProjects')}
-      >
+      <PageHeader title={t('projects')} description={t('manageYourProjects')}>
         <Button onClick={() => setIsDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> {t('createProject')}
         </Button>
       </PageHeader>
-      
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
-        {renderProjects()}
-      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">{renderProjects()}</div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('createNewProject')}</DialogTitle>
-            <DialogDescription>
-              {t('fillProjectDetails')}
-            </DialogDescription>
+            <DialogDescription>{t('fillProjectDetails')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -184,12 +202,10 @@ export default function ProjectsPage() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               {t('cancel')}
             </Button>
-            <Button onClick={handleCreateProject}>
-              {t('create')}
-            </Button>
+            <Button onClick={handleCreateProject}>{t('create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </Main>
   );
-} 
+}

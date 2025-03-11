@@ -1,10 +1,5 @@
 import db from '@/lib/supabase/db';
-import {
-  Repository,
-  GitProvider,
-  GitProviderType,
-  SyncStatus,
-} from '@/types/repositories';
+import { Repository, GitProvider, GitProviderType, SyncStatus } from '@/types/repositories';
 import { GitHubProviderService } from './git-providers/github';
 import { GitLabProviderService } from './git-providers/gitlab';
 import { GiteaProviderService } from './git-providers/gitea';
@@ -49,12 +44,12 @@ export async function getGitProviderService(
 export async function listGitProviders(userId: string): Promise<GitProvider[]> {
   try {
     logger.info('Listing git providers for user', { userId });
-    
+
     const data = await db.query('git_providers', {
       where: { user_id: userId },
       orderBy: { created_at: 'desc' },
     });
-    
+
     return data.map(mapGitProviderFromDb) || [];
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -69,14 +64,14 @@ export async function listGitProviders(userId: string): Promise<GitProvider[]> {
 export async function getGitProvider(id: string): Promise<GitProvider | null> {
   try {
     logger.info('Getting git provider', { id });
-    
+
     const providers = await db.query('git_providers', {
       where: { id },
     });
-    
+
     const provider = providers[0];
     if (!provider) return null;
-    
+
     return mapGitProviderFromDb(provider);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -98,11 +93,11 @@ export async function createGitProvider(
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: Date;
-  }
+  },
 ): Promise<GitProvider | null> {
   try {
     logger.info('Creating git provider', { userId, type: data.name });
-    
+
     const providerData = {
       user_id: userId,
       tenant_id: userId, // Using userId as tenantId for now
@@ -117,17 +112,17 @@ export async function createGitProvider(
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    
+
     const result = await db.query('git_providers', {
       insert: providerData,
       returning: true,
     });
-    
+
     const provider = result[0];
     if (!provider) {
       throw new Error('Failed to create git provider');
     }
-    
+
     return mapGitProviderFromDb(provider);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -145,38 +140,38 @@ export async function updateGitProvider(
     accessToken?: string;
     refreshToken?: string;
     expiresAt?: Date;
-  }
+  },
 ): Promise<GitProvider | null> {
   try {
     logger.info('Updating git provider', { id });
-    
+
     const updated_ata: Record<string, any> = {
       updated_at: new Date().toISOString(),
     };
-    
+
     if (data.accessToken !== undefined) {
       updated_ata.access_token = data.accessToken;
     }
-    
+
     if (data.refreshToken !== undefined) {
       updated_ata.refresh_token = data.refreshToken;
     }
-    
+
     if (data.expiresAt !== undefined) {
       updated_ata.expires_at = data.expiresAt.toISOString();
     }
-    
+
     const result = await db.query('git_providers', {
       where: { id },
       update: updated_ata,
       returning: true,
     });
-    
+
     const provider = result[0];
     if (!provider) {
       throw new Error(`Git provider not found: ${id}`);
     }
-    
+
     return mapGitProviderFromDb(provider);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -191,12 +186,12 @@ export async function updateGitProvider(
 export async function deleteGitProvider(id: string): Promise<boolean> {
   try {
     logger.info('Deleting git provider', { id });
-    
+
     await db.query('git_providers', {
       where: { id },
       delete: true,
     });
-    
+
     return true;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -214,36 +209,36 @@ export async function listRepositories(
     providerId?: string;
     projectId?: string;
     syncStatus?: SyncStatus;
-  }
+  },
 ): Promise<Repository[]> {
   try {
     logger.info('Listing repositories', { userId, filters });
-    
+
     const where: Record<string, any> = {};
-    
+
     // Join with git_providers to filter by user_id
     const joinConditions = {
       'repositories.provider_id': 'git_providers.id',
     };
-    
+
     // Add filters
     if (filters?.providerId) {
       where.provider_id = filters.providerId;
     }
-    
+
     if (filters?.projectId) {
       where.project_id = filters.projectId;
     }
-    
+
     if (filters?.syncStatus) {
       where.sync_status = filters.syncStatus.toLowerCase();
     }
-    
+
     // Add user filter through the join
     const additionalWhere = {
       'git_providers.user_id': userId,
     };
-    
+
     const data = await db.query('repositories', {
       join: {
         table: 'git_providers',
@@ -253,7 +248,7 @@ export async function listRepositories(
       where,
       orderBy: { created_at: 'desc' },
     });
-    
+
     return data.map(mapRepositoryFromDb) || [];
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

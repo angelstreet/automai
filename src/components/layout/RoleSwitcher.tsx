@@ -35,40 +35,40 @@ if (typeof window !== 'undefined' && !window.hasOwnProperty('__debugRole')) {
   Object.defineProperty(window, '__debugRole', {
     value: null,
     writable: true,
-    configurable: true
+    configurable: true,
   });
 }
 
 function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   // Get user from context
   const { user } = useUser();
-  
+
   // Local state for the selected role (for debugging)
   const [selectedRole, setSelectedRole] = React.useState<Role>(
     // Initialize from window.__debugRole if available, otherwise from user
-    typeof window !== 'undefined' && window.__debugRole ? 
-      window.__debugRole : 
-      user?.role || 'viewer'
+    typeof window !== 'undefined' && window.__debugRole
+      ? window.__debugRole
+      : user?.role || 'viewer',
   );
-  
+
   // Handle role change
   const handleValueChange = React.useCallback((value: Role) => {
     console.log('[RoleSwitcher] Debug: Changing role to:', value);
-    
+
     // Update local state
     setSelectedRole(value);
-    
+
     // Set the global debug role
     if (typeof window !== 'undefined') {
       window.__debugRole = value;
       console.log('[RoleSwitcher] Debug: Set global __debugRole to:', value);
     }
-    
+
     try {
       // Dispatch custom event for debugging
-      const event = new CustomEvent('debug:roleChange:v2', { 
+      const event = new CustomEvent('debug:roleChange:v2', {
         detail: { role: value },
-        bubbles: true 
+        bubbles: true,
       });
       window.dispatchEvent(event);
       console.log('[RoleSwitcher] Debug: Successfully dispatched debug:roleChange:v2 event');
@@ -78,13 +78,10 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   }, []);
 
   return (
-    <Select
-      value={selectedRole}
-      onValueChange={handleValueChange}
-    >
-      <SelectTrigger className={cn("w-full", className)}>
+    <Select value={selectedRole} onValueChange={handleValueChange}>
+      <SelectTrigger className={cn('w-full', className)}>
         <SelectValue placeholder="Select a role">
-          {roles.find(r => r.value === selectedRole)?.label || 'Select a role'}
+          {roles.find((r) => r.value === selectedRole)?.label || 'Select a role'}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

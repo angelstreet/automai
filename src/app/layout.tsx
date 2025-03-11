@@ -23,16 +23,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Get theme from cookies for server-side rendering
   const cookieStore = await cookies();
   const themeCookie = cookieStore.get('theme');
   const theme = (themeCookie?.value ?? 'system') as 'light' | 'dark' | 'system';
-  
+
   return (
     <html lang="en" className={inter.className} suppressHydrationWarning>
       <head>
@@ -41,9 +37,7 @@ export default async function RootLayout({
       </head>
       <body>
         <ThemeProviders defaultTheme={theme}>
-          <SWRProvider>
-            {children}
-          </SWRProvider>
+          <SWRProvider>{children}</SWRProvider>
         </ThemeProviders>
       </body>
     </html>

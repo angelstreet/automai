@@ -9,26 +9,23 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    
+
     // Call the server action to test connection
     const result = await testGitProviderConnection(body);
-    
+
     if (!result.success) {
       return NextResponse.json(
         { success: false, error: result.error || 'Failed to test connection' },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     return NextResponse.json({
       success: true,
-      message: result.message || 'Connection test successful'
+      message: result.message || 'Connection test successful',
     });
   } catch (error) {
     console.error('Error in POST /api/repositories/test-connection:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

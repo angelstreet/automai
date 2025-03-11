@@ -52,10 +52,10 @@ export default function TerminalPage() {
             // Verify this is the correct host
             if (parsedHost.name.toLowerCase() === name.toLowerCase()) {
               console.log('Using host data from session storage');
-              
+
               // Store the last access timestamp
               sessionStorage.setItem('currentHost_accessed', Date.now().toString());
-              
+
               return parsedHost;
             }
           } catch (e) {
@@ -71,19 +71,19 @@ export default function TerminalPage() {
       // Fetch from the standardized lowercase route
       console.log(`Fetching from /api/hosts/byname/${name}`);
       const response = await fetch(`/api/hosts/byname/${name}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Error response from API:', errorData);
         throw new Error(errorData.error || 'Failed to fetch host');
       }
-      
+
       const data = await response.json();
       if (!data.success || !data.data) {
         console.error('Invalid host data returned:', data);
         throw new Error('Invalid host data');
       }
-      
+
       const hostData = data.data;
 
       if (!hostData) {
@@ -147,10 +147,10 @@ export default function TerminalPage() {
         if (typeof window !== 'undefined') {
           // First check if we have a reference to the current host
           const currentHostRef = sessionStorage.getItem('currentHost');
-          
+
           // Try different approaches to get the host data
           let hostData = null;
-          
+
           // 1. Try to get the host using the reference (most efficient)
           if (currentHostRef && !currentHostRef.startsWith('{')) {
             // This is a reference like "host_123", not a full JSON object
@@ -167,14 +167,17 @@ export default function TerminalPage() {
               console.error('Error retrieving host from reference:', e);
             }
           }
-          
+
           // 2. Try direct storage as full object (backward compatibility)
           if (!hostData && currentHostRef) {
             try {
               // Try parsing it directly in case it's a full JSON object
               const parsedHost = JSON.parse(currentHostRef);
-              if (parsedHost && parsedHost.name && 
-                  parsedHost.name.toLowerCase() === hostName.toLowerCase()) {
+              if (
+                parsedHost &&
+                parsedHost.name &&
+                parsedHost.name.toLowerCase() === hostName.toLowerCase()
+              ) {
                 console.log('Found host stored as full JSON object');
                 hostData = parsedHost;
               }
@@ -182,11 +185,13 @@ export default function TerminalPage() {
               // Not a JSON object, which is expected with the new approach
             }
           }
-          
+
           // 3. Try by name directly
           if (!hostData) {
             try {
-              const storedHostByName = sessionStorage.getItem(`host_name_${hostName.toLowerCase()}`);
+              const storedHostByName = sessionStorage.getItem(
+                `host_name_${hostName.toLowerCase()}`,
+              );
               if (storedHostByName) {
                 const parsedHost = JSON.parse(storedHostByName);
                 console.log('Found host by name in sessionStorage');
@@ -196,7 +201,7 @@ export default function TerminalPage() {
               console.error('Error retrieving host by name:', e);
             }
           }
-          
+
           // 4. Try the backup full object we stored for debugging
           if (!hostData) {
             try {
@@ -212,20 +217,20 @@ export default function TerminalPage() {
               console.error('Error retrieving backup host data:', e);
             }
           }
-          
+
           // If we found host data through any method, use it
           if (hostData) {
             console.log('Using host data from sessionStorage without API calls:', {
               name: hostData.name,
               is_windows: hostData.is_windows,
-              os_type: hostData.os_type
+              os_type: hostData.os_type,
             });
             setConnections([hostData]);
             setLoading(false);
             return;
           }
         }
-        
+
         // Only fetch if we don't have the data in sessionStorage
         const host = await fetchMachineByName(hostName);
         if (!host) {
@@ -258,7 +263,7 @@ export default function TerminalPage() {
       const message = error instanceof Error ? error.message : 'Failed to initialize terminals';
       setError(message);
       console.error('Terminal initialization error:', message);
-      
+
       // Important: Don't reset initializationAttemptedRef here to prevent infinite loop
       // initializationAttemptedRef.current = false;
     } finally {

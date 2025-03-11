@@ -5,11 +5,38 @@ import { useRepository } from '@/hooks/useRepository';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/shadcn/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/shadcn/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/shadcn/alert-dialog';
 import { useRouter } from 'next/navigation';
-import { Edit, Save, Trash2, ArrowLeft, RefreshCw, GitBranch, Lock, Unlock, ExternalLink } from 'lucide-react';
+import {
+  Edit,
+  Save,
+  Trash2,
+  ArrowLeft,
+  RefreshCw,
+  GitBranch,
+  Lock,
+  Unlock,
+  ExternalLink,
+} from 'lucide-react';
 import { Badge } from '@/components/shadcn/badge';
 import { useTranslations } from 'next-intl';
 
@@ -21,7 +48,8 @@ interface RepositoryDetailProps {
 export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps) {
   const router = useRouter();
   const t = useTranslations('Repositories');
-  const { repository, loading, error, updateRepository, deleteRepository, syncRepository } = useRepository(repositoryId);
+  const { repository, loading, error, updateRepository, deleteRepository, syncRepository } =
+    useRepository(repositoryId);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -45,11 +73,13 @@ export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps
   };
 
   const handleSave = async () => {
-    if (await updateRepository({ 
-      name, 
-      description, 
-      defaultBranch 
-    })) {
+    if (
+      await updateRepository({
+        name,
+        description,
+        defaultBranch,
+      })
+    ) {
       setIsEditing(false);
     }
   };
@@ -72,14 +102,26 @@ export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps
 
   const getSyncStatusBadge = () => {
     if (!repository) return null;
-    
+
     switch (repository.syncStatus) {
       case 'SYNCED':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Synced</Badge>;
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            Synced
+          </Badge>
+        );
       case 'PENDING':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            Pending
+          </Badge>
+        );
       case 'ERROR':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Error</Badge>;
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+            Error
+          </Badge>
+        );
       default:
         return null;
     }
@@ -145,9 +187,9 @@ export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps
           {isEditing ? (
             <>
               <CardTitle>
-                <Input 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder={t('repositoryName')}
                   className="text-xl font-bold"
                 />
@@ -159,16 +201,22 @@ export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps
               <div className="flex items-center space-x-2">
                 <CardTitle>{repository.name}</CardTitle>
                 {getSyncStatusBadge()}
-                {repository.isPrivate ? 
-                  <Badge variant="outline" className="bg-slate-50"><Lock className="h-3 w-3 mr-1" /> {t('private')}</Badge> : 
-                  <Badge variant="outline" className="bg-slate-50"><Unlock className="h-3 w-3 mr-1" /> {t('public')}</Badge>
-                }
+                {repository.isPrivate ? (
+                  <Badge variant="outline" className="bg-slate-50">
+                    <Lock className="h-3 w-3 mr-1" /> {t('private')}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-slate-50">
+                    <Unlock className="h-3 w-3 mr-1" /> {t('public')}
+                  </Badge>
+                )}
               </div>
               <CardDescription>
-                {repository.owner} • {t('lastSynced', { 
-                  date: repository.lastSyncedAt 
-                    ? new Date(repository.lastSyncedAt).toLocaleDateString() 
-                    : t('never')
+                {repository.owner} •{' '}
+                {t('lastSynced', {
+                  date: repository.lastSyncedAt
+                    ? new Date(repository.lastSyncedAt).toLocaleDateString()
+                    : t('never'),
                 })}
               </CardDescription>
             </>
@@ -186,20 +234,20 @@ export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps
           <>
             <div className="space-y-2">
               <label htmlFor="description">{t('description')}</label>
-              <Textarea 
+              <Textarea
                 id="description"
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)} 
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
                 placeholder={t('repositoryDescriptionPlaceholder')}
                 className="min-h-[100px]"
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="defaultBranch">{t('defaultBranch')}</label>
-              <Input 
+              <Input
                 id="defaultBranch"
-                value={defaultBranch} 
-                onChange={(e) => setDefaultBranch(e.target.value)} 
+                value={defaultBranch}
+                onChange={(e) => setDefaultBranch(e.target.value)}
                 placeholder={t('defaultBranchPlaceholder')}
               />
             </div>
@@ -222,9 +270,9 @@ export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps
             {repository.url && (
               <div>
                 <h3 className="text-sm font-medium">{t('repositoryUrl')}</h3>
-                <a 
-                  href={repository.url} 
-                  target="_blank" 
+                <a
+                  href={repository.url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center mt-1 text-blue-600 hover:underline"
                 >
@@ -259,9 +307,7 @@ export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{t('areYouSure')}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t('deleteRepositoryConfirmation')}
-                </AlertDialogDescription>
+                <AlertDialogDescription>{t('deleteRepositoryConfirmation')}</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
@@ -273,4 +319,4 @@ export function RepositoryDetail({ repositoryId, onBack }: RepositoryDetailProps
       </CardFooter>
     </Card>
   );
-} 
+}

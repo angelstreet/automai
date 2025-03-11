@@ -37,7 +37,6 @@ import { useUser } from '@/context/UserContext';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
 import { User } from '@/types/user';
 
-
 type Project = {
   id: string;
   name: string;

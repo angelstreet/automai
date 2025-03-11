@@ -87,15 +87,15 @@ export const sidebarData: SidebarData = {
           icon: Code2,
           roles: ['admin', 'developer'],
           items: [
-            { 
-              title: 'Projects', 
-              href: '/development/projects', 
+            {
+              title: 'Projects',
+              href: '/development/projects',
               icon: FileCode,
               roles: ['admin', 'developer'],
             },
-            { 
-              title: 'Use Cases', 
-              href: '/development/usecases', 
+            {
+              title: 'Use Cases',
+              href: '/development/usecases',
               icon: TestTube,
               roles: ['admin', 'developer'],
             },

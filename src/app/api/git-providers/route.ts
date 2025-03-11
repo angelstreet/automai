@@ -22,21 +22,18 @@ export async function GET() {
   try {
     // Call the server action to get git providers
     const result = await getGitProviders();
-    
+
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Failed to fetch git providers' },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     return NextResponse.json(result.data);
   } catch (error) {
     console.error('Error in GET /api/git-providers:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -48,32 +45,29 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    
+
     // Call the server action to create git provider
     const result = await createGitProvider(body);
-    
+
     if (!result.success) {
       return NextResponse.json(
         { error: result.error || 'Failed to create git provider' },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     // If authUrl is provided, return it along with the provider data
     if (result.authUrl) {
       return NextResponse.json({
         id: result.data.id,
-        authUrl: result.authUrl
+        authUrl: result.authUrl,
       });
     }
-    
+
     // Otherwise, just return the provider data
     return NextResponse.json(result.data, { status: 201 });
   } catch (error) {
     console.error('Error in POST /api/git-providers:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

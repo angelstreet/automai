@@ -38,7 +38,7 @@ export function NavUser({ user }: NavUserProps) {
       const formData = new FormData();
       formData.append('locale', locale);
       const result = await signOut(formData);
-      
+
       // Let the server action handle the redirect
       if (result.success && result.redirectUrl) {
         router.push(result.redirectUrl);
@@ -54,10 +54,10 @@ export function NavUser({ user }: NavUserProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              size={isCollapsed ? "sm" : "default"}
+              size={isCollapsed ? 'sm' : 'default'}
               className={cn(
-                "data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
-                isCollapsed ? "justify-center py-1" : "py-1.5 px-2 w-full max-w-[150px]"
+                'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
+                isCollapsed ? 'justify-center py-1' : 'py-1.5 px-2 w-full max-w-[150px]',
               )}
             >
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-background">
@@ -83,10 +83,16 @@ export function NavUser({ user }: NavUserProps) {
           <DropdownMenuContent align="start" className="w-26">
             <DropdownMenuLabel className="text-xs">My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/profile`)} className="text-xs">
+            <DropdownMenuItem
+              onClick={() => router.push(`/${locale}/${tenant}/profile`)}
+              className="text-xs"
+            >
               Profile
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/settings`)} className="text-xs">
+            <DropdownMenuItem
+              onClick={() => router.push(`/${locale}/${tenant}/settings`)}
+              className="text-xs"
+            >
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />

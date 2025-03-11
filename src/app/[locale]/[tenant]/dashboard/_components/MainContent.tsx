@@ -19,7 +19,7 @@ export function MainContent() {
     title: string;
     dueDate: string;
   };
-  
+
   type ChatMessage = {
     id: string;
     name: string;
@@ -27,10 +27,10 @@ export function MainContent() {
     message: string;
     time: string;
   };
-  
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [teamChat, setTeamChat] = useState<ChatMessage[]>([]);
-  
+
   useEffect(() => {
     // Using static demo data instead of server calls
     const staticTasks = [
@@ -50,7 +50,7 @@ export function MainContent() {
         dueDate: 'Due next week',
       },
     ];
-    
+
     const staticChat = [
       {
         id: '1',
@@ -74,7 +74,7 @@ export function MainContent() {
         time: 'Yesterday',
       },
     ];
-    
+
     setTasks(staticTasks);
     setTeamChat(staticChat);
   }, []);
@@ -139,13 +139,16 @@ export function MainContent() {
                 <div key={chat.id} className="flex items-start gap-4">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={chat.avatar} />
-                    <AvatarFallback>{chat.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>
+                      {chat.name
+                        .split(' ')
+                        .map((n: string) => n[0])
+                        .join('')}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{chat.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {chat.message}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{chat.message}</p>
                     <p className="text-xs text-muted-foreground">{chat.time}</p>
                   </div>
                 </div>

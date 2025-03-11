@@ -7,25 +7,27 @@ export interface RepositoryFilter {
   providerId?: string;
 }
 
-export async function getRepositories(filter?: RepositoryFilter): Promise<{ success: boolean; error?: string; data?: Repository[] }> {
+export async function getRepositories(
+  filter?: RepositoryFilter,
+): Promise<{ success: boolean; error?: string; data?: Repository[] }> {
   try {
     const where: Record<string, any> = {};
-    
+
     if (filter?.providerId) {
       where.provider_id = filter.providerId;
     }
-    
+
     const result = await db.repository.findMany({
       where,
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
     });
-    
+
     // We need to ensure we're working with valid repository objects
     // First convert to unknown to break the typing, then explicitly cast
     const repositories = result as unknown as any[];
-    
+
     // Transform to the correct Repository type
-    const data: Repository[] = repositories.map(repo => ({
+    const data: Repository[] = repositories.map((repo) => ({
       id: String(repo.id),
       providerId: String(repo.provider_id),
       name: String(repo.name),
@@ -39,9 +41,9 @@ export async function getRepositories(filter?: RepositoryFilter): Promise<{ succ
       created_at: new Date(repo.created_at),
       updated_at: new Date(repo.updated_at),
       lastSyncedAt: repo.last_synced_at ? new Date(repo.last_synced_at) : undefined,
-      error: repo.error ? String(repo.error) : undefined
+      error: repo.error ? String(repo.error) : undefined,
     }));
-    
+
     return { success: true, data };
   } catch (error: any) {
     console.error('Error in getRepositories:', error);
@@ -49,12 +51,14 @@ export async function getRepositories(filter?: RepositoryFilter): Promise<{ succ
   }
 }
 
-export async function createRepository(data: Partial<Repository>): Promise<{ success: boolean; error?: string; data?: Repository }> {
+export async function createRepository(
+  data: Partial<Repository>,
+): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     const newRepo = await db.repository.create({
-      data
+      data,
     });
-    
+
     return { success: true, data: newRepo };
   } catch (error: any) {
     console.error('Error in createRepository:', error);
@@ -62,13 +66,16 @@ export async function createRepository(data: Partial<Repository>): Promise<{ suc
   }
 }
 
-export async function updateRepository(id: string, updates: Partial<Repository>): Promise<{ success: boolean; error?: string; data?: Repository }> {
+export async function updateRepository(
+  id: string,
+  updates: Partial<Repository>,
+): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     const data = await db.repository.update({
       where: { id },
-      data: updates
+      data: updates,
     });
-    
+
     return { success: true, data };
   } catch (error: any) {
     console.error('Error in updateRepository:', error);
@@ -79,9 +86,9 @@ export async function updateRepository(id: string, updates: Partial<Repository>)
 export async function deleteRepository(id: string): Promise<{ success: boolean; error?: string }> {
   try {
     await db.repository.delete({
-      where: { id }
+      where: { id },
     });
-    
+
     return { success: true };
   } catch (error: any) {
     console.error('Error in deleteRepository:', error);
@@ -89,13 +96,15 @@ export async function deleteRepository(id: string): Promise<{ success: boolean; 
   }
 }
 
-export async function syncRepository(id: string): Promise<{ success: boolean; error?: string; data?: Repository }> {
+export async function syncRepository(
+  id: string,
+): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     const data = await db.repository.update({
       where: { id },
-      data: { last_synced: new Date().toISOString() }
+      data: { last_synced: new Date().toISOString() },
     });
-    
+
     return { success: true, data };
   } catch (error: any) {
     console.error('Error in syncRepository:', error);
@@ -103,16 +112,18 @@ export async function syncRepository(id: string): Promise<{ success: boolean; er
   }
 }
 
-export async function getRepository(id: string): Promise<{ success: boolean; error?: string; data?: Repository }> {
+export async function getRepository(
+  id: string,
+): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     const data = await db.repository.findUnique({
-      where: { id }
+      where: { id },
     });
-    
+
     if (!data) {
       return { success: false, error: 'Repository not found' };
     }
-    
+
     return { success: true, data };
   } catch (error: any) {
     console.error('Error in getRepository:', error);

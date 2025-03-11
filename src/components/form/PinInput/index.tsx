@@ -4,7 +4,10 @@ import { PinInputField } from './PinInput.common';
 import { PinInputContext } from './context';
 import type { PinInputProps } from './types';
 import { usePinInput } from './usePinInput';
-import { _getValidChildren as getValidChildren, _getInputFieldCount as getInputFieldCount } from './utils';
+import {
+  _getValidChildren as getValidChildren,
+  _getInputFieldCount as getInputFieldCount,
+} from './utils';
 
 const PinInput = ({ className, children, ref, ...props }: PinInputProps) => {
   const {

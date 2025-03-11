@@ -78,12 +78,7 @@ export const SidebarMenuButton = React.forwardRef<
     return (
       <Tooltip>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent
-          side="right"
-          align="center"
-          hidden={isOpen || isMobile}
-          {...tooltip}
-        />
+        <TooltipContent side="right" align="center" hidden={isOpen || isMobile} {...tooltip} />
       </Tooltip>
     );
   },

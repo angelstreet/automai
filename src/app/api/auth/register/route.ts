@@ -77,9 +77,9 @@ export async function POST(request: NextRequest) {
     }
 
     // If using Supabase in production, register with Supabase first
-    
+
     const supabaseResult = await supabaseAuth.signUp(email, password, {
-      data: { name }
+      data: { name },
     });
 
     if (!supabaseResult.success) {
@@ -87,12 +87,10 @@ export async function POST(request: NextRequest) {
         { error: supabaseResult.error || 'Failed to register with Supabase' },
         { status: 500 },
       );
-      
 
       // Successfully registered with Supabase
       console.log('User registered with Supabase:', supabaseResult.data?.user?.id);
     }
-
 
     const hashedPassword = await hash(password, 10);
 

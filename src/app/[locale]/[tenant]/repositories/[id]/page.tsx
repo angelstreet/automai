@@ -20,13 +20,10 @@ export default function RepositoryPage() {
 
   return (
     <Main>
-      <PageHeader 
-        title={t('repositoryDetails')}
-        description={t('viewAndManageRepository')}
-      />
+      <PageHeader title={t('repositoryDetails')} description={t('viewAndManageRepository')} />
       <div className="grid gap-8 mt-6">
         <RepositoryDetail repositoryId={repositoryId} onBack={handleBack} />
       </div>
     </Main>
   );
-} 
+}

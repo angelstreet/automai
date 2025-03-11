@@ -7,14 +7,12 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
     PORT: z.string().transform(Number).default('3000'),
 
-
     NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 
     // Authentication
     JWT_SECRET: z.string().min(1),
-
   })
   .refine(
     // Supabase credentials are required in production environment
@@ -90,12 +88,12 @@ export const getSiteUrl = () => {
   if (isCodespace()) {
     return `https://${process.env.CODESPACE_NAME}-3000.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || 'app.github.dev'}`;
   }
-  
+
   // Production
   if (isProduction()) {
     return 'https://automai-eta.vercel.app';
   }
-  
+
   // Development fallback
   return 'http://localhost:3000';
 };

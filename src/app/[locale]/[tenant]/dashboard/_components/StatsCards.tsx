@@ -10,7 +10,7 @@ export function StatsCards() {
     testsRun: number;
     successRate: number;
   };
-  
+
   const [stats, setStats] = useState<DashboardStats>({
     projects: 0,
     testCases: 0,
@@ -26,7 +26,7 @@ export function StatsCards() {
       testsRun: 1023,
       successRate: 92,
     };
-    
+
     setStats(staticStats);
   }, []);
 

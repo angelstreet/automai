@@ -134,14 +134,15 @@ export function Terminal({ connection }: TerminalProps) {
         // Check if connection.is_windows is truthy
         is_windows_truthy: !!connection.is_windows,
       });
-      
+
       // Explicitly check is_windows field, ensure it's treated as boolean
       // First convert to boolean with !! then compare strictly with === true
       // This handles all edge cases (undefined, null, string 'true', etc.)
       const explicitIsWindows = !!connection.is_windows === true;
-      const osTypeIsWindows = typeof connection.os_type === 'string' && 
-                              connection.os_type.toLowerCase().includes('windows');
-      
+      const osTypeIsWindows =
+        typeof connection.os_type === 'string' &&
+        connection.os_type.toLowerCase().includes('windows');
+
       const isWindows = explicitIsWindows || osTypeIsWindows;
       console.log('[Terminal] Initial Windows detection:', {
         is_windows: isWindows,
@@ -281,12 +282,13 @@ export function Terminal({ connection }: TerminalProps) {
             stringify_is_windows: JSON.stringify(connection.is_windows),
             is_windows_truthy: !!connection.is_windows,
           });
-          
+
           // Use the same logic for consistency throughout the component
           const explicitIsWindows = !!connection.is_windows === true;
-          const osTypeIsWindows = typeof connection.os_type === 'string' && 
-                                 connection.os_type.toLowerCase().includes('windows');
-          
+          const osTypeIsWindows =
+            typeof connection.os_type === 'string' &&
+            connection.os_type.toLowerCase().includes('windows');
+
           const is_windows = explicitIsWindows || osTypeIsWindows;
           console.log('[Terminal] Windows detection result:', {
             is_windows: is_windows,

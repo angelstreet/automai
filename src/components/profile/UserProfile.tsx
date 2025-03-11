@@ -27,12 +27,12 @@ export function UserProfile({ tenant: propTenant }: UserProfileProps) {
   const router = useRouter();
   const params = useParams();
   const { user } = useUser();
-  const locale = params.locale as string || 'en';
+  const locale = (params.locale as string) || 'en';
   const [imageError, setImageError] = React.useState(false);
-  
+
   // Use tenant from props if available, otherwise use from URL params as fallback
   const tenant = propTenant || (params.tenant as string) || 'trial';
-  
+
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
     return name
@@ -45,14 +45,14 @@ export function UserProfile({ tenant: propTenant }: UserProfileProps) {
   // Simple name and avatar extraction
   const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
   const avatarSrc = user?.user_metadata?.avatar_url || '/avatars/default.svg';
-  
+
   const handleSignOut = async () => {
     try {
       // Use the server action directly
       const formData = new FormData();
       formData.append('locale', locale);
       const result = await signOut(formData);
-      
+
       // Let the server action handle the redirect
       if (result.success && result.redirectUrl) {
         router.push(result.redirectUrl);
@@ -65,16 +65,12 @@ export function UserProfile({ tenant: propTenant }: UserProfileProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground"
         >
           <Avatar className="h-8 w-8 border border-border dark:border-gray-600 shadow-sm">
-            <AvatarImage
-              src={avatarSrc}
-              alt={userName}
-              onError={() => setImageError(true)}
-            />
+            <AvatarImage src={avatarSrc} alt={userName} onError={() => setImageError(true)} />
             <AvatarFallback className="bg-accent text-accent-foreground dark:bg-gray-700 dark:text-gray-200">
               {userName ? getInitials(userName) : <UserIcon className="h-4 w-4" />}
             </AvatarFallback>
@@ -100,7 +96,7 @@ export function UserProfile({ tenant: propTenant }: UserProfileProps) {
           <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem 
+        <DropdownMenuItem
           onClick={handleSignOut}
           className="text-red-500 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
         >

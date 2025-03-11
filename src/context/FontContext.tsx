@@ -45,4 +45,4 @@ export function FontProvider({ children }: FontProviderProps) {
   );
 }
 
-export const useFont = () => useContext(FontContext); 
+export const useFont = () => useContext(FontContext);

@@ -40,24 +40,28 @@ export async function getHosts() {
     });
     console.log('Supabase returned hosts successfully');
 
-    console.log('Raw hosts from database:', hosts.slice(0, 2).map(h => ({
-      id: h.id,
-      name: h.name,
-      is_windows: h.is_windows,
-      type: typeof h.is_windows
-    })));
-    
+    console.log(
+      'Raw hosts from database:',
+      hosts.slice(0, 2).map((h) => ({
+        id: h.id,
+        name: h.name,
+        is_windows: h.is_windows,
+        type: typeof h.is_windows,
+      })),
+    );
+
     // Map hosts and ensure is_windows is properly set
     return hosts.map((host) => {
       // Check if is_windows is explicitly defined in the database
       const explicitIsWindows = host.is_windows === true;
-      const hasOsType = typeof host.os_type === 'string' && host.os_type.toLowerCase().includes('windows');
-      
+      const hasOsType =
+        typeof host.os_type === 'string' && host.os_type.toLowerCase().includes('windows');
+
       // Return host with is_windows properly set
       return {
         ...host,
         // Prioritize database field, fall back to OS detection
-        is_windows: explicitIsWindows || hasOsType
+        is_windows: explicitIsWindows || hasOsType,
       };
     });
   } catch (error) {
@@ -112,7 +116,7 @@ export async function createHost(data: {
     // Test connection first to detect Windows
     let connectionSuccess = false;
     let isWindows = false;
-    
+
     if (data.type === 'ssh' && data.user && data.password) {
       try {
         console.log(`Testing connection to detect Windows for: ${data.ip}`);
@@ -126,7 +130,7 @@ export async function createHost(data: {
 
         // Set connection success flag based on test result
         connectionSuccess = testResult.success;
-        
+
         if (testResult.is_windows) {
           console.log(`Windows detected for ${data.ip}, setting is_windows=true`);
           // Set is_windows in the data
@@ -147,7 +151,7 @@ export async function createHost(data: {
 
     // Set status to 'connected' if connection test was successful
     const currentTimestamp = new Date().toISOString();
-    
+
     const host = await db.host.create({
       data: {
         name: data.name,
@@ -161,7 +165,7 @@ export async function createHost(data: {
         status: 'connected',
         is_windows: isWindows,
         // Update the timestamp to now - only set fields that exist in the database
-        updated_at: currentTimestamp
+        updated_at: currentTimestamp,
       },
     });
 
@@ -323,7 +327,7 @@ export async function testHostConnection(data: {
           });
         } catch (schemaError) {
           console.error('Error updating host:', schemaError);
-          
+
           // If the update fails due to missing is_windows field, update without it
           if (
             (schemaError as Error).message &&
