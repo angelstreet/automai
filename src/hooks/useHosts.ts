@@ -80,6 +80,7 @@ export function useHosts(initialHosts: Host[] = []) {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTesting, setIsTesting] = useState<string | null>(null);
+  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
   const { toast } = useToast();
   
   // Update local state when SWR data changes
@@ -273,6 +274,8 @@ export function useHosts(initialHosts: Host[] = []) {
     lastRefreshTimeRef.current = now;
     
     try {
+      setIsRefreshingAll(true);
+      
       // Use mutate to refresh the hosts list, but don't cause a refetch if we already have data
       if (hosts.length === 0) {
         await mutate();
@@ -307,28 +310,29 @@ export function useHosts(initialHosts: Host[] = []) {
       // API call to test all connections
       const results = await testAllHosts();
       
-      if (results.success) {
-        // Update the status of each host without causing a refetch
-        mutate(
-          currentHosts => {
-            if (!currentHosts || currentHosts.length === 0) return hosts;
-            
-            const now = new Date();
-            return currentHosts.map(host => {
-              const result = results.results?.find(r => r.hostId === host.id);
-              if (result) {
-                return {
-                  ...host,
-                  status: result.result.success ? 'connected' : 'failed',
-                  errorMessage: !result.result.success ? result.result.message : undefined,
-                  updated_at: result.result.success ? now : host.updated_at
-                };
-              }
-              return host;
-            });
-          },
-          false // Don't revalidate
-        );
+      if (results.success && results.results) {
+        // Update hosts one by one as they complete testing
+        for (const result of results.results) {
+          await mutate(
+            currentHosts => {
+              if (!currentHosts || currentHosts.length === 0) return hosts;
+              
+              const now = new Date();
+              return currentHosts.map(host => {
+                if (host.id === result.hostId) {
+                  return {
+                    ...host,
+                    status: result.result.success ? 'connected' : 'failed',
+                    errorMessage: !result.result.success ? result.result.message : undefined,
+                    updated_at: result.result.success ? now : host.updated_at
+                  };
+                }
+                return host;
+              });
+            },
+            false
+          );
+        }
         
         return true;
       } else {
@@ -341,13 +345,15 @@ export function useHosts(initialHosts: Host[] = []) {
       // If there's an error, revert to previous state
       await mutate();
       return false;
+    } finally {
+      setIsRefreshingAll(false);
     }
   }, [mutate, hosts]);
 
   return {
     hosts,
     isLoading,
-    isRefreshing: isValidating,
+    isRefreshing: isRefreshingAll,
     isDeleting,
     isTesting,
     addHost: addNewHost,
