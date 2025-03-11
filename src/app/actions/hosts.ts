@@ -110,7 +110,7 @@ export async function testHostConnection(id: string): Promise<{ success: boolean
   }
 }
 
-export async function testAllHosts(): Promise<{ success: boolean; error?: string; results?: Array<{ id: string; success: boolean; message?: string }> }> {
+export async function testAllHosts(): Promise<{ success: boolean; error?: string; results?: Array<{ hostId: string; result: { success: boolean; message?: string } }> }> {
   try {
     const hostsResult = await getHosts();
     
@@ -119,12 +119,32 @@ export async function testAllHosts(): Promise<{ success: boolean; error?: string
     }
     
     const hosts = hostsResult.data || [];
-    const results = await Promise.all(
-      hosts.map(async (host) => {
-        const result = await testHostConnection(host.id);
-        return { id: host.id, success: result.success, message: result.message };
-      })
-    );
+    const results = [];
+
+    // Test each host sequentially
+    for (const host of hosts) {
+      // Test the connection
+      const result = await testConnection({
+        type: host.type,
+        ip: host.ip,
+        port: host.port,
+        username: host.user,
+        password: host.password,
+        hostId: host.id
+      });
+
+      // Add result to array
+      results.push({
+        hostId: host.id,
+        result: {
+          success: result.success,
+          message: result.message
+        }
+      });
+
+      // Small delay between hosts
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
 
     return {
       success: true,

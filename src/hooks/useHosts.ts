@@ -282,6 +282,27 @@ export function useHosts(initialHosts: Host[] = []) {
       if (hosts.length === 0) {
         return false;
       }
+
+      // First set all hosts to failed state
+      mutate(
+        currentHosts => currentHosts?.map(host => ({
+          ...host,
+          status: 'failed'
+        })),
+        false
+      );
+
+      // Small delay to show the red state
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Then set all to testing state
+      mutate(
+        currentHosts => currentHosts?.map(host => ({
+          ...host,
+          status: 'testing'
+        })),
+        false
+      );
       
       // API call to test all connections
       const results = await testAllHosts();
@@ -311,10 +332,14 @@ export function useHosts(initialHosts: Host[] = []) {
         
         return true;
       } else {
+        // If the API call fails, set all hosts back to their previous state
+        await mutate();
         return false;
       }
     } catch (error) {
       console.error('Error refreshing connections:', error);
+      // If there's an error, revert to previous state
+      await mutate();
       return false;
     }
   }, [mutate, hosts]);
