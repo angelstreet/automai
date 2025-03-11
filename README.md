@@ -140,7 +140,7 @@ npx @agentdeskai/browser-tools-server
 ```
 
 ## Additional Documentation
-
+https://supabase.com/docs/guides/auth/managing-user-data#using-triggers
 For detailed project documentation, architecture, and advanced configuration, please refer to the docs in the `docs` directory.
 
 ---

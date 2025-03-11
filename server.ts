@@ -96,7 +96,6 @@ async function shutdown(signal: string) {
 }
 
 // Handle termination signals
-process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGINT', () => {
   console.log('SIGINT received at:', new Date().toISOString());
   console.log('Call stack:', new Error().stack);
@@ -112,13 +111,11 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   console.log('SIGTERM received at:', new Date().toISOString());
   console.log('Call stack:', new Error().stack);
-  console.log('Process details:', {
-    pid: process.pid,
-    ppid: process.ppid, // Parent process ID might reveal the sender
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    env: { NODE_ENV: process.env.NODE_ENV, FULL_SHUTDOWN: process.env.FULL_SHUTDOWN },
-  });
+  console.log('Process details:', { /* ... */ });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Ignoring SIGTERM in development mode to keep server running');
+    return;
+  }
   shutdown('SIGTERM');
 });
 process.on('uncaughtException', (err) => {

@@ -191,37 +191,35 @@ export async function handleSshConnection(
   // Add this function to try different Windows connection methods
   const tryWindowsConnection = (retryCount = 0) => {
     if (!sshClient) return;
-
+  
     const methods = [
       { cmd: 'cmd.exe', opts: { pty: true, term: 'xterm-256color' } },
       { cmd: 'cmd.exe /k "cd %USERPROFILE%"', opts: { pty: true, term: 'xterm-256color' } },
       { cmd: 'powershell.exe', opts: { pty: true, term: 'xterm-256color' } },
-      { cmd: null, opts: { pty: true, term: 'xterm-256color' } }, // Regular shell as last resort
+      { cmd: null, opts: { pty: true, term: 'xterm-256color' } },
     ];
-
+  
     if (retryCount >= methods.length) {
       logger.error('All Windows connection methods failed', { connectionId });
+      if (sshClient) sshClient.end(); // Ensure cleanup
       return;
     }
-
+  
     const method = methods[retryCount];
-
     if (method.cmd) {
-      logger.info(`Trying Windows connection method ${retryCount}: ${method.cmd}`, {
-        connectionId,
-      });
+      logger.info(`Trying Windows connection method ${retryCount}: ${method.cmd}`, { connectionId });
       sshClient.exec(method.cmd, method.opts, (err, stream) => {
         if (err) {
-          logger.warn(`Windows connection method ${retryCount} failed: ${err.message}`, {
-            connectionId,
-          });
+          logger.warn(`Method ${retryCount} failed: ${err.message}`, { connectionId, errorDetails: err });
           tryWindowsConnection(retryCount + 1);
         } else {
+          logger.info(`Connected via ${method.cmd}`, { connectionId });
           setupStream(stream);
         }
       });
     } else {
-      createShellSession(); // Fall back to regular shell
+      logger.info('Falling back to regular shell', { connectionId });
+      createShellSession();
     }
   };
 
@@ -386,25 +384,20 @@ export async function handleSshConnection(
   }
 
   // Set up WebSocket close handler first
-  clientSocket.on('close', () => {
-    logger.info('WebSocket closed');
+  clientSocket.on('close', (code, reason) => {
+    logger.info('WebSocket closed', { connectionId, code, reason: reason.toString() });
+  
+    // Clean up stream
     if (stream) {
-      try {
-        // Use destroy instead of close for compatibility
-        stream.destroy();
-      } catch (e) {
-        // Ignore errors when closing stream
-      }
+      logger.debug('Destroying SSH stream', { connectionId });
+      stream.destroy(); // No try-catch; let it fail silently if it must
     }
+  
+    // Clean up SSH client
     if (sshClient) {
-      try {
-        logger.info('Ending SSH client due to WebSocket closure', { connectionId });
-        sshClient.end();
-      } catch (e) {
-        logger.error(`Error ending SSH client: ${e instanceof Error ? e.message : String(e)}`, {
-          connectionId,
-        });
-      }
+      logger.info('Ending SSH client due to WebSocket closure', { connectionId });
+      sshClient.end(); // Synchronous, no callback needed for simplicity
+      logger.debug('SSH client ended', { connectionId });
     }
   });
 
