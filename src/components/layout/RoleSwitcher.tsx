@@ -53,7 +53,7 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
   
   // Handle role change
   const handleValueChange = React.useCallback((value: Role) => {
-    console.log('Debug: Changing role to:', value);
+    console.log('[RoleSwitcher] Debug: Changing role to:', value);
     
     // Update local state
     setSelectedRole(value);
@@ -61,18 +61,20 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
     // Set the global debug role
     if (typeof window !== 'undefined') {
       window.__debugRole = value;
+      console.log('[RoleSwitcher] Debug: Set global __debugRole to:', value);
     }
     
-    // Dispatch custom event for debugging
-    // Use a more specific event name to avoid conflicts
-    const event = new CustomEvent('debug:roleChange:v2', { 
-      detail: { role: value },
-      bubbles: true 
-    });
-    window.dispatchEvent(event);
-    
-    // Log that the event was dispatched
-    console.log('Debug role change event dispatched with role:', value);
+    try {
+      // Dispatch custom event for debugging
+      const event = new CustomEvent('debug:roleChange:v2', { 
+        detail: { role: value },
+        bubbles: true 
+      });
+      window.dispatchEvent(event);
+      console.log('[RoleSwitcher] Debug: Successfully dispatched debug:roleChange:v2 event');
+    } catch (error) {
+      console.error('[RoleSwitcher] Error dispatching role change event:', error);
+    }
   }, []);
 
   return (

@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
-import { hostsApi } from '@/app/actions/hosts';
+import { testConnection as testConnectionAction, verifyFingerprint as verifyFingerprintAction } from '@/app/actions/hosts';
 
 export interface FormData {
   name: string;
@@ -77,12 +77,12 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !testing) {
       e.preventDefault();
-      testConnection();
+      testHostConnection();
     }
   };
 
   // Update the testConnection function to use the API service
-  const testConnection = async () => {
+  const testHostConnection = async () => {
     // Throttle requests
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
@@ -98,7 +98,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
     setFingerprintVerified(false);
 
     try {
-      const data = await hostsApi.testConnection({
+      const data = await testConnectionAction({
         type: formData.type,
         ip: formData.ip,
         port: parseInt(formData.port),
@@ -108,8 +108,8 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
 
       if (data.requireVerification) {
         setRequireVerification(true);
-        setFingerprint(data.fingerprint);
-        setTestError(data.message);
+        setFingerprint(data.fingerprint || null);
+        setTestError(data.message || null);
       } else if (data.success) {
         setTestSuccess(true);
         if (data.fingerprint) {
@@ -120,7 +120,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
           onTestSuccess();
         }
       } else {
-        setTestError(data.message);
+        setTestError(data.message || null);
       }
     } catch (error) {
       setTestError(error instanceof Error ? error.message : 'Failed to test connection');
@@ -131,7 +131,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
   };
 
   // Update verifyFingerprint to use the API service
-  const verifyFingerprint = async () => {
+  const verifyHostFingerprint = async () => {
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
       return;
@@ -148,7 +148,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
       }
       
       setVerifyingFingerprint(true);
-      const data = await hostsApi.verifyFingerprint({
+      const data = await verifyFingerprintAction({
         fingerprint: fingerprint,
         host: formData.ip,
         port: parseInt(formData.port),
@@ -162,7 +162,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
           onTestSuccess();
         }
       } else {
-        setTestError(data.message);
+        setTestError(data.message || null);
       }
     } catch (error) {
       setTestError(error instanceof Error ? error.message : 'Failed to verify fingerprint');
@@ -276,20 +276,23 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         </div>
 
         <div className="flex justify-end space-x-2 mt-4">
-          <Button variant="outline" onClick={testConnection} disabled={testing} type="button">
+          <Button variant="outline" onClick={testHostConnection} disabled={testing} type="button">
             {testing ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Testing...
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                {t('testing')}
               </>
             ) : (
-              <>Test Connection</>
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {t('testConnection')}
+              </>
             )}
           </Button>
 
           {onSave && (
-            <Button onClick={onSave} disabled={!testSuccess} type="button">
-              Save
+            <Button onClick={onSave} disabled={testing} type="button">
+              {t('save')}
             </Button>
           )}
         </div>
@@ -310,7 +313,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
             </p>
             <p className="mb-4">Are you sure you want to continue connecting?</p>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm" onClick={verifyFingerprint} disabled={testing}>
+              <Button variant="outline" size="sm" onClick={verifyHostFingerprint} disabled={testing}>
                 {testing ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (

@@ -48,36 +48,47 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
 
   // Listen for debug role change events
   useEffect(() => {
+    console.log('[AppSidebar] Setting up role change event listeners');
+    
     const handleDebugRoleChange = (event: CustomEvent<{ role: Role }>) => {
-      console.log('AppSidebar - Debug role change event received:', event.detail.role);
+      console.log('[AppSidebar] Debug role change event received:', event.detail.role);
       
       // Update the debug role
       setDebugRole(event.detail.role);
       
       // Force a re-render
       forceRerender();
+      
+      // Update the global debug role to ensure consistency
+      if (typeof window !== 'undefined') {
+        window.__debugRole = event.detail.role;
+      }
+      
+      console.log('[AppSidebar] State updated - debugRole:', event.detail.role);
     };
 
     // Add event listener for the new event
     window.addEventListener('debug:roleChange:v2', handleDebugRoleChange as EventListener);
-    
-    // Also listen for the old event for backward compatibility
-    window.addEventListener('debug:roleChange', handleDebugRoleChange as EventListener);
+    console.log('[AppSidebar] Added debug:roleChange:v2 event listener');
     
     // Clean up
     return () => {
       window.removeEventListener('debug:roleChange:v2', handleDebugRoleChange as EventListener);
-      window.removeEventListener('debug:roleChange', handleDebugRoleChange as EventListener);
+      console.log('[AppSidebar] Removed debug:roleChange:v2 event listener');
     };
   }, [forceRerender]);
 
   // Get the user role from debug override, user.user_role, or use a default role
   const userRole = debugRole || user?.user_role || 'viewer';
   
-  // Log the current role being used for debugging
+  // Log role changes
   useEffect(() => {
-    console.log('AppSidebar - Current role being used:', userRole, 'Force update count:', forceUpdate);
-  }, [userRole, forceUpdate]);
+    console.log('[AppSidebar] Role changed:', {
+      debugRole,
+      userRole,
+      forceUpdateCount: forceUpdate
+    });
+  }, [debugRole, userRole, forceUpdate]);
 
   // Filter out empty sections based on user role - memoize this calculation
   const filteredNavGroups = useMemo(() => {

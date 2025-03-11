@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import useSWR from 'swr';
 import { Host } from '@/types/hosts';
-import { hostsApi } from '@/app/actions/hosts';
+import { getHosts, deleteHost, testAllHosts, addHost, testConnection, checkAllConnections } from '@/app/actions/hosts';
 
 // Define a SWR fetcher function for hosts with request throttling
 const requestTimestamps: number[] = [];
@@ -27,7 +27,8 @@ const hostsFetcher = async () => {
   }
   
   // Fetch hosts with normal flow
-  const hosts = await hostsApi.getHosts();
+  const result = await getHosts();
+  const hosts = result.data || [];
   
   // Process hosts for consistency
   return hosts.map((host: Host) => ({
@@ -92,16 +93,18 @@ export function useHosts(initialHosts: Host[] = []) {
   const addNewHost = useCallback(async (hostData: Omit<Host, 'id'>) => {
     try {
       // Create new host
-      const newHost = await hostsApi.createHost({
+      const result = await addHost({
         name: hostData.name,
         description: hostData.description || '',
         type: hostData.type,
         ip: hostData.ip,
         port: hostData.port || 22,
-        username: hostData.username || hostData.user,
+        user: hostData.username || hostData.user,
         password: hostData.password || '',
         status: 'pending'
       });
+      
+      const newHost = result.data;
       
       // Update cache with the new host
       mutate(currentHosts => [...(currentHosts || []), newHost], false);
@@ -167,8 +170,8 @@ export function useHosts(initialHosts: Host[] = []) {
         false
       );
       
-      // Use the API client to delete the host
-      await hostsApi.deleteHost(id);
+      // Use the server action to delete the host
+      await deleteHost(id);
       
       toast({
         title: 'Success',
@@ -193,7 +196,7 @@ export function useHosts(initialHosts: Host[] = []) {
   }, [toast, mutate]);
 
   // Test host connection
-  const testConnection = useCallback(async (id: string) => {
+  const testHostConnection = useCallback(async (id: string) => {
     try {
       setIsTesting(id);
       
@@ -214,7 +217,7 @@ export function useHosts(initialHosts: Host[] = []) {
         false
       );
       
-      const result = await hostsApi.testConnection({
+      const result = await testConnection({
         type: host.type,
         ip: host.ip,
         port: host.port,
@@ -309,7 +312,7 @@ export function useHosts(initialHosts: Host[] = []) {
       }
       
       // API call to test all connections
-      const results = await hostsApi.testAllHosts();
+      const results = await testAllHosts();
       
       if (results.success) {
         // Update the status of each host without causing a refetch
@@ -368,7 +371,7 @@ export function useHosts(initialHosts: Host[] = []) {
     updateHost: updateHostDetails,
     deleteHost,
     refreshConnections,
-    testConnection,
+    testConnection: testHostConnection,
     forceRefresh: () => mutate(),
     error: error ? (error as Error).message : undefined
   };

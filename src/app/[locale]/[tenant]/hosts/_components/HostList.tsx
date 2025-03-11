@@ -1,7 +1,6 @@
 'use client';
 
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
-import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
@@ -14,8 +13,6 @@ import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
 
 export default function HostContainer() {
-  // Local UI state
-  const { locale = 'en' } = useParams();
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
