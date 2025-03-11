@@ -283,7 +283,7 @@ export async function startServer(options: {
 /**
  * Stop the server
  */
-export async function stopServer(): Promise<void> {
+export async function stopServer(forceFullShutdown: boolean = false): Promise<void> {
   return new Promise(async (resolve, reject) => {
     if (!httpServer) {
       logger.info('No HTTP server to stop, already shut down');
@@ -319,22 +319,17 @@ export async function stopServer(): Promise<void> {
     }, 5000);
 
     // Handle WebSocket server shutdown in parallel without blocking the HTTP server shutdown
-    if (isWebSocketInitialized) {
-      logger.info('Starting WebSocket server shutdown (non-blocking)');
-      try {
-        // Initialize WebSocket close but don't await it
-        const { closeWebSocketServer } = await import('./websocket');
-        isWebSocketInitialized = false;
-        
-        // Run WebSocket shutdown in parallel but don't block HTTP server shutdown
-        closeWebSocketServer().then(() => {
-          logger.info('WebSocket server successfully shut down in background');
-        }).catch(wsErr => {
-          logger.error(`Background WebSocket server close error: ${wsErr}`);
-        });
-      } catch (err) {
-        logger.error(`Error initiating WebSocket server close: ${err}`);
-      }
+    if (isWebSocketInitialized && forceFullShutdown) {
+      const { closeWebSocketServer } = await import('./websocket');
+      await closeWebSocketServer();
+      isWebSocketInitialized = false;
+    }
+    if (forceFullShutdown) {
+      httpServer.closeAllConnections();
+      httpServer.close((err) => { /* ... */ });
+    } else {
+      logger.info('Partial shutdown: Keeping HTTP server alive');
+      resolve();
     }
 
     // Remove all upgrade listeners to prevent memory leaks

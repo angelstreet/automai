@@ -85,20 +85,42 @@ async function shutdown(signal: string) {
   }, 6000); // 6 seconds to account for HTTP service's 5-second timeout
 
   try {
-    await stopServer();
+    await stopServer(true);
     console.log('Server shut down successfully');
     clearTimeout(forceExitTimeout);
     process.exit(0);
   } catch (err) {
     console.error('Error during shutdown:', err);
-    clearTimeout(forceExitTimeout);
-    process.exit(0);
+    process.exit(1);
   }
 }
 
 // Handle termination signals
 process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => {
+  console.log('SIGINT received at:', new Date().toISOString());
+  console.log('Call stack:', new Error().stack);
+  console.log('Process details:', {
+    pid: process.pid,
+    ppid: process.ppid, // Parent process ID might reveal the sender
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    env: { NODE_ENV: process.env.NODE_ENV, FULL_SHUTDOWN: process.env.FULL_SHUTDOWN },
+  });
+  shutdown('SIGINT');
+});
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received at:', new Date().toISOString());
+  console.log('Call stack:', new Error().stack);
+  console.log('Process details:', {
+    pid: process.pid,
+    ppid: process.ppid, // Parent process ID might reveal the sender
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    env: { NODE_ENV: process.env.NODE_ENV, FULL_SHUTDOWN: process.env.FULL_SHUTDOWN },
+  });
+  shutdown('SIGTERM');
+});
 process.on('uncaughtException', (err) => {
   // Don't shut down for EADDRINUSE errors
   if (err && typeof err === 'object' && 'code' in err && err.code === 'EADDRINUSE') {
