@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
-import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import {
   Sidebar,
   SidebarContent,
@@ -38,29 +37,46 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
     typeof window !== 'undefined' ? window.__debugRole : null
   );
 
+  // Add a force update state to trigger re-renders
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Force a re-render of the component
+  const forceRerender = useCallback(() => {
+    setForceUpdate(prev => prev + 1);
+  }, []);
+
   // Listen for debug role change events
   useEffect(() => {
     const handleDebugRoleChange = (event: CustomEvent<{ role: Role }>) => {
       console.log('AppSidebar - Debug role change event received:', event.detail.role);
+      
+      // Update the debug role
       setDebugRole(event.detail.role);
+      
+      // Force a re-render
+      forceRerender();
     };
 
-    // Add event listener
+    // Add event listener for the new event
+    window.addEventListener('debug:roleChange:v2', handleDebugRoleChange as EventListener);
+    
+    // Also listen for the old event for backward compatibility
     window.addEventListener('debug:roleChange', handleDebugRoleChange as EventListener);
     
     // Clean up
     return () => {
+      window.removeEventListener('debug:roleChange:v2', handleDebugRoleChange as EventListener);
       window.removeEventListener('debug:roleChange', handleDebugRoleChange as EventListener);
     };
-  }, []);
+  }, [forceRerender]);
 
   // Get the user role from debug override, user.user_role, or use a default role
   const userRole = debugRole || user?.user_role || 'viewer';
   
   // Log the current role being used for debugging
   useEffect(() => {
-    console.log('AppSidebar - Current role being used:', userRole);
-  }, [userRole]);
+    console.log('AppSidebar - Current role being used:', userRole, 'Force update count:', forceUpdate);
+  }, [userRole, forceUpdate]);
 
   // Filter out empty sections based on user role - memoize this calculation
   const filteredNavGroups = useMemo(() => {
@@ -91,7 +107,7 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
       // Only include groups that have at least one accessible item
       return accessibleItems.length > 0;
     });
-  }, [user, userRole, sidebarData.navGroups]);
+  }, [user, userRole, sidebarData.navGroups, forceUpdate]);
 
   // Get user avatar from metadata
   // Prepare user data for NavUser - memoize this calculation

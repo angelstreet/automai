@@ -64,15 +64,15 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
     }
     
     // Dispatch custom event for debugging
-    const event = new CustomEvent('debug:roleChange', { 
+    // Use a more specific event name to avoid conflicts
+    const event = new CustomEvent('debug:roleChange:v2', { 
       detail: { role: value },
       bubbles: true 
     });
     window.dispatchEvent(event);
     
-    // Force reload the page to ensure all components pick up the new role
-    // This is a hack for debugging purposes only
-    window.location.reload();
+    // Log that the event was dispatched
+    console.log('Debug role change event dispatched with role:', value);
   }, []);
 
   return (
