@@ -78,8 +78,8 @@ const AppSidebar = React.memo(function AppSidebar({ ...props }: React.ComponentP
     };
   }, [forceRerender]);
 
-  // Get the user role from debug override, user.user_role, or use a default role
-  const userRole = debugRole || user?.user_role || 'viewer';
+  // Get the user role from debug override, user.role, or use a default role
+  const userRole = debugRole || user?.role || 'viewer';
   
   // Log role changes
   useEffect(() => {

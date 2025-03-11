@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
         name,
         email,
         password: hashedPassword,
-        user_role: 'admin', // First user is admin of their tenant
+        role: 'admin', // First user is admin of their tenant
         tenant_id: tenant.id,
       },
     });

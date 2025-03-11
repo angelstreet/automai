@@ -1,7 +1,7 @@
 'use server';
 
 import { supabaseAuth } from '@/lib/supabase/auth';
-import { invalidateUserCache, ensureUserInDatabase } from './user';
+import { invalidateUserCache } from './user';
 
 /**
  * Sign in with OAuth provider
@@ -64,10 +64,6 @@ export async function handleAuthCallback(url: string) {
         console.log('⭐ AUTH CALLBACK - User email:', session.user.email);
       }
       
-      // Ensure user exists in database after successful authentication
-      console.log('⭐ AUTH CALLBACK - Ensuring user in database');
-      await ensureUserInDatabase(result.data);
-      
       // Get the tenant information for redirection
       const userData = result.data.session?.user;
       
@@ -120,12 +116,7 @@ export async function signUp(email: string, password: string, name: string, redi
       redirectTo: redirectUrl,
       data: { name }
     });
-    
-    if (result.success && result.data) {
-      // Ensure user exists in database after successful signup
-      await ensureUserInDatabase(result.data);
-    }
-    
+        
     return { 
       success: result.success, 
       error: result.error || null, 
@@ -146,12 +137,7 @@ export async function signInWithPassword(email: string, password: string) {
     await invalidateUserCache();
     
     const result = await supabaseAuth.signInWithPassword(email, password);
-    
-    if (result.success && result.data) {
-      // Ensure user exists in database after successful authentication
-      await ensureUserInDatabase(result.data);
-    }
-    
+        
     return { 
       success: result.success, 
       error: result.error || null, 

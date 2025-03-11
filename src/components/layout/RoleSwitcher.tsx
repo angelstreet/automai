@@ -48,7 +48,7 @@ function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
     // Initialize from window.__debugRole if available, otherwise from user
     typeof window !== 'undefined' && window.__debugRole ? 
       window.__debugRole : 
-      user?.user_role || 'viewer'
+      user?.role || 'viewer'
   );
   
   // Handle role change

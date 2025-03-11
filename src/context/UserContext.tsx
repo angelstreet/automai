@@ -28,7 +28,7 @@ const SWR_CONFIG = {
 
 // Enhanced user type with all metadata fields
 interface EnhancedUser extends Omit<AuthUser, 'tenant_id'> {
-  user_role: Role; // Renamed from 'role' for clarity and consistency
+  role: Role; // Renamed from 'role' for clarity and consistency
   tenant_id?: string | null;
   tenant_name: string;
   name: string;
@@ -150,18 +150,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const extractUserData = (userData: AuthUser | null): EnhancedUser | null => {
     if (!userData) return null;
     
-    // Extract role - ONLY use user_role (not Supabase's role property)
+    // Extract role - ONLY use role (not Supabase's role property)
     if (!isProduction) {
       console.log('Raw userData for role extraction:', {
-        direct_user_role: (userData as any).user_role,
-        metadata_user_role: userData.user_metadata?.user_role,
+        direct_role: (userData as any).role,
+        metadata_role: userData.user_metadata?.role,
         full_metadata: userData.user_metadata
       });
     }
     
     const userRole = (
-      ((userData as any).user_role && isValidRole((userData as any).user_role) && (userData as any).user_role) ||
-      (userData.user_metadata?.user_role && isValidRole(userData.user_metadata.user_role) && userData.user_metadata.user_role) ||
+      ((userData as any).role && isValidRole((userData as any).role) && (userData as any).role) ||
+      (userData.user_metadata?.role && isValidRole(userData.user_metadata.role) && userData.user_metadata.role) ||
       DEFAULT_ROLE
     ) as Role;
     
@@ -179,7 +179,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Return enhanced user object with all extracted data
     const enhancedUser = {
       ...userData,
-      user_role: userRole,
+      role: userRole,
       tenant_id: tenantId,
       tenant_name: tenantName,
       name
@@ -251,7 +251,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       
       // Update the user's role using updateUserProfile
       const formData = new FormData();
-      formData.append('user_role', role);
+      formData.append('role', role);
       await handleUpdateProfile(formData);
       
       // Refresh user data to get updated role

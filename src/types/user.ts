@@ -29,7 +29,7 @@ export type AuthUser = {
     avatar_url?: string;
     tenant_id?: string;
     role?: string;
-    user_role?: string;
+    role?: string;
     tenant_name?: string;
     raw_user_meta_data?: {
       name?: string;
@@ -46,7 +46,7 @@ export interface CustomSupabaseUser extends SupabaseUser {
     full_name?: string;
     preferred_username?: string;
     avatar_url?: string;
-    user_role?: string;
+    role?: string;
     tenant_id?: string;
     tenant_name?: string;
     plan?: string;
