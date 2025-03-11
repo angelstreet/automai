@@ -12,7 +12,8 @@ export interface User {
   role?: string;
   tenant_id?: string | null;
   tenant_name?: string | null;
-  plan?: string;
+  avatar_url?: string;
+  
 }
 
 export type AuthUser = {
@@ -28,7 +29,6 @@ export type AuthUser = {
     preferred_username?: string;
     avatar_url?: string;
     tenant_id?: string;
-    role?: string;
     role?: string;
     tenant_name?: string;
     raw_user_meta_data?: {

@@ -9,7 +9,6 @@ import { useUser } from '@/context/UserContext';
 import {
   signInWithOAuth as signInWithOAuthAction,
   signInWithPassword as signInWithPasswordAction,
-  resetPasswordForEmail as resetPasswordAction,
 } from '@/app/actions/auth';
 
 export default function LoginPage() {

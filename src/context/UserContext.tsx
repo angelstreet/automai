@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useCallback, useState } from 'react';
 import useSWR from 'swr';
-import { updateProfile as updateProfileAction, getCurrentUser } from '@/app/actions/user';
+import { updateProfile as updateProfileAction, getUser} from '@/app/actions/user';
 import { Role, AuthUser } from '@/types/user';
 
 // Default role
@@ -97,7 +97,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       // No valid cache, fetch from API
-      const userData = await getCurrentUser();
+      const userData = await getUser();
 
       // Early return if no session/user data
       if (!userData) {
