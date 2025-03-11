@@ -45,10 +45,11 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
   const [showError, setShowError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const t = useTranslations('Common');
 
   const getStatusDot = (status: string) => {
-    const baseClasses = 'h-4 w-4 rounded-full';
+    const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
 
     if (!status) {
       return (
@@ -88,6 +89,19 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               </TooltipTrigger>
               <TooltipContent>
                 <p>{t('failed')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'testing':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-yellow-500 animate-pulse`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('testing')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -182,7 +196,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   };
 
   const handleRefreshClick = async () => {
-    if (isRefreshing || !onTestConnection) return;
+    if (isRefreshing || !onTestConnection || isDeleting) return;
 
     setIsRefreshing(true);
     try {
@@ -190,6 +204,12 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  const handleDelete = () => {
+    if (isDeleting) return;
+    setIsDeleting(true);
+    onDelete?.(host.id);
   };
 
   return (
@@ -222,11 +242,11 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                   <ScrollText className="mr-2 h-4 w-4" />
                   <span>{t('logs')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleRefreshClick} disabled={isRefreshing}>
+                <DropdownMenuItem onClick={handleRefreshClick} disabled={isRefreshing || isDeleting}>
                   <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                   <span>{isRefreshing ? t('refreshing') : t('refresh')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete?.(host.id)} className="text-destructive">
+                <DropdownMenuItem onClick={handleDelete} disabled={isDeleting} className="text-destructive">
                   <XCircle className="mr-2 h-4 w-4" />
                   <span>{t('delete')}</span>
                 </DropdownMenuItem>

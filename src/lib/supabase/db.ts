@@ -616,7 +616,7 @@ const db = {
       const { error } = await supabase
         .from('hosts')
         .delete()
-        .match(where);
+        .eq('id', where.id);
       
       if (error) {
         console.error('Error deleting host:', error);

@@ -56,6 +56,9 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
   const [requireVerification, setRequireVerification] = useState(false);
   const [verifyingFingerprint, setVerifyingFingerprint] = useState(false);
 
+  // State for test status
+  const [testStatus, setTestStatus] = useState<'error' | 'success'>('error');
+
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');
     onChange({
@@ -97,6 +100,12 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
     setRequireVerification(false);
     setFingerprintVerified(false);
 
+    // Set initial failed state (red)
+    setTestStatus('error');
+    
+    // Small delay to show the red state
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     try {
       const data = await testConnectionAction({
         type: formData.type,
@@ -112,6 +121,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         setTestError(data.message || null);
       } else if (data.success) {
         setTestSuccess(true);
+        setTestStatus('success');
         if (data.fingerprint) {
           setFingerprint(data.fingerprint);
           setFingerprintVerified(data.fingerprintVerified || false);
@@ -121,9 +131,11 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
         }
       } else {
         setTestError(data.message || null);
+        setTestStatus('error');
       }
     } catch (error) {
       setTestError(error instanceof Error ? error.message : 'Failed to test connection');
+      setTestStatus('error');
       console.error('Error testing connection:', error);
     } finally {
       setTesting(false);
