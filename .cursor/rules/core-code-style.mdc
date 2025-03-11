@@ -1,0 +1,127 @@
+---
+description: Core Code Style and Quality Standards
+globs: "**/*.{ts,tsx,js,jsx}"
+priority: 2
+---
+
+# Code Style and Quality Standards
+
+## Overview
+
+These code style and quality standards ensure readability, maintainability, and consistency across the codebase. Following these standards makes the code easier to understand, review, and modify, reducing bugs and technical debt.
+
+## Key Principles
+
+1. **Consistency** - Follow established patterns and conventions throughout the codebase
+2. **Readability** - Write code that is easy to read and understand by other developers
+3. **Simplicity** - Keep code simple and avoid unnecessary complexity
+4. **Maintainability** - Structure code to be easily maintainable in the future
+5. **Documentation** - Document code appropriately where needed
+
+## Detailed Rules
+
+### File Organization
+
+- Keep files under 300 lines where possible
+- Group related functionality together
+- Order imports consistently (external, internal, types)
+- Use clear and consistent file naming conventions
+
+### Naming Conventions
+
+- Use descriptive, intention-revealing names
+- Follow consistent casing conventions:
+  - PascalCase for components, interfaces, and types
+  - camelCase for variables, functions, and instances
+  - UPPER_CASE for constants
+- Prefix boolean variables with "is", "has", "should", etc.
+- Prefix event handlers with "handle" or "on"
+
+### Formatting and Whitespace
+
+- Use consistent indentation (2 spaces)
+- Add blank lines to separate logical sections
+- Limit line length to improve readability
+- Use consistent spacing around operators and brackets
+
+### Functions and Methods
+
+- Keep functions small and focused on a single responsibility
+- Limit function parameters (use objects for multiple parameters)
+- Return early to avoid deep nesting
+- Use meaningful return values
+
+### Error Handling
+
+- Handle errors explicitly and intentionally
+- Provide meaningful error messages
+- Use try/catch blocks appropriately
+- Avoid swallowing errors
+
+### Comments and Documentation
+
+- Write self-documenting code where possible
+- Use comments to explain "why", not "what"
+- Document complex algorithms and business rules
+- Add JSDoc comments for public APIs and interfaces
+
+## Examples
+
+### ✅ Good Example - Function Organization
+
+```typescript
+// Clear, focused function with descriptive name
+function calculateTotalPrice(items: CartItem[]): number {
+  // Early return for edge case
+  if (!items.length) return 0;
+  
+  // Clear implementation with meaningful variable names
+  const subtotal = items.reduce(
+    (sum, item) => sum + (item.price * item.quantity), 
+    0
+  );
+  
+  const taxRate = 0.08;
+  const tax = subtotal * taxRate;
+  
+  return subtotal + tax;
+}
+```
+
+**Why it's good**: Single responsibility, descriptive naming, clear structure, and appropriate comments.
+
+### ❌ Bad Example - Function Organization
+
+```typescript
+// Unclear name, multiple responsibilities
+function calc(i: any[]): any {
+  let result = 0;
+  let t = 0;
+  
+  // Hard to understand implementation
+  for (let x = 0; x < i.length; x++) {
+    result += i[x].p * i[x].q;
+  }
+  
+  t = result * 0.08;
+  result += t;
+  
+  return result;
+}
+```
+
+**Why it's bad**: Unclear naming, poor type definitions, cryptic variable names, and lacks structure.
+
+## Common Pitfalls
+
+- **Premature optimization** - Focus on clarity first, optimize only when necessary
+- **Inconsistent naming** - Stick to established conventions
+- **Functions that do too much** - Break down complex functions into smaller ones
+- **Excessive comments** - Aim for self-documenting code with targeted comments
+- **Magic numbers/strings** - Use named constants for better readability
+
+## Related Rules
+
+- core-general.mdc - For general principles and guidelines
+- frontend-components.mdc - For component-specific code style
+- backend-api.mdc - For API-specific patterns 
