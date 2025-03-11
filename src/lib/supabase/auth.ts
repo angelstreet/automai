@@ -1,8 +1,25 @@
-import { cookies } from 'next/headers';
-import { createClient } from './server';
-import { createClient as createAdminClient } from './admin';
-import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/user';
+// DO NOT MODIFY THIS FILE (Assuming this is in a separate file)
+import { createBrowserClient } from '@supabase/ssr';
 
+let browserClientInstance: ReturnType<typeof createBrowserClient> | null = null;
+
+export const createClient = async () => {
+  if (typeof window === 'undefined') {
+    throw new Error('createClient should only be called in browser/client components');
+  }
+  if (browserClientInstance) {
+    return browserClientInstance;
+  }
+  browserClientInstance = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+  return browserClientInstance;
+};
+
+// Main auth file
+import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/user';
+import { createClient } from './your-create-client-file'; // Adjust path to your createClient file
 
 // Check if we're in an environment where Supabase auth is available
 const isUsingSupabase = () => {
@@ -15,38 +32,39 @@ export const supabaseAuth = {
       return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      // Use the admin client to get user by ID (requires service role)
-      const adminClient = createAdminClient();
-      const { data, error } = await adminClient.auth.admin.getUserById(userId);
-      
-      if (error) {
-        console.error('Error getting user by ID:', error);
-        return { success: false, error: error.message };
+      const supabase = await createClient();
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, tenant_id, tenant_name, role, avatar_url')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error('Error getting profile by ID:', profileError);
+        return { success: false, error: profileError.message };
       }
-      
-      if (!data.user) {
-        return { success: false, error: 'User not found' };
+
+      if (!profile) {
+        return { success: false, error: 'User profile not found' };
       }
-      
-      // Extract user data with metadata
-      const user = data.user;
-      const metadata = user.user_metadata || {};
-      
-      // Format user data to match UserSession type
-      return { 
-        success: true, 
+
+      // Optionally fetch email and other auth data
+      const { data: authUser, error: authError } = await supabase.auth.getUser();
+
+      return {
+        success: true,
         data: {
-          id: user.id,
-          email: user.email,
-          name: metadata.name || metadata.full_name || user.email?.split('@')[0] || null,
-          image: metadata.avatar_url || null,
-          role: metadata.role || 'user',
-          tenant_id: metadata.tenant_id || 'trial',
-          tenant_name: metadata.tenant_name || 'Trial',
-          created_at: user.created_at,
-          updated_at: user.updated_at,
-          user_metadata: user.user_metadata
-        }
+          id: profile.id,
+          email: authError ? null : authUser?.user?.email || null, // Fallback if auth fails
+          name: null, // Not in profiles; could add to table if needed
+          image: profile.avatar_url || null,
+          role: profile.role || 'user',
+          tenant_id: profile.tenant_id || 'trial',
+          tenant_name: profile.tenant_name || 'Trial',
+          created_at: authError ? null : authUser?.user?.created_at || null,
+          updated_at: authError ? null : authUser?.user?.updated_at || null,
+          user_metadata: authError ? {} : authUser?.user?.user_metadata || {},
+        },
       };
     } catch (error) {
       console.error('Error getting user by ID:', error);
@@ -56,25 +74,39 @@ export const supabaseAuth = {
       };
     }
   },
-  
+
   async updateUserMetadata(userId: string, metadata: Record<string, any>): Promise<AuthResult<any>> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      // Use the admin client to update user metadata (requires service role)
-      const adminClient = createAdminClient();
-      const { data, error } = await adminClient.auth.admin.updateUserById(
-        userId,
-        { user_metadata: metadata }
-      );
-      
-      if (error) {
-        console.error('Error updating user metadata:', error);
-        return { success: false, error: error.message };
+      const supabase = await createClient();
+      // Update auth metadata
+      const { data: authData, error: authError } = await supabase.auth.updateUser({ data: metadata });
+
+      if (authError) {
+        console.error('Error updating auth metadata:', authError);
+        return { success: false, error: authError.message };
       }
-      
-      return { success: true, data: data.user };
+
+      // Update profiles table with relevant fields
+      const profileUpdate = {
+        tenant_id: metadata.tenant_id || null,
+        tenant_name: metadata.tenant_name || null,
+        role: metadata.role || null,
+        avatar_url: metadata.avatar_url || null,
+      };
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Error updating profile:', profileError);
+        return { success: false, error: profileError.message };
+      }
+
+      return { success: true, data: authData.user };
     } catch (error) {
       console.error('Error updating user metadata:', error);
       return {
@@ -83,44 +115,46 @@ export const supabaseAuth = {
       };
     }
   },
-  
+
   async ensureUserInDb(userData: any): Promise<AuthResult<any>> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      // Use admin client to check if user exists and create if not
-      const adminClient = createAdminClient();
-      
-      // Check if user already exists in the users table
-      const { data: existingUser, error: findError } = await adminClient
-        .from('users')
-        .select('*')
+      const supabase = await createClient();
+      const { data: existingUser, error: findError } = await supabase
+        .from('profiles')
+        .select('id, tenant_id, tenant_name, role, avatar_url')
         .eq('id', userData.id)
         .single();
-        
+
       if (findError && findError.code !== 'PGRST116') {
         console.error('Error finding user:', findError);
         return { success: false, error: findError.message };
       }
-      
+
       if (existingUser) {
-        // User exists, return success
         return { success: true, data: existingUser };
       }
-      
-      // Create user record in database
-      const { data: newUser, error: createError } = await adminClient
-        .from('users')
-        .insert(userData)
+
+      const newProfile = {
+        id: userData.id,
+        tenant_id: userData.tenant_id || 'trial',
+        tenant_name: userData.tenant_name || 'Trial',
+        role: userData.role || 'user',
+        avatar_url: userData.avatar_url || null,
+      };
+      const { data: newUser, error: createError } = await supabase
+        .from('profiles')
+        .insert(newProfile)
         .select()
         .single();
-        
+
       if (createError) {
         console.error('Error creating user:', createError);
         return { success: false, error: createError.message };
       }
-      
+
       return { success: true, data: newUser };
     } catch (error) {
       console.error('Error ensuring user in database:', error);
@@ -130,46 +164,51 @@ export const supabaseAuth = {
       };
     }
   },
+
   async getSession(): Promise<AuthResult<SessionData>> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error getting session:', error);
-        return { success: false, error: error.message };
+      const supabase = await createClient();
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('Error getting session:', sessionError);
+        return { success: false, error: sessionError.message };
       }
-      if (!data.session) {
+
+      if (!sessionData.session) {
         return { success: false, error: 'No active session' };
       }
-      const { user, access_token, expires_at } = data.session;
+
+      const { user, access_token, expires_at } = sessionData.session;
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('tenant_id, tenant_name, role, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+      }
+
       const metadata = user.user_metadata || {};
-      const name =
-        metadata.name ||
-        metadata.full_name ||
-        (metadata as any)?.raw_user_meta_data?.name ||
-        metadata.preferred_username ||
-        user.email?.split('@')[0] ||
-        null;
-      const tenant_id = metadata.tenant_id || metadata.tenantId || 'trial';
-      const tenant_name = metadata.tenant_name || metadata.tenantName || tenant_id;
+
       return {
         success: true,
         data: {
           user: {
             id: user.id,
             email: user.email,
-            name,
-            image: metadata.avatar_url,
-            role: metadata.role || 'user',
-            tenant_id,
-            tenant_name,
+            name: metadata.name || user.email?.split('@')[0] || null, // Fallback if not in profiles
+            image: profile?.avatar_url || metadata.avatar_url || null,
+            role: profile?.role || metadata.role || 'user',
+            tenant_id: profile?.tenant_id || metadata.tenant_id || 'trial',
+            tenant_name: profile?.tenant_name || metadata.tenant_name || 'Trial',
             created_at: user.created_at,
             updated_at: user.updated_at,
-            user_metadata: user.user_metadata
+            user_metadata: metadata,
           },
           accessToken: access_token,
           expires: expires_at ? new Date(expires_at * 1000).toISOString() : '',
@@ -177,7 +216,10 @@ export const supabaseAuth = {
       };
     } catch (error) {
       console.error('Error in getSession:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   },
 
@@ -186,43 +228,15 @@ export const supabaseAuth = {
       return { success: false, error: 'Invalid or missing authorization header' };
     }
     try {
-      const token = authHeader.substring(7);
-      const supabase = createAdminClient();
-      const { data, error } = await supabase.auth.getUser(token);
-      if (error || !data.user) {
-        console.error('Error getting user from token:', error?.message);
-        return { success: false, error: error?.message || 'Invalid token' };
-      }
-      const user = data.user;
-      const metadata = user.user_metadata || {};
-      const name =
-        metadata.name ||
-        metadata.full_name ||
-        (metadata as any)?.raw_user_meta_data?.name ||
-        metadata.preferred_username ||
-        user.email?.split('@')[0] ||
-        null;
-      const tenant_id = metadata.tenant_id || metadata.tenantId || 'trial';
-      const tenant_name = metadata.tenant_name || metadata.tenantName || tenant_id;
-      return {
-        success: true,
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            name,
-            image: metadata.avatar_url,
-            role: metadata.role || 'user',
-            tenant_id,
-            tenant_name,
-          },
-          accessToken: token,
-          expires: new Date(Date.now() + 3600 * 1000).toISOString(),
-        },
-      };
+      throw new Error(
+        'extractSessionFromHeader is not supported with browser client. Use server-side logic with service role key.'
+      );
     } catch (error) {
       console.error('Error extracting session from header:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   },
 
@@ -241,19 +255,22 @@ export const supabaseAuth = {
 
   async signInWithPassword(email: string, password: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available in this environment' };
+      return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
       if (error) {
         return { success: false, error: error.message };
       }
       return { success: true, data: data.session };
     } catch (error) {
       console.error('Error signing in:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   },
 
@@ -263,12 +280,12 @@ export const supabaseAuth = {
     options?: { redirectTo?: string; data?: Record<string, any> }
   ): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available in this environment' };
+      return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
       const { data, error } = await supabase.auth.signUp({ email, password, options });
+
       if (error) {
         console.error('Error signing up:', error);
         return { success: false, error: error.message };
@@ -276,7 +293,10 @@ export const supabaseAuth = {
       return { success: true, data };
     } catch (error) {
       console.error('Error signing up:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to sign up' };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to sign up',
+      };
     }
   },
 
@@ -285,12 +305,12 @@ export const supabaseAuth = {
     options?: { redirectTo?: string }
   ): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available in this environment' };
+      return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
       const { data, error } = await supabase.auth.signInWithOAuth({ provider, options });
+
       if (error) {
         console.error('Error signing in with OAuth:', error);
         return { success: false, error: error.message };
@@ -307,40 +327,19 @@ export const supabaseAuth = {
 
   async handleOAuthCallback(code: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available in this environment' };
+      return { success: false, error: 'Supabase auth not available' };
     }
     try {
+      const supabase = await createClient();
       console.log('🔐 AUTH_SERVICE: Starting OAuth code exchange for code:', code.substring(0, 6) + '...');
-      
-      // Get cookies before exchange
-      const cookieStore = await cookies();
-      const cookiesBefore = cookieStore.getAll().filter(c => 
-        c.name.startsWith('sb-') || c.name.includes('supabase')
-      );
-      console.log('🔐 AUTH_SERVICE: Cookies before exchange:', 
-        cookiesBefore.map(c => c.name));
-      
-      // Create client and exchange code
-      const supabase = await createClient(cookieStore);
-      console.log('🔐 AUTH_SERVICE: Calling exchangeCodeForSession');
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-      
+
       if (error) {
         console.error('🔐 AUTH_SERVICE ERROR: Error exchanging code for session:', error);
         return { success: false, error: error.message };
       }
-      
-      // Get cookies after exchange to verify they were set
-      const cookiesAfter = (await cookies()).getAll().filter(c => 
-        c.name.startsWith('sb-') || c.name.includes('supabase')
-      );
-      console.log('🔐 AUTH_SERVICE: Cookies after exchange:', 
-        cookiesAfter.map(c => c.name));
-      
-      console.log('🔐 AUTH_SERVICE: Exchange successful:', 
-        !!data?.session, 
-        data?.session?.user?.id || 'no user id');
-      
+
+      console.log('🔐 AUTH_SERVICE: Exchange successful:', !!data?.session, data?.session?.user?.id || 'no user id');
       return { success: true, data };
     } catch (error) {
       console.error('🔐 AUTH_SERVICE ERROR: Error handling OAuth callback:', error);
@@ -353,12 +352,12 @@ export const supabaseAuth = {
 
   async signOut(): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available in this environment' };
+      return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
       const { error } = await supabase.auth.signOut();
+
       if (error) {
         console.error('Error signing out:', error);
         return { success: false, error: error.message };
@@ -375,12 +374,12 @@ export const supabaseAuth = {
 
   async updatePassword(password: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available in this environment' };
+      return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
       const { data, error } = await supabase.auth.updateUser({ password });
+
       if (error) {
         console.error('Error updating password:', error);
         return { success: false, error: error.message };
@@ -397,13 +396,13 @@ export const supabaseAuth = {
 
   async resetPasswordForEmail(email: string, redirectTo?: string): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available in this environment' };
+      return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
+      const supabase = await createClient();
       const options = redirectTo ? { redirectTo } : undefined;
       const { error } = await supabase.auth.resetPasswordForEmail(email, options);
+
       if (error) {
         console.error('Error resetting password:', error);
         return { success: false, error: error.message };
@@ -420,17 +419,35 @@ export const supabaseAuth = {
 
   async updateProfile(data: Record<string, any>): Promise<AuthResult> {
     if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available in this environment' };
+      return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      const cookieStore = await cookies();
-      const supabase = await createClient(cookieStore);
-      const { data: userData, error } = await supabase.auth.updateUser({ data });
-      if (error) {
-        console.error('Error updating profile:', error);
-        return { success: false, error: error.message };
+      const supabase = await createClient();
+      const { data: authData, error: authError } = await supabase.auth.updateUser({ data });
+
+      if (authError) {
+        console.error('Error updating auth profile:', authError);
+        return { success: false, error: authError.message };
       }
-      return { success: true, data: userData };
+
+      // Update profiles table
+      const profileUpdate = {
+        tenant_id: data.tenant_id || null,
+        tenant_name: data.tenant_name || null,
+        role: data.role || null,
+        avatar_url: data.avatar_url || null,
+      };
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(profileUpdate)
+        .eq('id', authData.user.id);
+
+      if (profileError) {
+        console.error('Error updating profile:', profileError);
+        return { success: false, error: profileError.message };
+      }
+
+      return { success: true, data: authData };
     } catch (error) {
       console.error('Error updating profile:', error);
       return {
