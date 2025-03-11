@@ -3,6 +3,7 @@
 import db from '@/lib/supabase/db';
 import { Host } from '@/types/hosts';
 import { logger } from '@/lib/logger';
+import { testHostConnection as testHostConnectionService } from '@/lib/services/hosts';
 // Import getBaseUrl from utils instead
 import { getBaseUrl } from '@/lib/utils';
 
@@ -123,7 +124,22 @@ export async function testAllHosts(): Promise<{ success: boolean; error?: string
 
     // Test each host sequentially
     for (const host of hosts) {
-      // Test the connection
+      // First update the host to failed state (red)
+      await db.host.update({
+        where: { id: host.id },
+        data: { status: 'failed' }
+      });
+
+      // Small delay to show the red state
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Then update to testing state
+      await db.host.update({
+        where: { id: host.id },
+        data: { status: 'testing' }
+      });
+
+      // Test the connection using the real SSH test
       const result = await testConnection({
         type: host.type,
         ip: host.ip,
@@ -131,6 +147,15 @@ export async function testAllHosts(): Promise<{ success: boolean; error?: string
         username: host.user,
         password: host.password,
         hostId: host.id
+      });
+
+      // Update the host status based on the test result
+      await db.host.update({
+        where: { id: host.id },
+        data: { 
+          status: result.success ? 'connected' : 'failed',
+          updated_at: new Date().toISOString()
+        }
       });
 
       // Add result to array
@@ -168,32 +193,8 @@ export async function testConnection(data: {
   username?: string;
   password?: string;
   hostId?: string;
-}): Promise<{ 
-  success: boolean; 
-  message?: string; 
-  fingerprint?: string; 
-  fingerprintVerified?: boolean;
-  requireVerification?: boolean;
-}> {
-  try {
-    // This would normally call a service function to test the connection
-    // For now, we'll simulate a successful connection
-    logger.info('Testing host connection', { ip: data.ip });
-    
-    // Simulate a successful connection
-    return { 
-      success: true, 
-      message: 'Connection successful',
-      fingerprint: data.hostId ? 'simulated-fingerprint' : undefined,
-      fingerprintVerified: true
-    };
-  } catch (error: any) {
-    console.error('Error testing connection:', error);
-    return { 
-      success: false, 
-      message: error.message || 'Failed to test connection' 
-    };
-  }
+}) {
+  return testHostConnectionService(data);
 }
 
 /**
