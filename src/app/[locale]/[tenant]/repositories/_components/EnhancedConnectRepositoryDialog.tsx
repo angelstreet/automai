@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { 
   Github, 
@@ -53,12 +53,6 @@ export function EnhancedConnectRepositoryDialog({
   const [serverUrl, setServerUrl] = useState('');
   const [popularCategory, setPopularCategory] = useState('CI/CD');
   const [selectedRunner, setSelectedRunner] = useState<any>(null);
-  
-  useEffect(() => {
-    if (currentProvider === 'gitea') {
-      setActiveTab('token');
-    }
-  }, [currentProvider]);
   
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -211,9 +205,9 @@ export function EnhancedConnectRepositoryDialog({
                     </Badge>
                   </div>
                   
-                  <Tabs defaultValue={currentProvider === 'gitea' ? 'token' : 'oauth'} value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <Tabs defaultValue={currentProvider === 'gitea' ? 'token' : 'oauth'} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="oauth" disabled={currentProvider === 'gitea'} title={currentProvider === 'gitea' ? t('giteaOAuthNotSupported') : undefined}>
+                      <TabsTrigger value="oauth" disabled={currentProvider === 'gitea'}>
                         OAuth
                       </TabsTrigger>
                       <TabsTrigger value="token">{t('accessToken')}</TabsTrigger>
