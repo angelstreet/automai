@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { 
   Github, 
@@ -53,6 +53,12 @@ export function EnhancedConnectRepositoryDialog({
   const [serverUrl, setServerUrl] = useState('');
   const [popularCategory, setPopularCategory] = useState('CI/CD');
   const [selectedRunner, setSelectedRunner] = useState<any>(null);
+  
+  useEffect(() => {
+    if (currentProvider === 'gitea') {
+      setActiveTab('token');
+    }
+  }, [currentProvider]);
   
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -205,9 +211,9 @@ export function EnhancedConnectRepositoryDialog({
                     </Badge>
                   </div>
                   
-                  <Tabs defaultValue={currentProvider === 'gitea' ? 'token' : 'oauth'} className="w-full">
+                  <Tabs defaultValue={currentProvider === 'gitea' ? 'token' : 'oauth'} value={activeTab} onValueChange={setActiveTab} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="oauth" disabled={currentProvider === 'gitea'}>
+                      <TabsTrigger value="oauth" disabled={currentProvider === 'gitea'} title={currentProvider === 'gitea' ? t('giteaOAuthNotSupported') : undefined}>
                         OAuth
                       </TabsTrigger>
                       <TabsTrigger value="token">{t('accessToken')}</TabsTrigger>
@@ -341,34 +347,7 @@ export function EnhancedConnectRepositoryDialog({
                   </p>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label>{t('selectRunner')}</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    {SAMPLE_RUNNERS.map(runner => (
-                      <div 
-                        key={runner.id}
-                        className={`p-3 border rounded-md transition-colors cursor-pointer hover:bg-muted ${
-                          selectedRunner?.id === runner.id ? 'bg-muted ring-1 ring-primary' : ''
-                        } ${runner.status === 'busy' ? 'opacity-50' : ''}`}
-                        onClick={() => runner.status !== 'busy' && setSelectedRunner(runner)}
-                      >
-                        <div className="flex items-center">
-                          <Terminal className="h-4 w-4 mr-2" />
-                          <span className="text-sm font-medium">{runner.name}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-xs text-muted-foreground">{runner.type}</span>
-                          <Badge variant={runner.status === 'available' ? 'secondary' : 'outline'} className="text-xs">
-                            {runner.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {t('runnerDescription')}
-                  </p>
-                </div>
+                
               </div>
               
               <Alert>
