@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { Server } from 'lucide-react';
-import { Host } from './types';
+import { Host } from '../types';
+import { groupHostsByEnvironment } from '../utils';
 
 interface HostSelectorProps {
   availableHosts: Host[];
@@ -10,19 +11,16 @@ interface HostSelectorProps {
   onHostToggle: (hostId: string) => void;
 }
 
-const HostSelector = ({ availableHosts, selectedHosts, onHostToggle }: HostSelectorProps) => {
+/**
+ * Component for selecting target hosts grouped by environment
+ */
+const HostSelector: React.FC<HostSelectorProps> = ({ 
+  availableHosts, 
+  selectedHosts, 
+  onHostToggle 
+}) => {
   // Group hosts by environment
-  const hostsByEnvironment = availableHosts.reduce(
-    (acc, host) => {
-      const env = host.environment || 'Other';
-      if (!acc[env]) {
-        acc[env] = [];
-      }
-      acc[env].push(host);
-      return acc;
-    },
-    {} as Record<string, Host[]>,
-  );
+  const hostsByEnvironment = groupHostsByEnvironment(availableHosts);
 
   // Sort environments - put Production first, then Staging, then others alphabetically
   const sortedEnvironments = Object.keys(hostsByEnvironment).sort((a, b) => {
@@ -60,15 +58,17 @@ const HostSelector = ({ availableHosts, selectedHosts, onHostToggle }: HostSelec
                     <input
                       type="checkbox"
                       id={`host-${host.id}`}
-                      checked={selectedHosts.includes(host.id.toString())}
-                      onChange={() => onHostToggle(host.id.toString())}
-                      className="mr-2 text-blue-600 focus:ring-blue-500 dark:border-gray-600 rounded"
+                      checked={selectedHosts.includes(host.id)}
+                      onChange={() => onHostToggle(host.id)}
+                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                     />
                     <label htmlFor={`host-${host.id}`} className="flex-1 cursor-pointer">
                       <div className="font-medium text-sm text-gray-900 dark:text-white">
                         {host.name}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{host.ip}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {host.ip || 'Status: ' + host.status}
+                      </div>
                     </label>
                   </div>
                 ))}

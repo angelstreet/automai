@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Code } from 'lucide-react';
-import { Script } from './types';
+import { Script } from '../types';
 
 interface ScriptSelectorProps {
   availableScripts: Script[];
@@ -11,12 +11,15 @@ interface ScriptSelectorProps {
   isProjectSelected: boolean;
 }
 
-const ScriptSelector = ({
+/**
+ * Component for selecting scripts from a repository
+ */
+const ScriptSelector: React.FC<ScriptSelectorProps> = ({
   availableScripts,
   selectedScripts,
   onScriptToggle,
   isProjectSelected,
-}: ScriptSelectorProps) => {
+}) => {
   return (
     <div>
       <label className="block text-sm font-medium mb-2 flex items-center text-gray-700 dark:text-gray-300">
@@ -43,9 +46,9 @@ const ScriptSelector = ({
                 <input
                   type="checkbox"
                   id={`script-${script.id}`}
-                  checked={selectedScripts.includes(script.id.toString())}
-                  onChange={() => onScriptToggle(script.id.toString())}
-                  className="mr-2 text-blue-600 focus:ring-blue-500 dark:border-gray-600 rounded"
+                  checked={selectedScripts.includes(script.id)}
+                  onChange={() => onScriptToggle(script.id)}
+                  className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                 />
                 <label htmlFor={`script-${script.id}`} className="flex-1 cursor-pointer">
                   <div className="font-medium text-sm text-gray-900 dark:text-white">

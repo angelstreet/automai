@@ -1,35 +1,6 @@
 'use server';
 
-// Define our data types
-interface ActivityItem {
-  id: string;
-  action: string;
-  timestamp: number;
-  user: string;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  dueDate: string;
-  priority: string;
-}
-
-interface Stats {
-  successRate: number;
-  testsRun: number;
-  projects?: number;
-  testCases?: number;
-  activeProjects?: number;
-  uptime?: number;
-}
-
-interface ChatMessage {
-  id: string;
-  name: string;
-  message: string;
-  timestamp: number;
-}
+import { ActivityItem, Task, Stats, ChatMessage } from '@/types/dashboard';
 
 // Cache for server actions to prevent unnecessary API calls
 let statsCache: Stats | null = null;
@@ -68,13 +39,6 @@ export async function getDashboardStats(): Promise<Stats> {
   statsLastFetch = now;
 
   return data;
-}
-
-interface ActivityItem {
-  id: string;
-  action: string;
-  timestamp: number;
-  user: string;
 }
 
 export async function getRecentActivity(): Promise<ActivityItem[]> {
