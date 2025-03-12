@@ -132,13 +132,15 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
             <ArrowLeft size={12} className="mr-1" />
             Back to Deployments
           </button>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create New Deployment</h2>
           <div></div> {/* Empty div for flex spacing */}
         </div>
       </div>
 
       {/* Progress indicator - with larger numbers */}
-      <div className="mb-3">
+      <div className="mb-3 relative">
+        <div className="text-center mb-2">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create New Deployment</h2>
+        </div>
         <div className="flex justify-between">
           <div className={`flex flex-col items-center ${step >= 1 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
             <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 1 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
@@ -282,7 +284,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                     type="button"
                     onClick={handleNextStep}
                     disabled={!isStepValid()}
-                    className={`px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                    className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                       isStepValid() 
                         ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
                         : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
@@ -293,7 +295,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 ) : (
                   <button
                     type="submit"
-                    className="px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
                   >
                     Create Deployment
                   </button>
@@ -340,7 +342,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   type="button"
                   onClick={handleNextStep}
                   disabled={!isStepValid()}
-                  className={`px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                     isStepValid() 
                       ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
                       : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
@@ -404,7 +406,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   type="button"
                   onClick={handleNextStep}
                   disabled={!isStepValid()}
-                  className={`px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                     isStepValid() 
                       ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
                       : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
@@ -467,7 +469,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 
                 <button
                   type="submit"
-                  className="px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
                 >
                   Create Deployment
                 </button>

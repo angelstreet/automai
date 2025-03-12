@@ -53,7 +53,7 @@ const DeploymentPage = () => {
               </>
             )}
             <button 
-              className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+              className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 ${view === 'list' ? '' : 'ml-[-4.5rem]'}`}
               onClick={() => setView(view === 'list' ? 'create' : 'list')}
             >
               {view === 'list' ? (
