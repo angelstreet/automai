@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRepositories, createRepository } from '@/app/actions/repositories';
+import { getRepositories, createRepository } from '@/app/[locale]/[tenant]/repositories/actions';
 
 /**
  * GET /api/repositories

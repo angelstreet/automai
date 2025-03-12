@@ -10,7 +10,7 @@ import {
   updateRepository,
   deleteRepository,
   syncRepository as syncRepositoryApi,
-} from '@/app/actions/repositories';
+} from './actions';
 import {
   getGitProviders,
   addGitProvider,

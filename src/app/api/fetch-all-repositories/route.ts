@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getRepositories } from '@/app/actions/repositories';
+import { getRepositories } from '@/app/[locale]/[tenant]/repositories/actions';
 
 // GET /api/fetch-all-repositories
 export async function GET(request: Request) {
