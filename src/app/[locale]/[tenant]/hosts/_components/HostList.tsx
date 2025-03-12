@@ -133,7 +133,7 @@ export default function HostContainer() {
             disabled={isRefreshing || loading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || loading ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            Refresh
           </Button>
           <Button onClick={() => setShowAddHost(true)}>
             <Plus className="h-4 w-4 mr-2" />
