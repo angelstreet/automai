@@ -1,7 +1,7 @@
 'use client';
 
-import { Overview } from '@/components/dashboard/Overview';
-import { RecentSales } from '@/components/dashboard/RecentSales';
+import { Overview } from './Overview';
+import { RecentSales } from './RecentSales';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
 import {
