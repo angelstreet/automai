@@ -30,13 +30,13 @@ export default function HostContainer() {
   // Use the SWR-powered hook for data fetching and mutations
   const {
     hosts,
-    isLoading,
-    isRefreshing,
-    testConnection,
-    refreshConnections,
-    deleteHost,
+    loading,
+    error,
+    fetchHosts,
     addHost,
-  } = useHosts([]);
+    deleteHost,
+    testConnection,
+  } = useHosts();
 
   // Handle add host form submission
   const handleSaveHost = async () => {
@@ -103,8 +103,8 @@ export default function HostContainer() {
               <List className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={refreshConnections} variant="outline" size="sm" disabled={isRefreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <Button onClick={fetchHosts} variant="outline" size="sm">
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button onClick={() => setShowAddHost(true)}>
@@ -114,9 +114,12 @@ export default function HostContainer() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-10">Loading hosts...</div>
-      ) : hosts.length === 0 ? (
+      {loading && hosts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10">
+          <RefreshCw className="h-8 w-8 animate-spin mb-4" />
+          <p className="text-muted-foreground">Loading hosts...</p>
+        </div>
+      ) : !loading && hosts.length === 0 ? (
         <div className="text-center py-10">
           <p className="text-muted-foreground">No hosts found</p>
           <Button onClick={() => setShowAddHost(true)} className="mt-4">

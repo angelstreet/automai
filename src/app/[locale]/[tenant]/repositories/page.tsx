@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { GitBranch, Plus, RefreshCw, Search, Filter, Star } from 'lucide-react';
 
@@ -33,7 +32,6 @@ import { RepositoryExplorer } from './_components/RepositoryExplorer';
 import { EnhancedConnectRepositoryDialog } from './_components/EnhancedConnectRepositoryDialog';
 
 export default function EnhancedRepositoryPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations('repositories');
 

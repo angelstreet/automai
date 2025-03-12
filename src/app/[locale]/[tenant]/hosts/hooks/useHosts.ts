@@ -1,59 +1,73 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from '../types';
 import { getHosts, createHost } from '@/app/actions/hosts';
+import useSWR from 'swr';
+
+// Local storage key for hosts cache
+const HOSTS_CACHE_KEY = 'hosts-cache';
+
+// Helper to get cached hosts
+const getCachedHosts = (): Host[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const cached = localStorage.getItem(HOSTS_CACHE_KEY);
+    return cached ? JSON.parse(cached) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+// Helper to set cached hosts
+const setCachedHosts = (hosts: Host[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(HOSTS_CACHE_KEY, JSON.stringify(hosts));
+  } catch (e) {
+    console.error('Failed to cache hosts:', e);
+  }
+};
 
 export function useHosts() {
-  const [hosts, setHosts] = useState<Host[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
 
-  const fetchHosts = useCallback(async () => {
+  // Fetch hosts with SWR
+  const {
+    data: hosts = [],
+    isLoading,
+    mutate,
+  } = useSWR<Host[]>('hosts', async () => {
     try {
-      setLoading(true);
-      setError(null);
-
       const result = await getHosts();
-
       if (!result.success) {
-        setError(new Error(result.error || 'Failed to fetch hosts'));
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to fetch hosts',
-          variant: 'destructive',
-        });
-        return [];
+        throw new Error(result.error || 'Failed to fetch hosts');
       }
-
-      setHosts(result.data || []);
-      return result.data;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch hosts';
-      setError(err instanceof Error ? err : new Error(errorMessage));
+      // Update cache when we get new data
+      setCachedHosts(result.data || []);
+      return result.data || [];
+    } catch (error) {
+      console.error('Error fetching hosts:', error);
       toast({
         title: 'Error',
-        description: errorMessage,
+        description: 'Failed to fetch hosts',
         variant: 'destructive',
       });
       return [];
-    } finally {
-      setLoading(false);
     }
-  }, [toast]);
+  }, {
+    fallbackData: getCachedHosts(), // Use cached data while loading
+    revalidateOnFocus: false, // Don't revalidate on window focus
+    dedupingInterval: 5000, // Dedupe requests within 5 seconds
+  });
 
   const addHost = useCallback(
     async (hostData: Omit<Host, 'id'>) => {
       try {
-        setLoading(true);
-        setError(null);
-
         const result = await createHost(hostData);
 
         if (!result.success) {
-          setError(new Error(result.error || 'Failed to create host'));
           toast({
             title: 'Error',
             description: result.error || 'Failed to create host',
@@ -62,7 +76,12 @@ export function useHosts() {
           return null;
         }
 
-        setHosts((prevHosts) => [...prevHosts, result.data]);
+        // Update the SWR cache with the new host
+        await mutate(async (currentHosts: Host[] = []) => {
+          const updatedHosts = [...currentHosts, result.data];
+          setCachedHosts(updatedHosts);
+          return updatedHosts;
+        }, false);
 
         toast({
           title: 'Success',
@@ -72,31 +91,23 @@ export function useHosts() {
         return result.data;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to create host';
-        setError(err instanceof Error ? err : new Error(errorMessage));
         toast({
           title: 'Error',
           description: errorMessage,
           variant: 'destructive',
         });
         return null;
-      } finally {
-        setLoading(false);
       }
     },
-    [toast],
+    [toast, mutate],
   );
-
-  // Fetch hosts on mount
-  useEffect(() => {
-    fetchHosts();
-  }, [fetchHosts]);
 
   return {
     hosts,
-    loading,
-    error,
-    fetchHosts,
+    loading: isLoading,
+    error: null,
+    fetchHosts: mutate,
     addHost,
-    isLoaded: !loading && hosts !== null,
+    isLoaded: !isLoading && hosts !== null,
   };
 } 
