@@ -2,103 +2,74 @@
 
 ## Overview
 
-These guidelines define how to implement caching across the application. Follow these patterns for consistent and efficient data management.
+These guidelines define caching implementation across the three-layer architecture: Server DB → Server Actions → Client Hooks.
 
 ## Key Principles
 
-1. **Use SWR as Primary Cache**
-   - Implement through global `SWRProvider`
-   - Configure revalidation and deduping intervals
-   - Use for all data fetching hooks
+1. **Three-Layer Caching**
+   - Server DB: No caching (always fresh data)
+   - Server Actions: Optional server-side caching for expensive operations
+   - Client Hooks: Primary caching layer using SWR + storage
 
-2. **Hybrid Caching Strategy**
-   - Combine SWR with localStorage/sessionStorage
-   - Use localStorage for longer-term persistence
-   - Use sessionStorage for session-specific data
-
-3. **Cache Invalidation**
-   - Always provide clear cache methods
-   - Invalidate both SWR and storage caches
-   - Handle errors gracefully
-
-## Implementation Examples
-
-### SWR Configuration
-
-```typescript
-// Global SWR configuration
-const SWRConfig = {
-  revalidateOnFocus: false,
-  revalidateOnReconnect: false,
-  dedupingInterval: 60000, // 1 minute
-  revalidateIfStale: false
-};
-
-// Hook implementation
-const useData = (key: string) => {
-  return useSWR(key, fetcher, SWRConfig);
-};
-```
-
-### Hybrid Caching Pattern
-
-```typescript
-const fetchWithCache = async (key: string) => {
-  // Try localStorage first
-  if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem(key);
-    if (cached) return JSON.parse(cached);
-  }
-
-  // Fetch and cache
-  const data = await fetchData();
-  localStorage.setItem(key, JSON.stringify(data));
-  return data;
-};
-```
-
-### Cache Invalidation
-
-```typescript
-const clearCache = async () => {
-  // Clear storage
-  localStorage.removeItem(key);
-  // Clear SWR
-  await mutate(key, null, false);
-};
-```
-
-## Common Pitfalls
-
-1. **❌ Never cache sensitive data** in localStorage/sessionStorage
-2. **❌ Never ignore SSR considerations** when accessing window/localStorage
-3. **❌ Never skip error handling** for storage operations
-4. **❌ Never cache without expiration** strategy
-
-## Best Practices
-
-1. **✅ Always define cache duration constants**
+2. **Cache Strategy by Layer**
    ```typescript
-   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-   ```
-
-2. **✅ Always handle SSR safely**
-   ```typescript
-   if (typeof window !== 'undefined') {
-     // Storage operations here
+   // 1. Client Hooks Layer (Primary Cache)
+   function useData() {
+     return useSWR(key, fetcher, {
+       dedupingInterval: 60000,
+       revalidateOnFocus: false
+     });
    }
+
+   // 2. Server Actions Layer (Optional Cache)
+   let actionCache = null;
+   let cacheTimestamp = 0;
+   const CACHE_TTL = 5 * 60 * 1000;
+
+   // 3. Server DB Layer (No Cache)
+   const db = { /* Direct Supabase calls */ };
    ```
 
-3. **✅ Always implement request throttling** for frequent calls
-   ```typescript
-   const MIN_REQUEST_INTERVAL = 3000; // 3 seconds
-   ```
+## Implementation Rules
 
-4. **✅ Always clear invalid cache data**
-   ```typescript
-   try {
-     const cached = JSON.parse(storage.getItem(key));
-   } catch {
-     storage.removeItem(key);
-   }
-   ``` 
+1. **✅ Client-Side Caching (Hooks Layer)**
+   - Use SWR as primary cache
+   - Add localStorage for persistence
+   - Handle SSR safely
+
+2. **✅ Server-Side Caching (Actions Layer)**
+   - Cache expensive computations
+   - Use TTL for cache invalidation
+   - Clear on mutations
+
+3. **❌ Never Cache**
+   - Sensitive data
+   - Without expiration
+   - In Server DB layer
+   - Without error handling
+
+## Example Pattern
+
+```typescript
+// Client Hook
+export function useData() {
+  return useSWR('key', async () => {
+    // Try localStorage
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('key');
+      if (cached) return JSON.parse(cached);
+    }
+    
+    // Fetch from Server Action
+    const { data } = await serverAction();
+    
+    // Update localStorage
+    if (data) localStorage.setItem('key', JSON.stringify(data));
+    
+    return data;
+  }, {
+    dedupingInterval: 60000,
+    revalidateOnFocus: false
+  });
+}
+``` 

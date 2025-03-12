@@ -12,6 +12,144 @@ These guidelines cover how to properly integrate with Supabase services includin
 4. **Error Handling** - Handle Supabase errors consistently and gracefully
 5. **Security** - Follow best practices for secure authentication and data access
 6. **Three-Layer Architecture** - Follow the server-db → server-actions → client-hooks pattern
+7. **Caching Strategy** - Implement layer-specific caching rules
+
+## Three-Layer Architecture with Caching
+
+We use a strict three-layer architecture with specific caching strategies for each layer:
+
+1. **Server DB Layer** (Core)
+   - Lives in `/src/lib/supabase/db.ts`
+   - Direct Supabase database calls only
+   - ❌ No caching at this layer
+   - Uses server-side Supabase client
+   - Handles raw data formatting
+
+2. **Server Actions Layer** (Bridge)
+   - Lives in `/src/app/actions/*.ts`
+   - Optional TTL-based caching for expensive operations
+   - Clear cache on mutations
+   - Returns consistent format: {success, data, error}
+
+3. **Client Hooks Layer** (Interface)
+   - Lives in `/src/hooks/*.ts`
+   - Primary caching using SWR + localStorage
+   - Handle SSR safely
+   - Manage loading states and errors
+
+### Implementation Pattern
+
+```typescript
+// 1. Server DB Layer - No Caching
+const db = {
+  host: {
+    async findMany() {
+      const supabase = await createServerClient();
+      const { data } = await supabase.from('hosts').select('*');
+      return data || [];
+    }
+  }
+};
+
+// 2. Server Actions Layer - Optional Cache
+let actionCache = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 5 * 60 * 1000;
+
+export async function getHosts() {
+  if (actionCache && Date.now() - cacheTimestamp < CACHE_TTL) {
+    return { success: true, data: actionCache };
+  }
+  const data = await db.host.findMany();
+  actionCache = data;
+  cacheTimestamp = Date.now();
+  return { success: true, data };
+}
+
+// 3. Client Hooks Layer - Primary Cache
+export function useHosts() {
+  return useSWR('hosts', async () => {
+    // Try localStorage
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('hosts');
+      if (cached) return JSON.parse(cached);
+    }
+    
+    const { data } = await getHosts();
+    if (data) localStorage.setItem('hosts', JSON.stringify(data));
+    return data;
+  }, {
+    dedupingInterval: 60000,
+    revalidateOnFocus: false
+  });
+}
+```
+
+### Key Restrictions
+
+- ❌ Never cache in Server DB Layer
+- ❌ Never cache sensitive data
+- ❌ Never cache without expiration
+- ✅ Always clear cache on mutations
+- ✅ Always handle SSR safely
+- ✅ Always implement error handling
+
+## Common Patterns
+
+### Authentication with Cache
+
+```typescript
+// In UserContext
+export function UserProvider({ children }) {
+  const { data: user } = useSWR('user', async () => {
+    // Try cache first
+    const cached = localStorage.getItem('user');
+    if (cached) return JSON.parse(cached);
+    
+    // Fetch fresh
+    const { data: user } = await getUser();
+    if (user) localStorage.setItem('user', JSON.stringify(user));
+    return user;
+  }, {
+    dedupingInterval: 60000,
+    revalidateOnFocus: false
+  });
+
+  return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+}
+```
+
+### Database Operations
+
+```typescript
+// In a client hook
+export function useData() {
+  const { data, error } = useSWR(['key', filters], async () => {
+    const cached = localStorage.getItem('cache-key');
+    if (cached) return JSON.parse(cached);
+    
+    const { data } = await serverAction();
+    if (data) localStorage.setItem('cache-key', JSON.stringify(data));
+    return data;
+  });
+
+  return { data, error, loading: !data && !error };
+}
+```
+
+## Error Handling
+
+- Always catch and log errors in each layer
+- Clear invalid cache data on errors
+- Provide fallback data when cache is invalid
+- Implement retry strategies in client hooks
+
+## Security Considerations
+
+- Never cache authentication tokens in localStorage
+- Clear all caches on logout
+- Implement proper cache invalidation
+- Respect user privacy settings
 
 ## Three-Layer Architecture
 
