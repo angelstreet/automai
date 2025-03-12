@@ -122,47 +122,50 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-      <div className="mb-6">
-        <button 
-          onClick={onComplete} 
-          className="flex items-center text-sm text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          <ArrowLeft size={16} className="mr-1" />
-          Back to Deployments
-        </button>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-2">Create New Deployment</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-3">
+      <div className="mb-2">
+        <div className="flex justify-between items-center">
+          <button 
+            onClick={onComplete} 
+            className="flex items-center text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            <ArrowLeft size={12} className="mr-1" />
+            Back to Deployments
+          </button>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create New Deployment</h2>
+          <div></div> {/* Empty div for flex spacing */}
+        </div>
       </div>
 
-      {/* Progress indicator */}
-      <div className="mb-8">
+      {/* Progress indicator - even more compact */}
+      <div className="mb-3">
         <div className="flex justify-between">
           <div className={`flex flex-col items-center ${step >= 1 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-8 h-8 flex items-center justify-center rounded-full border-2 ${step >= 1 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
+            <div className={`w-5 h-5 flex items-center justify-center rounded-full border text-xs ${step >= 1 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
               1
             </div>
-            <span className="text-xs mt-1">Details</span>
+            <span className="text-xs">Details</span>
           </div>
-          <div className={`flex-1 h-1 mt-4 mx-2 ${step >= 2 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          <div className={`flex-1 h-0.5 mt-2.5 mx-1 ${step >= 2 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
           <div className={`flex flex-col items-center ${step >= 2 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-8 h-8 flex items-center justify-center rounded-full border-2 ${step >= 2 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
+            <div className={`w-5 h-5 flex items-center justify-center rounded-full border text-xs ${step >= 2 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
               2
             </div>
-            <span className="text-xs mt-1">Scripts</span>
+            <span className="text-xs">Scripts</span>
           </div>
-          <div className={`flex-1 h-1 mt-4 mx-2 ${step >= 3 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          <div className={`flex-1 h-0.5 mt-2.5 mx-1 ${step >= 3 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
           <div className={`flex flex-col items-center ${step >= 3 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-8 h-8 flex items-center justify-center rounded-full border-2 ${step >= 3 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
+            <div className={`w-5 h-5 flex items-center justify-center rounded-full border text-xs ${step >= 3 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
               3
             </div>
-            <span className="text-xs mt-1">Hosts</span>
+            <span className="text-xs">Hosts</span>
           </div>
-          <div className={`flex-1 h-1 mt-4 mx-2 ${step >= 4 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          <div className={`flex-1 h-0.5 mt-2.5 mx-1 ${step >= 4 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
           <div className={`flex flex-col items-center ${step >= 4 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-8 h-8 flex items-center justify-center rounded-full border-2 ${step >= 4 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
+            <div className={`w-5 h-5 flex items-center justify-center rounded-full border text-xs ${step >= 4 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
               4
             </div>
-            <span className="text-xs mt-1">Review</span>
+            <span className="text-xs">Review</span>
           </div>
         </div>
       </div>
@@ -171,10 +174,12 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 1: Basic Details */}
         {step === 1 && (
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Deployment Details</h3>
-            <div className="space-y-4">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Deployment Details</h3>
+            
+            {/* Two-column layout for name and description */}
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="name" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
                   Deployment Name *
                 </label>
                 <input
@@ -183,13 +188,13 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   name="name"
                   value={deploymentData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   required
                 />
               </div>
               
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="description" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
                   Description
                 </label>
                 <textarea
@@ -197,35 +202,38 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   name="description"
                   value={deploymentData.description}
                   onChange={handleInputChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  rows={1}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 />
               </div>
-              
+            </div>
+            
+            <div className="mb-2">
+              <label htmlFor="repositoryId" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                Repository *
+              </label>
+              <select
+                id="repositoryId"
+                name="repositoryId"
+                value={deploymentData.repositoryId}
+                onChange={handleInputChange}
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                required
+              >
+                <option value="">Select a repository</option>
+                <option value="repo1">Main Repository</option>
+                <option value="repo2">Frontend Repository</option>
+                <option value="repo3">Backend Repository</option>
+              </select>
+            </div>
+            
+            {/* Schedule options and navigation buttons in same row */}
+            <div className="flex justify-between items-center">
               <div>
-                <label htmlFor="repositoryId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Repository *
-                </label>
-                <select
-                  id="repositoryId"
-                  name="repositoryId"
-                  value={deploymentData.repositoryId}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  required
-                >
-                  <option value="">Select a repository</option>
-                  <option value="repo1">Main Repository</option>
-                  <option value="repo2">Frontend Repository</option>
-                  <option value="repo3">Backend Repository</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
                   Schedule
                 </label>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3">
                   <div className="flex items-center">
                     <input
                       type="radio"
@@ -234,9 +242,9 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                       value="now"
                       checked={deploymentData.schedule === 'now'}
                       onChange={handleInputChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+                      className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
                     />
-                    <label htmlFor="scheduleNow" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    <label htmlFor="scheduleNow" className="ml-1 text-xs text-gray-700 dark:text-gray-300">
                       Deploy now
                     </label>
                   </div>
@@ -248,41 +256,105 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                       value="later"
                       checked={deploymentData.schedule === 'later'}
                       onChange={handleInputChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+                      className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
                     />
-                    <label htmlFor="scheduleLater" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    <label htmlFor="scheduleLater" className="ml-1 text-xs text-gray-700 dark:text-gray-300">
                       Schedule for later
                     </label>
                   </div>
                 </div>
               </div>
               
-              {deploymentData.schedule === 'later' && (
-                <div>
-                  <label htmlFor="scheduledTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Scheduled Time *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    id="scheduledTime"
-                    name="scheduledTime"
-                    value={deploymentData.scheduledTime}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    required={deploymentData.schedule === 'later'}
-                  />
-                </div>
-              )}
+              {/* Navigation buttons */}
+              <div className="flex justify-end">
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={handlePrevStep}
+                    className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    Previous
+                  </button>
+                ) : (
+                  <div></div>
+                )}
+                
+                {step < 4 ? (
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    disabled={!isStepValid()}
+                    className={`px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                      isStepValid() 
+                        ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+                        : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+                    }`}
+                  >
+                    Next
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  >
+                    Create Deployment
+                  </button>
+                )}
+              </div>
             </div>
+            
+            {deploymentData.schedule === 'later' && (
+              <div className="mt-2">
+                <label htmlFor="scheduledTime" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                  Scheduled Time *
+                </label>
+                <input
+                  type="datetime-local"
+                  id="scheduledTime"
+                  name="scheduledTime"
+                  value={deploymentData.scheduledTime}
+                  onChange={handleInputChange}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  required={deploymentData.schedule === 'later'}
+                />
+              </div>
+            )}
           </div>
         )}
         
         {/* Step 2: Select Scripts */}
         {step === 2 && (
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Select Scripts</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Select Scripts</h3>
+              
+              {/* Navigation buttons */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  Previous
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={!isStepValid()}
+                  className={`px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                    isStepValid() 
+                      ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+                      : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+            
             <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-              <div className="max-h-60 overflow-y-auto">
+              <div className="max-h-48 overflow-y-auto">
                 {[
                   { id: 'script1', name: 'Deployment Script', path: '/scripts/deploy.sh', repository: 'main' },
                   { id: 'script2', name: 'Backup Script', path: '/scripts/backup.sh', repository: 'main' },
@@ -290,17 +362,17 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 ].map((script) => (
                   <div
                     key={script.id}
-                    className="flex items-center px-3 py-2 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800"
+                    className="flex items-center px-2 py-1 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800"
                   >
                     <input
                       type="checkbox"
                       id={`script-${script.id}`}
                       checked={deploymentData.scriptIds.includes(script.id)}
                       onChange={() => handleScriptsChange(script.id)}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+                      className="mr-2 h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                     />
                     <label htmlFor={`script-${script.id}`} className="flex-1 cursor-pointer">
-                      <div className="font-medium text-sm text-gray-900 dark:text-white">
+                      <div className="font-medium text-xs text-gray-900 dark:text-white">
                         {script.name}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
@@ -317,9 +389,36 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 3: Select Target Hosts */}
         {step === 3 && (
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Select Target Hosts</h3>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Select Target Hosts</h3>
+              
+              {/* Navigation buttons */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  Previous
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={!isStepValid()}
+                  className={`px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                    isStepValid() 
+                      ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+                      : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+            
             <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-              <div className="max-h-60 overflow-y-auto">
+              <div className="max-h-48 overflow-y-auto">
                 {[
                   { id: 'host1', name: 'Production Server 1', environment: 'Production', status: 'online', ip: '192.168.1.10' },
                   { id: 'host2', name: 'Production Server 2', environment: 'Production', status: 'online', ip: '192.168.1.11' },
@@ -328,17 +427,17 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 ].map((host) => (
                   <div
                     key={host.id}
-                    className="flex items-center px-3 py-2 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800"
+                    className="flex items-center px-2 py-1 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800"
                   >
                     <input
                       type="checkbox"
                       id={`host-${host.id}`}
                       checked={deploymentData.hostIds.includes(host.id)}
                       onChange={() => handleHostsChange(host.id)}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
+                      className="mr-2 h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                     />
                     <label htmlFor={`host-${host.id}`} className="flex-1 cursor-pointer">
-                      <div className="font-medium text-sm text-gray-900 dark:text-white">
+                      <div className="font-medium text-xs text-gray-900 dark:text-white">
                         {host.name}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -355,106 +454,92 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 4: Review */}
         {step === 4 && (
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Review Deployment</h3>
-            <div className="space-y-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Review Deployment</h3>
+              
+              {/* Navigation buttons */}
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  Previous
+                </button>
+                
+                <button
+                  type="submit"
+                  className="px-2 py-1 rounded-md shadow-sm text-xs font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
+                >
+                  Create Deployment
+                </button>
+              </div>
+            </div>
+            
+            <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-md">
               <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Deployment Details</h4>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Name:</div>
-                  <div className="text-sm text-gray-900 dark:text-white">{deploymentData.name}</div>
+                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Deployment Details</h4>
+                <div className="mt-1 grid grid-cols-2 gap-1 text-xs">
+                  <div className="text-gray-500 dark:text-gray-400">Name:</div>
+                  <div className="text-gray-900 dark:text-white">{deploymentData.name}</div>
                   
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Description:</div>
-                  <div className="text-sm text-gray-900 dark:text-white">{deploymentData.description || 'N/A'}</div>
+                  <div className="text-gray-500 dark:text-gray-400">Description:</div>
+                  <div className="text-gray-900 dark:text-white">{deploymentData.description || 'N/A'}</div>
                   
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Repository:</div>
-                  <div className="text-sm text-gray-900 dark:text-white">
+                  <div className="text-gray-500 dark:text-gray-400">Repository:</div>
+                  <div className="text-gray-900 dark:text-white">
                     {deploymentData.repositoryId === 'repo1' ? 'Main Repository' : 
                      deploymentData.repositoryId === 'repo2' ? 'Frontend Repository' : 
                      deploymentData.repositoryId === 'repo3' ? 'Backend Repository' : 'N/A'}
                   </div>
                   
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Schedule:</div>
-                  <div className="text-sm text-gray-900 dark:text-white">
+                  <div className="text-gray-500 dark:text-gray-400">Schedule:</div>
+                  <div className="text-gray-900 dark:text-white">
                     {deploymentData.schedule === 'now' ? 'Deploy immediately' : 
                      `Scheduled for ${deploymentData.scheduledTime}`}
                   </div>
                 </div>
               </div>
               
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Selected Scripts</h4>
-                {deploymentData.scriptIds.length === 0 ? (
-                  <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">No scripts selected</div>
-                ) : (
-                  <ul className="mt-1 list-disc list-inside text-sm text-gray-900 dark:text-white">
-                    {deploymentData.scriptIds.map(id => {
-                      const scriptName = 
-                        id === 'script1' ? 'Deployment Script' :
-                        id === 'script2' ? 'Backup Script' :
-                        id === 'script3' ? 'Monitoring Script' : id;
-                      return <li key={id}>{scriptName}</li>;
-                    })}
-                  </ul>
-                )}
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Target Hosts</h4>
-                {deploymentData.hostIds.length === 0 ? (
-                  <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">No hosts selected</div>
-                ) : (
-                  <ul className="mt-1 list-disc list-inside text-sm text-gray-900 dark:text-white">
-                    {deploymentData.hostIds.map(id => {
-                      const hostName = 
-                        id === 'host1' ? 'Production Server 1' :
-                        id === 'host2' ? 'Production Server 2' :
-                        id === 'host3' ? 'Staging Server' :
-                        id === 'host4' ? 'Development Server' : id;
-                      return <li key={id}>{hostName}</li>;
-                    })}
-                  </ul>
-                )}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Selected Scripts</h4>
+                  {deploymentData.scriptIds.length === 0 ? (
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">No scripts selected</div>
+                  ) : (
+                    <ul className="mt-0.5 list-disc list-inside text-xs text-gray-900 dark:text-white">
+                      {deploymentData.scriptIds.map(id => {
+                        const scriptName = 
+                          id === 'script1' ? 'Deployment Script' :
+                          id === 'script2' ? 'Backup Script' :
+                          id === 'script3' ? 'Monitoring Script' : id;
+                        return <li key={id}>{scriptName}</li>;
+                      })}
+                    </ul>
+                  )}
+                </div>
+                
+                <div>
+                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Target Hosts</h4>
+                  {deploymentData.hostIds.length === 0 ? (
+                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">No hosts selected</div>
+                  ) : (
+                    <ul className="mt-0.5 list-disc list-inside text-xs text-gray-900 dark:text-white">
+                      {deploymentData.hostIds.map(id => {
+                        const hostName = 
+                          id === 'host1' ? 'Production Server 1' :
+                          id === 'host2' ? 'Production Server 2' :
+                          id === 'host3' ? 'Staging Server' :
+                          id === 'host4' ? 'Development Server' : id;
+                        return <li key={id}>{hostName}</li>;
+                      })}
+                    </ul>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         )}
-        
-        {/* Navigation buttons */}
-        <div className="mt-8 flex justify-between">
-          {step > 1 ? (
-            <button
-              type="button"
-              onClick={handlePrevStep}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Previous
-            </button>
-          ) : (
-            <div></div>
-          )}
-          
-          {step < 4 ? (
-            <button
-              type="button"
-              onClick={handleNextStep}
-              disabled={!isStepValid()}
-              className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                isStepValid() 
-                  ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
-                  : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
-              }`}
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            >
-              Create Deployment
-            </button>
-          )}
-        </div>
       </form>
     </div>
   );
