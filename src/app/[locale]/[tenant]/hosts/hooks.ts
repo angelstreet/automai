@@ -10,7 +10,7 @@ import {
   createHost,
   deleteHost as deleteHostAction,
   testHostConnection as testHostConnectionAction,
-} from '@/app/actions/hosts';
+} from './actions';
 import useSWR from 'swr';
 
 // Local storage key for hosts cache
