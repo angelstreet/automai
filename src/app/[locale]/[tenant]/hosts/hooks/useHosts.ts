@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from '../types';
-import { getHosts, createHost } from '@/app/actions/hosts';
+import { getHosts, createHost, deleteHost as deleteHostAction, testHostConnection as testHostConnectionAction } from '@/app/actions/hosts';
 import useSWR from 'swr';
 
 // Local storage key for hosts cache
@@ -78,6 +78,7 @@ export function useHosts() {
 
         // Update the SWR cache with the new host
         await mutate(async (currentHosts: Host[] = []) => {
+          if (!result.data) return currentHosts;
           const updatedHosts = [...currentHosts, result.data];
           setCachedHosts(updatedHosts);
           return updatedHosts;
@@ -97,12 +98,129 @@ export function useHosts() {
     [toast, mutate],
   );
 
+  // Delete host functionality
+  const deleteHost = useCallback(
+    async (id: string) => {
+      try {
+        const result = await deleteHostAction(id);
+
+        if (!result.success) {
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to delete host',
+            variant: 'destructive',
+          });
+          return false;
+        }
+
+        // Update the SWR cache to remove the deleted host
+        await mutate(
+          async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.filter(host => host.id !== id);
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          },
+          false
+        );
+
+        toast({
+          title: 'Success',
+          description: 'Host deleted successfully',
+        });
+
+        return true;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete host';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return false;
+      }
+    },
+    [toast, mutate]
+  );
+
+  // Test connection functionality
+  const testConnection = useCallback(
+    async (id: string) => {
+      try {
+        const result = await testHostConnectionAction(id);
+
+        if (!result.success) {
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to test connection',
+            variant: 'destructive',
+          });
+          
+          // Update the host status in the cache
+          await mutate(
+            async (currentHosts: Host[] = []) => {
+              const updatedHosts = currentHosts.map(host => {
+                if (host.id === id) {
+                  return {
+                    ...host,
+                    status: 'failed' as const,
+                  };
+                }
+                return host;
+              });
+              setCachedHosts(updatedHosts);
+              return updatedHosts;
+            },
+            false
+          );
+          
+          return false;
+        }
+
+        // Update the host status in the cache
+        await mutate(
+          async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map(host => {
+              if (host.id === id) {
+                return {
+                  ...host,
+                  status: 'connected' as const,
+                };
+              }
+              return host;
+            });
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          },
+          false
+        );
+
+        toast({
+          title: 'Success',
+          description: result.message || 'Connection test successful',
+        });
+        
+        return true;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to test connection';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return false;
+      }
+    },
+    [toast, mutate]
+  );
+
   return {
     hosts,
     loading: isLoading,
     error: null,
     fetchHosts: mutate,
     addHost,
+    deleteHost,
+    testConnection,
     isLoaded: !isLoading && hosts !== null,
   };
 } 

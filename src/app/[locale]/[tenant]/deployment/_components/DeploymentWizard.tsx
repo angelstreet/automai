@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowLeft, Calendar, Server, Code, CheckCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface DeploymentWizardProps {
   onComplete: () => void;

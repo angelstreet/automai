@@ -5,7 +5,7 @@ import { ArrowLeft, RefreshCw, Terminal, Files, ChartBar, StopCircle, X } from '
 import { useDeploymentDetails } from '../useDeployments';
 import StatusBadge from './StatusBadge';
 import { calculateDuration, formatDate } from '../utils';
-import { DeploymentScript, LogEntry } from '../types';
+import { DeploymentScript } from '../types';
 
 interface DeploymentDetailsProps {
   deploymentId: string;

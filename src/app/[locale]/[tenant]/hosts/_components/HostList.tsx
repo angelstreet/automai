@@ -43,12 +43,15 @@ export default function HostContainer() {
     const success = await addHost({
       name: formData.name,
       description: formData.description,
-      type: formData.type,
+      type: formData.type as 'ssh' | 'docker' | 'portainer',
       ip: formData.ip,
       port: parseInt(formData.port),
-      user: formData.username, // Convert from form's username to API's user field
+      user: formData.username,
       password: formData.password,
-      status: 'pending',
+      status: 'connected',
+      created_at: new Date(),
+      updated_at: new Date(),
+      is_windows: false,
     });
 
     if (success) {
@@ -103,7 +106,7 @@ export default function HostContainer() {
               <List className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={fetchHosts} variant="outline" size="sm">
+          <Button onClick={() => fetchHosts()} variant="outline" size="sm">
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
