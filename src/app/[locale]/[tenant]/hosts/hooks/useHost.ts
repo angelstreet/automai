@@ -132,11 +132,6 @@ export function useHost(initialHostId?: string) {
 
       setHost(null);
 
-      toast({
-        title: 'Success',
-        description: 'Host deleted successfully',
-      });
-
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete host';
@@ -197,11 +192,6 @@ export function useHost(initialHostId?: string) {
           status: 'connected',
           errorMessage: undefined,
         };
-      });
-
-      toast({
-        title: 'Success',
-        description: result.message || 'Connection test successful',
       });
 
       return true;

@@ -272,10 +272,6 @@ export function useHostManagement(hostId?: string) {
       const result = await deleteHostAction(hostId);
       
       if (result.success) {
-        toast({
-          title: 'Host deleted',
-          description: 'Host has been deleted successfully',
-        });
         router.refresh();
         return true;
       } else {

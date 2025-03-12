@@ -15,7 +15,7 @@ import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { SAMPLE_FILES, SAMPLE_FILE_CONTENT } from './constants';
+import { SAMPLE_FILES, SAMPLE_FILE_CONTENT, FILE_EXTENSION_COLORS } from './constants';
 
 interface RepositoryExplorerProps {
   repository: any; // We'll replace this with proper types later
@@ -44,22 +44,12 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     }
   };
 
-  // Get file icon based on extension
+  // Get file icon based on extension using constants
   const getFileIcon = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
+    const extension = fileName.split('.').pop()?.toLowerCase() || 'default';
+    const colorClass = FILE_EXTENSION_COLORS[extension] || FILE_EXTENSION_COLORS.default;
     
-    switch(extension) {
-      case 'py':
-        return <FileCode className="text-blue-500" />;
-      case 'sh':
-        return <Terminal className="text-green-500" />;
-      case 'md':
-        return <FileCode className="text-gray-500" />;
-      case 'txt':
-        return <FileCode className="text-gray-400" />;
-      default:
-        return <FileCode />;
-    }
+    return <FileCode className={colorClass} />;
   };
 
   // Navigate through repository files
