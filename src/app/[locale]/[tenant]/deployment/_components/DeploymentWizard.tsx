@@ -137,33 +137,33 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         </div>
       </div>
 
-      {/* Progress indicator - even more compact */}
+      {/* Progress indicator - with larger numbers */}
       <div className="mb-3">
         <div className="flex justify-between">
           <div className={`flex flex-col items-center ${step >= 1 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-5 h-5 flex items-center justify-center rounded-full border text-xs ${step >= 1 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
-              1
+            <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 1 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
+              <span className="text-sm font-medium">1</span>
             </div>
             <span className="text-xs">Details</span>
           </div>
-          <div className={`flex-1 h-0.5 mt-2.5 mx-1 ${step >= 2 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          <div className={`flex-1 h-0.5 mt-3 mx-1 ${step >= 2 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
           <div className={`flex flex-col items-center ${step >= 2 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-5 h-5 flex items-center justify-center rounded-full border text-xs ${step >= 2 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
-              2
+            <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 2 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
+              <span className="text-sm font-medium">2</span>
             </div>
             <span className="text-xs">Scripts</span>
           </div>
-          <div className={`flex-1 h-0.5 mt-2.5 mx-1 ${step >= 3 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          <div className={`flex-1 h-0.5 mt-3 mx-1 ${step >= 3 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
           <div className={`flex flex-col items-center ${step >= 3 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-5 h-5 flex items-center justify-center rounded-full border text-xs ${step >= 3 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
-              3
+            <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 3 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
+              <span className="text-sm font-medium">3</span>
             </div>
             <span className="text-xs">Hosts</span>
           </div>
-          <div className={`flex-1 h-0.5 mt-2.5 mx-1 ${step >= 4 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          <div className={`flex-1 h-0.5 mt-3 mx-1 ${step >= 4 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
           <div className={`flex flex-col items-center ${step >= 4 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-5 h-5 flex items-center justify-center rounded-full border text-xs ${step >= 4 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
-              4
+            <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 4 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
+              <span className="text-sm font-medium">4</span>
             </div>
             <span className="text-xs">Review</span>
           </div>
@@ -176,36 +176,34 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
           <div>
             <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Deployment Details</h3>
             
-            {/* Two-column layout for name and description */}
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div>
-                <label htmlFor="name" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
-                  Deployment Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={deploymentData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="description" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
-                  Description
-                </label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={deploymentData.description}
-                  onChange={handleInputChange}
-                  rows={1}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+            {/* Name and description stacked vertically */}
+            <div className="mb-2">
+              <label htmlFor="name" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                Deployment Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={deploymentData.name}
+                onChange={handleInputChange}
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                required
+              />
+            </div>
+            
+            <div className="mb-2">
+              <label htmlFor="description" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                Description
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                value={deploymentData.description}
+                onChange={handleInputChange}
+                rows={4}
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white resize-none"
+              />
             </div>
             
             <div className="mb-2">
