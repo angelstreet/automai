@@ -1,0 +1,104 @@
+# Caching Best Practices
+
+## Overview
+
+These guidelines define how to implement caching across the application. Follow these patterns for consistent and efficient data management.
+
+## Key Principles
+
+1. **Use SWR as Primary Cache**
+   - Implement through global `SWRProvider`
+   - Configure revalidation and deduping intervals
+   - Use for all data fetching hooks
+
+2. **Hybrid Caching Strategy**
+   - Combine SWR with localStorage/sessionStorage
+   - Use localStorage for longer-term persistence
+   - Use sessionStorage for session-specific data
+
+3. **Cache Invalidation**
+   - Always provide clear cache methods
+   - Invalidate both SWR and storage caches
+   - Handle errors gracefully
+
+## Implementation Examples
+
+### SWR Configuration
+
+```typescript
+// Global SWR configuration
+const SWRConfig = {
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  dedupingInterval: 60000, // 1 minute
+  revalidateIfStale: false
+};
+
+// Hook implementation
+const useData = (key: string) => {
+  return useSWR(key, fetcher, SWRConfig);
+};
+```
+
+### Hybrid Caching Pattern
+
+```typescript
+const fetchWithCache = async (key: string) => {
+  // Try localStorage first
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(key);
+    if (cached) return JSON.parse(cached);
+  }
+
+  // Fetch and cache
+  const data = await fetchData();
+  localStorage.setItem(key, JSON.stringify(data));
+  return data;
+};
+```
+
+### Cache Invalidation
+
+```typescript
+const clearCache = async () => {
+  // Clear storage
+  localStorage.removeItem(key);
+  // Clear SWR
+  await mutate(key, null, false);
+};
+```
+
+## Common Pitfalls
+
+1. **❌ Never cache sensitive data** in localStorage/sessionStorage
+2. **❌ Never ignore SSR considerations** when accessing window/localStorage
+3. **❌ Never skip error handling** for storage operations
+4. **❌ Never cache without expiration** strategy
+
+## Best Practices
+
+1. **✅ Always define cache duration constants**
+   ```typescript
+   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+   ```
+
+2. **✅ Always handle SSR safely**
+   ```typescript
+   if (typeof window !== 'undefined') {
+     // Storage operations here
+   }
+   ```
+
+3. **✅ Always implement request throttling** for frequent calls
+   ```typescript
+   const MIN_REQUEST_INTERVAL = 3000; // 3 seconds
+   ```
+
+4. **✅ Always clear invalid cache data**
+   ```typescript
+   try {
+     const cached = JSON.parse(storage.getItem(key));
+   } catch {
+     storage.removeItem(key);
+   }
+   ``` 
