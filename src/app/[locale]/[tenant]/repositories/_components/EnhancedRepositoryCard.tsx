@@ -40,7 +40,7 @@ export function EnhancedRepositoryCard({
 
   // Get the provider icon based on the type
   const getProviderIcon = () => {
-    switch(repository.provider) {
+    switch(repository.providerType) {
       case 'github':
         return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':

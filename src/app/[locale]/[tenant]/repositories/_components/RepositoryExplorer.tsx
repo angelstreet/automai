@@ -15,91 +15,12 @@ import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
+import { SAMPLE_FILES, SAMPLE_FILE_CONTENT } from './constants';
 
 interface RepositoryExplorerProps {
   repository: any; // We'll replace this with proper types later
   onBack: () => void;
 }
-
-// Sample file structure for a repository
-const SAMPLE_FILES = {
-  'src': {
-    type: 'folder',
-    children: {
-      'main.py': { type: 'file', size: '4.2 KB', lastModified: '2025-02-28' },
-      'utils': {
-        type: 'folder',
-        children: {
-          'helpers.py': { type: 'file', size: '2.8 KB', lastModified: '2025-02-15' },
-          'config.py': { type: 'file', size: '1.5 KB', lastModified: '2025-02-20' }
-        }
-      }
-    }
-  },
-  'tests': {
-    type: 'folder',
-    children: {
-      'test_main.py': { type: 'file', size: '3.1 KB', lastModified: '2025-02-25' }
-    }
-  },
-  'README.md': { type: 'file', size: '8.5 KB', lastModified: '2025-03-01' },
-  'requirements.txt': { type: 'file', size: '0.5 KB', lastModified: '2025-02-10' }
-};
-
-// Sample file content
-const SAMPLE_FILE_CONTENT = `#!/usr/bin/env python3
-import argparse
-import logging
-import sys
-from pathlib import Path
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-def parse_arguments():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description='Process some data.')
-    parser.add_argument('--input', type=str, required=True, help='Input file path')
-    parser.add_argument('--output', type=str, required=True, help='Output file path')
-    parser.add_argument('--verbose', action='store_true', help='Enable verbose logging')
-    
-    return parser.parse_args()
-
-def main():
-    """Main entry point of the script."""
-    args = parse_arguments()
-    
-    if args.verbose:
-        logger.setLevel(logging.DEBUG)
-    
-    logger.info(f"Processing input file: {args.input}")
-    input_path = Path(args.input)
-    output_path = Path(args.output)
-    
-    if not input_path.exists():
-        logger.error(f"Input file does not exist: {args.input}")
-        return 1
-    
-    # Process the file
-    try:
-        with open(input_path, 'r') as f_in, open(output_path, 'w') as f_out:
-            for line in f_in:
-                # Example processing: convert to uppercase
-                processed_line = line.upper()
-                f_out.write(processed_line)
-        
-        logger.info(f"Successfully processed file and saved to: {args.output}")
-        return 0
-    except Exception as e:
-        logger.error(f"Error processing file: {e}")
-        return 1
-
-if __name__ == "__main__":
-    sys.exit(main())
-`;
 
 export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerProps) {
   const t = useTranslations('repositories');
@@ -111,7 +32,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
 
   // Get provider icon
   const getProviderIcon = () => {
-    switch(repository.provider) {
+    switch(repository.providerType) {
       case 'github':
         return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':

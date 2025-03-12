@@ -30,71 +30,7 @@ import { Badge } from '@/components/shadcn/badge';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { ConnectRepositoryValues } from '@/types/repositories';
-
-// Mock data for popular repositories by category
-const POPULAR_REPOSITORIES = {
-  'CI/CD': [
-    { 
-      id: '1', 
-      name: 'actions/runner-images', 
-      description: 'GitHub Actions runner images',
-      url: 'https://github.com/actions/runner-images.git',
-      stars: '4.2k',
-      category: 'CI/CD'
-    },
-    { 
-      id: '2', 
-      name: 'jenkins-x/jx3-pipeline-catalog', 
-      description: 'Jenkins X Pipeline Catalog',
-      url: 'https://github.com/jenkins-x/jx3-pipeline-catalog.git',
-      stars: '1.7k',
-      category: 'CI/CD'
-    }
-  ],
-  'Automation': [
-    { 
-      id: '3', 
-      name: 'ansible/ansible', 
-      description: 'Ansible automation platform',
-      url: 'https://github.com/ansible/ansible.git',
-      stars: '58.1k',
-      category: 'Automation'
-    },
-    { 
-      id: '4', 
-      name: 'puppetlabs/puppet', 
-      description: 'Puppet infrastructure automation',
-      url: 'https://github.com/puppetlabs/puppet.git',
-      stars: '7.3k',
-      category: 'Automation'
-    }
-  ],
-  'Monitoring': [
-    { 
-      id: '5', 
-      name: 'grafana/grafana', 
-      description: 'Grafana observability platform',
-      url: 'https://github.com/grafana/grafana.git',
-      stars: '57.2k',
-      category: 'Monitoring'
-    },
-    { 
-      id: '6', 
-      name: 'prometheus/prometheus', 
-      description: 'Prometheus monitoring system',
-      url: 'https://github.com/prometheus/prometheus.git',
-      stars: '48.9k',
-      category: 'Monitoring'
-    }
-  ]
-};
-
-// Mock runners for execution environment selection
-const SAMPLE_RUNNERS = [
-  { id: '1', name: 'Python Runner', type: 'docker', status: 'available' },
-  { id: '2', name: 'Ubuntu Server', type: 'ssh', status: 'available' },
-  { id: '3', name: 'Data Node', type: 'ssh', status: 'busy' }
-];
+import { POPULAR_REPOSITORIES, SAMPLE_RUNNERS } from './constants';
 
 interface EnhancedConnectRepositoryDialogProps {
   open: boolean;

@@ -29,7 +29,7 @@ export interface Repository {
   isPrivate: boolean;
   defaultBranch: string;
   language?: string;
-  provider: GitProviderType;
+  providerType: GitProviderType;
   providerId: string;
   owner: string;
   lastSyncedAt?: string;
