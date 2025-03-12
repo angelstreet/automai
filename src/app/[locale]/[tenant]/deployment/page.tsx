@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Plus, List, LayoutGrid, RefreshCw } from 'lucide-react';
 import DeploymentWizard from './_components/DeploymentWizard';
