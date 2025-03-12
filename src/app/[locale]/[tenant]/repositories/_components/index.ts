@@ -1,5 +1,5 @@
 export { GitProviderCard } from './GitProviderCard';
-export { RepositoryCard } from './RepositoryCard';
+export { RepositoryCard } from './EnhancedRepositoryCard';
 export { AddGitProviderDialog } from './AddGitProviderDialog';
 export { RepositoryGrid } from './RepositoryGrid';
 export { GitProviderGrid } from './GitProviderGrid';

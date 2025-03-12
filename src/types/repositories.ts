@@ -1,109 +1,60 @@
-import { z } from 'zod';
+/**
+ * Types for Git repositories and providers
+ */
 
 export type GitProviderType = 'github' | 'gitlab' | 'gitea';
 
 export type GitProviderStatus = 'connected' | 'disconnected' | 'error';
 
-export type SyncStatus = 'IDLE' | 'SYNCING' | 'ERROR' | 'SYNCED';
+export type RepositorySyncStatus = 'SYNCED' | 'SYNCING' | 'ERROR' | 'IDLE' | 'PENDING';
 
 export interface GitProvider {
   id: string;
-  userId: string;
-  tenantId: string;
   type: GitProviderType;
+  name: GitProviderType | string;
   displayName: string;
-  status: 'connected' | 'disconnected';
+  status: GitProviderStatus;
   serverUrl?: string;
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: Date;
-  created_at: Date;
-  updated_at: Date;
-  lastSyncedAt?: Date;
+  lastSyncedAt?: string;
+  repositoryCount?: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Repository {
   id: string;
-  providerId: string;
   name: string;
-  owner: string;
+  description?: string;
   url?: string;
-  branch?: string;
-  defaultBranch?: string;
   isPrivate: boolean;
-  description?: string;
-  syncStatus: 'SYNCED' | 'PENDING' | 'ERROR';
-  created_at: Date;
-  updated_at: Date;
-  lastSyncedAt?: Date;
-  error?: string;
-}
-
-export interface RepositoryCreateInput {
-  name: string;
-  description?: string;
-  url: string;
-  defaultBranch?: string;
-  providerId: string;
-  projectId?: string;
-}
-
-export interface RepositoryUpdateInput {
-  name?: string;
-  description?: string;
-  defaultBranch?: string;
-  projectId?: string;
-}
-
-export interface GitProviderCreateInput {
-  name: GitProviderType;
-  type: GitProviderType;
-  displayName: string;
-  serverUrl?: string;
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: Date;
-}
-
-export interface GitProviderUpdateInput {
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: Date;
-}
-
-export interface OAuthState {
+  defaultBranch: string;
+  language?: string;
   provider: GitProviderType;
-  redirectUrl: string;
+  providerId: string;
+  owner: string;
+  lastSyncedAt?: string;
+  syncStatus: RepositorySyncStatus;
+  createdAt: string;
+  updated_at: string;
+  provider?: GitProvider;
 }
 
-export const GitProviderSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  tenantId: z.string(),
-  type: z.enum(['github', 'gitlab', 'gitea']),
-  displayName: z.string(),
-  status: z.enum(['connected', 'disconnected']),
-  serverUrl: z.string().optional(),
-  accessToken: z.string().optional(),
-  refreshToken: z.string().optional(),
-  expiresAt: z.date().optional(),
-  created_at: z.date(),
-  updated_at: z.date(),
-  lastSyncedAt: z.date().optional(),
-});
+export interface RepositoryFile {
+  name: string;
+  path: string;
+  type: 'file' | 'folder';
+  size?: string;
+  lastModified?: string;
+  content?: string;
+  children?: Record<string, RepositoryFile>;
+}
 
-export const RepositorySchema = z.object({
-  id: z.string(),
-  providerId: z.string(),
-  name: z.string(),
-  owner: z.string(),
-  url: z.string().optional(),
-  branch: z.string().optional(),
-  isPrivate: z.boolean(),
-  description: z.string().optional(),
-  syncStatus: z.enum(['SYNCED', 'PENDING', 'ERROR']),
-  created_at: z.date(),
-  updated_at: z.date(),
-  lastSyncedAt: z.date().optional(),
-  error: z.string().optional(),
-});
+export interface ConnectRepositoryValues {
+  type: GitProviderType | 'quick-clone';
+  method?: 'oauth' | 'token';
+  displayName?: string;
+  accessToken?: string;
+  serverUrl?: string;
+  url?: string;
+  runner?: any;
+}

@@ -38,7 +38,7 @@
     "src/**/*.ts",
     "src/**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, "src/app/[locale]/[tenant]/repositories/_components/EnhancedConnectRepositoryDialog.tsx"  ],
   "exclude": [
     "node_modules",
     ".next",

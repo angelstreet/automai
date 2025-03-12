@@ -1,565 +1,300 @@
-'use client';
+import React, { useState } from 'react';
+import { GitBranch, Plus, RefreshCw, Search, Filter, Star, ArrowLeft, ExternalLink, Lock, Globe } from 'lucide-react';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { GitBranch, Plus, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
-import { Repository, GitProvider, GitProviderType } from '@/types/repositories';
-import { useToast } from '@/components/shadcn/use-toast';
-import { Button } from '@/components/shadcn/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { EmptyState } from '@/components/layout/EmptyState';
-import {
-  RepositoryCard,
-  GitProviderCard,
-  AddGitProviderDialog,
-  RepositoryGrid,
-  GitProviderGrid,
-  RepositoryTable,
-} from './_components';
-import { useTranslations } from 'next-intl';
-import { useRepositories } from '@/hooks/useRepositories';
-import { useGitProviders } from '@/hooks/useGitProviders';
-import { cn } from '@/lib/utils';
+// Mock repositories data
+const MOCK_REPOSITORIES = [
+  {
+    id: '1',
+    name: 'deployment-scripts',
+    description: 'CI/CD and deployment automation scripts',
+    provider: 'github',
+    isPrivate: false,
+    language: 'Python',
+    lastSyncedAt: 'a few days ago',
+    defaultBranch: 'main',
+    syncStatus: 'SYNCED',
+    owner: 'company'
+  },
+  {
+    id: '2',
+    name: 'system-utils',
+    description: 'System monitoring and maintenance utilities for cloud environments',
+    provider: 'github',
+    isPrivate: true,
+    language: 'Bash',
+    lastSyncedAt: '5 days ago',
+    defaultBranch: 'main',
+    syncStatus: 'SYNCED',
+    owner: 'username'
+  },
+  {
+    id: '3',
+    name: 'data-pipelines',
+    description: 'ETL and data processing pipelines for analytics',
+    provider: 'gitlab',
+    isPrivate: false,
+    language: 'Python',
+    lastSyncedAt: '1 week ago',
+    defaultBranch: 'master',
+    syncStatus: 'IDLE',
+    owner: 'department'
+  }
+];
 
-export default function RepositoriesPage() {
-  const router = useRouter();
-  const { toast } = useToast();
-  const t = useTranslations('repositories');
+// Repository Card Component
+const RepositoryCard = ({ repository, isPinned, isHovered, onPin }) => {
+  return (
+    <div 
+      className={`border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md p-4 relative ${isHovered ? 'shadow-md' : ''}`}
+    >
+      <div className="absolute top-2 right-2">
+        <button 
+          className={`p-1 rounded-full ${isPinned ? 'text-yellow-500' : 'text-gray-400'}`}
+          onClick={onPin}
+        >
+          <Star className="h-4 w-4" />
+        </button>
+      </div>
+      
+      <div className="flex items-center gap-2 mt-2">
+        <GitBranch className="h-5 w-5" />
+        <div className="flex-1 min-w-0">
+          <div className="text-base font-semibold truncate">
+            {repository.name}
+          </div>
+          <div className="truncate text-xs text-gray-500">
+            {repository.owner}/{repository.name}
+          </div>
+        </div>
+        {repository.isPrivate ? (
+          <div className="px-2 py-1 rounded-full text-xs flex items-center border">
+            <Lock className="h-3 w-3 mr-1" />
+            Private
+          </div>
+        ) : (
+          <div className="px-2 py-1 rounded-full text-xs flex items-center bg-gray-100">
+            <Globe className="h-3 w-3 mr-1" />
+            Public
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-2 text-sm text-gray-600 line-clamp-2">
+        {repository.description}
+      </div>
+      
+      <div className="mt-4 flex items-center text-xs text-gray-500">
+        <GitBranch className="h-3 w-3 mr-1" />
+        {repository.defaultBranch || 'main'}
+        <div 
+          className={`ml-2 px-2 py-0.5 rounded-full text-xs 
+            ${repository.language === 'Python' ? 'bg-blue-100 text-blue-800' : 
+              repository.language === 'Bash' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}
+        >
+          {repository.language}
+        </div>
+        <div className="ml-auto flex items-center">
+          <div className="h-3 w-3 mr-1">⏱️</div>
+          {repository.lastSyncedAt}
+        </div>
+      </div>
+      
+      {isHovered && (
+        <div className="mt-4 pt-2 border-t flex justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`px-2 py-0.5 rounded-full text-xs ${repository.syncStatus === 'SYNCED' ? 'bg-blue-100 text-blue-800' : 'border'}`}>
+              {repository.syncStatus}
+            </div>
+          </div>
+          <div className="flex gap-1">
+            <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md flex items-center">
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Open
+            </button>
+            <button className="px-2 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded-md flex items-center">
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Sync
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [providers, setProviders] = useState<GitProvider[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
-  const [tabsValue, setTabsValue] = useState('providers');
-  const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
-  const [refreshingProviderId, setRefreshingProviderId] = useState<string | null>(null);
-  const [addProviderOpen, setAddProviderOpen] = useState(false);
-  const [isAddingProvider, setIsAddingProvider] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<GitProvider | null>(null);
+export default function RepositoryPagePreview() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedProviders, setSelectedProviders] = useState<string[]>([]);
-  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
-
-  // Add a ref to track if fetching is already in progress
-  const isFetchingRef = useRef(false);
-
-  const {
-    repositories: repositoriesFromHooks,
-    isLoading: isLoadingRepos,
-    syncRepository,
-    isSyncing,
-    refreshAll: refreshRepositories,
-  } = useRepositories();
-
-  const {
-    providers: providersFromHooks,
-    isLoading: isLoadingProviders,
-    refreshProvider,
-    isRefreshing: isRefreshingProvider,
-    addProvider: addProviderFromHooks,
-    isAddingProvider: isAddingProviderFromHooks,
-    editProvider,
-    editingProvider: editingProviderFromHooks,
-    setEditingProvider: setEditingProviderFromHooks,
-  } = useGitProviders();
-
-  // Define fetchData outside of useEffect so it can be called from other places
-  const fetchData = async () => {
-    // Check if a fetch is already in progress
-    if (isFetchingRef.current) return;
-
-    isFetchingRef.current = true;
-    setIsLoading(true);
-
-    try {
-      // Step 1: Fetch providers from database
-      console.log('Fetching Git providers from database...');
-      const providersResponse = await fetchWithAuth(
-        '/api/git-providers',
-        {},
-        {
-          maxRetries: 3,
-          initialDelay: 1000,
-          shouldRetry: true,
-        },
-      );
-
-      if (!providersResponse.ok) {
-        // Handle error without redirecting
-        console.log('Failed to fetch providers:', providersResponse.status);
-
-        if (providersResponse.status === 401) {
-          toast({
-            title: 'Authentication Error',
-            description: 'Unable to access Git providers. Please check your connection.',
-            variant: 'destructive',
-          });
-        }
-
-        setProviders([]);
-        setRepositories([]);
-        setIsLoading(false);
-        isFetchingRef.current = false;
-        return; // Exit early if we can't fetch providers
-      }
-
-      // Process provider data
-      const providersData = await providersResponse.json();
-      setProviders(providersData);
-
-      // Step 2: Check if we have any providers with valid status
-      const hasValidProviders =
-        providersData.length > 0 &&
-        providersData.some((provider) => provider.status === 'connected');
-
-      if (!hasValidProviders) {
-        console.log('No valid providers found, skipping repository fetch');
-        setRepositories([]);
-        setIsLoading(false);
-        isFetchingRef.current = false;
-        return; // Exit early if no valid providers
-      }
-
-      // Step 3: Fetch repositories only if we have valid providers
-      console.log('Fetching repositories for providers...');
-      const reposResponse = await fetchWithAuth(
-        '/api/fetch-all-repositories',
-        {},
-        {
-          maxRetries: 3,
-          initialDelay: 1000,
-          shouldRetry: true,
-        },
-      );
-
-      if (!reposResponse.ok) {
-        // Handle error without redirecting
-        console.log('Failed to fetch repositories:', reposResponse.status);
-
-        if (reposResponse.status === 401) {
-          toast({
-            title: 'Authentication Error',
-            description: 'Unable to access repositories. Please check your connection.',
-            variant: 'destructive',
-          });
-        }
-
-        setRepositories([]);
+  const [activeTab, setActiveTab] = useState('all');
+  const [pinnedRepos, setPinnedRepos] = useState(new Set(['1']));
+  const [hoveredRepo, setHoveredRepo] = useState(null);
+  const [showConnectDialog, setShowConnectDialog] = useState(false);
+  
+  // Toggle pinned status
+  const handleTogglePinned = (id) => {
+    setPinnedRepos(prev => {
+      const newPinned = new Set(prev);
+      if (newPinned.has(id)) {
+        newPinned.delete(id);
       } else {
-        const reposData = await reposResponse.json();
-        console.log(`Fetched ${reposData.length} repositories`);
-        setRepositories(reposData);
+        newPinned.add(id);
       }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch data. Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-      isFetchingRef.current = false;
+      return newPinned;
+    });
+  };
+  
+  // Filter repos based on tab
+  const getTabRepositories = () => {
+    switch(activeTab) {
+      case 'pinned':
+        return MOCK_REPOSITORIES.filter(repo => pinnedRepos.has(repo.id));
+      case 'public':
+        return MOCK_REPOSITORIES.filter(repo => !repo.isPrivate);
+      case 'private':
+        return MOCK_REPOSITORIES.filter(repo => repo.isPrivate);
+      case 'all':
+      default:
+        return MOCK_REPOSITORIES;
     }
   };
-
-  // Fetch data on component mount
-  useEffect(() => {
-    fetchData();
-  }, [router, toast]);
-
-  // Handle adding a provider
-  const handleAddProvider = async (values: { type: GitProviderType; displayName: string }) => {
-    setIsAddingProvider(true);
-    try {
-      const response = await fetchWithAuth('/api/git-providers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to add provider: ${response.statusText}`);
-      }
-
-      const newProvider = await response.json();
-      setProviders([...providers, newProvider]);
-
-      toast({
-        title: 'Success',
-        description: 'Git provider added successfully',
-      });
-
-      // Refresh the data to get updated providers and repositories
-      isFetchingRef.current = false;
-      fetchData();
-    } catch (error) {
-      console.error('Error adding provider:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add provider. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsAddingProvider(false);
-      setAddProviderOpen(false);
-    }
-  };
-
-  // Handle editing a provider
-  const handleEditProvider = (provider: GitProvider) => {
-    setEditingProvider(provider);
-    setAddProviderOpen(true);
-  };
-
-  // Handle deleting a provider
-  const handleDeleteProvider = async (id: string) => {
-    if (!confirm(t('confirm_delete'))) return;
-
-    try {
-      const response = await fetchWithAuth(`/api/git-providers?id=${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete provider: ${response.statusText}`);
-      }
-
-      // Remove provider from state
-      setProviders(providers.filter((p) => p.id !== id));
-      // Remove associated repositories
-      setRepositories(repositories.filter((r) => r.providerId !== id));
-
-      toast({
-        title: 'Success',
-        description: 'Git provider deleted successfully',
-      });
-    } catch (error) {
-      console.error('Error deleting provider:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete provider. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Handle refreshing a provider's repositories
-  const handleRefreshProvider = async (id: string) => {
-    setRefreshingProviderId(id);
-    try {
-      const response = await fetchWithAuth(`/api/git-providers/sync?id=${id}`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to refresh provider: ${response.statusText}`);
-      }
-
-      // Refresh the data to get updated repositories
-      isFetchingRef.current = false;
-      await fetchData();
-
-      toast({
-        title: 'Success',
-        description: 'Provider repositories refreshed successfully',
-      });
-    } catch (error) {
-      console.error('Error refreshing provider:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh provider repositories. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setRefreshingProviderId(null);
-    }
-  };
-
-  // Handle syncing a specific repository
-  const handleSyncRepository = async (id: string) => {
-    setSyncingRepoId(id);
-    try {
-      const response = await fetchWithAuth(`/api/repositories/sync?id=${id}`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to sync repository: ${response.statusText}`);
-      }
-
-      const updatedRepo = await response.json();
-
-      // Update repository in state
-      setRepositories(repositories.map((repo) => (repo.id === id ? updatedRepo : repo)));
-
-      toast({
-        title: 'Success',
-        description: 'Repository synced successfully',
-      });
-    } catch (error) {
-      console.error('Error syncing repository:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to sync repository. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSyncingRepoId(null);
-    }
-  };
-
-  // Toggle provider filter
-  const handleToggleProviderFilter = (providerName: string) => {
-    setSelectedProviders((prev) =>
-      prev.includes(providerName)
-        ? prev.filter((p) => p !== providerName)
-        : [...prev, providerName],
-    );
-  };
-
-  // Clear all filters
-  const handleClearFilters = () => {
-    setSelectedProviders([]);
-    setSearchQuery('');
-  };
-
-  // Refresh all repositories
-  const handleRefreshAllRepositories = async () => {
-    setIsRefreshingAll(true);
-    try {
-      // Step 1: Check if we have valid providers first
-      if (providers.length === 0) {
-        toast({
-          title: 'No Providers',
-          description: 'No Git providers found to refresh repositories.',
-          variant: 'default',
-        });
-        return;
-      }
-
-      const hasValidProviders = providers.some((provider) => provider.status === 'connected');
-      if (!hasValidProviders) {
-        toast({
-          title: 'No Connected Providers',
-          description: 'No connected Git providers found. Please connect a provider first.',
-          variant: 'default',
-        });
-        return;
-      }
-
-      // Step 2: Call API to refresh all repositories
-      console.log('Refreshing repositories for all providers...');
-      const response = await fetchWithAuth('/api/fetch-all-repositories', {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to refresh repositories');
-      }
-
-      // Step 3: Fetch updated data
-      await fetchData();
-
-      toast({
-        title: 'Success',
-        description: 'All repositories refreshed successfully',
-      });
-    } catch (error) {
-      console.error('Error refreshing repositories:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to refresh repositories. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRefreshingAll(false);
-    }
-  };
-
-  // Filter repositories based on search and selected providers
-  const filteredRepositories = repositories.filter((repo) => {
-    const matchesSearch =
-      searchQuery.toLowerCase() === '' ||
-      repo.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesProvider =
-      selectedProviders.length === 0 ||
-      (repo.provider && selectedProviders.includes(repo.provider.id));
-    return matchesSearch && matchesProvider;
-  });
-
-  // Render content based on whether providers exist
-  const renderContent = () => {
-    // If still loading, show loading state
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">{t('loading')}</p>
-          </div>
-        </div>
-      );
-    }
-
-    // Handle empty states
-    if (tabsValue === 'providers' && providers.length === 0) {
-      return (
-        <EmptyState
-          title={t('no_providers')}
-          description={t('connectGit')}
-          icon={<GitBranch className="h-6 w-6" />}
-          action={
-            <Button onClick={() => setAddProviderOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('add_provider')}
-            </Button>
-          }
-        />
-      );
-    }
-
-    if (tabsValue === 'repositories') {
-      // If no providers at all, show provider empty state even in repositories tab
-      if (providers.length === 0) {
-        return (
-          <EmptyState
-            title={t('no_providers')}
-            description={t('connectGit')}
-            icon={<GitBranch className="h-6 w-6" />}
-            action={
-              <Button onClick={() => setAddProviderOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                {t('add_provider')}
-              </Button>
-            }
-          />
-        );
-      }
-
-      // If providers exist but no repositories, show repositories empty state
-      if (repositories.length === 0) {
-        return (
-          <EmptyState
-            title={t('no_repositories')}
-            description={t('no_repositories_description')}
-            icon={<GitBranch className="h-6 w-6" />}
-            action={
-              <Button onClick={() => setTabsValue('providers')}>{t('view_providers')}</Button>
-            }
-          />
-        );
-      }
-
-      // If repositories exist but none match the filter, show filtered empty state
-      if (filteredRepositories.length === 0) {
-        return (
-          <EmptyState
-            title={t('no_repos_found')}
-            description={
-              searchQuery || selectedProviders.length > 0
-                ? t('no_repos_found')
-                : t('no_repositories_description')
-            }
-            icon={<GitBranch className="h-6 w-6" />}
-            action={<Button onClick={handleClearFilters}>{t('clear_all')}</Button>}
-          />
-        );
-      }
-    }
-
-    // If we have data to show, render the appropriate content
+  
+  const displayRepositories = getTabRepositories();
+  
+  // Mock dialog for UI demo
+  const ConnectDialog = ({ open, onClose }) => {
+    if (!open) return null;
+    
     return (
-      <Tabs value={tabsValue} onValueChange={setTabsValue} className="w-full">
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="repositories">{t('repositories')}</TabsTrigger>
-            <TabsTrigger value="providers">{t('provider_type')}</TabsTrigger>
-          </TabsList>
-          <div className="flex space-x-2">
-            {tabsValue === 'repositories' && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefreshAllRepositories}
-                disabled={isRefreshingAll}
-              >
-                {isRefreshingAll ? (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                    {t('refreshing')}
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    {t('refresh')}
-                  </>
-                )}
-              </Button>
-            )}
-            <Button size="sm" onClick={() => setAddProviderOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('add_provider')}
-            </Button>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg max-w-md w-full p-4 shadow-xl">
+          <h2 className="text-xl font-semibold mb-2">Connect Repository</h2>
+          <p className="text-gray-600 mb-4">Connect to a Git provider to browse repositories</p>
+          
+          <div className="flex gap-2 justify-end">
+            <button 
+              className="px-4 py-2 border rounded-md hover:bg-gray-50"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+            <button 
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              onClick={onClose}
+            >
+              Connect
+            </button>
           </div>
         </div>
-
-        <TabsContent value="repositories" className="mt-0">
-          <RepositoryTable
-            repositories={filteredRepositories}
-            providers={providers}
-            selectedProviders={selectedProviders}
-            searchQuery={searchQuery}
-            isLoading={isLoadingRepos}
-            syncingRepoId={isSyncing}
-            onSearchChange={setSearchQuery}
-            onToggleProviderFilter={(providerId) => {
-              setSelectedProviders((prev) =>
-                prev.includes(providerId)
-                  ? prev.filter((id) => id !== providerId)
-                  : [...prev, providerId],
-              );
-            }}
-            onClearFilters={handleClearFilters}
-            onRefreshRepos={refreshRepositories}
-            onSyncRepository={syncRepository}
-          />
-        </TabsContent>
-
-        <TabsContent value="providers" className="mt-0">
-          <GitProviderGrid
-            providers={providers}
-            isLoading={isLoadingProviders}
-            onRefresh={refreshProvider}
-            refreshingProviderId={isRefreshingProvider}
-            onEdit={setEditingProviderFromHooks}
-          />
-        </TabsContent>
-      </Tabs>
+      </div>
     );
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <PageHeader title={t('repositories')} description={t('repositories_description')}>
-        {providers.length > 0 && (
-          <Button onClick={() => setAddProviderOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('add_provider')}
-          </Button>
-        )}
-        <AddGitProviderDialog
-          onSubmit={handleAddProvider}
-          isSubmitting={isAddingProvider}
-          open={addProviderOpen}
-          onOpenChange={setAddProviderOpen}
-          initialValues={editingProvider}
-        />
-      </PageHeader>
-      {renderContent()}
+    <div className="bg-white p-6 max-w-7xl mx-auto">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Repositories</h1>
+          <p className="text-gray-600">Browse, manage and execute scripts from your connected repositories</p>
+        </div>
+        <button 
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+          onClick={() => setShowConnectDialog(true)}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Provider
+        </button>
+      </div>
+
+      <div className="border rounded-lg">
+        <div className="p-4 border-b">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Repository Explorer</h2>
+            <button className="px-3 py-1.5 border rounded-md hover:bg-gray-50 flex items-center text-sm">
+              <RefreshCw className="h-4 w-4 mr-1" />
+              Refresh
+            </button>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-grow">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+              <input
+                placeholder="Search repositories..."
+                className="pl-8 pr-4 py-2 border rounded w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <select className="border rounded px-3 py-2">
+                <option>All Categories</option>
+                <option>Deployment</option>
+                <option>Data Processing</option>
+                <option>Testing</option>
+              </select>
+              <button className="p-2 border rounded">
+                <Filter className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div className="px-4 pt-4">
+          <div className="flex border-b">
+            <button 
+              className={`px-4 py-2 border-b-2 font-medium text-sm ${activeTab === 'all' ? 'border-blue-600 text-blue-600' : 'border-transparent'}`}
+              onClick={() => setActiveTab('all')}
+            >
+              All
+            </button>
+            <button 
+              className={`px-4 py-2 border-b-2 font-medium text-sm flex items-center ${activeTab === 'pinned' ? 'border-blue-600 text-blue-600' : 'border-transparent'}`}
+              onClick={() => setActiveTab('pinned')}
+            >
+              <Star className="h-4 w-4 mr-1" />
+              Pinned
+            </button>
+            <button 
+              className={`px-4 py-2 border-b-2 font-medium text-sm ${activeTab === 'public' ? 'border-blue-600 text-blue-600' : 'border-transparent'}`}
+              onClick={() => setActiveTab('public')}
+            >
+              Public
+            </button>
+            <button 
+              className={`px-4 py-2 border-b-2 font-medium text-sm ${activeTab === 'private' ? 'border-blue-600 text-blue-600' : 'border-transparent'}`}
+              onClick={() => setActiveTab('private')}
+            >
+              Private
+            </button>
+          </div>
+          
+          <div className="py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {displayRepositories.map(repo => (
+                <div 
+                  key={repo.id} 
+                  onMouseEnter={() => setHoveredRepo(repo.id)}
+                  onMouseLeave={() => setHoveredRepo(null)}
+                >
+                  <RepositoryCard
+                    repository={repo}
+                    isPinned={pinnedRepos.has(repo.id)}
+                    isHovered={hoveredRepo === repo.id}
+                    onPin={(e) => {
+                      e.stopPropagation(); 
+                      handleTogglePinned(repo.id);
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <ConnectDialog 
+        open={showConnectDialog} 
+        onClose={() => setShowConnectDialog(false)}
+      />
     </div>
   );
 }

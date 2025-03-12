@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Repository } from '@/types/repositories';
-import { RepositoryCard } from './RepositoryCard';
+import { RepositoryCard } from './EnhancedRepositoryCard';
 import { Input } from '@/components/shadcn/input';
 import { Search } from 'lucide-react';
 
