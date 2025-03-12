@@ -4,8 +4,6 @@ import db from '@/lib/supabase/db';
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import { logger } from '@/lib/logger';
 import { testHostConnection as testHostConnectionService } from '@/lib/services/hosts';
-// Import getBaseUrl from utils instead
-import { getBaseUrl } from '@/lib/utils';
 
 export interface HostFilter {
   status?: string;

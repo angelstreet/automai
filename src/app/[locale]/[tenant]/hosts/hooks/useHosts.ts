@@ -83,11 +83,6 @@ export function useHosts() {
           return updatedHosts;
         }, false);
 
-        toast({
-          title: 'Success',
-          description: 'Host created successfully',
-        });
-
         return result.data;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to create host';
