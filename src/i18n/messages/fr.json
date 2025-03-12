@@ -204,7 +204,8 @@
     "confirm_delete": "Êtes-vous sûr de vouloir supprimer ce fournisseur Git?",
     "delete_warning": "Cela supprimera tous les dépôts associés. Cette action ne peut pas être annulée.",
     "connectGit": "Connectez-vous à vos fournisseurs Git pour importer des dépôts",
-    "connectedProviders": "Fournisseurs connectés"
+    "connectedProviders": "Fournisseurs connectés",
+    "loading": "Chargement des dépôts..."
   },
   "Settings": {
     "title": "Paramètres",

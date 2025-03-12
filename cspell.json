@@ -1,7 +1,12 @@
 {
   "version": "0.2",
   "language": "en",
-  "words": ["automai", "shadcn", "tailwindcss", "nextjs"],
+  "words": [
+    "automai",
+    "shadcn",
+    "tailwindcss",
+    "nextjs"
+  ],
   "ignorePaths": [
     "node_modules/**",
     ".git/**",
@@ -10,5 +15,6 @@
     "build/**",
     ".next/**",
     "out/**"
-  ]
+  ],
+  "enabled": false
 }

@@ -238,7 +238,8 @@
     "actions": "Actions",
     "search": "Search",
     "clear_all": "Clear all",
-    "no_repos_found": "No repositories found matching your criteria."
+    "no_repos_found": "No repositories found matching your criteria.",
+    "loading": "Loading repositories..."
   },
   "Settings": {
     "title": "Settings",
