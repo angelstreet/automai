@@ -141,6 +141,28 @@ export function useHosts() {
   const testConnection = useCallback(
     async (id: string) => {
       try {
+        // First update the host to testing state
+        await mutate(
+          async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map(host => {
+              if (host.id === id) {
+                return {
+                  ...host,
+                  status: 'testing' as const,
+                };
+              }
+              return host;
+            });
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          },
+          false
+        );
+        
+        // Small delay to show the testing state animation
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        
+        // Now perform the actual connection test
         const result = await testHostConnectionAction(id);
 
         if (!result.success) {
@@ -188,11 +210,6 @@ export function useHosts() {
           },
           false
         );
-
-        toast({
-          title: 'Success',
-          description: result.message || 'Connection test successful',
-        });
         
         return true;
       } catch (err) {
@@ -202,10 +219,123 @@ export function useHosts() {
           description: errorMessage,
           variant: 'destructive',
         });
+        
+        // Make sure to update the host status to failed in case of error
+        await mutate(
+          async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map(host => {
+              if (host.id === id) {
+                return {
+                  ...host,
+                  status: 'failed' as const,
+                };
+              }
+              return host;
+            });
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          },
+          false
+        );
+        
         return false;
       }
     },
     [toast, mutate]
+  );
+
+  // Test all connections functionality
+  const testAllConnections = useCallback(
+    async () => {
+      try {
+        // Get current hosts from cache
+        const currentHosts = [...hosts];
+        let successCount = 0;
+        
+        // Test each host sequentially
+        for (const host of currentHosts) {
+          // First update the host to testing state
+          await mutate(
+            async (currentHosts: Host[] = []) => {
+              const updatedHosts = currentHosts.map(h => {
+                if (h.id === host.id) {
+                  return {
+                    ...h,
+                    status: 'testing' as const,
+                  };
+                }
+                return h;
+              });
+              setCachedHosts(updatedHosts);
+              return updatedHosts;
+            },
+            false
+          );
+          
+          // Small delay to show the testing state animation
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          
+          // Now perform the actual connection test
+          try {
+            const result = await testHostConnectionAction(host.id);
+            
+            // Update the host status in the cache based on the result
+            await mutate(
+              async (currentHosts: Host[] = []) => {
+                const updatedHosts = currentHosts.map(h => {
+                  if (h.id === host.id) {
+                    return {
+                      ...h,
+                      status: result.success ? 'connected' as const : 'failed' as const,
+                    };
+                  }
+                  return h;
+                });
+                setCachedHosts(updatedHosts);
+                return updatedHosts;
+              },
+              false
+            );
+            
+            if (result.success) {
+              successCount++;
+            }
+            
+            // Small delay between hosts
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          } catch (error) {
+            // Update the host status to failed in case of error
+            await mutate(
+              async (currentHosts: Host[] = []) => {
+                const updatedHosts = currentHosts.map(h => {
+                  if (h.id === host.id) {
+                    return {
+                      ...h,
+                      status: 'failed' as const,
+                    };
+                  }
+                  return h;
+                });
+                setCachedHosts(updatedHosts);
+                return updatedHosts;
+              },
+              false
+            );
+          }
+        }
+        
+        return true;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to test all connections';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return false;
+      }
+    },
+    [hosts, toast, mutate]
   );
 
   return {
@@ -216,6 +346,7 @@ export function useHosts() {
     addHost,
     deleteHost,
     testConnection,
+    testAllConnections,
     isLoaded: !isLoading && hosts !== null,
   };
 } 

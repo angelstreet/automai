@@ -17,6 +17,7 @@ export default function HostContainer() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
   const [selectMode] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -36,7 +37,20 @@ export default function HostContainer() {
     addHost,
     deleteHost,
     testConnection,
+    testAllConnections,
   } = useHosts();
+
+  // Handle refresh all hosts
+  const handleRefreshAll = async () => {
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    try {
+      await testAllConnections();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Handle add host form submission
   const handleSaveHost = async () => {
@@ -106,9 +120,14 @@ export default function HostContainer() {
               <List className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={() => fetchHosts()} variant="outline" size="sm">
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+          <Button 
+            onClick={handleRefreshAll} 
+            variant="outline" 
+            size="sm"
+            disabled={isRefreshing || loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || loading ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Testing...' : 'Test All'}
           </Button>
           <Button onClick={() => setShowAddHost(true)}>
             <Plus className="h-4 w-4 mr-2" />
