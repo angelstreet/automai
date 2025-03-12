@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
 import { Host } from './types';
-import { deleteHost as deleteHostAction, getHost, updateHost, getHosts, createHost, testConnection } from './actions';
+import {
+  getHost,
+  getHosts,
+  updateHost,
+  createHost,
+  deleteHost as deleteHostAction,
+  testHostConnection as testHostConnectionAction,
+} from '@/app/actions/hosts';
 import useSWR from 'swr';
 
 // Local storage key for hosts cache
@@ -31,275 +37,543 @@ const setCachedHosts = (hosts: Host[]) => {
   }
 };
 
-/**
- * Hook to manage a list of hosts
- * @returns Object with hosts data and management functions
- */
-export function useHostsList() {
+export function useHosts() {
   const { toast } = useToast();
-  const [hosts, setHosts] = useState<Host[]>(getCachedHosts());
-  const [loading, setLoading] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // Fetch hosts from API with SWR for caching
-  const { data, isValidating, mutate } = useSWR<{ success: boolean; data?: Host[]; error?: string }>(
-    'hosts',
-    async () => {
-      try {
-        const result = await getHosts();
-        return result;
-      } catch (err) {
-        console.error('Error fetching hosts:', err);
-        throw err;
+  // Fetch hosts with SWR
+  const {
+    data: hosts = [],
+    isLoading,
+    mutate,
+  } = useSWR<Host[]>('hosts', async () => {
+    try {
+      const result = await getHosts();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch hosts');
       }
-    },
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 10000, // 10 seconds
-      onSuccess: (data) => {
-        if (data?.success && data.data) {
-          setHosts(data.data);
-          setCachedHosts(data.data);
-          setError(null);
-        } else if (data?.error) {
-          setError(data.error);
+      // Update cache when we get new data
+      setCachedHosts(result.data || []);
+      return result.data || [];
+    } catch (error) {
+      console.error('Error fetching hosts:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch hosts',
+        variant: 'destructive',
+      });
+      return [];
+    }
+  }, {
+    fallbackData: getCachedHosts(), // Use cached data while loading
+    revalidateOnFocus: false, // Don't revalidate on window focus
+    dedupingInterval: 5000, // Dedupe requests within 5 seconds
+  });
+
+  const addHost = useCallback(
+    async (hostData: Omit<Host, 'id'>) => {
+      try {
+        const result = await createHost(hostData);
+
+        if (!result.success) {
           toast({
-            title: 'Error fetching hosts',
-            description: data.error,
+            title: 'Error',
+            description: result.error || 'Failed to create host',
             variant: 'destructive',
           });
+          return null;
         }
-        setLoading(false);
-        setIsLoaded(true);
-      },
-      onError: (err) => {
-        console.error('Error fetching hosts:', err);
-        setError(err.message || 'Failed to fetch hosts');
-        setLoading(false);
-        setIsLoaded(true);
-        toast({
-          title: 'Error fetching hosts',
-          description: err.message || 'Failed to fetch hosts',
-          variant: 'destructive',
-        });
-      },
-    }
-  );
 
-  // Function to fetch hosts
-  const fetchHosts = useCallback(async () => {
-    try {
-      setLoading(true);
-      await mutate();
-    } catch (err) {
-      console.error('Error refreshing hosts:', err);
-    }
-  }, [mutate]);
+        // Update the SWR cache with the new host
+        await mutate(async (currentHosts: Host[] = []) => {
+          if (!result.data) return currentHosts;
+          const updatedHosts = [...currentHosts, result.data];
+          setCachedHosts(updatedHosts);
+          return updatedHosts;
+        }, false);
 
-  // Function to add a new host
-  const addHost = useCallback(async (hostData: Partial<Host>) => {
-    try {
-      const result = await createHost(hostData);
-      if (result.success && result.data) {
-        // Update the local state and cache
-        const updatedHosts = [...hosts, result.data];
-        setHosts(updatedHosts);
-        setCachedHosts(updatedHosts);
-        toast({
-          title: 'Host added successfully',
-          description: `${hostData.name} has been added.`,
-        });
         return result.data;
-      } else {
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to create host';
         toast({
-          title: 'Error adding host',
-          description: result.error || 'Failed to add host',
+          title: 'Error',
+          description: errorMessage,
           variant: 'destructive',
         });
         return null;
       }
-    } catch (err) {
-      console.error('Error adding host:', err);
-      toast({
-        title: 'Error adding host',
-        description: err instanceof Error ? err.message : 'Failed to add host',
-        variant: 'destructive',
-      });
-      return null;
-    }
-  }, [hosts, toast]);
+    },
+    [toast, mutate],
+  );
 
-  return {
-    hosts,
-    loading,
-    isValidating,
-    isLoaded,
-    error,
-    fetchHosts,
-    addHost,
-  };
-}
+  // Delete host functionality
+  const deleteHost = useCallback(
+    async (id: string) => {
+      try {
+        const result = await deleteHostAction(id);
 
-/**
- * Hook to manage a single host's operations
- * @param hostId The ID of the host to manage
- * @returns Object with host data and management functions
- */
-export function useHostManagement(hostId?: string) {
-  const { toast } = useToast();
-  const router = useRouter();
-  const [host, setHost] = useState<Host | null>(null);
-  const [loading, setLoading] = useState(hostId ? true : false);
-  const [error, setError] = useState<string | null>(null);
+        if (!result.success) {
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to delete host',
+            variant: 'destructive',
+          });
+          return false;
+        }
 
-  // Fetch host data if ID is provided
-  useEffect(() => {
-    if (hostId) {
-      fetchHost();
-    }
-  }, [hostId]);
+        // Update the SWR cache to remove the deleted host
+        await mutate(
+          async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.filter(host => host.id !== id);
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          },
+          false
+        );
 
-  // Function to fetch host data
-  const fetchHost = useCallback(async () => {
-    if (!hostId) return;
-    
-    try {
-      setLoading(true);
-      const result = await getHost(hostId);
-      
-      if (result.success && result.data) {
-        setHost(result.data);
-        setError(null);
-      } else {
-        setError(result.error || 'Failed to fetch host');
-        toast({
-          title: 'Error fetching host',
-          description: result.error || 'Failed to fetch host',
-          variant: 'destructive',
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching host:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch host');
-      toast({
-        title: 'Error fetching host',
-        description: err instanceof Error ? err.message : 'Failed to fetch host',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [hostId, toast]);
-
-  // Function to test connection to the host
-  const testHostConnection = useCallback(async () => {
-    if (!host) return false;
-    
-    try {
-      // Call test connection with the correct field names
-      const testResult = await testConnection({
-        type: host.type,
-        ip: host.ip,
-        port: host.port,
-        user: host.user,
-        password: host.password,
-      });
-      
-      if (testResult.success) {
-        toast({
-          title: 'Connection successful',
-          description: testResult.message || 'Successfully connected to the host',
-        });
         return true;
-      } else {
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to delete host';
         toast({
-          title: 'Connection failed',
-          description: testResult.error || 'Failed to connect to the host',
+          title: 'Error',
+          description: errorMessage,
           variant: 'destructive',
         });
         return false;
       }
-    } catch (err) {
-      console.error('Error testing connection:', err);
-      toast({
-        title: 'Connection failed',
-        description: err instanceof Error ? err.message : 'Failed to connect to the host',
-        variant: 'destructive',
-      });
-      return false;
-    }
-  }, [host, toast]);
+    },
+    [toast, mutate]
+  );
 
-  // Function to update host data
-  const updateHostDetails = useCallback(async (updates: Partial<Host>) => {
-    if (!hostId) return null;
-    
-    try {
-      const result = await updateHost(hostId, updates);
-      
-      if (result.success && result.data) {
-        setHost(result.data);
+  // Test connection functionality
+  const testConnection = useCallback(
+    async (id: string) => {
+      try {
+        // First update the host to testing state
+        await mutate(
+          async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map(host => {
+              if (host.id === id) {
+                return {
+                  ...host,
+                  status: 'testing' as const,
+                };
+              }
+              return host;
+            });
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          },
+          false
+        );
+        
+        // Small delay to show the testing state animation
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        
+        // Now perform the actual connection test
+        const result = await testHostConnectionAction(id);
+
+        if (!result.success) {
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to test connection',
+            variant: 'destructive',
+          });
+          
+          // Update the host status in the cache
+          await mutate(
+            async (currentHosts: Host[] = []) => {
+              const updatedHosts = currentHosts.map(host => {
+                if (host.id === id) {
+                  return {
+                    ...host,
+                    status: 'failed' as const,
+                  };
+                }
+                return host;
+              });
+              setCachedHosts(updatedHosts);
+              return updatedHosts;
+            },
+            false
+          );
+          
+          return false;
+        }
+
+        // Update the host status in the cache
+        await mutate(
+          async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map(host => {
+              if (host.id === id) {
+                return {
+                  ...host,
+                  status: 'connected' as const,
+                };
+              }
+              return host;
+            });
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          },
+          false
+        );
+        
+        return true;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to test connection';
         toast({
-          title: 'Host updated',
-          description: 'Host has been updated successfully',
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
         });
-        return result.data;
-      } else {
+        
+        // Make sure to update the host status to failed in case of error
+        await mutate(
+          async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map(host => {
+              if (host.id === id) {
+                return {
+                  ...host,
+                  status: 'failed' as const,
+                };
+              }
+              return host;
+            });
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          },
+          false
+        );
+        
+        return false;
+      }
+    },
+    [toast, mutate]
+  );
+
+  // Test all connections functionality
+  const testAllConnections = useCallback(
+    async () => {
+      try {
+        // Get current hosts from cache
+        const currentHosts = [...hosts];
+        let successCount = 0;
+        
+        // Test each host sequentially
+        for (const host of currentHosts) {
+          // First update the host to testing state
+          await mutate(
+            async (currentHosts: Host[] = []) => {
+              const updatedHosts = currentHosts.map(h => {
+                if (h.id === host.id) {
+                  return {
+                    ...h,
+                    status: 'testing' as const,
+                  };
+                }
+                return h;
+              });
+              setCachedHosts(updatedHosts);
+              return updatedHosts;
+            },
+            false
+          );
+          
+          // Small delay to show the testing state animation
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          
+          // Now perform the actual connection test
+          try {
+            const result = await testHostConnectionAction(host.id);
+            
+            // Update the host status in the cache based on the result
+            await mutate(
+              async (currentHosts: Host[] = []) => {
+                const updatedHosts = currentHosts.map(h => {
+                  if (h.id === host.id) {
+                    return {
+                      ...h,
+                      status: result.success ? 'connected' as const : 'failed' as const,
+                    };
+                  }
+                  return h;
+                });
+                setCachedHosts(updatedHosts);
+                return updatedHosts;
+              },
+              false
+            );
+            
+            if (result.success) {
+              successCount++;
+            }
+            
+            // Small delay between hosts
+            await new Promise((resolve) => setTimeout(resolve, 200));
+          } catch (error) {
+            // Update the host status to failed in case of error
+            await mutate(
+              async (currentHosts: Host[] = []) => {
+                const updatedHosts = currentHosts.map(h => {
+                  if (h.id === host.id) {
+                    return {
+                      ...h,
+                      status: 'failed' as const,
+                    };
+                  }
+                  return h;
+                });
+                setCachedHosts(updatedHosts);
+                return updatedHosts;
+              },
+              false
+            );
+          }
+        }
+        
+        return true;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to test all connections';
         toast({
-          title: 'Update failed',
-          description: result.error || 'Failed to update host',
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return false;
+      }
+    },
+    [hosts, toast, mutate]
+  );
+
+  return {
+    hosts,
+    loading: isLoading,
+    error: null,
+    fetchHosts: mutate,
+    addHost,
+    deleteHost,
+    testConnection,
+    testAllConnections,
+    isLoaded: !isLoading && hosts !== null,
+  };
+}
+
+export function useHost(initialHostId?: string) {
+  const [host, setHost] = useState<Host | null>(null);
+  const [loading, setLoading] = useState(initialHostId ? true : false);
+  const [error, setError] = useState<Error | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  const { toast } = useToast();
+
+  const fetchHost = useCallback(
+    async (id: string) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const result = await getHost(id);
+
+        if (!result.success) {
+          setError(new Error(result.error || 'Failed to fetch host'));
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to fetch host',
+            variant: 'destructive',
+          });
+          return null;
+        }
+
+        setHost(result.data || null);
+        return result.data;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch host';
+        setError(err instanceof Error ? err : new Error(errorMessage));
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [toast],
+  );
+
+  const updateHostDetails = useCallback(
+    async (updates: Partial<Omit<Host, 'id'>>) => {
+      if (!host?.id) {
+        toast({
+          title: 'Error',
+          description: 'No host selected',
           variant: 'destructive',
         });
         return null;
       }
-    } catch (err) {
-      console.error('Error updating host:', err);
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const result = await updateHost(host.id, updates);
+
+        if (!result.success) {
+          setError(new Error(result.error || 'Failed to update host'));
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to update host',
+            variant: 'destructive',
+          });
+          return null;
+        }
+
+        setHost(result.data || null);
+
+        toast({
+          title: 'Success',
+          description: 'Host updated successfully',
+        });
+
+        return result.data;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to update host';
+        setError(err instanceof Error ? err : new Error(errorMessage));
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [host, toast],
+  );
+
+  const removeHost = useCallback(async () => {
+    if (!host?.id) {
       toast({
-        title: 'Update failed',
-        description: err instanceof Error ? err.message : 'Failed to update host',
+        title: 'Error',
+        description: 'No host selected',
         variant: 'destructive',
       });
-      return null;
+      return false;
     }
-  }, [hostId, toast]);
 
-  // Function to delete the host
-  const removeHost = useCallback(async () => {
-    if (!hostId) return false;
-    
     try {
-      const result = await deleteHostAction(hostId);
-      
-      if (result.success) {
-        router.refresh();
-        return true;
-      } else {
+      setLoading(true);
+      setError(null);
+
+      const result = await deleteHostAction(host.id);
+
+      if (!result.success) {
+        setError(new Error(result.error || 'Failed to delete host'));
         toast({
-          title: 'Deletion failed',
+          title: 'Error',
           description: result.error || 'Failed to delete host',
           variant: 'destructive',
         });
         return false;
       }
+
+      setHost(null);
+
+      return true;
     } catch (err) {
-      console.error('Error deleting host:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete host';
+      setError(err instanceof Error ? err : new Error(errorMessage));
       toast({
-        title: 'Deletion failed',
-        description: err instanceof Error ? err.message : 'Failed to delete host',
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [host, toast]);
+
+  const testHostConnection = useCallback(async () => {
+    if (!host?.id) {
+      toast({
+        title: 'Error',
+        description: 'No host selected',
         variant: 'destructive',
       });
       return false;
     }
-  }, [hostId, router, toast]);
+
+    try {
+      setIsTesting(true);
+      setError(null);
+
+      const result = await testHostConnectionAction(host.id);
+
+      if (!result.success) {
+        setError(new Error(result.error || 'Failed to test connection'));
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to test connection',
+          variant: 'destructive',
+        });
+
+        // Update host status
+        setHost((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: 'failed',
+            errorMessage: result.error,
+          };
+        });
+
+        return false;
+      }
+
+      // Update host status
+      setHost((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: 'connected',
+          errorMessage: undefined,
+        };
+      });
+
+      return true;
+    } catch (err: any) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to test connection';
+      setError(err instanceof Error ? err : new Error(errorMessage));
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    } finally {
+      setIsTesting(false);
+    }
+  }, [host, toast]);
+
+  // Fetch host on mount if initialHostId is provided
+  useEffect(() => {
+    if (initialHostId) {
+      fetchHost(initialHostId);
+    }
+  }, [initialHostId, fetchHost]);
 
   return {
     host,
     loading,
     error,
-    testConnection: testHostConnection,
+    isTesting,
+    fetchHost,
     updateHost: updateHostDetails,
     deleteHost: removeHost,
-    fetchHost,
+    testConnection: testHostConnection,
+    isLoaded: !loading && host !== null,
   };
-} 
+}
+

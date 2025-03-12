@@ -249,35 +249,32 @@ export async function handleOAuthCallback(
     });
 
     if (!provider) {
-      return { success: false, error: 'Provider not found or not authorized' };
+      return { success: false, error: 'Provider not found' };
     }
 
-    // Update provider with success status
-    try {
-      await db.gitProvider.update({
-        where: { id: providerId },
-        data: {
-          status: 'connected',
-          last_synced_at: new Date().toISOString(),
-        },
-      });
-    } catch (updateError) {
-      return { success: false, error: 'Failed to update provider' };
-    }
+    // Exchange code for token
+    // This would typically involve making a request to the git provider's API
+    // For now, we'll just update the provider with a dummy token
+    await db.gitProvider.update({
+      where: { id: providerId },
+      data: {
+        token: `dummy-token-${code}`,
+        is_configured: true,
+      },
+    });
 
-    // Return success with redirect URL
     return {
       success: true,
-      redirectUrl: `/repositories?provider=${providerId}`,
+      redirectUrl: redirectUri || '/repositories',
     };
   } catch (error: any) {
     console.error('Error in handleOAuthCallback:', error);
-    return { success: false, error: error.message || 'Failed to process OAuth callback' };
+    return { success: false, error: error.message || 'Failed to handle OAuth callback' };
   }
 }
 
 /**
- * Create a new git provider
+ * Create a git provider
  */
 export async function createGitProvider(
   data: GitProviderCreateInput,
@@ -291,55 +288,49 @@ export async function createGitProvider(
     // Validate input data
     const validatedData = gitProviderCreateSchema.parse(data);
 
-    // Create the provider
-    let provider;
-    try {
-      provider = await db.gitProvider.create({
-        data: {
-          type: validatedData.type,
-          display_name: validatedData.displayName,
-          server_url: validatedData.serverUrl,
-          token: validatedData.token,
-          user_id: user.id,
-          status: validatedData.token ? 'connected' : 'pending',
-        },
-      });
-    } catch (createError: any) {
-      console.error('Error creating git provider:', createError);
-      return { success: false, error: createError.message };
-    }
+    // Create provider in database
+    const provider = await db.gitProvider.create({
+      data: {
+        type: validatedData.type,
+        display_name: validatedData.displayName,
+        server_url: validatedData.serverUrl,
+        token: validatedData.token,
+        user_id: user.id,
+        is_configured: !!validatedData.token,
+      },
+    });
 
     // If token is provided, we're done
     if (validatedData.token) {
       return { success: true, data: provider };
     }
 
-    // Otherwise, generate OAuth URL based on provider type
-    let authUrl = '';
-    const stateData = {
-      providerId: provider.id,
-      redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/git-providers/callback`,
-    };
-    const state = Buffer.from(JSON.stringify(stateData)).toString('base64');
+    // Otherwise, generate OAuth URL
+    let authUrl;
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/git-providers/callback`;
+    const state = Buffer.from(
+      JSON.stringify({
+        providerId: provider.id,
+        redirectUri: '/repositories',
+      }),
+    ).toString('base64');
 
     if (validatedData.type === 'github') {
-      const clientId = process.env.GITHUB_CLIENT_ID;
-      authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo&state=${state}`;
+      authUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=repo`;
     } else if (validatedData.type === 'gitlab') {
-      const clientId = process.env.GITLAB_CLIENT_ID;
-      authUrl = `https://gitlab.com/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(stateData.redirectUri)}&response_type=code&state=${state}&scope=api`;
+      authUrl = `https://gitlab.com/oauth/authorize?client_id=${process.env.GITLAB_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&response_type=code&scope=api`;
     } else {
-      return { success: false, error: 'Unsupported provider type for OAuth' };
+      // For Gitea, we'd need to implement a similar flow
+      return { success: false, error: 'OAuth not implemented for Gitea yet' };
     }
 
-    return { success: true, data: provider, authUrl };
+    return {
+      success: true,
+      data: provider,
+      authUrl,
+    };
   } catch (error: any) {
     console.error('Error in createGitProvider:', error);
-
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
-    }
-
     return { success: false, error: error.message || 'Failed to create git provider' };
   }
-}
+} 

@@ -16,7 +16,7 @@ import {
   addGitProvider,
   updateGitProvider,
   refreshGitProvider,
-} from '@/app/actions/git-providers';
+} from './actions';
 
 /**
  * Hook for managing multiple repositories
