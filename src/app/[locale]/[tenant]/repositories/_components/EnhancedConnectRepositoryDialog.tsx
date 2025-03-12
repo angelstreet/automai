@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { 
   Github, 
-  GitMerge, 
   Globe, 
-  Terminal, 
   GitBranch,
   ArrowRight,
   RefreshCw
