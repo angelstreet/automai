@@ -38,9 +38,10 @@ interface ConnectionFormProps {
   onChange: (formData: FormData) => void;
   onSave?: () => void;
   onTestSuccess?: () => void;
+  isSaving?: boolean;
 }
 
-export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: ConnectionFormProps) {
+export function ConnectionForm({ formData, onChange, onSave, onTestSuccess, isSaving = false }: ConnectionFormProps) {
   const t = useTranslations('Common');
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
@@ -306,8 +307,15 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess }: Co
           </Button>
 
           {onSave && (
-            <Button onClick={onSave} disabled={testing} type="button">
-              {t('save')}
+            <Button onClick={onSave} disabled={testing || isSaving} type="button">
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  {t('saving')}
+                </>
+              ) : (
+                t('save')
+              )}
             </Button>
           )}
         </div>

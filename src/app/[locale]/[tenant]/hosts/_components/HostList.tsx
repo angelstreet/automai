@@ -18,6 +18,7 @@ export default function HostContainer() {
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
   const [selectMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -54,31 +55,36 @@ export default function HostContainer() {
 
   // Handle add host form submission
   const handleSaveHost = async () => {
-    const success = await addHost({
-      name: formData.name,
-      description: formData.description,
-      type: formData.type as 'ssh' | 'docker' | 'portainer',
-      ip: formData.ip,
-      port: parseInt(formData.port),
-      user: formData.username,
-      password: formData.password,
-      status: 'connected',
-      created_at: new Date(),
-      updated_at: new Date(),
-      is_windows: false,
-    });
-
-    if (success) {
-      setShowAddHost(false);
-      setFormData({
-        name: '',
-        description: '',
-        type: 'ssh',
-        ip: '',
-        port: '22',
-        username: '',
-        password: '',
+    setIsSaving(true);
+    try {
+      const success = await addHost({
+        name: formData.name,
+        description: formData.description,
+        type: formData.type as 'ssh' | 'docker' | 'portainer',
+        ip: formData.ip,
+        port: parseInt(formData.port),
+        user: formData.username,
+        password: formData.password,
+        status: 'connected',
+        created_at: new Date(),
+        updated_at: new Date(),
+        is_windows: false,
       });
+
+      if (success) {
+        setShowAddHost(false);
+        setFormData({
+          name: '',
+          description: '',
+          type: 'ssh',
+          ip: '',
+          port: '22',
+          username: '',
+          password: '',
+        });
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -127,7 +133,7 @@ export default function HostContainer() {
             disabled={isRefreshing || loading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || loading ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Testing...' : 'Test All'}
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
           <Button onClick={() => setShowAddHost(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -170,7 +176,12 @@ export default function HostContainer() {
           <DialogHeader>
             <DialogTitle>Add New Host</DialogTitle>
           </DialogHeader>
-          <ConnectionForm formData={formData} onChange={setFormData} onSave={handleSaveHost} />
+          <ConnectionForm 
+            formData={formData} 
+            onChange={setFormData} 
+            onSave={handleSaveHost}
+            isSaving={isSaving}
+          />
         </DialogContent>
       </Dialog>
     </div>
