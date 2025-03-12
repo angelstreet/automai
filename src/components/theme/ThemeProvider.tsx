@@ -5,11 +5,6 @@ import { type ThemeProviderProps } from 'next-themes';
 import * as React from 'react';
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  // Create a custom cookie setter function
-  const setCookieOnChange = (theme: string) => {
-    // Set theme cookie when theme changes
-    document.cookie = `theme=${theme}; path=/; max-age=31536000`; // 1 year
-  };
 
   return (
     <NextThemesProvider

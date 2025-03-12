@@ -14,7 +14,7 @@ import {
 } from '@/components/sidebar';
 import { useUser } from '@/context/UserContext';
 import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '../sidebar/constants';
-import { sidebarData } from './data/sidebarData';
+import { sidebarData } from '@/components/sidebar/sidebarData';
 import * as React from 'react';
 import { Role } from '@/types/user';
 

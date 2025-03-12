@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
-import { sidebarData } from '@/components/layout/data/sidebarData';
+import { sidebarData } from '@/components/sidebar/sidebarData';
 
 export function TopNav() {
   return (

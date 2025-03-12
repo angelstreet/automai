@@ -18,3 +18,4 @@ export { SidebarMenuButton } from './SidebarMenuButton';
 export { SidebarMenuSub } from './SidebarMenuSub';
 export { SidebarMenuSubButton } from './SidebarMenuSubButton';
 export { useSidebar } from '@/hooks/useSidebar';
+export { sidebarData, type SidebarData } from './sidebarData';
