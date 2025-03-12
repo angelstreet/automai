@@ -5,8 +5,8 @@ import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import { Host } from '@/types/hosts';
-import { useHosts } from '@/hooks/useHosts';
+import { Host } from '../types';
+import { useHosts } from '../hooks/useHosts';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 import { HostGrid } from './HostGrid';

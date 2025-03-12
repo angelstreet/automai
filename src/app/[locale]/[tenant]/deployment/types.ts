@@ -2,11 +2,12 @@
 
 export type DeploymentStatus = 
   | 'pending'
+  | 'scheduled'
   | 'in_progress'
   | 'success'
   | 'failed'
   | 'cancelled'
-  | 'scheduled';
+  | 'partial_success';
 
 export interface Script {
   id: string;
@@ -15,11 +16,15 @@ export interface Script {
   repository: string;
 }
 
-export interface DeploymentScript extends Script {
-  status: 'pending' | 'in_progress' | 'success' | 'failed';
-  startTime?: string;
-  endTime?: string;
-  output?: string;
+export interface DeploymentScript {
+  id: string;
+  repositoryId: string;
+  name: string;
+  path: string;
+  status: 'pending' | 'running' | 'success' | 'failed';
+  startedAt?: string;
+  completedAt?: string;
+  logs?: string[];
 }
 
 export interface Host {
@@ -30,8 +35,11 @@ export interface Host {
   ip?: string;
 }
 
-export interface DeploymentHost extends Host {
-  status: 'pending' | 'running' | 'success' | 'failed';
+export interface DeploymentHost {
+  id: string;
+  name: string;
+  environment: string;
+  status: 'pending' | 'deploying' | 'success' | 'failed';
 }
 
 export interface Repository {
@@ -50,21 +58,35 @@ export interface Deployment {
   id: string;
   name: string;
   description?: string;
-  repository: Repository;
+  repositoryId: string;
   status: DeploymentStatus;
   createdBy: string;
-  startTime?: string;
-  endTime?: string;
-  scheduledTime?: string;
+  createdAt: string;
+  scheduledFor?: string;
+  startedAt?: string;
+  completedAt?: string;
   scripts: DeploymentScript[];
   hosts: DeploymentHost[];
-  logs: LogEntry[];
+  configuration: DeploymentConfig;
+  logs?: LogEntry[];
+}
+
+export interface DeploymentConfig {
+  schedule: 'immediate' | 'scheduled';
+  scheduledTime?: string;
+  environmentVariables: Record<string, string>;
+  notifications: {
+    email: boolean;
+    slack: boolean;
+  };
+  runnerType: 'jenkins' | 'direct' | 'docker';
+  runnerId?: string;
 }
 
 export interface DeploymentFormData {
   name: string;
   description: string;
-  repository: string;
+  repositoryId: string;
   selectedScripts: string[];
   selectedHosts: string[];
   schedule: 'now' | 'later';

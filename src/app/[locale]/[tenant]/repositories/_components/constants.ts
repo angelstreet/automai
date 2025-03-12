@@ -3,7 +3,7 @@
  */
 
 // Import types
-import { Repository, GitProvider } from '@/types/repositories';
+import { Repository, GitProvider } from '../types';
 
 // Repository categories for filtering
 export const REPOSITORY_CATEGORIES = [

@@ -1,6 +1,6 @@
 'use server';
 
-import { ActivityItem, Task, Stats, ChatMessage } from '@/types/dashboard';
+import { ActivityItem, Task, Stats, ChatMessage } from './types';
 
 // Cache for server actions to prevent unnecessary API calls
 let statsCache: Stats | null = null;

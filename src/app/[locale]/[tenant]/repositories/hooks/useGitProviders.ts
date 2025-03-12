@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
-import { GitProvider } from '@/types/repositories';
+import { GitProvider } from '../types';
 import {
   getGitProviders,
   addGitProvider,
@@ -133,4 +133,4 @@ export function useGitProviders() {
     editingProvider,
     setEditingProvider,
   };
-}
+} 

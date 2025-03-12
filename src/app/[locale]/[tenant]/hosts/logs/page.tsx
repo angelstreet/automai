@@ -7,7 +7,7 @@ import { Button } from '@/components/shadcn/button';
 import { Card } from '@/components/shadcn/card';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { useToast } from '@/components/shadcn/use-toast';
-import { Host } from '@/types/hosts';
+import { Host } from '../../types';
 
 interface Log {
   id: string;

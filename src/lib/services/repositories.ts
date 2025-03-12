@@ -1,5 +1,5 @@
 import db from '@/lib/supabase/db';
-import { Repository, GitProvider, GitProviderType, SyncStatus } from '@/types/repositories';
+import { Repository, GitProvider, GitProviderType, RepositorySyncStatus } from '@/app/[locale]/[tenant]/repositories/types';
 import { GitHubProviderService } from './git-providers/github';
 import { GitLabProviderService } from './git-providers/gitlab';
 import { GiteaProviderService } from './git-providers/gitea';
@@ -208,7 +208,7 @@ export async function listRepositories(
   filters?: {
     providerId?: string;
     projectId?: string;
-    syncStatus?: SyncStatus;
+    syncStatus?: RepositorySyncStatus;
   },
 ): Promise<Repository[]> {
   try {

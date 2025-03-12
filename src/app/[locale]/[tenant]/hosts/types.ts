@@ -29,4 +29,4 @@ export interface Host {
   created_at: Date;
   updated_at: Date;
   is_windows: Boolean;
-}
+} 

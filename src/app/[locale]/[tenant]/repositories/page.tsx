@@ -24,7 +24,7 @@ import {
 import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useToast } from '@/components/shadcn/use-toast';
-import { Repository, ConnectRepositoryValues } from '@/types/repositories';
+import { Repository, ConnectRepositoryValues } from './types';
 import { REPOSITORY_CATEGORIES } from './_components/constants';
 
 // Import components

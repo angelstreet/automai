@@ -2,18 +2,19 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
+import { Repository } from '../types';
 import {
   getRepository,
   updateRepository,
   deleteRepository,
-  syncRepository,
+  syncRepository as syncRepositoryApi,
 } from '@/app/actions/repositories';
-import { Repository } from '@/types/repositories';
 
 export function useRepository(initialRepositoryId?: string) {
   const [repository, setRepository] = useState<Repository | null>(null);
   const [loading, setLoading] = useState(initialRepositoryId ? true : false);
   const [error, setError] = useState<Error | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
 
   const fetchRepository = useCallback(
@@ -53,7 +54,7 @@ export function useRepository(initialRepositoryId?: string) {
   );
 
   const updateRepositoryDetails = useCallback(
-    async (updates: Partial<Repository>) => {
+    async (updates: Partial<Omit<Repository, 'id'>>) => {
       if (!repository?.id) {
         toast({
           title: 'Error',
@@ -151,21 +152,21 @@ export function useRepository(initialRepositoryId?: string) {
     }
   }, [repository, toast]);
 
-  const syncRepositoryData = useCallback(async () => {
+  const syncRepository = useCallback(async () => {
     if (!repository?.id) {
       toast({
         title: 'Error',
         description: 'No repository selected',
         variant: 'destructive',
       });
-      return null;
+      return false;
     }
 
     try {
-      setLoading(true);
+      setIsSyncing(true);
       setError(null);
 
-      const result = await syncRepository(repository.id);
+      const result = await syncRepositoryApi(repository.id);
 
       if (!result.success) {
         setError(new Error(result.error || 'Failed to sync repository'));
@@ -174,18 +175,37 @@ export function useRepository(initialRepositoryId?: string) {
           description: result.error || 'Failed to sync repository',
           variant: 'destructive',
         });
-        return null;
+
+        // Update repository status
+        setRepository((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: 'failed',
+            errorMessage: result.error,
+          };
+        });
+
+        return false;
       }
 
-      setRepository(result.data || null);
+      // Update repository status
+      setRepository((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: 'synced',
+          errorMessage: undefined,
+        };
+      });
 
       toast({
         title: 'Success',
-        description: 'Repository synced successfully',
+        description: result.message || 'Repository synced successfully',
       });
 
-      return result.data;
-    } catch (err) {
+      return true;
+    } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to sync repository';
       setError(err instanceof Error ? err : new Error(errorMessage));
       toast({
@@ -193,9 +213,9 @@ export function useRepository(initialRepositoryId?: string) {
         description: errorMessage,
         variant: 'destructive',
       });
-      return null;
+      return false;
     } finally {
-      setLoading(false);
+      setIsSyncing(false);
     }
   }, [repository, toast]);
 
@@ -210,10 +230,11 @@ export function useRepository(initialRepositoryId?: string) {
     repository,
     loading,
     error,
+    isSyncing,
     fetchRepository,
     updateRepository: updateRepositoryDetails,
     deleteRepository: removeRepository,
-    syncRepository: syncRepositoryData,
+    syncRepository,
     isLoaded: !loading && repository !== null,
   };
-}
+} 

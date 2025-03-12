@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/components/shadcn/use-toast';
-import { Host } from '@/types/hosts';
+import { Host } from '../types';
 import {
   getHost,
   updateHost,
@@ -237,4 +237,4 @@ export function useHost(initialHostId?: string) {
     testConnection: testHostConnection,
     isLoaded: !loading && host !== null,
   };
-}
+} 

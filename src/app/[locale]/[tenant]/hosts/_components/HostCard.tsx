@@ -33,7 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/shadcn/tooltip';
-import { Host } from '@/types/hosts';
+import { Host } from '../types';
 
 interface HostCardProps {
   host: Host;

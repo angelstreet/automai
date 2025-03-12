@@ -16,7 +16,7 @@ import {
   DialogDescription,
 } from '@/components/shadcn/dialog';
 import { hostsApi } from '@/app/actions/hosts';
-import { Host } from '@/types/hosts';
+import { Host } from '../types';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 

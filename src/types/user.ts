@@ -41,50 +41,6 @@ export type AuthUser = {
   };
 };
 
-// Extend Supabase user with our custom metadata
-export interface CustomSupabaseUser extends SupabaseUser {
-  user_metadata: {
-    name?: string;
-    full_name?: string;
-    preferred_username?: string;
-    avatar_url?: string;
-    role?: string;
-    tenant_id?: string;
-    tenant_name?: string;
-    plan?: string;
-    raw_user_meta_data?: {
-      name?: string;
-      full_name?: string;
-      preferred_username?: string;
-    };
-  };
-}
-
-/********************************************
- * PROFILE TYPES
- ********************************************/
-
-export type ProfileData = {
-  name?: string;
-  avatar_url?: string;
-  locale?: string;
-};
-
-/********************************************
- * ROLE TYPES
- ********************************************/
-
-// User role types
-export interface UserRole {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface UserRoleFilter {
-  userId?: string;
-}
 
 // Role type used in RoleContext
 export type Role = 'admin' | 'viewer' | 'developer' | 'tester';
@@ -94,19 +50,6 @@ export interface UIRole {
   id: string;
   name: string;
   icon?: string;
-}
-
-// Response types for user role actions
-export interface UserRoleResponse {
-  success: boolean;
-  error?: string;
-  data?: UserRole[];
-}
-
-export interface SingleUserRoleResponse {
-  success: boolean;
-  error?: string;
-  data?: UserRole;
 }
 
 /********************************************

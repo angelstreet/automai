@@ -29,7 +29,7 @@ import { Label } from '@/components/shadcn/label';
 import { Badge } from '@/components/shadcn/badge';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { ConnectRepositoryValues } from '@/types/repositories';
+import { ConnectRepositoryValues } from '../types';
 import { POPULAR_REPOSITORIES, SAMPLE_RUNNERS } from './constants';
 
 interface EnhancedConnectRepositoryDialogProps {

@@ -1,7 +1,7 @@
 'use server';
 
 import db from '@/lib/supabase/db';
-import { Repository } from '@/types/repositories';
+import { Repository } from '@/app/[locale]/[tenant]/repositories/types';
 
 export interface RepositoryFilter {
   providerId?: string;

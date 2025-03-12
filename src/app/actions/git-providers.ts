@@ -1,7 +1,7 @@
 'use server';
 
 import db from '@/lib/supabase/db';
-import { GitProvider } from '@/types/repositories';
+import { GitProvider } from '@/app/[locale]/[tenant]/repositories/types';
 import { z } from 'zod';
 import { getUser } from '@/app/actions/user';
 
