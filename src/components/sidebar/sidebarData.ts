@@ -82,33 +82,13 @@ export const sidebarData: SidebarData = {
       title: 'Main',
       items: [
         {
-          title: 'Development',
-          href: '/development',
-          icon: Code2,
-          roles: ['admin', 'developer'],
-          items: [
-            {
-              title: 'Projects',
-              href: '/development/projects',
-              icon: FileCode,
-              roles: ['admin', 'developer'],
-            },
-            {
-              title: 'Use Cases',
-              href: '/development/usecases',
-              icon: TestTube,
-              roles: ['admin', 'developer'],
-            },
-          ],
-        },
-        {
           title: 'Repositories',
           href: '/repositories',
           icon: GitBranch,
           roles: ['admin', 'developer'],
         },
         {
-          title: 'Tests',
+          title: 'Runs',
           href: '/tests',
           icon: Rocket,
           roles: ['admin', 'developer', 'tester'],
