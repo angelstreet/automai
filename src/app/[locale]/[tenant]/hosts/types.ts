@@ -24,9 +24,13 @@ export interface Host {
   password?: string;
 
   // Status fields
-  status: 'connected' | 'failed' | 'pending';
+  status: 'connected' | 'failed' | 'pending' | 'testing';
 
   created_at: Date;
   updated_at: Date;
   is_windows: Boolean;
+  
+  // Additional fields used in components
+  os_type?: string;
+  errorMessage?: string;
 } 

@@ -123,11 +123,6 @@ export function useHosts() {
           false
         );
 
-        toast({
-          title: 'Success',
-          description: 'Host deleted successfully',
-        });
-
         return true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to delete host';

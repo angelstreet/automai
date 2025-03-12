@@ -46,6 +46,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const [showError, setShowError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
   const t = useTranslations('Common');
 
   const getStatusDot = (status: string) => {
@@ -215,8 +216,23 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const handleDelete = () => {
     if (isDeleting) return;
     setIsDeleting(true);
+    
+    // Mark as deleted before calling onDelete
+    setIsDeleted(true);
+    
+    // Call the onDelete handler
     onDelete?.(host.id);
+    
+    // Reset the deleting state after a short delay
+    setTimeout(() => {
+      setIsDeleting(false);
+    }, 500);
   };
+
+  // If the host is deleted, don't render anything
+  if (isDeleted) {
+    return null;
+  }
 
   return (
     <>
