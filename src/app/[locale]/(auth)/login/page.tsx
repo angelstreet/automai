@@ -1,8 +1,10 @@
 'use client';
 
-import * as React from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+
+import * as React from 'react';
+
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';

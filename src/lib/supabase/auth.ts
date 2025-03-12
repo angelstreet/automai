@@ -1,4 +1,5 @@
 import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/user';
+
 import { createClient } from './server';
 
 const isUsingSupabase = () => {
