@@ -74,14 +74,9 @@ export default function EnhancedRepositoryPage() {
       } catch (error) {
         console.error('Error fetching repositories:', error);
         
-        // Show error and set empty repository list
+        // Set empty repository list without showing an error toast
+        // This is normal for new users who don't have any repositories yet
         setRepositories([]);
-        
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch repositories from the server.',
-          variant: 'destructive',
-        });
       } finally {
         setIsLoading(false);
       }
@@ -429,11 +424,7 @@ export default function EnhancedRepositoryPage() {
                 ) : (
                   <EmptyState
                     title={t('no_repositories')}
-                    description={
-                      searchQuery || filterCategory !== 'All' 
-                        ? t('no_repos_found')
-                        : t('no_repositories_description')
-                    }
+                    description={t('no_repositories_description')}
                     icon={<GitBranch className="h-6 w-6" />}
                     action={
                       <Button onClick={() => setConnectDialogOpen(true)}>

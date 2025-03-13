@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
 import { Star, GitBranch, Clock, ExternalLink, RefreshCw, Globe, Lock } from 'lucide-react';
@@ -31,13 +31,34 @@ export function EnhancedRepositoryCard({
   onTogglePinned,
   isPinned,
 }: EnhancedRepositoryCardProps) {
+  // Initialize isHovered to false to prevent hydration mismatch
   const [isHovered, setIsHovered] = useState(false);
+  // Add isClient state to handle client-side rendering safely
+  const [isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
+  
+  // This effect only runs on the client after hydration is complete
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
-  // Format the last synced date
-  const lastSyncedText = repository.lastSyncedAt
-    ? `${t('lastSynced', { date: formatDistanceToNow(new Date(repository.lastSyncedAt), { addSuffix: true }) })}`
-    : t('never');
+  // Format the last synced date - using a more stable approach to avoid hydration issues
+  const getLastSyncedText = () => {
+    if (!repository.lastSyncedAt) return t('never');
+    
+    // Use a safer method that's less likely to cause hydration errors
+    try {
+      return t('lastSynced', { 
+        date: formatDistanceToNow(new Date(repository.lastSyncedAt), { addSuffix: true }) 
+      });
+    } catch (e) {
+      // Fall back to a simple format if there's an issue
+      return t('lastSynced', { date: t('recently') });
+    }
+  };
+  
+  // Get the text outside of render to reduce dynamic content
+  const lastSyncedText = getLastSyncedText();
 
   // Get the provider icon based on the type
   const getProviderIcon = () => {
@@ -134,7 +155,7 @@ export function EnhancedRepositoryCard({
         </div>
       </CardContent>
       
-      <CardFooter className={`pt-2 border-t flex justify-between transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+      <CardFooter className={`pt-2 border-t flex justify-between transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex items-center gap-2">
           <Badge variant={repository.syncStatus === 'SYNCED' ? 'default' : 'outline'}>
             {repository.syncStatus}

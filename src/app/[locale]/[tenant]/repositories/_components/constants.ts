@@ -103,4 +103,17 @@ export const REPOSITORY_CATEGORIES = [
     { id: '1', name: 'Default Runner', type: 'default', status: 'available' }
   ];
   
-  // No mock repositories - we're using real data from the API
+  // Mock sample file structure and content for repository explorer 
+  // TODO: Replace with real data from API
+  export const SAMPLE_FILES: Record<string, any> = {
+    'README.md': { 
+      type: 'file', 
+      size: '1.2 KB', 
+      lastModified: '2023-01-01' 
+    }
+  };
+  
+  export const SAMPLE_FILE_CONTENT = `# Repository
+
+This is a placeholder README for the repository.
+  `;
