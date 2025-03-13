@@ -96,14 +96,34 @@ export function EnhancedConnectRepositoryDialog({
     }, 1500);
   };
   
-  const handleQuickClone = () => {
-    if (!quickCloneUrl || !selectedRunner) return;
+  const handleQuickClone = async () => {
+    if (!quickCloneUrl) return;
     
     setIsCloning(true);
     
-    // Simulate cloning operation
-    setTimeout(() => {
-      setIsCloning(false);
+    try {
+      // Call API to create repository from URL
+      const response = await fetch('/api/repositories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quickClone: true,
+          url: quickCloneUrl,
+          isPrivate: false,
+          description: `Imported from ${quickCloneUrl}`,
+          runner: selectedRunner // This field is used by the UI but not required by API
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to clone repository');
+      }
+      
+      const data = await response.json();
+      
       if (onSubmit) {
         onSubmit({
           type: 'quick-clone',
@@ -111,10 +131,16 @@ export function EnhancedConnectRepositoryDialog({
           runner: selectedRunner
         });
       }
+      
       setQuickCloneUrl('');
       setSelectedRunner(null);
       onOpenChange(false);
-    }, 2000);
+    } catch (error) {
+      console.error('Error cloning repository:', error);
+      // We could add toast notifications here if needed
+    } finally {
+      setIsCloning(false);
+    }
   };
   
   const handleClonePopularRepo = (repoUrl: string) => {

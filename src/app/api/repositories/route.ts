@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRepositories, createRepository } from '@/app/[locale]/[tenant]/repositories/actions';
+import { getRepositories, createRepository, createRepositoryFromUrl } from '@/app/[locale]/[tenant]/repositories/actions';
 
 /**
  * GET /api/repositories
@@ -37,19 +37,41 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body = await request.json();
 
-    // Call the server action to create repository
-    const result = await createRepository(body);
-
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || 'Failed to create repository' },
-        { status: 400 },
+    // Check if this is a quick clone request or a regular repository creation
+    if (body.quickClone && body.url) {
+      // This is a quick clone request - use the specialized function
+      const result = await createRepositoryFromUrl(
+        body.url,
+        body.isPrivate || false,
+        body.description
       );
-    }
 
-    return NextResponse.json(result.data, { status: 201 });
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.error || 'Failed to create repository from URL' },
+          { status: 400 },
+        );
+      }
+
+      return NextResponse.json({ success: true, data: result.data }, { status: 201 });
+    } else {
+      // Regular repository creation
+      const result = await createRepository(body);
+
+      if (!result.success) {
+        return NextResponse.json(
+          { success: false, error: result.error || 'Failed to create repository' },
+          { status: 400 },
+        );
+      }
+
+      return NextResponse.json({ success: true, data: result.data }, { status: 201 });
+    }
   } catch (error) {
     console.error('Error in POST /api/repositories:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

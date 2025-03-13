@@ -1,5 +1,6 @@
 import { createClient } from '../server';
 import { cookies } from 'next/headers';
+import { detectProviderFromUrl, extractRepoNameFromUrl, extractOwnerFromUrl } from './utils';
 
 // Improved response type format following guidelines
 type DbResponse<T> = {
@@ -33,6 +34,14 @@ export interface RepositoryCreateData {
   url: string;
   default_branch: string;
   is_private: boolean;
+}
+
+export interface QuickCloneRepositoryData {
+  url: string;
+  provider_id?: string;
+  default_branch?: string;
+  is_private?: boolean;
+  description?: string | null;
 }
 
 // Repository DB operations
@@ -282,6 +291,103 @@ const repository = {
       }
 
       return { success: true, data: result };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  },
+  
+  /**
+   * Create a repository from a URL (quick clone)
+   * 
+   * This is used when a user provides a git repository URL directly,
+   * without specifying a provider. We'll detect the provider from the URL.
+   */
+  async createRepositoryFromUrl(
+    data: QuickCloneRepositoryData, 
+    profileId: string
+  ): Promise<DbResponse<Repository>> {
+    try {
+      const { url } = data;
+      
+      if (!url) {
+        return { success: false, error: 'Repository URL is required' };
+      }
+      
+      // Detect the provider type from the URL
+      const providerType = detectProviderFromUrl(url);
+      
+      if (!providerType) {
+        return { success: false, error: 'Unable to determine provider from URL' };
+      }
+      
+      // Extract repository name and owner from URL
+      const repoName = extractRepoNameFromUrl(url);
+      const owner = extractOwnerFromUrl(url);
+      
+      // Look for an existing provider of this type associated with the user
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      
+      const { data: existingProviders, error: providersError } = await supabase
+        .from('git_providers')
+        .select('id')
+        .eq('profile_id', profileId)
+        .eq('type', providerType)
+        .limit(1);
+      
+      if (providersError) {
+        return { success: false, error: providersError.message };
+      }
+      
+      // If we don't have a provider for this type, we need to create one
+      let providerId = data.provider_id;
+      
+      if (!providerId) {
+        if (existingProviders && existingProviders.length > 0) {
+          providerId = existingProviders[0].id;
+        } else {
+          // We need to create a default provider for this type
+          const { data: newProvider, error: createProviderError } = await supabase
+            .from('git_providers')
+            .insert({
+              type: providerType,
+              name: `Default ${providerType.charAt(0).toUpperCase() + providerType.slice(1)}`,
+              profile_id: profileId,
+              is_public: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+            
+          if (createProviderError || !newProvider) {
+            return { 
+              success: false, 
+              error: createProviderError?.message || 'Failed to create default provider' 
+            };
+          }
+          
+          providerId = newProvider.id;
+        }
+      }
+      
+      // Now create the repository
+      const repoData: RepositoryCreateData = {
+        name: repoName,
+        full_name: `${owner}/${repoName}`,
+        description: data.description || `Imported from ${url}`,
+        provider_id: providerId,
+        provider_repo_id: `${owner}/${repoName}`,
+        url: url,
+        default_branch: data.default_branch || 'main',
+        is_private: data.is_private !== undefined ? data.is_private : false
+      };
+      
+      // Create the repository using our existing method
+      return this.createRepository(repoData, profileId);
     } catch (error) {
       return { 
         success: false, 

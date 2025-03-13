@@ -1,6 +1,7 @@
 'use server';
 
 import db from '@/lib/supabase/db';
+import { repository, gitProvider } from '@/lib/supabase';
 import { GitProvider, Repository, GitProviderType, RepositorySyncStatus } from '@/app/[locale]/[tenant]/repositories/types';
 import { z } from 'zod';
 import { getUser } from '@/app/actions/user';
@@ -137,6 +138,59 @@ export async function syncRepository(
   } catch (error: any) {
     console.error('Error in syncRepository:', error);
     return { success: false, error: error.message || 'Failed to sync repository' };
+  }
+}
+
+/**
+ * Create a repository from a URL (quick clone)
+ * This is used when a user just enters a URL in the UI without connecting a Git provider
+ */
+export async function createRepositoryFromUrl(
+  url: string,
+  isPrivate: boolean = false,
+  description?: string
+): Promise<{ success: boolean; error?: string; data?: Repository }> {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    // Call the DB layer function
+    const result = await repository.createRepositoryFromUrl(
+      {
+        url,
+        is_private: isPrivate,
+        description
+      },
+      user.id
+    );
+    
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+    
+    // Transform the repository to match the UI's expected format
+    const repoData: Repository = {
+      id: result.data!.id,
+      name: result.data!.name,
+      description: result.data!.description || undefined,
+      url: result.data!.url,
+      isPrivate: result.data!.is_private,
+      defaultBranch: result.data!.default_branch,
+      providerType: 'github', // This should be determined by the DB layer
+      providerId: result.data!.provider_id,
+      owner: result.data!.full_name.split('/')[0],
+      lastSyncedAt: result.data!.last_synced_at || undefined,
+      syncStatus: 'SYNCED',
+      createdAt: result.data!.created_at,
+      updated_at: result.data!.updated_at
+    };
+    
+    return { success: true, data: repoData };
+  } catch (error: any) {
+    console.error('Error in createRepositoryFromUrl:', error);
+    return { success: false, error: error.message || 'Failed to create repository from URL' };
   }
 }
 
