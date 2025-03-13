@@ -322,11 +322,6 @@ export default function EnhancedRepositoryPage() {
       
       // Remove the repository from the state
       setRepositories(prev => prev.filter(repo => repo.id !== repositoryToDelete));
-      
-      toast({
-        title: 'Success',
-        description: t('deleteSuccess'),
-      });
     } catch (error) {
       console.error('Error deleting repository:', error);
       

@@ -97,7 +97,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
  */
 export async function DELETE(request: NextRequest, { params }: Props) {
   try {
-    const { id } = params;
+    // Make sure to await the params to avoid the Next.js warning
+    const id = await params.id;
 
     // Call the server action to delete repository
     const result = await deleteRepository(id);

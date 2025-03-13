@@ -63,15 +63,15 @@ export async function GET(
     }
     
     // Debug logs
-    console.log('Provider type:', provider.provider_type);
+    console.log('Provider type:', provider.type);
     console.log('Repository owner:', repository.owner);
     console.log('Repository name:', repository.name);
     
     let files = [];
     
     // Handle different Git providers
-    if (provider.provider_type === 'github' || 
-        (provider.provider_type === undefined && repository.owner === 'angelstreet')) {
+    if (provider.type === 'github' || 
+        (provider.type === undefined && repository.owner === 'angelstreet')) {
       // Use GitHub API - fallback for undefined provider type for angelstreet repos
       const githubToken = process.env.GITHUB_TOKEN;
       
@@ -117,13 +117,13 @@ export async function GET(
           { status: 500 },
         );
       }
-    } else if (provider.provider_type === 'gitlab') {
+    } else if (provider.type === 'gitlab') {
       // Use GitLab API (to be implemented)
       return NextResponse.json(
         { success: false, error: 'GitLab API integration not implemented yet' },
         { status: 501 },
       );
-    } else if (provider.provider_type === 'gitea') {
+    } else if (provider.type === 'gitea') {
       // Use Gitea API (to be implemented)
       return NextResponse.json(
         { success: false, error: 'Gitea API integration not implemented yet' },

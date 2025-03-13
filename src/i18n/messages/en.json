@@ -290,6 +290,7 @@
     "enterAccessToken": "Enter your access token",
     "tokenGenerationInfo": "You can generate a token in your {provider} account settings.",
     "tokenSecurityInfo": "Your token is securely stored and will only be used to access repositories you specify.",
+    "quickCloneDescription": "Clone a public repository from GitHub, GitLab, or a self-hosted Git server.",
     "repositoryUrl": "Repository URL",
     "repositoryUrlDescription": "Enter the URL of a public Git repository",
     "selectRunner": "Select Runner",

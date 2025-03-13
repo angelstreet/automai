@@ -127,8 +127,16 @@ export async function updateRepository(
 
 export async function deleteRepository(id: string): Promise<{ success: boolean; error?: string }> {
   try {
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
     await db.repository.delete({
-      where: { id },
+      where: { 
+        id,
+        profile_id: user.id
+      },
     });
 
     return { success: true };

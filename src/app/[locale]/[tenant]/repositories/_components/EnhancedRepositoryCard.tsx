@@ -106,32 +106,26 @@ export function EnhancedRepositoryCard({
 
   return (
     <Card 
-      className="overflow-hidden transition-all duration-200 hover:shadow-md"
+      className="overflow-hidden transition-all duration-160 hover:shadow-md"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <CardHeader className="pb-2 pt-3 px-4 relative">
-        <div className="absolute top-2 right-2 flex gap-1">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={`h-8 w-8 ${isStarred ? 'text-yellow-500' : ''}`}
-            onClick={handleStarClick}
-          >
-            <Star className="h-4 w-4" />
-          </Button>
-        </div>
-        
         <div className="flex items-center gap-2">
           {getProviderIcon()}
           <div className="flex-1 min-w-0">
             <CardTitle className="text-base truncate">
               {repository.name}
             </CardTitle>
-            <CardDescription className="truncate text-xs">
-              {repository.owner}/{repository.name}
-            </CardDescription>
           </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={`h-7 w-7 p-0 ${isStarred ? 'text-yellow-500' : ''}`}
+            onClick={handleStarClick}
+          >
+            <Star className="h-4 w-4" />
+          </Button>
           {repository.isPrivate ? (
             <Badge variant="outline" className="flex items-center">
               <Lock className="h-3 w-3 mr-1" />
@@ -143,10 +137,6 @@ export function EnhancedRepositoryCard({
               {t('public')}
             </Badge>
           )}
-        </div>
-        
-        <div className="mt-2 text-sm text-muted-foreground line-clamp-2">
-          {repository.description}
         </div>
       </CardHeader>
       
@@ -167,9 +157,9 @@ export function EnhancedRepositoryCard({
         </div>
       </CardContent>
       
-      <CardFooter className={`pt-2 px-4 border-t flex justify-between transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="flex items-center gap-2">
-          <Badge variant={repository.syncStatus === 'SYNCED' ? 'default' : 'outline'}>
+      <CardFooter className={`py-3 px-3 border-t flex justify-between transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="flex items-center gap-1">
+          <Badge variant={repository.syncStatus === 'SYNCED' ? 'default' : 'outline'} className="text-xs py-0">
             {repository.syncStatus}
           </Badge>
         </div>
@@ -177,7 +167,7 @@ export function EnhancedRepositoryCard({
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="h-6 text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={handleDeleteClick}
             disabled={isDeleting}
           >
@@ -188,7 +178,7 @@ export function EnhancedRepositoryCard({
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8"
+              className="h-6"
               onClick={(e) => {
                 e.stopPropagation();
                 window.open(repository.url, '_blank');
@@ -201,7 +191,7 @@ export function EnhancedRepositoryCard({
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8"
+            className="h-6"
             onClick={handleSyncClick}
             disabled={isSyncing}
           >
