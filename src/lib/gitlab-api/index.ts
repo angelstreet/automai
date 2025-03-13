@@ -69,17 +69,20 @@ export interface GitLabBranch {
  * Get repository information from GitLab
  * @param serverUrl The GitLab server URL (defaults to gitlab.com)
  * @param projectId Repository ID or path with namespace (e.g., 'username/repo')
- * @param token Access token for authentication
+ * @param token Optional access token for authentication
  */
 export async function getRepository(
   serverUrl: string = 'https://gitlab.com',
   projectId: string,
-  token: string
+  token?: string
 ): Promise<GitLabRepository> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
   };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   
   // URL encode the projectId for paths with namespaces
   const encodedProjectId = encodeURIComponent(projectId);
@@ -101,19 +104,22 @@ export async function getRepository(
  * @param projectId Repository ID or path with namespace (e.g., 'username/repo')
  * @param path Path within the repository
  * @param ref Branch or commit reference
- * @param token Access token for authentication
+ * @param token Optional access token for authentication
  */
 export async function listFiles(
   serverUrl: string = 'https://gitlab.com',
   projectId: string,
   path: string = '',
   ref: string = '',
-  token: string
+  token?: string
 ): Promise<GitLabFile[]> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
   };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   
   // URL encode the projectId for paths with namespaces
   const encodedProjectId = encodeURIComponent(projectId);
@@ -150,19 +156,22 @@ export async function listFiles(
  * @param projectId Repository ID or path with namespace (e.g., 'username/repo')
  * @param filePath Path to the file
  * @param ref Branch or commit reference
- * @param token Access token for authentication
+ * @param token Optional access token for authentication
  */
 export async function getFileContent(
   serverUrl: string = 'https://gitlab.com',
   projectId: string,
   filePath: string,
   ref: string = '',
-  token: string
+  token?: string
 ): Promise<GitLabFileContent> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
   };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   
   // URL encode the projectId and filePath
   const encodedProjectId = encodeURIComponent(projectId);
@@ -189,17 +198,20 @@ export async function getFileContent(
  * List branches in a repository
  * @param serverUrl The GitLab server URL (defaults to gitlab.com)
  * @param projectId Repository ID or path with namespace (e.g., 'username/repo')
- * @param token Access token for authentication
+ * @param token Optional access token for authentication
  */
 export async function listBranches(
   serverUrl: string = 'https://gitlab.com',
   projectId: string,
-  token: string
+  token?: string
 ): Promise<GitLabBranch[]> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
   };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
   
   // URL encode the projectId for paths with namespaces
   const encodedProjectId = encodeURIComponent(projectId);

@@ -59,77 +59,182 @@ export async function GET(request: NextRequest) {
       const projectId = extractGitLabProjectId(repositoryUrl);
       console.log(`[GET /api/repositories/explore] GitLab Project ID: ${projectId}`);
       
-      switch (action) {
-        case 'info':
-          data = await getGitLabRepository(serverUrl, projectId, provider.access_token);
-          break;
-        
-        case 'list':
-          data = await listGitLabFiles(serverUrl, projectId, path, branch, provider.access_token);
+      try {
+        switch (action) {
+          case 'info':
+            data = await getGitLabRepository(serverUrl, projectId, provider.access_token);
+            break;
           
-          // Transform GitLab response to match the expected format
-          data = data.map((item: any) => ({
-            name: item.name,
-            path: item.path,
-            type: item.type === 'tree' ? 'dir' : 'file',
-            size: item.size || 0,
-            url: item.web_url,
-          }));
-          break;
-        
-        case 'file':
-          if (!path) {
+          case 'list':
+            data = await listGitLabFiles(serverUrl, projectId, path, branch, provider.access_token);
+            
+            // Transform GitLab response to match the expected format
+            data = data.map((item: any) => ({
+              name: item.name,
+              path: item.path,
+              type: item.type === 'tree' ? 'dir' : 'file',
+              size: item.size || 0,
+              url: item.web_url,
+            }));
+            break;
+          
+          case 'file':
+            if (!path) {
+              return NextResponse.json(
+                { success: false, error: 'File path is required' },
+                { status: 400 }
+              );
+            }
+            data = await getGitLabFileContent(serverUrl, projectId, path, branch, provider.access_token);
+            break;
+          
+          case 'branches':
+            data = await listGitLabBranches(serverUrl, projectId, provider.access_token);
+            break;
+          
+          default:
             return NextResponse.json(
-              { success: false, error: 'File path is required' },
+              { success: false, error: 'Invalid action' },
               { status: 400 }
             );
+        }
+      } catch (error) {
+        console.error(`[GET /api/repositories/explore] Error with token: ${error}`);
+        
+        // If authentication fails, try without token for public repositories
+        if (error instanceof Error && error.message.includes('Unauthorized')) {
+          console.log('[GET /api/repositories/explore] Trying without token for public repository');
+          
+          try {
+            switch (action) {
+              case 'info':
+                data = await getGitLabRepository(serverUrl, projectId);
+                break;
+              
+              case 'list':
+                data = await listGitLabFiles(serverUrl, projectId, path, branch);
+                
+                // Transform GitLab response to match the expected format
+                data = data.map((item: any) => ({
+                  name: item.name,
+                  path: item.path,
+                  type: item.type === 'tree' ? 'dir' : 'file',
+                  size: item.size || 0,
+                  url: item.web_url,
+                }));
+                break;
+              
+              case 'file':
+                if (!path) {
+                  return NextResponse.json(
+                    { success: false, error: 'File path is required' },
+                    { status: 400 }
+                  );
+                }
+                data = await getGitLabFileContent(serverUrl, projectId, path, branch);
+                break;
+              
+              case 'branches':
+                data = await listGitLabBranches(serverUrl, projectId);
+                break;
+              
+              default:
+                return NextResponse.json(
+                  { success: false, error: 'Invalid action' },
+                  { status: 400 }
+                );
+            }
+          } catch (publicError) {
+            console.error(`[GET /api/repositories/explore] Error without token: ${publicError}`);
+            throw new Error(
+              'Repository access failed. This may be a private repository that requires valid credentials.'
+            );
           }
-          data = await getGitLabFileContent(serverUrl, projectId, path, branch, provider.access_token);
-          break;
-        
-        case 'branches':
-          data = await listGitLabBranches(serverUrl, projectId, provider.access_token);
-          break;
-        
-        default:
-          return NextResponse.json(
-            { success: false, error: 'Invalid action' },
-            { status: 400 }
-          );
+        } else {
+          throw error;
+        }
       }
     } else if (provider.type === 'gitea' || provider.type === 'self-hosted' || provider.type === 'github') {
       // Gitea API (also works for GitHub and self-hosted providers)
       const { owner, repo } = extractGiteaRepoInfo(repositoryUrl);
       console.log(`[GET /api/repositories/explore] Gitea/GitHub Owner/Repo: ${owner}/${repo}`);
       
-      switch (action) {
-        case 'info':
-          data = await getGiteaRepository(serverUrl, owner, repo, provider.access_token);
-          break;
-        
-        case 'list':
-          data = await listGiteaFiles(serverUrl, owner, repo, path, branch, provider.access_token);
-          break;
-        
-        case 'file':
-          if (!path) {
+      try {
+        switch (action) {
+          case 'info':
+            data = await getGiteaRepository(serverUrl, owner, repo, provider.access_token);
+            break;
+          
+          case 'list':
+            data = await listGiteaFiles(serverUrl, owner, repo, path, branch, provider.access_token);
+            break;
+          
+          case 'file':
+            if (!path) {
+              return NextResponse.json(
+                { success: false, error: 'File path is required' },
+                { status: 400 }
+              );
+            }
+            data = await getGiteaFileContent(serverUrl, owner, repo, path, branch, provider.access_token);
+            break;
+          
+          case 'branches':
+            data = await listGiteaBranches(serverUrl, owner, repo, provider.access_token);
+            break;
+          
+          default:
             return NextResponse.json(
-              { success: false, error: 'File path is required' },
+              { success: false, error: 'Invalid action' },
               { status: 400 }
             );
+        }
+      } catch (error) {
+        console.error(`[GET /api/repositories/explore] Error with token: ${error}`);
+        
+        // If authentication fails, try without token for public repositories
+        if (error instanceof Error && error.message.includes('Unauthorized')) {
+          console.log('[GET /api/repositories/explore] Trying without token for public repository');
+          
+          try {
+            switch (action) {
+              case 'info':
+                data = await getGiteaRepository(serverUrl, owner, repo);
+                break;
+              
+              case 'list':
+                data = await listGiteaFiles(serverUrl, owner, repo, path, branch);
+                break;
+              
+              case 'file':
+                if (!path) {
+                  return NextResponse.json(
+                    { success: false, error: 'File path is required' },
+                    { status: 400 }
+                  );
+                }
+                data = await getGiteaFileContent(serverUrl, owner, repo, path, branch);
+                break;
+              
+              case 'branches':
+                data = await listGiteaBranches(serverUrl, owner, repo);
+                break;
+              
+              default:
+                return NextResponse.json(
+                  { success: false, error: 'Invalid action' },
+                  { status: 400 }
+                );
+            }
+          } catch (publicError) {
+            console.error(`[GET /api/repositories/explore] Error without token: ${publicError}`);
+            throw new Error(
+              'Repository access failed. This may be a private repository that requires valid credentials.'
+            );
           }
-          data = await getGiteaFileContent(serverUrl, owner, repo, path, branch, provider.access_token);
-          break;
-        
-        case 'branches':
-          data = await listGiteaBranches(serverUrl, owner, repo, provider.access_token);
-          break;
-        
-        default:
-          return NextResponse.json(
-            { success: false, error: 'Invalid action' },
-            { status: 400 }
-          );
+        } else {
+          throw error;
+        }
       }
     } else {
       return NextResponse.json(

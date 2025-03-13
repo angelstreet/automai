@@ -1,29 +1,31 @@
 /**
- * Gitea API Integration
- * This module provides functions to interact with Gitea API endpoints
+ * GitHub API Integration
+ * This module provides functions to interact with GitHub API endpoints
  */
 
-// Types for Gitea API responses
-export interface GiteaRepository {
+// Types for GitHub API responses
+export interface GitHubRepository {
   id: number;
   name: string;
   full_name: string;
   description: string;
   private: boolean;
   owner: {
-    id: number;
     login: string;
-    full_name: string;
+    id: number;
     avatar_url: string;
+    url: string;
+    html_url: string;
   };
   html_url: string;
-  clone_url: string;
+  url: string;
   default_branch: string;
   created_at: string;
   updated_at: string;
+  pushed_at: string;
 }
 
-export interface GiteaFile {
+export interface GitHubFile {
   name: string;
   path: string;
   sha: string;
@@ -37,7 +39,7 @@ export interface GiteaFile {
   encoding?: string;
 }
 
-export interface GiteaBranch {
+export interface GitHubBranch {
   name: string;
   commit: {
     sha: string;
@@ -47,27 +49,27 @@ export interface GiteaBranch {
 }
 
 /**
- * Get repository information from Gitea
- * @param serverUrl The Gitea server URL
+ * Get repository information from GitHub
  * @param owner Repository owner
  * @param repo Repository name
  * @param token Optional access token for authentication
  */
 export async function getRepository(
-  serverUrl: string,
   owner: string,
   repo: string,
   token?: string
-): Promise<GiteaRepository> {
+): Promise<GitHubRepository> {
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    'Accept': 'application/vnd.github.v3+json',
   };
   
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
   
-  const response = await fetch(`${serverUrl}/api/v1/repos/${owner}/${repo}`, { headers });
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    headers,
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch repository: ${response.statusText}`);
@@ -78,7 +80,6 @@ export async function getRepository(
 
 /**
  * List files in a repository
- * @param serverUrl The Gitea server URL
  * @param owner Repository owner
  * @param repo Repository name
  * @param path Path within the repository
@@ -86,15 +87,14 @@ export async function getRepository(
  * @param token Optional access token for authentication
  */
 export async function listFiles(
-  serverUrl: string,
   owner: string,
   repo: string,
   path: string = '',
   ref: string = '',
   token?: string
-): Promise<GiteaFile[]> {
+): Promise<GitHubFile[]> {
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    'Accept': 'application/vnd.github.v3+json',
   };
   
   if (token) {
@@ -102,12 +102,14 @@ export async function listFiles(
   }
   
   // Build URL with query parameters if ref is provided
-  let url = `${serverUrl}/api/v1/repos/${owner}/${repo}/contents/${path}`;
+  let url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
   if (ref) {
     url += `?ref=${ref}`;
   }
   
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, {
+    headers,
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to list files: ${response.statusText}`);
@@ -118,7 +120,6 @@ export async function listFiles(
 
 /**
  * Get file content from a repository
- * @param serverUrl The Gitea server URL
  * @param owner Repository owner
  * @param repo Repository name
  * @param path Path to the file
@@ -126,15 +127,14 @@ export async function listFiles(
  * @param token Optional access token for authentication
  */
 export async function getFileContent(
-  serverUrl: string,
   owner: string,
   repo: string,
   path: string,
   ref: string = '',
   token?: string
-): Promise<GiteaFile> {
+): Promise<GitHubFile> {
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    'Accept': 'application/vnd.github.v3+json',
   };
   
   if (token) {
@@ -142,12 +142,14 @@ export async function getFileContent(
   }
   
   // Build URL with query parameters if ref is provided
-  let url = `${serverUrl}/api/v1/repos/${owner}/${repo}/contents/${path}`;
+  let url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
   if (ref) {
     url += `?ref=${ref}`;
   }
   
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, {
+    headers,
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to get file content: ${response.statusText}`);
@@ -158,26 +160,26 @@ export async function getFileContent(
 
 /**
  * List branches in a repository
- * @param serverUrl The Gitea server URL
  * @param owner Repository owner
  * @param repo Repository name
  * @param token Optional access token for authentication
  */
 export async function listBranches(
-  serverUrl: string,
   owner: string,
   repo: string,
   token?: string
-): Promise<GiteaBranch[]> {
+): Promise<GitHubBranch[]> {
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    'Accept': 'application/vnd.github.v3+json',
   };
   
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
   
-  const response = await fetch(`${serverUrl}/api/v1/repos/${owner}/${repo}/branches`, { headers });
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, {
+    headers,
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to list branches: ${response.statusText}`);
@@ -187,25 +189,31 @@ export async function listBranches(
 }
 
 /**
- * Extract owner and repo name from a Gitea URL
- * @param url Gitea repository URL
+ * Extract owner and repo from a GitHub URL
+ * @param url GitHub repository URL
  */
-export function extractGiteaRepoInfo(url: string): { owner: string; repo: string } {
+export function extractGitHubRepoInfo(url: string): { owner: string; repo: string } {
   // Remove .git suffix if present
   const cleanUrl = url.endsWith('.git') ? url.slice(0, -4) : url;
   
   try {
     const urlObj = new URL(cleanUrl);
-    const pathParts = urlObj.pathname.split('/').filter(Boolean);
     
-    if (pathParts.length < 2) {
-      throw new Error('Invalid Gitea repository URL format');
+    // For github.com
+    if (urlObj.hostname === 'github.com') {
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      
+      if (pathParts.length < 2) {
+        throw new Error('Invalid GitHub repository URL format');
+      }
+      
+      return {
+        owner: pathParts[0],
+        repo: pathParts[1],
+      };
     }
     
-    return {
-      owner: pathParts[0],
-      repo: pathParts[1],
-    };
+    throw new Error('Not a GitHub URL');
   } catch (error) {
     throw new Error('Invalid URL format');
   }
