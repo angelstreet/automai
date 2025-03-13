@@ -10,6 +10,7 @@ import {
   createHost,
   deleteHost as deleteHostAction,
   testHostConnection as testHostConnectionAction,
+  testConnection as testConnectionAction,
 } from './actions';
 import useSWR from 'swr';
 
@@ -145,7 +146,7 @@ export function useHosts() {
   );
 
   // Test connection functionality
-  const testConnection = useCallback(
+  const testHostById = useCallback(
     async (id: string) => {
       try {
         // First update the host to testing state
@@ -251,6 +252,30 @@ export function useHosts() {
     [toast, mutate]
   );
 
+  // Test connection with credentials
+  const testConnection = useCallback(
+    async (data: {
+      type: string;
+      ip: string;
+      port?: number;
+      username?: string;
+      password?: string;
+    }) => {
+      try {
+        return await testConnectionAction(data);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to test connection';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+        return { success: false, error: errorMessage };
+      }
+    },
+    [toast]
+  );
+
   // Test all connections functionality
   const testAllConnections = useCallback(
     async () => {
@@ -352,6 +377,7 @@ export function useHosts() {
     fetchHosts: mutate,
     addHost,
     deleteHost,
+    testHostById,
     testConnection,
     testAllConnections,
     isLoaded: !isLoading && hosts !== null,

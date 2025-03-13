@@ -15,8 +15,8 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/shadcn/dialog';
-import { hostsApi } from '@/app/actions/hosts';
 import { Host } from '../types';
+import { useHosts } from '../hooks';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 
@@ -30,6 +30,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   const t = useTranslations('Common');
   const params = useParams();
   const locale = params.locale as string;
+  const { addHost, testConnection } = useHosts();
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -99,7 +100,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
     setIsCreating(true);
     try {
-      const host = await hostsApi.createHost({
+      const host = await addHost({
         name: formData.name,
         description: formData.description || '',
         type: 'ssh',
@@ -115,7 +116,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       resetForm();
       onOpenChange(false);
 
-      if (onSuccess) {
+      if (onSuccess && host) {
         onSuccess(host);
       }
     } catch (error) {
@@ -150,7 +151,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     return t('errors.hostConnection');
   };
 
-  const testConnection = async (): Promise<boolean> => {
+  const testConnectionHandler = async (): Promise<boolean> => {
     if (!validateFormData()) return false;
 
     // Throttle requests
@@ -165,7 +166,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     setTestError(null);
 
     try {
-      const data = await hostsApi.testConnection({
+      const data = await testConnection({
         type: 'ssh',
         ip: formData.ip,
         port: parseInt(formData.port),

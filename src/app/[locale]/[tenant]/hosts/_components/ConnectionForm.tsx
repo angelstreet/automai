@@ -17,10 +17,8 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
-import {
-  testConnection as testConnectionAction,
-  verifyFingerprint as verifyFingerprintAction,
-} from '@/app/actions/hosts';
+import { useHosts } from '../hooks';
+import { verifyFingerprint as verifyFingerprintAction } from '../actions';
 
 export interface FormData {
   name: string;
@@ -43,6 +41,7 @@ interface ConnectionFormProps {
 
 export function ConnectionForm({ formData, onChange, onSave, onTestSuccess, isSaving = false }: ConnectionFormProps) {
   const t = useTranslations('Common');
+  const { testConnection } = useHosts();
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
@@ -111,7 +110,7 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess, isSa
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     try {
-      const data = await testConnectionAction({
+      const data = await testConnection({
         type: formData.type,
         ip: formData.ip,
         port: parseInt(formData.port),
