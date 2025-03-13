@@ -401,9 +401,9 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
       {/* Main content area */}
       <div>
         {activeTab === 'code' && (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {/* GitHub-style repository stats */}
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-2">
               <div className="flex items-center">
                 <GitBranch className="h-4 w-4 mr-1" />
                 <span>main</span>
