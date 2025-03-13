@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
-import { Star, GitBranch, Clock, ExternalLink, RefreshCw, Globe, Lock } from 'lucide-react';
+import { Star, GitBranch, Clock, ExternalLink, RefreshCw, Globe, Lock, Trash2 } from 'lucide-react';
 
 import {
   Card,
@@ -19,7 +19,9 @@ import { LANGUAGE_COLORS } from './constants';
 interface EnhancedRepositoryCardProps {
   repository: any; // We'll replace this with proper types later
   onSync: (id: string) => Promise<void>;
+  onDelete?: (id: string) => void;
   isSyncing: boolean;
+  isDeleting?: boolean;
   onToggleStarred: (id: string) => void;
   isStarred: boolean;
 }
@@ -27,7 +29,9 @@ interface EnhancedRepositoryCardProps {
 export function EnhancedRepositoryCard({
   repository,
   onSync,
+  onDelete,
   isSyncing,
+  isDeleting,
   onToggleStarred,
   isStarred,
 }: EnhancedRepositoryCardProps) {
@@ -92,13 +96,21 @@ export function EnhancedRepositoryCard({
     onToggleStarred(repository.id);
   };
 
+  // Handle delete button click without propagation
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(repository.id);
+    }
+  };
+
   return (
     <Card 
       className="overflow-hidden transition-all duration-200 hover:shadow-md"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <CardHeader className="pb-2 relative">
+      <CardHeader className="pb-2 pt-3 px-4 relative">
         <div className="absolute top-2 right-2 flex gap-1">
           <Button 
             variant="ghost" 
@@ -110,7 +122,7 @@ export function EnhancedRepositoryCard({
           </Button>
         </div>
         
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex items-center gap-2">
           {getProviderIcon()}
           <div className="flex-1 min-w-0">
             <CardTitle className="text-base truncate">
@@ -138,7 +150,7 @@ export function EnhancedRepositoryCard({
         </div>
       </CardHeader>
       
-      <CardContent className="pb-2">
+      <CardContent className="py-2 px-4">
         <div className="flex items-center text-xs text-muted-foreground">
           <GitBranch className="h-3 w-3 mr-1" />
           {repository.defaultBranch || 'main'}
@@ -155,13 +167,23 @@ export function EnhancedRepositoryCard({
         </div>
       </CardContent>
       
-      <CardFooter className={`pt-2 border-t flex justify-between transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
+      <CardFooter className={`pt-2 px-4 border-t flex justify-between transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex items-center gap-2">
           <Badge variant={repository.syncStatus === 'SYNCED' ? 'default' : 'outline'}>
             {repository.syncStatus}
           </Badge>
         </div>
         <div className="flex gap-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={handleDeleteClick}
+            disabled={isDeleting}
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            {t('deleteAction')}
+          </Button>
           {repository.url && (
             <Button 
               variant="ghost" 

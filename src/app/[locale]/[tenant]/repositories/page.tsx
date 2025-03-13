@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { GitBranch, Plus, RefreshCw, Search, Filter, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { GitBranch, Plus, RefreshCw, Search, Filter, Star, ChevronLeft, ChevronRight, Trash } from 'lucide-react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
+import { Badge } from '@/components/shadcn/badge';
 import { 
   Card, 
   CardContent, 
@@ -13,23 +14,28 @@ import {
   CardTitle 
 } from '@/components/shadcn/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/shadcn/select';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { EmptyState } from '@/components/layout/EmptyState';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shadcn/select';
+import { Separator } from '@/components/shadcn/separator';
+import { Skeleton } from '@/components/shadcn/skeleton';
 import { useToast } from '@/components/shadcn/use-toast';
-import { Repository, ConnectRepositoryValues } from './types';
-import { REPOSITORY_CATEGORIES } from './_components/constants';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/shadcn/dialog';
 
-// Import components
 import { EnhancedRepositoryCard } from './_components/EnhancedRepositoryCard';
 import { RepositoryExplorer } from './_components/RepositoryExplorer';
 import { EnhancedConnectRepositoryDialog } from './_components/EnhancedConnectRepositoryDialog';
+
+import { PageHeader } from '@/components/layout/PageHeader';
+import { EmptyState } from '@/components/layout/EmptyState';
+
+import { Repository, ConnectRepositoryValues } from './types';
+import { REPOSITORY_CATEGORIES } from './_components/constants';
 
 export default function EnhancedRepositoryPage() {
   const { toast } = useToast();
@@ -52,6 +58,10 @@ export default function EnhancedRepositoryPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
+
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [repositoryToDelete, setRepositoryToDelete] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     // Fetch repositories
@@ -288,6 +298,54 @@ export default function EnhancedRepositoryPage() {
     }
   };
 
+  // Handle repository deletion
+  const handleDeleteRepository = async (id: string) => {
+    setRepositoryToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteRepository = async () => {
+    if (!repositoryToDelete) return;
+    
+    setIsDeleting(repositoryToDelete);
+    setDeleteDialogOpen(false);
+    
+    try {
+      // Call API to delete the repository
+      const response = await fetch(`/api/repositories/${repositoryToDelete}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete repository');
+      }
+      
+      // Remove the repository from the state
+      setRepositories(prev => prev.filter(repo => repo.id !== repositoryToDelete));
+      
+      toast({
+        title: 'Success',
+        description: t('deleteSuccess'),
+      });
+    } catch (error) {
+      console.error('Error deleting repository:', error);
+      
+      toast({
+        title: 'Error',
+        description: t('deleteFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(null);
+      setRepositoryToDelete(null);
+    }
+  };
+
+  const cancelDeleteRepository = () => {
+    setDeleteDialogOpen(false);
+    setRepositoryToDelete(null);
+  };
+
   // Filter and sort repositories based on current UI state
   const filteredRepositories = repositories
     .filter(repo => {
@@ -390,6 +448,8 @@ export default function EnhancedRepositoryPage() {
                 isSyncing={syncingRepoId === repo.id}
                 onToggleStarred={handleToggleStarred}
                 isStarred={starredRepos.has(repo.id)}
+                onDelete={handleDeleteRepository}
+                isDeleting={isDeleting === repo.id}
               />
             </div>
           ))}
@@ -557,6 +617,25 @@ export default function EnhancedRepositoryPage() {
         onOpenChange={setConnectDialogOpen}
         onSubmit={handleConnectRepository}
       />
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('confirmDeleteRepository')}</DialogTitle>
+          </DialogHeader>
+          <DialogDescription>
+            {t('deleteRepositoryWarning')}
+          </DialogDescription>
+          <DialogFooter>
+            <Button variant="destructive" onClick={confirmDeleteRepository}>
+              {t('deleteAction')}
+            </Button>
+            <Button variant="outline" onClick={cancelDeleteRepository}>
+              {t('cancelAction')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

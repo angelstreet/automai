@@ -2,7 +2,7 @@
  * Types for Git repositories and providers
  */
 
-export type GitProviderType = 'github' | 'gitlab' | 'gitea';
+export type GitProviderType = 'github' | 'gitlab' | 'gitea' | 'self-hosted';
 
 export type GitProviderStatus = 'connected' | 'disconnected' | 'error';
 
@@ -56,4 +56,4 @@ export interface ConnectRepositoryValues {
   accessToken?: string;
   serverUrl?: string;
   url?: string;
-} 
+}

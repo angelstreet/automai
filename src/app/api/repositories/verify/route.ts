@@ -61,15 +61,40 @@ export async function POST(request: Request) {
           const errorData = await response.json();
           error = errorData.message || 'Repository not found on GitLab';
         }
-      } else if (providerType === 'gitea') {
-        // For Gitea, we would need the server URL which we don't have here
-        // This is a simplified check that assumes the repository exists
-        exists = true;
+      } else if (providerType === 'gitea' || providerType === 'self-hosted') {
+        // For self-hosted Git providers, we can't easily verify
+        // without knowing the server URL and authentication details
+        
+        // Extract server URL from the repository URL
+        const serverUrl = url.match(/^(https?:\/\/[^\/]+)/)?.[1] || '';
+        
+        if (serverUrl && serverUrl.includes('://')) {
+          try {
+            // Try a simple HEAD request to check if the server is reachable
+            const response = await fetch(serverUrl, { method: 'HEAD' });
+            exists = response.status < 400; // Any non-error status code
+            
+            if (!exists) {
+              error = `Server at ${serverUrl} is not reachable`;
+            }
+          } catch (err) {
+            // If we can't reach the server, we'll still allow the clone attempt
+            // as it might be accessible from the server but not from the API
+            exists = true;
+            console.warn(`Could not verify server at ${serverUrl}, but allowing clone attempt`);
+          }
+        } else {
+          // If we can't determine the server URL, assume it exists
+          exists = true;
+        }
       } else {
         error = `Unsupported provider type: ${providerType}`;
       }
     } catch (err: any) {
-      error = err.message || 'Error checking repository existence';
+      // For any errors during verification, we'll still allow the clone attempt
+      // This is more permissive for self-hosted repositories
+      exists = true;
+      console.warn(`Error checking repository existence: ${err.message}, but allowing clone attempt`);
     }
 
     return NextResponse.json({ 

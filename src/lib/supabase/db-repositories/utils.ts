@@ -4,7 +4,7 @@ import { GitProviderType } from '@/app/[locale]/[tenant]/repositories/types';
  * Determines the Git provider type based on the repository URL
  * 
  * @param url Repository URL to analyze
- * @returns Provider type (github, gitlab, gitea) or null if not recognized
+ * @returns Provider type (github, gitlab, gitea, self-hosted) or null if not recognized
  */
 export function detectProviderFromUrl(url: string): GitProviderType | null {
   if (!url) return null;
@@ -31,11 +31,9 @@ export function detectProviderFromUrl(url: string): GitProviderType | null {
       return 'gitlab';
     }
     
-    // Check for Gitea - this is more difficult as Gitea can be hosted anywhere
-    // We'll check for common Gitea paths and patterns
+    // Check for known Gitea instances
     if (
       normalizedUrl.includes('gitea.') ||
-      // Add additional checks for your organizations' known Gitea instances
       normalizedUrl.includes('/gitea/')
     ) {
       return 'gitea';
@@ -60,12 +58,17 @@ export function detectProviderFromUrl(url: string): GitProviderType | null {
       return 'gitlab';
     }
     
-    // Default to github if we can't determine the provider
-    // This matches the current behavior
-    return 'github';
+    // Check for IP addresses or other non-standard domains
+    // These are likely self-hosted instances
+    if (/\d+\.\d+\.\d+\.\d+/.test(normalizedUrl) || !normalizedUrl.includes('.')) {
+      return 'self-hosted';
+    }
+    
+    // Default to self-hosted for any other URLs
+    return 'self-hosted';
   } catch (error) {
     console.error('Error detecting provider from URL:', error);
-    return 'github'; // Default to GitHub
+    return 'self-hosted'; // Default to self-hosted for unknown providers
   }
 }
 
@@ -81,11 +84,16 @@ export function extractRepoNameFromUrl(url: string): string {
   try {
     // Handle various URL formats
     
-    // Regular HTTPS URLs (github.com/user/repo)
+    // Regular HTTPS URLs (github.com/user/repo or self-hosted like 77.56.53.130:3000/user/repo)
     if (url.includes('://')) {
-      const parts = url.split('/');
-      const lastPart = parts[parts.length - 1] || parts[parts.length - 2] || '';
-      return lastPart.replace(/\.git$/, '');
+      const urlWithoutProtocol = url.replace(/^(https?:\/\/)/, '');
+      const parts = urlWithoutProtocol.split('/');
+      
+      // Get the last part of the URL (the repository name)
+      if (parts.length >= 2) {
+        const lastPart = parts[parts.length - 1] || parts[parts.length - 2] || '';
+        return lastPart.replace(/\.git$/, '');
+      }
     }
     
     // SSH URLs (git@github.com:user/repo.git)
@@ -114,12 +122,19 @@ export function extractOwnerFromUrl(url: string): string {
   if (!url) return 'owner';
   
   try {
-    // Regular HTTPS URLs (github.com/user/repo)
+    // Regular HTTPS URLs (github.com/user/repo or self-hosted like 77.56.53.130:3000/user/repo)
     if (url.includes('://')) {
-      const parts = url.replace(/^(https?:\/\/)/, '').split('/');
-      if (parts.length >= 2) {
-        return parts[1];
+      const urlWithoutProtocol = url.replace(/^(https?:\/\/)/, '');
+      const parts = urlWithoutProtocol.split('/');
+      
+      // For self-hosted instances with port numbers (like 77.56.53.130:3000/user/repo)
+      if (parts[0].includes(':')) {
+        // If there's a port number, the owner should be parts[1]
+        return parts.length >= 2 ? parts[1] : 'owner';
       }
+      
+      // For standard URLs (github.com/user/repo)
+      return parts.length >= 2 ? parts[1] : 'owner';
     }
     
     // SSH URLs (git@github.com:user/repo.git)

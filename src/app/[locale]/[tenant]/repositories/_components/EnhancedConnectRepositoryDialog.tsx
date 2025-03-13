@@ -28,7 +28,6 @@ import { Badge } from '@/components/shadcn/badge';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { ConnectRepositoryValues } from '../types';
-import { POPULAR_REPOSITORIES } from './constants';
 import { useToast } from '@/components/shadcn/use-toast';
 
 interface EnhancedConnectRepositoryDialogProps {
@@ -52,7 +51,6 @@ export function EnhancedConnectRepositoryDialog({
   const [currentProvider, setCurrentProvider] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState('');
   const [serverUrl, setServerUrl] = useState('');
-  const [popularCategory, setPopularCategory] = useState('CI/CD');
   const { toast } = useToast();
   
   const handleConnect = (provider: string) => {
@@ -156,12 +154,13 @@ export function EnhancedConnectRepositoryDialog({
   const handleQuickClone = async () => {
     if (!quickCloneUrl) return;
     
-    // Validate URL format before proceeding
-    const urlPattern = /^(https?:\/\/)?(www\.)?(github\.com|gitlab\.com|bitbucket\.org)\/[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_.]+\/?$/;
+    // Update URL pattern to allow self-hosted repositories
+    // This pattern now accepts any URL with http/https protocol
+    const urlPattern = /^(https?:\/\/)(.+)\/([^\/]+)\/([^\/]+)(\.git)?$/;
     if (!urlPattern.test(quickCloneUrl)) {
       toast({
         title: "Invalid Repository URL",
-        description: "Please enter a valid GitHub, GitLab, or Bitbucket repository URL.",
+        description: "Please enter a valid Git repository URL (e.g., http://77.56.53.130:3000/sunri/sunri.git).",
         variant: "destructive",
       });
       return;
@@ -237,11 +236,6 @@ export function EnhancedConnectRepositoryDialog({
     }
   };
   
-  const handleClonePopularRepo = (repoUrl: string) => {
-    setQuickCloneUrl(repoUrl);
-    setActiveTab('quick-clone');
-  };
-  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
@@ -253,7 +247,7 @@ export function EnhancedConnectRepositoryDialog({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid grid-cols-3 mb-4">
+          <TabsList className="grid grid-cols-2 mb-4">
             <TabsTrigger value="oauth" className="flex items-center justify-center">
               <Github className="w-4 h-4 mr-2" />
               {t('gitProvider')}
@@ -261,10 +255,6 @@ export function EnhancedConnectRepositoryDialog({
             <TabsTrigger value="quick-clone" className="flex items-center justify-center">
               <Globe className="w-4 h-4 mr-2" />
               {t('publicRepository')}
-            </TabsTrigger>
-            <TabsTrigger value="popular" className="flex items-center justify-center">
-              <GitBranch className="w-4 h-4 mr-2" />
-              {t('popularScripts')}
             </TabsTrigger>
           </TabsList>
           
@@ -458,8 +448,6 @@ export function EnhancedConnectRepositoryDialog({
                     {t('repositoryUrlDescription')}
                   </p>
                 </div>
-                
-                
               </div>
               
               <Alert>
@@ -482,56 +470,6 @@ export function EnhancedConnectRepositoryDialog({
                   <>{t('cloneAndExplore')}</>
                 )}
               </Button>
-            </div>
-          </TabsContent>
-          
-          {/* Popular Scripts Tab */}
-          <TabsContent value="popular">
-            <div className="space-y-4">
-              <p className="text-sm">
-                {t('popularRepositoriesDescription')}
-              </p>
-              
-              <div className="flex space-x-2 mt-4 mb-2">
-                {Object.keys(POPULAR_REPOSITORIES).map(category => (
-                  <Button 
-                    key={category}
-                    variant={popularCategory === category ? 'default' : 'outline'}
-                    onClick={() => setPopularCategory(category)}
-                    className="text-xs"
-                  >
-                    {category}
-                  </Button>
-                ))}
-              </div>
-              
-              <div className="space-y-3 mt-4">
-                {POPULAR_REPOSITORIES[popularCategory].map(repo => (
-                  <div 
-                    key={repo.id}
-                    className="p-4 border rounded-lg hover:bg-muted transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Github className="h-5 w-5 mr-2" />
-                        <h3 className="font-medium">{repo.name}</h3>
-                      </div>
-                      <Badge variant="outline">{repo.stars}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {repo.description}
-                    </p>
-                    <div className="flex justify-end mt-3">
-                      <Button
-                        size="sm"
-                        onClick={() => handleClonePopularRepo(repo.url)}
-                      >
-                        {t('cloneRepository')}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </TabsContent>
         </Tabs>

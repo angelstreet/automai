@@ -351,13 +351,32 @@ const repository = {
         providerId = existingProviders[0].id;
       } else {
         // We need to create a default provider for this type
+        let providerName = providerType === 'self-hosted' 
+          ? 'Self-Hosted Git'
+          : `Default ${providerType.charAt(0).toUpperCase() + providerType.slice(1)}`;
+          
+        // For self-hosted repositories, extract the server URL to include in the provider name
+        let serverUrl = '';
+        if (providerType === 'self-hosted') {
+          const urlMatch = url.match(/^(https?:\/\/[^\/]+)/);
+          if (urlMatch && urlMatch[1]) {
+            serverUrl = urlMatch[1];
+            // Use the server URL in the provider name
+            const hostname = new URL(serverUrl).hostname;
+            if (hostname) {
+              providerName = `Self-Hosted (${hostname})`;
+            }
+          }
+        }
+        
         const { data: newProvider, error: createProviderError } = await supabase
           .from('git_providers')
           .insert({
             type: providerType,
-            name: `Default ${providerType.charAt(0).toUpperCase() + providerType.slice(1)}`,
+            name: providerName,
             profile_id: profileId,
             is_configured: true,
+            server_url: serverUrl || undefined,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -377,7 +396,7 @@ const repository = {
       // Now create the repository
       const repoData: RepositoryCreateData = {
         name: repoName,
-        description: data.description || `Imported from ${url}`,
+        description: data.description || '',
         provider_id: providerId,
         provider_type: providerType,
         url: url,
