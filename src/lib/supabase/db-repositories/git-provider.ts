@@ -15,6 +15,7 @@ export interface GitProvider {
   type: 'github' | 'gitlab' | 'gitea';
   access_token: string;
   profile_id: string;
+  server_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -68,6 +69,34 @@ const gitProvider = {
         .select('*')
         .eq('id', id)
         .eq('profile_id', profileId)
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  },
+
+  /**
+   * Get a git provider by ID without tenant isolation
+   * This is used for API endpoints that need to access provider data
+   */
+  async getGitProviderById(id: string): Promise<DbResponse<GitProvider>> {
+    try {
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+
+      const { data, error } = await supabase
+        .from('git_providers')
+        .select('*')
+        .eq('id', id)
         .single();
 
       if (error) {
@@ -300,4 +329,13 @@ const gitProvider = {
   },
 };
 
+// Export individual functions for direct imports
+export const getGitProviders = gitProvider.getGitProviders;
+export const getGitProvider = gitProvider.getGitProvider;
+export const getGitProviderById = gitProvider.getGitProviderById;
+export const createGitProvider = gitProvider.createGitProvider;
+export const updateGitProvider = gitProvider.updateGitProvider;
+export const deleteGitProvider = gitProvider.deleteGitProvider;
+
+// Export the entire object as default
 export default gitProvider;

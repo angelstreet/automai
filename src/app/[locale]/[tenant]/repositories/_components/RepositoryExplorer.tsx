@@ -79,15 +79,18 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     return <FileCode className={`h-4 w-4 ${colorClass}`} />;
   };
 
-  // Fetch repository files
+  // Load repository files
   useEffect(() => {
     const fetchFiles = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        const path = currentPath.join('/');
-        const response = await fetch(`/api/repositories/${repository.id}/files?path=${path}`);
+        const pathString = currentPath.join('/');
+        const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId}&repositoryUrl=${encodeURIComponent(repository.url)}&path=${encodeURIComponent(pathString)}&action=list`;
+        
+        console.log('Fetching files from:', url);
+        const response = await fetch(url);
         
         if (!response.ok) {
           const errorData = await response.json();
@@ -96,8 +99,15 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         
         const data = await response.json();
         
-        if (data.success && Array.isArray(data.data)) {
-          setFiles(data.data);
+        if (data.success && data.data) {
+          // Sort files: directories first, then files, both alphabetically
+          const sortedFiles = [...data.data].sort((a, b) => {
+            if (a.type === 'dir' && b.type !== 'dir') return -1;
+            if (a.type !== 'dir' && b.type === 'dir') return 1;
+            return a.name.localeCompare(b.name);
+          });
+          
+          setFiles(sortedFiles);
         } else {
           throw new Error('Invalid API response format');
         }
@@ -111,7 +121,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     };
     
     fetchFiles();
-  }, [repository.id, currentPath]);
+  }, [repository.id, repository.providerId, repository.url, currentPath]);
 
   // Navigate through repository files
   const handleNavigate = async (item: any, isFolder = false) => {
@@ -123,7 +133,10 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       setSelectedFile(item.path);
       
       try {
-        const response = await fetch(`/api/repositories/${repository.id}/file-content?path=${item.path}`);
+        const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId}&repositoryUrl=${encodeURIComponent(repository.url)}&path=${encodeURIComponent(item.path)}&action=file`;
+        
+        console.log('Fetching file content from:', url);
+        const response = await fetch(url);
         
         if (!response.ok) {
           const errorData = await response.json();
@@ -133,7 +146,13 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         const data = await response.json();
         
         if (data.success && data.data) {
-          setFileContent(data.data.content);
+          // Decode base64 content if needed
+          if (data.data.encoding === 'base64' && data.data.content) {
+            const decodedContent = atob(data.data.content);
+            setFileContent(decodedContent);
+          } else {
+            setFileContent(data.data.content || 'No content available');
+          }
         } else {
           throw new Error('Invalid API response format');
         }
@@ -194,8 +213,8 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     
     // Sort files: folders first, then files alphabetically
     const sortedFiles = [...files].sort((a, b) => {
-      if (a.type === 'folder' && b.type !== 'folder') return -1;
-      if (a.type !== 'folder' && b.type === 'folder') return 1;
+      if (a.type === 'dir' && b.type !== 'dir') return -1;
+      if (a.type !== 'dir' && b.type === 'dir') return 1;
       return a.name.localeCompare(b.name);
     });
     
@@ -215,9 +234,9 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
           <div 
             key={index}
             className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
-            onClick={() => handleNavigate(item, item.type === 'folder')}
+            onClick={() => handleNavigate(item, item.type === 'dir')}
           >
-            {item.type === 'folder' ? (
+            {item.type === 'dir' ? (
               <Folder className="h-4 w-4 mr-2 text-blue-500" />
             ) : (
               <span className="mr-2">{getFileIcon(item.name)}</span>
