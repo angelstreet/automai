@@ -30,10 +30,12 @@ export interface RepositoryCreateData {
   full_name: string;
   description?: string | null;
   provider_id: string;
+  provider_type: string;
   provider_repo_id: string;
   url: string;
   default_branch: string;
   is_private: boolean;
+  owner?: string | null;
 }
 
 export interface QuickCloneRepositoryData {
@@ -343,35 +345,35 @@ const repository = {
       }
       
       // If we don't have a provider for this type, we need to create one
-      let providerId = data.provider_id;
+      let providerId: string;
       
-      if (!providerId) {
-        if (existingProviders && existingProviders.length > 0) {
-          providerId = existingProviders[0].id;
-        } else {
-          // We need to create a default provider for this type
-          const { data: newProvider, error: createProviderError } = await supabase
-            .from('git_providers')
-            .insert({
-              type: providerType,
-              name: `Default ${providerType.charAt(0).toUpperCase() + providerType.slice(1)}`,
-              profile_id: profileId,
-              is_public: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-            
-          if (createProviderError || !newProvider) {
-            return { 
-              success: false, 
-              error: createProviderError?.message || 'Failed to create default provider' 
-            };
-          }
+      if (data.provider_id) {
+        providerId = data.provider_id;
+      } else if (existingProviders && existingProviders.length > 0) {
+        providerId = existingProviders[0].id;
+      } else {
+        // We need to create a default provider for this type
+        const { data: newProvider, error: createProviderError } = await supabase
+          .from('git_providers')
+          .insert({
+            type: providerType,
+            name: `Default ${providerType.charAt(0).toUpperCase() + providerType.slice(1)}`,
+            profile_id: profileId,
+            is_configured: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
           
-          providerId = newProvider.id;
+        if (createProviderError || !newProvider) {
+          return { 
+            success: false, 
+            error: createProviderError?.message || 'Failed to create default provider' 
+          };
         }
+        
+        providerId = newProvider.id;
       }
       
       // Now create the repository
@@ -380,10 +382,12 @@ const repository = {
         full_name: `${owner}/${repoName}`,
         description: data.description || `Imported from ${url}`,
         provider_id: providerId,
+        provider_type: providerType,
         provider_repo_id: `${owner}/${repoName}`,
         url: url,
-        default_branch: data.default_branch || 'main',
-        is_private: data.is_private !== undefined ? data.is_private : false
+        default_branch: 'main',
+        is_private: data.is_private !== undefined ? data.is_private : false,
+        owner: owner
       };
       
       // Create the repository using our existing method

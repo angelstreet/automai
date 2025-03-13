@@ -5,6 +5,7 @@ import { repository, gitProvider } from '@/lib/supabase';
 import { GitProvider, Repository, GitProviderType, RepositorySyncStatus } from '@/app/[locale]/[tenant]/repositories/types';
 import { z } from 'zod';
 import { getUser } from '@/app/actions/user';
+import { serverCache } from '@/lib/cache';
 
 // Schema for testing a connection
 const testConnectionSchema = z.object({
@@ -39,6 +40,15 @@ export async function getRepositories(
   filter?: RepositoryFilter,
 ): Promise<{ success: boolean; error?: string; data?: Repository[] }> {
   try {
+    // Create a cache key based on the filter
+    const cacheKey = `repositories:${filter?.providerId || 'all'}`;
+    
+    // Try to get from cache first
+    const cachedData = serverCache.get<Repository[]>(cacheKey);
+    if (cachedData) {
+      return { success: true, data: cachedData };
+    }
+    
     const where: Record<string, any> = {};
 
     if (filter?.providerId) {
@@ -72,6 +82,9 @@ export async function getRepositories(
       lastSyncedAt: repo.last_synced_at ? new Date(repo.last_synced_at).toISOString() : undefined,
       error: repo.error ? String(repo.error) : undefined,
     }));
+    
+    // Cache the result for 5 minutes (default TTL)
+    serverCache.set(cacheKey, data);
 
     return { success: true, data };
   } catch (error: any) {

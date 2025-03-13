@@ -17,106 +17,184 @@ import {
   updateGitProvider,
   refreshGitProvider,
 } from './actions';
+import useSWR, { useSWRConfig } from 'swr';
 
 /**
  * Hook for managing multiple repositories
  */
-export function useRepositories() {
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+export function useRepositories(providerId?: string) {
   const { toast } = useToast();
+  const { mutate } = useSWRConfig();
+  const CACHE_KEY = `repositories:${providerId || 'all'}`;
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-  const fetchRepositories = useCallback(async () => {
+  // SWR fetcher with localStorage caching
+  const fetcher = async () => {
+    // Check localStorage first (if in browser)
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Date.now() < parsed.expiry) {
+            // Return cached data if not expired
+            return parsed.data;
+          }
+        } catch (e) {
+          // Invalid JSON, ignore and fetch fresh data
+          console.warn('Invalid cache data for repositories', e);
+        }
+      }
+    }
+    
+    // Fetch fresh data from Server Action
+    const result = await getRepositories(providerId ? { providerId } : undefined);
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch repositories');
+    }
+    
+    // Cache in localStorage if in browser
+    if (typeof window !== 'undefined' && result.data) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data: result.data,
+        expiry: Date.now() + CACHE_TTL
+      }));
+    }
+    
+    return result.data || [];
+  };
+  
+  // Use SWR for cache management
+  const { data: repositories, error, isLoading: loading, mutate: mutateRepositories } = useSWR(
+    CACHE_KEY, 
+    fetcher, 
+    {
+      dedupingInterval: 60000, // 1 minute
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true
+    }
+  );
+
+  // Function to invalidate cache
+  const invalidateCache = useCallback(() => {
+    // Remove from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CACHE_KEY);
+    }
+    
+    // Invalidate SWR cache
+    mutateRepositories();
+  }, [mutateRepositories, CACHE_KEY]);
+
+  const addRepository = useCallback(async (data: any) => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const result = await getRepositories();
+      const result = await createRepository(data);
 
       if (!result.success) {
-        setError(new Error(result.error || 'Failed to fetch repositories'));
         toast({
           title: 'Error',
-          description: result.error || 'Failed to fetch repositories',
+          description: result.error || 'Failed to create repository',
           variant: 'destructive',
         });
-        return [];
+        return null;
       }
 
-      setRepositories(result.data || []);
+      // Invalidate cache after successful creation
+      invalidateCache();
+      
+      toast({
+        title: 'Success',
+        description: 'Repository created successfully',
+      });
+
       return result.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch repositories';
-      setError(err instanceof Error ? err : new Error(errorMessage));
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create repository';
       toast({
         title: 'Error',
         description: errorMessage,
         variant: 'destructive',
       });
-      return [];
-    } finally {
-      setLoading(false);
+      return null;
     }
-  }, [toast]);
+  }, [toast, invalidateCache]);
 
-  const addRepository = useCallback(
-    async (repositoryData: Omit<Repository, 'id'>) => {
-      try {
-        setLoading(true);
-        setError(null);
+  const removeRepository = useCallback(async (id: string) => {
+    try {
+      const result = await deleteRepository(id);
 
-        const result = await createRepository(repositoryData);
-
-        if (!result.success) {
-          setError(new Error(result.error || 'Failed to create repository'));
-          toast({
-            title: 'Error',
-            description: result.error || 'Failed to create repository',
-            variant: 'destructive',
-          });
-          return null;
-        }
-
-        // Fixed type error by checking for data existence
-        if (result.data) {
-          setRepositories((prevRepositories) => [...prevRepositories, result.data as Repository]);
-        }
-
-        toast({
-          title: 'Success',
-          description: 'Repository created successfully',
-        });
-
-        return result.data;
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to create repository';
-        setError(err instanceof Error ? err : new Error(errorMessage));
+      if (!result.success) {
         toast({
           title: 'Error',
-          description: errorMessage,
+          description: result.error || 'Failed to delete repository',
           variant: 'destructive',
         });
-        return null;
-      } finally {
-        setLoading(false);
+        return false;
       }
-    },
-    [toast],
-  );
 
-  // Fetch repositories on mount
-  useEffect(() => {
-    fetchRepositories();
-  }, [fetchRepositories]);
+      // Invalidate cache after successful deletion
+      invalidateCache();
+      
+      toast({
+        title: 'Success',
+        description: 'Repository deleted successfully',
+      });
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete repository';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [toast, invalidateCache]);
+
+  const syncRepository = useCallback(async (id: string) => {
+    try {
+      const result = await syncRepositoryApi(id);
+
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to sync repository',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      // Invalidate cache after successful sync
+      invalidateCache();
+      
+      toast({
+        title: 'Success',
+        description: 'Repository sync initiated',
+      });
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to sync repository';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [toast, invalidateCache]);
 
   return {
-    repositories,
+    repositories: repositories || [],
     loading,
     error,
-    fetchRepositories,
     addRepository,
-    isLoaded: !loading && repositories !== null,
+    removeRepository,
+    syncRepository,
+    invalidateCache,
+    refresh: invalidateCache
   };
 }
 
