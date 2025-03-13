@@ -54,76 +54,41 @@ export default function EnhancedRepositoryPage() {
     const fetchRepositories = async () => {
       setIsLoading(true);
       try {
-        // In a real app, this would be an API call
+        // Call API endpoint
         const response = await fetch('/api/repositories');
-        if (response.ok) {
-          const data = await response.json();
-          setRepositories(data);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch repositories: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Process the response based on its format
+        if (Array.isArray(result)) {
+          setRepositories(result);
+        } else if (result.success && Array.isArray(result.data)) {
+          setRepositories(result.data);
         } else {
-          throw new Error('Failed to fetch repositories');
+          throw new Error('Invalid API response format');
         }
       } catch (error) {
         console.error('Error fetching repositories:', error);
         
-        // For demo purposes, set mock data
-        const mockData: Repository[] = [
-          {
-            id: '1',
-            name: 'deployment-scripts',
-            description: 'CI/CD and deployment automation scripts',
-            providerType: 'github',
-            providerId: 'github-1',
-            isPrivate: false,
-            language: 'Python',
-            lastSyncedAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-            defaultBranch: 'main',
-            syncStatus: 'SYNCED',
-            owner: 'company',
-            url: 'https://github.com/company/deployment-scripts',
-            createdAt: new Date(Date.now() - 3000000000).toISOString(),
-            updated_at: new Date(Date.now() - 172800000).toISOString()
-          },
-          {
-            id: '2',
-            name: 'system-utils',
-            description: 'System monitoring and maintenance utilities',
-            providerType: 'github',
-            providerId: 'github-1',
-            isPrivate: true,
-            language: 'Bash',
-            lastSyncedAt: new Date(Date.now() - 432000000).toISOString(), // 5 days ago
-            defaultBranch: 'main',
-            syncStatus: 'SYNCED',
-            owner: 'username',
-            url: 'https://github.com/username/system-utils',
-            createdAt: new Date(Date.now() - 5000000000).toISOString(),
-            updated_at: new Date(Date.now() - 432000000).toISOString()
-          },
-          {
-            id: '3',
-            name: 'data-pipelines',
-            description: 'ETL and data processing pipelines',
-            providerType: 'gitlab',
-            providerId: 'gitlab-1',
-            isPrivate: false,
-            language: 'Python',
-            lastSyncedAt: new Date(Date.now() - 604800000).toISOString(), // 1 week ago
-            defaultBranch: 'master',
-            syncStatus: 'IDLE',
-            owner: 'department',
-            url: 'https://gitlab.com/department/data-pipelines',
-            createdAt: new Date(Date.now() - 4000000000).toISOString(),
-            updated_at: new Date(Date.now() - 604800000).toISOString()
-          }
-        ];
-        setRepositories(mockData);
+        // Show error and set empty repository list
+        setRepositories([]);
+        
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch repositories from the server.',
+          variant: 'destructive',
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchRepositories();
-  }, []);
+  }, [toast]);
 
   // Handle repository pinning/unpinning
   const handleTogglePinned = (id: string) => {
@@ -142,32 +107,50 @@ export default function EnhancedRepositoryPage() {
   const handleSyncRepository = async (id: string) => {
     setSyncingRepoId(id);
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the API to sync the repository
+      const response = await fetch(`/api/repositories/${id}/sync`, {
+        method: 'POST',
+      });
       
-      // Update repository status
-      setRepositories(prev => 
-        prev.map(repo => 
-          repo.id === id 
-            ? { 
-                ...repo, 
-                syncStatus: 'SYNCED', 
-                lastSyncedAt: new Date().toISOString() 
-              } 
-            : repo
-        )
-      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to sync repository');
+      }
+      
+      const result = await response.json();
+      
+      // Update repository in the UI with the returned data
+      if (result.success && result.data) {
+        setRepositories(prev => 
+          prev.map(repo => 
+            repo.id === id ? { ...repo, ...result.data } : repo
+          )
+        );
+      }
       
       toast({
         title: 'Success',
         description: t('syncSuccess'),
       });
     } catch (error) {
+      console.error('Error syncing repository:', error);
       toast({
         title: 'Error',
         description: t('syncFailed'),
         variant: 'destructive',
       });
+      
+      // Update repository status to error
+      setRepositories(prev => 
+        prev.map(repo => 
+          repo.id === id 
+            ? { 
+                ...repo, 
+                syncStatus: 'ERROR', 
+              } 
+            : repo
+        )
+      );
     } finally {
       setSyncingRepoId(null);
     }
@@ -177,23 +160,40 @@ export default function EnhancedRepositoryPage() {
   const handleRefreshAll = async () => {
     setIsRefreshingAll(true);
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call API endpoint to refresh all repositories
+      const response = await fetch('/api/repositories/refresh-all', {
+        method: 'POST',
+      });
       
-      // Update all repositories
-      setRepositories(prev => 
-        prev.map(repo => ({ 
-          ...repo, 
-          syncStatus: 'SYNCED', 
-          lastSyncedAt: new Date().toISOString() 
-        }))
-      );
+      if (!response.ok) {
+        throw new Error('Failed to refresh repositories');
+      }
+      
+      // Fetch the updated list
+      const listResponse = await fetch('/api/repositories');
+      
+      if (!listResponse.ok) {
+        throw new Error('Failed to fetch updated repositories');
+      }
+      
+      const result = await listResponse.json();
+      
+      // Update repositories state
+      if (Array.isArray(result)) {
+        setRepositories(result);
+      } else if (result.success && Array.isArray(result.data)) {
+        setRepositories(result.data);
+      } else {
+        throw new Error('Invalid API response format');
+      }
       
       toast({
         title: 'Success',
         description: t('refreshSuccess'),
       });
     } catch (error) {
+      console.error('Error refreshing repositories:', error);
+      
       toast({
         title: 'Error',
         description: t('refreshFailed'),
@@ -205,37 +205,42 @@ export default function EnhancedRepositoryPage() {
   };
 
   // Handle repository connection
-  const handleConnectRepository = (values: ConnectRepositoryValues) => {
+  const handleConnectRepository = async (values: ConnectRepositoryValues) => {
     console.log('Connect repository:', values);
     
-    // In a real app, this would be an API call
-    // For demo purposes, add a mock repository
-    if (values.type === 'quick-clone' && values.url) {
-      const repoName = values.url.split('/').pop()?.replace('.git', '') || 'repo';
-      const newRepo: Repository = {
-        id: `repo-${Date.now()}`,
-        name: repoName,
-        description: 'Imported repository',
-        providerType: 'github',
-        providerId: 'github-1',
-        isPrivate: false,
-        defaultBranch: 'main',
-        language: 'JavaScript',
-        syncStatus: 'SYNCED',
-        owner: 'imported',
-        url: values.url,
-        lastSyncedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+    try {
+      setIsLoading(true);
       
-      setRepositories(prev => [newRepo, ...prev]);
+      // After any repository connection, refresh the repositories list
+      const response = await fetch('/api/repositories');
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repositories: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      // Update repositories state
+      if (Array.isArray(result)) {
+        setRepositories(result);
+      } else if (result.success && Array.isArray(result.data)) {
+        setRepositories(result.data);
+      }
+      
+      toast({
+        title: 'Success',
+        description: t('connectSuccess'),
+      });
+    } catch (error) {
+      console.error('Error refreshing repositories after connection:', error);
+      
+      toast({
+        title: 'Warning',
+        description: 'Repository may have been added. Please refresh the page.',
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    toast({
-      title: 'Success',
-      description: t('connectSuccess'),
-    });
   };
 
   // Filter repositories based on search query and category

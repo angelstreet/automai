@@ -28,7 +28,7 @@ import { Badge } from '@/components/shadcn/badge';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { ConnectRepositoryValues } from '../types';
-import { POPULAR_REPOSITORIES, SAMPLE_RUNNERS } from './constants';
+import { POPULAR_REPOSITORIES } from './constants';
 
 interface EnhancedConnectRepositoryDialogProps {
   open: boolean;
@@ -50,20 +50,44 @@ export function EnhancedConnectRepositoryDialog({
   const [accessToken, setAccessToken] = useState('');
   const [serverUrl, setServerUrl] = useState('');
   const [popularCategory, setPopularCategory] = useState('CI/CD');
-  const [selectedRunner, setSelectedRunner] = useState<any>(null);
   
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
   };
 
-  const handleOAuthConnect = () => {
+  const handleOAuthConnect = async () => {
     if (!currentProvider) return;
     
     setIsConnecting(true);
     
-    // Simulate OAuth connection
-    setTimeout(() => {
-      setIsConnecting(false);
+    try {
+      // Call API to initiate OAuth flow
+      const response = await fetch('/api/git-providers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: currentProvider,
+          displayName: `My ${currentProvider === 'github' ? 'GitHub' : 'GitLab'} Account`,
+          method: 'oauth'
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to initiate OAuth connection');
+      }
+      
+      const result = await response.json();
+      
+      // If we have an authUrl, redirect the user to it
+      if (result.success && result.authUrl) {
+        window.location.href = result.authUrl;
+        return;
+      }
+      
+      // Otherwise, we're done
       if (onSubmit) {
         onSubmit({
           type: currentProvider as any,
@@ -72,17 +96,41 @@ export function EnhancedConnectRepositoryDialog({
         });
       }
       onOpenChange(false);
-    }, 1500);
+    } catch (error) {
+      console.error('Error connecting with OAuth:', error);
+      // Display error to user
+    } finally {
+      setIsConnecting(false);
+    }
   };
   
-  const handleTokenConnect = () => {
+  const handleTokenConnect = async () => {
     if (!accessToken) return;
     
     setIsConnecting(true);
     
-    // Simulate token connection
-    setTimeout(() => {
-      setIsConnecting(false);
+    try {
+      // Call API to connect with token
+      const response = await fetch('/api/git-providers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: currentProvider,
+          displayName: `${currentProvider === 'github' ? 'GitHub' : currentProvider === 'gitlab' ? 'GitLab' : 'Gitea'} Account`,
+          method: 'token',
+          token: accessToken,
+          serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to connect with token');
+      }
+      
+      // Completed successfully
       if (onSubmit) {
         onSubmit({
           type: currentProvider as any,
@@ -93,7 +141,12 @@ export function EnhancedConnectRepositoryDialog({
         });
       }
       onOpenChange(false);
-    }, 1500);
+    } catch (error) {
+      console.error('Error connecting with token:', error);
+      // Display error to user
+    } finally {
+      setIsConnecting(false);
+    }
   };
   
   const handleQuickClone = async () => {
@@ -112,8 +165,7 @@ export function EnhancedConnectRepositoryDialog({
           quickClone: true,
           url: quickCloneUrl,
           isPrivate: false,
-          description: `Imported from ${quickCloneUrl}`,
-          runner: selectedRunner // This field is used by the UI but not required by API
+          description: `Imported from ${quickCloneUrl}`
         }),
       });
       
@@ -127,13 +179,11 @@ export function EnhancedConnectRepositoryDialog({
       if (onSubmit) {
         onSubmit({
           type: 'quick-clone',
-          url: quickCloneUrl,
-          runner: selectedRunner
+          url: quickCloneUrl
         });
       }
       
       setQuickCloneUrl('');
-      setSelectedRunner(null);
       onOpenChange(false);
     } catch (error) {
       console.error('Error cloning repository:', error);
@@ -377,7 +427,7 @@ export function EnhancedConnectRepositoryDialog({
               <Button 
                 className="w-full" 
                 onClick={handleQuickClone}
-                disabled={isCloning || !quickCloneUrl || !selectedRunner}
+                disabled={isCloning || !quickCloneUrl}
               >
                 {isCloning ? (
                   <>

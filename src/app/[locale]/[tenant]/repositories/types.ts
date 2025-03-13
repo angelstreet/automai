@@ -56,5 +56,4 @@ export interface ConnectRepositoryValues {
   accessToken?: string;
   serverUrl?: string;
   url?: string;
-  runner?: any;
 } 
