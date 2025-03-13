@@ -29,27 +29,31 @@ import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { ConnectRepositoryValues } from '../types';
 import { POPULAR_REPOSITORIES } from './constants';
+import { useToast } from '@/components/shadcn/use-toast';
 
 interface EnhancedConnectRepositoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (values: ConnectRepositoryValues) => void;
+  defaultTab?: string;
 }
 
 export function EnhancedConnectRepositoryDialog({ 
   open, 
   onOpenChange,
-  onSubmit
+  onSubmit,
+  defaultTab = 'quick-clone'
 }: EnhancedConnectRepositoryDialogProps) {
   const t = useTranslations('repositories');
-  const [activeTab, setActiveTab] = useState('oauth');
-  const [quickCloneUrl, setQuickCloneUrl] = useState('');
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
+  const [quickCloneUrl, setQuickCloneUrl] = useState<string>('');
   const [isCloning, setIsCloning] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [currentProvider, setCurrentProvider] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState('');
   const [serverUrl, setServerUrl] = useState('');
   const [popularCategory, setPopularCategory] = useState('CI/CD');
+  const { toast } = useToast();
   
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -152,6 +156,17 @@ export function EnhancedConnectRepositoryDialog({
   const handleQuickClone = async () => {
     if (!quickCloneUrl) return;
     
+    // Validate URL format before proceeding
+    const urlPattern = /^(https?:\/\/)?(www\.)?(github\.com|gitlab\.com|bitbucket\.org)\/[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_.]+\/?$/;
+    if (!urlPattern.test(quickCloneUrl)) {
+      toast({
+        title: "Invalid Repository URL",
+        description: "Please enter a valid GitHub, GitLab, or Bitbucket repository URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsCloning(true);
     
     try {
@@ -169,25 +184,37 @@ export function EnhancedConnectRepositoryDialog({
         }),
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to clone repository');
-      }
-      
       const data = await response.json();
       
-      if (onSubmit) {
-        onSubmit({
-          type: 'quick-clone',
-          url: quickCloneUrl
-        });
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to clone repository');
       }
       
-      setQuickCloneUrl('');
-      onOpenChange(false);
-    } catch (error) {
+      if (data.success) {
+        toast({
+          title: "Repository Cloned",
+          description: "Repository has been successfully imported.",
+        });
+        
+        if (onSubmit) {
+          onSubmit({
+            type: 'quick-clone',
+            url: quickCloneUrl
+          });
+        }
+        
+        setQuickCloneUrl('');
+        onOpenChange(false);
+      } else {
+        throw new Error(data.error || 'Failed to clone repository');
+      }
+    } catch (error: any) {
       console.error('Error cloning repository:', error);
-      // We could add toast notifications here if needed
+      toast({
+        title: "Clone Failed",
+        description: error.message || "Failed to clone repository. Please check the URL and try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsCloning(false);
     }

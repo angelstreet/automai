@@ -191,11 +191,11 @@ export async function createRepositoryFromUrl(
       url: result.data!.url,
       isPrivate: result.data!.is_private,
       defaultBranch: result.data!.default_branch,
-      providerType: 'github', // This should be determined by the DB layer
+      providerType: result.data!.provider_type,
       providerId: result.data!.provider_id,
-      owner: result.data!.full_name.split('/')[0],
+      owner: result.data!.owner || '',
       lastSyncedAt: result.data!.last_synced_at || undefined,
-      syncStatus: 'SYNCED',
+      syncStatus: result.data!.sync_status || 'SYNCED',
       createdAt: result.data!.created_at,
       updated_at: result.data!.updated_at
     };

@@ -76,7 +76,7 @@ The implementation follows the project's three-layer architecture (DB Layer → 
 
 2. **repositories**
    - Stores repository metadata
-   - Key fields: `id`, `provider_id`, `name`, `full_name`, `url`, `default_branch`
+   - Key fields: `id`, `provider_id`, `provider_type`, `name`, `owner`, `url`, `default_branch`, `is_private`, `language`, `sync_status`, `last_synced_at`
 
 3. **profile_repository_pins**
    - Tracks pinned repositories

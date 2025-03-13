@@ -27,11 +27,9 @@ export interface Repository {
 
 export interface RepositoryCreateData {
   name: string;
-  full_name: string;
   description?: string | null;
   provider_id: string;
   provider_type: string;
-  provider_repo_id: string;
   url: string;
   default_branch: string;
   is_private: boolean;
@@ -379,11 +377,9 @@ const repository = {
       // Now create the repository
       const repoData: RepositoryCreateData = {
         name: repoName,
-        full_name: `${owner}/${repoName}`,
         description: data.description || `Imported from ${url}`,
         provider_id: providerId,
         provider_type: providerType,
-        provider_repo_id: `${owner}/${repoName}`,
         url: url,
         default_branch: 'main',
         is_private: data.is_private !== undefined ? data.is_private : false,
