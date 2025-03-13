@@ -220,7 +220,9 @@
     "sortBy": "Trier par",
     "lastUpdated": "Dernière mise à jour",
     "name": "Nom",
+    "owner": "Propriétaire",
     "pinned": "Épinglé",
+    "starred": "Favoris",
     "all": "Tous",
     "syncSuccess": "Dépôt synchronisé avec succès",
     "syncFailed": "Échec de la synchronisation du dépôt",
@@ -274,7 +276,17 @@
     "execute": "Exécuter",
     "goUp": "Remonter",
     "selectFileToView": "Sélectionnez un fichier pour afficher son contenu",
-    "back": "Retour"
+    "back": "Retour",
+    "fileExplorer": "Explorateur de fichiers",
+    "fileContent": "Contenu du fichier",
+    "selectFile": "Sélectionnez un fichier pour l'afficher",
+    "code": "Code",
+    "terminal": "Terminal",
+    "settings": "Paramètres",
+    "codeViewNotImplemented": "La vue du code n'est pas encore implémentée",
+    "terminalNotImplemented": "La fonctionnalité du terminal n'est pas encore implémentée",
+    "settingsNotImplemented": "Les paramètres du dépôt ne sont pas encore implémentés",
+    "emptyDirectory": "Ce répertoire est vide"
   },
   "Settings": {
     "title": "Paramètres",

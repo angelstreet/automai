@@ -14,8 +14,9 @@ This document provides a technical overview of the repository management feature
 5. [Frontend Implementation](#frontend-implementation)
    - [Pages and Components](#pages-and-components)
    - [User Flows](#user-flows)
-6. [Current Status](#current-status)
-7. [Remaining Work](#remaining-work)
+6. [Error Handling and Validation](#error-handling-and-validation)
+7. [Current Status](#current-status)
+8. [Remaining Work](#remaining-work)
 
 ## Overview
 
@@ -183,6 +184,7 @@ The API endpoints provide HTTP access to the server actions:
    - `DELETE /api/repositories/[id]` - Delete repository
    - `POST /api/repositories/[id]/sync` - Sync repository with git provider
    - `POST /api/repositories/refresh-all` - Refresh all repositories
+   - `POST /api/repositories/verify` - Verify if a repository exists before cloning
 
 2. **Git Provider Endpoints**
    - `GET /api/git-providers` - List git providers
@@ -236,6 +238,31 @@ The main UI components are:
    - User clicks sync icon on a repository card
    - Backend updates timestamp and syncs with provider if possible
    - UI updates to show new sync status and timestamp
+
+## Error Handling and Validation
+
+The repository management feature includes comprehensive error handling and validation:
+
+1. **URL Validation**
+   - Repository URLs are validated using regex patterns to ensure they match expected formats for GitHub, GitLab, and other supported providers
+   - Invalid URLs are rejected with clear error messages before any API calls are made
+
+2. **Repository Existence Verification**
+   - Before cloning a repository, the system verifies that it actually exists by checking with the provider's API
+   - For GitHub repositories: Calls the GitHub API to check if the repo exists
+   - For GitLab repositories: Calls the GitLab API to check if the repo exists
+   - For Gitea repositories: Verifies based on available server information
+
+3. **Error Feedback**
+   - All errors are captured and presented to users with clear, actionable messages
+   - Toast notifications provide immediate feedback on success or failure
+   - Detailed error information helps users understand and resolve issues
+
+4. **Provider Detection**
+   - The system automatically detects the Git provider from the repository URL
+   - If the provider cannot be determined, users receive appropriate error messages
+
+This validation and error handling approach ensures a smooth user experience and prevents invalid data from being stored in the database.
 
 ## Current Status
 

@@ -3,20 +3,16 @@ import { useTranslations } from 'next-intl';
 import { 
   ArrowLeft, GitBranch, RefreshCw, FolderTree, Code, Play, 
   Settings, Terminal, FileCode, Folder, Star, GitFork, Eye, 
-  ChevronRight, ChevronDown, Download, History, PlusCircle
+  ChevronDown, Download, History, PlusCircle, FileText
 } from 'lucide-react';
 
-import {
-  Card,
-  CardContent,
-} from '@/components/shadcn/card';
+import { Card, CardContent } from '@/components/shadcn/card';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { FILE_EXTENSION_COLORS } from './constants';
 import { 
   Breadcrumb, 
   BreadcrumbItem, 
@@ -27,22 +23,46 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shadcn/tooltip';
 import { cn } from '@/lib/utils';
 
-interface RepositoryExplorerProps {
+// File extension colors for syntax highlighting
+const FILE_EXTENSION_COLORS = {
+  js: "text-yellow-500",
+  jsx: "text-blue-400",
+  ts: "text-blue-500",
+  tsx: "text-blue-600",
+  css: "text-pink-500",
+  scss: "text-pink-600",
+  html: "text-orange-500",
+  json: "text-green-500",
+  md: "text-purple-500",
+  py: "text-green-600",
+  rb: "text-red-500",
+  go: "text-cyan-500",
+  java: "text-amber-500",
+  php: "text-indigo-500",
+  c: "text-blue-800",
+  cpp: "text-blue-700",
+  cs: "text-violet-500",
+  rs: "text-orange-600",
+  swift: "text-orange-500",
+  kt: "text-purple-600",
+  default: "text-gray-500"
+};
+
+interface RepositoryDetailViewProps {
   repository: any; // We'll replace this with proper types later
   onBack: () => void;
 }
 
-export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerProps) {
+export function RepositoryDetailView({ repository, onBack }: RepositoryDetailViewProps) {
   const t = useTranslations('repositories');
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executionOutput, setExecutionOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [files, setFiles] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('code');
+  const [viewMode, setViewMode] = useState<'code' | 'preview'>('code');
 
   // Get provider icon and name
   const getProviderIcon = () => {
@@ -58,23 +78,10 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     }
   };
   
-  const getProviderName = () => {
-    switch(repository.providerType) {
-      case 'github':
-        return 'GitHub';
-      case 'gitlab':
-        return 'GitLab';
-      case 'gitea':
-        return 'Gitea';
-      default:
-        return 'Git';
-    }
-  };
-
-  // Get file icon based on extension using constants
+  // Get file icon based on extension
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase() || 'default';
-    const colorClass = FILE_EXTENSION_COLORS[extension] || FILE_EXTENSION_COLORS.default;
+    const colorClass = FILE_EXTENSION_COLORS[extension as keyof typeof FILE_EXTENSION_COLORS] || FILE_EXTENSION_COLORS.default;
     
     return <FileCode className={`h-4 w-4 ${colorClass}`} />;
   };
@@ -160,6 +167,41 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     setFileContent('');
   };
 
+  // Refresh current directory
+  const handleRefresh = () => {
+    // Re-fetch the current directory
+    const fetchFiles = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const path = currentPath.join('/');
+        const response = await fetch(`/api/repositories/${repository.id}/files?path=${path}`);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to fetch repository files');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && Array.isArray(data.data)) {
+          setFiles(data.data);
+        } else {
+          throw new Error('Invalid API response format');
+        }
+      } catch (error: any) {
+        console.error('Error fetching repository files:', error);
+        setError(error.message || 'Failed to fetch repository files');
+        setFiles([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchFiles();
+  };
+
   // Render file list
   const renderFileList = () => {
     if (isLoading) {
@@ -200,7 +242,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     });
     
     return (
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {currentPath.length > 0 && (
           <div 
             className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
@@ -232,7 +274,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   // Render breadcrumb navigation
   const renderBreadcrumb = () => {
     return (
-      <Breadcrumb className="mb-4">
+      <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink onClick={() => setCurrentPath([])}>
@@ -255,10 +297,10 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   };
 
   return (
-    <div className="space-y-2">
-      {/* GitHub-style header */}
-      <div className="flex flex-col space-y-2">
-        <div className="flex items-center justify-between">
+    <div className="space-y-0">
+      {/* Integrated header with back button, repo info, and actions */}
+      <div className="flex flex-col space-y-1 mb-4">
+        <div className="flex items-center justify-between border-b pb-2">
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" onClick={onBack} className="h-8">
               <ArrowLeft className="h-4 w-4 mr-1" />
@@ -280,7 +322,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8">
+                  <Button variant="outline" size="sm" className="h-8" onClick={handleRefresh}>
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -296,7 +338,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         </div>
         
         {/* GitHub-style tabs */}
-        <div className="border-b flex items-center">
+        <div className="flex items-center">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-transparent h-10 p-0">
               <TabsTrigger 
@@ -357,11 +399,11 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       </div>
       
       {/* Main content area */}
-      <div className="mt-4">
+      <div>
         {activeTab === 'code' && (
           <div className="space-y-4">
             {/* GitHub-style repository stats */}
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-4">
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <div className="flex items-center">
                 <GitBranch className="h-4 w-4 mr-1" />
                 <span>main</span>
@@ -384,11 +426,11 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             </div>
             
             {/* GitHub-style file explorer */}
-            <Card className="border-none shadow-none">
+            <Card className="border shadow-sm">
               <CardContent className="p-0">
                 <div className="flex flex-col">
                   {/* Branch selector and actions */}
-                  <div className="flex justify-between items-center p-3 bg-muted/50 border rounded-t-md">
+                  <div className="flex justify-between items-center p-3 bg-muted/50 border-b">
                     <div className="flex items-center">
                       <Button variant="outline" size="sm" className="h-8 text-xs">
                         <GitBranch className="h-3.5 w-3.5 mr-1" />
@@ -418,12 +460,12 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
                   </div>
                   
                   {/* Breadcrumb navigation */}
-                  <div className="px-4 py-2 border-x">
+                  <div className="px-4 py-2 border-b">
                     {renderBreadcrumb()}
                   </div>
                   
                   {/* File explorer and content */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-0 border-x border-b rounded-b-md">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-0">
                     <div className="md:col-span-1 border-r">
                       <ScrollArea className="h-[500px]">
                         {renderFileList()}
@@ -431,15 +473,40 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
                     </div>
                     
                     <div className="md:col-span-3">
-                      <div className="p-2 border-b bg-muted/30">
-                        {selectedFile ? (
-                          <div className="flex items-center text-sm">
-                            <FileCode className="h-4 w-4 mr-2" />
-                            <span className="font-medium">{selectedFile.split('/').pop()}</span>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-muted-foreground">
-                            {t('selectFile')}
+                      <div className="flex justify-between items-center p-2 border-b bg-muted/30">
+                        <div>
+                          {selectedFile ? (
+                            <div className="flex items-center text-sm">
+                              <FileCode className="h-4 w-4 mr-2" />
+                              <span className="font-medium">{selectedFile.split('/').pop()}</span>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">
+                              {t('selectFile')}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {selectedFile && (
+                          <div className="flex items-center">
+                            <Button 
+                              variant={viewMode === 'code' ? 'secondary' : 'ghost'} 
+                              size="sm" 
+                              className="h-7 text-xs"
+                              onClick={() => setViewMode('code')}
+                            >
+                              <Code className="h-3.5 w-3.5 mr-1" />
+                              <span>Code</span>
+                            </Button>
+                            <Button 
+                              variant={viewMode === 'preview' ? 'secondary' : 'ghost'} 
+                              size="sm" 
+                              className="h-7 text-xs"
+                              onClick={() => setViewMode('preview')}
+                            >
+                              <FileText className="h-3.5 w-3.5 mr-1" />
+                              <span>Preview</span>
+                            </Button>
                           </div>
                         )}
                       </div>

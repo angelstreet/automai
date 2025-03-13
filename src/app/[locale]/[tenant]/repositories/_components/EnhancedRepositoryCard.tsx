@@ -20,16 +20,16 @@ interface EnhancedRepositoryCardProps {
   repository: any; // We'll replace this with proper types later
   onSync: (id: string) => Promise<void>;
   isSyncing: boolean;
-  onTogglePinned: (id: string) => void;
-  isPinned: boolean;
+  onToggleStarred: (id: string) => void;
+  isStarred: boolean;
 }
 
 export function EnhancedRepositoryCard({
   repository,
   onSync,
   isSyncing,
-  onTogglePinned,
-  isPinned,
+  onToggleStarred,
+  isStarred,
 }: EnhancedRepositoryCardProps) {
   // Initialize isHovered to false to prevent hydration mismatch
   const [isHovered, setIsHovered] = useState(false);
@@ -86,10 +86,10 @@ export function EnhancedRepositoryCard({
     onSync(repository.id);
   };
 
-  // Handle pin button click without propagation
-  const handlePinClick = (e: React.MouseEvent) => {
+  // Handle star button click without propagation
+  const handleStarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onTogglePinned(repository.id);
+    onToggleStarred(repository.id);
   };
 
   return (
@@ -103,8 +103,8 @@ export function EnhancedRepositoryCard({
           <Button 
             variant="ghost" 
             size="icon" 
-            className={`h-8 w-8 ${isPinned ? 'text-yellow-500' : ''}`}
-            onClick={handlePinClick}
+            className={`h-8 w-8 ${isStarred ? 'text-yellow-500' : ''}`}
+            onClick={handleStarClick}
           >
             <Star className="h-4 w-4" />
           </Button>

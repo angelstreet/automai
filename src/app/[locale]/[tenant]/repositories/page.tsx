@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { GitBranch, Plus, RefreshCw, Search, Filter, Star } from 'lucide-react';
+import { GitBranch, Plus, RefreshCw, Search, Filter, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -37,7 +37,7 @@ export default function EnhancedRepositoryPage() {
 
   // State for repositories and UI
   const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [pinnedRepos, setPinnedRepos] = useState<Set<string>>(new Set());
+  const [starredRepos, setStarredRepos] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
@@ -48,6 +48,10 @@ export default function EnhancedRepositoryPage() {
   const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
   const [isExplorerView, setIsExplorerView] = useState(false);
   const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12);
 
   useEffect(() => {
     // Fetch repositories
@@ -71,6 +75,20 @@ export default function EnhancedRepositoryPage() {
         } else {
           throw new Error('Invalid API response format');
         }
+
+        // Also fetch starred repositories
+        try {
+          const starredResponse = await fetch('/api/repositories/starred');
+          if (starredResponse.ok) {
+            const starredResult = await starredResponse.json();
+            if (starredResult.success && Array.isArray(starredResult.data)) {
+              const starredIds = new Set<string>(starredResult.data.map((repo: any) => repo.repository_id as string));
+              setStarredRepos(starredIds);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching starred repositories:', error);
+        }
       } catch (error) {
         console.error('Error fetching repositories:', error);
         
@@ -85,17 +103,49 @@ export default function EnhancedRepositoryPage() {
     fetchRepositories();
   }, [toast]);
 
-  // Handle repository pinning/unpinning
-  const handleTogglePinned = (id: string) => {
-    setPinnedRepos(prev => {
-      const newPinned = new Set(prev);
-      if (newPinned.has(id)) {
-        newPinned.delete(id);
+  // Handle repository starring/unstarring
+  const handleToggleStarred = async (id: string) => {
+    // Optimistic UI update
+    setStarredRepos(prev => {
+      const newStarred = new Set(prev);
+      if (newStarred.has(id)) {
+        newStarred.delete(id);
       } else {
-        newPinned.add(id);
+        newStarred.add(id);
       }
-      return newPinned;
+      return newStarred;
     });
+
+    // Call API to update starred status
+    try {
+      const endpoint = `/api/repositories/${id}/${starredRepos.has(id) ? 'unstar' : 'star'}`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update starred status');
+      }
+    } catch (error) {
+      console.error('Error updating starred status:', error);
+      
+      // Revert the optimistic update on error
+      setStarredRepos(prev => {
+        const revertedStarred = new Set(prev);
+        if (revertedStarred.has(id)) {
+          revertedStarred.delete(id);
+        } else {
+          revertedStarred.add(id);
+        }
+        return revertedStarred;
+      });
+      
+      toast({
+        title: 'Error',
+        description: t('starredUpdateFailed'),
+        variant: 'destructive',
+      });
+    }
   };
 
   // Handle repository sync
@@ -238,51 +288,149 @@ export default function EnhancedRepositoryPage() {
     }
   };
 
-  // Filter repositories based on search query and category
-  const filteredRepositories = repositories.filter(repo => {
-    const matchesSearch = 
-      searchQuery === '' || 
-      repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (repo.description && repo.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    
-    const matchesCategory = filterCategory === 'All'; // In a real app, would check repo tags
-    
-    return matchesSearch && matchesCategory;
-  });
-
-  // Sort repositories
-  const sortedRepositories = [...filteredRepositories].sort((a, b) => {
-    // Always show pinned repositories first in all tabs
-    if (pinnedRepos.has(a.id) && !pinnedRepos.has(b.id)) return -1;
-    if (!pinnedRepos.has(a.id) && pinnedRepos.has(b.id)) return 1;
-    
-    // Then apply selected sort
-    switch(sortBy) {
-      case 'name':
+  // Filter and sort repositories based on current UI state
+  const filteredRepositories = repositories
+    .filter(repo => {
+      // Filter by search query
+      if (searchQuery && !repo.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
+          !repo.owner.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      
+      // Filter by tab
+      if (activeTab === 'public' && repo.isPrivate) return false;
+      if (activeTab === 'private' && !repo.isPrivate) return false;
+      if (activeTab === 'starred' && !starredRepos.has(repo.id)) return false;
+      
+      // Filter by category
+      if (filterCategory !== 'All') {
+        // Implement category filtering logic here if needed
+        return true;
+      }
+      
+      return true;
+    })
+    .sort((a, b) => {
+      // First sort by starred status
+      if (starredRepos.has(a.id) && !starredRepos.has(b.id)) return -1;
+      if (!starredRepos.has(a.id) && starredRepos.has(b.id)) return 1;
+      
+      // Then sort by the selected sort option
+      if (sortBy === 'lastUpdated') {
+        const dateA = a.lastSyncedAt ? new Date(a.lastSyncedAt).getTime() : 0;
+        const dateB = b.lastSyncedAt ? new Date(b.lastSyncedAt).getTime() : 0;
+        return dateB - dateA;
+      } else if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
-      case 'lastUpdated':
-        return new Date(b.lastSyncedAt || 0).getTime() - new Date(a.lastSyncedAt || 0).getTime();
-      default:
-        return 0;
-    }
-  });
-  
-  // Get repositories for current tab
-  const getTabRepositories = () => {
-    switch(activeTab) {
-      case 'pinned':
-        return sortedRepositories.filter(repo => pinnedRepos.has(repo.id));
-      case 'public':
-        return sortedRepositories.filter(repo => !repo.isPrivate);
-      case 'private':
-        return sortedRepositories.filter(repo => repo.isPrivate);
-      case 'all':
-      default:
-        return sortedRepositories;
-    }
+      } else if (sortBy === 'owner') {
+        return a.owner.localeCompare(b.owner);
+      }
+      
+      return 0;
+    });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredRepositories.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentRepositories = filteredRepositories.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Handle page change
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
   };
-  
-  const displayRepositories = getTabRepositories();
+
+  // Render repository cards
+  const renderRepositoryCards = () => {
+    if (isLoading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Card key={index} className="h-48 animate-pulse">
+              <CardContent className="p-6">
+                <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
+                <div className="h-3 bg-muted rounded w-1/2 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-2/3 mb-6"></div>
+                <div className="h-3 bg-muted rounded w-full"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    if (filteredRepositories.length === 0) {
+      return (
+        <EmptyState
+          icon={<GitBranch className="h-10 w-10" />}
+          title={t('noRepositories')}
+          description={searchQuery ? t('noRepositoriesMatchingSearch') : t('noRepositoriesYet')}
+          action={
+            <Button onClick={() => setConnectDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addRepository')}
+            </Button>
+          }
+        />
+      );
+    }
+
+    return (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {currentRepositories.map(repo => (
+            <div
+              key={repo.id}
+              onClick={() => handleViewRepository(repo)}
+              className="cursor-pointer"
+            >
+              <EnhancedRepositoryCard
+                repository={repo}
+                onSync={handleSyncRepository}
+                isSyncing={syncingRepoId === repo.id}
+                onToggleStarred={handleToggleStarred}
+                isStarred={starredRepos.has(repo.id)}
+              />
+            </div>
+          ))}
+        </div>
+        
+        {/* Pagination controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center mt-6 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <Button
+                key={page}
+                variant={page === currentPage ? "default" : "outline"}
+                size="sm"
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </Button>
+            ))}
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </>
+    );
+  };
 
   // Select repository for viewing
   const handleViewRepository = (repo: Repository) => {
@@ -332,6 +480,7 @@ export default function EnhancedRepositoryPage() {
                   <SelectContent>
                     <SelectItem value="lastUpdated">{t('lastUpdated')}</SelectItem>
                     <SelectItem value="name">{t('name')}</SelectItem>
+                    <SelectItem value="owner">{t('owner')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button 
@@ -387,53 +536,16 @@ export default function EnhancedRepositoryPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mb-4">
                 <TabsTrigger value="all">{t('all')}</TabsTrigger>
-                <TabsTrigger value="pinned">
+                <TabsTrigger value="starred">
                   <Star className="h-4 w-4 mr-1" />
-                  {t('pinned')}
+                  {t('starred')}
                 </TabsTrigger>
                 <TabsTrigger value="public">{t('public')}</TabsTrigger>
                 <TabsTrigger value="private">{t('private')}</TabsTrigger>
               </TabsList>
               
               <TabsContent value={activeTab}>
-                {isLoading ? (
-                  <div className="flex justify-center items-center h-64">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                      <p className="text-muted-foreground">{t('loading')}</p>
-                    </div>
-                  </div>
-                ) : displayRepositories.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {displayRepositories.map(repo => (
-                      <div 
-                        key={repo.id} 
-                        onClick={() => handleViewRepository(repo)}
-                        className="cursor-pointer"
-                      >
-                        <EnhancedRepositoryCard
-                          repository={repo}
-                          onSync={handleSyncRepository}
-                          isSyncing={syncingRepoId === repo.id}
-                          onTogglePinned={handleTogglePinned}
-                          isPinned={pinnedRepos.has(repo.id)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title={t('no_repositories')}
-                    description={t('no_repositories_description')}
-                    icon={<GitBranch className="h-6 w-6" />}
-                    action={
-                      <Button onClick={() => setConnectDialogOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        {t('add_provider')}
-                      </Button>
-                    }
-                  />
-                )}
+                {renderRepositoryCards()}
               </TabsContent>
             </Tabs>
           </CardContent>

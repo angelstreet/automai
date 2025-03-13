@@ -170,6 +170,23 @@ export function EnhancedConnectRepositoryDialog({
     setIsCloning(true);
     
     try {
+      // Verify if the repository exists before attempting to clone it
+      const verifyResponse = await fetch('/api/repositories/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: quickCloneUrl,
+        }),
+      });
+      
+      const verifyData = await verifyResponse.json();
+      
+      if (!verifyResponse.ok || !verifyData.exists) {
+        throw new Error(verifyData.error || 'Repository not found. Please check the URL and try again.');
+      }
+      
       // Call API to create repository from URL
       const response = await fetch('/api/repositories', {
         method: 'POST',

@@ -246,7 +246,9 @@
     "sortBy": "Sort by",
     "lastUpdated": "Last Updated",
     "name": "Name",
+    "owner": "Owner",
     "pinned": "Pinned",
+    "starred": "Starred",
     "all": "All",
     "syncSuccess": "Repository synchronized successfully",
     "syncFailed": "Failed to synchronize repository",
@@ -300,7 +302,17 @@
     "execute": "Execute",
     "goUp": "Go Up",
     "selectFileToView": "Select a file to view its contents",
-    "back": "Back"
+    "back": "Back",
+    "fileExplorer": "File Explorer",
+    "fileContent": "File Content",
+    "selectFile": "Select a file to view",
+    "code": "Code",
+    "terminal": "Terminal",
+    "settings": "Settings",
+    "codeViewNotImplemented": "Code view is not yet implemented",
+    "terminalNotImplemented": "Terminal functionality is not yet implemented",
+    "settingsNotImplemented": "Repository settings are not yet implemented",
+    "emptyDirectory": "This directory is empty"
   },
   "Settings": {
     "title": "Settings",
