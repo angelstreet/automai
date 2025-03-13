@@ -152,15 +152,20 @@ export function EnhancedConnectRepositoryDialog({
   };
   
   const handleQuickClone = async () => {
-    if (!quickCloneUrl) return;
-    
-    // Update URL pattern to allow self-hosted repositories
-    // This pattern now accepts any URL with http/https protocol
-    const urlPattern = /^(https?:\/\/)(.+)\/([^\/]+)\/([^\/]+)(\.git)?$/;
-    if (!urlPattern.test(quickCloneUrl)) {
+    if (!quickCloneUrl) {
       toast({
-        title: "Invalid Repository URL",
-        description: "Please enter a valid Git repository URL (e.g., http://77.56.53.130:3000/sunri/sunri.git).",
+        title: "Error",
+        description: "Please enter a repository URL",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate that the URL contains .git
+    if (!quickCloneUrl.includes('.git')) {
+      toast({
+        title: "Error",
+        description: "Invalid Git URL. URL must contain .git extension.",
         variant: "destructive",
       });
       return;
@@ -207,10 +212,7 @@ export function EnhancedConnectRepositoryDialog({
       }
       
       if (data.success) {
-        toast({
-          title: "Repository Cloned",
-          description: "Repository has been successfully imported.",
-        });
+        // Repository appears in the list, so no need for success toast
         
         if (onSubmit) {
           onSubmit({
@@ -221,14 +223,13 @@ export function EnhancedConnectRepositoryDialog({
         
         setQuickCloneUrl('');
         onOpenChange(false);
-      } else {
-        throw new Error(data.error || 'Failed to clone repository');
       }
     } catch (error: any) {
       console.error('Error cloning repository:', error);
+      
       toast({
-        title: "Clone Failed",
-        description: error.message || "Failed to clone repository. Please check the URL and try again.",
+        title: "Error",
+        description: error.message || "Failed to clone repository",
         variant: "destructive",
       });
     } finally {

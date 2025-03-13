@@ -9,7 +9,7 @@ import { serverCache } from '@/lib/cache';
 
 // Schema for testing a connection
 const testConnectionSchema = z.object({
-  type: z.enum(['github', 'gitlab', 'gitea'] as const, {
+  type: z.enum(['github', 'gitlab', 'gitea', 'self-hosted'] as const, {
     required_error: 'Provider type is required',
   }),
   serverUrl: z.string().url('Invalid URL').optional(),
@@ -22,7 +22,7 @@ type TestConnectionInput = z.infer<typeof testConnectionSchema>;
 
 // Schema for creating a git provider
 const gitProviderCreateSchema = z.object({
-  type: z.enum(['github', 'gitlab', 'gitea']),
+  type: z.enum(['github', 'gitlab', 'gitea', 'self-hosted']),
   displayName: z.string().min(2, 'Display name must be at least 2 characters'),
   serverUrl: z.string().url('Invalid URL').optional(),
   token: z.string().optional(),
@@ -172,12 +172,24 @@ export async function createRepositoryFromUrl(
   description?: string
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
+    console.log('[actions.createRepositoryFromUrl] Starting with URL:', url);
+    
     const user = await getUser();
     if (!user) {
+      console.log('[actions.createRepositoryFromUrl] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
     
+    console.log('[actions.createRepositoryFromUrl] User ID:', user.id);
+    
     // Call the DB layer function
+    console.log('[actions.createRepositoryFromUrl] Calling repository.createRepositoryFromUrl with:', {
+      url,
+      is_private: isPrivate,
+      description,
+      profileId: user.id
+    });
+    
     const result = await repository.createRepositoryFromUrl(
       {
         url,
@@ -186,6 +198,8 @@ export async function createRepositoryFromUrl(
       },
       user.id
     );
+    
+    console.log('[actions.createRepositoryFromUrl] Result from DB layer:', result);
     
     if (!result.success) {
       return { success: false, error: result.error };

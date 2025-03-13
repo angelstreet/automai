@@ -1,4 +1,4 @@
-import { createClient } from '../server';
+import { createClient } from '@/lib/supabase/server';
 
 // Improved response type format following guidelines
 type DbResponse<T> = {

@@ -36,15 +36,19 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
+    console.log('[POST /api/repositories] Request body:', body);
 
     // Check if this is a quick clone request or a regular repository creation
     if (body.quickClone && body.url) {
+      console.log('[POST /api/repositories] Processing quick clone request for URL:', body.url);
       // This is a quick clone request - use the specialized function
       const result = await createRepositoryFromUrl(
         body.url,
         body.isPrivate || false,
         body.description
       );
+      
+      console.log('[POST /api/repositories] Quick clone result:', result);
 
       if (!result.success) {
         return NextResponse.json(
@@ -56,7 +60,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, data: result.data }, { status: 201 });
     } else {
       // Regular repository creation
+      console.log('[POST /api/repositories] Processing regular repository creation request:', body);
       const result = await createRepository(body);
+      
+      console.log('[POST /api/repositories] Regular repository creation result:', result);
 
       if (!result.success) {
         return NextResponse.json(

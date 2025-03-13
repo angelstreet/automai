@@ -34,6 +34,9 @@ export interface RepositoryCreateData {
   default_branch: string;
   is_private: boolean;
   owner?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  sync_status?: string;
 }
 
 export interface QuickCloneRepositoryData {
@@ -318,14 +321,12 @@ const repository = {
       
       // Detect the provider type from the URL
       const providerType = detectProviderFromUrl(url);
-      
-      if (!providerType) {
-        return { success: false, error: 'Unable to determine provider from URL' };
-      }
+      console.log('[createRepositoryFromUrl] Detected provider type:', providerType);
       
       // Extract repository name and owner from URL
       const repoName = extractRepoNameFromUrl(url);
       const owner = extractOwnerFromUrl(url);
+      console.log('[createRepositoryFromUrl] Extracted repo details:', { repoName, owner });
       
       // Look for an existing provider of this type associated with the user
       const cookieStore = await cookies();
@@ -338,6 +339,8 @@ const repository = {
         .eq('type', providerType)
         .limit(1);
       
+      console.log('[createRepositoryFromUrl] Existing providers query result:', { existingProviders, providersError });
+      
       if (providersError) {
         return { success: false, error: providersError.message };
       }
@@ -347,8 +350,10 @@ const repository = {
       
       if (data.provider_id) {
         providerId = data.provider_id;
+        console.log('[createRepositoryFromUrl] Using provided provider ID:', providerId);
       } else if (existingProviders && existingProviders.length > 0) {
         providerId = existingProviders[0].id;
+        console.log('[createRepositoryFromUrl] Using existing provider ID:', providerId);
       } else {
         // We need to create a default provider for this type
         let providerName = providerType === 'self-hosted' 
@@ -369,10 +374,22 @@ const repository = {
           }
         }
         
+        // Map 'self-hosted' to 'gitea' for database compatibility
+        // This is a workaround for the database constraint
+        const dbProviderType = providerType === 'self-hosted' ? 'gitea' : providerType;
+        
+        console.log('[createRepositoryFromUrl] Creating provider with mapped type:', {
+          originalType: providerType,
+          mappedType: dbProviderType,
+          name: providerName,
+          profile_id: profileId,
+          server_url: serverUrl || undefined
+        });
+        
         const { data: newProvider, error: createProviderError } = await supabase
           .from('git_providers')
           .insert({
-            type: providerType,
+            type: dbProviderType, // Use the mapped type for database compatibility
             name: providerName,
             profile_id: profileId,
             is_configured: true,
@@ -383,6 +400,8 @@ const repository = {
           .select()
           .single();
           
+        console.log('[createRepositoryFromUrl] Provider creation result:', { newProvider, createProviderError });
+        
         if (createProviderError || !newProvider) {
           return { 
             success: false, 
@@ -398,11 +417,14 @@ const repository = {
         name: repoName,
         description: data.description || '',
         provider_id: providerId,
-        provider_type: providerType,
+        provider_type: providerType, // Keep the original provider type for UI display
         url: url,
-        default_branch: 'main',
-        is_private: data.is_private !== undefined ? data.is_private : false,
-        owner: owner
+        is_private: data.is_private || false,
+        owner: owner,
+        default_branch: 'main', // Default branch name
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        sync_status: 'IDLE',
       };
       
       // Create the repository using our existing method

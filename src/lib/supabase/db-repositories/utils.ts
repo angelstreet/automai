@@ -1,13 +1,45 @@
 import { GitProviderType } from '@/app/[locale]/[tenant]/repositories/types';
 
 /**
+ * Validates if a URL is a valid Git repository URL
+ * 
+ * @param url Repository URL to validate
+ * @returns Boolean indicating if the URL is valid
+ */
+export function isValidGitUrl(url: string): boolean {
+  if (!url) return false;
+  
+  // Check if the URL ends with .git or contains .git/ (common for Git repository URLs)
+  const hasGitExtension = url.endsWith('.git') || url.includes('.git/');
+  
+  // Check if it's a valid URL format
+  try {
+    // For http/https URLs
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      new URL(url);
+      return hasGitExtension;
+    }
+    
+    // For SSH URLs (git@github.com:user/repo.git format)
+    if (url.startsWith('git@')) {
+      const sshRegex = /^git@[a-zA-Z0-9.-]+:[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+\.git$/;
+      return sshRegex.test(url);
+    }
+    
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * Determines the Git provider type based on the repository URL
  * 
  * @param url Repository URL to analyze
  * @returns Provider type (github, gitlab, gitea, self-hosted) or null if not recognized
  */
-export function detectProviderFromUrl(url: string): GitProviderType | null {
-  if (!url) return null;
+export function detectProviderFromUrl(url: string): GitProviderType {
+  if (!url) return 'self-hosted'; // Default fallback
   
   try {
     // Normalize URL by removing protocol and any trailing slashes
@@ -58,17 +90,17 @@ export function detectProviderFromUrl(url: string): GitProviderType | null {
       return 'gitlab';
     }
     
-    // Check for IP addresses or other non-standard domains
-    // These are likely self-hosted instances
-    if (/\d+\.\d+\.\d+\.\d+/.test(normalizedUrl) || !normalizedUrl.includes('.')) {
+    // Check for IP-based URLs, which are likely self-hosted
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}/;
+    if (ipRegex.test(normalizedUrl)) {
       return 'self-hosted';
     }
     
     // Default to self-hosted for any other URLs
     return 'self-hosted';
-  } catch (error) {
-    console.error('Error detecting provider from URL:', error);
-    return 'self-hosted'; // Default to self-hosted for unknown providers
+  } catch (e) {
+    // If there's any error in parsing, default to self-hosted
+    return 'self-hosted';
   }
 }
 

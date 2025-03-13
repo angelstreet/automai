@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { detectProviderFromUrl, extractOwnerFromUrl, extractRepoNameFromUrl } from '@/lib/supabase/db-repositories/utils';
+import { detectProviderFromUrl, extractOwnerFromUrl, extractRepoNameFromUrl, isValidGitUrl } from '@/lib/supabase/db-repositories/utils';
 
 /**
  * Verify if a repository exists by checking the provider's API
@@ -16,15 +16,16 @@ export async function POST(request: Request) {
       );
     }
 
-    // Detect the provider type from the URL
-    const providerType = detectProviderFromUrl(url);
-    
-    if (!providerType) {
+    // Validate that the URL is a Git repository URL
+    if (!isValidGitUrl(url)) {
       return NextResponse.json(
-        { exists: false, error: 'Unable to determine provider from URL' },
+        { exists: false, error: 'Invalid Git repository URL. URL must contain .git extension.' },
         { status: 400 },
       );
     }
+
+    // Detect the provider type from the URL
+    const providerType = detectProviderFromUrl(url);
     
     // Extract repository name and owner from URL
     const repoName = extractRepoNameFromUrl(url);
@@ -61,48 +62,26 @@ export async function POST(request: Request) {
           const errorData = await response.json();
           error = errorData.message || 'Repository not found on GitLab';
         }
-      } else if (providerType === 'gitea' || providerType === 'self-hosted') {
-        // For self-hosted Git providers, we can't easily verify
-        // without knowing the server URL and authentication details
-        
-        // Extract server URL from the repository URL
-        const serverUrl = url.match(/^(https?:\/\/[^\/]+)/)?.[1] || '';
-        
-        if (serverUrl && serverUrl.includes('://')) {
-          try {
-            // Try a simple HEAD request to check if the server is reachable
-            const response = await fetch(serverUrl, { method: 'HEAD' });
-            exists = response.status < 400; // Any non-error status code
-            
-            if (!exists) {
-              error = `Server at ${serverUrl} is not reachable`;
-            }
-          } catch (err) {
-            // If we can't reach the server, we'll still allow the clone attempt
-            // as it might be accessible from the server but not from the API
-            exists = true;
-            console.warn(`Could not verify server at ${serverUrl}, but allowing clone attempt`);
-          }
-        } else {
-          // If we can't determine the server URL, assume it exists
-          exists = true;
-        }
-      } else {
-        error = `Unsupported provider type: ${providerType}`;
+      } else if (providerType === 'gitea') {
+        // For Gitea, we'll assume it exists if we can parse the URL
+        // This is a simplification as we'd need the specific Gitea instance URL to check
+        exists = true;
+      } else if (providerType === 'self-hosted') {
+        // For self-hosted, we'll assume it exists if the URL is valid
+        // The actual cloning process will verify if it's accessible
+        exists = true;
       }
-    } catch (err: any) {
-      // For any errors during verification, we'll still allow the clone attempt
-      // This is more permissive for self-hosted repositories
-      exists = true;
-      console.warn(`Error checking repository existence: ${err.message}, but allowing clone attempt`);
+    } catch (apiError: any) {
+      error = apiError.message || 'Error checking repository existence';
+      console.error('API error when verifying repository:', apiError);
     }
 
-    return NextResponse.json({ 
-      exists, 
-      error: exists ? null : error,
+    return NextResponse.json({
+      exists,
       provider: providerType,
       owner,
-      name: repoName
+      repo: repoName,
+      error: error || undefined,
     });
   } catch (error: any) {
     console.error('Error verifying repository:', error);
