@@ -7,69 +7,187 @@ These guidelines define caching implementation across the three-layer architectu
 ## Key Principles
 
 1. **Three-Layer Caching**
-   - Server DB: No caching (always fresh data)
-   - Server Actions: Optional server-side caching for expensive operations
-   - Client Hooks: Primary caching layer using SWR + storage
+   - **Server DB Layer**: ❌ NO caching (always fresh data)
+   - **Server Actions Layer**: ✅ Optional server-side caching for expensive operations
+   - **Client Hooks Layer**: ✅ Primary caching layer using SWR + localStorage
 
 2. **Cache Strategy by Layer**
    ```typescript
    // 1. Client Hooks Layer (Primary Cache)
    function useData() {
-     return useSWR(key, fetcher, {
+     return useSWR(key, async () => {
+       // Try localStorage
+       if (typeof window !== 'undefined') {
+         const cached = localStorage.getItem('key');
+         if (cached) {
+           const parsed = JSON.parse(cached);
+           if (Date.now() < parsed.expiry) {
+             return parsed.data;
+           }
+         }
+       }
+       
+       // Fetch from Server Action
+       const { data } = await serverAction();
+       
+       // Update localStorage
+       if (data) {
+         localStorage.setItem('key', JSON.stringify({
+           data,
+           expiry: Date.now() + (5 * 60 * 1000) // 5 minutes
+         }));
+       }
+       
+       return data;
+     }, {
        dedupingInterval: 60000,
-       revalidateOnFocus: false
+       revalidateOnFocus: false,
+       revalidateOnReconnect: true
      });
    }
 
    // 2. Server Actions Layer (Optional Cache)
    let actionCache = null;
    let cacheTimestamp = 0;
-   const CACHE_TTL = 5 * 60 * 1000;
+   const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+   
+   export async function getExpensiveData() {
+     // Check if cache is valid
+     if (actionCache && Date.now() - cacheTimestamp < CACHE_TTL) {
+       return actionCache;
+     }
+     
+     // Fetch fresh data
+     const result = await db.getExpensiveData();
+     
+     // Update cache
+     actionCache = result;
+     cacheTimestamp = Date.now();
+     
+     return result;
+   }
 
    // 3. Server DB Layer (No Cache)
-   const db = { /* Direct Supabase calls */ };
+   const db = { /* Direct Supabase calls - NEVER cache here */ };
    ```
 
 ## Implementation Rules
 
 1. **✅ Client-Side Caching (Hooks Layer)**
-   - Use SWR as primary cache
-   - Add localStorage for persistence
-   - Handle SSR safely
+   - Use SWR as primary cache mechanism
+   - Use consistent key structures for data fetching
+   - Add localStorage for offline persistence with TTL
+   - Handle SSR safely by checking for window object
+   - Implement proper revalidation strategies
+   - Configure cache lifetime appropriately:
+     ```typescript
+     // SWR configuration
+     useSWR('key', fetcher, {
+       dedupingInterval: 60000,  // 1 minute
+       revalidateOnFocus: false,
+       revalidateOnReconnect: true
+     });
+     ```
 
 2. **✅ Server-Side Caching (Actions Layer)**
-   - Cache expensive computations
+   - Cache expensive computations or frequently accessed data
    - Use TTL for cache invalidation
    - Clear on mutations
+   - Keep cache in the module scope (not global)
+   - Consider using a distributed cache for multi-instance deployments
+   - Only use for data that doesn't change frequently
 
-3. **❌ Never Cache**
-   - Sensitive data
+3. **✅ Cache Invalidation Rules**
+   - Clear relevant caches after mutations
+   - Implement cache versioning for major data structure changes
+   - Handle cache misses gracefully
+   - Never invalidate all caches unnecessarily
+
+4. **❌ NEVER Cache**
+   - Sensitive data or PII
+   - Authentication tokens
+   - Rapidly changing data
    - Without expiration
    - In Server DB layer
    - Without error handling
 
-## Example Pattern
+## Complete Example Pattern
 
 ```typescript
-// Client Hook
-export function useData() {
-  return useSWR('key', async () => {
-    // Try localStorage
+'use client';
+
+// Client Hook with SWR + localStorage
+export function useProjects() {
+  const { mutate } = useSWRConfig();
+  const CACHE_KEY = 'projects';
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  
+  // SWR fetcher with localStorage caching
+  const fetcher = async () => {
+    // Check localStorage first (if in browser)
     if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem('key');
-      if (cached) return JSON.parse(cached);
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Date.now() < parsed.expiry) {
+          // Return cached data if not expired
+          return parsed.data;
+        }
+      }
     }
     
-    // Fetch from Server Action
-    const { data } = await serverAction();
+    // Fetch fresh data from Server Action
+    const { success, data, error } = await getProjectsAction();
     
-    // Update localStorage
-    if (data) localStorage.setItem('key', JSON.stringify(data));
+    if (!success) {
+      throw new Error(error || 'Failed to fetch projects');
+    }
+    
+    // Cache in localStorage if in browser
+    if (typeof window !== 'undefined' && data) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        data,
+        expiry: Date.now() + CACHE_TTL
+      }));
+    }
     
     return data;
-  }, {
+  };
+  
+  // Use SWR for cache management
+  const { data, error, isLoading } = useSWR(CACHE_KEY, fetcher, {
     dedupingInterval: 60000,
-    revalidateOnFocus: false
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true
   });
-}
-``` 
+  
+  // Function to invalidate cache
+  const invalidateCache = useCallback(() => {
+    // Remove from localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(CACHE_KEY);
+    }
+    
+    // Invalidate SWR cache
+    mutate(CACHE_KEY);
+  }, [mutate]);
+  
+  // Function to create a project with cache invalidation
+  const createProject = useCallback(async (project) => {
+    const result = await createProjectAction(project);
+    
+    if (result.success) {
+      invalidateCache();
+    }
+    
+    return result;
+  }, [invalidateCache]);
+  
+  return {
+    projects: data || [],
+    isLoading,
+    error,
+    invalidateCache,
+    createProject
+  };
+} 

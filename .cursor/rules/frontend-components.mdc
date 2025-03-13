@@ -12,41 +12,77 @@ These guidelines define how to structure, organize, and implement React componen
 
 ## Key Principles
 
-1. **Single Responsibility** - Components should have a single, well-defined purpose
-2. **Reusability** - Design components to be reused across the application
-3. **Composition** - Prefer composition over configuration
-4. **Separation of Concerns** - Separate UI from business logic
-5. **Server vs. Client** - Appropriate use of server and client components
+1. **Feature-First Organization** - Group all related files for a feature together
+2. **Single Responsibility** - Components should have a single, well-defined purpose
+3. **Reusability** - Design components to be reused across the application
+4. **Composition** - Prefer composition over configuration
+5. **Separation of Concerns** - Separate UI from business logic
+6. **Server vs. Client** - Appropriate use of server and client components
 
 ## Detailed Rules
 
 ### Component Organization
 
-#### Directory Structure
+#### Feature-Based Organization
 
-- Shared components go in `/src/components/`
-- Page-specific components go in `_components/` folders next to pages
-- Group related components in feature directories
-- shadcn components go in `/src/components/shadcn/`
+- **Feature-based organization:** Group all feature-related files together
+  - Each feature should have its own directory under `/app/[locale]/[tenant]/`
+  - All related files for a feature should be in the same directory:
+    - `_components/` - Feature-specific components
+    - `actions.ts` - Server actions for the feature
+    - `types.ts` - Type definitions for the feature
+    - `constants.ts` - Constants for the feature
+    - `hooks.ts` - Custom hooks for the feature
+    - `utils.ts` - Utility functions for the feature
+    - `page.tsx` - Page component for the feature
 
 ```
-src/
-  ├── components/           # Shared components
-  │   ├── ui/               # UI primitives
-  │   ├── layout/           # Layout components
-  │   ├── form/             # Form components
-  │   └── feature/          # Feature-specific components
-  └── app/
-      └── [locale]/
-          └── feature/
-              └── _components/ # Page-specific components
+app/
+  └── [locale]/
+      └── [tenant]/
+          └── feature/           # Feature directory (e.g., dashboard, hosts, deployment)
+              ├── _components/   # Feature-specific components
+              ├── actions.ts     # Feature-specific server actions
+              ├── constants.ts   # Constants for deployments
+              ├── page.tsx       # Deployment page
+              ├── types.ts       # Type definitions
+              ├── usedeployments.ts # Feature-specific hooks
+              └── utils.ts       # Utility functions
 ```
+
+#### Shared Components and Functionality
+
+- **Shared functionality** goes in dedicated directories:
+  - `/src/components/` - Shared components used across multiple features
+  - `/src/hooks/` - Shared hooks used across multiple features
+  - `/src/types/` - Shared type definitions
+  - `/src/lib/` - Core utilities, services, and business logic
+  - `/src/context/` - Shared context providers
+
+- **Component types in shared directories**:
+  - `/src/components/shadcn/` - shadcn components (never modify these)
+  - `/src/components/ui/` - General UI primitives
+  - `/src/components/layout/` - Layout components
+  - `/src/components/form/` - Form components
 
 #### Component Naming
 
 - Use `PascalCase` for component files and names
 - Child components follow `ParentNameChildPart` pattern
 - Maintain a consistent naming scheme (e.g., for related components)
+
+### Server vs. Client Components
+
+- Use Server Components by default
+- Add 'use client' directive only when needed:
+  - Client-side state (useState, useReducer)
+  - Effects (useEffect, useLayoutEffect)
+  - Browser-only APIs
+  - Event handlers
+- **IMPORTANT:** Never use `React.use()` in Client Components:
+  - `React.use()` is for unwrapping promises in Server Components only
+  - In Client Components, hooks like `useParams()` already return resolved values, not promises
+  - Using `React.use()` in Client Components will cause runtime errors
 
 ### Component Structure
 
@@ -83,19 +119,6 @@ export function Button({
 }
 ```
 
-### Server vs. Client Components
-
-- Use Server Components by default
-- Add 'use client' directive only when needed:
-  - Client-side state (useState, useReducer)
-  - Effects (useEffect, useLayoutEffect)
-  - Browser-only APIs
-  - Event handlers
-- **IMPORTANT:** Never use `React.use()` in Client Components:
-  - `React.use()` is for unwrapping promises in Server Components only
-  - In Client Components, hooks like `useParams()` already return resolved values, not promises
-  - Using `React.use()` in Client Components will cause runtime errors
-
 ### Props and State
 
 - Define explicit interfaces for component props
@@ -106,11 +129,32 @@ export function Button({
 ### Custom Hooks
 
 - Extract complex logic into custom hooks
+- Place feature-specific hooks in the feature directory (`hooks.ts`)
+- Place shared hooks in `/src/hooks/`
 - Follow the `use` prefix naming convention
 - Keep hooks focused on a single concern
 - Maintain separation between UI and business logic
 
 ## Examples
+
+### ✅ Good Example - Feature-Based Organization
+
+```
+app/
+  └── [locale]/
+      └── [tenant]/
+          └── deployment/
+              ├── _components/
+              │   ├── deploymentdetails.tsx
+              │   ├── deploymentlist.tsx
+              │   └── deploymentwizard.tsx
+              ├── actions.ts      # Server actions for deployments
+              ├── constants.ts    # Constants for deployments
+              ├── page.tsx        # Deployment page
+              ├── types.ts        # Type definitions
+              ├── usedeployments.ts # Feature-specific hooks
+              └── utils.ts        # Utility functions
+```
 
 ### ✅ Good Example - Component Structure
 
@@ -167,47 +211,17 @@ export function Counter({
 }
 ```
 
-**Why it's good**: Clear interface, well-organized structure, small and focused component, proper event handling.
-
-### ❌ Bad Example - Component Structure
-
-```tsx
-// Missing 'use client' directive despite using hooks
-// No prop interface
-export default function Counter(props) {
-  let countState = React.useState(0);
-  
-  // Inline function with no destructuring
-  return (
-    <div>
-      <button onClick={function() { 
-        countState[1](mdc:countState[0] - (props.step || 1)); 
-        if (props.onCountChange) props.onCountChange(countState[0]);
-      }}>-</button>
-      <span>{countState[0]}</span>
-      <button onClick={function() { 
-        countState[1](mdc:countState[0] + (props.step || 1));
-        if (props.onCountChange) props.onCountChange(countState[0]);
-      }}>+</button>
-    </div>
-  );
-}
-```
-
-**Why it's bad**: Missing 'use client' directive, no prop interface, poor state variable naming, inline event handlers, no default props, missing styles.
-
 ## Common Pitfalls
 
+- **Not following feature-first organization** - Keep all related files for a feature together
 - **Mixing client and server concerns** - Keep server components free of client-side code
 - **Prop drilling** - Use context or composition instead of passing props through many levels
 - **Huge components** - Break down large components into smaller, focused ones
 - **Duplicated logic** - Extract shared logic into custom hooks or utility functions
 - **Missing 'use client' directive** - Remember to add it when using client-side features
 - **Using `React.use()` in client components** - Only use `React.use()` in server components to handle promises
-- **Supabase Integration** - Always use the centralized clients from `@/lib/supabase` (never the old utils implementation):
-  - Use `createBrowserClient` for client components
-  - Use `createServerClient` for server components
-  - Use `createMiddlewareClient` for middleware
+- **Modifying shadcn components** - Never modify components in `/src/components/shadcn/`
+- **Using incorrect imports** - Import from the correct layers (never bypass the three-layer architecture)
 
 ## Related Rules
 

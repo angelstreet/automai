@@ -32,7 +32,7 @@ We use a strict three-layer architecture for all Supabase operations:
    - Returns data in a consistent format: `{success, error, data}`
 
 2. **Server Actions Layer** (Bridge)
-   - Lives in `/src/app/actions/*.ts`
+   - Lives in `/src/app/actions/*.ts` for shared actions or in feature directories for feature-specific actions
    - Server-only functions marked with 'use server'
    - MUST NOT create Supabase clients directly
    - MUST import and call functions from the Server DB Layer
@@ -41,7 +41,7 @@ We use a strict three-layer architecture for all Supabase operations:
    - Returns data in a consistent format: `{success, error, data, ...additionalProps}`
 
 3. **Client Hooks Layer** (Interface)
-   - Lives in `/src/hooks/*.ts`
+   - Lives in `/src/hooks/*.ts` for shared hooks or in feature directories for feature-specific hooks
    - Client-side React hooks marked with 'use client'
    - MUST NOT create Supabase clients directly
    - MUST call Server Actions (not Server DB directly)
@@ -53,6 +53,66 @@ We use a strict three-layer architecture for all Supabase operations:
 
 1. Client Component → Client Hook → Server Action → Server DB → Supabase
 2. Server Component → Server Action → Server DB → Supabase
+
+## Supabase Clients
+
+### Centralized Clients
+
+Always use the centralized Supabase clients from `/src/lib/supabase/`:
+
+- `createBrowserClient()` - For client components (from `/src/lib/supabase/client.ts`)
+- `createServerClient()` - For server components (from `/src/lib/supabase/server.ts`)
+- `createMiddlewareClient()` - For middleware (from `/src/lib/supabase/middleware.ts`)
+- `createAdminClient()` - For privileged operations (from `/src/lib/supabase/admin.ts`)
+
+Never import Supabase clients directly in components or hooks. The only files that should import directly from Supabase are the files in `/src/lib/supabase/`.
+
+```typescript
+// ✅ CORRECT: In Server DB Layer
+// /src/lib/supabase/db.ts
+import { createClient } from '@supabase/supabase-js';
+
+export async function getProjects(tenantId: string) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
+  
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('tenant_id', tenantId); // Always apply tenant filtering
+    
+  return { success: !error, data, error: error?.message };
+}
+
+// ✅ CORRECT: In Server Actions Layer
+// /src/app/actions/projects.ts or /src/app/[locale]/[tenant]/projects/actions.ts
+import { getProjects } from '@/lib/supabase/db';
+
+export async function getProjectsAction() {
+  const session = await getSession();
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' };
+  }
+  
+  return await getProjects(session.user.tenantId);
+}
+
+// ✅ CORRECT: In Client Hooks Layer
+// /src/hooks/useProjects.ts or /src/app/[locale]/[tenant]/projects/hooks.ts
+'use client';
+import { getProjectsAction } from '@/app/actions/projects';
+
+export function useProjects() {
+  // Use SWR or React state to fetch and cache data
+  const { data, error, isLoading } = useSWR('projects', getProjectsAction);
+  
+  return { projects: data?.data || [], error, isLoading };
+}
+
+// ❌ INCORRECT: Never do this
+// import { createClient } from '@supabase/supabase-js'; // WRONG - direct import in component
+// const supabase = createClient(...); // WRONG - direct client creation outside Server DB Layer
+```
 
 ## Authentication Guidelines
 
@@ -122,6 +182,8 @@ For authentication flows, follow these specific patterns:
    - Provides methods for components to use
    - Example:
      ```typescript
+     'use client';
+     
      const exchangeCodeForSession = useCallback(async () => {
        try {
          setLoading(true);
@@ -165,129 +227,78 @@ For OAuth authentication (GitHub, Google, etc.), follow this specific flow:
    - Server Action determines redirect URL based on user data
    - Client redirects user to the appropriate page
 
-### Error Handling for Authentication
-
-Always follow these error handling patterns:
-
-1. **Server DB Layer**:
-   - Catch all Supabase errors
-   - Return standardized objects: `{success: false, error: 'Error message'}`
-   - Log detailed errors on the server
-
-2. **Server Actions Layer**:
-   - Handle specific error cases with appropriate messages
-   - Return standardized objects: `{success: false, error: 'User-friendly message'}`
-   - Add additional context if needed
-
-3. **Client Hooks Layer**:
-   - Set error state for component use
-   - Return user-friendly error messages
-   - Provide methods to clear errors
-
 ## Database Guidelines
-
-### Database Access Pattern
-
-For database operations, follow this pattern:
-
-1. **Server DB Layer** (`/src/lib/supabase/db.ts`)
-   - Contains all direct Supabase database calls
-   - Organized by table/entity
-   - Example:
-     ```typescript
-     const db = {
-       projects: {
-         async findMany(options = {}) {
-           const cookieStore = await cookies();
-           const supabase = await createClient(cookieStore);
-           
-           let query = supabase.from('projects').select('*');
-           
-           // Apply tenant isolation
-           if (options.tenant_id) {
-             query = query.eq('tenant_id', options.tenant_id);
-           }
-           
-           const { data, error } = await query;
-           
-           if (error) {
-             console.error('Error fetching projects:', error);
-             return [];
-           }
-           
-           return data || [];
-         }
-       }
-     };
-     ```
-
-2. **Server Actions Layer** (`/src/app/actions/*.ts`)
-   - Calls the Server DB Layer methods
-   - Adds business logic and validation
-   - Example:
-     ```typescript
-     export async function getProjects(filters = {}) {
-       try {
-         const user = await getCurrentUser();
-         if (!user) {
-           return { success: false, error: 'Unauthorized' };
-         }
-         
-         const projects = await db.projects.findMany({
-           ...filters,
-           tenant_id: user.tenant_id
-         });
-         
-         return { success: true, data: projects };
-       } catch (error) {
-         return { success: false, error: 'Failed to fetch projects' };
-       }
-     }
-     ```
-
-3. **Client Hooks Layer** (`/src/hooks/*.ts`)
-   - Calls Server Actions
-   - Manages loading and error states
-   - Example:
-     ```typescript
-     export function useProjects() {
-       const [projects, setProjects] = useState([]);
-       const [loading, setLoading] = useState(true);
-       const [error, setError] = useState(null);
-       
-       async function fetchProjects() {
-         setLoading(true);
-         const result = await getProjectsAction();
-         
-         if (result.success) {
-           setProjects(result.data);
-         } else {
-           setError(result.error);
-         }
-         
-         setLoading(false);
-       }
-       
-       useEffect(() => {
-         fetchProjects();
-       }, []);
-       
-       return { projects, loading, error, refetch: fetchProjects };
-     }
-     ```
 
 ### Tenant Isolation
 
 Always enforce tenant boundaries in database operations:
 
 1. **Server DB Layer**:
-   - Accept tenant_id as a parameter
+   - Accept tenant_id as a parameter for all database queries
    - Apply tenant_id filter to all queries
+   - Example:
+     ```typescript
+     async function getProjects(tenantId: string, options = {}) {
+       const cookieStore = await cookies();
+       const supabase = await createClient(cookieStore);
+       
+       let query = supabase.from('projects').select('*');
+       
+       // ALWAYS apply tenant isolation
+       query = query.eq('tenant_id', tenantId);
+       
+       // Apply other filters
+       if (options.status) {
+         query = query.eq('status', options.status);
+       }
+       
+       const { data, error } = await query;
+       
+       if (error) {
+         return { success: false, error: error.message };
+       }
+       
+       return { success: true, data };
+     }
+     ```
 
 2. **Server Actions Layer**:
-   - Get tenant_id from the current user
+   - Get tenant_id from the current user's session
    - Pass tenant_id to the Server DB Layer
    - Never allow cross-tenant access
+   - Example:
+     ```typescript
+     export async function getProjectsAction(filters = {}) {
+       const session = await getSession();
+       if (!session?.user) {
+         return { success: false, error: 'Unauthorized' };
+       }
+       
+       // ALWAYS pass tenant_id to DB layer
+       return await getProjects(session.user.tenantId, filters);
+     }
+     ```
+
+3. **Client Hooks Layer**:
+   - No special handling needed as tenant isolation is enforced at lower layers
+   - Example:
+     ```typescript
+     'use client';
+     
+     export function useProjects(filters = {}) {
+       // Tenant isolation is handled by Server Actions and DB Layer
+       const { data, error, isLoading } = useSWR(
+         ['projects', JSON.stringify(filters)],
+         () => getProjectsAction(filters)
+       );
+       
+       return { 
+         projects: data?.data || [], 
+         error: error || data?.error, 
+         isLoading 
+       };
+     }
+     ```
 
 ## Common Pitfalls
 
@@ -299,6 +310,7 @@ Always enforce tenant boundaries in database operations:
 - **Inconsistent Error Handling** - Always use the standardized error format
 - **Using React.use() with Promises in Client Components** - Never use React.use() in client components
 - **Using Incorrect Client** - Use the appropriate client for each context
+- **Feature-specific Files in Wrong Location** - Place feature-specific actions and hooks in the feature directory
 
 ## Examples
 

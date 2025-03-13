@@ -17,6 +17,7 @@ alwaysApply: true
    - Do not run `npm run dev` or any server unless specifically asked
    - Use curl and static analysis for debugging instead of running servers
    - If server testing is necessary, propose it first with clear justification
+   - For debugging authentication/API issues, use curl or similar tools instead
 
 3. **✅ ALWAYS provide clear plans before implementing changes**
    - Outline your approach before writing code
@@ -27,6 +28,63 @@ alwaysApply: true
    - Make the smallest change necessary to achieve the goal
    - Avoid refactoring unrelated code
    - Keep changes focused on solving the specific issue
+
+5. **✅ ALWAYS adhere to the three-layer architecture**
+   - Server DB Layer (Core) - `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
+   - Server Actions Layer (Bridge) - `/src/app/actions/*.ts` or feature-specific actions
+   - Client Hooks Layer (Interface) - `/src/hooks/*.ts` or feature-specific hooks
+
+6. **✅ NEVER modify shadcn components**
+   - Do not modify any files in `/src/components/shadcn/`
+   - These are UI primitives that should remain unchanged
+   - Extend functionality by composing components, not modifying them
+
+## Architecture Overview
+
+### Next.js App Router
+
+- 100% App Router based architecture (no Pages Router components)
+- Server Components by default, Client Components only when necessary
+- Feature-first organization approach
+
+### Project Structure
+
+```
+📁 app/
+  📁 [locale]/
+    📁 [tenant]/
+      📁 feature/           # Feature directory (e.g., dashboard, hosts, deployment)
+        📁 _components/     # Feature-specific components
+        📄 actions.ts       # Feature-specific server actions
+        📄 constants.ts     # Feature-specific constants
+        📄 hooks.ts         # Feature-specific hooks
+        📄 page.tsx         # Feature page component
+        📄 types.ts         # Feature-specific types
+        📄 utils.ts         # Feature-specific utilities
+📁 components/            # Shared components
+  📁 ui/                  # UI primitives
+  📁 layout/              # Layout components
+  📁 form/                # Form components
+  📁 shadcn/              # shadcn components (never modify)
+📁 lib/                   # Core utilities and services
+  📁 supabase/            # Supabase integration
+📁 hooks/                 # Shared hooks
+📁 context/               # Context providers
+📁 types/                 # Shared type definitions
+```
+
+### Feature-First Organization
+
+- Group all related files for a feature together in its own directory
+- Feature directories live in `/app/[locale]/[tenant]/`
+- Feature-specific code should be in the feature directory:
+  - Components in `_components/`
+  - Server actions in `actions.ts`
+  - Types in `types.ts`
+  - Constants in `constants.ts`
+  - Custom hooks in `hooks.ts`
+  - Utility functions in `utils.ts`
+- Only extract code to shared locations when used across multiple features
 
 ## Core Principles
 
@@ -135,4 +193,27 @@ alwaysApply: true
 4. **Update Cursor rules**
    - Update Cursor rules when new patterns or requirements emerge
    - Immediately update rules when mistakes are identified to prevent repetition
-   - Use rules as a living document that evolves with the codebase 
+   - Use rules as a living document that evolves with the codebase
+
+## Build/Test/Lint Commands
+
+```bash
+# Development
+npm run dev               # Run full dev server with custom server
+npm run build             # Create production build
+npm run start             # Start production server
+npm run lint              # Run ESLint
+npm run lint:fix          # Fix ESLint issues
+npm run format            # Run Prettier formatter
+npm run format:check      # Check formatting without fixing
+npm run test              # Run all tests
+npm run test:watch        # Run tests in watch mode
+npm run test:e2e          # Run end-to-end tests
+npm run analyze           # Analyze bundle size
+npm run browser-tools     # Run browser tools server
+
+# Electron
+npm run electron-dev      # Run Electron in development mode
+npm run electron-build    # Build Electron application
+npm run electron-pack     # Package Electron application
+``` 

@@ -24,18 +24,112 @@ These code style and quality standards ensure readability, maintainability, and 
 
 - Keep files under 300 lines where possible
 - Group related functionality together
-- Order imports consistently (external, internal, types)
+- Order imports consistently:
+  ```typescript
+  // External imports first (alphabetical order)
+  import { useState } from 'react';
+  import { z } from 'zod';
+  
+  // Internal imports next (alphabetical order)
+  import { Button } from '@/components/ui/button';
+  import { getProject } from '@/lib/db';
+  
+  // Type imports
+  import type { Project } from '@/types';
+  
+  // Style imports last
+  import './styles.css';
+  ```
 - Use clear and consistent file naming conventions
+
+### Component Structure
+
+For React components, follow this structure:
+
+1. **Types/Interfaces First**:
+   ```typescript
+   interface ButtonProps {
+     variant?: 'primary' | 'secondary';
+     size?: 'sm' | 'md' | 'lg';
+     disabled?: boolean;
+     onClick?: () => void;
+     children: React.ReactNode;
+   }
+   ```
+
+2. **Constants and Helper Functions Next**:
+   ```typescript
+   const BUTTON_VARIANTS = {
+     primary: 'bg-blue-500 text-white',
+     secondary: 'bg-gray-200 text-gray-800',
+   };
+   
+   const getButtonClasses = (variant: string, size: string, disabled: boolean) => {
+     const variantClass = BUTTON_VARIANTS[variant] || BUTTON_VARIANTS.primary;
+     const sizeClass = size === 'sm' ? 'text-sm py-1 px-2' : 'py-2 px-4';
+     const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : '';
+     
+     return `${variantClass} ${sizeClass} ${disabledClass} rounded`;
+   };
+   ```
+
+3. **Component Implementation Last**:
+   ```typescript
+   export function Button({
+     variant = 'primary',
+     size = 'md',
+     disabled = false,
+     onClick,
+     children
+   }: ButtonProps) {
+     return (
+       <button
+         className={getButtonClasses(variant, size, disabled)}
+         onClick={onClick}
+         disabled={disabled}
+       >
+         {children}
+       </button>
+     );
+   }
+   ```
 
 ### Naming Conventions
 
 - Use descriptive, intention-revealing names
 - Follow consistent casing conventions:
-  - PascalCase for components, interfaces, and types
-  - camelCase for variables, functions, and instances
-  - UPPER_CASE for constants
+  - **PascalCase** for:
+    - Components
+    - Types
+    - Interfaces
+    - Classes
+  - **camelCase** for:
+    - Variables
+    - Functions
+    - Methods
+    - Props
+    - Instances
+  - **UPPER_CASE** for:
+    - Constants
+    - Enums
+  - **kebab-case** for:
+    - File names (except for components)
+    - CSS class names
+    - API routes
+  - **snake_case** for:
+    - Database columns
 - Prefix boolean variables with "is", "has", "should", etc.
 - Prefix event handlers with "handle" or "on"
+- Prefix custom hooks with "use"
+
+### File Name Conventions
+
+- **React Components**: `PascalCase.tsx` (e.g., `Button.tsx`, `UserProfile.tsx`)
+- **Utility Files**: `camelCase.ts` (e.g., `formatDate.ts`, `validation.ts`)
+- **Barrel Files**: `index.ts`
+- **Configuration Files**: `kebab-case.config.ts` (e.g., `jest.config.ts`)
+- **API Route Files**: `route.ts` (in App Router)
+- **Style Files**: `kebab-case.css` or `camelCase.module.css`
 
 ### Formatting and Whitespace
 
@@ -57,6 +151,51 @@ These code style and quality standards ensure readability, maintainability, and 
 - Provide meaningful error messages
 - Use try/catch blocks appropriately
 - Avoid swallowing errors
+- Log errors on the server side for debugging
+- Return appropriate error responses to the client
+- Follow the standardized error format in all layers:
+  
+  **Server DB Layer**:
+  ```typescript
+  try {
+    const { data, error } = await supabase.from('projects').select('*');
+    if (error) {
+      console.error('DB error:', error);
+      return { success: false, error: error.message };
+    }
+    return { success: true, data };
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+  ```
+  
+  **Server Actions Layer**:
+  ```typescript
+  try {
+    const session = await getSession();
+    if (!session) {
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    const result = await db.getProjects(session.user.tenantId);
+    return result;
+  } catch (error) {
+    console.error('Action error:', error);
+    return { success: false, error: 'Failed to fetch projects' };
+  }
+  ```
+  
+  **Client Hooks Layer**:
+  ```typescript
+  const { data, error, isLoading } = useSWR('key', async () => {
+    const result = await serverAction();
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    return result.data;
+  });
+  ```
 
 ### Comments and Documentation
 
@@ -90,27 +229,78 @@ function calculateTotalPrice(items: CartItem[]): number {
 
 **Why it's good**: Single responsibility, descriptive naming, clear structure, and appropriate comments.
 
-### ❌ Bad Example - Function Organization
+### ✅ Good Example - Component Organization
 
 ```typescript
-// Unclear name, multiple responsibilities
-function calc(i: any[]): any {
-  let result = 0;
-  let t = 0;
+// Types first
+interface UserProfileProps {
+  userId: string;
+  showDetails?: boolean;
+  onUpdate?: (user: User) => void;
+}
+
+// Helper functions next
+const formatUserName = (user: User): string => {
+  return user.firstName && user.lastName
+    ? `${user.firstName} ${user.lastName}`
+    : user.email;
+};
+
+// Component last
+export function UserProfile({
+  userId,
+  showDetails = false,
+  onUpdate
+}: UserProfileProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Hard to understand implementation
-  for (let x = 0; x < i.length; x++) {
-    result += i[x].p * i[x].q;
-  }
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        setLoading(true);
+        const result = await getUserAction(userId);
+        
+        if (result.success) {
+          setUser(result.data);
+        } else {
+          setError(result.error);
+        }
+      } catch (err) {
+        setError('Failed to load user profile');
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    fetchUser();
+  }, [userId]);
   
-  t = result * 0.08;
-  result += t;
+  if (loading) return <Spinner />;
+  if (error) return <ErrorMessage message={error} />;
+  if (!user) return <EmptyState message="User not found" />;
   
-  return result;
+  return (
+    <div className="user-profile">
+      <h2>{formatUserName(user)}</h2>
+      {showDetails && (
+        <div className="user-details">
+          <p>Email: {user.email}</p>
+          <p>Role: {user.role}</p>
+        </div>
+      )}
+      {onUpdate && (
+        <Button onClick={() => onUpdate(user)}>
+          Update Profile
+        </Button>
+      )}
+    </div>
+  );
 }
 ```
 
-**Why it's bad**: Unclear naming, poor type definitions, cryptic variable names, and lacks structure.
+**Why it's good**: Clear structure with types first, then helper functions, then the component. Uses appropriate error handling, state management, and clean JSX.
 
 ## Common Pitfalls
 
@@ -119,6 +309,9 @@ function calc(i: any[]): any {
 - **Functions that do too much** - Break down complex functions into smaller ones
 - **Excessive comments** - Aim for self-documenting code with targeted comments
 - **Magic numbers/strings** - Use named constants for better readability
+- **Deep nesting** - Use early returns and guard clauses
+- **Incomplete error handling** - Always handle errors explicitly
+- **Type misuse** - Use proper TypeScript types instead of `any`
 
 ## Related Rules
 

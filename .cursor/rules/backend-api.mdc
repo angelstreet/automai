@@ -21,6 +21,30 @@ These guidelines define how to design, implement, and structure API endpoints in
 
 ## Detailed Rules
 
+### API Routes Organization
+
+API routes should follow the Next.js App Router conventions:
+
+1. **Route Handlers**:
+   - Place route handlers in `route.ts` files
+   - Follow the App Router directory structure for dynamic routes
+   - Use the API routes for backend functionality that can't be handled with Server Actions
+
+2. **Feature-First Organization**:
+   - For feature-specific API routes:
+     - `/src/app/api/[feature]/route.ts` - Main resource endpoint
+     - `/src/app/api/[feature]/[id]/route.ts` - Specific resource endpoint
+     - `/src/app/api/[feature]/[action]/route.ts` - Resource action endpoint
+   - Follow REST principles for URL naming
+
+3. **Prefer Server Actions**:
+   - For most backend operations, prefer Server Actions over API Routes
+   - Use API Routes primarily for:
+     - Webhook endpoints
+     - External API integration
+     - OAuth flows
+     - Operations needing specific headers or HTTP methods
+
 ### URL Structure
 
 - Use RESTful URL patterns
@@ -47,13 +71,13 @@ GET    /api/getProject/123          # Uses verb
 - Use Next.js App Router conventions with route.ts files
 - Implement proper HTTP methods (GET, POST, PUT, DELETE)
 - Keep route handlers focused on request/response handling
-- Extract business logic to service layer
+- Extract business logic to service layer or Server DB Layer
 
 ### Authentication & Authorization
 
 - Always check session in protected routes
 - Use `getSession()` from auth utilities or `createServerClient()` from Supabase centralized client
-- Follow centralized Supabase client pattern (see supabase-auth-db.mdc)
+- Follow centralized Supabase client pattern
 - Implement proper tenant isolation
 - Return appropriate status codes for auth failures (401/403)
 
