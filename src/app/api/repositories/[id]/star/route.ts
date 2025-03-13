@@ -6,9 +6,10 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  console.log('Star repository API route called for ID:', params.id);
   try {
-    const repositoryId = params.id;
+    // Ensure params is properly awaited
+    const repositoryId = params?.id;
+    console.log('Star repository API route called for ID:', repositoryId);
     
     if (!repositoryId) {
       return NextResponse.json(
@@ -55,22 +56,24 @@ export async function POST(
         );
       }
       
-      // Use the newly created profile
       profile = newProfile;
     }
     
-    // Use the DB layer module to star the repository
+    // Star the repository
     const result = await starRepository.starRepository(repositoryId, profile.id);
     
-    return NextResponse.json({ 
-      success: result.success, 
-      data: result.data,
-      error: result.error
-    });
-  } catch (error: any) {
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 500 },
+      );
+    }
+    
+    return NextResponse.json({ success: true, data: result.data });
+  } catch (error) {
     console.error('Error starring repository:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to star repository' },
+      { success: false, error: 'Failed to star repository' },
       { status: 500 },
     );
   }

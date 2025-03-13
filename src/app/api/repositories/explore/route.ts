@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRepository as getGiteaRepository, listFiles as listGiteaFiles, getFileContent as getGiteaFileContent, listBranches as listGiteaBranches, extractGiteaRepoInfo } from '@/lib/gitea-api';
 import { getRepository as getGitLabRepository, listFiles as listGitLabFiles, getFileContent as getGitLabFileContent, listBranches as listGitLabBranches, extractGitLabProjectId } from '@/lib/gitlab-api';
+import { getRepository as getGitHubRepository, listFiles as listGitHubFiles, getFileContent as getGitHubFileContent, listBranches as listGitHubBranches, extractGitHubRepoInfo } from '@/lib/github-api';
 import { getGitProviderById } from '@/lib/supabase/db-repositories/git-provider';
 
 /**
@@ -154,10 +155,124 @@ export async function GET(request: NextRequest) {
           throw error;
         }
       }
-    } else if (provider.type === 'gitea' || provider.type === 'self-hosted' || provider.type === 'github') {
-      // Gitea API (also works for GitHub and self-hosted providers)
+    } else if (provider.type === 'github') {
+      // GitHub API
+      const { owner, repo } = extractGitHubRepoInfo(repositoryUrl);
+      console.log(`[GET /api/repositories/explore] GitHub Owner/Repo: ${owner}/${repo}`);
+      
+      try {
+        switch (action) {
+          case 'info':
+            data = await getGitHubRepository(owner, repo, provider.access_token);
+            break;
+          
+          case 'list':
+            data = await listGitHubFiles(owner, repo, path, branch, provider.access_token);
+            
+            // If the response is a single file (not an array), wrap it in an array
+            if (!Array.isArray(data)) {
+              data = [data];
+            }
+            
+            // Transform GitHub response to match the expected format
+            data = data.map((item: any) => ({
+              name: item.name,
+              path: item.path,
+              type: item.type === 'dir' ? 'dir' : 'file',
+              size: item.size || 0,
+              url: item.html_url,
+              sha: item.sha,
+              download_url: item.download_url,
+            }));
+            break;
+          
+          case 'file':
+            if (!path) {
+              return NextResponse.json(
+                { success: false, error: 'File path is required' },
+                { status: 400 }
+              );
+            }
+            data = await getGitHubFileContent(owner, repo, path, branch, provider.access_token);
+            break;
+          
+          case 'branches':
+            data = await listGitHubBranches(owner, repo, provider.access_token);
+            break;
+          
+          default:
+            return NextResponse.json(
+              { success: false, error: 'Invalid action' },
+              { status: 400 }
+            );
+        }
+      } catch (error) {
+        console.error(`[GET /api/repositories/explore] Error with token: ${error}`);
+        
+        // If authentication fails, try without token for public repositories
+        if (error instanceof Error && (error.message.includes('Unauthorized') || error.message.includes('Not Found'))) {
+          console.log('[GET /api/repositories/explore] Trying without token for public repository');
+          
+          try {
+            switch (action) {
+              case 'info':
+                data = await getGitHubRepository(owner, repo);
+                break;
+              
+              case 'list':
+                data = await listGitHubFiles(owner, repo, path, branch);
+                
+                // If the response is a single file (not an array), wrap it in an array
+                if (!Array.isArray(data)) {
+                  data = [data];
+                }
+                
+                // Transform GitHub response to match the expected format
+                data = data.map((item: any) => ({
+                  name: item.name,
+                  path: item.path,
+                  type: item.type === 'dir' ? 'dir' : 'file',
+                  size: item.size || 0,
+                  url: item.html_url,
+                  sha: item.sha,
+                  download_url: item.download_url,
+                }));
+                break;
+              
+              case 'file':
+                if (!path) {
+                  return NextResponse.json(
+                    { success: false, error: 'File path is required' },
+                    { status: 400 }
+                  );
+                }
+                data = await getGitHubFileContent(owner, repo, path, branch);
+                break;
+              
+              case 'branches':
+                data = await listGitHubBranches(owner, repo);
+                break;
+              
+              default:
+                return NextResponse.json(
+                  { success: false, error: 'Invalid action' },
+                  { status: 400 }
+                );
+            }
+          } catch (publicError) {
+            console.error(`[GET /api/repositories/explore] Error without token: ${publicError}`);
+            throw new Error(
+              'Repository access failed. This may be a private repository that requires valid credentials.'
+            );
+          }
+        } else {
+          throw error;
+        }
+      }
+    } else if (provider.type === 'gitea' || provider.type === 'self-hosted') {
+      // Gitea API (also works for self-hosted providers)
       const { owner, repo } = extractGiteaRepoInfo(repositoryUrl);
-      console.log(`[GET /api/repositories/explore] Gitea/GitHub Owner/Repo: ${owner}/${repo}`);
+      console.log(`[GET /api/repositories/explore] Gitea Owner/Repo: ${owner}/${repo}`);
       
       try {
         switch (action) {

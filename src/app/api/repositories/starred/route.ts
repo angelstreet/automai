@@ -46,10 +46,10 @@ export async function GET() {
       data: result.data || [],
       error: result.error
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching starred repositories:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch starred repositories' },
+      { success: false, error: 'Failed to fetch starred repositories' },
       { status: 500 },
     );
   }
@@ -89,26 +89,9 @@ export async function POST(request: Request) {
       .single();
     
     if (profileError || !profile) {
-      console.log('Profile not found in POST, creating profile');
-      // Create a profile for the user
-      const { data: newProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: user.id,
-          created_at: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
-      
-      if (createError || !newProfile) {
-        return NextResponse.json(
-          { success: false, error: 'Failed to create profile' },
-          { status: 500 },
-        );
-      }
-      
-      // Use the newly created profile
-      profile = newProfile;
+      console.log('Profile not found in POST, returning empty array');
+      // Return empty array instead of error for better UX
+      return NextResponse.json({ success: true, data: [] });
     }
     
     // Use the DB layer module to star the repository

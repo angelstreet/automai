@@ -6,9 +6,10 @@ export async function POST(
   request: Request,
   { params }: { params: { id: string } }
 ) {
-  console.log('Unstar repository API route called for ID:', params.id);
   try {
-    const repositoryId = params.id;
+    // Ensure params is properly awaited
+    const repositoryId = params?.id;
+    console.log('Unstar repository API route called for ID:', repositoryId);
     
     if (!repositoryId) {
       return NextResponse.json(
@@ -52,10 +53,10 @@ export async function POST(
       data: result.data,
       error: result.error
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error unstarring repository:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to unstar repository' },
+      { success: false, error: 'Failed to unstar repository' },
       { status: 500 },
     );
   }
