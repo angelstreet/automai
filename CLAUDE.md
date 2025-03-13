@@ -14,7 +14,9 @@ alwaysApply: true
    - Follow the established project structure
 
 2. **✅ ALWAYS adhere to the three-layer architecture**
-   - Server DB Layer (Core) - `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
+   - Server DB Layer (Core):
+     - Core DB: `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
+     - Feature-specific DB: `/src/lib/supabase/db-{feature}/` folders
    - Server Actions Layer (Bridge) - `/src/app/actions/*.ts`
    - Client Hooks Layer (Interface) - `/src/hooks/*.ts`
 
@@ -76,7 +78,12 @@ alwaysApply: true
 ### Three-Layer Architecture for Supabase
 
 1. **Server DB Layer** (Core)
-   - Lives in `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
+   - **Core DB**:
+     - Lives in `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
+   - **Feature-specific DB**:
+     - Lives in `/src/lib/supabase/db-{feature}/` folders
+     - Examples: `/src/lib/supabase/db-repositories/`, `/src/lib/supabase/db-hosts/`, etc.
+     - Organized by domain to improve maintainability
    - Contains ALL actual Supabase database and auth calls
    - Only this layer should create Supabase clients using `createClient`
    - Uses server-side Supabase client with cookies()
@@ -105,6 +112,29 @@ alwaysApply: true
 - Accept tenant_id as a parameter in Server DB Layer
 - Get tenant_id from the current user in Server Actions Layer
 - Never allow cross-tenant access
+
+### DB Organization & Feature-Based Structure
+
+- **Core DB Files**:
+  - `/src/lib/supabase/db.ts` - Generic DB functions and legacy interface
+  - `/src/lib/supabase/auth.ts` - Authentication-specific functions
+  
+- **Feature-Specific DB Files**:
+  - `/src/lib/supabase/db-repositories/` - Repository-related DB functions
+    - `git-provider.ts` - Git provider operations
+    - `repository.ts` - Repository operations
+    - `pin-repository.ts` - Repository pin operations
+  - `/src/lib/supabase/db-hosts/` - Host-related DB functions
+  - `/src/lib/supabase/db-deployment/` - Deployment-related DB functions
+  
+- **Module Import Patterns**:
+  ```typescript
+  // Import directly from the supabase index (preferred)
+  import { gitProvider, repository } from '@/lib/supabase';
+  
+  // Or use the legacy db interface
+  import db from '@/lib/supabase/db';
+  ```
 
 ### OAuth Authentication Flow
 
@@ -402,4 +432,6 @@ npm run electron-pack     # Package Electron application
 - **Using React.use() with Promises in Client Components** - Never use React.use() in client components
 - **Using Incorrect Client** - Use the appropriate client for each context
 - **Modifying shadcn Components** - Never modify components in `/src/components/shadcn/`
-- **Running Servers Without Permission** - Never run development servers without explicit request 
+- **Running Servers Without Permission** - Never run development servers without explicit request
+- **Using Wrong DB Module** - Use the appropriate feature-specific DB module for domain operations
+- **Not Following Standard Response Format** - Always return `{success, error, data}` from DB operations 

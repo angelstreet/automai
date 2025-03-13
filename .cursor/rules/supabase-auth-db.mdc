@@ -18,8 +18,11 @@ priority: 2
 
 Authentication follows a strict three-layer architecture:
 
-### Server DB Layer (/src/lib/supabase/auth.ts)
-- Contains ALL Supabase auth calls
+### Server DB Layer
+- **Core Auth**: `/src/lib/supabase/auth.ts`
+- **Feature-specific DB**: `/src/lib/supabase/db-{feature}/` folders 
+  (e.g., `/src/lib/supabase/db-repositories/`, `/src/lib/supabase/db-hosts/`)
+- Contains ALL Supabase auth and database calls
 - Uses server-side Supabase client with cookies
 - Returns standard format: {success, error, data}
 
@@ -75,3 +78,42 @@ Authentication follows a strict three-layer architecture:
 - User cache (/src/app/actions/user.ts) has 5-minute TTL
 - The Supabase auth client is centralized in /src/lib/supabase/auth.ts
 - Authentication components must handle appropriate error states
+
+## DB Layer Organization
+
+The database layer uses a feature-based organization approach:
+
+### Core DB Layer
+- `/src/lib/supabase/db.ts` - Core DB functionality and older DB interface
+- `/src/lib/supabase/auth.ts` - Authentication-specific DB functions
+
+### Feature-Specific DB Modules
+- `/src/lib/supabase/db-repositories/` - Repository-related DB functions
+  - `git-provider.ts` - Git provider operations
+  - `repository.ts` - Repository operations
+  - `pin-repository.ts` - Repository pin operations
+  - `index.ts` - Exports all repository DB functions
+- `/src/lib/supabase/db-hosts/` - Host-related DB functions
+- `/src/lib/supabase/db-deployment/` - Deployment-related DB functions
+
+### Standard Response Format
+All DB functions should return a consistent format:
+```typescript
+type DbResponse<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
+```
+
+### Importing DB Modules
+DB modules can be imported in two ways:
+```typescript
+// 1. Via the main db object (legacy approach)
+import db from '@/lib/supabase/db';
+const providers = await db.gitProvider.findMany();
+
+// 2. Directly from feature-specific modules (preferred)
+import { gitProvider } from '@/lib/supabase';
+const { success, data, error } = await gitProvider.getGitProviders(profileId);
+```

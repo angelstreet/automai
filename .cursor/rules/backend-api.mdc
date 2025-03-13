@@ -78,7 +78,8 @@ GET    /api/getProject/123          # Uses verb
 - Always check session in protected routes
 - Use `getSession()` from auth utilities or `createServerClient()` from Supabase centralized client
 - Follow centralized Supabase client pattern
-- Implement proper tenant isolation
+- Implement proper tenant isolation through the DB layer
+- Use feature-specific DB modules from `/src/lib/supabase/db-{feature}/` folders
 - Return appropriate status codes for auth failures (401/403)
 
 ### Request Validation
@@ -264,6 +265,8 @@ export async function POST(req: NextRequest) {
 - **Poor Error Handling** - Handle errors gracefully with appropriate status codes
 - **Bloated Route Handlers** - Move business logic to service layer
 - **Direct Supabase Usage** - Always use centralized Supabase clients from `/src/lib/supabase`
+- **Bypassing Feature-Specific DB** - Use the appropriate DB module from `/src/lib/supabase/db-{feature}/` folders
+- **Not Returning Standard Response** - Always return `{success, error, data}` format from DB layer
 
 ## Related Rules
 
