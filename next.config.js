@@ -51,16 +51,6 @@ const nextConfig = {
     ];
     return config;
   },
-  experimental: {
-    serverActions: {
-      allowedOrigins: [
-        'localhost:3000',
-        'localhost:3001',
-        'localhost:3002',
-        `${process.env.CODESPACE_NAME}-3000.app.github.dev`,
-      ],
-    },
-  },
   serverExternalPackages: [
     'ws',
     'ssh2',
@@ -69,17 +59,6 @@ const nextConfig = {
     'oidc-token-hash',
     'openid-client',
   ],
-  async headers() {
-    return [
-      {
-        source: '/api/terminals/:id',
-        headers: [
-          { key: 'Connection', value: 'keep-alive' },
-          { key: 'Cache-Control', value: 'no-store' },
-        ],
-      },
-    ];
-  },
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -87,7 +66,5 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 };
-
-// NextAuth references removed - using Supabase Auth exclusively
 
 module.exports = withNextIntl(nextConfig);
