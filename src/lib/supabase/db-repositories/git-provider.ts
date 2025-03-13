@@ -12,7 +12,7 @@ type DbResponse<T> = {
 export interface GitProvider {
   id: string;
   name: string;
-  type: 'github' | 'gitlab' | 'gitea';
+  type: 'github' | 'gitlab' | 'gitea' | 'self-hosted';
   access_token: string;
   profile_id: string;
   server_url?: string;
