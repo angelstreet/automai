@@ -50,27 +50,7 @@ alwaysApply: true
 ### Project Structure
 
 ```
-📁 app/
-  📁 [locale]/
-    📁 [tenant]/
-      📁 feature/           # Feature directory (e.g., dashboard, hosts, deployment)
-        📁 _components/     # Feature-specific components
-        📄 actions.ts       # Feature-specific server actions
-        📄 constants.ts     # Feature-specific constants
-        📄 hooks.ts         # Feature-specific hooks
-        📄 page.tsx         # Feature page component
-        📄 types.ts         # Feature-specific types
-        📄 utils.ts         # Feature-specific utilities
-📁 components/            # Shared components
-  📁 ui/                  # UI primitives
-  📁 layout/              # Layout components
-  📁 form/                # Form components
-  📁 shadcn/              # shadcn components (never modify)
-📁 lib/                   # Core utilities and services
-  📁 supabase/            # Supabase integration
-📁 hooks/                 # Shared hooks
-📁 context/               # Context providers
-📁 types/                 # Shared type definitions
+Check documentation here .cursor/rules/frontend-components.mdc
 ```
 
 ### Feature-First Organization
