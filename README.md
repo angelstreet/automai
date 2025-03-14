@@ -1,34 +1,56 @@
 # Automai SaaS
 
-Automai is a multi-tenant SaaS platform designed for end-to-end test automation across web, desktop, and mobile environments.
+## Project Overview
+
+AutomAI is a multi-tenant SaaS platform designed to simplify deployment workflows and infrastructure management for technical and non-technical users alike. It serves as an intuitive interface to existing tools like Jenkins, SSH, Docker, and Portainer, allowing users to deploy applications without deep technical knowledge.
+
+## Core Purpose
+
+The platform aims to democratize deployment processes by providing a user-friendly interface that abstracts the complexity of underlying tools. AutomAI enables:
+- Non-technical users to deploy applications without understanding the underlying infrastructure
+- Technical users to set up workflows that can be executed by team members with varying technical expertise
+- Teams to manage deployments across multiple environments with proper access controls
+
+## Technology Stack
+
+- **Frontend**: Next.js App Router, React, Tailwind CSS, shadcn/ui components
+- **Backend**: Next.js API routes and Server Actions
+- **Database & Auth**: Supabase (PostgreSQL + Auth)
+- **CI/CD Integration**: Jenkins (planned)
+- **Deployment Targets**: SSH servers, Docker, Portainer (Docker in progress)
+- **Repository Integration**: GitHub, GitLab, Gitea
+
+## Architecture
+
+The application follows a strict three-layer architecture:
+
+1. **Server DB Layer (Core)**
+   - Direct database interaction via Supabase
+   - Located in `/src/lib/supabase/db*.ts` files
+   - Feature-specific DB modules in `/src/lib/supabase/db-{feature}/`
+
+2. **Server Actions Layer (Bridge)**
+   - Business logic and orchestration
+   - Located in `/src/app/actions/*.ts` and feature-specific action files
+   - Handles validation, error management, and calls to DB Layer
+
+3. **Client Hooks Layer (Interface)**
+   - React hooks for frontend components
+   - Manages loading/error states and data caching
+   - Calls Server Actions (never directly to DB Layer)
 
 ## 🚀 Quick Start Commands
 
 ```bash
-npx eslint . --ext .ts,.tsx --quiet
-# Restart next.js frontend
-npx supabase gen types typescript --project-id wexkgcszrwxqsthachfyq > src/types/supabase.ts
-code2prompt ../src --exclude="*.txt,*.md,*.mdc" --output=output.txt --line-number 
+# Start Next.js frontend
+rm -rf .next && npm run dev
 
 # Kill running process node
  pkill -f "node"
  npx kill-port 3000 3001
 
-# Start Next.js frontend
-rm -rf .next && npm run dev
-
-# Start Electron app (will also start Next.js if not running)
-npm run electron-dev
-
-# Start browser tools server for logs/debugging
-npx @agentdeskai/browser-tools-server
-
-# Run tests
-npm test  # or: npx jest tests/e2e.test.ts --runInBand
-
-# Supabase studio codespace
-https://vigilant-spork-q667vwj94c9x55-54323.app.github.dev
-
+# Export supabase tables
+npx supabase gen types typescript --project-id db?pwd > src/types/supabase.ts
 ```
 
 ## Installation
@@ -117,31 +139,28 @@ Note: The desktop app automatically detects if Next.js is running on port 3000 a
 
 For detailed desktop app documentation, see [Desktop Implementation Guide](docs/instructions/desktop.md).
 
-## Running Tests
-
-To run end-to-end tests, execute:
+## Build/Test/Lint Commands
 
 ```bash
-npx jest tests/e2e.test.ts --runInBand
-```
+# Development
+npm run dev               # Run full dev server with custom server
+npm run build             # Create production build
+npm run start             # Start production server
+npm run lint              # Run ESLint
+npm run lint:fix          # Fix ESLint issues
+npm run format            # Run Prettier formatter
+npm run format:check      # Check formatting without fixing
+npm run test              # Run all tests
+npm run test:watch        # Run tests in watch mode
+npm run test:e2e          # Run end-to-end tests
+npm run analyze           # Analyze bundle size
+npm run browser-tools     # Run browser tools server
 
-Alternatively, if configured in package.json, run:
-
-```bash
-npm test
-```
-
-## Running the Browser MCP Tool
-
-Use the following command to run the browser MCP tool, which helps analyze browser logs and console errors:
-
-```bash
-npx @agentdeskai/browser-tools-server
-```
-
-## Additional Documentation
-https://supabase.com/docs/guides/auth/managing-user-data#using-triggers
-For detailed project documentation, architecture, and advanced configuration, please refer to the docs in the `docs` directory.
+# Electron
+npm run electron-dev      # Run Electron in development mode
+npm run electron-build    # Build Electron application
+npm run electron-pack     # Package Electron application
+``` 
 
 ---
 
