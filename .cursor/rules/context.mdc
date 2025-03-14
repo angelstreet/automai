@@ -119,4 +119,29 @@ New developers should:
 4. Always adhere to the core principles of not reinventing the wheel
 5. Keep the non-technical user in mind when designing interfaces
 
-For detailed technical documentation, refer to the `/docs` directory.
+## Cursor Rules
+
+The project uses Cursor rules to enforce coding standards and architectural patterns:
+
+- `.cursor/rules/core-general.mdc`: Core principles and general development guidelines
+- `.cursor/rules/core-code-style.mdc`: Code style and quality standards
+- `.cursor/rules/frontend-components.mdc`: Component structure and organization
+- `.cursor/rules/backend-api.mdc`: API design and implementation
+- `.cursor/rules/supabase-auth-db.mdc`: Supabase authentication guidelines
+- `.cursor/rules/caching.mdc`: Caching best practices
+
+## Available Documentation
+
+Key documentation files with their purposes:
+
+- `/docs/api.md`: API standards and endpoints
+- `/docs/supabase-auth.md`: Authentication system details
+- `/docs/supabase-db.md`: Database schema and organization
+- `/docs/techstack.md`: Complete technology stack overview
+- `/docs/project_structure.md`: Detailed project directory structure
+- `/docs/features/repositories.md`: Repository feature documentation
+- `/docs/setup/setup.md`: Development environment setup guide
+- `/docs/setup/desktop-electron.md`: Electron desktop app integration
+- `/docs/setup/jenkins-fullguide.md`: Jenkins integration guide
+
+For implementation details, refer to these documentation files alongside the code.
