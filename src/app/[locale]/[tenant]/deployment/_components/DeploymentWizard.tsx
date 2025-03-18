@@ -7,35 +7,39 @@ import { SAMPLE_SCRIPTS, SAMPLE_HOSTS, REPOSITORY_OPTIONS } from '../constants';
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 import HostSelector from './HostSelector';
 import JenkinsConfig from './JenkinsConfig';
+import CustomSwitch from './CustomSwitch';
 
 interface DeploymentWizardProps {
   onComplete: () => void;
 }
 
+const initialDeploymentData: DeploymentData = {
+  name: '',
+  description: '',
+  repositoryId: '',
+  schedule: 'now',
+  scheduledTime: '',
+  scriptIds: [],
+  scriptParameters: {},
+  hostIds: [],
+  cronExpression: '',
+  repeatCount: 0,
+  environmentVars: [],
+  notifications: {
+    email: false,
+    slack: false
+  },
+  jenkinsConfig: {
+    enabled: false
+  }
+};
+
 const DeploymentWizard: React.FC<DeploymentWizardProps> = ({ 
   onComplete
 }) => {
   const [step, setStep] = useState(1);
-  const [deploymentData, setDeploymentData] = useState<DeploymentData>({
-    name: '',
-    description: '',
-    repositoryId: '',
-    schedule: 'now',
-    scheduledTime: '',
-    scriptIds: [],
-    scriptParameters: {},
-    hostIds: [],
-    cronExpression: '',
-    repeatCount: 0,
-    environmentVars: [],
-    notifications: {
-      email: false,
-      slack: false
-    },
-    jenkinsConfig: {
-      enabled: false
-    }
-  });
+  const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
+  const [showJenkinsView, setShowJenkinsView] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -138,11 +142,11 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     }
   };
 
-  const handleJenkinsConfigChange = (enabled: boolean, config: any) => {
+  const handleJenkinsConfigChange = (config: any) => {
     setDeploymentData(prev => ({
       ...prev,
       jenkinsConfig: {
-        enabled,
+        ...(prev.jenkinsConfig || {}),
         ...config
       }
     }));
@@ -579,91 +583,199 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
             </div>
             
             <div className="space-y-4">
-              {/* Jenkins Integration */}
-              <JenkinsConfig
-                enabled={deploymentData.jenkinsConfig?.enabled || false}
-                config={deploymentData.jenkinsConfig || {}}
-                onChange={handleJenkinsConfigChange}
-                className="mb-4"
-              />
-            
-              {/* Basic details review */}
-              <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Deployment Details</h4>
-                <div className="mt-1 grid grid-cols-2 gap-1 text-xs">
-                  <div className="text-gray-500 dark:text-gray-400">Name:</div>
-                  <div className="text-gray-900 dark:text-white">{deploymentData.name}</div>
-                  
-                  <div className="text-gray-500 dark:text-gray-400">Description:</div>
-                  <div className="text-gray-900 dark:text-white">{deploymentData.description || 'N/A'}</div>
-                  
-                  <div className="text-gray-500 dark:text-gray-400">Repository:</div>
-                  <div className="text-gray-900 dark:text-white">
-                    {REPOSITORY_OPTIONS.find(r => r.value === deploymentData.repositoryId)?.label || 'N/A'}
-                  </div>
-                  
-                  <div className="text-gray-500 dark:text-gray-400">Schedule:</div>
-                  <div className="text-gray-900 dark:text-white">
-                    {deploymentData.schedule === 'now' ? 'Deploy immediately' : 
-                     `Scheduled for ${deploymentData.scheduledTime}`}
-                  </div>
+              {/* Toggle between Jenkins and Script view */}
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium">Deployment Review</h3>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500">Script View</span>
+                  <CustomSwitch 
+                    checked={showJenkinsView}
+                    onCheckedChange={(checked) => {
+                      setShowJenkinsView(checked);
+                    }}
+                  />
+                  <span className="text-xs text-gray-500">Jenkins View</span>
                 </div>
+              </div>
+
+              {/* Show either Jenkins Config or Script Translation based on toggle */}
+              {showJenkinsView ? (
+                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Jenkins Configuration</h4>
+                  
+                  {!deploymentData.jenkinsConfig?.enabled ? (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500 mb-2">Jenkins integration is not enabled for this deployment.</p>
+                      <button
+                        type="button"
+                        onClick={() => handleJenkinsConfigChange({ enabled: true })}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        Enable Jenkins Integration
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Jenkins URL:</span>
+                        <span className="text-gray-900">{deploymentData.jenkinsConfig?.jenkinsUrl || 'Not configured'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Job Name:</span>
+                        <span className="text-gray-900">{deploymentData.jenkinsConfig?.jobName || 'Not configured'}</span>
+                      </div>
+                      {deploymentData.jenkinsConfig?.customParameters && Object.keys(deploymentData.jenkinsConfig.customParameters).length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-gray-500 mb-1">Parameters:</div>
+                          <ul className="space-y-1 pl-2">
+                            {Object.entries(deploymentData.jenkinsConfig.customParameters).map(([key, value]) => (
+                              <li key={key} className="flex justify-between">
+                                <span className="text-gray-500">{key}:</span>
+                                <span className="text-gray-900">{value}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                        <div className="text-gray-500 mb-1">Generated Jenkins Command:</div>
+                        <code className="block bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs overflow-x-auto whitespace-pre">
+                          {`curl -X POST ${deploymentData.jenkinsConfig?.jenkinsUrl || 'JENKINS_URL'}/job/${deploymentData.jenkinsConfig?.jobName || 'JOB_NAME'}/buildWithParameters \
+${Object.entries(deploymentData.jenkinsConfig?.customParameters || {}).map(([key, value]) => `  --data-urlencode "${key}=${value}"`).join('\n  ')}`}
+                        </code>
+                      </div>
+                      
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => handleJenkinsConfigChange({ enabled: false })}
+                          className="px-3 py-1 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 rounded-md text-xs hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          Disable Jenkins Integration
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Script Translation</h4>
+                  <code className="block bg-gray-100 dark:bg-gray-800 p-2 rounded text-xs overflow-x-auto whitespace-pre">
+                    {deploymentData.scriptIds.map(id => {
+                      const script = SAMPLE_SCRIPTS.find(s => s.id === id);
+                      if (!script) return null;
+                      
+                      // Format parameters as command-line arguments
+                      let paramString = '';
+                      if (script.parameters && script.parameters.length > 0) {
+                        paramString = script.parameters.map(param => {
+                          const paramValue = deploymentData.scriptParameters[script.id]?.[param.id] ?? param.default;
+                          if (typeof paramValue === 'boolean') {
+                            return paramValue ? `--${param.id}` : '';
+                          } else {
+                            return paramValue ? `--${param.id}="${paramValue}"` : '';
+                          }
+                        }).filter(Boolean).join(' ');
+                      }
+                      
+                      return `${script.path} ${paramString}`;
+                    }).filter(Boolean).join('\n')}
+                  </code>
+                </div>
+              )}
+            
+              {/* Basic details review - Compact table format */}
+              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Deployment Details</h4>
+                <table className="w-full text-xs">
+                  <tbody>
+                    <tr>
+                      <td className="py-1 pr-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">Name:</td>
+                      <td className="py-1 text-gray-900 dark:text-white">{deploymentData.name}</td>
+                      <td className="py-1 pr-2 text-gray-500 dark:text-gray-400 whitespace-nowrap pl-4">Repository:</td>
+                      <td className="py-1 text-gray-900 dark:text-white">
+                        {REPOSITORY_OPTIONS.find(r => r.value === deploymentData.repositoryId)?.label || 'N/A'}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-1 pr-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">Description:</td>
+                      <td className="py-1 text-gray-900 dark:text-white">{deploymentData.description || 'N/A'}</td>
+                      <td className="py-1 pr-2 text-gray-500 dark:text-gray-400 whitespace-nowrap pl-4">Schedule:</td>
+                      <td className="py-1 text-gray-900 dark:text-white">
+                        {deploymentData.schedule === 'now' ? 'Deploy immediately' : 
+                         `Scheduled for ${deploymentData.scheduledTime}`}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
               
               {/* Scripts and Hosts review */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Selected Scripts</h4>
+                {/* Scripts - Compact list */}
+                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Selected Scripts</h4>
                   {deploymentData.scriptIds.length === 0 ? (
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">No scripts selected</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">No scripts selected</div>
                   ) : (
-                    <div className="space-y-2">
+                    <ul className="space-y-1.5">
                       {deploymentData.scriptIds.map(id => {
                         const script = SAMPLE_SCRIPTS.find(s => s.id === id);
                         if (!script) return null;
                         
+                        // Format parameters as a compact string - only values
+                        let paramString = '';
+                        if (script.parameters && script.parameters.length > 0) {
+                          const params = script.parameters.map(param => {
+                            const paramValue = deploymentData.scriptParameters[script.id]?.[param.id] ?? param.default;
+                            // Only show the value, not the name
+                            return typeof paramValue === 'boolean' 
+                              ? (paramValue ? 'Yes' : 'No')
+                              : (paramValue || '');
+                          }).filter(Boolean); // Remove empty values
+                          
+                          paramString = params.join(' ');
+                        }
+                        
                         return (
-                          <div key={id} className="text-xs">
-                            <div className="font-medium text-gray-900 dark:text-white">{script.name}</div>
-                            <div className="text-gray-500 dark:text-gray-400">{script.path}</div>
-                            
-                            {/* Display script parameters */}
-                            {script.parameters && script.parameters.length > 0 && (
-                              <div className="mt-1 pl-2 border-l-2 border-gray-300 dark:border-gray-600">
-                                <div className="text-gray-500 dark:text-gray-400 mb-1">Parameters:</div>
-                                <div className="space-y-1 pl-1">
-                                  {script.parameters.map(param => {
-                                    const paramValue = deploymentData.scriptParameters[script.id]?.[param.id] ?? param.default;
-                                    return (
-                                      <div key={param.id} className="grid grid-cols-2 gap-1">
-                                        <div className="text-gray-500 dark:text-gray-400">{param.name}:</div>
-                                        <div className="text-gray-900 dark:text-white">
-                                          {typeof paramValue === 'boolean' 
-                                            ? (paramValue ? 'Yes' : 'No')
-                                            : (paramValue || 'Not set')}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-                          </div>
+                          <li key={id} className="text-xs border-b border-gray-200 dark:border-gray-600 pb-1.5 last:border-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-500 dark:text-gray-400 truncate pr-2">{script.path}</span>
+                              <span className="text-gray-900 dark:text-white text-right">{paramString}</span>
+                            </div>
+                          </li>
                         );
                       })}
-                    </div>
+                    </ul>
                   )}
                 </div>
                 
-                <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Target Hosts</h4>
+                {/* Hosts - Compact list */}
+                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Target Hosts</h4>
                   {deploymentData.hostIds.length === 0 ? (
-                    <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">No hosts selected</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">No hosts selected</div>
                   ) : (
-                    <ul className="mt-0.5 list-disc list-inside text-xs text-gray-900 dark:text-white">
+                    <ul className="space-y-1">
                       {deploymentData.hostIds.map(id => {
                         const host = SAMPLE_HOSTS.find(h => h.id === id);
-                        return <li key={id}>{host?.name || id}</li>;
+                        return (
+                          <li key={id} className="text-xs flex items-center justify-between">
+                            <span className="text-gray-900 dark:text-white">{host?.name || id}</span>
+                            {host && (
+                              <div className="flex items-center">
+                                <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+                                  {host.ip || 'No IP'}
+                                </span>
+                                <span 
+                                  className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                >
+                                  #{host.environment.toLowerCase()}
+                                </span>
+                              </div>
+                            )}
+                          </li>
+                        );
                       })}
                     </ul>
                   )}
