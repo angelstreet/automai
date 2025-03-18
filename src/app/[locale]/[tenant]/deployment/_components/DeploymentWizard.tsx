@@ -196,8 +196,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   // Use sample hosts from constants
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-3">
-      <div className="mb-2">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-2">
+      <div className="mb-1">
         <div className="flex justify-between items-center">
           <button 
             onClick={onComplete} 
@@ -211,51 +211,99 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
       </div>
 
       {/* Progress indicator */}
-      <div className="mb-3 relative">
-        <div className="text-center mb-2">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create New Deployment</h2>
-        </div>
+      <div className="mb-1 relative">
         <div className="flex justify-between">
           <div className={`flex flex-col items-center ${step >= 1 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 1 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
-              <span className="text-sm font-medium">1</span>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 1 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              1
             </div>
-            <span className="text-xs">Details</span>
+            <div className="text-xs mt-1">Details</div>
           </div>
-          <div className={`flex-1 h-0.5 mt-3 mx-1 ${step >= 2 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          
+          <div className="flex-1 flex items-center">
+            <div className={`h-0.5 w-full ${step >= 2 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+          </div>
+          
           <div className={`flex flex-col items-center ${step >= 2 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 2 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
-              <span className="text-sm font-medium">2</span>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 2 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              2
             </div>
-            <span className="text-xs">Scripts</span>
+            <div className="text-xs mt-1">Scripts</div>
           </div>
-          <div className={`flex-1 h-0.5 mt-3 mx-1 ${step >= 3 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          
+          <div className="flex-1 flex items-center">
+            <div className={`h-0.5 w-full ${step >= 3 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+          </div>
+          
           <div className={`flex flex-col items-center ${step >= 3 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 3 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
-              <span className="text-sm font-medium">3</span>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 3 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              3
             </div>
-            <span className="text-xs">Hosts</span>
+            <div className="text-xs mt-1">Hosts</div>
           </div>
-          <div className={`flex-1 h-0.5 mt-3 mx-1 ${step >= 4 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
+          
+          <div className="flex-1 flex items-center">
+            <div className={`h-0.5 w-full ${step >= 4 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+          </div>
+          
           <div className={`flex flex-col items-center ${step >= 4 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
-            <div className={`w-6 h-6 flex items-center justify-center rounded-full border ${step >= 4 ? 'border-blue-600 dark:border-blue-400 bg-blue-100 dark:bg-blue-900' : 'border-gray-300 dark:border-gray-700'}`}>
-              <span className="text-sm font-medium">4</span>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 4 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              4
             </div>
-            <span className="text-xs">Review</span>
+            <div className="text-xs mt-1">Review</div>
           </div>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* Step 1: Basic Details */}
+        {/* Step 1: Basic Deployment Information */}
         {step === 1 && (
           <div>
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Deployment Details</h3>
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Basic Info</h3>
+              
+              {/* Navigation buttons */}
+              <div className="flex justify-end">
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={handlePrevStep}
+                    className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    Previous
+                  </button>
+                ) : (
+                  <div></div>
+                )}
+                
+                {step < 4 ? (
+                  <button
+                    type="button"
+                    onClick={handleNextStep}
+                    disabled={!isStepValid()}
+                    className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                      isStepValid() 
+                        ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+                        : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+                    }`}
+                  >
+                    Next
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
+                  >
+                    Create Deployment
+                  </button>
+                )}
+              </div>
+            </div>
             
             {/* Name and description stacked vertically */}
-            <div className="mb-2">
-              <label htmlFor="name" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
-                Deployment Name *
+            <div className="mb-1">
+              <label htmlFor="name" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Name
               </label>
               <input
                 type="text"
@@ -263,13 +311,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 name="name"
                 value={deploymentData.name}
                 onChange={handleInputChange}
-                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter deployment name"
                 required
               />
             </div>
             
-            <div className="mb-2">
-              <label htmlFor="description" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+            <div className="mb-1">
+              <label htmlFor="description" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description
               </label>
               <textarea
@@ -277,13 +326,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 name="description"
                 value={deploymentData.description}
                 onChange={handleInputChange}
-                rows={4}
-                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white resize-none"
+                rows={2}
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Enter deployment description (optional)"
               />
             </div>
             
-            <div className="mb-2">
-              <label htmlFor="repositoryId" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+            <div className="mb-1">
+              <label htmlFor="repositoryId" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Repository *
               </label>
               <select
@@ -291,7 +341,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 name="repositoryId"
                 value={deploymentData.repositoryId}
                 onChange={handleInputChange}
-                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 required
               >
                 <option value="">Select a repository</option>
@@ -304,7 +354,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
             {/* Schedule options and navigation buttons in same row */}
             <div className="flex justify-between items-center">
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Schedule
                 </label>
                 <div className="flex items-center space-x-3">
@@ -378,8 +428,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
             </div>
             
             {deploymentData.schedule === 'later' && (
-              <div className="mt-2">
-                <label htmlFor="scheduledTime" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-0.5">
+              <div className="mt-1">
+                <label htmlFor="scheduledTime" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Scheduled Time *
                 </label>
                 <input
@@ -399,8 +449,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 2: Select Scripts with Parameters */}
         {step === 2 && (
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Select Scripts</h3>
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Scripts</h3>
               
               {/* Navigation buttons */}
               <div className="flex justify-end">
@@ -439,11 +489,11 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
           </div>
         )}
         
-        {/* Step 3: Select Target Hosts */}
+        {/* Step 3: Select Hosts */}
         {step === 3 && (
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Select Target Hosts</h3>
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Hosts</h3>
               
               {/* Navigation buttons */}
               <div className="flex justify-end">
@@ -481,8 +531,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 4: Review with Jenkins Integration */}
         {step === 4 && (
           <div>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Review Deployment</h3>
+            <div className="flex justify-between items-center mb-1">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Review</h3>
               
               {/* Navigation buttons */}
               <div className="flex justify-end">
