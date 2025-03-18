@@ -5,7 +5,6 @@ import { Check, ChevronsUpDown, Server, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
-import { Switch } from '@/components/shadcn/switch';
 import { Textarea } from '@/components/shadcn/textarea';
 import {
   Collapsible,
@@ -25,6 +24,7 @@ import {
   PopoverTrigger,
 } from '@/components/shadcn/popover';
 import { cn } from '@/lib/utils';
+import CustomSwitch from './CustomSwitch';
 
 interface JenkinsConfigProps {
   enabled: boolean;
@@ -111,7 +111,7 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
           <Server className="h-5 w-5 text-gray-500" />
           <h3 className="text-base font-medium">Jenkins Integration</h3>
         </div>
-        <Switch 
+        <CustomSwitch 
           checked={enabled} 
           onCheckedChange={handleEnableChange}
         />
