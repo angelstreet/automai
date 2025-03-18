@@ -690,7 +690,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                       <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Scripts to Execute</h5>
                       <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
                         {deploymentData.scriptIds.length > 0 ? (
-                          <ul className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
                             {deploymentData.scriptIds.map(id => {
                               const script = SAMPLE_SCRIPTS.find(s => s.id === id);
                               if (!script) return null;
@@ -709,20 +709,20 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                               }
                               
                               return (
-                                <li key={id} className="text-xs text-gray-800 dark:text-gray-200 flex items-start">
-                                  <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-1 rounded mr-2 min-w-[20px] text-center">
-                                    {deploymentData.scriptIds.indexOf(id) + 1}
+                                <div key={id} className="text-xs">
+                                  <div className="flex items-center">
+                                    <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1.5 py-0.5 rounded mr-2 min-w-[20px] text-center">
+                                      {deploymentData.scriptIds.indexOf(id) + 1}
+                                    </div>
+                                    <span className="text-gray-800 dark:text-gray-200">{script.path}</span>
+                                    {paramString && (
+                                      <span className="text-gray-500 ml-2">{paramString}</span>
+                                    )}
                                   </div>
-                                  <div className="flex-1">
-                                    <div className="font-medium">{script.name}</div>
-                                    <code className="block mt-1 text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                                      {script.path} {paramString}
-                                    </code>
-                                  </div>
-                                </li>
+                                </div>
                               );
                             })}
-                          </ul>
+                          </div>
                         ) : (
                           <p className="text-xs text-gray-500">No scripts selected</p>
                         )}
@@ -744,6 +744,11 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                                   <div className={`w-2 h-2 rounded-full mr-2 ${host.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}></div>
                                   <span className="text-gray-800 dark:text-gray-200">{host.name}</span>
                                   <span className="text-gray-500 ml-1">({host.ip})</span>
+                                  <span 
+                                  className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                >
+                                  #{host.environment.toLowerCase()}
+                                </span>
                                 </div>
                               );
                             })}
@@ -779,103 +784,11 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 </div>
               )}
             
-              {/* Basic details review - Compact table format */}
-              <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Deployment Details</h4>
-                <table className="w-full text-xs">
-                  <tbody>
-                    <tr>
-                      <td className="py-1 pr-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">Name:</td>
-                      <td className="py-1 text-gray-900 dark:text-white">{deploymentData.name}</td>
-                      <td className="py-1 pr-2 text-gray-500 dark:text-gray-400 whitespace-nowrap pl-4">Repository:</td>
-                      <td className="py-1 text-gray-900 dark:text-white">
-                        {REPOSITORY_OPTIONS.find(r => r.value === deploymentData.repositoryId)?.label || 'N/A'}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-1 pr-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">Description:</td>
-                      <td className="py-1 text-gray-900 dark:text-white">{deploymentData.description || 'N/A'}</td>
-                      <td className="py-1 pr-2 text-gray-500 dark:text-gray-400 whitespace-nowrap pl-4">Schedule:</td>
-                      <td className="py-1 text-gray-900 dark:text-white">
-                        {deploymentData.schedule === 'now' ? 'Deploy immediately' : 
-                         `Scheduled for ${deploymentData.scheduledTime}`}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
               
-              {/* Scripts and Hosts review */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Scripts - Compact list */}
-                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Selected Scripts</h4>
-                  {deploymentData.scriptIds.length === 0 ? (
-                    <div className="text-xs text-gray-500 dark:text-gray-400">No scripts selected</div>
-                  ) : (
-                    <ul className="space-y-1.5">
-                      {deploymentData.scriptIds.map(id => {
-                        const script = SAMPLE_SCRIPTS.find(s => s.id === id);
-                        if (!script) return null;
-                        
-                        // Format parameters as a compact string - only values
-                        let paramString = '';
-                        if (script.parameters && script.parameters.length > 0) {
-                          const params = script.parameters.map(param => {
-                            const paramValue = deploymentData.scriptParameters[script.id]?.[param.id] ?? param.default;
-                            // Only show the value, not the name
-                            return typeof paramValue === 'boolean' 
-                              ? (paramValue ? 'Yes' : 'No')
-                              : (paramValue || '');
-                          }).filter(Boolean); // Remove empty values
-                          
-                          paramString = params.join(' ');
-                        }
-                        
-                        return (
-                          <li key={id} className="text-xs border-b border-gray-200 dark:border-gray-600 pb-1.5 last:border-0">
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-500 dark:text-gray-400 truncate pr-2">{script.path}</span>
-                              <span className="text-gray-900 dark:text-white text-right">{paramString}</span>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-                
-                {/* Hosts - Compact list */}
-                <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-                  <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Target Hosts</h4>
-                  {deploymentData.hostIds.length === 0 ? (
-                    <div className="text-xs text-gray-500 dark:text-gray-400">No hosts selected</div>
-                  ) : (
-                    <ul className="space-y-1">
-                      {deploymentData.hostIds.map(id => {
-                        const host = SAMPLE_HOSTS.find(h => h.id === id);
-                        return (
-                          <li key={id} className="text-xs flex items-center justify-between">
-                            <span className="text-gray-900 dark:text-white">{host?.name || id}</span>
-                            {host && (
-                              <div className="flex items-center">
-                                <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
-                                  {host.ip || 'No IP'}
-                                </span>
-                                <span 
-                                  className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                                >
-                                  #{host.environment.toLowerCase()}
-                                </span>
-                              </div>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              </div>
+              
+              
+              
+              
             </div>
           </div>
         )}
