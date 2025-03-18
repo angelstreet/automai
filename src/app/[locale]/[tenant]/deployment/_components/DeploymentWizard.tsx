@@ -259,45 +259,19 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 1: Basic Deployment Information */}
         {step === 1 && (
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Basic Info</h3>
-              
-              {/* Navigation buttons */}
-              <div className="flex justify-end">
-                {step > 1 ? (
-                  <button
-                    type="button"
-                    onClick={handlePrevStep}
-                    className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    Previous
-                  </button>
-                ) : (
-                  <div></div>
-                )}
-                
-                {step < 4 ? (
-                  <button
-                    type="button"
-                    onClick={handleNextStep}
-                    disabled={!isStepValid()}
-                    className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                      isStepValid() 
-                        ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
-                        : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
-                    }`}
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
-                  >
-                    Create Deployment
-                  </button>
-                )}
-              </div>
+            <div className="flex justify-end mb-1">
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={!isStepValid()}
+                className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  isStepValid() 
+                    ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+                    : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+                }`}
+              >
+                Next
+              </button>
             </div>
             
             {/* Name and description stacked vertically */}
@@ -388,43 +362,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   </div>
                 </div>
               </div>
-              
-              {/* Navigation buttons */}
-              <div className="flex justify-end">
-                {step > 1 ? (
-                  <button
-                    type="button"
-                    onClick={handlePrevStep}
-                    className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    Previous
-                  </button>
-                ) : (
-                  <div></div>
-                )}
-                
-                {step < 4 ? (
-                  <button
-                    type="button"
-                    onClick={handleNextStep}
-                    disabled={!isStepValid()}
-                    className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                      isStepValid() 
-                        ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
-                        : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
-                    }`}
-                  >
-                    Next
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
-                  >
-                    Create Deployment
-                  </button>
-                )}
-              </div>
             </div>
             
             {deploymentData.schedule === 'later' && (
@@ -449,32 +386,27 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 2: Select Scripts with Parameters */}
         {step === 2 && (
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Scripts</h3>
+            <div className="flex justify-between mb-1">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                Previous
+              </button>
               
-              {/* Navigation buttons */}
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handlePrevStep}
-                  className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  Previous
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={!isStepValid()}
-                  className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                    isStepValid() 
-                      ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
-                      : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
-                  }`}
-                >
-                  Next
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={!isStepValid()}
+                className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  isStepValid() 
+                    ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+                    : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+                }`}
+              >
+                Next
+              </button>
             </div>
             
             <EnhancedScriptSelector
@@ -489,35 +421,30 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
           </div>
         )}
         
-        {/* Step 3: Select Hosts */}
+        {/* Step 3: Select Target Hosts */}
         {step === 3 && (
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Hosts</h3>
+            <div className="flex justify-between mb-1">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                Previous
+              </button>
               
-              {/* Navigation buttons */}
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handlePrevStep}
-                  className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  Previous
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={!isStepValid()}
-                  className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                    isStepValid() 
-                      ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
-                      : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
-                  }`}
-                >
-                  Next
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={!isStepValid()}
+                className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  isStepValid() 
+                    ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+                    : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+                }`}
+              >
+                Next
+              </button>
             </div>
             
             <HostSelector
@@ -531,26 +458,21 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 4: Review with Jenkins Integration */}
         {step === 4 && (
           <div>
-            <div className="flex justify-between items-center mb-1">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Review</h3>
+            <div className="flex justify-between mb-1">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                Previous
+              </button>
               
-              {/* Navigation buttons */}
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handlePrevStep}
-                  className="px-2 py-1 mr-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  Previous
-                </button>
-                
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
-                >
-                  Create Deployment
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
+              >
+                Create Deployment
+              </button>
             </div>
             
             <div className="space-y-4">
