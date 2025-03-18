@@ -2,20 +2,17 @@
 
 import React, { useState } from 'react';
 import { Plus, List, LayoutGrid, RefreshCw } from 'lucide-react';
-import DeploymentWizard from './_components/DeploymentWizard';
-import DeploymentList from './_components/DeploymentList';
+import { DeploymentWizard, DeploymentList } from './_components';
+import { useDeployments } from './useDeployments';
 
 const DeploymentPage = () => {
   const [view, setView] = useState('list'); // 'list' or 'create'
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
+  
+  const { isRefreshing, fetchDeployments } = useDeployments();
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    // In a real app, this would fetch fresh data
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1000);
+    fetchDeployments();
   };
 
   return (
@@ -76,7 +73,7 @@ const DeploymentPage = () => {
       </div>
 
       {view === 'list' ? (
-        <DeploymentList />
+        <DeploymentList onViewDeployment={(id) => console.log('View deployment:', id)} />
       ) : (
         <DeploymentWizard onComplete={() => setView('list')} />
       )}

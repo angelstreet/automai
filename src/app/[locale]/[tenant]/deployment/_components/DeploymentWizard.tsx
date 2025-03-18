@@ -2,6 +2,11 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { DeploymentData } from '../types';
+import { SAMPLE_SCRIPTS, SAMPLE_HOSTS, INITIAL_DEPLOYMENT_DATA, REPOSITORY_OPTIONS } from '../constants';
+import EnhancedScriptSelector from './EnhancedScriptSelector';
+import HostSelector from './HostSelector';
+import JenkinsConfig from './JenkinsConfig';
 
 interface DeploymentWizardProps {
   onComplete: () => void;
@@ -11,20 +16,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   onComplete
 }) => {
   const [step, setStep] = useState(1);
-  const [deploymentData, setDeploymentData] = useState({
-    name: '',
-    description: '',
-    repositoryId: '',
-    scriptIds: [] as string[],
-    hostIds: [] as string[],
-    schedule: 'now',
-    scheduledTime: '',
-    environmentVars: [] as Array<{key: string, value: string}>,
-    notifications: {
-      email: false,
-      slack: false
-    }
-  });
+  const [deploymentData, setDeploymentData] = useState<DeploymentData>(INITIAL_DEPLOYMENT_DATA);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -35,12 +27,39 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   };
 
   const handleScriptsChange = (scriptId: string) => {
-    setDeploymentData(prev => ({
-      ...prev,
-      scriptIds: prev.scriptIds.includes(scriptId)
+    setDeploymentData(prev => {
+      const newScriptIds = prev.scriptIds.includes(scriptId)
         ? prev.scriptIds.filter(id => id !== scriptId)
-        : [...prev.scriptIds, scriptId]
-    }));
+        : [...prev.scriptIds, scriptId];
+      
+      // If script is deselected, remove its parameters
+      const newScriptParameters = { ...prev.scriptParameters };
+      if (!newScriptIds.includes(scriptId) && newScriptParameters[scriptId]) {
+        delete newScriptParameters[scriptId];
+      }
+      
+      return {
+        ...prev,
+        scriptIds: newScriptIds,
+        scriptParameters: newScriptParameters
+      };
+    });
+  };
+
+  const handleScriptParameterChange = (scriptId: string, paramId: string, value: any) => {
+    setDeploymentData(prev => {
+      const scriptParams = prev.scriptParameters[scriptId] || {};
+      return {
+        ...prev,
+        scriptParameters: {
+          ...prev.scriptParameters,
+          [scriptId]: {
+            ...scriptParams,
+            [paramId]: value
+          }
+        }
+      };
+    });
   };
 
   const handleHostsChange = (hostId: string) => {
@@ -65,6 +84,16 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         }
       }));
     }
+  };
+
+  const handleJenkinsConfigChange = (enabled: boolean, config: any) => {
+    setDeploymentData(prev => ({
+      ...prev,
+      jenkinsConfig: {
+        enabled,
+        ...config
+      }
+    }));
   };
 
   const handleAddEnvVar = () => {
@@ -121,6 +150,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     }
   };
 
+  // Use sample hosts from constants
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-3">
       <div className="mb-2">
@@ -136,7 +167,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         </div>
       </div>
 
-      {/* Progress indicator - with larger numbers */}
+      {/* Progress indicator */}
       <div className="mb-3 relative">
         <div className="text-center mb-2">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">Create New Deployment</h2>
@@ -221,9 +252,9 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 required
               >
                 <option value="">Select a repository</option>
-                <option value="repo1">Main Repository</option>
-                <option value="repo2">Frontend Repository</option>
-                <option value="repo3">Backend Repository</option>
+                {REPOSITORY_OPTIONS.map(repo => (
+                  <option key={repo.value} value={repo.value}>{repo.label}</option>
+                ))}
               </select>
             </div>
             
@@ -322,7 +353,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
           </div>
         )}
         
-        {/* Step 2: Select Scripts */}
+        {/* Step 2: Select Scripts with Parameters */}
         {step === 2 && (
           <div>
             <div className="flex justify-between items-center mb-2">
@@ -353,36 +384,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
               </div>
             </div>
             
-            <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-              <div className="max-h-48 overflow-y-auto">
-                {[
-                  { id: 'script1', name: 'Deployment Script', path: '/scripts/deploy.sh', repository: 'main' },
-                  { id: 'script2', name: 'Backup Script', path: '/scripts/backup.sh', repository: 'main' },
-                  { id: 'script3', name: 'Monitoring Script', path: '/scripts/monitor.sh', repository: 'main' },
-                ].map((script) => (
-                  <div
-                    key={script.id}
-                    className="flex items-center px-2 py-1 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`script-${script.id}`}
-                      checked={deploymentData.scriptIds.includes(script.id)}
-                      onChange={() => handleScriptsChange(script.id)}
-                      className="mr-2 h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
-                    />
-                    <label htmlFor={`script-${script.id}`} className="flex-1 cursor-pointer">
-                      <div className="font-medium text-xs text-gray-900 dark:text-white">
-                        {script.name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {script.path}
-                      </div>
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <EnhancedScriptSelector
+              availableScripts={SAMPLE_SCRIPTS}
+              selectedScripts={deploymentData.scriptIds}
+              scriptParameters={deploymentData.scriptParameters}
+              onScriptToggle={handleScriptsChange}
+              onParameterChange={handleScriptParameterChange}
+              isProjectSelected={!!deploymentData.repositoryId}
+            />
           </div>
         )}
         
@@ -417,41 +426,15 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
               </div>
             </div>
             
-            <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-              <div className="max-h-48 overflow-y-auto">
-                {[
-                  { id: 'host1', name: 'Production Server 1', environment: 'Production', status: 'online', ip: '192.168.1.10' },
-                  { id: 'host2', name: 'Production Server 2', environment: 'Production', status: 'online', ip: '192.168.1.11' },
-                  { id: 'host3', name: 'Staging Server', environment: 'Staging', status: 'online', ip: '192.168.2.10' },
-                  { id: 'host4', name: 'Development Server', environment: 'Development', status: 'online', ip: '192.168.3.10' },
-                ].map((host) => (
-                  <div
-                    key={host.id}
-                    className="flex items-center px-2 py-1 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`host-${host.id}`}
-                      checked={deploymentData.hostIds.includes(host.id)}
-                      onChange={() => handleHostsChange(host.id)}
-                      className="mr-2 h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
-                    />
-                    <label htmlFor={`host-${host.id}`} className="flex-1 cursor-pointer">
-                      <div className="font-medium text-xs text-gray-900 dark:text-white">
-                        {host.name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {host.ip || 'Status: ' + host.status}
-                      </div>
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <HostSelector
+              availableHosts={SAMPLE_HOSTS}
+              selectedHosts={deploymentData.hostIds}
+              onHostToggle={handleHostsChange}
+            />
           </div>
         )}
         
-        {/* Step 4: Review */}
+        {/* Step 4: Review with Jenkins Integration */}
         {step === 4 && (
           <div>
             <div className="flex justify-between items-center mb-2">
@@ -476,8 +459,17 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
               </div>
             </div>
             
-            <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-2 rounded-md">
-              <div>
+            <div className="space-y-4">
+              {/* Jenkins Integration */}
+              <JenkinsConfig
+                enabled={deploymentData.jenkinsConfig?.enabled || false}
+                config={deploymentData.jenkinsConfig || {}}
+                onChange={handleJenkinsConfigChange}
+                className="mb-4"
+              />
+            
+              {/* Basic details review */}
+              <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
                 <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Deployment Details</h4>
                 <div className="mt-1 grid grid-cols-2 gap-1 text-xs">
                   <div className="text-gray-500 dark:text-gray-400">Name:</div>
@@ -488,9 +480,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   
                   <div className="text-gray-500 dark:text-gray-400">Repository:</div>
                   <div className="text-gray-900 dark:text-white">
-                    {deploymentData.repositoryId === 'repo1' ? 'Main Repository' : 
-                     deploymentData.repositoryId === 'repo2' ? 'Frontend Repository' : 
-                     deploymentData.repositoryId === 'repo3' ? 'Backend Repository' : 'N/A'}
+                    {REPOSITORY_OPTIONS.find(r => r.value === deploymentData.repositoryId)?.label || 'N/A'}
                   </div>
                   
                   <div className="text-gray-500 dark:text-gray-400">Schedule:</div>
@@ -501,37 +491,60 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-2">
-                <div>
+              {/* Scripts and Hosts review */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
                   <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Selected Scripts</h4>
                   {deploymentData.scriptIds.length === 0 ? (
                     <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">No scripts selected</div>
                   ) : (
-                    <ul className="mt-0.5 list-disc list-inside text-xs text-gray-900 dark:text-white">
+                    <div className="space-y-2">
                       {deploymentData.scriptIds.map(id => {
-                        const scriptName = 
-                          id === 'script1' ? 'Deployment Script' :
-                          id === 'script2' ? 'Backup Script' :
-                          id === 'script3' ? 'Monitoring Script' : id;
-                        return <li key={id}>{scriptName}</li>;
+                        const script = SAMPLE_SCRIPTS.find(s => s.id === id);
+                        if (!script) return null;
+                        
+                        return (
+                          <div key={id} className="text-xs">
+                            <div className="font-medium text-gray-900 dark:text-white">{script.name}</div>
+                            <div className="text-gray-500 dark:text-gray-400">{script.path}</div>
+                            
+                            {/* Display script parameters */}
+                            {script.parameters && script.parameters.length > 0 && (
+                              <div className="mt-1 pl-2 border-l-2 border-gray-300 dark:border-gray-600">
+                                <div className="text-gray-500 dark:text-gray-400 mb-1">Parameters:</div>
+                                <div className="space-y-1 pl-1">
+                                  {script.parameters.map(param => {
+                                    const paramValue = deploymentData.scriptParameters[script.id]?.[param.id] ?? param.default;
+                                    return (
+                                      <div key={param.id} className="grid grid-cols-2 gap-1">
+                                        <div className="text-gray-500 dark:text-gray-400">{param.name}:</div>
+                                        <div className="text-gray-900 dark:text-white">
+                                          {typeof paramValue === 'boolean' 
+                                            ? (paramValue ? 'Yes' : 'No')
+                                            : (paramValue || 'Not set')}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
                       })}
-                    </ul>
+                    </div>
                   )}
                 </div>
                 
-                <div>
+                <div className="space-y-2 bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
                   <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300">Target Hosts</h4>
                   {deploymentData.hostIds.length === 0 ? (
                     <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">No hosts selected</div>
                   ) : (
                     <ul className="mt-0.5 list-disc list-inside text-xs text-gray-900 dark:text-white">
                       {deploymentData.hostIds.map(id => {
-                        const hostName = 
-                          id === 'host1' ? 'Production Server 1' :
-                          id === 'host2' ? 'Production Server 2' :
-                          id === 'host3' ? 'Staging Server' :
-                          id === 'host4' ? 'Development Server' : id;
-                        return <li key={id}>{hostName}</li>;
+                        const host = SAMPLE_HOSTS.find(h => h.id === id);
+                        return <li key={id}>{host?.name || id}</li>;
                       })}
                     </ul>
                   )}

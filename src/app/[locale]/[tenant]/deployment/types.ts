@@ -97,3 +97,34 @@ export interface DeploymentFormData {
     slack: boolean;
   };
 }
+
+export interface ScriptParameter {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'string' | 'number' | 'boolean' | 'select';
+  required: boolean;
+  default?: string | number | boolean;
+  options?: string[]; // For select type
+}
+
+export interface Script {
+  id: string;
+  name: string;
+  path: string;
+  repository?: string;
+  parameters?: ScriptParameter[];
+}
+
+// Add to deployment data
+export interface DeploymentData {
+  // existing fields...
+  scriptParameters: Record<string, Record<string, any>>; // scriptId -> {paramId: value}
+  jenkinsConfig?: {
+    enabled: boolean;
+    jobName?: string;
+    jenkinsUrl?: string;
+    credentials?: string;
+    customParameters?: Record<string, string>;
+  };
+}
