@@ -2,34 +2,29 @@
 
 import React, { useState } from 'react';
 import { Code, ChevronDown, ChevronRight, CheckSquare, Square } from 'lucide-react';
-import { Script, ScriptParameter } from '../types';
+import { Script, ScriptParameter, Repository } from '../types';
 import ScriptParameterForm from './ScriptParameterForm';
 import { Input } from '@/components/shadcn/input';
 
 interface EnhancedScriptSelectorProps {
+  selectedRepository?: Repository;
   availableScripts: Script[];
-  selectedScripts: string[];
-  scriptParameters: Record<string, Record<string, any>>;
-  onScriptToggle: (scriptId: string) => void;
-  onParameterChange: (scriptId: string, paramId: string, value: any) => void;
-  isProjectSelected: boolean;
-  onBatchScriptToggle?: (scriptIds: string[], isSelected: boolean) => void;
+  selectedScriptIds: string[];
+  onScriptIdsChange: (scriptIds: string[]) => void;
   isLoading?: boolean;
   error?: string | null;
 }
 
 const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
+  selectedRepository,
   availableScripts,
-  selectedScripts,
-  scriptParameters,
-  onScriptToggle,
-  onParameterChange,
-  isProjectSelected,
-  onBatchScriptToggle,
+  selectedScriptIds,
+  onScriptIdsChange,
   isLoading = false,
   error = null
 }) => {
   const [expandedScripts, setExpandedScripts] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
   const toggleExpanded = (scriptId: string, event?: React.MouseEvent) => {
     if (event) {
@@ -49,145 +44,149 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
     // Create a new array with all script IDs
     const allScriptIds = availableScripts.map(script => script.id);
     
-    // Filter out scripts that are already selected to avoid unnecessary updates
-    const scriptsToAdd = allScriptIds.filter(id => !selectedScripts.includes(id));
+    // If all are already selected, deselect all
+    if (allScriptIds.length === selectedScriptIds.length && 
+        allScriptIds.every(id => selectedScriptIds.includes(id))) {
+      onScriptIdsChange([]);
+    } else {
+      // Otherwise select all
+      onScriptIdsChange(allScriptIds);
+    }
+  };
+
+  const handleToggleScript = (scriptId: string) => {
+    const newSelectedScripts = [...selectedScriptIds];
     
-    // If there are scripts to add, create a batch update
-    if (scriptsToAdd.length > 0) {
-      // Call the parent component with a special batch update
-      onBatchScriptToggle?.(scriptsToAdd, true);
+    if (newSelectedScripts.includes(scriptId)) {
+      const index = newSelectedScripts.indexOf(scriptId);
+      newSelectedScripts.splice(index, 1);
+    } else {
+      newSelectedScripts.push(scriptId);
     }
+    
+    onScriptIdsChange(newSelectedScripts);
   };
 
-  const handleUnselectAll = () => {
-    // If there are selected scripts, create a batch update to remove them all
-    if (selectedScripts.length > 0) {
-      // Call the parent component with a special batch update
-      onBatchScriptToggle?.(selectedScripts, false);
-    }
-  };
-
-  if (!isProjectSelected) {
-    return (
-      <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-        Please select a project first to view available scripts.
-      </div>
-    );
-  }
+  // Filter scripts based on search term
+  const filteredScripts = availableScripts.filter(script => 
+    script.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    script.path.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (isLoading) {
     return (
-      <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-        Loading...
+      <div className="p-4 flex justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4 text-center text-red-500 dark:text-red-400">
-        {error}
+      <div className="p-4 text-red-500">
+        Error loading scripts: {error}
+      </div>
+    );
+  }
+
+  if (!selectedRepository) {
+    return (
+      <div className="p-4 text-gray-500 dark:text-gray-400">
+        Please select a repository first to view available scripts.
+      </div>
+    );
+  }
+
+  if (availableScripts.length === 0) {
+    return (
+      <div className="p-4 text-gray-500 dark:text-gray-400">
+        No scripts found in this repository. Make sure your repository has executable scripts.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-      {/* Select All / Unselect All controls */}
-      <div className="px-2 py-1 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex justify-between items-center">
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-          {selectedScripts.length} of {availableScripts.length} scripts selected
-        </span>
-        <div className="flex space-x-2">
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleSelectAll();
-            }}
-            type="button"
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center"
-          >
-            <CheckSquare className="h-3 w-3 mr-1" />
-            Select All
-          </button>
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleUnselectAll();
-            }}
-            type="button"
-            className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center"
-          >
-            <Square className="h-3 w-3 mr-1" />
-            Unselect All
-          </button>
-        </div>
-      </div>
-      
-      {/* Scrollable container for scripts */}
-      <div className="max-h-80 overflow-y-auto">
-        {availableScripts.map((script) => (
-          <div key={script.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
-            <div 
-              className="py-1 px-2 flex items-center justify-between bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-              onClick={(e) => toggleExpanded(script.id, e)}
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+      {/* Header with search */}
+      <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+            <Code className="h-4 w-4 mr-1" />
+            Available Scripts
+            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+              ({filteredScripts.length} {filteredScripts.length === 1 ? 'script' : 'scripts'})
+            </span>
+          </h3>
+          <div className="flex items-center ml-auto">
+            <Input
+              type="text"
+              placeholder="Search scripts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="text-xs h-8 w-full sm:w-56"
+            />
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="ml-2 px-2 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
             >
-              <div className="flex items-center space-x-2">
-                <div 
-                  onClick={(e) => toggleExpanded(script.id, e)}
-                  className="cursor-pointer"
-                >
-                  {expandedScripts.has(script.id) ? (
-                    <ChevronDown className="h-3 w-3 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                  )}
-                </div>
-                <label 
-                  className="flex items-center cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(script.id)}
-                    onChange={() => onScriptToggle(script.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:focus:ring-blue-600 h-3 w-3 flex-shrink-0"
-                  />
-                  <span className="ml-1 text-xs font-medium text-gray-700 dark:text-gray-200 truncate">
-                    {script.path}
-                  </span>
-                </label>
-              </div>
-              <Code className="h-3 w-3 text-gray-500 dark:text-gray-400 flex-shrink-0 ml-1" />
-            </div>
-            
-            {/* Parameters input section - always editable */}
-            {expandedScripts.has(script.id) && (
-              <div className="px-2 py-1 pl-7 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
-                <div className="relative">
-                  <Input 
-                    id={`script-params-${script.id}`}
-                    value={scriptParameters[script.id]?.rawParams ?? ''}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onParameterChange(script.id, 'rawParams', e.target.value)}
-                    placeholder="Enter parameters (e.g., --env=dev --skip-tests)"
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-sm shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-xs py-0.5 h-6"
-                  />
-                </div>
-              </div>
-            )}
+              {selectedScriptIds.length === availableScripts.length ? 'Deselect All' : 'Select All'}
+            </button>
           </div>
-        ))}
-      </div>
-      
-      {/* Display when no scripts are available */}
-      {availableScripts.length === 0 && (
-        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-          No scripts are available for the selected project.
         </div>
-      )}
+      </div>
+
+      {/* Script list */}
+      <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
+        {filteredScripts.map(script => {
+          const isSelected = selectedScriptIds.includes(script.id);
+          const isExpanded = expandedScripts.has(script.id);
+          
+          return (
+            <div key={script.id} className="text-sm">
+              <div 
+                className={`px-3 py-2 flex items-start cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                onClick={() => handleToggleScript(script.id)}
+              >
+                <div className="flex items-center">
+                  {isSelected ? 
+                    <CheckSquare className="h-4 w-4 text-blue-500 mr-2 flex-shrink-0" /> : 
+                    <Square className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-gray-900 dark:text-white truncate">{script.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{script.path}</div>
+                </div>
+                {script.parameters && script.parameters.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => toggleExpanded(script.id, e)}
+                    className="p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                  >
+                    {isExpanded ? 
+                      <ChevronDown className="h-4 w-4" /> : 
+                      <ChevronRight className="h-4 w-4" />
+                    }
+                  </button>
+                )}
+              </div>
+              
+              {/* Parameter form if expanded */}
+              {isExpanded && isSelected && script.parameters && script.parameters.length > 0 && (
+                <div className="px-3 py-2 pl-9 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+                  <ScriptParameterForm 
+                    scriptId={script.id}
+                    parameters={script.parameters}
+                    values={{}}
+                    onChange={() => {}}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

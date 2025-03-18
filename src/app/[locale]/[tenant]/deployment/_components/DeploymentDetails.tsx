@@ -88,7 +88,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{deployment.name}</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {deployment.repository.owner}/{deployment.repository.name} • ID: {deployment.id}
+                Repository ID: {deployment.repositoryId} • ID: {deployment.id}
               </p>
             </div>
           </div>
@@ -124,14 +124,14 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
           <div className="flex items-center">
             <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">Duration:</span>
             <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {calculateDuration(deployment.startTime, deployment.endTime)}
+              {calculateDuration(deployment.startedAt || deployment.createdAt, deployment.completedAt)}
             </span>
           </div>
         </div>
         <div className="flex items-center">
           <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">Started:</span>
           <span className="text-sm font-medium text-gray-900 dark:text-white">
-            {formatDate(deployment.startTime)}
+            {formatDate(deployment.startedAt || deployment.createdAt)}
           </span>
         </div>
       </div>
@@ -189,7 +189,35 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
       <div className="p-4">
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* High-level Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Status</h4>
+                <div className="flex items-center">
+                  <StatusBadge status={deployment.status} />
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Duration</h4>
+                <p className="text-lg font-medium text-gray-900 dark:text-white">
+                  {calculateDuration(deployment.startedAt || deployment.createdAt, deployment.completedAt)}
+                </p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Target Hosts</h4>
+                <p className="text-lg font-medium text-gray-900 dark:text-white">
+                  {deployment.hosts ? deployment.hosts.length : 0}
+                </p>
+              </div>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Scripts</h4>
+                <p className="text-lg font-medium text-gray-900 dark:text-white">
+                  {deployment.scripts ? deployment.scripts.length : 0}
+                </p>
+              </div>
+            </div>
+            
             {/* Description */}
             <div>
               <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Description</h3>
@@ -217,7 +245,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                    {deployment.scripts.map((script) => (
+                    {deployment.scripts && deployment.scripts.map((script) => (
                       <tr key={script.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" onClick={() => handleViewScript(script)}>
                         <td className="px-4 py-4">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -231,7 +259,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                           <StatusBadge status={script.status} />
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                          {calculateDuration(script.startTime, script.endTime)}
+                          {calculateDuration(script.startedAt, script.completedAt)}
                         </td>
                       </tr>
                     ))}
@@ -259,7 +287,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                    {deployment.hosts.map((host) => (
+                    {deployment.hosts && deployment.hosts.map((host) => (
                       <tr key={host.id}>
                         <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                           {host.name}
@@ -289,7 +317,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
               </button>
             </div>
             <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900 p-4 overflow-auto h-96 font-mono text-sm">
-              {deployment.logs.map((log, index) => {
+              {deployment.logs && deployment.logs.map((log, index) => {
                 let textColor = 'text-gray-700 dark:text-gray-300';
                 if (log.level === 'ERROR') textColor = 'text-red-600 dark:text-red-400';
                 else if (log.level === 'WARNING') textColor = 'text-yellow-600 dark:text-yellow-400';
@@ -299,9 +327,8 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                   <div key={index} className="py-1">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
                       {formatDate(log.timestamp)}
-                    </span>
-                    <span className={`ml-2 text-xs font-medium ${textColor}`}>[{log.level}]</span>
-                    <span className="ml-2">{log.message}</span>
+                    </span>{' '}
+                    <span className={`${textColor}`}>{log.message}</span>
                   </div>
                 );
               })}
@@ -318,7 +345,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                 <h3 className="font-medium text-gray-900 dark:text-white">Scripts</h3>
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {deployment.scripts.map((script) => (
+                {deployment.scripts && deployment.scripts.map((script) => (
                   <div 
                     key={script.id} 
                     className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
@@ -331,7 +358,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                       <StatusBadge status={script.status} />
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {calculateDuration(script.startTime, script.endTime)}
+                      {calculateDuration(script.startedAt, script.completedAt)}
                     </div>
                   </div>
                 ))}
@@ -353,8 +380,8 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                   <div>
                     <div className="mb-2 text-sm">
                       <div><span className="font-medium text-gray-700 dark:text-gray-300">Path:</span> {selectedScript.path}</div>
-                      <div><span className="font-medium text-gray-700 dark:text-gray-300">Started:</span> {formatDate(selectedScript.startTime)}</div>
-                      <div><span className="font-medium text-gray-700 dark:text-gray-300">Duration:</span> {calculateDuration(selectedScript.startTime, selectedScript.endTime)}</div>
+                      <div><span className="font-medium text-gray-700 dark:text-gray-300">Started:</span> {formatDate(selectedScript.startedAt)}</div>
+                      <div><span className="font-medium text-gray-700 dark:text-gray-300">Duration:</span> {calculateDuration(selectedScript.startedAt, selectedScript.completedAt)}</div>
                     </div>
                     <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900 p-4 overflow-auto h-80 font-mono text-sm">
                       {selectedScript.output ? (
@@ -404,7 +431,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
               <div className="flex items-center justify-between mb-4">
                 <StatusBadge status={selectedScript.status} />
                 <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Duration: {calculateDuration(selectedScript.startTime, selectedScript.endTime)}
+                  Duration: {calculateDuration(selectedScript.startedAt, selectedScript.completedAt)}
                 </div>
               </div>
               <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900 p-4 overflow-auto max-h-96 font-mono text-sm">

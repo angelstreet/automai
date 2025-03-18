@@ -3,10 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { DeploymentData, ScriptParameter, Repository, Host as HostType } from '../types';
-import { SAMPLE_SCRIPTS } from '../constants';
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 import HostSelector from './HostSelector';
-import JenkinsConfig from './JenkinsConfig';
 import CustomSwitch from './CustomSwitch';
 import { useRepositories, useRepositoryScripts } from '../../repositories/hooks';
 import { useHosts } from '../../hosts/hooks';
@@ -115,21 +113,22 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     }));
   };
 
-  const handleScriptsChange = (scriptId: string) => {
+  const handleScriptsChange = (scriptIds: string[]) => {
     setDeploymentData(prev => {
-      const newScriptIds = prev.scriptIds.includes(scriptId)
-        ? prev.scriptIds.filter(id => id !== scriptId)
-        : [...prev.scriptIds, scriptId];
+      // Calculate which scripts were removed
+      const removedScriptIds = prev.scriptIds.filter(id => !scriptIds.includes(id));
       
-      // If script is deselected, remove its parameters
+      // Update script parameters - remove parameters for scripts that are no longer selected
       const newScriptParameters = { ...prev.scriptParameters };
-      if (!newScriptIds.includes(scriptId) && newScriptParameters[scriptId]) {
-        delete newScriptParameters[scriptId];
-      }
+      removedScriptIds.forEach(scriptId => {
+        if (newScriptParameters[scriptId]) {
+          delete newScriptParameters[scriptId];
+        }
+      });
       
       return {
         ...prev,
-        scriptIds: newScriptIds,
+        scriptIds: scriptIds,
         scriptParameters: newScriptParameters
       };
     });
@@ -482,19 +481,16 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   Error loading scripts: {scriptsError}
                 </p>
                 <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                  Using sample scripts until resolved.
+                  Please try refreshing the page or contact support if the issue persists.
                 </p>
               </div>
             )}
             
             <EnhancedScriptSelector
-              availableScripts={repositoryScripts.length > 0 ? repositoryScripts : SAMPLE_SCRIPTS}
-              selectedScripts={deploymentData.scriptIds}
-              scriptParameters={deploymentData.scriptParameters}
-              onScriptToggle={handleScriptsChange}
-              onParameterChange={handleScriptParameterChange}
-              onBatchScriptToggle={handleBatchScriptsChange}
-              isProjectSelected={!!deploymentData.repositoryId}
+              selectedRepository={deploymentData.selectedRepository || undefined}
+              availableScripts={repositoryScripts}
+              selectedScriptIds={deploymentData.scriptIds}
+              onScriptIdsChange={handleScriptsChange}
               isLoading={isLoadingScripts}
               error={scriptsError}
             />
@@ -743,7 +739,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                     }
                     
                     ${deploymentData.scriptIds.map(id => {
-                      const script = repositoryScripts.find(s => s.id === id) || SAMPLE_SCRIPTS.find(s => s.id === id);
+                      const script = repositoryScripts.find(s => s.id === id);
                       if (!script) return '';
                       
                       // Format parameters as command-line arguments
@@ -792,29 +788,25 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Deployment Summary</h4>
                   
                   <div className="space-y-4">
-                    {/* Selected Scripts */}
+                    {/* Scripts */}
                     <div>
-                      <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Scripts to Execute</h5>
+                      <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Scripts</h5>
                       <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
                         {deploymentData.scriptIds.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-2">
                             {deploymentData.scriptIds.map(id => {
-                              const script = repositoryScripts.find(s => s.id === id) || SAMPLE_SCRIPTS.find(s => s.id === id);
+                              const script = repositoryScripts.find(s => s.id === id);
                               if (!script) return null;
-                              
-                              // Format parameters as command-line arguments
+
+                              // Format parameter values if any
+                              const params = deploymentData.scriptParameters[id];
                               let paramString = '';
-                              if (script.parameters && script.parameters.length > 0) {
-                                paramString = script.parameters.map((param: ScriptParameter) => {
-                                  const paramValue = deploymentData.scriptParameters[script.id]?.[param.id] ?? param.default;
-                                  if (typeof paramValue === 'boolean') {
-                                    return paramValue ? `--${param.id}` : '';
-                                  } else {
-                                    return paramValue ? `--${param.id}="${paramValue}"` : '';
-                                  }
-                                }).filter(Boolean).join(' ');
+                              if (params) {
+                                paramString = Object.entries(params)
+                                  .map(([key, value]) => `${key}=${value}`)
+                                  .join(', ');
                               }
-                              
+                                
                               return (
                                 <div key={id} className="text-xs">
                                   <div className="flex items-center">
