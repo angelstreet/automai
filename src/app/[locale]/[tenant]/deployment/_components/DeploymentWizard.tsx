@@ -565,26 +565,16 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 5: Review with Jenkins Integration */}
         {step === 5 && (
           <div>
-            <div className="flex justify-between mb-1">
-              <button
-                type="button"
-                onClick={handlePrevStep}
-                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                Previous
-              </button>
-              
-              <button
-                type="submit"
-                className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
-              >
-                Create Deployment
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {/* Toggle between Jenkins and Script view */}
-              <div className="flex items-center justify-end mb-2">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-4">
+                <button
+                  type="button"
+                  onClick={handlePrevStep}
+                  className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  Previous
+                </button>
+                
                 <div className="flex items-center space-x-2">
                   <span className="text-xs text-gray-500">Script View</span>
                   <CustomSwitch 
@@ -596,7 +586,16 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                   <span className="text-xs text-gray-500">Jenkins View</span>
                 </div>
               </div>
-
+              
+              <button
+                type="submit"
+                className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500"
+              >
+                Create Deployment
+              </button>
+            </div>
+            
+            <div className="space-y-4">
               {/* Show either Jenkins Config or Script Translation based on toggle */}
               {showJenkinsView ? (
                 <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
