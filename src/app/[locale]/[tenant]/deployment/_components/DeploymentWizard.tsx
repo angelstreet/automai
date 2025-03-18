@@ -2,13 +2,26 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { DeploymentData, ScriptParameter, Repository } from '../types';
-import { SAMPLE_SCRIPTS, SAMPLE_HOSTS } from '../constants';
+import { DeploymentData, ScriptParameter, Repository, Host as HostType } from '../types';
+import { SAMPLE_SCRIPTS } from '../constants';
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 import HostSelector from './HostSelector';
 import JenkinsConfig from './JenkinsConfig';
 import CustomSwitch from './CustomSwitch';
 import { useRepositories, useRepositoryScripts } from '../../repositories/hooks';
+import { useHosts } from '../../hosts/hooks';
+import { Host as SystemHost } from '../../hosts/types';
+
+// Helper function to adapt system hosts to the format expected by the deployment module
+const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
+  return systemHosts.map(host => ({
+    id: host.id,
+    name: host.name,
+    environment: host.is_windows ? 'Windows' : 'Linux', // Use OS type as environment
+    status: host.status === 'connected' ? 'online' : 'offline',
+    ip: host.ip
+  }));
+};
 
 interface DeploymentWizardProps {
   onComplete: () => void;
@@ -56,6 +69,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     isLoading: isLoadingScripts,
     error: scriptsError
   } = useRepositoryScripts(deploymentData.repositoryId || undefined, deploymentData.selectedRepository);
+
+  // Use the hosts hook and adapt hosts for deployment
+  const { 
+    hosts: systemHosts, 
+    loading: isLoadingHosts, 
+    error: hostsError 
+  } = useHosts();
+  const availableHosts = adaptHostsForDeployment(systemHosts);
 
   // Add debug logging for the scripts
   useEffect(() => {
@@ -270,8 +291,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         return false;
     }
   };
-
-  // Use sample hosts from constants
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-2">
@@ -508,11 +527,27 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
               </button>
             </div>
             
-            <HostSelector
-              availableHosts={SAMPLE_HOSTS}
-              selectedHosts={deploymentData.hostIds}
-              onHostToggle={handleHostsChange}
-            />
+            {isLoadingHosts ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">Loading hosts...</span>
+              </div>
+            ) : hostsError ? (
+              <div className="mb-2 p-2 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-900 rounded-md">
+                <p className="text-xs text-red-600 dark:text-red-400">
+                  Error loading hosts: {hostsError}
+                </p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                  Please try refreshing the page or contact support if the issue persists.
+                </p>
+              </div>
+            ) : (
+              <HostSelector
+                availableHosts={availableHosts}
+                selectedHosts={deploymentData.hostIds}
+                onHostToggle={handleHostsChange}
+              />
+            )}
           </div>
         )}
         
@@ -699,7 +734,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
             steps {
                 script {
                     def hosts = ${JSON.stringify(deploymentData.hostIds.map(id => {
-                      const host = SAMPLE_HOSTS.find(h => h.id === id);
+                      const host = availableHosts.find(h => h.id === id);
                       return host ? `${host.name} (${host.ip})` : id;
                     }))}
                     
@@ -808,7 +843,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                         {deploymentData.hostIds.length > 0 ? (
                           <div className="grid grid-cols-2 gap-2">
                             {deploymentData.hostIds.map(id => {
-                              const host = SAMPLE_HOSTS.find(h => h.id === id);
+                              const host = availableHosts.find(h => h.id === id);
                               if (!host) return null;
                               
                               return (
