@@ -35,7 +35,7 @@ export default function TenantLayout({
               }}
             >
               <WorkspaceHeader tenant={tenant} />
-              <main className="flex-1 px-3 py-4 w-full max-w-full border border-gray-30 rounded-md">
+              <main className="flex-1 px-3 py-0 w-full max-w-full border border-gray-30 rounded-md">
                 {children}
               </main>
             </div>

@@ -46,6 +46,38 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     });
   };
 
+  const handleBatchScriptsChange = (scriptIds: string[], isSelected: boolean) => {
+    setDeploymentData(prev => {
+      let newScriptIds: string[];
+      
+      if (isSelected) {
+        // Add all scripts that aren't already selected
+        newScriptIds = [...new Set([...prev.scriptIds, ...scriptIds])];
+      } else {
+        // Remove all specified scripts
+        newScriptIds = prev.scriptIds.filter(id => !scriptIds.includes(id));
+      }
+      
+      // Update script parameters
+      const newScriptParameters = { ...prev.scriptParameters };
+      
+      // If scripts are deselected, remove their parameters
+      if (!isSelected) {
+        scriptIds.forEach(scriptId => {
+          if (newScriptParameters[scriptId]) {
+            delete newScriptParameters[scriptId];
+          }
+        });
+      }
+      
+      return {
+        ...prev,
+        scriptIds: newScriptIds,
+        scriptParameters: newScriptParameters
+      };
+    });
+  };
+
   const handleScriptParameterChange = (scriptId: string, paramId: string, value: string) => {
     setDeploymentData(prev => {
       const scriptParams = prev.scriptParameters[scriptId] || {};
@@ -129,6 +161,17 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if the event was triggered by a select all/unselect all button
+    const target = e.target as HTMLElement;
+    const isSelectAllButton = target.closest('button')?.textContent?.includes('Select All') || 
+                             target.closest('button')?.textContent?.includes('Unselect All');
+    
+    if (isSelectAllButton) {
+      // Don't proceed with form submission if it was triggered by select all/unselect all
+      return;
+    }
+    
     console.log('Deployment data submitted:', deploymentData);
     // Here you would typically send the data to your API
     alert('Deployment created successfully!');
@@ -390,6 +433,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
               scriptParameters={deploymentData.scriptParameters}
               onScriptToggle={handleScriptsChange}
               onParameterChange={handleScriptParameterChange}
+              onBatchScriptToggle={handleBatchScriptsChange}
               isProjectSelected={!!deploymentData.repositoryId}
             />
           </div>

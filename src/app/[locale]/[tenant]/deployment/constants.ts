@@ -119,7 +119,8 @@ export const SAMPLE_SCRIPTS: Script[] = [
     id: 'script3',
     name: 'Monitoring Script',
     path: '/scripts/monitor.sh',
-    repository: 'main'
+    repository: 'main',
+    parameters: []
   },
   {
     id: 'script4',
@@ -157,13 +158,15 @@ export const SAMPLE_SCRIPTS: Script[] = [
     id: 'script6',
     name: 'API Tests',
     path: '/tests/api/run_tests.sh',
-    repository: 'main'
+    repository: 'main',
+    parameters: []
   },
   {
     id: 'script7',
     name: 'UI Tests',
     path: '/tests/ui/run_tests.sh',
-    repository: 'main'
+    repository: 'main',
+    parameters: []
   },
   {
     id: 'script8',
@@ -185,7 +188,8 @@ export const SAMPLE_SCRIPTS: Script[] = [
     id: 'script9',
     name: 'Dependency Check',
     path: '/utils/check_deps.sh',
-    repository: 'main'
+    repository: 'main',
+    parameters: []
   },
   {
     id: 'script10',
@@ -207,7 +211,8 @@ export const SAMPLE_SCRIPTS: Script[] = [
     id: 'script11',
     name: 'Cache Cleanup',
     path: '/maintenance/clean_cache.sh',
-    repository: 'main'
+    repository: 'main',
+    parameters: []
   },
   {
     id: 'script12',
@@ -245,7 +250,8 @@ export const SAMPLE_SCRIPTS: Script[] = [
     id: 'script14',
     name: 'Health Check',
     path: '/monitoring/health_check.sh',
-    repository: 'main'
+    repository: 'main',
+    parameters: []
   },
   {
     id: 'script15',
@@ -283,7 +289,8 @@ export const SAMPLE_SCRIPTS: Script[] = [
     id: 'script17',
     name: 'Slack Notifications',
     path: '/notifications/slack_send.sh',
-    repository: 'main'
+    repository: 'main',
+    parameters: []
   },
   {
     id: 'script18',
@@ -321,7 +328,8 @@ export const SAMPLE_SCRIPTS: Script[] = [
     id: 'script20',
     name: 'Server Cleanup',
     path: '/maintenance/cleanup.sh',
-    repository: 'main'
+    repository: 'main',
+    parameters: []
   }
 ];
 
