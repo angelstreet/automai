@@ -337,8 +337,16 @@ export const SAMPLE_SCRIPTS: Script[] = [
 export const SAMPLE_HOSTS: Host[] = [
   { id: 'host1', name: 'Production Server 1', environment: 'Production', status: 'online', ip: '192.168.1.10' },
   { id: 'host2', name: 'Production Server 2', environment: 'Production', status: 'online', ip: '192.168.1.11' },
-  { id: 'host3', name: 'Staging Server', environment: 'Staging', status: 'online', ip: '192.168.2.10' },
-  { id: 'host4', name: 'Development Server', environment: 'Development', status: 'online', ip: '192.168.3.10' },
+  { id: 'host3', name: 'Production Database', environment: 'Production', status: 'online', ip: '192.168.1.12' },
+  { id: 'host4', name: 'Production Cache', environment: 'Production', status: 'online', ip: '192.168.1.13' },
+  { id: 'host5', name: 'Staging Web Server', environment: 'Staging', status: 'online', ip: '192.168.2.10' },
+  { id: 'host6', name: 'Staging Database', environment: 'Staging', status: 'online', ip: '192.168.2.11' },
+  { id: 'host7', name: 'Dev Server 1', environment: 'Development', status: 'online', ip: '192.168.3.10' },
+  { id: 'host8', name: 'Dev Server 2', environment: 'Development', status: 'offline', ip: '192.168.3.11' },
+  { id: 'host9', name: 'QA Server 1', environment: 'QA', status: 'online', ip: '192.168.4.10' },
+  { id: 'host10', name: 'QA Server 2', environment: 'QA', status: 'online', ip: '192.168.4.11' },
+  { id: 'host11', name: 'Test Server', environment: 'Test', status: 'online', ip: '192.168.5.10' },
+  { id: 'host12', name: 'UAT Server', environment: 'UAT', status: 'online', ip: '192.168.6.10' },
 ];
 
 // Sample Jenkins credentials
@@ -355,30 +363,6 @@ export const JENKINS_JOB_OPTIONS = [
   { value: 'deploy-full-stack', label: 'Deploy Full Stack' },
   { value: 'run-tests', label: 'Run Integration Tests' },
 ];
-
-// Initial deployment data structure
-export const INITIAL_DEPLOYMENT_DATA = {
-  name: '',
-  description: '',
-  repositoryId: '',
-  scriptIds: [] as string[],
-  scriptParameters: {} as Record<string, Record<string, any>>,
-  hostIds: [] as string[],
-  schedule: 'now' as 'now' | 'later',
-  scheduledTime: '',
-  environmentVars: [] as Array<{key: string, value: string}>,
-  notifications: {
-    email: false,
-    slack: false
-  },
-  jenkinsConfig: {
-    enabled: false,
-    jenkinsUrl: '',
-    jobName: '',
-    credentials: '',
-    customParameters: {}
-  }
-};
 
 // Repository options
 export const REPOSITORY_OPTIONS = [

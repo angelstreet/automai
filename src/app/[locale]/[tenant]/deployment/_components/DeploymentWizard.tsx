@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { DeploymentData } from '../types';
-import { SAMPLE_SCRIPTS, SAMPLE_HOSTS, INITIAL_DEPLOYMENT_DATA, REPOSITORY_OPTIONS } from '../constants';
+import { SAMPLE_SCRIPTS, SAMPLE_HOSTS, REPOSITORY_OPTIONS } from '../constants';
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 import HostSelector from './HostSelector';
 import JenkinsConfig from './JenkinsConfig';
@@ -16,7 +16,26 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   onComplete
 }) => {
   const [step, setStep] = useState(1);
-  const [deploymentData, setDeploymentData] = useState<DeploymentData>(INITIAL_DEPLOYMENT_DATA);
+  const [deploymentData, setDeploymentData] = useState<DeploymentData>({
+    name: '',
+    description: '',
+    repositoryId: '',
+    schedule: 'now',
+    scheduledTime: '',
+    scriptIds: [],
+    scriptParameters: {},
+    hostIds: [],
+    cronExpression: '',
+    repeatCount: 0,
+    environmentVars: [],
+    notifications: {
+      email: false,
+      slack: false
+    },
+    jenkinsConfig: {
+      enabled: false
+    }
+  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -95,6 +114,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   };
 
   const handleHostsChange = (hostId: string) => {
+    // Update host selection without triggering form submission
     setDeploymentData(prev => ({
       ...prev,
       hostIds: prev.hostIds.includes(hostId)
@@ -162,13 +182,20 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if the event was triggered by a select all/unselect all button
+    // Check if the event was triggered by a select all/unselect all button or environment tag
     const target = e.target as HTMLElement;
     const isSelectAllButton = target.closest('button')?.textContent?.includes('Select All') || 
                              target.closest('button')?.textContent?.includes('Unselect All');
+    const isFilterButton = target.closest('button')?.textContent?.includes('Filter');
+    const isEnvironmentTag = target.closest('button')?.textContent?.startsWith('#');
     
-    if (isSelectAllButton) {
-      // Don't proceed with form submission if it was triggered by select all/unselect all
+    if (isSelectAllButton || isFilterButton || isEnvironmentTag) {
+      // Don't proceed with form submission if it was triggered by select all/unselect all or environment tag
+      return;
+    }
+    
+    // Only proceed with form submission if we're on the final step (review)
+    if (step !== 5) {
       return;
     }
     
@@ -181,12 +208,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   const isStepValid = () => {
     switch (step) {
       case 1:
-        return deploymentData.name.trim() !== '' && deploymentData.repositoryId !== '';
+        return deploymentData.name !== '' && deploymentData.repositoryId !== '';
       case 2:
         return deploymentData.scriptIds.length > 0;
       case 3:
         return deploymentData.hostIds.length > 0;
       case 4:
+        return deploymentData.schedule === 'now' || (deploymentData.schedule === 'later' && deploymentData.scheduledTime !== '');
+      case 5:
         return true; // Review step is always valid
       default:
         return false;
@@ -249,6 +278,17 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
           <div className={`flex flex-col items-center ${step >= 4 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
             <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 4 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
               4
+            </div>
+            <div className="text-xs mt-1">Schedule</div>
+          </div>
+          
+          <div className="flex-1 flex items-center">
+            <div className={`h-0.5 w-full ${step >= 5 ? 'bg-blue-600 dark:bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}></div>
+          </div>
+          
+          <div className={`flex flex-col items-center ${step >= 5 ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-600'}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${step >= 5 ? 'bg-blue-100 dark:bg-blue-900' : 'bg-gray-100 dark:bg-gray-700'}`}>
+              5
             </div>
             <div className="text-xs mt-1">Review</div>
           </div>
@@ -324,62 +364,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 ))}
               </select>
             </div>
-            
-            {/* Schedule options and navigation buttons in same row */}
-            <div className="flex justify-between items-center">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Schedule
-                </label>
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="scheduleNow"
-                      name="schedule"
-                      value="now"
-                      checked={deploymentData.schedule === 'now'}
-                      onChange={handleInputChange}
-                      className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
-                    />
-                    <label htmlFor="scheduleNow" className="ml-1 text-xs text-gray-700 dark:text-gray-300">
-                      Deploy now
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="radio"
-                      id="scheduleLater"
-                      name="schedule"
-                      value="later"
-                      checked={deploymentData.schedule === 'later'}
-                      onChange={handleInputChange}
-                      className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
-                    />
-                    <label htmlFor="scheduleLater" className="ml-1 text-xs text-gray-700 dark:text-gray-300">
-                      Schedule for later
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {deploymentData.schedule === 'later' && (
-              <div className="mt-1">
-                <label htmlFor="scheduledTime" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Scheduled Time *
-                </label>
-                <input
-                  type="datetime-local"
-                  id="scheduledTime"
-                  name="scheduledTime"
-                  value={deploymentData.scheduledTime}
-                  onChange={handleInputChange}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  required={deploymentData.schedule === 'later'}
-                />
-              </div>
-            )}
           </div>
         )}
         
@@ -455,8 +439,127 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
           </div>
         )}
         
-        {/* Step 4: Review with Jenkins Integration */}
+        {/* Step 4: Schedule */}
         {step === 4 && (
+          <div>
+            <div className="flex justify-between mb-1">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                Previous
+              </button>
+              
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={!isStepValid()}
+                className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
+                  isStepValid() 
+                    ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+                    : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+            
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Deployment Schedule
+              </label>
+              <div className="flex items-center space-x-4 mb-2">
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="scheduleNow"
+                    name="schedule"
+                    value="now"
+                    checked={deploymentData.schedule === 'now'}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+                  />
+                  <label htmlFor="scheduleNow" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    Deploy now
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    id="scheduleLater"
+                    name="schedule"
+                    value="later"
+                    checked={deploymentData.schedule === 'later'}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
+                  />
+                  <label htmlFor="scheduleLater" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                    Schedule for later
+                  </label>
+                </div>
+              </div>
+              
+              {deploymentData.schedule === 'later' && (
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="scheduledTime" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Date and Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      id="scheduledTime"
+                      name="scheduledTime"
+                      value={deploymentData.scheduledTime || ''}
+                      onChange={handleInputChange}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      required={deploymentData.schedule === 'later'}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="cronExpression" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Cron Expression (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      id="cronExpression"
+                      name="cronExpression"
+                      value={deploymentData.cronExpression || ''}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 0 0 * * *"
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Format: minute hour day-of-month month day-of-week
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="repeatCount" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Repeat Count
+                    </label>
+                    <input
+                      type="number"
+                      id="repeatCount"
+                      name="repeatCount"
+                      min="0"
+                      value={deploymentData.repeatCount || 0}
+                      onChange={handleInputChange}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      0 means run once, -1 means repeat indefinitely
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Step 5: Review with Jenkins Integration */}
+        {step === 5 && (
           <div>
             <div className="flex justify-between mb-1">
               <button

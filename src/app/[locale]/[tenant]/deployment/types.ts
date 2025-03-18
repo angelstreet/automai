@@ -118,19 +118,22 @@ export interface Script {
 
 // Add to deployment data
 export interface DeploymentData {
+  id?: string;
   name: string;
   description: string;
   repositoryId: string;
-  scriptIds: string[];
-  hostIds: string[];
   schedule: 'now' | 'later';
   scheduledTime: string;
+  scriptIds: string[];
+  scriptParameters: Record<string, Record<string, string>>;
+  hostIds: string[];
+  cronExpression?: string;
+  repeatCount?: number;
   environmentVars: Array<{key: string, value: string}>;
   notifications: {
     email: boolean;
     slack: boolean;
   };
-  scriptParameters: Record<string, Record<string, any>>; // scriptId -> {paramId: value}
   jenkinsConfig?: {
     enabled: boolean;
     jobName?: string;
