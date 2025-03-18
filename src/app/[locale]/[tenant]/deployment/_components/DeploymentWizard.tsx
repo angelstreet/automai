@@ -46,7 +46,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     });
   };
 
-  const handleScriptParameterChange = (scriptId: string, paramId: string, value: any) => {
+  const handleScriptParameterChange = (scriptId: string, paramId: string, value: string) => {
     setDeploymentData(prev => {
       const scriptParams = prev.scriptParameters[scriptId] || {};
       return {
