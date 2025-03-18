@@ -2,30 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { DeploymentData } from '../types';
+import { DeploymentData, ScriptParameter, Repository } from '../types';
 import { SAMPLE_SCRIPTS, SAMPLE_HOSTS } from '../constants';
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 import HostSelector from './HostSelector';
 import JenkinsConfig from './JenkinsConfig';
 import CustomSwitch from './CustomSwitch';
+import { useRepositories, useRepositoryScripts } from '../../repositories/hooks';
 
 interface DeploymentWizardProps {
   onComplete: () => void;
-}
-interface Repository {
-  id: string;
-  name: string;
-  url: string;
-  provider: string;
-  description?: string;
-  starred?: boolean;
-  [key: string]: any;
 }
 
 const initialDeploymentData: DeploymentData = {
   name: '',
   description: '',
   repositoryId: '',
+  selectedRepository: null,
   schedule: 'now',
   scheduledTime: '',
   scriptIds: [],
@@ -49,46 +42,52 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   const [step, setStep] = useState(1);
   const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
   const [showJenkinsView, setShowJenkinsView] = useState(false);
-  const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [isLoadingRepositories, setIsLoadingRepositories] = useState(false);
-  const [repositoryError, setRepositoryError] = useState<string | null>(null);
+  
+  // Use the repository hook
+  const { 
+    repositories, 
+    loading: isLoadingRepositories, 
+    error: repositoryError 
+  } = useRepositories();
+  
+  // Use the repository scripts hook with a valid repository ID
+  const {
+    scripts: repositoryScripts,
+    isLoading: isLoadingScripts,
+    error: scriptsError
+  } = useRepositoryScripts(deploymentData.repositoryId || undefined, deploymentData.selectedRepository);
 
-  // Fetch repositories from the backend
+  // Add debug logging for the scripts
   useEffect(() => {
-    const fetchRepositories = async () => {
-      setIsLoadingRepositories(true);
-      setRepositoryError(null);
-      
-      try {
-        const response = await fetch('/api/repositories');
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch repositories: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        // Process the response based on its format
-        if (Array.isArray(result)) {
-          setRepositories(result);
-        } else if (result.success && Array.isArray(result.data)) {
-          setRepositories(result.data);
-        } else {
-          throw new Error('Invalid API response format');
-        }
-      } catch (error) {
-        console.error('Error fetching repositories:', error);
-        setRepositoryError(error instanceof Error ? error.message : 'Failed to load repositories');
-      } finally {
-        setIsLoadingRepositories(false);
-      }
-    };
-
-    fetchRepositories();
-  }, []);
+    console.log('Repository scripts:', repositoryScripts);
+    console.log('Scripts loading:', isLoadingScripts);
+    console.log('Scripts error:', scriptsError);
+  }, [repositoryScripts, isLoadingScripts, scriptsError]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Special handling for repositoryId to log selection
+    if (name === 'repositoryId') {
+      console.log('Repository selected:', value);
+      console.log('Available repositories:', repositories);
+      
+      if (value) {
+        const selectedRepo = repositories.find((r: Repository) => r.id === value);
+        console.log('Selected repository details:', selectedRepo);
+        
+        // Store the full repository object
+        setDeploymentData(prev => ({
+          ...prev,
+          repositoryId: value,
+          selectedRepository: selectedRepo
+        }));
+        
+        // Early return since we've already updated the state
+        return;
+      }
+    }
+    
     setDeploymentData(prev => ({
       ...prev,
       [name]: value
@@ -417,7 +416,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 ) : repositories.length === 0 ? (
                   <option value="" disabled>No repositories found</option>
                 ) : (
-                  repositories.map(repo => (
+                  repositories.map((repo: Repository) => (
                     <option key={repo.id} value={repo.id}>{repo.name}</option>
                   ))
                 )}
@@ -458,14 +457,27 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
               </button>
             </div>
             
+            {scriptsError && (
+              <div className="mb-2 p-2 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-900 rounded-md">
+                <p className="text-xs text-red-600 dark:text-red-400">
+                  Error loading scripts: {scriptsError}
+                </p>
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                  Using sample scripts until resolved.
+                </p>
+              </div>
+            )}
+            
             <EnhancedScriptSelector
-              availableScripts={SAMPLE_SCRIPTS}
+              availableScripts={repositoryScripts.length > 0 ? repositoryScripts : SAMPLE_SCRIPTS}
               selectedScripts={deploymentData.scriptIds}
               scriptParameters={deploymentData.scriptParameters}
               onScriptToggle={handleScriptsChange}
               onParameterChange={handleScriptParameterChange}
               onBatchScriptToggle={handleBatchScriptsChange}
               isProjectSelected={!!deploymentData.repositoryId}
+              isLoading={isLoadingScripts}
+              error={scriptsError}
             />
           </div>
         )}
@@ -669,7 +681,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     
     parameters {
         string(name: 'DEPLOYMENT_NAME', defaultValue: '${deploymentData.name}', description: 'Deployment name')
-        string(name: 'REPOSITORY', defaultValue: '${repositories.find(r => r.id === deploymentData.repositoryId)?.name || ''}', description: 'Repository')
+        string(name: 'REPOSITORY', defaultValue: '${deploymentData.selectedRepository?.name || ''}', description: 'Repository')
         ${deploymentData.schedule === 'later' ? 
           `string(name: 'SCHEDULED_TIME', defaultValue: '${deploymentData.scheduledTime}', description: 'Scheduled time')` : 
           '// Immediate deployment'}
@@ -696,13 +708,13 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                     }
                     
                     ${deploymentData.scriptIds.map(id => {
-                      const script = SAMPLE_SCRIPTS.find(s => s.id === id);
+                      const script = repositoryScripts.find(s => s.id === id) || SAMPLE_SCRIPTS.find(s => s.id === id);
                       if (!script) return '';
                       
                       // Format parameters as command-line arguments
                       let paramString = '';
                       if (script.parameters && script.parameters.length > 0) {
-                        paramString = script.parameters.map(param => {
+                        paramString = script.parameters.map((param: ScriptParameter) => {
                           const paramValue = deploymentData.scriptParameters[script.id]?.[param.id] ?? param.default;
                           if (typeof paramValue === 'boolean') {
                             return paramValue ? `--${param.id}` : '';
@@ -752,13 +764,13 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                         {deploymentData.scriptIds.length > 0 ? (
                           <div className="grid grid-cols-2 gap-2">
                             {deploymentData.scriptIds.map(id => {
-                              const script = SAMPLE_SCRIPTS.find(s => s.id === id);
+                              const script = repositoryScripts.find(s => s.id === id) || SAMPLE_SCRIPTS.find(s => s.id === id);
                               if (!script) return null;
                               
                               // Format parameters as command-line arguments
                               let paramString = '';
                               if (script.parameters && script.parameters.length > 0) {
-                                paramString = script.parameters.map(param => {
+                                paramString = script.parameters.map((param: ScriptParameter) => {
                                   const paramValue = deploymentData.scriptParameters[script.id]?.[param.id] ?? param.default;
                                   if (typeof paramValue === 'boolean') {
                                     return paramValue ? `--${param.id}` : '';

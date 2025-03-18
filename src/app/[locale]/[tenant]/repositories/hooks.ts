@@ -558,3 +558,204 @@ export function useGitProviders() {
     setEditingProvider,
   };
 }
+
+/**
+ * Hook for exploring repository files
+ */
+export function useRepositoryExplorer(repositoryId?: string, path: string = '', recursive: boolean = false) {
+  const [files, setFiles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const fetchFiles = useCallback(async (repoId: string, currentPath: string = '', isRecursive: boolean = false) => {
+    if (!repoId) {
+      setFiles([]);
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // First get the repository details to get provider info
+      const repoResult = await getRepository(repoId);
+      
+      console.log('Repository result:', repoResult);
+      
+      if (!repoResult.success || !repoResult.data) {
+        throw new Error(repoResult.error || 'Repository not found');
+      }
+      
+      const repository = repoResult.data;
+      console.log('Repository details:', repository);
+      
+      // Now fetch the files
+      const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId || ''}&repositoryUrl=${encodeURIComponent(repository.url || '')}&path=${encodeURIComponent(currentPath)}&action=list${isRecursive ? '&recursive=true' : ''}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch repository files: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Sort files: directories first, then files, both alphabetically
+        const sortedFiles = [...data.data].sort((a, b) => {
+          if (a.type === 'dir' && b.type !== 'dir') return -1;
+          if (a.type !== 'dir' && b.type === 'dir') return 1;
+          return a.name.localeCompare(b.name);
+        });
+        
+        setFiles(sortedFiles);
+        return sortedFiles;
+      } else {
+        throw new Error('Invalid API response format');
+      }
+    } catch (error: any) {
+      console.error('Error fetching repository files:', error);
+      setError(error.message || 'Failed to fetch repository files');
+      setFiles([]);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  // Fetch files when repositoryId or path changes
+  useEffect(() => {
+    if (repositoryId) {
+      fetchFiles(repositoryId, path, recursive);
+    } else {
+      setFiles([]);
+    }
+  }, [repositoryId, path, recursive, fetchFiles]);
+  
+  return {
+    files,
+    isLoading,
+    error,
+    fetchFiles,
+    setFiles
+  };
+}
+
+/**
+ * Hook for fetching script files from a repository
+ * Filters for .sh and .py files
+ */
+export function useRepositoryScripts(repositoryId?: string, selectedRepository?: any) {
+  const [scripts, setScripts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  console.log('useRepositoryScripts hook called with repositoryId:', repositoryId, 'selectedRepository:', selectedRepository);
+  
+  const fetchScripts = useCallback(async (repoId: string, repository?: any) => {
+    console.log('fetchScripts called with repoId:', repoId, 'repository:', repository);
+    
+    if (!repoId) {
+      console.log('No repository ID provided, returning empty scripts array');
+      setScripts([]);
+      return [];
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      let repoDetails: any;
+      
+      // Use provided repository if available, otherwise fetch it
+      if (repository && repository.id === repoId) {
+        console.log('Using provided repository details:', repository);
+        repoDetails = repository;
+      } else {
+        // First get the repository details to get provider info
+        console.log('Fetching repository details for ID:', repoId);
+        const repoResult = await getRepository(repoId);
+        
+        console.log('Repository result:', repoResult);
+        
+        if (!repoResult.success || !repoResult.data) {
+          throw new Error(repoResult.error || 'Repository not found');
+        }
+        
+        repoDetails = repoResult.data;
+      }
+      
+      console.log('Repository details to use:', repoDetails);
+      
+      // Construct API URL with fallbacks for missing values
+      const providerId = repoDetails.providerId || '';
+      const repositoryUrl = repoDetails.url || '';
+      
+      // Fetch all files recursively from the repository
+      const url = `/api/repositories/explore?repositoryId=${repoDetails.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repositoryUrl)}&path=&action=list&recursive=true`;
+      
+      console.log('Fetching scripts from URL:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch repository files: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Filter for script files (.sh, .py)
+        const scriptFiles = data.data.filter((file: any) => 
+          file.type === 'file' && 
+          (file.name.endsWith('.sh') || file.name.endsWith('.py'))
+        );
+        
+        // Transform to script format
+        const scriptsList = scriptFiles.map((file: any, index: number) => ({
+          id: `script-${index}`,
+          name: file.name,
+          path: file.path,
+          description: `${file.path} (${file.size} bytes)`,
+          parameters: [],
+          type: file.name.endsWith('.py') ? 'python' : 'shell'
+        }));
+        
+        setScripts(scriptsList);
+        return scriptsList;
+      } else {
+        throw new Error('Invalid API response format');
+      }
+    } catch (error: any) {
+      console.error('Error fetching repository scripts:', error);
+      setError(error.message || 'Failed to fetch repository scripts');
+      setScripts([]);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+  
+  // Fetch scripts when repositoryId changes
+  useEffect(() => {
+    console.log('useRepositoryScripts useEffect triggered with repositoryId:', repositoryId);
+    
+    if (repositoryId) {
+      fetchScripts(repositoryId, selectedRepository);
+    } else {
+      console.log('No repository ID in useEffect, clearing scripts');
+      setScripts([]);
+      setError(null);
+      setIsLoading(false);
+    }
+  }, [repositoryId, fetchScripts, selectedRepository]);
+  
+  return {
+    scripts,
+    isLoading,
+    error,
+    fetchScripts
+  };
+}

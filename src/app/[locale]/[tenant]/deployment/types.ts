@@ -9,11 +9,24 @@ export type DeploymentStatus =
   | 'cancelled'
   | 'partial_success';
 
+export interface ScriptParameter {
+  id: string;
+  name: string;
+  description?: string;
+  type: 'string' | 'number' | 'boolean' | 'select';
+  required: boolean;
+  default?: string | number | boolean;
+  options?: string[]; // For select type
+}
+
 export interface Script {
   id: string;
   name: string;
   path: string;
-  repository: string;
+  repository?: string;
+  description?: string;
+  type?: 'python' | 'shell';
+  parameters?: ScriptParameter[];
 }
 
 export interface DeploymentScript {
@@ -98,30 +111,13 @@ export interface DeploymentFormData {
   };
 }
 
-export interface ScriptParameter {
-  id: string;
-  name: string;
-  description?: string;
-  type: 'string' | 'number' | 'boolean' | 'select';
-  required: boolean;
-  default?: string | number | boolean;
-  options?: string[]; // For select type
-}
-
-export interface Script {
-  id: string;
-  name: string;
-  path: string;
-  repository?: string;
-  parameters?: ScriptParameter[];
-}
-
 // Add to deployment data
 export interface DeploymentData {
   id?: string;
   name: string;
   description: string;
   repositoryId: string;
+  selectedRepository?: Repository | null;
   schedule: 'now' | 'later';
   scheduledTime: string;
   scriptIds: string[];

@@ -14,6 +14,8 @@ interface EnhancedScriptSelectorProps {
   onParameterChange: (scriptId: string, paramId: string, value: any) => void;
   isProjectSelected: boolean;
   onBatchScriptToggle?: (scriptIds: string[], isSelected: boolean) => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
@@ -23,7 +25,9 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
   onScriptToggle,
   onParameterChange,
   isProjectSelected,
-  onBatchScriptToggle
+  onBatchScriptToggle,
+  isLoading = false,
+  error = null
 }) => {
   const [expandedScripts, setExpandedScripts] = useState<Set<string>>(new Set());
 
@@ -67,6 +71,22 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
     return (
       <div className="p-4 text-center text-gray-500 dark:text-gray-400">
         Please select a project first to view available scripts.
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+        Loading...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-center text-red-500 dark:text-red-400">
+        {error}
       </div>
     );
   }
