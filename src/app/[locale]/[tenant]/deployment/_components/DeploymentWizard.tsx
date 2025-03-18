@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { DeploymentData } from '../types';
-import { SAMPLE_SCRIPTS, SAMPLE_HOSTS, REPOSITORY_OPTIONS } from '../constants';
+import { SAMPLE_SCRIPTS, SAMPLE_HOSTS } from '../constants';
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 import HostSelector from './HostSelector';
 import JenkinsConfig from './JenkinsConfig';
@@ -11,6 +11,15 @@ import CustomSwitch from './CustomSwitch';
 
 interface DeploymentWizardProps {
   onComplete: () => void;
+}
+interface Repository {
+  id: string;
+  name: string;
+  url: string;
+  provider: string;
+  description?: string;
+  starred?: boolean;
+  [key: string]: any;
 }
 
 const initialDeploymentData: DeploymentData = {
@@ -40,6 +49,43 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   const [step, setStep] = useState(1);
   const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
   const [showJenkinsView, setShowJenkinsView] = useState(false);
+  const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [isLoadingRepositories, setIsLoadingRepositories] = useState(false);
+  const [repositoryError, setRepositoryError] = useState<string | null>(null);
+
+  // Fetch repositories from the backend
+  useEffect(() => {
+    const fetchRepositories = async () => {
+      setIsLoadingRepositories(true);
+      setRepositoryError(null);
+      
+      try {
+        const response = await fetch('/api/repositories');
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch repositories: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        
+        // Process the response based on its format
+        if (Array.isArray(result)) {
+          setRepositories(result);
+        } else if (result.success && Array.isArray(result.data)) {
+          setRepositories(result.data);
+        } else {
+          throw new Error('Invalid API response format');
+        }
+      } catch (error) {
+        console.error('Error fetching repositories:', error);
+        setRepositoryError(error instanceof Error ? error.message : 'Failed to load repositories');
+      } finally {
+        setIsLoadingRepositories(false);
+      }
+    };
+
+    fetchRepositories();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -361,12 +407,27 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
                 onChange={handleInputChange}
                 className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 required
+                disabled={isLoadingRepositories}
               >
                 <option value="">Select a repository</option>
-                {REPOSITORY_OPTIONS.map(repo => (
-                  <option key={repo.value} value={repo.value}>{repo.label}</option>
-                ))}
+                {isLoadingRepositories ? (
+                  <option value="" disabled>Loading repositories...</option>
+                ) : repositoryError ? (
+                  <option value="" disabled>Error: {repositoryError}</option>
+                ) : repositories.length === 0 ? (
+                  <option value="" disabled>No repositories found</option>
+                ) : (
+                  repositories.map(repo => (
+                    <option key={repo.id} value={repo.id}>{repo.name}</option>
+                  ))
+                )}
               </select>
+              {isLoadingRepositories && (
+                <div className="text-xs text-gray-500 mt-1">Loading repositories...</div>
+              )}
+              {repositoryError && (
+                <div className="text-xs text-red-500 mt-1">{repositoryError}</div>
+              )}
             </div>
           </div>
         )}
@@ -608,7 +669,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     
     parameters {
         string(name: 'DEPLOYMENT_NAME', defaultValue: '${deploymentData.name}', description: 'Deployment name')
-        string(name: 'REPOSITORY', defaultValue: '${REPOSITORY_OPTIONS.find(r => r.value === deploymentData.repositoryId)?.label || ''}', description: 'Repository')
+        string(name: 'REPOSITORY', defaultValue: '${repositories.find(r => r.id === deploymentData.repositoryId)?.name || ''}', description: 'Repository')
         ${deploymentData.schedule === 'later' ? 
           `string(name: 'SCHEDULED_TIME', defaultValue: '${deploymentData.scheduledTime}', description: 'Scheduled time')` : 
           '// Immediate deployment'}
