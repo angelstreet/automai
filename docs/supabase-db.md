@@ -2,7 +2,7 @@
 
 ## Database Schema Overview
 
-This document outlines the database schema for the repository management system. The database is structured to support Git provider connections, repository management, and user-specific settings.
+This document outlines the database schema for the system. The database is structured to support Git provider connections, repository management, host management, deployments, and CI/CD integrations.
 
 ## Tables
 
@@ -58,33 +58,7 @@ Tracks which repositories are pinned by users.
 | repository_id | uuid | Foreign key to repositories.id |
 | created_at | timestamp | Pin creation timestamp |
 
-### 4. profiles
-
-Extends the auth.users table with application-specific data.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key (matches auth.users.id) |
-| avatar_url | text | User's avatar URL |
-| tenant_id | text | Foreign key to tenants.id |
-| role | text | User role in the system |
-| tenant_name | text | Cached tenant name |
-| created_at | timestamp | Creation timestamp |
-| updated_at | timestamp | Last update timestamp |
-
-### 5. tenants
-
-Stores multi-tenant information.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| name | text | Tenant name |
-| domain | text | Tenant domain |
-| created_at | timestamp | Creation timestamp |
-| updated_at | timestamp | Last update timestamp |
-
-### 6. hosts
+### 4. hosts
 
 Stores server/host connection information.
 
@@ -103,6 +77,130 @@ Stores server/host connection information.
 | created_at | timestamp | Creation timestamp |
 | updated_at | timestamp | Last update timestamp |
 
+### 5. deployments
+
+Stores deployment information.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| name | text | Deployment name |
+| description | text | Deployment description |
+| repository_id | uuid | Foreign key to repositories.id |
+| status | text | Deployment status (pending, in_progress, success, failed, etc.) |
+| schedule | text | Schedule type (now, later) |
+| scheduled_time | timestamp | When deployment is scheduled to run |
+| script_ids | uuid[] | Array of script IDs to run |
+| host_ids | uuid[] | Array of target host IDs |
+| created_by | uuid | Foreign key to profiles.id |
+| created_at | timestamp | Creation timestamp |
+| started_at | timestamp | When deployment started |
+| completed_at | timestamp | When deployment completed |
+| updated_at | timestamp | Last update timestamp |
+
+### 6. deployment_logs
+
+Stores logs for deployment executions.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| deployment_id | uuid | Foreign key to deployments.id |
+| level | text | Log level (INFO, WARNING, ERROR, etc.) |
+| message | text | Log message content |
+| timestamp | timestamp | When log was created |
+
+### 7. deployment_scripts
+
+Tracks script execution within deployments.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| deployment_id | uuid | Foreign key to deployments.id |
+| script_id | uuid | Script identifier |
+| name | text | Script name |
+| path | text | Script path |
+| status | text | Script execution status |
+| started_at | timestamp | When script started |
+| completed_at | timestamp | When script completed |
+| output | text | Script output |
+| exit_code | integer | Exit code from script |
+| created_at | timestamp | Creation timestamp |
+| updated_at | timestamp | Last update timestamp |
+
+### 8. cicd_providers
+
+Stores CI/CD provider connections.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| type | text | Provider type (jenkins, circle, github_actions, etc.) |
+| name | text | Provider name |
+| url | text | Provider URL |
+| config | jsonb | Provider-specific configuration |
+| profile_id | uuid | Foreign key to profiles.id |
+| created_at | timestamp | Creation timestamp |
+| updated_at | timestamp | Last update timestamp |
+
+### 9. cicd_jobs
+
+Stores available jobs from CI/CD providers.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| provider_id | uuid | Foreign key to cicd_providers.id |
+| external_id | text | ID in the external CI/CD system |
+| name | text | Job name |
+| path | text | Job path (for hierarchical systems) |
+| description | text | Job description |
+| parameters | jsonb | Available job parameters |
+| created_at | timestamp | Creation timestamp |
+| updated_at | timestamp | Last update timestamp |
+
+### 10. deployment_cicd_mappings
+
+Links deployments to CI/CD jobs.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| deployment_id | uuid | Foreign key to deployments.id |
+| cicd_job_id | uuid | Foreign key to cicd_jobs.id |
+| parameters | jsonb | Parameters passed to the job |
+| build_number | text | CI/CD build/run number |
+| build_url | text | URL to the CI/CD build |
+| created_at | timestamp | Creation timestamp |
+| updated_at | timestamp | Last update timestamp |
+
+### 11. profiles
+
+Extends the auth.users table with application-specific data.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key (matches auth.users.id) |
+| avatar_url | text | User's avatar URL |
+| tenant_id | text | Foreign key to tenants.id |
+| role | text | User role in the system |
+| tenant_name | text | Cached tenant name |
+| created_at | timestamp | Creation timestamp |
+| updated_at | timestamp | Last update timestamp |
+
+### 12. tenants
+
+Stores multi-tenant information.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| name | text | Tenant name |
+| domain | text | Tenant domain |
+| created_at | timestamp | Creation timestamp |
+| updated_at | timestamp | Last update timestamp |
+
 ## Relationships
 
 1. `git_providers.profile_id` → `profiles.id`
@@ -110,21 +208,17 @@ Stores server/host connection information.
 3. `profile_repository_pins.profile_id` → `profiles.id`
 4. `profile_repository_pins.repository_id` → `repositories.id`
 5. `profiles.tenant_id` → `tenants.id`
-
-## Row-Level Security (RLS)
-
-Each table is protected with row-level security policies to ensure users can only access their own data:
-
-- Users can only see git providers connected to their profile
-- Users can only see repositories from their connected git providers
-- Users can only modify their own repository pins
+6. `deployments.repository_id` → `repositories.id`
+7. `deployments.created_by` → `profiles.id` 
+8. `deployment_logs.deployment_id` → `deployments.id`
+9. `deployment_scripts.deployment_id` → `deployments.id`
+10. `cicd_providers.profile_id` → `profiles.id`
+11. `cicd_jobs.provider_id` → `cicd_providers.id`
+12. `deployment_cicd_mappings.deployment_id` → `deployments.id`
+13. `deployment_cicd_mappings.cicd_job_id` → `cicd_jobs.id`
 
 ## Indexes
 
-Performance indexes exist on foreign key columns to optimize query performance:
+Various indexes are created on foreign key columns to optimize query performance.
 
-- `idx_git_providers_profile_id`
-- `idx_repositories_provider_id`
-- `idx_profile_repository_pins_profile_id`
-
-This schema supports the repository management system while maintaining data segregation and security.
+This schema supports the full application functionality while maintaining data integrity and relationships between different components of the system.
