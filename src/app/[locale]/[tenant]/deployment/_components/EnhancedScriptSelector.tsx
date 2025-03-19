@@ -3,14 +3,15 @@
 import React, { useState } from 'react';
 import { Code, ChevronDown, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { Script, ScriptParameter, Repository } from '../types';
-import ScriptParameterForm from './ScriptParameterForm';
 import { Input } from '@/components/shadcn/input';
 
 interface EnhancedScriptSelectorProps {
   selectedRepository?: Repository;
   availableScripts: Script[];
   selectedScriptIds: string[];
+  scriptParameters: Record<string, Record<string, string>>;
   onScriptIdsChange: (scriptIds: string[]) => void;
+  onScriptParameterChange: (scriptId: string, paramId: string, value: string) => void;
   isLoading?: boolean;
   error?: string | null;
 }
@@ -19,7 +20,9 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
   selectedRepository,
   availableScripts,
   selectedScriptIds,
+  scriptParameters,
   onScriptIdsChange,
+  onScriptParameterChange,
   isLoading = false,
   error = null
 }) => {
@@ -107,85 +110,90 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
 
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-      {/* Header with search */}
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
-            <Code className="h-4 w-4 mr-1" />
-            Available Scripts
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-              ({filteredScripts.length} {filteredScripts.length === 1 ? 'script' : 'scripts'})
-            </span>
-          </h3>
-          <div className="flex items-center ml-auto">
+      <div className="mt-2 px-3 pb-3">
+        <div className="flex justify-between items-center mb-2">
+          <div className="text-xs text-gray-500 dark:text-gray-400 px-1 py-0.5 bg-gray-50 dark:bg-gray-700 rounded">
+            {selectedScriptIds.length}/{availableScripts.length} scripts selected
+          </div>
+          <div className="flex items-center space-x-2">
             <Input
               type="text"
               placeholder="Search scripts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="text-xs h-8 w-full sm:w-56"
+              className="text-xs h-7 w-48 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             />
             <button
               type="button"
               onClick={handleSelectAll}
-              className="ml-2 px-2 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-md text-gray-700 dark:text-gray-300"
             >
               {selectedScriptIds.length === availableScripts.length ? 'Deselect All' : 'Select All'}
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Script list */}
-      <div className="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto">
-        {filteredScripts.map(script => {
-          const isSelected = selectedScriptIds.includes(script.id);
-          const isExpanded = expandedScripts.has(script.id);
-          
-          return (
-            <div key={script.id} className="text-sm">
-              <div 
-                className={`px-3 py-2 flex items-start cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
-                onClick={() => handleToggleScript(script.id)}
-              >
-                <div className="flex items-center">
-                  {isSelected ? 
-                    <CheckSquare className="h-4 w-4 text-blue-500 mr-2 flex-shrink-0" /> : 
-                    <Square className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 dark:text-white truncate">{script.name}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{script.path}</div>
-                </div>
-                {script.parameters && script.parameters.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={(e) => toggleExpanded(script.id, e)}
-                    className="p-1 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
-                  >
-                    {isExpanded ? 
-                      <ChevronDown className="h-4 w-4" /> : 
-                      <ChevronRight className="h-4 w-4" />
-                    }
-                  </button>
-                )}
+        
+        <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
+          <div className="max-h-[400px] overflow-y-auto">
+            {filteredScripts.length === 0 ? (
+              <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                {isLoading ? 'Loading scripts...' : 'No scripts found'}
               </div>
-              
-              {/* Parameter form if expanded */}
-              {isExpanded && isSelected && script.parameters && script.parameters.length > 0 && (
-                <div className="px-3 py-2 pl-9 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-                  <ScriptParameterForm 
-                    scriptId={script.id}
-                    parameters={script.parameters}
-                    values={{}}
-                    onChange={() => {}}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                  <tr>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">
+                      Select
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Script Path
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Parameters
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredScripts.map((script) => {
+                    const isSelected = selectedScriptIds.includes(script.id);
+                    
+                    return (
+                      <tr 
+                        key={script.id}
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                      >
+                        <td className="px-3 py-1.5 whitespace-nowrap">
+                          <div className="flex items-center" onClick={() => handleToggleScript(script.id)}>
+                            {isSelected ? 
+                              <CheckSquare className="h-4 w-4 text-blue-500 cursor-pointer" /> : 
+                              <Square className="h-4 w-4 text-gray-400 cursor-pointer" />
+                            }
+                          </div>
+                        </td>
+                        <td className="px-3 py-1.5 whitespace-nowrap" onClick={() => handleToggleScript(script.id)}>
+                          <div className="text-xs text-gray-900 dark:text-white truncate max-w-[300px] cursor-pointer">
+                            {script.path}
+                          </div>
+                        </td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">
+                          {isSelected && (
+                            <Input
+                              placeholder="Parameters (e.g. -d --key=value)"
+                              className="text-xs h-7 w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                              value={scriptParameters[script.id]?.['raw'] || ''}
+                              onChange={(e) => onScriptParameterChange(script.id, 'raw', e.target.value)}
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

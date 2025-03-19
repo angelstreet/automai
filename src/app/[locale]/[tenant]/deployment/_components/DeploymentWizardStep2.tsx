@@ -10,7 +10,9 @@ interface DeploymentWizardStep2Props {
   repositoryScripts: Script[];
   isLoadingScripts: boolean;
   scriptsError: string | null;
+  scriptParameters: Record<string, Record<string, string>>;
   onScriptsChange: (scriptIds: string[]) => void;
+  onScriptParameterChange: (scriptId: string, paramId: string, value: string) => void;
   onPrevStep: () => void;
   onNextStep: () => void;
   isStepValid: () => boolean;
@@ -22,7 +24,9 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
   repositoryScripts,
   isLoadingScripts,
   scriptsError,
+  scriptParameters,
   onScriptsChange,
+  onScriptParameterChange,
   onPrevStep,
   onNextStep,
   isStepValid
@@ -68,7 +72,9 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
         selectedRepository={selectedRepository || undefined}
         availableScripts={repositoryScripts}
         selectedScriptIds={scriptIds}
+        scriptParameters={scriptParameters}
         onScriptIdsChange={onScriptsChange}
+        onScriptParameterChange={onScriptParameterChange}
         isLoading={isLoadingScripts}
         error={scriptsError}
       />

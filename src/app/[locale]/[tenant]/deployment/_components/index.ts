@@ -12,6 +12,5 @@ export { default as DeploymentWizardStep5 } from './DeploymentWizardStep5';
 export { default as StatusBadge } from './StatusBadge';
 export { default as HostSelector } from './HostSelector';
 export { default as EnhancedScriptSelector } from './EnhancedScriptSelector';
-export { default as ScriptParameterForm } from './ScriptParameterForm';
 export { default as JenkinsConfig } from './JenkinsConfig';
 export { default as CustomSwitch } from './CustomSwitch';

@@ -63,11 +63,14 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   
   // Fetch job details when a job is selected
   const {
-    job,
-    parameters: jobParameters,
+    jobDetails,
     isLoading: isLoadingJobDetails,
     error: jobDetailsError
   } = useCICDJobDetails(jenkinsConfig.providerId, jenkinsConfig.jobId);
+  
+  // Extract job and parameters from job details
+  const job = jobDetails?.job;
+  const jobParameters = jobDetails?.parameters || [];
   
   // Update Jenkins config when providers change
   useEffect(() => {
@@ -181,41 +184,51 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
             
             <div className="space-y-4">
               {/* Scripts */}
-              <div>
-                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Scripts</h5>
-                <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
-                  {scriptIds.length > 0 ? (
-                    <div className="space-y-2">
-                      {scriptIds.map(id => {
-                        const script = repositoryScripts.find(s => s.id === id);
-                        if (!script) return null;
-
-                        // Format parameter values if any
-                        const params = scriptParameters[id];
-                        let paramString = '';
-                        if (params) {
-                          paramString = Object.entries(params)
-                            .map(([key, value]) => `${key}=${value}`)
-                            .join(', ');
-                        }
-                          
-                        return (
-                          <div key={id} className="text-xs">
-                            <div className="flex items-center">
-                              <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1.5 py-0.5 rounded mr-2 min-w-[20px] text-center">
-                                {scriptIds.indexOf(id) + 1}
-                              </div>
-                              <span className="text-gray-800 dark:text-gray-200">{script.path}</span>
-                              {paramString && (
-                                <span className="text-gray-500 ml-2">{paramString}</span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+              <div className="space-y-2 mb-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Selected Scripts ({scriptIds.length})
+                </h3>
+                <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {scriptIds.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 p-3">No scripts selected</p>
                   ) : (
-                    <p className="text-xs text-gray-500">No scripts selected</p>
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8">#</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Script Path</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameters</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {scriptIds.map((scriptId, index) => {
+                          const script = repositoryScripts.find(s => s.id === scriptId);
+                          const params = scriptParameters[scriptId]?.['raw'] || '';
+                          
+                          return (
+                            <tr key={scriptId}>
+                              <td className="px-3 py-1.5 whitespace-nowrap">
+                                <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1.5 py-0.5 rounded text-center text-xs">
+                                  {index + 1}
+                                </div>
+                              </td>
+                              <td className="px-3 py-1.5 whitespace-nowrap">
+                                <span className="text-xs text-gray-800 dark:text-gray-200 font-mono">
+                                  {script?.path || scriptId}
+                                </span>
+                              </td>
+                              <td className="px-3 py-1.5 whitespace-nowrap">
+                                {params && (
+                                  <span className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+                                    {params}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   )}
                 </div>
               </div>

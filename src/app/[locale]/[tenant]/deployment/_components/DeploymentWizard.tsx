@@ -449,12 +449,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {/* Step 2: Select Scripts with Parameters */}
         {step === 2 && (
           <DeploymentWizardStep2
-            selectedRepository={deploymentData.selectedRepository}
+            selectedRepository={deploymentData.selectedRepository || null}
             scriptIds={deploymentData.scriptIds}
             repositoryScripts={repositoryScripts}
             isLoadingScripts={isLoadingScripts}
             scriptsError={scriptsError}
+            scriptParameters={deploymentData.scriptParameters}
             onScriptsChange={handleScriptsChange}
+            onScriptParameterChange={handleScriptParameterChange}
             onPrevStep={handlePrevStep}
             onNextStep={handleNextStep}
             isStepValid={isStepValid}
@@ -479,9 +481,9 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         {step === 4 && (
           <DeploymentWizardStep4
             schedule={deploymentData.schedule}
-            scheduledTime={deploymentData.scheduledTime}
-            cronExpression={deploymentData.cronExpression}
-            repeatCount={deploymentData.repeatCount}
+            scheduledTime={deploymentData.scheduledTime || ''}
+            cronExpression={deploymentData.cronExpression || ''}
+            repeatCount={deploymentData.repeatCount || 0}
             onInputChange={handleInputChange}
             onPrevStep={handlePrevStep}
             onNextStep={handleNextStep}
@@ -498,12 +500,12 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
             scriptParameters={deploymentData.scriptParameters}
             hostIds={deploymentData.hostIds}
             schedule={deploymentData.schedule}
-            scheduledTime={deploymentData.scheduledTime}
-            cronExpression={deploymentData.cronExpression}
-            repeatCount={deploymentData.repeatCount}
+            scheduledTime={deploymentData.scheduledTime || ''}
+            cronExpression={deploymentData.cronExpression || ''}
+            repeatCount={deploymentData.repeatCount || 0}
             repositoryScripts={repositoryScripts}
             availableHosts={availableHosts}
-            jenkinsConfig={deploymentData.jenkinsConfig}
+            jenkinsConfig={deploymentData.jenkinsConfig || { enabled: false }}
             onJenkinsConfigChange={(enabled, config) => {
               setDeploymentData(prev => ({
                 ...prev,
