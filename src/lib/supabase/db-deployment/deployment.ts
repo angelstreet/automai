@@ -4,13 +4,37 @@ import { cookies } from 'next/headers';
 // Deployment DB operations
 const deployment = {
   async findMany(options: any = {}) {
+    console.log('DB layer: Finding many deployments with options:', JSON.stringify(options));
+    
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
-    let builder = supabase.from('deployments').select('*');
+    // Make sure to select all required fields explicitly
+    let builder = supabase.from('deployments').select(`
+      id,
+      name,
+      description,
+      repository_id,
+      status,
+      user_id,
+      created_at,
+      started_at,
+      completed_at,
+      scheduled_time,
+      schedule_type,
+      cron_expression,
+      repeat_count,
+      scripts,
+      hosts,
+      parameters,
+      environment_vars,
+      tenant_id,
+      error_message
+    `);
 
     // Apply filters if provided
     if (options.where) {
+      console.log('Applying filters:', JSON.stringify(options.where));
       Object.entries(options.where).forEach(([key, value]) => {
         builder = builder.eq(key, value);
       });
@@ -41,6 +65,7 @@ const deployment = {
       return [];
     }
 
+    console.log('DB layer: Found', data?.length || 0, 'deployments');
     return data || [];
   },
 
@@ -59,16 +84,38 @@ const deployment = {
   },
 
   async create({ data }: { data: any }) {
+    console.log('DB layer: Creating deployment with data:', JSON.stringify(data));
+    
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
-    const { data: result, error } = await supabase.from('deployments').insert(data).select().single();
+    // Ensure we have all required fields
+    const deploymentData = {
+      name: data.name,
+      description: data.description || '',
+      repository_id: data.repository_id,
+      scripts: data.scripts || [],
+      hosts: data.hosts || [],
+      status: data.status || 'pending',
+      schedule_type: data.schedule_type || 'now',
+      scheduled_time: data.scheduled_time || null,
+      cron_expression: data.cron_expression || null,
+      repeat_count: data.repeat_count || 0,
+      parameters: data.parameters || {},
+      environment_vars: data.environment_vars || {},
+      tenant_id: data.tenant_id,
+      user_id: data.user_id,
+      created_at: new Date().toISOString()
+    };
+
+    const { data: result, error } = await supabase.from('deployments').insert(deploymentData).select().single();
 
     if (error) {
       console.error('Error creating deployment:', error);
       throw error;
     }
 
+    console.log('DB layer: Deployment created successfully with ID:', result?.id);
     return result;
   },
 

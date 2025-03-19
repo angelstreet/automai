@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { DeploymentData, ScriptParameter, Repository, Host as HostType } from '../types';
+import { DeploymentData, DeploymentFormData, ScriptParameter, Repository, Host as HostType } from '../types';
 import { useRepositories, useRepositoryScripts } from '../../repositories/hooks';
 import { useHosts } from '../../hosts/hooks';
+import { useCreateDeployment } from '../hooks';
 import { Host as SystemHost } from '../../hosts/types';
 import DeploymentWizardStep1 from './DeploymentWizardStep1';
 import DeploymentWizardStep2 from './DeploymentWizardStep2';
@@ -250,7 +251,13 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     setStep(prev => prev - 1);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Get the deployment creation hook
+  const { submit: createDeployment, isSubmitting, error: deploymentError } = useCreateDeployment();
+  
+  const [isCreating, setIsCreating] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Check if the event was triggered by a select all/unselect all button or environment tag
@@ -270,10 +277,51 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
       return;
     }
     
+    // Reset errors
+    setSubmissionError(null);
+    setIsCreating(true);
+    
     console.log('Deployment data submitted:', deploymentData);
-    // Here you would typically send the data to your API
-    alert('Deployment created successfully!');
-    onComplete();
+    
+    try {
+      // Map DeploymentData to DeploymentFormData format expected by the server action
+      const formData: DeploymentFormData = {
+        name: deploymentData.name,
+        description: deploymentData.description,
+        repository: deploymentData.repositoryId, // Note field name change
+        selectedScripts: deploymentData.scriptIds, // Note field name change
+        selectedHosts: deploymentData.hostIds, // Note field name change
+        schedule: deploymentData.schedule,
+        scheduledTime: deploymentData.scheduledTime,
+        cronExpression: deploymentData.cronExpression,
+        repeatCount: deploymentData.repeatCount,
+        environmentVars: deploymentData.environmentVars,
+        parameters: deploymentData.scriptParameters,
+        notifications: deploymentData.notifications,
+        jenkinsConfig: deploymentData.jenkinsConfig
+      };
+      
+      console.log('Calling createDeployment with formData:', formData);
+      
+      // Call the server action through the hook
+      const deploymentId = await createDeployment(formData);
+      
+      if (deploymentId) {
+        console.log('Deployment created successfully with ID:', deploymentId);
+        alert('Deployment created successfully!');
+        onComplete();
+      } else {
+        console.error('Failed to create deployment:', deploymentError);
+        setSubmissionError(deploymentError || 'Failed to create deployment');
+        alert(`Error creating deployment: ${deploymentError || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error creating deployment:', error);
+      setSubmissionError(error.message || 'An unexpected error occurred');
+      alert(`Error creating deployment: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const isStepValid = () => {

@@ -96,18 +96,57 @@ export interface DeploymentConfig {
   runnerId?: string;
 }
 
+// CI/CD Provider and Job interfaces
+export interface CICDProvider {
+  id: string;
+  name: string;
+  type: string;
+  url: string;
+  tenant_id: string;
+  auth_type: string;
+  credentials?: Record<string, string>;
+  created_at: string;
+}
+
+export interface CICDJob {
+  id: string;
+  provider_id: string;
+  name: string;
+  description?: string;
+  parameters?: Array<{
+    name: string;
+    type: string;
+    description?: string;
+    default?: any;
+    required: boolean;
+    choices?: string[];
+  }>;
+  tenant_id: string;
+  url?: string;
+  created_at: string;
+}
+
 export interface DeploymentFormData {
   name: string;
   description: string;
-  repositoryId: string;
+  repository: string;  // Changed from repositoryId to match the current implementation
   selectedScripts: string[];
   selectedHosts: string[];
   schedule: 'now' | 'later';
   scheduledTime: string;
+  cronExpression?: string;
+  repeatCount?: number;
   environmentVars: Array<{key: string, value: string}>;
+  parameters?: Record<string, any>;
   notifications: {
     email: boolean;
     slack: boolean;
+  };
+  jenkinsConfig?: {
+    enabled: boolean;
+    providerId?: string;
+    jobId?: string;
+    parameters?: Record<string, any>;
   };
 }
 
@@ -132,9 +171,8 @@ export interface DeploymentData {
   };
   jenkinsConfig?: {
     enabled: boolean;
-    jobName?: string;
-    jenkinsUrl?: string;
-    credentials?: string;
-    customParameters?: Record<string, string>;
+    providerId?: string;
+    jobId?: string;
+    parameters?: Record<string, any>;
   };
 }
