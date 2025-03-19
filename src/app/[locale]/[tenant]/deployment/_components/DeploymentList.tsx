@@ -13,7 +13,6 @@ import { useDeployments } from '../context';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
-import { getRepositories } from '../actions';
 
 interface DeploymentListProps {
   onViewDeployment?: (deploymentId: string) => void;
@@ -22,7 +21,7 @@ interface DeploymentListProps {
 const DeploymentList: React.FC<DeploymentListProps> = ({ 
   onViewDeployment 
 }) => {
-  const { deployments, loading, error, fetchDeployments, isRefreshing } = useDeployments();
+  const { deployments, loading, error, fetchDeployments, isRefreshing, fetchRepositories } = useDeployments();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [repositories, setRepositories] = useState<Record<string, Repository>>({});
@@ -33,9 +32,9 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   useEffect(() => {
     const loadRepositories = async () => {
       try {
-        const repos = await getRepositories();
+        const repos = await fetchRepositories();
         // Convert array to record for easy lookup
-        const repoMap = repos.reduce((acc, repo) => {
+        const repoMap = repos.reduce((acc: Record<string, Repository>, repo: Repository) => {
           acc[repo.id] = repo;
           return acc;
         }, {} as Record<string, Repository>);
@@ -46,7 +45,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     };
 
     loadRepositories();
-  }, []);
+  }, [fetchRepositories]);
 
   // Handle refresh button click
   const handleRefresh = () => {
@@ -62,8 +61,12 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
 
   // Get repository name from deployment
   const getRepositoryName = (deployment: Deployment): string => {
+    console.log('Repositories:', repositories);
+    console.log('Current deployment repository ID:', deployment.repositoryId);
+    
     // Use the repository mapping if available
     if (deployment.repositoryId && repositories[deployment.repositoryId]) {
+      console.log('Found repository:', repositories[deployment.repositoryId]);
       return repositories[deployment.repositoryId].name;
     }
     

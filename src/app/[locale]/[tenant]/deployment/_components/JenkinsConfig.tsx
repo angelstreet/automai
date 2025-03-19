@@ -19,7 +19,6 @@ import {
   PopoverTrigger,
 } from '@/components/shadcn/popover';
 import { cn } from '@/lib/utils';
-import CustomSwitch from './CustomSwitch';
 
 interface JenkinsConfigProps {
   enabled: boolean;
@@ -47,11 +46,7 @@ interface JenkinsConfigProps {
   onParameterChange?: (name: string, value: string) => void;
 }
 
-import { JENKINS_CREDENTIAL_OPTIONS, JENKINS_JOB_OPTIONS } from '../constants';
-
-// Use imported constants
-const credentialOptions = JENKINS_CREDENTIAL_OPTIONS;
-const jobOptions = JENKINS_JOB_OPTIONS;
+import {JENKINS_JOB_OPTIONS } from '../constants';
 
 const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
   enabled,

@@ -1,6 +1,5 @@
 // src/app/[locale]/[tenant]/deployment/constants.ts
 
-
 // Status configuration for the StatusBadge component
 export const STATUS_CONFIG = {
   success: {

@@ -93,12 +93,14 @@ function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
 /**
  * Get a specific deployment by ID
  * @param id Deployment ID
- * @param user The authenticated user
  * @returns Deployment object or null if not found
  */
-export async function getDeploymentById(id: string, user: AuthUser | null): Promise<Deployment | null> {
+export async function getDeploymentById(id: string): Promise<Deployment | null> {
   try {
     console.log(`Actions layer: Fetching deployment with ID: ${id}`);
+    
+    // Get the current user
+    const user = await getUser();
     
     if (!user) {
       console.error('Actions layer: Cannot fetch deployment - user not authenticated');
@@ -153,12 +155,10 @@ export async function getDeploymentById(id: string, user: AuthUser | null): Prom
 /**
  * Create a new deployment
  * @param formData Deployment form data
- * @param user The authenticated user
  * @returns Object with success status and optional deployment ID
  */
 export async function createDeployment(
-  formData: DeploymentFormData,
-  user: AuthUser | null
+  formData: DeploymentFormData
 ): Promise<{ success: boolean; deploymentId?: string; error?: string }> {
   try {
     console.log('Actions layer: Creating deployment with form data:', JSON.stringify({
@@ -171,6 +171,9 @@ export async function createDeployment(
       jenkinsEnabled: formData.jenkinsConfig?.enabled
     }));
 
+    // Get the current user
+    const user = await getUser();
+    
     if (!user) {
       console.error('Actions layer: Cannot create deployment - user not authenticated');
       return { success: false, error: 'User not authenticated' };
@@ -397,12 +400,13 @@ export async function getDeploymentStatus(
 
 /**
  * Get repositories for the current user
+ * @param user Optional user data to avoid redundant auth calls
  * @returns List of repositories
  */
-export async function getRepositories(): Promise<Repository[]> {
+export async function getRepositories(user?: AuthUser | null): Promise<Repository[]> {
   try {
-    // Get the current user
-    const userData = await getUser();
+    // Get the current user if not provided
+    const userData = user || await getUser();
     
     if (!userData) {
       console.error('Failed to get user data for repositories');
