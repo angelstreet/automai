@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/shadcn/button';
 import { Badge } from '@/components/shadcn/badge';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { LANGUAGE_COLORS } from './constants';
+import { LANGUAGE_COLORS } from '../constants';
 
 interface EnhancedRepositoryCardProps {
   repository: any; // We'll replace this with proper types later

@@ -16,7 +16,7 @@ import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { FILE_EXTENSION_COLORS } from './constants';
+import { FILE_EXTENSION_COLORS } from '../constants';
 import { 
   Breadcrumb, 
   BreadcrumbItem, 

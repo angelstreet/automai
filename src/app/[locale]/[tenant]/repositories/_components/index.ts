@@ -1,13 +1,12 @@
+// Export UI components
 export { EnhancedRepositoryCard } from './EnhancedRepositoryCard';
 export { EnhancedConnectRepositoryDialog } from './EnhancedConnectRepositoryDialog';
 export { RepositoryExplorer } from './RepositoryExplorer';
-export { 
-  REPOSITORY_CATEGORIES, 
-  POPULAR_REPOSITORIES, 
-  SAMPLE_RUNNERS, 
-  SAMPLE_FILES, 
-  SAMPLE_FILE_CONTENT, 
-  MOCK_REPOSITORIES,
+
+// Import constants from main constants file
+export {
   LANGUAGE_COLORS,
-  FILE_EXTENSION_COLORS
-} from './constants';
+  FILE_EXTENSION_COLORS,
+  REPOSITORY_CATEGORIES,
+  POPULAR_REPOSITORIES
+} from '../constants';

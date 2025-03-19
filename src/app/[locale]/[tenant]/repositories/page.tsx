@@ -35,7 +35,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { EmptyState } from '@/components/layout/EmptyState';
 
 import { Repository, ConnectRepositoryValues } from './types';
-import { REPOSITORY_CATEGORIES } from './_components/constants';
+import { REPOSITORY_CATEGORIES } from './constants';
 
 export default function EnhancedRepositoryPage() {
   const { toast } = useToast();
