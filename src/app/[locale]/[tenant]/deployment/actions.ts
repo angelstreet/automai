@@ -71,17 +71,22 @@ export async function createDeployment(
     const scriptPaths: string[] = [];
     const scriptParameters: string[] = [];
     
+    console.log('Actions layer: Raw parameters from form:', JSON.stringify(formData.parameters, null, 2));
+    
     if (formData.scriptMapping) {
       Object.entries(formData.scriptMapping).forEach(([scriptId, scriptInfo]) => {
         if (scriptInfo && scriptInfo.path) {
           scriptPaths.push(scriptInfo.path);
           
           // Store parameters for this script path if they exist
-          if (formData.parameters && formData.parameters[scriptId]) {
-            // Convert parameters to a string and add to the array
-            scriptParameters.push(JSON.stringify(formData.parameters[scriptId]));
+          if (formData.parameters && formData.parameters[scriptId] && formData.parameters[scriptId].raw) {
+            // Just use the raw parameter value as a string
+            const rawParam = formData.parameters[scriptId].raw;
+            console.log(`Actions layer: For script ${scriptId}, using raw parameter: "${rawParam}"`);
+            scriptParameters.push(rawParam);
           } else {
             // Add an empty string if no parameters
+            console.log(`Actions layer: No parameters for script ${scriptId}, using empty string`);
             scriptParameters.push('');
           }
         }
