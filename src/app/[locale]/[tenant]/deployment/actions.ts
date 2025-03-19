@@ -4,7 +4,7 @@ import { Deployment, DeploymentFormData } from './types';
 import { deployment, cicd } from '@/lib/supabase/db-deployment';
 import { getCICDProvider } from '@/lib/services/cicd';
 // Import getUser which should be trusted over getSession in server components
-import { getUser } from '@/lib/supabase/auth';
+import { getUser, getSupabaseSession } from '@/lib/supabase/auth';
 import { z } from 'zod';
 
 /**
@@ -15,13 +15,14 @@ export async function getDeployments(): Promise<Deployment[]> {
   
   try {
     // Get session for authentication and tenant isolation
-    const session = await getSession();
-    if (!session?.user) {
+    const sessionResult = await getSupabaseSession();
+    if (!sessionResult.success || !sessionResult.data?.user) {
       console.error('Authentication error: No session or user');
       return [];
     }
 
-    const tenantId = session.user.tenantId || '';
+    const session = sessionResult.data;
+    const tenantId = session.user.tenant_id || '';
     if (!tenantId) {
       console.error('Authentication error: No tenant ID');
       return [];
@@ -719,15 +720,16 @@ export async function getAvailableHosts(): Promise<{ id: string; name: string; e
 export async function getAvailableCICDProviders(): Promise<{ success: boolean; providers?: any[]; error?: string }> {
   try {
     // Get current user session
-    const session = await getSession();
-    if (!session?.user) {
+    const sessionResult = await getSupabaseSession();
+    if (!sessionResult.success || !sessionResult.data?.user) {
       return { 
         success: false, 
         error: 'Unauthorized - Please sign in' 
       };
     }
 
-    const tenantId = session.user.tenantId || '';
+    const session = sessionResult.data;
+    const tenantId = session.user.tenant_id || '';
     if (!tenantId) {
       return {
         success: false,
@@ -764,15 +766,16 @@ export async function getAvailableCICDProviders(): Promise<{ success: boolean; p
 export async function getAvailableCICDJobs(providerId: string): Promise<{ success: boolean; jobs?: any[]; error?: string }> {
   try {
     // Get current user session
-    const session = await getSession();
-    if (!session?.user) {
+    const sessionResult = await getSupabaseSession();
+    if (!sessionResult.success || !sessionResult.data?.user) {
       return { 
         success: false, 
         error: 'Unauthorized - Please sign in' 
       };
     }
 
-    const tenantId = session.user.tenantId || '';
+    const session = sessionResult.data;
+    const tenantId = session.user.tenant_id || '';
     if (!tenantId) {
       return {
         success: false,
