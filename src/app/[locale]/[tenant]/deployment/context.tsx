@@ -84,12 +84,14 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-
+  const [initialized, setInitialized] = useState(false);
+  
   /**
    * Fetch the current user data and cache it in the context
    * This reduces redundant auth calls across deployment functions
    */
   const fetchUserData = useCallback(async () => {
+    console.log('DeploymentContext: Fetching user data');
     try {
       const user = await getUser();
       setCurrentUser(user);
@@ -105,24 +107,26 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    * Updates the deployments state with the latest data
    */
   const fetchDeployments = useCallback(async () => {
-    setLoading(true);
+    if (isRefreshing) return; // Prevent concurrent fetches
+    
+    setIsRefreshing(true);
     setError(null);
     
     try {
+      console.log('DeploymentContext: Fetching deployments');
       // Use cached user data when available
-      if (!currentUser) {
-        await fetchUserData();
-      }
+      const user = currentUser || await fetchUserData();
       
-      const data = await getDeployments(currentUser);
+      const data = await getDeployments(user);
       setDeployments(data);
     } catch (err) {
       setError('Failed to load deployments');
       console.error('Error fetching deployments:', err);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  }, [currentUser, fetchUserData]);
+  }, [currentUser, fetchUserData, isRefreshing]);
 
   /**
    * Fetch a single deployment by ID
@@ -319,16 +323,19 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [currentUser, fetchUserData]);
 
-  // Fetch user data and deployments on component mount - only once
+  // Initial data loading effect - only runs once on mount
   useEffect(() => {
-    const initialize = async () => {
-      await fetchUserData();
-      await fetchDeployments();
-    };
-    
-    initialize();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!initialized) {
+      console.log('DeploymentContext: Initializing data');
+      const initializeData = async () => {
+        await fetchUserData();
+        await fetchDeployments();
+        setInitialized(true);
+      };
+      
+      initializeData();
+    }
+  }, [initialized, fetchUserData, fetchDeployments]);
 
   // Create the context value object with all state and functions
   const contextValue: DeploymentContextType = {
