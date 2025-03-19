@@ -32,8 +32,16 @@ export class JenkinsProvider implements CICDProvider {
    * Helper method to make authenticated requests to Jenkins API
    */
   private async jenkinsRequest<T>(path: string, options: RequestInit = {}): Promise<CICDResponse<T>> {
+    console.log(`[JENKINS] Request initiated: ${options.method || 'GET'} ${path}`);
+    console.log(`[JENKINS] Request options:`, JSON.stringify({
+      method: options.method || 'GET',
+      headers: options.headers || {},
+      body: options.body ? '(present)' : '(none)'
+    }));
+    
     try {
       if (!this.config) {
+        console.error('[JENKINS] Request failed: Provider not initialized');
         return {
           success: false,
           error: 'Jenkins provider not initialized'
@@ -41,6 +49,7 @@ export class JenkinsProvider implements CICDProvider {
       }
 
       const url = `${this.baseUrl}${path}`;
+      console.log(`[JENKINS] Full URL: ${url}`);
       
       // Add authentication headers
       const headers = {
@@ -48,15 +57,20 @@ export class JenkinsProvider implements CICDProvider {
         'Authorization': this.authHeader,
         'Content-Type': 'application/json'
       };
+      console.log(`[JENKINS] Headers prepared (auth header present: ${!!this.authHeader})`);
 
+      console.log(`[JENKINS] Sending request to ${url}`);
       const response = await fetch(url, {
         ...options,
         headers,
         cache: 'no-store' // Important for real-time data
       });
+      console.log(`[JENKINS] Response received: Status ${response.status} ${response.statusText}`);
+      console.log(`[JENKINS] Response headers:`, JSON.stringify(Object.fromEntries([...response.headers.entries()])));
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`[JENKINS] Request failed with status ${response.status}: ${errorText}`);
         return {
           success: false,
           error: `Jenkins API error: ${response.status} - ${errorText}`
@@ -65,20 +79,26 @@ export class JenkinsProvider implements CICDProvider {
 
       // Handle different response types
       const contentType = response.headers.get('content-type');
+      console.log(`[JENKINS] Response content-type: ${contentType}`);
+      
       let data: any;
       
       if (contentType?.includes('application/json')) {
         data = await response.json();
+        console.log(`[JENKINS] Parsed JSON response:`, JSON.stringify(data, null, 2));
       } else {
         data = await response.text();
+        console.log(`[JENKINS] Text response (first 500 chars): ${data.substring(0, 500)}${data.length > 500 ? '...' : ''}`);
       }
 
+      console.log(`[JENKINS] Request completed successfully`);
       return {
         success: true,
         data: data as T
       };
     } catch (error: any) {
-      console.error('Jenkins API request error:', error);
+      console.error('[JENKINS] Request failed with exception:', error);
+      console.error('[JENKINS] Error stack:', error.stack);
       return {
         success: false,
         error: error.message || 'Failed to make Jenkins API request'
@@ -201,46 +221,79 @@ export class JenkinsProvider implements CICDProvider {
    * Trigger a Jenkins job build
    */
   async triggerJob(jobId: string, parameters?: Record<string, any>): Promise<CICDResponse<CICDBuild>> {
+    console.log(`[JENKINS] Triggering job '${jobId}' with parameters:`, JSON.stringify(parameters || {}));
+    
     try {
       let buildUrl: string;
       
       // If parameters are provided, use the parameters endpoint
       if (parameters && Object.keys(parameters).length > 0) {
+        console.log(`[JENKINS] Job has ${Object.keys(parameters).length} parameters, using buildWithParameters endpoint`);
+        
         // Prepare parameters for Jenkins API
         const paramString = Object.entries(parameters)
           .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
           .join('&');
         
+        console.log(`[JENKINS] Parameter string: ${paramString}`);
+        const endpoint = `/job/${encodeURIComponent(jobId)}/buildWithParameters?${paramString}`;
+        console.log(`[JENKINS] Triggering endpoint: ${endpoint}`);
+        
         // Trigger build with parameters
         const result = await this.jenkinsRequest<any>(
-          `/job/${encodeURIComponent(jobId)}/buildWithParameters?${paramString}`,
+          endpoint,
           { method: 'POST' }
         );
         
+        console.log(`[JENKINS] Trigger result:`, JSON.stringify(result));
+        
         if (!result.success) {
+          console.error(`[JENKINS] Failed to trigger job with parameters: ${result.error}`);
           return result;
         }
         
         // Get the build URL from the Location header or response
         buildUrl = result.data.location || '';
+        console.log(`[JENKINS] Build URL from response: ${buildUrl}`);
       } else {
+        console.log(`[JENKINS] Job has no parameters, using standard build endpoint`);
+        
         // Trigger build without parameters
+        const endpoint = `/job/${encodeURIComponent(jobId)}/build`;
+        console.log(`[JENKINS] Triggering endpoint: ${endpoint}`);
+        
         const result = await this.jenkinsRequest<any>(
-          `/job/${encodeURIComponent(jobId)}/build`,
+          endpoint,
           { method: 'POST' }
         );
         
+        console.log(`[JENKINS] Trigger result:`, JSON.stringify(result));
+        
         if (!result.success) {
+          console.error(`[JENKINS] Failed to trigger job: ${result.error}`);
           return result;
         }
         
         // Get the build URL from the Location header or response
         buildUrl = result.data.location || '';
+        console.log(`[JENKINS] Build URL from response: ${buildUrl}`);
+      }
+      
+      // Check if we got a buildUrl
+      if (!buildUrl) {
+        console.error(`[JENKINS] No build URL returned from Jenkins API`);
+        return {
+          success: false,
+          error: 'No build URL returned from Jenkins API'
+        };
       }
       
       // Extract build number from the queue item URL
       const queueIdMatch = buildUrl.match(/\/queue\/item\/(\d+)\/?$/);
+      console.log(`[JENKINS] Queue ID match:`, queueIdMatch);
+      
       if (!queueIdMatch) {
+        console.error(`[JENKINS] Could not extract queue ID from build URL: ${buildUrl}`);
         return {
           success: false,
           error: 'Could not extract queue ID from Jenkins response'
@@ -248,48 +301,70 @@ export class JenkinsProvider implements CICDProvider {
       }
       
       const queueId = queueIdMatch[1];
+      console.log(`[JENKINS] Extracted queue ID: ${queueId}`);
       
       // Poll the queue item to get the build ID
       let buildId = '';
       let attempts = 0;
       
+      console.log(`[JENKINS] Starting to poll queue item for build ID`);
       while (!buildId && attempts < 10) {
+        attempts++;
+        console.log(`[JENKINS] Polling attempt ${attempts}/10`);
+        
         // Wait a bit before checking
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Check queue item status
-        const queueResult = await this.jenkinsRequest<any>(`/queue/item/${queueId}/api/json`);
+        const queueEndpoint = `/queue/item/${queueId}/api/json`;
+        console.log(`[JENKINS] Checking queue status endpoint: ${queueEndpoint}`);
+        
+        const queueResult = await this.jenkinsRequest<any>(queueEndpoint);
+        console.log(`[JENKINS] Queue status result:`, JSON.stringify(queueResult));
         
         if (queueResult.success && queueResult.data.executable) {
           // Got the build ID
           buildId = queueResult.data.executable.number.toString();
+          console.log(`[JENKINS] Build ID obtained: ${buildId}`);
           break;
+        } else if (queueResult.success) {
+          console.log(`[JENKINS] Build not started yet, queue item status:`, 
+            queueResult.data.blocked ? 'blocked' : 
+            queueResult.data.stuck ? 'stuck' : 
+            queueResult.data.cancelled ? 'cancelled' : 'waiting');
+        } else {
+          console.error(`[JENKINS] Error checking queue status: ${queueResult.error}`);
         }
-        
-        attempts++;
       }
       
       if (!buildId) {
+        console.error(`[JENKINS] Failed to get build ID after ${attempts} attempts`);
         return {
           success: false,
           error: 'Build was triggered but failed to start or timed out'
         };
       }
       
+      // Prepare return data
+      const buildData = {
+        id: buildId,
+        job_id: jobId,
+        url: `${this.baseUrl}/job/${encodeURIComponent(jobId)}/${buildId}/`,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log(`[JENKINS] Job triggered successfully:`, JSON.stringify(buildData));
+      
       // Return the build information
       return {
         success: true,
-        data: {
-          id: buildId,
-          job_id: jobId,
-          url: `${this.baseUrl}/job/${encodeURIComponent(jobId)}/${buildId}/`,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
+        data: buildData
       };
     } catch (error: any) {
-      console.error(`Error triggering Jenkins job ${jobId}:`, error);
+      console.error(`[JENKINS] Error triggering job ${jobId}:`, error);
+      console.error(`[JENKINS] Error stack:`, error.stack);
       return {
         success: false,
         error: error.message || `Failed to trigger Jenkins job ${jobId}`

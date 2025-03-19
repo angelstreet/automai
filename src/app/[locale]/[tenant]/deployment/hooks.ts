@@ -7,9 +7,7 @@ import {
   getAvailableCICDJobs, 
   getCICDJobDetails,
   getDeploymentStatus,
-  createDeployment,
-  getScriptsForRepository,
-  getAvailableHosts
+  createDeployment
 } from './actions';
 import { CICDProvider, CICDJob, DeploymentFormData } from './types';
 
@@ -18,14 +16,11 @@ const CACHE_KEYS = {
   PROVIDERS: 'cicd-providers',
   JOBS: (providerId: string) => `cicd-jobs-${providerId}`,
   JOB_DETAILS: (providerId: string, jobId: string) => `cicd-job-details-${providerId}-${jobId}`,
-  DEPLOYMENT_STATUS: (deploymentId: string) => `deployment-status-${deploymentId}`,
-  REPOSITORY_SCRIPTS: (repositoryId: string) => `repository-scripts-${repositoryId}`,
-  AVAILABLE_HOSTS: 'available-hosts'
+  DEPLOYMENT_STATUS: (deploymentId: string) => `deployment-status-${deploymentId}`
 };
 
-// Cache expiration times
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const SCRIPTS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes for scripts (longer because they change less often)
+// Cache expiration time (5 minutes)
+const CACHE_TTL = 5 * 60 * 1000;
 
 /**
  * Hook to fetch CI/CD providers
@@ -347,139 +342,5 @@ export function useDeploymentStatus(deploymentId?: string) {
     isRefreshing: isValidating,
     error: error?.message,
     refreshStatus
-  };
-}
-
-/**
- * Hook to fetch repository scripts with local storage caching
- */
-export function useRepositoryScripts(repositoryId: string | undefined) {
-  const { mutate } = useSWRConfig();
-  
-  // No repository ID, no scripts
-  const cacheKey = repositoryId ? CACHE_KEYS.REPOSITORY_SCRIPTS(repositoryId) : null;
-  
-  // Fetch scripts with SWR + localStorage caching
-  const fetcher = async () => {
-    if (!repositoryId) {
-      return [];
-    }
-    
-    // Check localStorage first
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem(cacheKey!);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Date.now() < parsed.expiry) {
-          console.log('Using cached scripts for repository', repositoryId);
-          return parsed.data;
-        }
-      }
-    }
-    
-    console.log('Fetching fresh scripts for repository', repositoryId);
-    // Fetch from API
-    const scripts = await getScriptsForRepository(repositoryId);
-    
-    // Cache in localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(cacheKey!, JSON.stringify({
-        data: scripts,
-        expiry: Date.now() + SCRIPTS_CACHE_TTL
-      }));
-    }
-    
-    return scripts;
-  };
-  
-  const { data, error, isLoading, isValidating } = useSWR(
-    cacheKey,
-    fetcher,
-    {
-      dedupingInterval: 60000, // 1 minute
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true
-    }
-  );
-  
-  // Function to manually invalidate cache and refresh scripts
-  const refreshScripts = useCallback(() => {
-    if (typeof window !== 'undefined' && cacheKey) {
-      localStorage.removeItem(cacheKey);
-    }
-    if (cacheKey) {
-      mutate(cacheKey);
-    }
-  }, [mutate, cacheKey]);
-  
-  return {
-    scripts: data || [],
-    isLoading,
-    isRefreshing: isValidating,
-    error: error?.message,
-    refreshScripts
-  };
-}
-
-/**
- * Hook to fetch available hosts with local storage caching
- */
-export function useAvailableHosts() {
-  const { mutate } = useSWRConfig();
-  const cacheKey = CACHE_KEYS.AVAILABLE_HOSTS;
-  
-  // Fetch hosts with SWR + localStorage caching
-  const fetcher = async () => {
-    // Check localStorage first
-    if (typeof window !== 'undefined') {
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Date.now() < parsed.expiry) {
-          console.log('Using cached hosts');
-          return parsed.data;
-        }
-      }
-    }
-    
-    console.log('Fetching fresh hosts');
-    // Fetch from API
-    const hosts = await getAvailableHosts();
-    
-    // Cache in localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(cacheKey, JSON.stringify({
-        data: hosts,
-        expiry: Date.now() + CACHE_TTL
-      }));
-    }
-    
-    return hosts;
-  };
-  
-  const { data, error, isLoading, isValidating } = useSWR(
-    cacheKey,
-    fetcher,
-    {
-      dedupingInterval: 60000, // 1 minute
-      revalidateOnFocus: false,
-      revalidateOnReconnect: true
-    }
-  );
-  
-  // Function to manually invalidate cache and refresh hosts
-  const refreshHosts = useCallback(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(cacheKey);
-    }
-    mutate(cacheKey);
-  }, [mutate]);
-  
-  return {
-    hosts: data || [],
-    isLoading,
-    isRefreshing: isValidating,
-    error: error?.message,
-    refreshHosts
   };
 }

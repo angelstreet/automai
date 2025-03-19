@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
-import { Host as HostType, ScriptParameter } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Host as HostType, ScriptParameter, CICDProvider, CICDJob } from '../types';
 import CustomSwitch from './CustomSwitch';
 import JenkinsConfig from './JenkinsConfig';
+import { useCICDProviders, useCICDJobs, useCICDJobDetails } from '../hooks';
 
 interface DeploymentWizardStep5Props {
   showJenkinsView: boolean;
@@ -19,11 +20,14 @@ interface DeploymentWizardStep5Props {
   availableHosts: HostType[];
   jenkinsConfig: {
     enabled: boolean;
+    providerId?: string;
+    jobId?: string;
+    parameters?: Record<string, any>;
     [key: string]: any;
   };
   onJenkinsConfigChange: (enabled: boolean, config: any) => void;
   onPrevStep: () => void;
-  isSubmitting?: boolean; // Added prop to show loading state
+  isSubmitting?: boolean;
 }
 
 const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
@@ -43,6 +47,76 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   onPrevStep,
   isSubmitting = false,
 }) => {
+  // Fetch CI/CD providers
+  const { 
+    providers, 
+    isLoading: isLoadingProviders,
+    error: providersError
+  } = useCICDProviders();
+  
+  // Fetch CI/CD jobs when a provider is selected
+  const {
+    jobs,
+    isLoading: isLoadingJobs,
+    error: jobsError
+  } = useCICDJobs(jenkinsConfig.providerId);
+  
+  // Fetch job details when a job is selected
+  const {
+    job,
+    parameters: jobParameters,
+    isLoading: isLoadingJobDetails,
+    error: jobDetailsError
+  } = useCICDJobDetails(jenkinsConfig.providerId, jenkinsConfig.jobId);
+  
+  // Update Jenkins config when providers change
+  useEffect(() => {
+    if (providers.length > 0 && jenkinsConfig.enabled && !jenkinsConfig.providerId) {
+      // Auto-select the first Jenkins provider if none is selected
+      const jenkinsProviders = providers.filter(p => p.type === 'jenkins');
+      if (jenkinsProviders.length > 0) {
+        onJenkinsConfigChange(true, {
+          ...jenkinsConfig,
+          providerId: jenkinsProviders[0].id,
+          url: jenkinsProviders[0].url
+        });
+      }
+    }
+  }, [providers, jenkinsConfig.enabled, jenkinsConfig.providerId]);
+  
+  // Handle provider selection
+  const handleProviderChange = (providerId: string) => {
+    const provider = providers.find(p => p.id === providerId);
+    onJenkinsConfigChange(jenkinsConfig.enabled, {
+      ...jenkinsConfig,
+      providerId,
+      url: provider?.url || '',
+      jobId: undefined // Reset job when provider changes
+    });
+  };
+  
+  // Handle job selection
+  const handleJobChange = (jobId: string) => {
+    const job = jobs.find(j => j.id === jobId);
+    onJenkinsConfigChange(jenkinsConfig.enabled, {
+      ...jenkinsConfig,
+      jobId,
+      jobName: job?.name || '',
+      parameters: {} // Reset parameters when job changes
+    });
+  };
+  
+  // Handle parameter change
+  const handleParameterChange = (name: string, value: string) => {
+    onJenkinsConfigChange(jenkinsConfig.enabled, {
+      ...jenkinsConfig,
+      parameters: {
+        ...(jenkinsConfig.parameters || {}),
+        [name]: value
+      }
+    });
+  };
+  
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -91,6 +165,15 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
             enabled={jenkinsConfig.enabled}
             config={jenkinsConfig}
             onChange={onJenkinsConfigChange}
+            providers={providers}
+            jobs={jobs}
+            jobParameters={jobParameters}
+            isLoadingProviders={isLoadingProviders}
+            isLoadingJobs={isLoadingJobs}
+            isLoadingJobDetails={isLoadingJobDetails}
+            onProviderChange={handleProviderChange}
+            onJobChange={handleJobChange}
+            onParameterChange={handleParameterChange}
           />
         ) : (
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">

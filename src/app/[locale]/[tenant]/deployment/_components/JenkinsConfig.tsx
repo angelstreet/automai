@@ -29,13 +29,27 @@ import CustomSwitch from './CustomSwitch';
 interface JenkinsConfigProps {
   enabled: boolean;
   config: {
+    providerId?: string;
+    jobId?: string;
     jenkinsUrl?: string;
     jobName?: string;
     credentials?: string;
     customParameters?: Record<string, string>;
+    parameters?: Record<string, any>;
   };
   onChange: (enabled: boolean, config: any) => void;
   className?: string;
+  
+  // Real data from hooks
+  providers?: any[];
+  jobs?: any[];
+  jobParameters?: any[];
+  isLoadingProviders?: boolean;
+  isLoadingJobs?: boolean;
+  isLoadingJobDetails?: boolean;
+  onProviderChange?: (providerId: string) => void;
+  onJobChange?: (jobId: string) => void;
+  onParameterChange?: (name: string, value: string) => void;
 }
 
 import { JENKINS_CREDENTIAL_OPTIONS, JENKINS_JOB_OPTIONS } from '../constants';
@@ -49,8 +63,18 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
   config,
   onChange,
   className,
+  providers = [],
+  jobs = [],
+  jobParameters = [],
+  isLoadingProviders = false,
+  isLoadingJobs = false,
+  isLoadingJobDetails = false,
+  onProviderChange,
+  onJobChange,
+  onParameterChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openProviders, setOpenProviders] = useState(false);
   const [openCredentials, setOpenCredentials] = useState(false);
   const [openJobs, setOpenJobs] = useState(false);
   
@@ -59,6 +83,16 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
     Object.entries(config.customParameters || {}).map(([key, value]) => ({ key, value }))
   );
   
+  // Use real providers or fallback to constants
+  const providerOptions = providers.length > 0 
+    ? providers.map(p => ({ value: p.id, label: p.name }))
+    : [{ value: 'jenkins-default', label: 'Default Jenkins Server' }];
+    
+  // Use real jobs or fallback to constants  
+  const jobOptions = jobs.length > 0
+    ? jobs.map(j => ({ value: j.id, label: j.name }))
+    : JENKINS_JOB_OPTIONS;
+  
   const handleEnableChange = (checked: boolean) => {
     onChange(checked, config);
   };
@@ -66,6 +100,33 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
   const handleConfigChange = (key: string, value: any) => {
     const newConfig = { ...config, [key]: value };
     onChange(enabled, newConfig);
+  };
+  
+  const handleProviderSelect = (providerId: string) => {
+    if (onProviderChange) {
+      onProviderChange(providerId);
+    } else {
+      handleConfigChange('providerId', providerId);
+    }
+    setOpenProviders(false);
+  };
+  
+  const handleJobSelect = (jobId: string) => {
+    if (onJobChange) {
+      onJobChange(jobId);
+    } else {
+      handleConfigChange('jobId', jobId);
+    }
+    setOpenJobs(false);
+  };
+  
+  const handleParameterValueChange = (name: string, value: string) => {
+    if (onParameterChange) {
+      onParameterChange(name, value);
+    } else {
+      const newParameters = { ...(config.parameters || {}), [name]: value };
+      handleConfigChange('parameters', newParameters);
+    }
   };
   
   const addCustomParam = () => {
@@ -137,111 +198,194 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
           </div>
           
           <CollapsibleContent className="mt-2 space-y-4">
-            {/* Jenkins URL */}
+            {/* Jenkins Provider Selection */}
+            <div className="space-y-2">
+              <Label>Jenkins Provider</Label>
+              {isLoadingProviders ? (
+                <div className="h-9 flex items-center justify-center border rounded-md bg-gray-50 dark:bg-gray-800">
+                  <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              ) : (
+                <Popover open={openProviders} onOpenChange={setOpenProviders}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openProviders}
+                      className="w-full justify-between"
+                    >
+                      {config.providerId ? 
+                        providerOptions.find((option) => option.value === config.providerId)?.label : 
+                        "Select Jenkins provider..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search providers..." />
+                      <CommandEmpty>No providers found.</CommandEmpty>
+                      <CommandGroup>
+                        {providerOptions.map((option) => (
+                          <CommandItem
+                            key={option.value}
+                            onSelect={() => handleProviderSelect(option.value)}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                config.providerId === option.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {option.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+              {providers.length === 0 && !isLoadingProviders && (
+                <p className="text-xs text-amber-500">
+                  No Jenkins providers found. Please configure a Jenkins provider in the CI/CD settings.
+                </p>
+              )}
+            </div>
+            
+            {/* Jenkins URL (read-only, comes from selected provider) */}
             <div className="space-y-2">
               <Label htmlFor="jenkins-url">Jenkins URL</Label>
               <Input
                 id="jenkins-url"
                 placeholder="https://jenkins.example.com"
                 value={config.jenkinsUrl || ''}
+                readOnly={!!config.providerId}
+                disabled={!!config.providerId}
                 onChange={(e) => handleConfigChange('jenkinsUrl', e.target.value)}
+                className={cn(config.providerId && "bg-gray-50 dark:bg-gray-800")}
               />
+              {config.providerId && (
+                <p className="text-xs text-gray-500">
+                  URL is automatically set from the selected provider.
+                </p>
+              )}
             </div>
             
-            {/* Jenkins Credentials */}
-            <div className="space-y-2">
-              <Label>Credentials</Label>
-              <Popover open={openCredentials} onOpenChange={setOpenCredentials}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openCredentials}
-                    className="w-full justify-between"
-                  >
-                    {config.credentials ? 
-                      credentialOptions.find((option) => option.value === config.credentials)?.label : 
-                      "Select credentials..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput placeholder="Search credentials..." />
-                    <CommandEmpty>No credentials found.</CommandEmpty>
-                    <CommandGroup>
-                      {credentialOptions.map((option) => (
-                        <CommandItem
-                          key={option.value}
-                          onSelect={() => {
-                            handleConfigChange('credentials', option.value);
-                            setOpenCredentials(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              config.credentials === option.value ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {option.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            {/* Jenkins Job */}
+            {/* Jenkins Job Selection */}
             <div className="space-y-2">
               <Label>Jenkins Job</Label>
-              <Popover open={openJobs} onOpenChange={setOpenJobs}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openJobs}
-                    className="w-full justify-between"
-                  >
-                    {config.jobName ? 
-                      jobOptions.find((option) => option.value === config.jobName)?.label : 
-                      "Select job..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput placeholder="Search jobs..." />
-                    <CommandEmpty>No jobs found.</CommandEmpty>
-                    <CommandGroup>
-                      {jobOptions.map((option) => (
-                        <CommandItem
-                          key={option.value}
-                          onSelect={() => {
-                            handleConfigChange('jobName', option.value);
-                            setOpenJobs(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              config.jobName === option.value ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {option.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              {!config.providerId ? (
+                <p className="text-xs text-amber-500 mb-2">
+                  Please select a Jenkins provider first.
+                </p>
+              ) : isLoadingJobs ? (
+                <div className="h-9 flex items-center justify-center border rounded-md bg-gray-50 dark:bg-gray-800">
+                  <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+              ) : (
+                <Popover open={openJobs} onOpenChange={setOpenJobs}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={openJobs}
+                      className="w-full justify-between"
+                      disabled={!config.providerId || isLoadingJobs}
+                    >
+                      {config.jobId ? 
+                        jobOptions.find((option) => option.value === config.jobId)?.label : 
+                        "Select job..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search jobs..." />
+                      <CommandEmpty>No jobs found.</CommandEmpty>
+                      <CommandGroup>
+                        {jobOptions.map((option) => (
+                          <CommandItem
+                            key={option.value}
+                            onSelect={() => handleJobSelect(option.value)}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                config.jobId === option.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {option.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+              {jobs.length === 0 && config.providerId && !isLoadingJobs && (
+                <p className="text-xs text-amber-500">
+                  No jobs found in this Jenkins provider. Please make sure jobs are configured.
+                </p>
+              )}
             </div>
+            
+            {/* Job Parameters */}
+            {config.jobId && jobParameters && jobParameters.length > 0 && (
+              <div className="space-y-2 border rounded-md p-3 bg-gray-50 dark:bg-gray-800">
+                <h4 className="font-medium text-sm">Job Parameters</h4>
+                {isLoadingJobDetails ? (
+                  <div className="h-9 flex items-center justify-center">
+                    <svg className="animate-spin h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {jobParameters.map((param) => (
+                      <div key={param.name} className="space-y-1">
+                        <Label htmlFor={`param-${param.name}`} className="flex items-center gap-1">
+                          {param.name}
+                          {param.required && <span className="text-red-500">*</span>}
+                        </Label>
+                        {param.choices ? (
+                          <select 
+                            id={`param-${param.name}`}
+                            value={(config.parameters && config.parameters[param.name]) || param.default || ''}
+                            onChange={(e) => handleParameterValueChange(param.name, e.target.value)}
+                            className="w-full rounded-md border border-gray-300 dark:border-gray-600 p-2 text-sm bg-white dark:bg-gray-800"
+                          >
+                            {param.choices.map((choice) => (
+                              <option key={choice} value={choice}>{choice}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            id={`param-${param.name}`}
+                            placeholder={param.description || `Enter ${param.name}...`}
+                            value={(config.parameters && config.parameters[param.name]) || param.default || ''}
+                            onChange={(e) => handleParameterValueChange(param.name, e.target.value)}
+                          />
+                        )}
+                        {param.description && (
+                          <p className="text-xs text-gray-500">{param.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             
             {/* Custom Parameters */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Custom Parameters</Label>
+                <Label>Additional Parameters</Label>
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -289,6 +433,7 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
                 id="jenkins-file"
                 placeholder="pipeline { ... }"
                 className="font-mono text-xs h-32"
+                value={config.jenkinsFile || ''}
                 onChange={(e) => handleConfigChange('jenkinsFile', e.target.value)}
               />
               <p className="text-xs text-gray-500">

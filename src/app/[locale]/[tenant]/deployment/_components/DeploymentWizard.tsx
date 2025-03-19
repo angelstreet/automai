@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { DeploymentData, DeploymentFormData, ScriptParameter, Repository, Host as HostType } from '../types';
-import { useRepositories } from '../../repositories/hooks';
+import { useRepositories, useRepositoryScripts } from '../../repositories/hooks';
 import { useHosts } from '../../hosts/hooks';
-import { useCreateDeployment, useRepositoryScripts, useAvailableHosts } from '../hooks';
+import { useCreateDeployment } from '../hooks';
 import { Host as SystemHost } from '../../hosts/types';
 import DeploymentWizardStep1 from './DeploymentWizardStep1';
 import DeploymentWizardStep2 from './DeploymentWizardStep2';
@@ -64,32 +64,22 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     error: repositoryError 
   } = useRepositories();
   
-  // Use our new local storage caching hook for repository scripts
+  // Use the repository scripts hook
   const {
     scripts: repositoryScripts,
     isLoading: isLoadingScripts,
-    error: scriptsError,
-    isRefreshing: isRefreshingScripts
-  } = useRepositoryScripts(deploymentData.repositoryId || undefined);
+    error: scriptsError
+  } = useRepositoryScripts(deploymentData.repositoryId || undefined, deploymentData.selectedRepository);
 
-  // First check system hosts for permissions, then fetch available hosts with caching
+  // Use the hosts hook
   const { 
     hosts: systemHosts, 
-    loading: isLoadingSystemHosts 
+    loading: isLoadingHosts, 
+    error: hostsError 
   } = useHosts();
   
-  // Use our new cached available hosts hook
-  const {
-    hosts: cachedHosts,
-    isLoading: isLoadingHosts,
-    error: hostsError,
-    isRefreshing: isRefreshingHosts
-  } = useAvailableHosts();
-  
-  // Combine the approaches - use system hosts for permissions checking and cached hosts for display
-  const availableHosts = systemHosts.length > 0 
-    ? adaptHostsForDeployment(systemHosts)
-    : cachedHosts;
+  // Adapt hosts for deployment
+  const availableHosts = adaptHostsForDeployment(systemHosts);
 
   // Add debug logging for the scripts
   useEffect(() => {
@@ -296,6 +286,21 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     console.log('Deployment data submitted:', deploymentData);
     
     try {
+      // Create scriptMapping from repositoryScripts array
+      const scriptMapping: Record<string, {path: string; name: string; type: string}> = {};
+      
+      // Populate scriptMapping for each selected script
+      deploymentData.scriptIds.forEach(scriptId => {
+        const script = repositoryScripts.find(s => s.id === scriptId);
+        if (script) {
+          scriptMapping[scriptId] = {
+            path: script.path,
+            name: script.name,
+            type: script.type || 'shell' // Default to shell if type is not specified
+          };
+        }
+      });
+      
       // Map DeploymentData to DeploymentFormData format expected by the server action
       const formData: DeploymentFormData = {
         name: deploymentData.name,
@@ -310,7 +315,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         environmentVars: deploymentData.environmentVars,
         parameters: deploymentData.scriptParameters,
         notifications: deploymentData.notifications,
-        jenkinsConfig: deploymentData.jenkinsConfig
+        jenkinsConfig: deploymentData.jenkinsConfig,
+        scriptMapping: scriptMapping // Add the script mapping data
       };
       
       console.log('Calling createDeployment with formData:', formData);

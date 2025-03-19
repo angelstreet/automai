@@ -1,10 +1,10 @@
 'use server';
 
 import { Deployment, DeploymentFormData } from './types';
-import { SAMPLE_DEPLOYMENTS } from './constants';
 import { deployment, cicd } from '@/lib/supabase/db-deployment';
 import { getCICDProvider } from '@/lib/services/cicd';
-import { getSession } from '@/lib/supabase/auth';
+// Import getUser which should be trusted over getSession in server components
+import { getUser } from '@/lib/supabase/auth';
 import { z } from 'zod';
 
 /**
@@ -27,7 +27,7 @@ export async function getDeployments(): Promise<Deployment[]> {
       return [];
     }
     
-    // Try to get from database first
+    // Get deployments from database
     const dbDeployments = await deployment.findMany({
       where: { tenant_id: tenantId },
       orderBy: { created_at: 'desc' }
@@ -35,54 +35,47 @@ export async function getDeployments(): Promise<Deployment[]> {
     
     console.log('Deployments from DB:', dbDeployments.length, 'deployments found');
     
-    if (dbDeployments.length > 0) {
-      // Convert to the expected format
-      return dbDeployments.map(dbDep => {
-        return {
-          id: dbDep.id,
-          name: dbDep.name,
-          description: dbDep.description || '',
+    // Convert to the expected format
+    return dbDeployments.map(dbDep => {
+      return {
+        id: dbDep.id,
+        name: dbDep.name,
+        description: dbDep.description || '',
+        repositoryId: dbDep.repository_id,
+        status: dbDep.status as DeploymentStatus,
+        createdBy: dbDep.user_id,
+        createdAt: dbDep.created_at,
+        scheduledFor: dbDep.scheduled_time,
+        startedAt: dbDep.started_at,
+        completedAt: dbDep.completed_at,
+        scripts: dbDep.scripts.map((scriptId: string) => ({
+          id: scriptId,
           repositoryId: dbDep.repository_id,
-          status: dbDep.status as DeploymentStatus,
-          createdBy: dbDep.user_id,
-          createdAt: dbDep.created_at,
-          scheduledFor: dbDep.scheduled_time,
-          startedAt: dbDep.started_at,
-          completedAt: dbDep.completed_at,
-          scripts: dbDep.scripts.map((scriptId: string) => ({
-            id: scriptId,
-            repositoryId: dbDep.repository_id,
-            name: 'Script', // Would need to fetch actual script details
-            path: scriptId,
-            status: 'pending'
-          })),
-          hosts: dbDep.hosts.map((hostId: string) => ({
-            id: hostId,
-            name: 'Host', // Would need to fetch actual host details
-            environment: 'Unknown',
-            status: 'pending'
-          })),
-          configuration: {
-            schedule: dbDep.schedule_type === 'now' ? 'immediate' : 'scheduled',
-            scheduledTime: dbDep.scheduled_time,
-            environmentVariables: {},
-            notifications: {
-              email: false,
-              slack: false
-            },
-            runnerType: 'direct'
-          }
-        };
-      });
-    }
-    
-    // Fallback to sample data if no deployments found
-    console.log('No deployments found in DB, using sample data');
-    return [...SAMPLE_DEPLOYMENTS];
+          name: 'Script', // Would need to fetch actual script details
+          path: scriptId,
+          status: 'pending'
+        })),
+        hosts: dbDep.hosts.map((hostId: string) => ({
+          id: hostId,
+          name: 'Host', // Would need to fetch actual host details
+          environment: 'Unknown',
+          status: 'pending'
+        })),
+        configuration: {
+          schedule: dbDep.schedule_type === 'now' ? 'immediate' : 'scheduled',
+          scheduledTime: dbDep.scheduled_time,
+          environmentVariables: {},
+          notifications: {
+            email: false,
+            slack: false
+          },
+          runnerType: 'direct'
+        }
+      };
+    });
   } catch (error) {
     console.error('Error fetching deployments:', error);
-    // Fallback to sample data on error
-    return [...SAMPLE_DEPLOYMENTS];
+    return [];
   }
 }
 
@@ -90,58 +83,203 @@ export async function getDeployments(): Promise<Deployment[]> {
  * Get deployment by ID
  */
 export async function getDeploymentById(id: string): Promise<Deployment | null> {
-  // In a real app, you would fetch a specific deployment from your API
-  
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  const deployment = SAMPLE_DEPLOYMENTS.find(d => d.id === id);
-  return deployment ? { ...deployment } : null;
-}
-
-/**
- * Create a new deployment with optional CI/CD integration
- */
-export async function createDeployment(formData: DeploymentFormData): Promise<{ success: boolean; deploymentId?: string; error?: string }> {
-  console.log('Creating deployment with data:', JSON.stringify(formData, null, 2));
+  console.log('Fetching deployment by ID:', id);
   
   try {
     // Get session for authentication and tenant isolation
     const session = await getSession();
     if (!session?.user) {
       console.error('Authentication error: No session or user');
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
-      };
+      return null;
     }
 
     const tenantId = session.user.tenantId || '';
     if (!tenantId) {
       console.error('Authentication error: No tenant ID');
+      return null;
+    }
+    
+    // Get deployment from database
+    const dbDeployment = await deployment.findUnique({
+      where: { id, tenant_id: tenantId }
+    });
+    
+    if (!dbDeployment) {
+      console.log('Deployment not found:', id);
+      return null;
+    }
+    
+    console.log('Deployment found:', dbDeployment.id);
+    
+    // Convert to the expected format
+    return {
+      id: dbDeployment.id,
+      name: dbDeployment.name,
+      description: dbDeployment.description || '',
+      repositoryId: dbDeployment.repository_id,
+      status: dbDeployment.status as DeploymentStatus,
+      createdBy: dbDeployment.user_id,
+      createdAt: dbDeployment.created_at,
+      scheduledFor: dbDeployment.scheduled_time,
+      startedAt: dbDeployment.started_at,
+      completedAt: dbDeployment.completed_at,
+      scripts: dbDeployment.scripts.map((scriptId: string) => ({
+        id: scriptId,
+        repositoryId: dbDeployment.repository_id,
+        name: 'Script', // Would need to fetch actual script details
+        path: scriptId,
+        status: 'pending'
+      })),
+      hosts: dbDeployment.hosts.map((hostId: string) => ({
+        id: hostId,
+        name: 'Host', // Would need to fetch actual host details
+        environment: 'Unknown',
+        status: 'pending'
+      })),
+      configuration: {
+        schedule: dbDeployment.schedule_type === 'now' ? 'immediate' : 'scheduled',
+        scheduledTime: dbDeployment.scheduled_time,
+        environmentVariables: {},
+        notifications: {
+          email: false,
+          slack: false
+        },
+        runnerType: 'direct'
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching deployment by ID:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a new deployment with optional CI/CD integration
+ */
+export async function createDeployment(formData: DeploymentFormData): Promise<{ success: boolean; deploymentId?: string; error?: string }> {
+  console.log('[ACTION:DEPLOYMENT] ====== START: Create Deployment ======');
+  console.log('[ACTION:DEPLOYMENT] Form data received:', JSON.stringify(formData, null, 2));
+  
+  try {
+    console.log('[ACTION:DEPLOYMENT] Getting authenticated user...');
+    // Use getUser() instead of getSession() per best practices for server components
+    let user;
+    try {
+      // getUser() is the recommended method for server components per docs
+      const userResult = await getUser();
+      
+      console.log('[ACTION:DEPLOYMENT] User result:', JSON.stringify({
+        success: userResult.success,
+        hasUser: !!userResult.data,
+        userId: userResult.data?.id || 'none',
+        email: userResult.data?.email || 'none',
+        tenantId: userResult.data?.tenantId || 'none',
+        error: userResult.error || 'none'
+      }));
+      
+      if (!userResult.success) {
+        console.error('[ACTION:DEPLOYMENT] Authentication error:', userResult.error);
+        return { 
+          success: false, 
+          error: 'Unauthorized - ' + (userResult.error || 'Authentication failed')
+        };
+      }
+      
+      if (!userResult.data) {
+        console.error('[ACTION:DEPLOYMENT] Authentication error: No user data returned');
+        return { 
+          success: false, 
+          error: 'Unauthorized - No user found' 
+        };
+      }
+      
+      user = userResult.data;
+    } catch (authError) {
+      console.error('[ACTION:DEPLOYMENT] Exception during getUser():', authError);
+      console.error('[ACTION:DEPLOYMENT] Auth error stack:', authError.stack);
+      return { 
+        success: false, 
+        error: 'Authentication error: ' + authError.message 
+      };
+    }
+
+    const tenantId = user.tenantId || '';
+    if (!tenantId) {
+      console.error('[ACTION:DEPLOYMENT] Authentication error: No tenant ID in user data');
+      console.log('[ACTION:DEPLOYMENT] User data:', JSON.stringify({
+        user_id: user.id,
+        email: user.email,
+        has_tenant: !!user.tenantId
+      }));
       return {
         success: false,
         error: 'Tenant ID is required'
       };
     }
     
-    console.log('Creating deployment for tenant:', tenantId, 'user:', session.user.id);
+    console.log(`[ACTION:DEPLOYMENT] Creating deployment for tenant: ${tenantId}, user: ${user.id}`);
     
     // Validate required fields
-    if (!formData.name || !formData.repository || formData.selectedScripts.length === 0 || formData.selectedHosts.length === 0) {
-      console.error('Validation error: Missing required fields');
+    const validationErrors = [];
+    if (!formData.name) validationErrors.push('name');
+    if (!formData.repository) validationErrors.push('repository');
+    if (!formData.selectedScripts || formData.selectedScripts.length === 0) validationErrors.push('selectedScripts');
+    if (!formData.selectedHosts || formData.selectedHosts.length === 0) validationErrors.push('selectedHosts');
+    
+    if (validationErrors.length > 0) {
+      console.error(`[ACTION:DEPLOYMENT] Validation error: Missing required fields: ${validationErrors.join(', ')}`);
       return { 
         success: false, 
-        error: 'Missing required fields' 
+        error: `Missing required fields: ${validationErrors.join(', ')}` 
       };
     }
+    
+    // Log script information for debugging
+    console.log('[ACTION:DEPLOYMENT] Selected scripts:', JSON.stringify(formData.selectedScripts));
+    
+    // If we have scripts, we need to resolve them to actual script paths
+    if (formData.selectedScripts && formData.selectedScripts.length > 0) {
+      console.log('[ACTION:DEPLOYMENT] Script mapping information:');
+      
+      // Log any script info we can access
+      if (formData.scriptMapping) {
+        console.log('[ACTION:DEPLOYMENT] Script ID to path mapping:', JSON.stringify(formData.scriptMapping));
+      } else {
+        console.log('[ACTION:DEPLOYMENT] No script mapping provided in formData');
+      }
+      
+      // If Jenkins is enabled, log how scripts relate to Jenkins parameters
+      if (formData.jenkinsConfig?.enabled) {
+        console.log('[ACTION:DEPLOYMENT] Jenkins parameters:', JSON.stringify(formData.jenkinsConfig.parameters || {}));
+        console.log('[ACTION:DEPLOYMENT] Need to verify how scripts map to Jenkins parameters');
+      }
+    }
+    
+    console.log('[ACTION:DEPLOYMENT] All required fields present, preparing deployment data');
+    
+    // Transform the scripts array to include path information from the scriptMapping
+    const scripts = formData.selectedScripts.map(scriptId => {
+      // If we have mapping info, use it, otherwise just use the script ID
+      if (formData.scriptMapping && formData.scriptMapping[scriptId]) {
+        const scriptInfo = formData.scriptMapping[scriptId];
+        return {
+          id: scriptId,
+          path: scriptInfo.path,
+          name: scriptInfo.name,
+          type: scriptInfo.type
+        };
+      }
+      return scriptId;
+    });
+    
+    console.log('[ACTION:DEPLOYMENT] Transformed scripts data:', JSON.stringify(scripts));
     
     // Create the deployment record
     const deploymentData = {
       name: formData.name,
       description: formData.description || '',
       repository_id: formData.repository,
-      scripts: formData.selectedScripts,
+      scripts: scripts, // Use the transformed scripts with path info
       hosts: formData.selectedHosts,
       schedule_type: formData.schedule || 'now',
       scheduled_time: formData.scheduledTime || null,
@@ -150,135 +288,253 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{ 
       parameters: formData.parameters || {},
       environment_vars: formData.environmentVars || {},
       tenant_id: tenantId,
-      user_id: session.user.id,
+      user_id: user.id,
       status: 'pending'
     };
     
-    console.log('Deployment data prepared:', JSON.stringify(deploymentData, null, 2));
+    console.log('[ACTION:DEPLOYMENT] Deployment data prepared:', JSON.stringify(deploymentData, null, 2));
     
     // Create deployment in the database
-    console.log('Creating deployment record in database...');
-    const deploymentResult = await deployment.create({ data: deploymentData });
+    console.log('[ACTION:DEPLOYMENT] Creating deployment record in database...');
     
-    if (!deploymentResult) {
-      console.error('Failed to create deployment record');
+    try {
+      const deploymentResult = await deployment.create({ data: deploymentData });
+      
+      if (!deploymentResult) {
+        console.error('[ACTION:DEPLOYMENT] Failed to create deployment record - null result returned');
+        return {
+          success: false,
+          error: 'Failed to create deployment record'
+        };
+      }
+      
+      console.log(`[ACTION:DEPLOYMENT] Deployment created successfully with ID: ${deploymentResult.id}`);
+      console.log('[ACTION:DEPLOYMENT] Deployment record:', JSON.stringify(deploymentResult, null, 2));
+      
+      // Check if CI/CD integration is enabled
+      if (formData.jenkinsConfig?.enabled && formData.jenkinsConfig?.providerId && formData.jenkinsConfig?.jobId) {
+        console.log('[ACTION:DEPLOYMENT] Jenkins integration enabled with:');
+        console.log(`[ACTION:DEPLOYMENT] - Provider ID: ${formData.jenkinsConfig.providerId}`);
+        console.log(`[ACTION:DEPLOYMENT] - Job ID: ${formData.jenkinsConfig.jobId}`);
+        
+        // Store the jenkins parameters at this scope so they're available throughout
+        let jenkinsParams = formData.jenkinsConfig.parameters || {};
+        
+        // If we have scripts with path info, add them to Jenkins parameters
+        if (scripts && scripts.length > 0 && typeof scripts[0] === 'object') {
+          // Create a special SCRIPTS parameter with the array of script data
+          jenkinsParams = {
+            ...jenkinsParams,
+            SCRIPTS: JSON.stringify(scripts),
+            DEPLOYMENT_ID: deploymentResult.id,
+            REPOSITORY_ID: formData.repository
+          };
+          console.log('[ACTION:DEPLOYMENT] Enhanced Jenkins parameters with script info');
+        }
+        
+        console.log(`[ACTION:DEPLOYMENT] - Parameters: ${JSON.stringify(jenkinsParams)}`);
+        
+        // Define a variable scoped to the entire function for these parameters
+        const finalJenkinsParams = jenkinsParams;
+        
+        // Create CI/CD mapping
+        console.log('[ACTION:DEPLOYMENT] Creating CI/CD mapping...');
+        
+        try {
+          const mappingResult = await cicd.createDeploymentCICDMapping({
+            deployment_id: deploymentResult.id,
+            provider_id: formData.jenkinsConfig.providerId,
+            job_id: formData.jenkinsConfig.jobId,
+            tenant_id: tenantId,
+            parameters: finalJenkinsParams || {}
+          });
+          
+          if (!mappingResult.success) {
+            console.error(`[ACTION:DEPLOYMENT] Failed to create CI/CD mapping: ${mappingResult.error}`);
+            
+            // Update deployment with error
+            console.log('[ACTION:DEPLOYMENT] Updating deployment with error status...');
+            try {
+              await deployment.update({
+                where: { id: deploymentResult.id },
+                data: { status: 'error', error_message: 'Failed to create CI/CD mapping' }
+              });
+              console.log('[ACTION:DEPLOYMENT] Deployment updated with error status');
+            } catch (updateError) {
+              console.error('[ACTION:DEPLOYMENT] Failed to update deployment with error status:', updateError);
+            }
+            
+            return {
+              success: false,
+              error: 'Failed to create CI/CD integration: ' + mappingResult.error,
+              deploymentId: deploymentResult.id
+            };
+          }
+          
+          console.log(`[ACTION:DEPLOYMENT] CI/CD mapping created successfully with ID: ${mappingResult.data.id}`);
+          
+          // Try to trigger the CI/CD job
+          // Get provider from database
+          console.log(`[ACTION:DEPLOYMENT] Getting CI/CD provider with ID: ${formData.jenkinsConfig.providerId}`);
+          const providerResult = await getCICDProvider(formData.jenkinsConfig.providerId, tenantId);
+          
+          if (!providerResult.success || !providerResult.data) {
+            console.error(`[ACTION:DEPLOYMENT] Failed to get CI/CD provider: ${providerResult.error || 'No provider data returned'}`);
+            console.log('[ACTION:DEPLOYMENT] Provider result:', JSON.stringify(providerResult));
+            
+            try {
+              await deployment.update({
+                where: { id: deploymentResult.id },
+                data: { status: 'error', error_message: 'Failed to get CI/CD provider' }
+              });
+              console.log('[ACTION:DEPLOYMENT] Deployment updated with error status');
+            } catch (updateError) {
+              console.error('[ACTION:DEPLOYMENT] Failed to update deployment with error status:', updateError);
+            }
+            
+            return {
+              success: false,
+              error: 'Failed to get CI/CD provider: ' + (providerResult.error || 'Unknown error'),
+              deploymentId: deploymentResult.id
+            };
+          }
+          
+          // Trigger the job
+          console.log(`[ACTION:DEPLOYMENT] CI/CD provider found, triggering job: ${formData.jenkinsConfig.jobId}`);
+          console.log('[ACTION:DEPLOYMENT] Provider type:', providerResult.data.type);
+          
+          const provider = providerResult.data;
+          
+          // Check if the provider is a valid instance with triggerJob method
+          if (!provider || typeof provider.triggerJob !== 'function') {
+            console.error('[ACTION:DEPLOYMENT] Invalid provider instance:', provider);
+            
+            try {
+              await deployment.update({
+                where: { id: deploymentResult.id },
+                data: { status: 'error', error_message: 'Invalid CI/CD provider instance' }
+              });
+            } catch (updateError) {
+              console.error('[ACTION:DEPLOYMENT] Failed to update deployment with error status:', updateError);
+            }
+            
+            return {
+              success: false,
+              error: 'Invalid CI/CD provider instance',
+              deploymentId: deploymentResult.id
+            };
+          }
+          
+          console.log('[ACTION:DEPLOYMENT] Calling provider.triggerJob...');
+          const triggerResult = await provider.triggerJob(
+            formData.jenkinsConfig.jobId,
+            finalJenkinsParams || {}
+          );
+          
+          console.log('[ACTION:DEPLOYMENT] Trigger result:', JSON.stringify(triggerResult));
+          
+          if (!triggerResult.success) {
+            console.error(`[ACTION:DEPLOYMENT] Failed to trigger CI/CD job: ${triggerResult.error}`);
+            
+            // Update deployment with error
+            console.log('[ACTION:DEPLOYMENT] Updating deployment and mapping with error status...');
+            try {
+              await deployment.update({
+                where: { id: deploymentResult.id },
+                data: { status: 'error', error_message: 'Failed to trigger CI/CD job: ' + triggerResult.error }
+              });
+              
+              // Update mapping with error
+              await cicd.updateDeploymentCICDMapping(
+                { id: mappingResult.data.id, tenant_id: tenantId },
+                { status: 'error', error_message: triggerResult.error }
+              );
+              
+              console.log('[ACTION:DEPLOYMENT] Deployment and mapping updated with error status');
+            } catch (updateError) {
+              console.error('[ACTION:DEPLOYMENT] Failed to update status with error:', updateError);
+            }
+            
+            return {
+              success: false,
+              error: 'Failed to trigger CI/CD job: ' + triggerResult.error,
+              deploymentId: deploymentResult.id
+            };
+          }
+          
+          console.log(`[ACTION:DEPLOYMENT] CI/CD job triggered successfully with build ID: ${triggerResult.data.id}`);
+          console.log(`[ACTION:DEPLOYMENT] Build URL: ${triggerResult.data.url}`);
+          
+          // Update mapping with build ID and URL
+          console.log('[ACTION:DEPLOYMENT] Updating mapping with build information...');
+          try {
+            await cicd.updateDeploymentCICDMapping(
+              { id: mappingResult.data.id, tenant_id: tenantId },
+              {
+                status: 'running',
+                build_id: triggerResult.data.id,
+                build_url: triggerResult.data.url
+              }
+            );
+            console.log('[ACTION:DEPLOYMENT] Mapping updated successfully');
+          } catch (updateError) {
+            console.error('[ACTION:DEPLOYMENT] Failed to update mapping with build information:', updateError);
+          }
+          
+          // Update deployment status
+          console.log('[ACTION:DEPLOYMENT] Updating deployment status to in_progress...');
+          try {
+            await deployment.update({
+              where: { id: deploymentResult.id },
+              data: { status: 'in_progress' }
+            });
+            console.log('[ACTION:DEPLOYMENT] Deployment status updated to in_progress');
+          } catch (updateError) {
+            console.error('[ACTION:DEPLOYMENT] Failed to update deployment status:', updateError);
+          }
+        } catch (mappingError) {
+          console.error('[ACTION:DEPLOYMENT] Exception in Jenkins integration flow:', mappingError);
+          console.error('[ACTION:DEPLOYMENT] Stack trace:', mappingError.stack);
+          
+          // Try to update deployment with error
+          try {
+            await deployment.update({
+              where: { id: deploymentResult.id },
+              data: { status: 'error', error_message: 'Exception in CI/CD integration: ' + mappingError.message }
+            });
+          } catch (updateError) {
+            console.error('[ACTION:DEPLOYMENT] Failed to update deployment with error status:', updateError);
+          }
+          
+          return {
+            success: false,
+            error: 'Exception in CI/CD integration: ' + mappingError.message,
+            deploymentId: deploymentResult.id
+          };
+        }
+      } else {
+        console.log('[ACTION:DEPLOYMENT] Jenkins integration not enabled or missing configuration');
+      }
+      
+      console.log(`[ACTION:DEPLOYMENT] Deployment creation completed successfully: ${deploymentResult.id}`);
+      console.log('[ACTION:DEPLOYMENT] ====== END: Create Deployment ======');
+      
+      return { 
+        success: true,
+        deploymentId: deploymentResult.id
+      };
+    } catch (dbError) {
+      console.error('[ACTION:DEPLOYMENT] Database error creating deployment:', dbError);
+      console.error('[ACTION:DEPLOYMENT] Stack trace:', dbError.stack);
       return {
         success: false,
-        error: 'Failed to create deployment record'
+        error: 'Database error: ' + dbError.message
       };
     }
-    
-    console.log('Deployment created successfully:', deploymentResult.id);
-    
-    // Check if CI/CD integration is enabled
-    if (formData.jenkinsConfig?.enabled && formData.jenkinsConfig?.providerId && formData.jenkinsConfig?.jobId) {
-      console.log('Jenkins integration enabled, creating mapping...');
-      
-      // Create CI/CD mapping
-      const mappingResult = await cicd.createDeploymentCICDMapping({
-        deployment_id: deploymentResult.id,
-        provider_id: formData.jenkinsConfig.providerId,
-        job_id: formData.jenkinsConfig.jobId,
-        tenant_id: tenantId,
-        parameters: formData.jenkinsConfig.parameters || {}
-      });
-      
-      if (!mappingResult.success) {
-        console.error('Failed to create CI/CD mapping:', mappingResult.error);
-        
-        // Update deployment with error
-        await deployment.update({
-          where: { id: deploymentResult.id },
-          data: { status: 'error', error_message: 'Failed to create CI/CD mapping' }
-        });
-        
-        return {
-          success: false,
-          error: 'Failed to create CI/CD integration: ' + mappingResult.error,
-          deploymentId: deploymentResult.id
-        };
-      }
-      
-      console.log('CI/CD mapping created successfully:', mappingResult.data.id);
-      
-      // Try to trigger the CI/CD job
-      // Get provider from database
-      console.log('Getting CI/CD provider:', formData.jenkinsConfig.providerId);
-      const providerResult = await getCICDProvider(formData.jenkinsConfig.providerId, tenantId);
-      
-      if (!providerResult.success || !providerResult.data) {
-        console.error('Failed to get CI/CD provider:', providerResult.error);
-        
-        await deployment.update({
-          where: { id: deploymentResult.id },
-          data: { status: 'error', error_message: 'Failed to get CI/CD provider' }
-        });
-        
-        return {
-          success: false,
-          error: 'Failed to get CI/CD provider: ' + (providerResult.error || 'Unknown error'),
-          deploymentId: deploymentResult.id
-        };
-      }
-      
-      // Trigger the job
-      console.log('Triggering CI/CD job:', formData.jenkinsConfig.jobId);
-      const provider = providerResult.data;
-      const triggerResult = await provider.triggerJob(
-        formData.jenkinsConfig.jobId,
-        formData.jenkinsConfig.parameters || {}
-      );
-      
-      if (!triggerResult.success) {
-        console.error('Failed to trigger CI/CD job:', triggerResult.error);
-        
-        // Update deployment with error
-        await deployment.update({
-          where: { id: deploymentResult.id },
-          data: { status: 'error', error_message: 'Failed to trigger CI/CD job' }
-        });
-        
-        // Update mapping with error
-        await cicd.updateDeploymentCICDMapping(
-          { id: mappingResult.data.id, tenant_id: tenantId },
-          { status: 'error' }
-        );
-        
-        return {
-          success: false,
-          error: 'Failed to trigger CI/CD job: ' + triggerResult.error,
-          deploymentId: deploymentResult.id
-        };
-      }
-      
-      console.log('CI/CD job triggered successfully:', triggerResult.data.id);
-      
-      // Update mapping with build ID and URL
-      await cicd.updateDeploymentCICDMapping(
-        { id: mappingResult.data.id, tenant_id: tenantId },
-        {
-          status: 'running',
-          build_id: triggerResult.data.id,
-          build_url: triggerResult.data.url
-        }
-      );
-      
-      // Update deployment status
-      await deployment.update({
-        where: { id: deploymentResult.id },
-        data: { status: 'in_progress' }
-      });
-      
-      console.log('Deployment status updated to in_progress');
-    }
-    
-    console.log('Deployment creation completed:', deploymentResult.id);
-    return { 
-      success: true,
-      deploymentId: deploymentResult.id
-    };
   } catch (error: any) {
-    console.error('Error creating deployment:', error);
+    console.error('[ACTION:DEPLOYMENT] Unhandled exception in createDeployment:', error);
+    console.error('[ACTION:DEPLOYMENT] Stack trace:', error.stack);
+    console.log('[ACTION:DEPLOYMENT] ====== END: Create Deployment (ERROR) ======');
     return { 
       success: false, 
       error: error.message || 'Failed to create deployment' 

@@ -49,6 +49,17 @@ export const supabaseAuth = {
         return { success: false, error: 'No role found in profiles table' };
       }
 
+      // Check if tenant information is properly set
+      if (!profile?.tenant_id) {
+        console.error('Missing tenant_id in user profile');
+        return { success: false, error: 'Missing tenant_id in user profile' };
+      }
+      
+      if (!profile?.tenant_name) {
+        console.error('Missing tenant_name in user profile');
+        return { success: false, error: 'Missing tenant_name in user profile' };
+      }
+
       return {
         success: true,
         data: {
@@ -58,8 +69,8 @@ export const supabaseAuth = {
             name,
             image: profile?.avatar_url || metadata.avatar_url || null,
             role,
-            tenant_id: profile?.tenant_id || metadata.tenant_id || 'unknown',
-            tenant_name: profile?.tenant_name || metadata.tenant_name || 'trial',
+            tenant_id: profile.tenant_id,
+            tenant_name: profile.tenant_name,
             user_metadata: metadata,
           },
           accessToken: access_token,
@@ -93,6 +104,8 @@ export const supabaseAuth = {
         };
       }
 
+      console.log(`Fetching profile for user ${authUser.id}`);
+      
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select(
@@ -106,12 +119,27 @@ export const supabaseAuth = {
         .eq('id', authUser.id)
         .single();
 
+      console.log('Profile query result:', { 
+        success: !profileError, 
+        profileData: profile, 
+        error: profileError?.message || null 
+      });
+      
       if (profileError) {
+        console.error(`Failed to fetch profile for user ${authUser.id}:`, profileError);
         return {
           success: false,
           error: profileError.message,
         };
       }
+      
+      // Detailed logging of tenant information
+      console.log(`User ${authUser.id} tenant info:`, {
+        profileTenantId: profile.tenant_id,
+        profileTenantName: profile.tenant_name,
+        metadataTenantId: authUser.user_metadata?.tenant_id,
+        metadataTenantName: authUser.user_metadata?.tenant_name
+      });
 
       // Get name from user metadata with fallbacks
       const name =
@@ -129,6 +157,32 @@ export const supabaseAuth = {
         return { success: false, error: 'No role found in profiles table' };
       }
 
+      // Check if tenant_id and tenant_name are properly set
+      if (!profile.tenant_id) {
+        console.error('Missing tenant_id in user profile - checking DB records');
+        
+        // Debug query to check if profile record exists properly
+        const { data: profileCheck, error: checkError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', authUser.id);
+          
+        console.log('Profile record check:', {
+          userId: authUser.id,
+          found: !!profileCheck?.length,
+          recordCount: profileCheck?.length || 0,
+          fullRecord: profileCheck && profileCheck[0] ? profileCheck[0] : null,
+          error: checkError ? checkError.message : null
+        });
+        
+        return { success: false, error: 'Missing tenant_id in user profile' };
+      }
+      
+      if (!profile.tenant_name) {
+        console.error('Missing tenant_name in user profile');
+        return { success: false, error: 'Missing tenant_name in user profile' };
+      }
+
       return {
         success: true,
         data: {
@@ -136,8 +190,8 @@ export const supabaseAuth = {
           email: authUser.email || '',
           name,
           role,
-          tenant_id: profile.tenant_id || 'default',
-          tenant_name: profile.tenant_name || 'trial',
+          tenant_id: profile.tenant_id,
+          tenant_name: profile.tenant_name,
           avatar_url:
             authUser.user_metadata?.avatar_url || profile.avatar_url || '/avatars/default.svg',
           user_metadata: authUser.user_metadata,
@@ -307,12 +361,30 @@ export const supabaseAuth = {
       return { success: false, error: 'Supabase auth not available' };
     }
     try {
+      console.log('Signing out user and clearing all caches');
       const supabase = await createClient();
       const { error } = await supabase.auth.signOut();
 
-      // Clear user data cache from localStorage
+      // Clear ALL user data caches
       if (typeof window !== 'undefined') {
+        console.log('Clearing localStorage user caches');
         localStorage.removeItem('user-data-cache');
+        localStorage.removeItem('cached_user');
+        
+        // Clear any SWR cache keys related to user
+        localStorage.removeItem('swr-user-data');
+      }
+      
+      // Attempt to invalidate server-side cache
+      try {
+        const importDynamic = new Function('modulePath', 'return import(modulePath)');
+        const userActions = await importDynamic('@/app/actions/user');
+        if (userActions.invalidateUserCache) {
+          console.log('Invalidating server-side user cache');
+          await userActions.invalidateUserCache();
+        }
+      } catch (e) {
+        console.warn('Could not invalidate server-side cache:', e);
       }
 
       if (error) {
@@ -415,7 +487,12 @@ export const supabaseAuth = {
 };
 
 // Export simplified direct access
-export const getSession = () => supabaseAuth.getSession();
+// Renamed for clarity to specify this gets a Supabase authentication session
+export const getSupabaseSession = () => supabaseAuth.getSession();
+
+// Keep old function for backward compatibility but mark as deprecated
+/** @deprecated Use getSupabaseSession instead for clarity */
+export const getSession = () => getSupabaseSession();
 export const getUser = () => supabaseAuth.getUser();
 export const isAuthenticated = () => supabaseAuth.isAuthenticated();
 export const signInWithPassword = (email: string, password: string) =>

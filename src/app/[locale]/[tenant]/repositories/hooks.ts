@@ -645,39 +645,45 @@ export function useRepositoryExplorer(repositoryId?: string, path: string = '', 
 /**
  * Hook for fetching script files from a repository
  * Filters for .sh and .py files
+ * Uses SWR for efficient caching
  */
 export function useRepositoryScripts(repositoryId?: string, selectedRepository?: any) {
-  const [scripts, setScripts] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  console.log('useRepositoryScripts hook called with repositoryId:', repositoryId, 'selectedRepository:', selectedRepository);
-  
-  const fetchScripts = useCallback(async (repoId: string, repository?: any) => {
-    console.log('fetchScripts called with repoId:', repoId, 'repository:', repository);
-    
-    if (!repoId) {
-      console.log('No repository ID provided, returning empty scripts array');
-      setScripts([]);
+  const { toast } = useToast();
+  const CACHE_KEY = repositoryId ? `repository-scripts:${repositoryId}` : null;
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  // SWR fetcher with localStorage caching
+  const fetcher = async () => {
+    if (!repositoryId) {
       return [];
     }
-    
-    setIsLoading(true);
-    setError(null);
+
+    // Check localStorage first (if in browser)
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(CACHE_KEY!);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Date.now() < parsed.expiry) {
+            // Return cached data if not expired
+            return parsed.data;
+          }
+        } catch (e) {
+          // Invalid JSON, ignore and fetch fresh data
+          console.warn('Invalid cache data for repository scripts', e);
+        }
+      }
+    }
     
     try {
       let repoDetails: any;
       
       // Use provided repository if available, otherwise fetch it
-      if (repository && repository.id === repoId) {
-        console.log('Using provided repository details:', repository);
-        repoDetails = repository;
+      if (selectedRepository && selectedRepository.id === repositoryId) {
+        repoDetails = selectedRepository;
       } else {
         // First get the repository details to get provider info
-        console.log('Fetching repository details for ID:', repoId);
-        const repoResult = await getRepository(repoId);
-        
-        console.log('Repository result:', repoResult);
+        const repoResult = await getRepository(repositoryId);
         
         if (!repoResult.success || !repoResult.data) {
           throw new Error(repoResult.error || 'Repository not found');
@@ -686,16 +692,12 @@ export function useRepositoryScripts(repositoryId?: string, selectedRepository?:
         repoDetails = repoResult.data;
       }
       
-      console.log('Repository details to use:', repoDetails);
-      
       // Construct API URL with fallbacks for missing values
       const providerId = repoDetails.providerId || '';
       const repositoryUrl = repoDetails.url || '';
       
       // Fetch all files recursively from the repository
       const url = `/api/repositories/explore?repositoryId=${repoDetails.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repositoryUrl)}&path=&action=list&recursive=true`;
-      
-      console.log('Fetching scripts from URL:', url);
       
       const response = await fetch(url);
       
@@ -723,39 +725,67 @@ export function useRepositoryScripts(repositoryId?: string, selectedRepository?:
           type: file.name.endsWith('.py') ? 'python' : 'shell'
         }));
         
-        setScripts(scriptsList);
+        // Cache in localStorage if in browser
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(CACHE_KEY!, JSON.stringify({
+            data: scriptsList,
+            expiry: Date.now() + CACHE_TTL
+          }));
+        }
+        
         return scriptsList;
       } else {
         throw new Error('Invalid API response format');
       }
     } catch (error: any) {
       console.error('Error fetching repository scripts:', error);
-      setError(error.message || 'Failed to fetch repository scripts');
-      setScripts([]);
+      throw error;
+    }
+  };
+  
+  // Use SWR for data fetching and caching
+  const { 
+    data: scripts, 
+    error, 
+    isLoading, 
+    mutate 
+  } = useSWR(
+    CACHE_KEY,
+    fetcher,
+    {
+      dedupingInterval: 60000, // 1 minute
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      suspense: false,
+      shouldRetryOnError: false,
+      revalidateIfStale: false
+    }
+  );
+
+  // Function to manually refresh scripts
+  const fetchScripts = useCallback(async (repoId: string, repository?: any) => {
+    if (!repoId) {
       return [];
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
-  
-  // Fetch scripts when repositoryId changes
-  useEffect(() => {
-    console.log('useRepositoryScripts useEffect triggered with repositoryId:', repositoryId);
     
-    if (repositoryId) {
-      fetchScripts(repositoryId, selectedRepository);
-    } else {
-      console.log('No repository ID in useEffect, clearing scripts');
-      setScripts([]);
-      setError(null);
-      setIsLoading(false);
+    try {
+      // Use the mutate function from SWR to trigger a refresh
+      return await mutate();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch repository scripts",
+        variant: "destructive"
+      });
+      return [];
     }
-  }, [repositoryId, fetchScripts, selectedRepository]);
-  
+  }, [mutate, toast]);
+
+  // Provide the same interface as the original hook for compatibility
   return {
-    scripts,
+    scripts: scripts || [],
     isLoading,
-    error,
+    error: error ? error.message : null,
     fetchScripts
   };
 }

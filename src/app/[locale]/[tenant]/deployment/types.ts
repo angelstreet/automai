@@ -148,6 +148,12 @@ export interface DeploymentFormData {
     jobId?: string;
     parameters?: Record<string, any>;
   };
+  // Maps script IDs to their file paths for better script resolution
+  scriptMapping?: Record<string, {
+    path: string;
+    name: string;
+    type: string;
+  }>;
 }
 
 // Add to deployment data

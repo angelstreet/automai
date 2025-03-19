@@ -22,8 +22,17 @@ let noSessionErrorLogged = false;
 
 // Add a function to invalidate the cache when needed
 export async function invalidateUserCache() {
+  console.log('[SERVER] Invalidating user cache');
   userCache = null;
-  return { success: true };
+  
+  // Also clear any client-side cache if possible
+  if (typeof window !== 'undefined') {
+    console.log('[CLIENT] Clearing localStorage cache');
+    localStorage.removeItem('user-data-cache');
+    localStorage.removeItem('cached_user');
+  }
+  
+  return { success: true, message: 'User cache invalidated' };
 }
 
 /**
@@ -45,9 +54,18 @@ export async function getUser(): Promise<AuthUser | null> {
   }
 
   try {
-    // Only log once per session for debugging
-    console.log('[Auth] Using getUser from cache or fetch');
+    // Enhanced logging for debugging tenant issues
+    console.log('[Auth] Getting user data from server (cache expired or missing)');
     const result = await supabaseAuth.getUser();
+    
+    if (result.success && result.data) {
+      console.log('[Auth] User data successfully retrieved', {
+        tenant_id: result.data.tenant_id,
+        tenant_name: result.data.tenant_name
+      });
+    } else {
+      console.error('[Auth] Failed to get user data:', result.error);
+    }
 
     // Update cache with a longer expiration for successful auth
     userCache = {

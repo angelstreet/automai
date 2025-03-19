@@ -27,16 +27,26 @@ const UserContext = createContext<UserContextType>({
 });
 
 // Map the auth user to our User type
-const mapAuthUserToUser = (authUser: AuthUser): User => ({
-  id: authUser.id,
-  email: authUser.email,
-  name: authUser.user_metadata?.name || authUser.email.split('@')[0] || 'Guest',
-  role: (authUser.user_metadata?.role as Role) || 'viewer',
-  tenant_id: authUser.user_metadata?.tenant_id || 'default',
-  tenant_name: authUser.user_metadata?.tenant_name || 'default',
-  avatar_url: authUser.user_metadata?.avatar_url || '',
-  user_metadata: authUser.user_metadata,
-});
+const mapAuthUserToUser = (authUser: AuthUser): User => {
+  if (!authUser.tenant_id) {
+    throw new Error('Missing tenant_id in user data');
+  }
+  
+  if (!authUser.tenant_name) {
+    throw new Error('Missing tenant_name in user data');
+  }
+
+  return {
+    id: authUser.id,
+    email: authUser.email,
+    name: authUser.user_metadata?.name || authUser.email.split('@')[0] || 'Guest',
+    role: (authUser.user_metadata?.role as Role) || 'viewer',
+    tenant_id: authUser.tenant_id,
+    tenant_name: authUser.tenant_name,
+    avatar_url: authUser.user_metadata?.avatar_url || '',
+    user_metadata: authUser.user_metadata,
+  };
+};
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -76,15 +86,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const authUser = await getUser();
       if (!authUser) return null;
 
-      // Map to our User type
-      const user = mapAuthUserToUser(authUser);
-
-      // Cache the user in localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('cached_user', JSON.stringify(user));
+      try {
+        // Map to our User type - will throw if tenant data is missing
+        const user = mapAuthUserToUser(authUser);
+        
+        // Cache the user in localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('cached_user', JSON.stringify(user));
+        }
+        
+        return user;
+      } catch (error) {
+        console.error('User data mapping error:', error);
+        setError(error instanceof Error ? error : new Error('Invalid user data'));
+        return null;
       }
 
-      return user;
     } catch (error) {
       console.error('Error fetching user:', error);
       setError(error instanceof Error ? error : new Error('Failed to fetch user'));
