@@ -12,6 +12,8 @@ import {
   getAvailableHosts,
   getDeploymentStatus
 } from './actions';
+import { getUser } from '@/app/actions/user';
+import { AuthUser } from '@/types/user';
 
 /**
  * Cache keys for deployment data
@@ -34,6 +36,7 @@ interface DeploymentContextType {
   loading: boolean;
   error: string | null;
   isRefreshing: boolean;
+  currentUser: AuthUser | null;
   
   // Core deployment actions
   fetchDeployments: () => Promise<void>;
@@ -62,6 +65,7 @@ interface DeploymentContextType {
     cicd?: any;
     error?: string;
   }>;
+  refreshUserData: () => Promise<AuthUser | null>;
 }
 
 /**
@@ -79,6 +83,22 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+
+  /**
+   * Fetch the current user data and cache it in the context
+   * This reduces redundant auth calls across deployment functions
+   */
+  const fetchUserData = useCallback(async () => {
+    try {
+      const user = await getUser();
+      setCurrentUser(user);
+      return user;
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      return null;
+    }
+  }, []);
 
   /**
    * Fetch all deployments
@@ -89,6 +109,11 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     setError(null);
     
     try {
+      // Use cached user data when available
+      if (!currentUser) {
+        await fetchUserData();
+      }
+      
       const data = await getDeployments();
       setDeployments(data);
     } catch (err) {
@@ -97,7 +122,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser, fetchUserData]);
 
   /**
    * Fetch a single deployment by ID
@@ -108,6 +133,11 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     setError(null);
     
     try {
+      // Use cached user data when available
+      if (!currentUser) {
+        await fetchUserData();
+      }
+      
       const deployment = await getDeploymentById(id);
       return deployment;
     } catch (err) {
@@ -117,7 +147,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser, fetchUserData]);
 
   /**
    * Create a new deployment
@@ -128,7 +158,12 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     setError(null);
     
     try {
-      const result = await createDeploymentAction(formData);
+      // Use cached user data when available
+      if (!currentUser) {
+        await fetchUserData();
+      }
+      
+      const result = await createDeploymentAction(formData, currentUser);
       
       if (!result.success) {
         setError(result.error || 'Failed to create deployment');
@@ -147,7 +182,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [fetchDeployments]);
+  }, [currentUser, fetchUserData, fetchDeployments]);
 
   /**
    * Abort a running deployment
@@ -157,6 +192,11 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     setError(null);
     
     try {
+      // Use cached user data when available
+      if (!currentUser) {
+        await fetchUserData();
+      }
+      
       const result = await abortDeploymentAction(id);
       
       if (!result.success) {
@@ -174,7 +214,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
       console.error('Error aborting deployment:', err);
       return { success: false, error: errorMessage };
     }
-  }, [fetchDeployments]);
+  }, [currentUser, fetchUserData, fetchDeployments]);
 
   /**
    * Refresh a deployment's status
@@ -185,6 +225,11 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     setError(null);
     
     try {
+      // Use cached user data when available
+      if (!currentUser) {
+        await fetchUserData();
+      }
+      
       const result = await refreshDeploymentAction(id);
       
       if (!result.success) {
@@ -210,7 +255,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [currentUser, fetchUserData]);
 
   /**
    * Get scripts for a repository
@@ -218,12 +263,17 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    */
   const fetchScriptsForRepository = useCallback(async (repositoryId: string) => {
     try {
+      // Use cached user data when available
+      if (!currentUser) {
+        await fetchUserData();
+      }
+      
       return await getScriptsForRepository(repositoryId);
     } catch (err) {
       console.error('Error fetching scripts:', err);
       return [];
     }
-  }, []);
+  }, [currentUser, fetchUserData]);
 
   /**
    * Get available hosts
@@ -231,12 +281,17 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    */
   const fetchAvailableHosts = useCallback(async () => {
     try {
+      // Use cached user data when available
+      if (!currentUser) {
+        await fetchUserData();
+      }
+      
       return await getAvailableHosts();
     } catch (err) {
       console.error('Error fetching hosts:', err);
       return [];
     }
-  }, []);
+  }, [currentUser, fetchUserData]);
 
   /**
    * Fetch deployment status including CI/CD status
@@ -244,16 +299,26 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    */
   const fetchDeploymentStatus = useCallback(async (id: string) => {
     try {
+      // Use cached user data when available
+      if (!currentUser) {
+        await fetchUserData();
+      }
+      
       return await getDeploymentStatus(id);
     } catch (err) {
       console.error('Error fetching deployment status:', err);
       return { success: false, error: 'Failed to fetch deployment status' };
     }
-  }, []);
+  }, [currentUser, fetchUserData]);
 
-  // Fetch deployments on component mount - only once
+  // Fetch user data and deployments on component mount - only once
   useEffect(() => {
-    fetchDeployments();
+    const initialize = async () => {
+      await fetchUserData();
+      await fetchDeployments();
+    };
+    
+    initialize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -264,6 +329,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     loading,
     error,
     isRefreshing,
+    currentUser,
     
     // Core actions
     fetchDeployments,
@@ -275,7 +341,8 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     // Supporting actions
     fetchScriptsForRepository,
     fetchAvailableHosts,
-    fetchDeploymentStatus
+    fetchDeploymentStatus,
+    refreshUserData: fetchUserData
   };
 
   return (
