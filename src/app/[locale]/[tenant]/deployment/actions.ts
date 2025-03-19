@@ -69,7 +69,7 @@ export async function createDeployment(
 
     // Extract script paths and parameters from the scriptMapping
     const scriptPaths: string[] = [];
-    const scriptParameters: Record<string, any> = {};
+    const scriptParameters: string[] = [];
     
     if (formData.scriptMapping) {
       Object.entries(formData.scriptMapping).forEach(([scriptId, scriptInfo]) => {
@@ -78,7 +78,11 @@ export async function createDeployment(
           
           // Store parameters for this script path if they exist
           if (formData.parameters && formData.parameters[scriptId]) {
-            scriptParameters[scriptInfo.path] = formData.parameters[scriptId];
+            // Convert parameters to a string and add to the array
+            scriptParameters.push(JSON.stringify(formData.parameters[scriptId]));
+          } else {
+            // Add an empty string if no parameters
+            scriptParameters.push('');
           }
         }
       });
@@ -121,6 +125,7 @@ export async function createDeployment(
       user_id: user.id
     };
 
+    console.log('Actions layer: Final deployment data:', JSON.stringify(deploymentData, null, 2));
     console.log('Actions layer: Calling deployment.create with data');
     
     // Create the deployment in the database

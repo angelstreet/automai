@@ -105,48 +105,62 @@ const deployment = {
     return data;
   },
 
-  async create({ data }: { data: any }) {
-    console.log('DB layer: Creating deployment with data:', JSON.stringify(data));
+  async create({ data }: { data: any }): Promise<any> {
+    console.log('DB layer: Creating deployment with data:', JSON.stringify(data, null, 2));
     
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-
-    // Ensure we have all required fields
-    const deploymentData = {
-      name: data.name,
-      description: data.description || '',
-      repository_id: data.repository_id,
-      scripts_paths: data.scripts_paths || [],
-      scripts_parameters: data.scripts_parameters || {},
-      host_ids: data.host_ids || [],
-      status: data.status || 'pending',
-      schedule_type: data.schedule_type || 'now',
-      scheduled_time: data.scheduled_time || null,
-      cron_expression: data.cron_expression || null,
-      repeat_count: data.repeat_count || 0,
-      parameters: data.parameters || {},
-      environment_vars: data.environment_vars || {},
-      tenant_id: data.tenant_id,
-      user_id: data.user_id,
-      created_at: new Date().toISOString()
-    };
-
-    const { data: result, error } = await supabase.from('deployments').insert(deploymentData).select().single();
-
-    if (error) {
-      console.error('Error creating deployment:', error);
+    try {
+      console.log('DB layer: Creating Supabase client...');
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      console.log('DB layer: Supabase client created');
+      
+      const deploymentData = {
+        name: data.name,
+        description: data.description || '',
+        repository_id: data.repository_id,
+        scripts_paths: data.scripts_paths || [],
+        scripts_parameters: data.scripts_parameters || [],
+        host_ids: data.host_ids || [],
+        status: data.status || 'pending',
+        schedule_type: data.schedule_type || 'now',
+        scheduled_time: data.scheduled_time || null,
+        cron_expression: data.cron_expression || null,
+        repeat_count: data.repeat_count || 0,
+        parameters: data.parameters || {},
+        environment_vars: data.environment_vars || [],
+        tenant_id: data.tenant_id,
+        user_id: data.user_id,
+        created_at: new Date().toISOString()
+      };
+      
+      console.log('DB layer: Final deployment data for insert:', JSON.stringify(deploymentData, null, 2));
+      
+      const { data: result, error } = await supabase
+        .from('deployments')
+        .insert(deploymentData)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('DB layer: Error creating deployment:', error);
+        return {
+          success: false,
+          error: `Failed to create deployment: ${error.message}`
+        };
+      }
+      
+      console.log('DB layer: Deployment created successfully with ID:', result.id);
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('DB layer: Error creating deployment:', error);
       return {
         success: false,
-        error
+        error: `Failed to create deployment: ${error instanceof Error ? error.message : String(error)}`
       };
     }
-
-    console.log('DB layer: Deployment created successfully with ID:', result?.id);
-    return {
-      success: true,
-      id: result.id,
-      data: result
-    };
   },
 
   async update({ where, data }: { where: any; data: any }) {
