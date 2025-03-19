@@ -208,9 +208,6 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    * @param id Deployment ID to refresh
    */
   const handleRefreshDeployment = useCallback(async (id: string) => {
-    setIsRefreshing(true);
-    setError(null);
-    
     try {
       // Use cached user data when available
       if (!currentUser) {
@@ -220,27 +217,13 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
       const result = await refreshDeploymentAction(id);
       
       if (!result.success) {
-        setError(result.error || 'Failed to refresh deployment');
         return { success: false, error: result.error };
-      }
-      
-      // If we got updated deployment data, update it in the list
-      if (result.deployment) {
-        setDeployments(prevDeployments => 
-          prevDeployments.map(d => 
-            d.id === id ? result.deployment! : d
-          )
-        );
       }
       
       return { success: true, deployment: result.deployment };
     } catch (err) {
-      const errorMessage = 'Failed to refresh deployment';
-      setError(errorMessage);
       console.error('Error refreshing deployment:', err);
-      return { success: false, error: errorMessage };
-    } finally {
-      setIsRefreshing(false);
+      return { success: false, error: 'Failed to refresh deployment' };
     }
   }, [currentUser, fetchUserData]);
 
@@ -320,6 +303,19 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [currentUser, fetchUserData]);
 
+  /**
+   * Refresh user data
+   * @returns AuthUser or null if not found
+   */
+  const handleRefreshUserData = useCallback(async () => {
+    try {
+      return await fetchUserData();
+    } catch (err) {
+      console.error('Error refreshing user data:', err);
+      return null;
+    }
+  }, []);
+
   // Initial data loading effect - only runs once on mount
   useEffect(() => {
     if (!initialized) {
@@ -357,7 +353,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     fetchDeploymentStatus: handleFetchDeploymentStatus,
     
     // User management
-    refreshUserData: fetchUserData
+    refreshUserData: handleRefreshUserData
   };
 
   return (

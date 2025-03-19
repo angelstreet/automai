@@ -72,15 +72,11 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
     Object.entries(config.customParameters || {}).map(([key, value]) => ({ key, value }))
   );
   
-  // Use real providers or fallback to constants
-  const providerOptions = providers.length > 0 
-    ? providers.map(p => ({ value: p.id, label: p.name }))
-    : [{ value: 'jenkins-default', label: 'Default Jenkins Server' }];
-    
-  // Use real jobs or fallback to constants  
-  const jobOptions = jobs.length > 0
-    ? jobs.map(j => ({ value: j.id, label: j.name }))
-    : JENKINS_JOB_OPTIONS;
+  // Use real providers
+  const providerOptions = providers.map(p => ({ value: p.id, label: p.name }));
+  
+  // Use real jobs
+  const jobOptions = jobs.map(j => ({ value: j.id, label: j.name }));
   
   const handleEnableChange = (checked: boolean) => {
     onChange(checked, config);
