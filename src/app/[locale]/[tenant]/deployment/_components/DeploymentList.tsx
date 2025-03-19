@@ -50,7 +50,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const getFilteredDeployments = () => {
     return deployments.filter(deployment => {
       // Filter by tab
-      if (activeTab === 'scheduled' && !deployment.scheduledFor) return false;
+      if (activeTab === 'scheduled' && deployment.scheduleType !== 'scheduled') return false;
       if (activeTab === 'active' && deployment.status !== 'in_progress') return false;
       if (activeTab === 'completed' && (deployment.status !== 'success' && deployment.status !== 'failed')) return false;
 
@@ -60,7 +60,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
         searchQuery === '' || 
         deployment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         repoName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deployment.createdBy.toLowerCase().includes(searchQuery.toLowerCase());
+        deployment.userId.toLowerCase().includes(searchQuery.toLowerCase());
 
       // Filter by status
       const matchesStatus = filterStatus === 'all' || deployment.status === filterStatus;
@@ -82,8 +82,8 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
         return a.status.localeCompare(b.status);
       } else {
         // Default: sort by date (newest first)
-        const dateA = new Date(a.startedAt || a.scheduledFor || a.createdAt).getTime();
-        const dateB = new Date(b.startedAt || b.scheduledFor || b.createdAt).getTime();
+        const dateA = new Date(a.startedAt || a.scheduledTime || a.createdAt).getTime();
+        const dateB = new Date(b.startedAt || b.scheduledTime || b.createdAt).getTime();
         return dateB - dateA;
       }
     });
@@ -235,7 +235,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{deployment.name}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {deployment.hosts.length} host{deployment.hosts.length !== 1 ? 's' : ''}, {deployment.scripts.length} script{deployment.scripts.length !== 1 ? 's' : ''}
+                          {deployment.hostIds?.length || 0} host{(deployment.hostIds?.length || 0) !== 1 ? 's' : ''}, {deployment.scriptsPath?.length || 0} script{(deployment.scriptsPath?.length || 0) !== 1 ? 's' : ''}
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
@@ -252,8 +252,8 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                           ? getFormattedTime(deployment.startedAt, deployment.completedAt) 
                           : deployment.startedAt 
                             ? 'Running...' 
-                            : deployment.scheduledFor 
-                              ? `Scheduled for ${getFormattedTime(deployment.scheduledFor)}` 
+                            : deployment.scheduledTime 
+                              ? `Scheduled for ${getFormattedTime(deployment.scheduledTime)}` 
                               : '-'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">

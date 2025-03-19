@@ -28,8 +28,7 @@ const deployment = {
       scripts_parameters,
       host_ids,
       environment_vars,
-      tenant_id,
-      error_message
+      tenant_id
     `);
 
     // Apply filters if provided
@@ -91,8 +90,7 @@ const deployment = {
       scripts_parameters,
       host_ids,
       environment_vars,
-      tenant_id,
-      error_message
+      tenant_id
     `).match(where).single();
 
     if (error) {
