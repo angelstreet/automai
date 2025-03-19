@@ -192,12 +192,12 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
                   {scriptIds.length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400 p-3">No scripts selected</p>
                   ) : (
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8">#</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Script Path</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameters</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">#</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">Script Path</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">Parameters</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">

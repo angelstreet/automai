@@ -140,16 +140,16 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
                 {isLoading ? 'Loading scripts...' : 'No scripts found'}
               </div>
             ) : (
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
                 <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
                   <tr>
                     <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">
                       Select
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">
                       Script Path
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">
                       Parameters
                     </th>
                   </tr>
@@ -177,14 +177,18 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
                           </div>
                         </td>
                         <td className="px-3 py-1.5 whitespace-nowrap">
-                          {isSelected && (
-                            <Input
-                              placeholder="Parameters (e.g. -d --key=value)"
-                              className="text-xs h-7 w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                              value={scriptParameters[script.id]?.['raw'] || ''}
-                              onChange={(e) => onScriptParameterChange(script.id, 'raw', e.target.value)}
-                            />
-                          )}
+                          <div className="h-7"> 
+                            {isSelected ? (
+                              <Input
+                                placeholder="Parameters (e.g. -d --key=value)"
+                                className="text-xs h-7 w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                value={scriptParameters[script.id]?.['raw'] || ''}
+                                onChange={(e) => onScriptParameterChange(script.id, 'raw', e.target.value)}
+                              />
+                            ) : (
+                              <div className="h-7"></div> 
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
