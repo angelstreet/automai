@@ -112,7 +112,7 @@ export async function createDeployment(
       name: formData.name,
       description: formData.description || '',
       repository_id: formData.repository,
-      scripts_paths: scriptPaths,
+      scripts_path: scriptPaths,
       scripts_parameters: scriptParameters,
       host_ids: validHostIds,
       status: 'pending',

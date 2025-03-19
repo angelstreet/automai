@@ -24,7 +24,7 @@ const deployment = {
       schedule_type,
       cron_expression,
       repeat_count,
-      scripts_paths,
+      scripts_path,
       scripts_parameters,
       host_ids,
       parameters,
@@ -88,7 +88,7 @@ const deployment = {
       schedule_type,
       cron_expression,
       repeat_count,
-      scripts_paths,
+      scripts_path,
       scripts_parameters,
       host_ids,
       parameters,
@@ -118,7 +118,7 @@ const deployment = {
         name: data.name,
         description: data.description || '',
         repository_id: data.repository_id,
-        scripts_paths: data.scripts_paths || [],
+        scripts_path: data.scripts_path || [],
         scripts_parameters: data.scripts_parameters || [],
         host_ids: data.host_ids || [],
         status: data.status || 'pending',
@@ -126,7 +126,6 @@ const deployment = {
         scheduled_time: data.scheduled_time || null,
         cron_expression: data.cron_expression || null,
         repeat_count: data.repeat_count || 0,
-        parameters: data.parameters || {},
         environment_vars: data.environment_vars || [],
         tenant_id: data.tenant_id,
         user_id: data.user_id,
@@ -164,64 +163,98 @@ const deployment = {
   },
 
   async update({ where, data }: { where: any; data: any }) {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    console.log('DB layer: Updating deployment with where:', JSON.stringify(where));
+    console.log('DB layer: Updating deployment with data:', JSON.stringify(data, null, 2));
+    
+    try {
+      console.log('DB layer: Creating Supabase client...');
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      console.log('DB layer: Supabase client created');
 
-    // Prepare update data
-    const updateData = {
-      name: data.name,
-      description: data.description,
-      repository_id: data.repository_id,
-      scripts_paths: data.scripts_paths,
-      scripts_parameters: data.scripts_parameters,
-      host_ids: data.host_ids,
-      status: data.status,
-      schedule_type: data.schedule_type,
-      scheduled_time: data.scheduled_time,
-      cron_expression: data.cron_expression,
-      repeat_count: data.repeat_count,
-      parameters: data.parameters,
-      environment_vars: data.environment_vars,
-    };
+      // Prepare update data
+      const updateData = {
+        name: data.name,
+        description: data.description,
+        repository_id: data.repository_id,
+        scripts_path: data.scripts_path,
+        scripts_parameters: data.scripts_parameters,
+        host_ids: data.host_ids,
+        status: data.status,
+        schedule_type: data.schedule_type,
+        scheduled_time: data.scheduled_time,
+        cron_expression: data.cron_expression,
+        repeat_count: data.repeat_count,
+        environment_vars: data.environment_vars,
+      };
+      
+      console.log('DB layer: Final update data:', JSON.stringify(updateData, null, 2));
 
-    const { data: result, error } = await supabase
-      .from('deployments')
-      .update(updateData)
-      .match(where)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating deployment:', error);
+      const { data: result, error } = await supabase
+        .from('deployments')
+        .update(updateData)
+        .match(where)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('DB layer: Error updating deployment:', error);
+        return {
+          success: false,
+          error: `Failed to update deployment: ${error.message}`
+        };
+      }
+      
+      console.log('DB layer: Deployment updated successfully');
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('DB layer: Error updating deployment:', error);
       return {
         success: false,
-        error
+        error: `Failed to update deployment: ${error instanceof Error ? error.message : String(error)}`
       };
     }
-
-    console.log('DB layer: Deployment updated successfully with ID:', result?.id);
-    return {
-      success: true,
-      id: result.id,
-      data: result
-    };
   },
 
   async delete({ where }: { where: any }) {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
+    console.log('DB layer: Deleting deployment with where:', JSON.stringify(where));
+    
+    try {
+      console.log('DB layer: Creating Supabase client...');
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+      console.log('DB layer: Supabase client created');
 
-    const { error } = await supabase.from('deployments').delete().match(where);
-
-    if (error) {
-      console.error('Error deleting deployment:', error);
+      const { data: result, error } = await supabase
+        .from('deployments')
+        .delete()
+        .match(where)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('DB layer: Error deleting deployment:', error);
+        return {
+          success: false,
+          error: `Failed to delete deployment: ${error.message}`
+        };
+      }
+      
+      console.log('DB layer: Deployment deleted successfully');
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('DB layer: Error deleting deployment:', error);
       return {
         success: false,
-        error
+        error: `Failed to delete deployment: ${error instanceof Error ? error.message : String(error)}`
       };
     }
-
-    return { success: true };
   },
 };
 
