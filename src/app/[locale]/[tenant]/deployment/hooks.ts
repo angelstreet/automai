@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { 
   getAvailableCICDProviders, 
   getAvailableCICDJobs, 
   getCICDJobDetails,
-  getDeploymentStatus,
   createDeployment
 } from './actions';
 import { CICDProvider, CICDJob, DeploymentFormData } from './types';
@@ -15,8 +14,7 @@ import { CICDProvider, CICDJob, DeploymentFormData } from './types';
 const CACHE_KEYS = {
   PROVIDERS: 'cicd-providers',
   JOBS: (providerId: string) => `cicd-jobs-${providerId}`,
-  JOB_DETAILS: (providerId: string, jobId: string) => `cicd-job-details-${providerId}-${jobId}`,
-  DEPLOYMENT_STATUS: (deploymentId: string) => `deployment-status-${deploymentId}`
+  JOB_DETAILS: (providerId: string, jobId: string) => `cicd-job-details-${providerId}-${jobId}`
 };
 
 // Cache expiration time (5 minutes)
@@ -224,8 +222,7 @@ export function useCICDJobDetails(providerId?: string, jobId?: string) {
   }, [mutate, cacheKey]);
   
   return {
-    job: data,
-    parameters: data?.parameters || [],
+    jobDetails: data,
     isLoading,
     isRefreshing: isValidating,
     error: error?.message,
@@ -237,12 +234,11 @@ export function useCICDJobDetails(providerId?: string, jobId?: string) {
  * Hook to create a deployment with CI/CD integration
  */
 export function useCreateDeployment() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [deploymentId, setDeploymentId] = useState<string | null>(null);
   
-  const submit = useCallback(async (formData: DeploymentFormData) => {
-    setIsSubmitting(true);
+  const handleCreateDeployment = useCallback(async (formData: DeploymentFormData) => {
+    setLoading(true);
     setError(null);
     
     try {
@@ -250,97 +246,23 @@ export function useCreateDeployment() {
       
       if (!result.success) {
         setError(result.error || 'Failed to create deployment');
-        return null;
+        return { success: false, error: result.error };
       }
       
-      setDeploymentId(result.deploymentId || null);
-      return result.deploymentId;
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
-      return null;
+      return { success: true, deploymentId: result.deploymentId };
+    } catch (err) {
+      const errorMessage = 'Failed to create deployment';
+      setError(errorMessage);
+      console.error(err);
+      return { success: false, error: errorMessage };
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   }, []);
   
-  const reset = useCallback(() => {
-    setError(null);
-    setDeploymentId(null);
-  }, []);
-  
   return {
-    submit,
-    reset,
-    isSubmitting,
-    error,
-    deploymentId
-  };
-}
-
-/**
- * Hook to monitor deployment status including CI/CD status
- */
-export function useDeploymentStatus(deploymentId?: string) {
-  const { mutate } = useSWRConfig();
-  
-  // No deployment ID, no status
-  const cacheKey = deploymentId ? CACHE_KEYS.DEPLOYMENT_STATUS(deploymentId) : null;
-  
-  // Fetch deployment status
-  const fetcher = async () => {
-    if (!deploymentId) {
-      return null;
-    }
-    
-    const result = await getDeploymentStatus(deploymentId);
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch deployment status');
-    }
-    
-    return {
-      deployment: result.deployment,
-      cicd: result.cicd
-    };
-  };
-  
-  // Poll more frequently for running deployments
-  const [pollInterval, setPollInterval] = useState(10000); // 10 seconds by default
-  
-  const { data, error, isLoading, isValidating, mutate: refreshData } = useSWR(
-    cacheKey,
-    fetcher,
-    {
-      refreshInterval: pollInterval,
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true
-    }
-  );
-  
-  // Set appropriate poll interval based on deployment status
-  useEffect(() => {
-    if (data?.deployment?.status === 'in_progress' || data?.cicd?.status === 'running') {
-      setPollInterval(5000); // Poll every 5 seconds for running deployments
-    } else if (data?.deployment?.status === 'pending' || data?.deployment?.status === 'scheduled') {
-      setPollInterval(10000); // Poll every 10 seconds for pending deployments
-    } else {
-      setPollInterval(30000); // Poll every 30 seconds for completed deployments
-    }
-  }, [data]);
-  
-  // Function to manually refresh status
-  const refreshStatus = useCallback(() => {
-    if (cacheKey) {
-      refreshData();
-    }
-  }, [refreshData, cacheKey]);
-  
-  return {
-    deployment: data?.deployment,
-    cicd: data?.cicd,
-    isLoading,
-    isRefreshing: isValidating,
-    error: error?.message,
-    refreshStatus
+    createDeployment: handleCreateDeployment,
+    loading,
+    error
   };
 }

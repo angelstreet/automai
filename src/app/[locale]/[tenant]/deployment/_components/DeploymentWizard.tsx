@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { DeploymentData, DeploymentFormData, ScriptParameter, Repository, Host as HostType } from '../types';
 import { useRepositories, useRepositoryScripts } from '../../repositories/hooks';
 import { useHosts } from '../../hosts/hooks';
-import { useCreateDeployment } from '../hooks';
+import { useDeploymentContext } from '../context';
 import { Host as SystemHost } from '../../hosts/types';
 import DeploymentWizardStep1 from './DeploymentWizardStep1';
 import DeploymentWizardStep2 from './DeploymentWizardStep2';
@@ -104,7 +104,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         setDeploymentData(prev => ({
           ...prev,
           repositoryId: value,
-          selectedRepository: selectedRepo
+          selectedRepository: selectedRepo || null
         }));
         
         // Early return since we've already updated the state
@@ -254,7 +254,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   };
 
   // Get the deployment creation hook
-  const { submit: createDeployment, isSubmitting, error: deploymentError } = useCreateDeployment();
+  const { createDeployment, loading: isSubmitting } = useDeploymentContext();
   
   const [isCreating, setIsCreating] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -291,7 +291,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
       
       // Populate scriptMapping for each selected script
       deploymentData.scriptIds.forEach(scriptId => {
-        const script = repositoryScripts.find(s => s.id === scriptId);
+        const script = repositoryScripts.find((s: any) => s.id === scriptId);
         if (script) {
           scriptMapping[scriptId] = {
             path: script.path,
@@ -310,28 +310,28 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
         selectedHosts: deploymentData.hostIds, // Note field name change
         schedule: deploymentData.schedule,
         scheduledTime: deploymentData.scheduledTime,
-        cronExpression: deploymentData.cronExpression,
-        repeatCount: deploymentData.repeatCount,
+        cronExpression: deploymentData.cronExpression || '',
+        repeatCount: deploymentData.repeatCount || 0,
         environmentVars: deploymentData.environmentVars,
         parameters: deploymentData.scriptParameters,
         notifications: deploymentData.notifications,
-        jenkinsConfig: deploymentData.jenkinsConfig,
+        jenkinsConfig: deploymentData.jenkinsConfig || { enabled: false },
         scriptMapping: scriptMapping // Add the script mapping data
       };
       
       console.log('Calling createDeployment with formData:', formData);
       
       // Call the server action through the hook
-      const deploymentId = await createDeployment(formData);
+      const result = await createDeployment(formData);
       
-      if (deploymentId) {
-        console.log('Deployment created successfully with ID:', deploymentId);
+      if (result.success) {
+        console.log('Deployment created successfully with ID:', result.deploymentId);
         alert('Deployment created successfully!');
         onComplete();
       } else {
-        console.error('Failed to create deployment:', deploymentError);
-        setSubmissionError(deploymentError || 'Failed to create deployment');
-        alert(`Error creating deployment: ${deploymentError || 'Unknown error'}`);
+        console.error('Failed to create deployment:', result.error);
+        setSubmissionError(result.error || 'Failed to create deployment');
+        alert(`Error creating deployment: ${result.error || 'Unknown error'}`);
       }
     } catch (error: any) {
       console.error('Error creating deployment:', error);

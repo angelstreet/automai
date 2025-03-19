@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, List, LayoutGrid, RefreshCw } from 'lucide-react';
 import { DeploymentWizard, DeploymentList } from './_components';
-import { useDeployments } from './useDeployments';
+import { DeploymentProvider, useDeployments } from './context';
 
 const DeploymentPage = () => {
   const [view, setView] = useState('list'); // 'list' or 'create'
@@ -81,4 +81,12 @@ const DeploymentPage = () => {
   );
 };
 
-export default DeploymentPage;
+const DeploymentPageWithProvider = () => {
+  return (
+    <DeploymentProvider>
+      <DeploymentPage />
+    </DeploymentProvider>
+  );
+};
+
+export default DeploymentPageWithProvider;

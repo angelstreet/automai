@@ -78,25 +78,19 @@ export const formatDate = (dateString: string | null | undefined): string => {
   
   /**
    * Get formatted time for display in the UI
+   * Overloaded to handle both a single date string or start/end time for duration
    */
-  export const getFormattedTime = (deployment: {
-    startTime?: string | null;
-    scheduledTime?: string | null;
-  }): string => {
-    if (deployment.startTime) {
-      return `Started ${formatRelativeTime(deployment.startTime)}`;
-    } else if (deployment.scheduledTime) {
-      const now = new Date();
-      const scheduledDate = new Date(deployment.scheduledTime);
-      
-      if (scheduledDate > now) {
-        return formatFutureTime(deployment.scheduledTime);
-      } else {
-        return `Scheduled for ${formatRelativeTime(deployment.scheduledTime)}`;
-      }
+  export function getFormattedTime(dateString: string): string;
+  export function getFormattedTime(startTime: string, endTime: string): string;
+  export function getFormattedTime(timeA: string, timeB?: string): string {
+    if (timeB) {
+      // If two parameters, calculate duration
+      return calculateDuration(timeA, timeB);
     }
-    return 'Not scheduled';
-  };
+    
+    // If one parameter, format as relative time
+    return formatRelativeTime(timeA);
+  }
   
   /**
    * Group hosts by environment

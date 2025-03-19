@@ -9,14 +9,20 @@ import {
   Eye,
   MoreHorizontal
 } from 'lucide-react';
-import { useDeployments } from '../useDeployments';
-import { Deployment } from '../types';
+import { useDeployments } from '../context';
+import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
 
 interface DeploymentListProps {
   onViewDeployment?: (deploymentId: string) => void;
 }
+
+// Helper function to get repository name from deployment
+const getRepositoryName = (deployment: Deployment): string => {
+  // In a real implementation, you would fetch the repository name using the repositoryId
+  return deployment.repositoryId;
+};
 
 const DeploymentList: React.FC<DeploymentListProps> = ({ 
   onViewDeployment 
@@ -44,15 +50,16 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const getFilteredDeployments = () => {
     return deployments.filter(deployment => {
       // Filter by tab
-      if (activeTab === 'scheduled' && !deployment.scheduledTime) return false;
+      if (activeTab === 'scheduled' && !deployment.scheduledFor) return false;
       if (activeTab === 'active' && deployment.status !== 'in_progress') return false;
       if (activeTab === 'completed' && (deployment.status !== 'success' && deployment.status !== 'failed')) return false;
 
       // Filter by search query
+      const repoName = getRepositoryName(deployment);
       const matchesSearch = 
         searchQuery === '' || 
         deployment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deployment.repository.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        repoName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         deployment.createdBy.toLowerCase().includes(searchQuery.toLowerCase());
 
       // Filter by status
@@ -70,13 +77,13 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
       } else if (sortBy === 'repository') {
-        return a.repository.name.localeCompare(b.repository.name);
+        return getRepositoryName(a).localeCompare(getRepositoryName(b));
       } else if (sortBy === 'status') {
         return a.status.localeCompare(b.status);
       } else {
         // Default: sort by date (newest first)
-        const dateA = new Date(a.startTime || a.scheduledTime || 0).getTime();
-        const dateB = new Date(b.startTime || b.scheduledTime || 0).getTime();
+        const dateA = new Date(a.startedAt || a.scheduledFor || a.createdAt).getTime();
+        const dateB = new Date(b.startedAt || b.scheduledFor || b.createdAt).getTime();
         return dateB - dateA;
       }
     });
@@ -208,10 +215,10 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                       Status
                     </th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Time
+                      Created
                     </th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Created By
+                      Runtime
                     </th>
                     <th scope="col" className="relative px-4 py-3">
                       <span className="sr-only">Actions</span>
@@ -220,44 +227,45 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {displayDeployments.map((deployment) => (
-                    <tr key={deployment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr 
+                      key={deployment.id} 
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => handleViewDeployment(deployment)}
+                    >
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {deployment.name}
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{deployment.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {deployment.hosts.length} host{deployment.hosts.length !== 1 ? 's' : ''}, {deployment.scripts.length} script{deployment.scripts.length !== 1 ? 's' : ''}
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {deployment.repository.owner}/{deployment.repository.name}
-                        </div>
+                        <div className="text-sm text-gray-900 dark:text-white">{getRepositoryName(deployment)}</div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <StatusBadge status={deployment.status} />
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {getFormattedTime(deployment)}
-                        </div>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {getFormattedTime(deployment.createdAt)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {deployment.createdBy}
-                        </div>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {deployment.completedAt && deployment.startedAt 
+                          ? getFormattedTime(deployment.startedAt, deployment.completedAt) 
+                          : deployment.startedAt 
+                            ? 'Running...' 
+                            : deployment.scheduledFor 
+                              ? `Scheduled for ${getFormattedTime(deployment.scheduledFor)}` 
+                              : '-'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end">
-                          <button 
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
-                            onClick={() => handleViewDeployment(deployment)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <div className="relative inline-block text-left">
-                            <button type="button" className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
+                        <button 
+                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDeployment(deployment);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}

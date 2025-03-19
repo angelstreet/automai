@@ -2,10 +2,10 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, RefreshCw, Terminal, Files, ChartBar, StopCircle, X } from 'lucide-react';
-import { useDeploymentDetails } from '../useDeployments';
+import { useDeploymentDetails } from '../context';
 import StatusBadge from './StatusBadge';
 import { calculateDuration, formatDate } from '../utils';
-import { DeploymentScript } from '../types';
+import { DeploymentScript, DeploymentHost } from '../types';
 
 interface DeploymentDetailsProps {
   deploymentId: string;
@@ -200,108 +200,173 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
               </div>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Duration</h4>
-                <p className="text-lg font-medium text-gray-900 dark:text-white">
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {calculateDuration(deployment.startedAt || deployment.createdAt, deployment.completedAt)}
                 </p>
               </div>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Target Hosts</h4>
-                <p className="text-lg font-medium text-gray-900 dark:text-white">
-                  {deployment.hosts ? deployment.hosts.length : 0}
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Hosts</h4>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {deployment.hosts.length}
                 </p>
               </div>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Scripts</h4>
-                <p className="text-lg font-medium text-gray-900 dark:text-white">
-                  {deployment.scripts ? deployment.scripts.length : 0}
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {deployment.scripts.length}
                 </p>
               </div>
             </div>
             
-            {/* Description */}
+            {/* Deployment Details */}
             <div>
-              <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Description</h3>
-              <p className="text-gray-700 dark:text-gray-300">
-                {deployment.description || 'No description provided.'}
-              </p>
-            </div>
-            
-            {/* Scripts Summary */}
-            <div>
-              <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Scripts Status</h3>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Script
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Duration
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                    {deployment.scripts && deployment.scripts.map((script) => (
-                      <tr key={script.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer" onClick={() => handleViewScript(script)}>
-                        <td className="px-4 py-4">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {script.name}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {script.path}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4">
-                          <StatusBadge status={script.status} />
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
-                          {calculateDuration(script.startedAt, script.completedAt)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Deployment Details</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{deployment.name}</div>
+                  </div>
+                  <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
+                      {deployment.description || <span className="text-gray-400 dark:text-gray-500">No description provided</span>}
+                    </div>
+                  </div>
+                  <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Repository</div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{deployment.repositoryId}</div>
+                  </div>
+                  <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Created By</div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{deployment.createdBy}</div>
+                  </div>
+                  <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Created At</div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{formatDate(deployment.createdAt)}</div>
+                  </div>
+                  {deployment.scheduledFor && (
+                    <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scheduled For</div>
+                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{formatDate(deployment.scheduledFor)}</div>
+                    </div>
+                  )}
+                  {deployment.startedAt && (
+                    <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Started At</div>
+                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{formatDate(deployment.startedAt)}</div>
+                    </div>
+                  )}
+                  {deployment.completedAt && (
+                    <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Completed At</div>
+                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{formatDate(deployment.completedAt)}</div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* Hosts Summary */}
+            
+            {/* Hosts */}
             <div>
-              <h3 className="text-lg font-medium mb-2 text-gray-900 dark:text-white">Target Hosts</h3>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Host
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Environment
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                    {deployment.hosts && deployment.hosts.map((host) => (
-                      <tr key={host.id}>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                          {host.name}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                          {host.environment}
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge status={host.status} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Hosts ({deployment.hosts.length})</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                {deployment.hosts.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                    No hosts selected for this deployment
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Name
+                          </th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Environment
+                          </th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {deployment.hosts.map((host: DeploymentHost) => (
+                          <tr key={host.id}>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                              {host.name}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                {host.environment || 'Unknown'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <StatusBadge status={host.status} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Scripts */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Scripts ({deployment.scripts.length})</h3>
+              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                {deployment.scripts.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                    No scripts selected for this deployment
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Name
+                          </th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Path
+                          </th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th scope="col" className="relative px-4 py-3">
+                            <span className="sr-only">Actions</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {deployment.scripts.map((script: DeploymentScript) => (
+                          <tr key={script.id}>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                              {script.name}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {script.path}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <StatusBadge status={script.status} />
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                              <button 
+                                onClick={() => handleViewScript(script)}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                              >
+                                View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -310,151 +375,78 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
         {/* Logs Tab */}
         {activeTab === 'logs' && (
           <div>
-            <div className="mb-4 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Deployment Logs</h3>
-              <button className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded dark:bg-gray-700 dark:text-gray-300">
-                Download Logs
-              </button>
-            </div>
-            <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900 p-4 overflow-auto h-96 font-mono text-sm">
-              {deployment.logs && deployment.logs.map((log, index) => {
-                let textColor = 'text-gray-700 dark:text-gray-300';
-                if (log.level === 'ERROR') textColor = 'text-red-600 dark:text-red-400';
-                else if (log.level === 'WARNING') textColor = 'text-yellow-600 dark:text-yellow-400';
-                else if (log.level === 'INFO') textColor = 'text-blue-600 dark:text-blue-400';
-                
-                return (
-                  <div key={index} className="py-1">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatDate(log.timestamp)}
-                    </span>{' '}
-                    <span className={`${textColor}`}>{log.message}</span>
+            <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300 h-96 overflow-y-auto">
+              {deployment.logs && deployment.logs.length > 0 ? (
+                deployment.logs.map((log, index) => (
+                  <div key={index} className="mb-1">
+                    <span className="text-gray-500">[{formatDate(log.timestamp)}]</span> <span className={`${
+                      log.level === 'ERROR' ? 'text-red-400' :
+                      log.level === 'WARNING' ? 'text-yellow-400' :
+                      log.level === 'INFO' ? 'text-blue-400' :
+                      'text-gray-300'
+                    }`}>{log.message}</span>
                   </div>
-                );
-              })}
+                ))
+              ) : (
+                <div className="text-center text-gray-500 mt-16">
+                  No logs available for this deployment
+                </div>
+              )}
             </div>
           </div>
         )}
         
         {/* Scripts Tab */}
         {activeTab === 'scripts' && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Script list */}
-            <div className="md:col-span-1 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-medium text-gray-900 dark:text-white">Scripts</h3>
+          <div>
+            {selectedScript ? (
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">{selectedScript.name}</h3>
+                  <button 
+                    onClick={() => setSelectedScript(null)}
+                    className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <X className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  </button>
+                </div>
+                <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300 h-96 overflow-y-auto">
+                  <pre>{selectedScript.logs ? selectedScript.logs.join('\n') : 'No script content available'}</pre>
+                </div>
               </div>
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {deployment.scripts && deployment.scripts.map((script) => (
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {deployment.scripts.map((script: DeploymentScript) => (
                   <div 
                     key={script.id} 
-                    className={`p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                      selectedScript?.id === script.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                    }`}
+                    className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                     onClick={() => handleViewScript(script)}
                   >
-                    <div className="flex justify-between items-center">
-                      <div className="font-medium text-gray-900 dark:text-white">{script.name}</div>
+                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-2">{script.name}</h4>
+                    <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+                      <span>Path: {script.path}</span>
                       <StatusBadge status={script.status} />
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {calculateDuration(script.startedAt, script.completedAt)}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-            
-            {/* Script output */}
-            <div className="md:col-span-3 border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h3 className="font-medium text-gray-900 dark:text-white">
-                  {selectedScript ? selectedScript.name : 'Select a script'}
-                </h3>
-                {selectedScript && (
-                  <StatusBadge status={selectedScript.status} />
-                )}
-              </div>
-              <div className="p-4">
-                {selectedScript ? (
-                  <div>
-                    <div className="mb-2 text-sm">
-                      <div><span className="font-medium text-gray-700 dark:text-gray-300">Path:</span> {selectedScript.path}</div>
-                      <div><span className="font-medium text-gray-700 dark:text-gray-300">Started:</span> {formatDate(selectedScript.startedAt)}</div>
-                      <div><span className="font-medium text-gray-700 dark:text-gray-300">Duration:</span> {calculateDuration(selectedScript.startedAt, selectedScript.completedAt)}</div>
-                    </div>
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900 p-4 overflow-auto h-80 font-mono text-sm">
-                      {selectedScript.output ? (
-                        selectedScript.output.split('\n').map((line, index) => (
-                          <div key={index} className="py-0.5">{line}</div>
-                        ))
-                      ) : (
-                        <div className="text-gray-500 dark:text-gray-400">No output available.</div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-96 flex items-center justify-center text-gray-500 dark:text-gray-400">
-                    Select a script to view its output
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         )}
         
         {/* Metrics Tab */}
         {activeTab === 'metrics' && (
-          <div>
-            <div className="text-center py-8">
-              <ChartBar className="h-16 w-16 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Metrics Coming Soon</h3>
-              <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                Detailed performance metrics for this deployment will be available in a future update.
-              </p>
+          <div className="text-center py-8">
+            <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
+              <ChartBar className="h-12 w-12" />
             </div>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">Metrics coming soon</h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              Detailed metrics for deployments will be available in a future update
+            </p>
           </div>
         )}
       </div>
-      
-      {/* Script Selection Modal */}
-      {selectedScript && activeTab !== 'scripts' && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900 dark:text-white">{selectedScript.name}</h3>
-              <button onClick={() => setSelectedScript(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-4">
-                <StatusBadge status={selectedScript.status} />
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  Duration: {calculateDuration(selectedScript.startedAt, selectedScript.completedAt)}
-                </div>
-              </div>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900 p-4 overflow-auto max-h-96 font-mono text-sm">
-                {selectedScript.output ? (
-                  selectedScript.output.split('\n').map((line, index) => (
-                    <div key={index} className="py-0.5">{line}</div>
-                  ))
-                ) : (
-                  <div className="text-gray-500 dark:text-gray-400">No output available.</div>
-                )}
-              </div>
-            </div>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
-              <button 
-                onClick={() => setSelectedScript(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200 rounded-md text-sm font-medium"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

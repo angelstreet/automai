@@ -46,8 +46,9 @@ app/
               ├── constants.ts   # Constants for deployments
               ├── page.tsx       # Deployment page
               ├── types.ts       # Type definitions
-              ├── usedeployments.ts # Feature-specific hooks
-              └── utils.ts       # Utility functions
+              ├── hooks.ts # Feature-specific hooks
+              ├── utils.ts       # Utility functions
+              └── context.tsx    # Feature-specific context provider
 ```
 
 #### Shared Components and Functionality
