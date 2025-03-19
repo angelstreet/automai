@@ -16,6 +16,10 @@ const SCRIPTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 let hostsCache: { data: { id: string; name: string; environment: string; status: string }[], timestamp: number } | null = null;
 const HOSTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Add cache for deployments list
+let deploymentsCache: { data: Deployment[], timestamp: number } | null = null;
+const DEPLOYMENTS_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
 /**
  * Get all deployments
  * @param user Optional pre-fetched user data to avoid redundant auth calls
@@ -24,6 +28,12 @@ export async function getDeployments(user?: AuthUser | null): Promise<Deployment
   console.log('Fetching all deployments');
   
   try {
+    // Check cache first
+    if (deploymentsCache && (Date.now() - deploymentsCache.timestamp < DEPLOYMENTS_CACHE_TTL)) {
+      console.log('Returning cached deployments');
+      return deploymentsCache.data;
+    }
+    
     // Use provided user data or fetch it if not provided
     const currentUser = user || await getUser();
     if (!currentUser) {
@@ -39,7 +49,15 @@ export async function getDeployments(user?: AuthUser | null): Promise<Deployment
     
     // For now, return sample deployments
     // In a real implementation, we would fetch from the database
-    return [];
+    const deployments: Deployment[] = [];
+    
+    // Update cache
+    deploymentsCache = {
+      data: deployments,
+      timestamp: Date.now()
+    };
+    
+    return deployments;
   } catch (error) {
     console.error('Error fetching deployments:', error);
     return [];

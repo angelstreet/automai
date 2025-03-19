@@ -13,6 +13,8 @@ priority: 2
 - **Tenant Isolation** - Always enforce tenant boundaries
 - **Profile Extension** - Use profiles table to extend auth.users
 - **OAuth Flow** - Follow standard OAuth pattern with auth-redirect
+- **User Context Integration** - Pass user data between layers to avoid redundant auth calls
+- **Consistent Caching Strategy** - Implement TTL-based caching at appropriate layers
 
 ## Three-Layer Architecture
 
@@ -26,17 +28,103 @@ Authentication follows a strict three-layer architecture:
 - Uses server-side Supabase client with cookies
 - Returns standard format: {success, error, data}
 
-### Server Actions Layer (/src/app/actions/auth.ts)
+### Server Actions Layer
+- Located in `/src/app/[locale]/[tenant]/{feature}/actions.ts`
 - 'use server' functions
 - Calls functions from the Server DB Layer
 - Handles error management and redirects
+- Accepts optional user parameter to avoid redundant auth calls
+- Implements caching for frequently accessed data
 - Returns enhanced results: {success, error, data, redirectUrl}
 
-### Client Hooks Layer (Various hooks)
-- 'use client' React hooks
-- Calls Server Actions via form actions or direct invocation
+### Client Context Layer
+- Located in `/src/app/[locale]/[tenant]/{feature}/context.tsx`
+- 'use client' React context and hooks
+- Provides state management and function wrappers for actions
+- Converts User type to AuthUser type when needed
 - Manages loading, error states and user experience
 - Never calls Server DB directly
+
+## Data and Context Flow
+
+```
+┌─────────────────────┐     ┌───────────────────┐     ┌────────────────────┐
+│                     │     │                   │     │                    │
+│   Client Components │     │  Feature Context  │     │   User Context     │
+│                     │     │                   │     │                    │
+└─────────┬───────────┘     └────────┬──────────┘     └──────────┬─────────┘
+          │                          │                           │
+          │                          │                           │
+          │ ┌──────────────────┐     │                           │
+          │ │                  │     │                           │
+          │ │ useHostContext() │     │                           │
+          └─┤                  │◄────┘                           │
+            │                  │                                 │
+            └──────┬───────────┘                                 │
+                   │                                             │
+                   │                                             │
+                   │           ┌───────────────────────┐         │
+                   │           │                       │         │
+                   │           │ userToAuthUser(user)  │◄────────┘
+                   │           │                       │
+                   │           └───────────┬───────────┘
+                   │                       │
+                   ▼                       ▼
+          ┌──────────────────┐    ┌──────────────────┐
+          │                  │    │                  │
+          │  Action Methods  │    │ Cache Mechanism  │
+          │                  │    │                  │
+          └────────┬─────────┘    └─────────┬────────┘
+                   │                        │
+                   │       ┌────────────────┘
+                   │       │
+                   ▼       ▼
+          ┌──────────────────┐    ┌──────────────────┐
+          │                  │    │                  │
+          │  DB Operations   │◄───┤  Type Mappers    │
+          │                  │    │                  │
+          └────────┬─────────┘    └──────────────────┘
+                   │
+                   ▼
+          ┌──────────────────┐
+          │                  │
+          │   Supabase DB    │
+          │                  │
+          └──────────────────┘
+```
+
+### Data Flow Process:
+
+1. **Component Initialization**:
+   - Component mounts and uses a context hook (e.g., `useHostContext()`)
+   - Context includes state and action methods
+
+2. **User Context Integration**:
+   - The feature context (e.g., HostContext) accesses user data from UserContext
+   - Converts User to AuthUser using the userToAuthUser helper when needed
+
+3. **Data Operation Request**:
+   - Component calls a context method (e.g., `fetchHosts()`)
+   - Context calls the corresponding action (e.g., `getHosts()`)
+   - Passes the user data to avoid redundant auth calls
+
+4. **Cache Check**:
+   - Action checks if data is in cache (using serverCache)
+   - Returns cached data if available and not expired
+
+5. **DB Operation**:
+   - If not cached, action calls DB operation with user data
+   - DB operation performs the actual database query
+   - Returns results in standard format
+
+6. **Type Mapping and Response**:
+   - Action maps DB response to proper UI types using mapper functions
+   - Caches the result for future use
+   - Returns formatted data to the context
+
+7. **State Update**:
+   - Context updates its state with the new data
+   - Component re-renders with the updated state
 
 ## Authentication Flow
 
@@ -59,6 +147,68 @@ Authentication follows a strict three-layer architecture:
 - Always use supabase.auth.getUser() for protection
 - Never trust getSession() in server components
 - Always validate user permissions server-side
+- Use optional user parameters in action functions to avoid redundant auth calls
+- Implement data mapping functions to handle type differences (e.g., DB types vs. UI types)
+- Store constants at the feature root level, not in component directories
+
+### Passing User Context
+
+When implementing feature actions:
+- Always accept an optional user parameter in action functions
+- Only call getUser() if the user parameter is not provided
+- Use a helper function to convert between User and AuthUser types when needed
+- Example:
+  ```typescript
+  export async function getHosts(filter?: HostFilter, user?: AuthUser | User | null): Promise<Result<Host[]>> {
+    try {
+      // Get the current user if not provided
+      if (!user) {
+        const userResult = await getUser();
+        if (!userResult.success) {
+          return { success: false, error: userResult.error || 'Authentication failed' };
+        }
+        user = userResult.data;
+      }
+      
+      // Convert User to AuthUser if needed
+      if (!('created_at' in user)) {
+        user = {
+          ...user,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+      }
+      
+      // Continue with DB operations...
+    }
+  }
+  ```
+
+### Caching Strategy
+
+- Implement caching at the actions layer using the serverCache utility
+- Define consistent TTL values in constants files
+- Clear cache entries when data is modified
+- Example:
+  ```typescript
+  // In constants.ts
+  export const CACHE_TTL = {
+    REPOSITORIES: 5 * 60 * 1000, // 5 minutes
+    REPOSITORY: 2 * 60 * 1000,   // 2 minutes
+    USER: 15 * 60 * 1000,        // 15 minutes
+  };
+  
+  // In actions.ts
+  const cacheKey = `repositories:${filter?.providerId || 'all'}`;
+  const cachedData = serverCache.get<Repository[]>(cacheKey);
+  
+  if (cachedData) {
+    return { success: true, data: cachedData };
+  }
+  
+  // Fetch data and cache result
+  serverCache.set(cacheKey, data, CACHE_TTL.REPOSITORIES);
+  ```
 
 ### Use Middleware for Session Management
 - Middleware refreshes auth tokens automatically
@@ -75,9 +225,11 @@ Authentication follows a strict three-layer architecture:
 
 ## Implementation Notes
 - The middleware (/src/middleware.ts) handles session refresh and protection
-- User cache (/src/app/actions/user.ts) has 5-minute TTL
+- User cache (/src/app/actions/user.ts) has 15-minute TTL
 - The Supabase auth client is centralized in /src/lib/supabase/auth.ts
 - Authentication components must handle appropriate error states
+- Use consistent data mappers (e.g., mapDbRepositoryToRepository) to handle type differences
+- Constants should be defined at the feature root level (e.g., `/src/app/[locale]/[tenant]/{feature}/constants.ts`)
 
 ## DB Layer Organization
 
@@ -106,6 +258,26 @@ type DbResponse<T> = {
 };
 ```
 
+### Type Mapping
+When converting between DB types and UI types:
+- Create mapper functions to standardize conversion logic
+- Handle null/undefined values gracefully
+- Ensure all required fields are included
+- Example:
+  ```typescript
+  function mapDbRepositoryToRepository(dbRepo: any): Repository {
+    if (!dbRepo) {
+      return { /* default values */ };
+    }
+    
+    return {
+      id: String(dbRepo.id || ''),
+      name: String(dbRepo.name || ''),
+      // Map other fields...
+    };
+  }
+  ```
+
 ### Importing DB Modules
 DB modules can be imported in two ways:
 ```typescript
@@ -116,4 +288,3 @@ const providers = await db.gitProvider.findMany();
 // 2. Directly from feature-specific modules (preferred)
 import { gitProvider } from '@/lib/supabase';
 const { success, data, error } = await gitProvider.getGitProviders(profileId);
-```

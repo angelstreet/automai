@@ -114,7 +114,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
         await fetchUserData();
       }
       
-      const data = await getDeployments();
+      const data = await getDeployments(currentUser);
       setDeployments(data);
     } catch (err) {
       setError('Failed to load deployments');
@@ -138,7 +138,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
         await fetchUserData();
       }
       
-      const deployment = await getDeploymentById(id);
+      const deployment = await getDeploymentById(id, currentUser);
       return deployment;
     } catch (err) {
       setError('Failed to load deployment details');
@@ -197,7 +197,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
         await fetchUserData();
       }
       
-      const result = await abortDeploymentAction(id);
+      const result = await abortDeploymentAction(id, currentUser);
       
       if (!result.success) {
         setError(result.error || 'Failed to abort deployment');
@@ -230,7 +230,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
         await fetchUserData();
       }
       
-      const result = await refreshDeploymentAction(id);
+      const result = await refreshDeploymentAction(id, currentUser);
       
       if (!result.success) {
         setError(result.error || 'Failed to refresh deployment');
@@ -261,17 +261,21 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    * Get scripts for a repository
    * Takes repository ID and returns available scripts
    */
-  const fetchScriptsForRepository = useCallback(async (repositoryId: string) => {
+  const handleFetchScriptsForRepository = useCallback(async (repositoryId: string) => {
+    setLoading(true);
+    
     try {
       // Use cached user data when available
       if (!currentUser) {
         await fetchUserData();
       }
       
-      return await getScriptsForRepository(repositoryId);
+      return await getScriptsForRepository(repositoryId, currentUser);
     } catch (err) {
       console.error('Error fetching scripts:', err);
       return [];
+    } finally {
+      setLoading(false);
     }
   }, [currentUser, fetchUserData]);
 
@@ -279,17 +283,21 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    * Get available hosts
    * Returns a list of hosts that can be used for deployments
    */
-  const fetchAvailableHosts = useCallback(async () => {
+  const handleFetchAvailableHosts = useCallback(async () => {
+    setLoading(true);
+    
     try {
       // Use cached user data when available
       if (!currentUser) {
         await fetchUserData();
       }
       
-      return await getAvailableHosts();
+      return await getAvailableHosts(currentUser);
     } catch (err) {
       console.error('Error fetching hosts:', err);
       return [];
+    } finally {
+      setLoading(false);
     }
   }, [currentUser, fetchUserData]);
 
@@ -297,14 +305,14 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    * Fetch deployment status including CI/CD status
    * Takes deployment ID and returns comprehensive status information
    */
-  const fetchDeploymentStatus = useCallback(async (id: string) => {
+  const handleFetchDeploymentStatus = useCallback(async (id: string) => {
     try {
       // Use cached user data when available
       if (!currentUser) {
         await fetchUserData();
       }
       
-      return await getDeploymentStatus(id);
+      return await getDeploymentStatus(id, currentUser);
     } catch (err) {
       console.error('Error fetching deployment status:', err);
       return { success: false, error: 'Failed to fetch deployment status' };
@@ -339,9 +347,9 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     refreshDeployment: handleRefreshDeployment,
     
     // Supporting actions
-    fetchScriptsForRepository,
-    fetchAvailableHosts,
-    fetchDeploymentStatus,
+    fetchScriptsForRepository: handleFetchScriptsForRepository,
+    fetchAvailableHosts: handleFetchAvailableHosts,
+    fetchDeploymentStatus: handleFetchDeploymentStatus,
     refreshUserData: fetchUserData
   };
 
