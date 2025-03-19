@@ -67,20 +67,46 @@ export async function createDeployment(
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
     const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
 
+    // Check if the selected scripts and hosts are valid UUIDs
+    const isValidUUID = (id: string) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(id);
+    };
+
+    // Filter out any non-UUID script IDs and log warnings
+    const validScriptIds = formData.selectedScripts?.filter(id => {
+      const isValid = isValidUUID(id);
+      if (!isValid) {
+        console.warn(`Actions layer: Filtering out invalid script ID: ${id}`);
+      }
+      return isValid;
+    }) || [];
+    
+    const validHostIds = formData.selectedHosts?.filter(id => {
+      const isValid = isValidUUID(id);
+      if (!isValid) {
+        console.warn(`Actions layer: Filtering out invalid host ID: ${id}`);
+      }
+      return isValid;
+    }) || [];
+
+    console.log('Actions layer: Valid script IDs:', validScriptIds);
+    console.log('Actions layer: Valid host IDs:', validHostIds);
+
     // Map form data to database schema
     const deploymentData = {
       name: formData.name,
       description: formData.description || '',
       repository_id: formData.repository,
-      scripts: formData.selectedScripts || [],
-      hosts: formData.selectedHosts || [],
+      script_ids: validScriptIds,
+      host_ids: validHostIds,
       status: 'pending',
       schedule_type: formData.schedule,
       scheduled_time: formData.scheduledTime || null,
       cron_expression: formData.cronExpression || null,
       repeat_count: formData.repeatCount || 0,
       parameters: formData.parameters || {},
-      environment_vars: formData.environmentVars || [],
+      environment_vars: formData.environmentVars || [], 
       tenant_id: user.tenant_id,
       user_id: user.id
     };
@@ -88,9 +114,23 @@ export async function createDeployment(
     console.log('Actions layer: Calling deployment.create with data');
     
     // Create the deployment in the database
-    const deploymentResult = await deploymentDb.create({ data: deploymentData });
-    
-    console.log('Actions layer: Deployment created with ID:', deploymentResult?.id);
+    const result = await deploymentDb.create({ data: deploymentData });
+
+    if (!result.success) {
+      console.error('Error creating deployment:', result.error);
+      
+      // Provide more specific error messages based on the error type
+      if (result.error?.code === '22P02') {
+        return { 
+          success: false, 
+          error: 'Invalid data type for one or more fields. Please ensure all IDs are valid UUIDs.' 
+        };
+      }
+      
+      return { success: false, error: result.error?.message || 'Failed to create deployment' };
+    }
+
+    console.log('Actions layer: Deployment created with ID:', result.id);
 
     // If Jenkins integration is enabled, create the CICD mapping
     if (formData.jenkinsConfig?.enabled && 
@@ -100,7 +140,7 @@ export async function createDeployment(
       console.log('Actions layer: Jenkins integration enabled, creating CICD mapping');
       
       const cicdMappingData = {
-        deployment_id: deploymentResult.id,
+        deployment_id: result.id,
         provider_id: formData.jenkinsConfig.providerId,
         job_id: formData.jenkinsConfig.jobId,
         tenant_id: user.tenant_id,
@@ -131,7 +171,7 @@ export async function createDeployment(
     
     return { 
       success: true, 
-      deploymentId: deploymentResult.id 
+      deploymentId: result.id 
     };
   } catch (error) {
     console.error('Error creating deployment:', error);

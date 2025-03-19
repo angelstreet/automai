@@ -24,8 +24,8 @@ const deployment = {
       schedule_type,
       cron_expression,
       repeat_count,
-      scripts,
-      hosts,
+      script_ids,
+      host_ids,
       parameters,
       environment_vars,
       tenant_id,
@@ -94,8 +94,8 @@ const deployment = {
       name: data.name,
       description: data.description || '',
       repository_id: data.repository_id,
-      scripts: data.scripts || [],
-      hosts: data.hosts || [],
+      script_ids: data.script_ids || [],
+      host_ids: data.host_ids || [],
       status: data.status || 'pending',
       schedule_type: data.schedule_type || 'now',
       scheduled_time: data.scheduled_time || null,
@@ -112,11 +112,18 @@ const deployment = {
 
     if (error) {
       console.error('Error creating deployment:', error);
-      throw error;
+      return {
+        success: false,
+        error
+      };
     }
 
     console.log('DB layer: Deployment created successfully with ID:', result?.id);
-    return result;
+    return {
+      success: true,
+      id: result.id,
+      data: result
+    };
   },
 
   async update({ where, data }: { where: any; data: any }) {
@@ -132,10 +139,18 @@ const deployment = {
 
     if (error) {
       console.error('Error updating deployment:', error);
-      throw error;
+      return {
+        success: false,
+        error
+      };
     }
 
-    return result;
+    console.log('DB layer: Deployment updated successfully with ID:', result?.id);
+    return {
+      success: true,
+      id: result.id,
+      data: result
+    };
   },
 
   async delete({ where }: { where: any }) {
@@ -146,7 +161,10 @@ const deployment = {
 
     if (error) {
       console.error('Error deleting deployment:', error);
-      throw error;
+      return {
+        success: false,
+        error
+      };
     }
 
     return { success: true };
