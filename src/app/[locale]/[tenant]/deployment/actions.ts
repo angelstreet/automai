@@ -67,20 +67,31 @@ export async function createDeployment(
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
     const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
 
-    // Check if the selected scripts and hosts are valid UUIDs
+    // Extract script paths and parameters from the scriptMapping
+    const scriptPaths: string[] = [];
+    const scriptParameters: Record<string, any> = {};
+    
+    if (formData.scriptMapping) {
+      Object.entries(formData.scriptMapping).forEach(([scriptId, scriptInfo]) => {
+        if (scriptInfo && scriptInfo.path) {
+          scriptPaths.push(scriptInfo.path);
+          
+          // Store parameters for this script path if they exist
+          if (formData.parameters && formData.parameters[scriptId]) {
+            scriptParameters[scriptInfo.path] = formData.parameters[scriptId];
+          }
+        }
+      });
+    }
+
+    console.log('Actions layer: Script paths:', scriptPaths);
+    console.log('Actions layer: Script parameters:', scriptParameters);
+
+    // Check if the selected hosts are valid UUIDs
     const isValidUUID = (id: string) => {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       return uuidRegex.test(id);
     };
-
-    // Filter out any non-UUID script IDs and log warnings
-    const validScriptIds = formData.selectedScripts?.filter(id => {
-      const isValid = isValidUUID(id);
-      if (!isValid) {
-        console.warn(`Actions layer: Filtering out invalid script ID: ${id}`);
-      }
-      return isValid;
-    }) || [];
     
     const validHostIds = formData.selectedHosts?.filter(id => {
       const isValid = isValidUUID(id);
@@ -90,7 +101,6 @@ export async function createDeployment(
       return isValid;
     }) || [];
 
-    console.log('Actions layer: Valid script IDs:', validScriptIds);
     console.log('Actions layer: Valid host IDs:', validHostIds);
 
     // Map form data to database schema
@@ -98,14 +108,14 @@ export async function createDeployment(
       name: formData.name,
       description: formData.description || '',
       repository_id: formData.repository,
-      script_ids: validScriptIds,
+      scripts_paths: scriptPaths,
+      scripts_parameters: scriptParameters,
       host_ids: validHostIds,
       status: 'pending',
       schedule_type: formData.schedule,
       scheduled_time: formData.scheduledTime || null,
       cron_expression: formData.cronExpression || null,
       repeat_count: formData.repeatCount || 0,
-      parameters: formData.parameters || {},
       environment_vars: formData.environmentVars || [], 
       tenant_id: user.tenant_id,
       user_id: user.id

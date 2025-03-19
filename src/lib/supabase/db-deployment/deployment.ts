@@ -24,7 +24,8 @@ const deployment = {
       schedule_type,
       cron_expression,
       repeat_count,
-      script_ids,
+      scripts_paths,
+      scripts_parameters,
       host_ids,
       parameters,
       environment_vars,
@@ -73,7 +74,28 @@ const deployment = {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
-    const { data, error } = await supabase.from('deployments').select().match(where).single();
+    const { data, error } = await supabase.from('deployments').select(`
+      id,
+      name,
+      description,
+      repository_id,
+      status,
+      user_id,
+      created_at,
+      started_at,
+      completed_at,
+      scheduled_time,
+      schedule_type,
+      cron_expression,
+      repeat_count,
+      scripts_paths,
+      scripts_parameters,
+      host_ids,
+      parameters,
+      environment_vars,
+      tenant_id,
+      error_message
+    `).match(where).single();
 
     if (error) {
       console.error('Error finding deployment:', error);
@@ -94,7 +116,8 @@ const deployment = {
       name: data.name,
       description: data.description || '',
       repository_id: data.repository_id,
-      script_ids: data.script_ids || [],
+      scripts_paths: data.scripts_paths || [],
+      scripts_parameters: data.scripts_parameters || {},
       host_ids: data.host_ids || [],
       status: data.status || 'pending',
       schedule_type: data.schedule_type || 'now',
@@ -130,9 +153,26 @@ const deployment = {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
 
+    // Prepare update data
+    const updateData = {
+      name: data.name,
+      description: data.description,
+      repository_id: data.repository_id,
+      scripts_paths: data.scripts_paths,
+      scripts_parameters: data.scripts_parameters,
+      host_ids: data.host_ids,
+      status: data.status,
+      schedule_type: data.schedule_type,
+      scheduled_time: data.scheduled_time,
+      cron_expression: data.cron_expression,
+      repeat_count: data.repeat_count,
+      parameters: data.parameters,
+      environment_vars: data.environment_vars,
+    };
+
     const { data: result, error } = await supabase
       .from('deployments')
-      .update(data)
+      .update(updateData)
       .match(where)
       .select()
       .single();
