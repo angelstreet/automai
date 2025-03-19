@@ -60,6 +60,8 @@ export const supabaseAuth = {
         return { success: false, error: 'Missing tenant_name in user profile' };
       }
 
+      // Create a clean user object with data only from the profiles table
+      // and user metadata for non-sensitive information
       return {
         success: true,
         data: {
@@ -71,7 +73,13 @@ export const supabaseAuth = {
             role,
             tenant_id: profile.tenant_id,
             tenant_name: profile.tenant_name,
-            user_metadata: metadata,
+            user_metadata: {
+              name: metadata.name,
+              full_name: metadata.full_name,
+              preferred_username: metadata.preferred_username,
+              avatar_url: metadata.avatar_url,
+              raw_user_meta_data: metadata.raw_user_meta_data
+            },
           },
           accessToken: access_token,
           expires: expires_at ? new Date(expires_at * 1000).toISOString() : '',
@@ -133,14 +141,6 @@ export const supabaseAuth = {
         };
       }
       
-      // Detailed logging of tenant information
-      console.log(`User ${authUser.id} tenant info:`, {
-        profileTenantId: profile.tenant_id,
-        profileTenantName: profile.tenant_name,
-        metadataTenantId: authUser.user_metadata?.tenant_id,
-        metadataTenantName: authUser.user_metadata?.tenant_name
-      });
-
       // Get name from user metadata with fallbacks
       const name =
         authUser.user_metadata?.name ||
@@ -183,6 +183,8 @@ export const supabaseAuth = {
         return { success: false, error: 'Missing tenant_name in user profile' };
       }
 
+      // Create a clean user object with data only from the profiles table
+      // and user metadata for non-sensitive information
       return {
         success: true,
         data: {
@@ -192,9 +194,14 @@ export const supabaseAuth = {
           role,
           tenant_id: profile.tenant_id,
           tenant_name: profile.tenant_name,
-          avatar_url:
-            authUser.user_metadata?.avatar_url || profile.avatar_url || '/avatars/default.svg',
-          user_metadata: authUser.user_metadata,
+          avatar_url: profile.avatar_url || authUser.user_metadata?.avatar_url || '/avatars/default.svg',
+          user_metadata: {
+            name: authUser.user_metadata?.name,
+            full_name: authUser.user_metadata?.full_name,
+            preferred_username: authUser.user_metadata?.preferred_username,
+            avatar_url: authUser.user_metadata?.avatar_url,
+            raw_user_meta_data: authUser.user_metadata?.raw_user_meta_data
+          },
         },
       };
     } catch (error) {

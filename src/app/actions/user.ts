@@ -60,6 +60,7 @@ export async function getUser(): Promise<AuthUser | null> {
     
     if (result.success && result.data) {
       console.log('[Auth] User data successfully retrieved', {
+        id: result.data.id,
         tenant_id: result.data.tenant_id,
         tenant_name: result.data.tenant_name
       });

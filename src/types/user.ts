@@ -23,6 +23,7 @@ export type AuthUser = {
   email: string;
   name?: string;
   tenant_id: string;
+  tenant_name: string;
   created_at: string;
   updated_at: string;
   user_metadata?: {
@@ -30,9 +31,6 @@ export type AuthUser = {
     full_name?: string;
     preferred_username?: string;
     avatar_url?: string;
-    tenant_id?: string;
-    role?: string;
-    tenant_name?: string;
     raw_user_meta_data?: {
       name?: string;
       full_name?: string;
