@@ -7,11 +7,6 @@ import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
 import { Textarea } from '@/components/shadcn/textarea';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/shadcn/collapsible';
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -73,7 +68,6 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
   onJobChange,
   onParameterChange,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [openProviders, setOpenProviders] = useState(false);
   const [openCredentials, setOpenCredentials] = useState(false);
   const [openJobs, setOpenJobs] = useState(false);
@@ -175,24 +169,8 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
       </div>
       
       {enabled && (
-        <Collapsible
-          open={isOpen}
-          onOpenChange={setIsOpen}
-          className="border rounded-md p-2"
-        >
-          <div className="flex items-center justify-between">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm">
-                {isOpen ? (
-                  <ChevronsUpDown className="h-4 w-4" />
-                ) : (
-                  <ChevronsUpDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-          </div>
-          
-          <CollapsibleContent className="mt-2 space-y-4">
+        <div className="border rounded-md p-4">
+          <div className="space-y-4">
             {/* Jenkins Provider Selection */}
             <div className="space-y-2">
               <Label>Jenkins Provider</Label>
@@ -435,8 +413,8 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
                 Expert users can provide a custom Jenkinsfile that will override the default pipeline configuration.
               </p>
             </div>
-          </CollapsibleContent>
-        </Collapsible>
+          </div>
+        </div>
       )}
     </div>
   );

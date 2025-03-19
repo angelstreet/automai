@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { Host as HostType, ScriptParameter, CICDProvider, CICDJob } from '../types';
 import CustomSwitch from './CustomSwitch';
-import JenkinsConfig from './JenkinsConfig';
 import { useCICDProviders, useCICDJobs, useCICDJobDetails } from '../hooks';
 
 interface DeploymentWizardStep5Props {
@@ -164,31 +163,15 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
       </div>
       
       <div className="space-y-4">
-        {/* Show either Jenkins Config or Deployment Review based on toggle */}
+        {/* Show either Jenkins Pipeline Preview or Deployment Review based on toggle */}
         {jenkinsConfig.enabled ? (
-          <>
-            <JenkinsConfig
-              enabled={jenkinsConfig.enabled}
-              config={jenkinsConfig}
-              onChange={onJenkinsConfigChange}
-              providers={providers}
-              jobs={jobs}
-              jobParameters={jobParameters}
-              isLoadingProviders={isLoadingProviders}
-              isLoadingJobs={isLoadingJobs}
-              isLoadingJobDetails={isLoadingJobDetails}
-              onProviderChange={handleProviderChange}
-              onJobChange={handleJobChange}
-              onParameterChange={handleParameterChange}
-            />
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">Jenkins Pipeline Preview</h3>
+            </div>
             
-            {/* Jenkins Pipeline Preview */}
-            <div className="mt-6 space-y-2">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Jenkins Pipeline Preview
-              </h3>
-              <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 p-4 overflow-auto max-h-96">
-                <pre className="text-xs text-gray-300 font-mono whitespace-pre">
+            <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 p-4 overflow-auto max-h-96">
+              <pre className="text-xs text-gray-300 font-mono whitespace-pre">
 {`pipeline {
     agent any
     
@@ -203,7 +186,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
             steps {
                 script {
                     // Deploy scripts to selected hosts
-                    ${scriptIds.map((scriptId, index) => {
+                    ${scriptIds.map((scriptId) => {
                       const script = repositoryScripts.find(s => s.id === scriptId);
                       const params = scriptParameters[scriptId]?.['raw'] || '';
                       return `sh "automai-deploy ${script?.path || scriptId} ${params}"`;
@@ -213,10 +196,9 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         }
     }
 }`}
-                </pre>
-              </div>
+              </pre>
             </div>
-          </>
+          </div>
         ) : (
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
             <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Deployment Summary</h4>
