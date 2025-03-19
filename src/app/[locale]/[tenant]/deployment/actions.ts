@@ -425,7 +425,7 @@ export async function getRepositories(user?: AuthUser | null): Promise<Repositor
     return data.map((repo: DbRepository) => ({
       id: repo.id,
       name: repo.name,
-      owner: repo.full_name.split('/')[0],
+      owner: repo.full_name && repo.full_name.includes('/') ? repo.full_name.split('/')[0] : 'Unknown',
       url: repo.url
     }));
   } catch (error) {

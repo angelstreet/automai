@@ -61,17 +61,13 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
 
   // Get repository name from deployment
   const getRepositoryName = (deployment: Deployment): string => {
-    console.log('Repositories:', repositories);
-    console.log('Current deployment repository ID:', deployment.repositoryId);
-    
-    // Use the repository mapping if available
+    // Check if we have a valid repository ID and if it exists in our repositories object
     if (deployment.repositoryId && repositories[deployment.repositoryId]) {
-      console.log('Found repository:', repositories[deployment.repositoryId]);
       return repositories[deployment.repositoryId].name;
     }
     
-    // Fallback to the repository ID
-    return deployment.repositoryId;
+    // Fallback to the repository ID if name can't be found
+    return deployment.repositoryId || 'Unknown';
   };
 
   // Filter deployments based on tab, search query, and status filter
@@ -246,22 +242,22 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Name
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Repository
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Created
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Runtime
                     </th>
-                    <th scope="col" className="relative px-4 py-3">
+                    <th scope="col" className="relative px-2 py-1">
                       <span className="sr-only">Actions</span>
                     </th>
                   </tr>
@@ -273,26 +269,23 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer relative group"
                       onClick={() => handleViewDeployment(deployment)}
                     >
-                      <div className="absolute left-4 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg p-2 text-xs z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
-                        <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
-                        <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
-                      </div>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-2 py-1 whitespace-nowrap">
                         <div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div>
-                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                          {/* Empty div to maintain spacing */}
+                        <div className="group-hover:block hidden absolute left-0 top-full mt-1 z-50 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg p-2 text-xs">
+                          <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
+                          <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-2 py-1 whitespace-nowrap">
                         <div className="text-sm text-gray-600 dark:text-gray-300">{getRepositoryName(deployment)}</div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-2 py-1 whitespace-nowrap">
                         <StatusBadge status={deployment.status} />
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {getFormattedTime(deployment.createdAt)}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {deployment.completedAt && deployment.startedAt 
                           ? getFormattedTime(deployment.startedAt, deployment.completedAt) 
                           : deployment.startedAt 
@@ -301,7 +294,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                               ? `Scheduled for ${getFormattedTime(deployment.scheduledTime)}` 
                               : '-'}
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-2 py-1 whitespace-nowrap text-right text-sm font-medium">
                         {/* View button removed as requested */}
                       </td>
                     </tr>
