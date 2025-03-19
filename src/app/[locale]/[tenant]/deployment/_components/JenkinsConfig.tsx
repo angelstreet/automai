@@ -170,12 +170,8 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Server className="h-5 w-5 text-gray-500" />
-          <h3 className="text-base font-medium">Jenkins Integration</h3>
+          <h3 className="text-base font-medium">CI/CD Integration</h3>
         </div>
-        <CustomSwitch 
-          checked={enabled} 
-          onCheckedChange={handleEnableChange}
-        />
       </div>
       
       {enabled && (
@@ -185,7 +181,6 @@ const JenkinsConfig: React.FC<JenkinsConfigProps> = ({
           className="border rounded-md p-2"
         >
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Configure Jenkins Pipeline</h4>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm">
                 {isOpen ? (

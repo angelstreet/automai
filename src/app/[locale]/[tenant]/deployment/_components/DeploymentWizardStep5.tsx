@@ -122,24 +122,26 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex justify-between items-center mb-6">
+        <button
+          type="button"
+          onClick={onPrevStep}
+          className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+          Previous
+        </button>
+        
         <div className="flex items-center space-x-4">
-          <button
-            type="button"
-            onClick={onPrevStep}
-            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            Previous
-          </button>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-500">Script View</span>
-            <CustomSwitch 
-              checked={showJenkinsView}
-              onCheckedChange={setShowJenkinsView}
-            />
-            <span className="text-xs text-gray-500">Jenkins View</span>
-          </div>
+          <CustomSwitch
+            checked={jenkinsConfig.enabled}
+            onCheckedChange={(checked: boolean) => {
+              onJenkinsConfigChange(checked, jenkinsConfig);
+              if (checked) {
+                setShowJenkinsView(true);
+              }
+            }}
+            label="Jenkins Integration"
+          />
         </div>
         
         <button
@@ -162,22 +164,59 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
       </div>
       
       <div className="space-y-4">
-        {/* Show either Jenkins Config or Script Translation based on toggle */}
-        {showJenkinsView ? (
-          <JenkinsConfig
-            enabled={jenkinsConfig.enabled}
-            config={jenkinsConfig}
-            onChange={onJenkinsConfigChange}
-            providers={providers}
-            jobs={jobs}
-            jobParameters={jobParameters}
-            isLoadingProviders={isLoadingProviders}
-            isLoadingJobs={isLoadingJobs}
-            isLoadingJobDetails={isLoadingJobDetails}
-            onProviderChange={handleProviderChange}
-            onJobChange={handleJobChange}
-            onParameterChange={handleParameterChange}
-          />
+        {/* Show either Jenkins Config or Deployment Review based on toggle */}
+        {jenkinsConfig.enabled ? (
+          <>
+            <JenkinsConfig
+              enabled={jenkinsConfig.enabled}
+              config={jenkinsConfig}
+              onChange={onJenkinsConfigChange}
+              providers={providers}
+              jobs={jobs}
+              jobParameters={jobParameters}
+              isLoadingProviders={isLoadingProviders}
+              isLoadingJobs={isLoadingJobs}
+              isLoadingJobDetails={isLoadingJobDetails}
+              onProviderChange={handleProviderChange}
+              onJobChange={handleJobChange}
+              onParameterChange={handleParameterChange}
+            />
+            
+            {/* Jenkins Pipeline Preview */}
+            <div className="mt-6 space-y-2">
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Jenkins Pipeline Preview
+              </h3>
+              <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 p-4 overflow-auto max-h-96">
+                <pre className="text-xs text-gray-300 font-mono whitespace-pre">
+{`pipeline {
+    agent any
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Deploy Scripts') {
+            steps {
+                script {
+                    // Deploy scripts to selected hosts
+                    ${scriptIds.map((scriptId, index) => {
+                      const script = repositoryScripts.find(s => s.id === scriptId);
+                      const params = scriptParameters[scriptId]?.['raw'] || '';
+                      return `sh "automai-deploy ${script?.path || scriptId} ${params}"`;
+                    }).join('\n                    ')}
+                }
+            }
+        }
+    }
+}`}
+                </pre>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
             <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Deployment Summary</h4>
