@@ -11,13 +11,81 @@ import { Deployment, DeploymentFormData, DeploymentStatus } from './types';
  */
 export async function getDeployments(user: AuthUser | null): Promise<Deployment[]> {
   try {
-    // TODO: Implement actual API call to fetch deployments
-    // This is a stub implementation
+    console.log('Actions layer: Fetching deployments for user:', user?.id);
+    
+    if (!user) {
+      console.error('Actions layer: Cannot fetch deployments - user not authenticated');
+      return [];
+    }
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Fetch deployments from the database
+    const where = { tenant_id: user.tenant_id };
+    console.log('Actions layer: Fetching deployments with where:', JSON.stringify(where));
+    
+    const result = await deploymentDb.findMany({ where });
+    console.log('Actions layer: Raw result from database:', JSON.stringify(result, null, 2));
+    
+    // Handle the result based on its structure
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false && 'error' in result) {
+        console.error('Actions layer: Error fetching deployments:', result.error);
+        return [];
+      }
+      
+      let dbDeployments: any[] = [];
+      
+      if ('data' in result && Array.isArray(result.data)) {
+        dbDeployments = result.data;
+      } else if (Array.isArray(result)) {
+        dbDeployments = result;
+      }
+      
+      // Map database results to Deployment type
+      const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
+      
+      console.log('Actions layer: Fetched deployments count:', deployments.length);
+      if (deployments.length > 0) {
+        console.log('Actions layer: First deployment sample:', JSON.stringify(deployments[0], null, 2));
+      } else {
+        console.log('Actions layer: No deployments found');
+      }
+      
+      return deployments;
+    }
+    
+    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
     return [];
   } catch (error) {
     console.error('Error fetching deployments:', error);
     throw new Error('Failed to fetch deployments');
   }
+}
+
+// Define a function to map database deployment to Deployment type
+function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
+  return {
+    id: dbDeployment.id,
+    name: dbDeployment.name,
+    description: dbDeployment.description,
+    repositoryId: dbDeployment.repository_id,
+    scriptsPath: dbDeployment.scripts_path || [],
+    scriptsParameters: dbDeployment.scripts_parameters || [],
+    hostIds: dbDeployment.host_ids || [],
+    status: dbDeployment.status as DeploymentStatus,
+    scheduleType: dbDeployment.schedule_type,
+    scheduledTime: dbDeployment.scheduled_time,
+    cronExpression: dbDeployment.cron_expression,
+    repeatCount: dbDeployment.repeat_count,
+    environmentVars: dbDeployment.environment_vars,
+    tenantId: dbDeployment.tenant_id,
+    userId: dbDeployment.user_id,
+    createdAt: dbDeployment.created_at,
+    startedAt: dbDeployment.started_at,
+    completedAt: dbDeployment.completed_at
+  };
 }
 
 /**
@@ -28,8 +96,51 @@ export async function getDeployments(user: AuthUser | null): Promise<Deployment[
  */
 export async function getDeploymentById(id: string, user: AuthUser | null): Promise<Deployment | null> {
   try {
-    // TODO: Implement actual API call to fetch deployment by ID
-    // This is a stub implementation
+    console.log(`Actions layer: Fetching deployment with ID: ${id}`);
+    
+    if (!user) {
+      console.error('Actions layer: Cannot fetch deployment - user not authenticated');
+      return null;
+    }
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Fetch deployment from the database
+    const where = { id, tenant_id: user.tenant_id };
+    console.log('Actions layer: Fetching deployment with where:', JSON.stringify(where));
+    
+    const result = await deploymentDb.findUnique({ where });
+    console.log('Actions layer: Raw result from database:', JSON.stringify(result, null, 2));
+    
+    // Handle the result based on its structure
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false && 'error' in result && result.error) {
+        console.error('Actions layer: Error fetching deployment:', result.error);
+        return null;
+      }
+      
+      let dbDeployment: any = null;
+      
+      if ('data' in result) {
+        dbDeployment = result.data;
+      } else if (!('success' in result)) {
+        dbDeployment = result;
+      }
+      
+      if (!dbDeployment) {
+        console.log(`Actions layer: No deployment found with ID: ${id}`);
+        return null;
+      }
+      
+      // Map database result to Deployment type
+      const deployment = mapDbDeploymentToDeployment(dbDeployment);
+      console.log('Actions layer: Fetched deployment:', JSON.stringify(deployment, null, 2));
+      
+      return deployment;
+    }
+    
+    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
     return null;
   } catch (error) {
     console.error(`Error fetching deployment ${id}:`, error);

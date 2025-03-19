@@ -27,7 +27,6 @@ const deployment = {
       scripts_path,
       scripts_parameters,
       host_ids,
-      parameters,
       environment_vars,
       tenant_id,
       error_message
@@ -91,7 +90,6 @@ const deployment = {
       scripts_path,
       scripts_parameters,
       host_ids,
-      parameters,
       environment_vars,
       tenant_id,
       error_message

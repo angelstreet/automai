@@ -73,15 +73,19 @@ export interface Deployment {
   description?: string;
   repositoryId: string;
   status: DeploymentStatus;
-  createdBy: string;
+  userId: string;
+  tenantId: string;
   createdAt: string;
-  scheduledFor?: string;
   startedAt?: string;
   completedAt?: string;
-  scripts: DeploymentScript[];
-  hosts: DeploymentHost[];
-  configuration: DeploymentConfig;
-  logs?: LogEntry[];
+  scheduledTime?: string;
+  scheduleType: string;
+  cronExpression?: string;
+  repeatCount?: number;
+  scriptsPath: string[];
+  scriptsParameters: string[];
+  hostIds: string[];
+  environmentVars?: any[];
 }
 
 export interface DeploymentConfig {
