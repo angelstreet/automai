@@ -1,6 +1,13 @@
 import { createClient } from '../server';
 import { cookies } from 'next/headers';
-import { DbResponse } from '../types';
+import { supabaseAuth } from '../auth';
+
+// Define DbResponse type locally
+type DbResponse<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
 
 // CI/CD related DB operations
 const cicd = {
@@ -15,6 +22,23 @@ const cicd = {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
       console.log(`[DB:CICD] Supabase client created`);
+
+      // Get authenticated user to ensure proper tenant access
+      const { success: userSuccess, data: userData, error: userError } = await supabaseAuth.getUser();
+      
+      if (!userSuccess || userError) {
+        console.error(`[DB:CICD] Authentication error:`, userError);
+        return {
+          success: false,
+          error: `Authentication failed: ${userError || 'User not authenticated'}`
+        };
+      }
+      
+      // If tenant_id not provided, use the authenticated user's tenant_id
+      if (!options.tenant_id && userData && userData.tenant_id) {
+        options.tenant_id = userData.tenant_id;
+        console.log(`[DB:CICD] Using authenticated user's tenant_id: ${options.tenant_id}`);
+      }
 
       console.log(`[DB:CICD] Building query for cicd_providers table`);
       let query = supabase.from('cicd_providers').select('*');
