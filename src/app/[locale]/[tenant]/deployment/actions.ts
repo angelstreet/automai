@@ -2,7 +2,9 @@
 
 import { revalidatePath } from 'next/cache';
 import { AuthUser } from '@/types/user';
-import { Deployment, DeploymentFormData, DeploymentStatus } from './types';
+import { Deployment, DeploymentFormData, DeploymentStatus, Repository } from './types';
+import repository, { Repository as DbRepository } from '@/lib/supabase/db-repositories/repository';
+import { getUser } from '@/app/actions/user';
 
 /**
  * Get all deployments for the current user
@@ -390,5 +392,40 @@ export async function getDeploymentStatus(
   } catch (error) {
     console.error(`Error fetching status for deployment ${id}:`, error);
     return { success: false, error: 'Failed to fetch deployment status' };
+  }
+}
+
+/**
+ * Get repositories for the current user
+ * @returns List of repositories
+ */
+export async function getRepositories(): Promise<Repository[]> {
+  try {
+    // Get the current user
+    const userData = await getUser();
+    
+    if (!userData) {
+      console.error('Failed to get user data for repositories');
+      return [];
+    }
+    
+    // Get repositories from the database
+    const { success, data, error } = await repository.getRepositories(userData.id);
+    
+    if (!success || error || !data) {
+      console.error(`Error fetching repositories: ${error}`);
+      return [];
+    }
+    
+    // Map the database repositories to the Repository type
+    return data.map((repo: DbRepository) => ({
+      id: repo.id,
+      name: repo.name,
+      owner: repo.full_name.split('/')[0],
+      url: repo.url
+    }));
+  } catch (error) {
+    console.error('Error in getRepositories:', error);
+    return [];
   }
 }

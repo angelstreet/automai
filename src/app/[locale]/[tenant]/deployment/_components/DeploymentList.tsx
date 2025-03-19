@@ -1,38 +1,52 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Clock, 
   RefreshCw, 
   Play, 
-  Eye,
-  MoreHorizontal
+  MoreHorizontal,
+  Info
 } from 'lucide-react';
 import { useDeployments } from '../context';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
+import { getRepositories } from '../actions';
 
 interface DeploymentListProps {
   onViewDeployment?: (deploymentId: string) => void;
 }
 
-// Helper function to get repository name from deployment
-const getRepositoryName = (deployment: Deployment): string => {
-  // In a real implementation, you would fetch the repository name using the repositoryId
-  return deployment.repositoryId;
-};
-
 const DeploymentList: React.FC<DeploymentListProps> = ({ 
   onViewDeployment 
 }) => {
-  const { deployments, loading, isRefreshing, fetchDeployments } = useDeployments();
-  
-  const [activeTab, setActiveTab] = useState('all');
+  const { deployments, loading, error, fetchDeployments, isRefreshing } = useDeployments();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [repositories, setRepositories] = useState<Record<string, Repository>>({});
   const [sortBy, setSortBy] = useState('date');
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // Fetch repositories on component mount
+  useEffect(() => {
+    const loadRepositories = async () => {
+      try {
+        const repos = await getRepositories();
+        // Convert array to record for easy lookup
+        const repoMap = repos.reduce((acc, repo) => {
+          acc[repo.id] = repo;
+          return acc;
+        }, {} as Record<string, Repository>);
+        setRepositories(repoMap);
+      } catch (error) {
+        console.error('Error loading repositories:', error);
+      }
+    };
+
+    loadRepositories();
+  }, []);
 
   // Handle refresh button click
   const handleRefresh = () => {
@@ -46,11 +60,23 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     }
   };
 
+  // Get repository name from deployment
+  const getRepositoryName = (deployment: Deployment): string => {
+    // Use the repository mapping if available
+    if (deployment.repositoryId && repositories[deployment.repositoryId]) {
+      return repositories[deployment.repositoryId].name;
+    }
+    
+    // Fallback to the repository ID
+    return deployment.repositoryId;
+  };
+
   // Filter deployments based on tab, search query, and status filter
   const getFilteredDeployments = () => {
     return deployments.filter(deployment => {
       // Filter by tab
       if (activeTab === 'scheduled' && deployment.scheduleType !== 'scheduled') return false;
+      if (activeTab === 'pending' && deployment.status !== 'pending') return false;
       if (activeTab === 'active' && deployment.status !== 'in_progress') return false;
       if (activeTab === 'completed' && (deployment.status !== 'success' && deployment.status !== 'failed')) return false;
 
@@ -158,6 +184,17 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
               </button>
               <button
                 className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${
+                  activeTab === 'pending'
+                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+                onClick={() => setActiveTab('pending')}
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Pending
+              </button>
+              <button
+                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${
                   activeTab === 'active'
                     ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
                     : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -189,6 +226,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
             <div className="text-center py-8">
               <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
                 {activeTab === 'scheduled' ? <Clock className="h-12 w-12" /> : 
+                 activeTab === 'pending' ? <Clock className="h-12 w-12" /> :
                  activeTab === 'active' ? <Play className="h-12 w-12" /> :
                  activeTab === 'completed' ? <Clock className="h-12 w-12" /> :
                  <Clock className="h-12 w-12" />}
@@ -229,17 +267,21 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                   {displayDeployments.map((deployment) => (
                     <tr 
                       key={deployment.id} 
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer relative group"
                       onClick={() => handleViewDeployment(deployment)}
                     >
+                      <div className="absolute left-4 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg p-2 text-xs z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
+                        <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
+                        <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
+                      </div>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{deployment.name}</div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {deployment.hostIds?.length || 0} host{(deployment.hostIds?.length || 0) !== 1 ? 's' : ''}, {deployment.scriptsPath?.length || 0} script{(deployment.scriptsPath?.length || 0) !== 1 ? 's' : ''}
+                        <div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div>
+                        <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
+                          {/* Empty div to maintain spacing */}
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">{getRepositoryName(deployment)}</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-300">{getRepositoryName(deployment)}</div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <StatusBadge status={deployment.status} />
@@ -257,15 +299,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                               : '-'}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button 
-                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewDeployment(deployment);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
+                        {/* View button removed as requested */}
                       </td>
                     </tr>
                   ))}
