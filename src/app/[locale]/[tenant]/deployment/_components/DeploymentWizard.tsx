@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { DeploymentData, DeploymentFormData, ScriptParameter, Repository, Host as HostType } from '../types';
-import { useRepositories, useRepositoryScripts } from '../../repositories/hooks';
+import { useRepositories } from '../../repositories/hooks';
 import { useHosts } from '../../hosts/hooks';
-import { useCreateDeployment } from '../hooks';
+import { useCreateDeployment, useRepositoryScripts, useAvailableHosts } from '../hooks';
 import { Host as SystemHost } from '../../hosts/types';
 import DeploymentWizardStep1 from './DeploymentWizardStep1';
 import DeploymentWizardStep2 from './DeploymentWizardStep2';
@@ -64,20 +64,32 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     error: repositoryError 
   } = useRepositories();
   
-  // Use the repository scripts hook with a valid repository ID
+  // Use our new local storage caching hook for repository scripts
   const {
     scripts: repositoryScripts,
     isLoading: isLoadingScripts,
-    error: scriptsError
-  } = useRepositoryScripts(deploymentData.repositoryId || undefined, deploymentData.selectedRepository);
+    error: scriptsError,
+    isRefreshing: isRefreshingScripts
+  } = useRepositoryScripts(deploymentData.repositoryId || undefined);
 
-  // Use the hosts hook and adapt hosts for deployment
+  // First check system hosts for permissions, then fetch available hosts with caching
   const { 
     hosts: systemHosts, 
-    loading: isLoadingHosts, 
-    error: hostsError 
+    loading: isLoadingSystemHosts 
   } = useHosts();
-  const availableHosts = adaptHostsForDeployment(systemHosts);
+  
+  // Use our new cached available hosts hook
+  const {
+    hosts: cachedHosts,
+    isLoading: isLoadingHosts,
+    error: hostsError,
+    isRefreshing: isRefreshingHosts
+  } = useAvailableHosts();
+  
+  // Combine the approaches - use system hosts for permissions checking and cached hosts for display
+  const availableHosts = systemHosts.length > 0 
+    ? adaptHostsForDeployment(systemHosts)
+    : cachedHosts;
 
   // Add debug logging for the scripts
   useEffect(() => {
@@ -496,6 +508,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
               }));
             }}
             onPrevStep={handlePrevStep}
+            isSubmitting={isCreating || isSubmitting}
           />
         )}
       </form>
