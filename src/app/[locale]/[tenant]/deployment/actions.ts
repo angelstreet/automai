@@ -310,6 +310,18 @@ export async function createDeployment(
           
           console.log('Actions layer: Creating Jenkins job with XML:', jobXml);
           
+          // DEBUG: Log provider details before job creation
+          console.log('Actions layer: Jenkins provider details:', {
+            providerConfigured: !!provider,
+            providerType: provider?.constructor?.name,
+            baseUrl: provider['baseUrl'],
+            authPresent: !!provider['authHeader'],
+          });
+          
+          // Test the connection first
+          const testResult = await provider.testConnection();
+          console.log('Actions layer: Jenkins connection test result:', testResult);
+          
           // Create the job in Jenkins
           const createResult = await provider.createJob(jobName, jobXml, folderPath);
           if (!createResult.success) {

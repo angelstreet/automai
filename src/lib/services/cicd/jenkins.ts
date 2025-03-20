@@ -16,17 +16,30 @@ export class JenkinsProvider implements CICDProvider {
     this.config = config;
     this.baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
     
+    console.log(`[JENKINS] Initializing provider with config: url=${this.baseUrl}, type=${config.type}, auth_type=${config.auth_type}`);
+    console.log(`[JENKINS] Credentials available:`, {
+      username: !!config.credentials.username,
+      password: !!config.credentials.password,
+      token: !!config.credentials.token
+    });
+    
     // Set up authentication
     if (config.auth_type === 'token') {
       // Jenkins API token authentication
       const token = config.credentials.token;
       const username = config.credentials.username || 'admin';
+      console.log(`[JENKINS] Using token auth with username: ${username}`);
       this.authHeader = `Basic ${Buffer.from(`${username}:${token}`).toString('base64')}`;
     } else if (config.auth_type === 'basic_auth') {
       // Basic authentication
       const { username, password } = config.credentials;
+      console.log(`[JENKINS] Using basic auth with username: ${username}`);
       this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+    } else {
+      console.warn(`[JENKINS] Unknown auth type: ${config.auth_type}, no authentication will be used`);
     }
+    
+    console.log(`[JENKINS] Provider initialized with auth header (present: ${!!this.authHeader})`);
   }
 
   /**
@@ -34,7 +47,7 @@ export class JenkinsProvider implements CICDProvider {
    */
   private async getCrumb(): Promise<CICDResponse<{ crumb: string; crumbRequestField: string }>> {
     try {
-      console.log('[JENKINS] Getting CSRF crumb from Jenkins');
+      console.log('[JENKINS] Getting CSRF crumb from Jenkins with auth:', !!this.authHeader);
       
       // Try to get a crumb from Jenkins
       const result = await this.jenkinsRequest<any>(
@@ -46,6 +59,12 @@ export class JenkinsProvider implements CICDProvider {
           }
         }
       );
+      
+      console.log(`[JENKINS] Crumb request result:`, { 
+        success: result.success, 
+        dataAvailable: !!result.data,
+        error: result.error
+      });
       
       if (!result.success) {
         console.error('[JENKINS] Failed to get CSRF crumb:', result.error);
