@@ -59,11 +59,16 @@ export default function CICDProvider() {
     setLoading(true);
     
     try {
+      console.log('CICDProvider component: Calling getCICDProvidersAction');
       const result = await getCICDProvidersAction();
       
+      console.log('CICDProvider component: Received result:', JSON.stringify(result, null, 2));
+      
       if (result.success) {
+        console.log('CICDProvider component: Setting providers with data:', JSON.stringify(result.data, null, 2));
         setProviders(result.data || []);
       } else {
+        console.error('CICDProvider component: Error fetching providers:', result.error);
         toast({
           title: 'Error loading providers',
           description: result.error || 'Failed to fetch CI/CD providers',
@@ -71,6 +76,7 @@ export default function CICDProvider() {
         });
       }
     } catch (error: any) {
+      console.error('CICDProvider component: Exception occurred:', error);
       toast({
         title: 'Error',
         description: error.message || 'An unexpected error occurred',

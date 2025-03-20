@@ -28,13 +28,17 @@ export async function getCICDProvidersAction(): Promise<CICDProviderListResult> 
     const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
     
     // Get CICD providers for the tenant
+    console.log('Calling cicdDb.getCICDProviders with params:', { where: { tenant_id: user.tenant_id } });
     const result = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
+    
+    console.log('Raw result from cicdDb.getCICDProviders:', JSON.stringify(result, null, 2));
     
     if (!result.success) {
       console.error('Error fetching CICD providers:', result.error);
       return { success: false, error: result.error, data: [] };
     }
     
+    console.log('Returning CICD providers:', JSON.stringify(result.data, null, 2));
     return { success: true, data: result.data || [] };
   } catch (error: any) {
     console.error('Unexpected error fetching CICD providers:', error);
