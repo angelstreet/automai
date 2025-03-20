@@ -1,5 +1,6 @@
 import { CICDProvider, CICDProviderConfig } from './interfaces';
 import { JenkinsProvider } from './jenkins';
+import { GitHubProvider } from './github';
 
 /**
  * Factory for creating CI/CD provider instances
@@ -14,6 +15,9 @@ export class CICDProviderFactory {
     switch (config.type.toLowerCase()) {
       case 'jenkins':
         provider = new JenkinsProvider();
+        break;
+      case 'github':
+        provider = new GitHubProvider();
         break;
       default:
         throw new Error(`Unsupported CI/CD provider type: ${config.type}`);

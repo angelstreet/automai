@@ -17,13 +17,16 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\"",
     "typecheck": "tsc --noEmit",
     "build:structure": "node scripts/generate-structure.js",
+    "check:components": "node scripts/check-components.js",
+    "fix:components": "node scripts/check-components.js --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "NODE_ENV=test jest --config jest.config.e2e.js",
     "electron-dev": "cross-env ELECTRON_PORT=3000 electron electron/main.js",
     "electron-build": "next build && electron-builder",
     "electron-pack": "npm run build && electron-builder -c.extraMetadata.main=electron/main.js",
-    "update-deps": "npm update && npm outdated"
+    "update-deps": "npm update && npm outdated",
+    "migrate:cicd": "node scripts/migrations/apply-cicd-providers.js"
   },
   "dependencies": {
     "@alloc/quick-lru": "5.2.0",

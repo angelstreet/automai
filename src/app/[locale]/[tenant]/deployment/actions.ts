@@ -797,3 +797,387 @@ export async function updateDeploymentCICDStatus(
     return { success: false, error: error.message || 'Failed to update deployment status' };
   }
 }
+
+/**
+ * Create a new CI/CD provider
+ * @param providerData Provider data to create
+ * @returns Object with success status and optional provider ID
+ */
+export async function createCICDProviderAction(
+  providerData: any
+): Promise<{ success: boolean; providerId?: string; error?: string }> {
+  try {
+    console.log('Actions layer: Creating CI/CD provider:', JSON.stringify({
+      name: providerData.name,
+      type: providerData.type,
+      url: providerData.url,
+      auth_type: providerData.auth_type
+    }));
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot create CI/CD provider - user not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Map form data to database schema
+    const dbProviderData = {
+      name: providerData.name,
+      type: providerData.type,
+      url: providerData.url,
+      config: {
+        auth_type: providerData.auth_type,
+        credentials: providerData.credentials,
+        status: 'configured'
+      },
+      tenant_id: user.tenant_id
+    };
+    
+    // Create the provider in the database
+    const result = await cicdDb.createCICDProvider({ data: dbProviderData });
+    
+    if (!result.success) {
+      console.error('Actions layer: Error creating CI/CD provider:', result.error);
+      return { success: false, error: result.error || 'Failed to create CI/CD provider' };
+    }
+    
+    console.log('Actions layer: CI/CD provider created with ID:', result.id);
+    
+    // Revalidate the CI/CD providers list
+    revalidatePath('/[locale]/[tenant]/deployment/cicd');
+    
+    return { 
+      success: true, 
+      providerId: result.id 
+    };
+  } catch (error: any) {
+    console.error('Error creating CI/CD provider:', error);
+    return { success: false, error: error.message || 'Failed to create CI/CD provider' };
+  }
+}
+
+/**
+ * Update an existing CI/CD provider
+ * @param providerData Provider data to update
+ * @returns Object with success status
+ */
+export async function updateCICDProviderAction(
+  providerData: any
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log('Actions layer: Updating CI/CD provider:', JSON.stringify({
+      id: providerData.id,
+      name: providerData.name,
+      type: providerData.type,
+      url: providerData.url,
+      auth_type: providerData.auth_type
+    }));
+    
+    if (!providerData.id) {
+      console.error('Actions layer: Cannot update CI/CD provider - provider ID is required');
+      return { success: false, error: 'Provider ID is required' };
+    }
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot update CI/CD provider - user not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Get the existing provider data
+    const existingProvider = await cicdDb.getCICDProvider({
+      where: { id: providerData.id, tenant_id: user.tenant_id }
+    });
+    
+    if (!existingProvider.success || !existingProvider.data) {
+      console.error('Actions layer: Cannot update CI/CD provider - provider not found');
+      return { success: false, error: 'Provider not found' };
+    }
+    
+    // Map form data to database schema
+    const dbProviderData = {
+      name: providerData.name,
+      type: providerData.type,
+      url: providerData.url,
+      config: {
+        ...existingProvider.data.config,
+        auth_type: providerData.auth_type,
+        credentials: providerData.credentials || existingProvider.data.config.credentials
+      }
+    };
+    
+    // Update the provider in the database
+    const result = await cicdDb.updateCICDProvider({
+      where: { id: providerData.id, tenant_id: user.tenant_id },
+      data: dbProviderData
+    });
+    
+    if (!result.success) {
+      console.error('Actions layer: Error updating CI/CD provider:', result.error);
+      return { success: false, error: result.error || 'Failed to update CI/CD provider' };
+    }
+    
+    console.log('Actions layer: CI/CD provider updated successfully');
+    
+    // Revalidate the CI/CD providers list
+    revalidatePath('/[locale]/[tenant]/deployment/cicd');
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating CI/CD provider:', error);
+    return { success: false, error: error.message || 'Failed to update CI/CD provider' };
+  }
+}
+
+/**
+ * Delete a CI/CD provider
+ * @param providerId Provider ID to delete
+ * @returns Object with success status
+ */
+export async function deleteCICDProviderAction(
+  providerId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log(`Actions layer: Deleting CI/CD provider ${providerId}`);
+    
+    if (!providerId) {
+      console.error('Actions layer: Cannot delete CI/CD provider - provider ID is required');
+      return { success: false, error: 'Provider ID is required' };
+    }
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot delete CI/CD provider - user not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Check if there are any deployment mappings using jobs from this provider
+    const mappings = await cicdDb.getDeploymentCICDMappings({});
+    
+    if (mappings.success && mappings.data) {
+      const relatedMappings = mappings.data.filter(mapping => 
+        mapping.cicd_jobs && mapping.cicd_jobs.provider_id === providerId
+      );
+      
+      if (relatedMappings.length > 0) {
+        console.error(`Actions layer: Cannot delete CI/CD provider - it is used by ${relatedMappings.length} deployments`);
+        return { 
+          success: false, 
+          error: `Cannot delete provider - it is being used by ${relatedMappings.length} deployments`
+        };
+      }
+    }
+    
+    // Delete the provider from the database
+    const result = await cicdDb.deleteCICDProvider({
+      where: { id: providerId, tenant_id: user.tenant_id }
+    });
+    
+    if (!result.success) {
+      console.error('Actions layer: Error deleting CI/CD provider:', result.error);
+      return { success: false, error: result.error || 'Failed to delete CI/CD provider' };
+    }
+    
+    console.log('Actions layer: CI/CD provider deleted successfully');
+    
+    // Revalidate the CI/CD providers list
+    revalidatePath('/[locale]/[tenant]/deployment/cicd');
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting CI/CD provider:', error);
+    return { success: false, error: error.message || 'Failed to delete CI/CD provider' };
+  }
+}
+
+/**
+ * Test connection to a CI/CD provider
+ * @param providerData Provider data to test
+ * @returns Object with success status
+ */
+export async function testCICDProviderAction(
+  providerData: any
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log('Actions layer: Testing CI/CD provider connection:', JSON.stringify({
+      name: providerData.name,
+      type: providerData.type,
+      url: providerData.url,
+      auth_type: providerData.auth_type
+    }));
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot test CI/CD provider - user not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD service
+    const { getCICDProvider, CICDProviderFactory } = await import('@/lib/services/cicd');
+    
+    // Create a temporary provider config for testing
+    const providerConfig = {
+      id: providerData.id || 'temp-id',
+      type: providerData.type,
+      name: providerData.name,
+      url: providerData.url,
+      config: {
+        auth_type: providerData.auth_type,
+        credentials: providerData.credentials,
+        status: 'testing'
+      }
+    };
+    
+    // Try to create and initialize the provider
+    try {
+      const provider = CICDProviderFactory.createProvider(providerConfig);
+      
+      // Test connection by getting available jobs
+      const jobsResult = await provider.getAvailableJobs();
+      
+      if (!jobsResult.success) {
+        console.error('Actions layer: CI/CD provider connection test failed:', jobsResult.error);
+        return { success: false, error: jobsResult.error || 'Failed to connect to CI/CD provider' };
+      }
+      
+      console.log(`Actions layer: CI/CD provider connection test successful, found ${jobsResult.data.length} jobs`);
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error('Actions layer: Error testing CI/CD provider connection:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to connect to CI/CD provider'
+      };
+    }
+  } catch (error: any) {
+    console.error('Error testing CI/CD provider connection:', error);
+    return { success: false, error: error.message || 'Failed to test CI/CD provider connection' };
+  }
+}
+
+/**
+ * Sync CI/CD jobs for a provider
+ * @param providerId Provider ID to sync jobs for
+ * @returns Object with success status and job count
+ */
+export async function syncCICDJobsAction(
+  providerId: string
+): Promise<{ success: boolean; jobCount?: number; error?: string }> {
+  try {
+    console.log(`Actions layer: Syncing CI/CD jobs for provider ${providerId}`);
+    
+    if (!providerId) {
+      console.error('Actions layer: Cannot sync CI/CD jobs - provider ID is required');
+      return { success: false, error: 'Provider ID is required' };
+    }
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot sync CI/CD jobs - user not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD database and service modules
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+    
+    // Get the provider from the database
+    const providerResult = await cicdDb.getCICDProvider({
+      where: { id: providerId, tenant_id: user.tenant_id }
+    });
+    
+    if (!providerResult.success || !providerResult.data) {
+      console.error('Actions layer: Cannot sync CI/CD jobs - provider not found');
+      return { success: false, error: 'Provider not found' };
+    }
+    
+    // Get the provider service instance
+    const serviceResult = await getCICDProvider(providerId, user.tenant_id);
+    
+    if (!serviceResult.success || !serviceResult.data) {
+      console.error('Actions layer: Error getting CI/CD provider service:', serviceResult.error);
+      return { success: false, error: serviceResult.error || 'Failed to get CI/CD provider service' };
+    }
+    
+    const provider = serviceResult.data;
+    
+    // Get available jobs from the provider
+    const jobsResult = await provider.getAvailableJobs();
+    
+    if (!jobsResult.success) {
+      console.error('Actions layer: Error getting available jobs:', jobsResult.error);
+      return { success: false, error: jobsResult.error || 'Failed to get available jobs' };
+    }
+    
+    // Sync jobs to the database
+    let syncedCount = 0;
+    
+    for (const job of jobsResult.data) {
+      // Check if job already exists
+      const existingJob = await cicdDb.getCICDJob({
+        where: { 
+          external_id: job.id,
+          provider_id: providerId
+        }
+      });
+      
+      if (existingJob.success && existingJob.data) {
+        // Update existing job
+        // We don't actually need to update anything here as the job definition
+        // doesn't change often, but we could add update logic if needed
+        syncedCount++;
+      } else {
+        // Create new job
+        const jobData = {
+          provider_id: providerId,
+          external_id: job.id,
+          name: job.name,
+          path: job.url,
+          description: job.description,
+          parameters: job.parameters
+        };
+        
+        const createResult = await cicdDb.createCICDJob({ data: jobData });
+        
+        if (createResult.success) {
+          syncedCount++;
+        } else {
+          console.error(`Actions layer: Error creating job ${job.name}:`, createResult.error);
+        }
+      }
+    }
+    
+    console.log(`Actions layer: Synced ${syncedCount} jobs for provider ${providerId}`);
+    
+    // Revalidate the CI/CD jobs list
+    revalidatePath('/[locale]/[tenant]/deployment/cicd');
+    
+    return { 
+      success: true,
+      jobCount: syncedCount
+    };
+  } catch (error: any) {
+    console.error('Error syncing CI/CD jobs:', error);
+    return { success: false, error: error.message || 'Failed to sync CI/CD jobs' };
+  }
+}

@@ -2,6 +2,7 @@
 export * from './interfaces';
 export * from './factory';
 export { JenkinsProvider } from './jenkins';
+export { GitHubProvider } from './github';
 
 // Export async function to get a provider instance
 import { cicd } from '@/lib/supabase/db-deployment';
@@ -14,7 +15,7 @@ import { CICDProviderFactory } from './factory';
 export async function getCICDProvider(providerId: string, tenantId: string): Promise<CICDResponse<CICDProvider>> {
   try {
     // Get provider configuration from the database
-    const providerResult = await cicd.getCICDProvider({ id: providerId, tenant_id: tenantId });
+    const providerResult = await cicd.getCICDProvider({ where: { id: providerId, tenant_id: tenantId } });
     
     if (!providerResult.success || !providerResult.data) {
       return {
@@ -24,13 +25,16 @@ export async function getCICDProvider(providerId: string, tenantId: string): Pro
     }
     
     // Map database provider to configuration
+    const providerData = providerResult.data;
+    
+    // Map from the database structure (with config object) to the service structure
     const providerConfig: CICDProviderConfig = {
-      id: providerResult.data.id,
-      url: providerResult.data.url,
-      auth_type: providerResult.data.auth_type,
-      credentials: providerResult.data.credentials,
-      type: providerResult.data.type,
-      name: providerResult.data.name
+      id: providerData.id,
+      url: providerData.url,
+      type: providerData.type,
+      name: providerData.name,
+      auth_type: providerData.config.auth_type,
+      credentials: providerData.config.credentials
     };
     
     // Create provider instance using factory

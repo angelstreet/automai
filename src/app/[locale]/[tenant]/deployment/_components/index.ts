@@ -14,3 +14,4 @@ export { default as HostSelector } from './HostSelector';
 export { default as EnhancedScriptSelector } from './EnhancedScriptSelector';
 export { default as JenkinsConfig } from './JenkinsConfig';
 export { default as CustomSwitch } from './CustomSwitch';
+export { DeploymentNavbar } from './DeploymentNavbar';

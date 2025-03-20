@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, List, LayoutGrid, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { DeploymentWizard, DeploymentList } from './_components';
-import { DeploymentProvider, useDeployments } from './context';
+import { useDeployments } from './context';
 
 const DeploymentPage = () => {
   const [view, setView] = useState('list'); // 'list' or 'create'
-  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
-  
   const { isRefreshing, fetchDeployments } = useDeployments();
 
   const handleRefresh = () => {
@@ -16,45 +14,33 @@ const DeploymentPage = () => {
   };
 
   return (
-    <div className="container mx-auto py-6 px-4">
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Deployments</h1>
-          <div className="flex items-center gap-2">
-            {view === 'list' && (
-              <>
-               
-                <button 
-                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-              </>
-            )}
+    <>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          {view === 'list' && (
             <button 
-              className={`inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 ${view === 'list' ? '' : 'ml-[-4.5rem]'}`}
-              onClick={() => setView(view === 'list' ? 'create' : 'list')}
+              className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
             >
-              {view === 'list' ? (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Deployment
-                </>
-              ) : (
-                'Back to List'
-              )}
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
             </button>
-          </div>
+          )}
         </div>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          {view === 'list' 
-            ? 'Manage and monitor your deployments across all environments'
-            : 'Create a new deployment to run scripts on selected hosts'
-          }
-        </p>
+        <button 
+          className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+          onClick={() => setView(view === 'list' ? 'create' : 'list')}
+        >
+          {view === 'list' ? (
+            <>
+              <Plus className="h-4 w-4 mr-2" />
+              New Deployment
+            </>
+          ) : (
+            'Back to List'
+          )}
+        </button>
       </div>
 
       {view === 'list' ? (
@@ -62,16 +48,8 @@ const DeploymentPage = () => {
       ) : (
         <DeploymentWizard onComplete={() => setView('list')} />
       )}
-    </div>
+    </>
   );
 };
 
-const DeploymentPageWithProvider = () => {
-  return (
-    <DeploymentProvider>
-      <DeploymentPage />
-    </DeploymentProvider>
-  );
-};
-
-export default DeploymentPageWithProvider;
+export default DeploymentPage;
