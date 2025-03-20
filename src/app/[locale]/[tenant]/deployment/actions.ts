@@ -351,32 +351,36 @@ export async function createDeployment(
           } else {
             console.log('Actions layer: CICD mapping created successfully');
             
-            // Always trigger the job immediately after creation
-            console.log('Actions layer: Automatically triggering Jenkins job after creation');
-            const triggerResult = await provider.triggerJob(jobId);
-            if (!triggerResult.success) {
-              console.error('Actions layer: Failed to trigger Jenkins job:', triggerResult.error);
-              // Log error but don't fail the deployment creation
-              console.warn('Actions layer: Continuing despite Jenkins trigger failure. User can manually trigger the job later.');
-            } else {
-              console.log('Actions layer: Jenkins job triggered successfully with build ID:', triggerResult.data.id);
-              console.log('Actions layer: Build URL:', triggerResult.data.url);
-              
-              // Update the CICD mapping with build information if available
-              if (triggerResult.data && triggerResult.data.id) {
-                try {
-                  await cicdDb.updateDeploymentCICDMapping(
-                    cicdMappingResult.id,
-                    {
-                      build_number: triggerResult.data.id,
-                      build_url: triggerResult.data.url
-                    }
-                  );
-                  console.log('Actions layer: Updated CICD mapping with build information');
-                } catch (updateError) {
-                  console.error('Actions layer: Failed to update CICD mapping with build info:', updateError);
+            // Only trigger the job immediately if schedule type is 'now'
+            if (deploymentData.schedule_type === 'now') {
+              console.log('Actions layer: Schedule type is "now", triggering Jenkins job immediately');
+              const triggerResult = await provider.triggerJob(jobId);
+              if (!triggerResult.success) {
+                console.error('Actions layer: Failed to trigger Jenkins job:', triggerResult.error);
+                // Log error but don't fail the deployment creation
+                console.warn('Actions layer: Continuing despite Jenkins trigger failure. User can manually trigger the job later.');
+              } else {
+                console.log('Actions layer: Jenkins job triggered successfully with build ID:', triggerResult.data.id);
+                console.log('Actions layer: Build URL:', triggerResult.data.url);
+                
+                // Update the CICD mapping with build information if available
+                if (triggerResult.data && triggerResult.data.id) {
+                  try {
+                    await cicdDb.updateDeploymentCICDMapping(
+                      cicdMappingResult.id,
+                      {
+                        build_number: triggerResult.data.id,
+                        build_url: triggerResult.data.url
+                      }
+                    );
+                    console.log('Actions layer: Updated CICD mapping with build information');
+                  } catch (updateError) {
+                    console.error('Actions layer: Failed to update CICD mapping with build info:', updateError);
+                  }
                 }
               }
+            } else {
+              console.log(`Actions layer: Schedule type is "${deploymentData.schedule_type}", not triggering Jenkins job now`);
             }
           }
         }
