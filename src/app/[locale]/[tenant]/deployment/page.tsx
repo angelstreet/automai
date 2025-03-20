@@ -23,22 +23,7 @@ const DeploymentPage = () => {
           <div className="flex items-center gap-2">
             {view === 'list' && (
               <>
-                <div className="border border-gray-200 dark:border-gray-700 rounded-md p-1 mr-2 flex">
-                  <button 
-                    className={`p-1 rounded ${viewMode === 'table' ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
-                    onClick={() => setViewMode('table')}
-                    title="Table view"
-                  >
-                    <List className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                  </button>
-                  <button 
-                    className={`p-1 rounded ${viewMode === 'grid' ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
-                    onClick={() => setViewMode('grid')}
-                    title="Grid view"
-                  >
-                    <LayoutGrid className="h-4 w-4 text-gray-600 dark:text-gray-300" />
-                  </button>
-                </div>
+               
                 <button 
                   className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
                   onClick={handleRefresh}

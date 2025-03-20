@@ -6,8 +6,6 @@ import {
   Clock, 
   RefreshCw, 
   Play, 
-  MoreHorizontal,
-  Info
 } from 'lucide-react';
 import { useDeployments } from '../context';
 import { Deployment, Repository } from '../types';
@@ -239,68 +237,71 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Repository
-                    </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Created
-                    </th>
-                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Runtime
-                    </th>
-                    <th scope="col" className="relative px-2 py-1">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {displayDeployments.map((deployment) => (
-                    <tr 
-                      key={deployment.id} 
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer relative group"
-                      onClick={() => handleViewDeployment(deployment)}
-                    >
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div>
-                        <div className="group-hover:block hidden absolute left-0 top-full mt-1 z-50 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg p-2 text-xs">
-                          <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
-                          <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
-                        </div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <div className="text-sm text-gray-600 dark:text-gray-300">{getRepositoryName(deployment)}</div>
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap">
-                        <StatusBadge status={deployment.status} />
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {getFormattedTime(deployment.createdAt)}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {deployment.completedAt && deployment.startedAt 
-                          ? getFormattedTime(deployment.startedAt, deployment.completedAt) 
-                          : deployment.startedAt 
-                            ? 'Running...' 
-                            : deployment.scheduledTime 
-                              ? `Scheduled for ${getFormattedTime(deployment.scheduledTime)}` 
-                              : '-'}
-                      </td>
-                      <td className="px-2 py-1 whitespace-nowrap text-right text-sm font-medium">
-                        {/* View button removed as requested */}
-                      </td>
+              <div className="relative">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Repository
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Runtime
+                      </th>
+                      <th scope="col" className="relative px-2 py-1">
+                        <span className="sr-only">Actions</span>
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {displayDeployments.map((deployment) => (
+                      <tr 
+                        key={deployment.id} 
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer group"
+                        onClick={() => handleViewDeployment(deployment)}
+                      >
+                        <td className="px-2 py-1 whitespace-nowrap relative">
+                          <div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div>
+                          <div className="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-3 text-xs z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
+                            <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
+                          </div>
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap">
+                          <div className="text-sm text-gray-600 dark:text-gray-300">{getRepositoryName(deployment)}</div>
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap">
+                          <StatusBadge status={deployment.status} />
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          {getFormattedTime(deployment.createdAt)}
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          {deployment.completedAt && deployment.startedAt 
+                            ? getFormattedTime(deployment.startedAt, deployment.completedAt) 
+                            : deployment.startedAt 
+                              ? 'Running...' 
+                              : deployment.scheduledTime 
+                                ? `Scheduled for ${getFormattedTime(deployment.scheduledTime)}` 
+                                : '-'}
+                        </td>
+                        <td className="px-2 py-1 whitespace-nowrap text-right text-sm font-medium">
+                          {/* View button removed as requested */}
+                          <span className="sr-only">View</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
