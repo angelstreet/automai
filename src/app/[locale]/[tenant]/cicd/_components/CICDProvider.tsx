@@ -202,20 +202,19 @@ export default function CICDProvider() {
   };
   
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xl font-bold">CI/CD Providers</CardTitle>
+    <Card className="shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b">
+        <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-white">CI/CD Providers</CardTitle>
         <Button
           onClick={() => handleAddEditProvider()}
-          size="sm"
-          className="h-8 gap-1"
+          className="inline-flex items-center px-3 py-1.5 text-sm font-medium"
         >
-          <PlusCircle className="h-4 w-4" />
+          <PlusCircle className="h-4 w-4 mr-1" />
           <span>Add Provider</span>
         </Button>
       </CardHeader>
       
-      <CardContent>
+      <CardContent className="pt-4">
         {loading ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-50"></div>

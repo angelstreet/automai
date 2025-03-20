@@ -116,11 +116,11 @@ async function createCICDProvider({ data }: CreateProviderParams): Promise<{ suc
 
     console.log('DB layer: CI/CD provider created with ID:', provider.id);
 
-    return {
-      success: true,
+      return {
+        success: true,
       id: provider.id
-    };
-  } catch (error: any) {
+      };
+    } catch (error: any) {
     console.error('DB layer: Unexpected error creating CI/CD provider:', error);
     return { success: false, error: error.message };
   }
@@ -225,17 +225,17 @@ async function getCICDProvider({ where }: GetParams): Promise<{
     
     // Execute query
     const { data: provider, error } = await query.single();
-    
-    if (error) {
+
+      if (error) {
       console.error('DB layer: Error getting CI/CD provider:', error);
       return { success: false, error: error.message };
-    }
-    
-    return {
-      success: true,
+      }
+
+      return {
+        success: true,
       data: provider as CICDProvider
-    };
-  } catch (error: any) {
+      };
+    } catch (error: any) {
     console.error('DB layer: Unexpected error getting CI/CD provider:', error);
     return { success: false, error: error.message };
   }
@@ -304,9 +304,9 @@ async function createCICDJob({ data }: CreateJobParams): Promise<{ success: bool
         parameters: data.parameters
       })
       .select('id')
-      .single();
+        .single();
 
-    if (error) {
+      if (error) {
       console.error('DB layer: Error creating CI/CD job:', error);
       return { success: false, error: error.message };
     }
@@ -358,9 +358,9 @@ async function getCICDJob({
     if (error) {
       console.error('DB layer: Error getting CI/CD job:', error);
       return { success: false, error: error.message };
-    }
-    
-    return {
+        }
+        
+        return {
       success: true,
       data: job as CICDJob
     };
@@ -400,12 +400,12 @@ async function getCICDJobs({
       console.error('DB layer: Error getting CI/CD jobs:', error);
       return { success: false, error: error.message };
     }
-    
-    return {
-      success: true,
+      
+      return {
+        success: true,
       data: jobs as CICDJob[]
-    };
-  } catch (error: any) {
+      };
+    } catch (error: any) {
     console.error('DB layer: Unexpected error getting CI/CD jobs:', error);
     return { success: false, error: error.message };
   }
@@ -500,7 +500,7 @@ async function createDeploymentCICDMapping(
     
     // Create mapping
     const { data: mapping, error } = await supabase
-      .from('deployment_cicd_mappings')
+        .from('deployment_cicd_mappings')
       .insert({
         deployment_id: data.deployment_id,
         cicd_job_id: data.cicd_job_id,
@@ -509,18 +509,18 @@ async function createDeploymentCICDMapping(
         build_url: data.build_url
       })
       .select('id')
-      .single();
+        .single();
 
-    if (error) {
+      if (error) {
       console.error('DB layer: Error creating deployment CICD mapping:', error);
       return { success: false, error: error.message };
-    }
+      }
 
-    return {
-      success: true,
+      return {
+        success: true,
       id: mapping.id
-    };
-  } catch (error: any) {
+      };
+    } catch (error: any) {
     console.error('DB layer: Unexpected error creating deployment CICD mapping:', error);
     return { success: false, error: error.message };
   }
@@ -577,31 +577,31 @@ async function getDeploymentCICDMappings({
     const supabase = await getSupabaseClient();
     
     // Build query
-    let query = supabase
-      .from('deployment_cicd_mappings')
-      .select(`
-        *,
+      let query = supabase
+        .from('deployment_cicd_mappings')
+        .select(`
+          *,
         cicd_jobs(*)
       `);
     
     // Add where clauses
     if (where?.deployment_id) {
       query = query.eq('deployment_id', where.deployment_id);
-    }
-    
-    // Execute query
+      }
+
+      // Execute query
     const { data: mappings, error } = await query;
-    
-    if (error) {
+
+      if (error) {
       console.error('DB layer: Error getting deployment CICD mappings:', error);
       return { success: false, error: error.message };
-    }
-    
-    return {
-      success: true,
+      }
+
+      return {
+        success: true,
       data: mappings as any[]
-    };
-  } catch (error: any) {
+      };
+    } catch (error: any) {
     console.error('DB layer: Unexpected error getting deployment CICD mappings:', error);
     return { success: false, error: error.message };
   }

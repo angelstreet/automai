@@ -185,7 +185,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     <div className="w-full">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-gray-400" />
@@ -211,13 +211,6 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                 <option value="pending">Pending</option>
                 <option value="scheduled">Scheduled</option>
               </select>
-              <button 
-                className="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </button>
             </div>
           </div>
         </div>
