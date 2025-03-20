@@ -7,6 +7,7 @@ export class JenkinsProvider implements CICDProvider {
   private config: CICDProviderConfig | null = null;
   private authHeader: string = '';
   private baseUrl: string = '';
+  private crumb: { crumb: string; crumbRequestField: string } | null = null;
 
   /**
    * Initialize the Jenkins provider with configuration
@@ -25,6 +26,64 @@ export class JenkinsProvider implements CICDProvider {
       // Basic authentication
       const { username, password } = config.credentials;
       this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
+    }
+  }
+
+  /**
+   * Get a Jenkins CSRF crumb for protected operations
+   */
+  private async getCrumb(): Promise<CICDResponse<{ crumb: string; crumbRequestField: string }>> {
+    try {
+      console.log('[JENKINS] Getting CSRF crumb from Jenkins');
+      
+      // Try to get a crumb from Jenkins
+      const result = await this.jenkinsRequest<any>(
+        '/crumbIssuer/api/json',
+        { 
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        }
+      );
+      
+      if (!result.success) {
+        console.error('[JENKINS] Failed to get CSRF crumb:', result.error);
+        // If crumb issuer fails, we might be dealing with a Jenkins instance without CSRF protection
+        return {
+          success: false,
+          error: `Failed to get CSRF crumb: ${result.error}`
+        };
+      }
+      
+      if (!result.data || !result.data.crumb || !result.data.crumbRequestField) {
+        console.error('[JENKINS] Invalid CSRF crumb response:', JSON.stringify(result.data));
+        return {
+          success: false,
+          error: 'Invalid CSRF crumb response from Jenkins'
+        };
+      }
+      
+      const crumbData = {
+        crumb: result.data.crumb,
+        crumbRequestField: result.data.crumbRequestField
+      };
+      
+      console.log(`[JENKINS] CSRF crumb obtained: ${crumbData.crumbRequestField}=${crumbData.crumb.substring(0, 10)}...`);
+      
+      // Cache the crumb for future requests
+      this.crumb = crumbData;
+      
+      return {
+        success: true,
+        data: crumbData
+      };
+    } catch (error: any) {
+      console.error('[JENKINS] Error getting CSRF crumb:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get CSRF crumb from Jenkins'
+      };
     }
   }
 
@@ -52,11 +111,38 @@ export class JenkinsProvider implements CICDProvider {
       console.log(`[JENKINS] Full URL: ${url}`);
       
       // Add authentication headers
-      const headers = {
+      let headers: HeadersInit = {
         ...options.headers,
-        'Authorization': this.authHeader,
-        'Content-Type': 'application/json'
+        'Authorization': this.authHeader
       };
+
+      // Set default content type if not overridden by options
+      if (!headers['Content-Type'] && !options.headers?.['Content-Type']) {
+        headers['Content-Type'] = 'application/json';
+      }
+      
+      // For POST/PUT/DELETE requests, add CSRF protection crumb
+      if (['POST', 'PUT', 'DELETE'].includes(options.method || '')) {
+        // Make sure we have a valid crumb
+        if (!this.crumb) {
+          console.log('[JENKINS] No CSRF crumb available, fetching one...');
+          const crumbResult = await this.getCrumb();
+          
+          if (crumbResult.success && crumbResult.data) {
+            this.crumb = crumbResult.data;
+          } else {
+            console.warn('[JENKINS] Failed to get CSRF crumb, proceeding without it:', crumbResult.error);
+            // Continue without crumb - some Jenkins instances don't require it
+          }
+        }
+        
+        // Add the crumb to headers if available
+        if (this.crumb) {
+          headers[this.crumb.crumbRequestField] = this.crumb.crumb;
+          console.log(`[JENKINS] Added CSRF crumb to request headers: ${this.crumb.crumbRequestField}=${this.crumb.crumb.substring(0, 10)}...`);
+        }
+      }
+      
       console.log(`[JENKINS] Headers prepared (auth header present: ${!!this.authHeader})`);
 
       console.log(`[JENKINS] Sending request to ${url}`);
@@ -71,6 +157,17 @@ export class JenkinsProvider implements CICDProvider {
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[JENKINS] Request failed with status ${response.status}: ${errorText}`);
+        
+        // If we get a 403 with a crumb error, our crumb might be expired
+        if (response.status === 403 && errorText.includes('No valid crumb') && this.crumb) {
+          console.log('[JENKINS] CSRF crumb validation failed, clearing cached crumb');
+          this.crumb = null;
+          
+          // Retry the request once with a fresh crumb
+          console.log('[JENKINS] Retrying request with fresh CSRF crumb');
+          return this.jenkinsRequest<T>(path, options);
+        }
+        
         return {
           success: false,
           error: `Jenkins API error: ${response.status} - ${errorText}`
@@ -482,6 +579,63 @@ export class JenkinsProvider implements CICDProvider {
       return {
         success: false,
         error: error.message || `Failed to get Jenkins build logs for ${jobId}/${buildId}`
+      };
+    }
+  }
+
+  /**
+   * Delete a Jenkins job
+   * @param jobId The ID (name) of the job to delete
+   * @param folderPath Optional folder path where the job is located
+   * @returns Object with success status
+   */
+  async deleteJob(jobId: string, folderPath?: string): Promise<CICDResponse<boolean>> {
+    try {
+      console.log(`[JENKINS] Deleting job '${jobId}'${folderPath ? ` in folder '${folderPath}'` : ''}`);
+      
+      if (!jobId) {
+        console.error('[JENKINS] Cannot delete job - job ID is required');
+        return {
+          success: false,
+          error: 'Job ID is required'
+        };
+      }
+      
+      // Construct the API endpoint - handle folder path if specified
+      let endpoint = `/job/${encodeURIComponent(jobId)}/doDelete`;
+      
+      // If folder path is specified, modify the endpoint to delete in that folder
+      if (folderPath) {
+        // Format: /job/folder/job/subfolder/job/jobName/doDelete
+        const folderSegments = folderPath.split('/').filter(Boolean);
+        endpoint = folderSegments.map(segment => `/job/${encodeURIComponent(segment)}`).join('') + 
+                  `/job/${encodeURIComponent(jobId)}/doDelete`;
+      }
+      
+      console.log(`[JENKINS] Deleting job at endpoint: ${endpoint}`);
+      
+      // Make POST request to Jenkins API (Jenkins uses POST for deletion)
+      const result = await this.jenkinsRequest<any>(
+        endpoint,
+        { method: 'POST' }
+      );
+      
+      if (!result.success) {
+        console.error(`[JENKINS] Failed to delete job: ${result.error}`);
+        return result;
+      }
+      
+      console.log(`[JENKINS] Job deleted successfully: ${jobId}`);
+      
+      return {
+        success: true,
+        data: true
+      };
+    } catch (error: any) {
+      console.error(`[JENKINS] Error deleting job ${jobId}:`, error);
+      return {
+        success: false,
+        error: error.message || `Failed to delete Jenkins job ${jobId}`
       };
     }
   }

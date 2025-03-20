@@ -224,12 +224,10 @@ const deployment = {
       const supabase = await createClient(cookieStore);
       console.log('DB layer: Supabase client created');
 
-      const { data: result, error } = await supabase
+      const { error } = await supabase
         .from('deployments')
         .delete()
-        .match(where)
-        .select()
-        .single();
+        .match(where);
       
       if (error) {
         console.error('DB layer: Error deleting deployment:', error);
@@ -241,8 +239,7 @@ const deployment = {
       
       console.log('DB layer: Deployment deleted successfully');
       return {
-        success: true,
-        data: result
+        success: true
       };
     } catch (error) {
       console.error('DB layer: Error deleting deployment:', error);

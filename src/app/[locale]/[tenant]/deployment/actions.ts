@@ -251,92 +251,116 @@ export async function createDeployment(
     console.log('Actions layer: Calling deployment.create with data');
     
     // Create the deployment in the database
-    const createResult = await deploymentDb.create({ data: deploymentData });
-    
-    if (!createResult.success) {
-      console.error('Actions layer: Error creating deployment:', createResult.error);
-      return { success: false, error: createResult.error };
-    }
-    
-    const deploymentId = createResult.data.id;
-    console.log(`Actions layer: Deployment created with ID: ${deploymentId}`);
-    
-    // If Jenkins integration is enabled, create a Jenkins job
-    if (formData.jenkinsConfig?.enabled) {
-      console.log('Actions layer: Jenkins integration enabled, creating Jenkins job');
+    const result = await deploymentDb.create({ data: deploymentData });
+
+    if (!result.success) {
+      console.error('Error creating deployment:', result.error);
       
-      try {
-        // Import the necessary modules
+      // Provide more specific error messages based on the error type
+      if (result.error?.code === '22P02') {
+        return { 
+          success: false, 
+          error: 'Invalid data type for one or more fields. Please ensure all IDs are valid UUIDs.' 
+        };
+      }
+      
+      return { success: false, error: result.error?.message || 'Failed to create deployment' };
+    }
+
+    console.log('Actions layer: Deployment created with ID:', result.id);
+
+    // Always try to create the CICD mapping if we have a provider
+    console.log('Actions layer: Checking for Jenkins integration');
+    
+    try {
+      // Get provider ID - use the one from form config or get the default
+      const providerId = formData.jenkinsConfig?.providerId || 
+                       await getDefaultProviderIdForTenant(user.tenant_id);
+      
+      if (!providerId) {
+        console.error('Actions layer: No CI/CD provider found for tenant');
+        // Continue deployment without CI/CD
+      } else {
+        console.log('Actions layer: Jenkins integration possible, creating job with provider:', providerId);
+        
+        // Import the CI/CD service and XML generator
         const { getCICDProvider } = await import('@/lib/services/cicd');
         const { generateJenkinsPipelineXml } = await import('@/lib/services/cicd/xml-generators');
         
-        // Get provider
-        const providerId = formData.jenkinsConfig.providerId;
-        if (!providerId) {
-          console.error('Actions layer: No Jenkins provider ID specified');
-          return { success: false, error: 'No Jenkins provider ID specified' };
-        }
-        
+        // Get the provider instance
         const providerResult = await getCICDProvider(providerId, user.tenant_id);
-        if (!providerResult.success) {
-          console.error('Actions layer: Failed to get Jenkins provider:', providerResult.error);
-          return { success: false, error: `Failed to get Jenkins provider: ${providerResult.error}` };
-        }
         
-        // Create job name and XML
-        const provider = providerResult.data;
-        const jobName = `deployment_${deploymentData.name.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase()}`;
-        const folderPath = 'trial/joachim_djibril'; // Fixed folder path
-        
-        // Generate Jenkins job XML
-        const jobXml = generateJenkinsPipelineXml(
-          deploymentData.name,
-          deploymentData.repository_id,
-          deploymentData.scripts_path,
-          deploymentData.scripts_parameters,
-          deploymentData.host_ids
-        );
-        
-        console.log('Actions layer: Creating Jenkins job with XML:', jobXml);
-        
-        // Create the job in Jenkins
-        const createResult = await provider.createJob(jobName, jobXml, folderPath);
-        if (!createResult.success) {
-          console.error('Actions layer: Failed to create Jenkins job:', createResult.error);
-          return { success: false, error: `Failed to create Jenkins job: ${createResult.error}` };
-        }
-        
-        // Get created job ID
-        const jobId = createResult.data;
-        
-        // Store mapping in database for future reference
-        await cicdDb.createCICDDeploymentMapping({
-          deployment_id: deploymentId,
-          provider_id: providerId,
-          job_id: jobId,
-          parameters: {
-            repository_id: deploymentData.repository_id,
-            host_ids: deploymentData.host_ids,
-          }
-        });
-        
-        console.log(`Actions layer: Jenkins job created successfully with ID: ${jobId}`);
-        
-        // Trigger the job
-        const triggerResult = await provider.triggerJob(jobId);
-        if (!triggerResult.success) {
-          console.warn('Actions layer: Failed to trigger Jenkins job:', triggerResult.error);
-          // Don't fail the deployment creation if trigger fails
+        if (!providerResult.success || !providerResult.data) {
+          console.error('Actions layer: Error getting CI/CD provider:', providerResult.error);
         } else {
-          console.log('Actions layer: Jenkins job triggered successfully');
+          const provider = providerResult.data;
+          
+          // Create job name and XML
+          const jobName = `deployment_${deploymentData.name.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase()}`;
+          const folderPath = 'trial/joachim_djibril'; // Fixed folder path for now
+          
+          // Generate Jenkins job XML
+          const jobXml = generateJenkinsPipelineXml(
+            deploymentData.name,
+            deploymentData.repository_id,
+            deploymentData.scripts_path,
+            deploymentData.scripts_parameters,
+            deploymentData.host_ids
+          );
+          
+          console.log('Actions layer: Creating Jenkins job with XML:', jobXml);
+          
+          // Create the job in Jenkins
+          const createResult = await provider.createJob(jobName, jobXml, folderPath);
+          if (!createResult.success) {
+            console.error('Actions layer: Failed to create Jenkins job:', createResult.error);
+            // Fail the entire deployment creation to maintain sync with Jenkins
+            return { success: false, error: `Failed to create Jenkins job: ${createResult.error}` };
+          }
+          
+          // Get created job ID
+          const jobId = createResult.data;
+          
+          console.log(`Actions layer: Jenkins job created successfully with ID: ${jobId}`);
+          
+          // Store mapping in database for future reference
+          const cicdMappingResult = await cicdDb.createCICDDeploymentMapping({
+            deployment_id: result.id,
+            provider_id: providerId,
+            job_id: jobId,
+            parameters: {
+              repository_id: deploymentData.repository_id,
+              host_ids: deploymentData.host_ids,
+            }
+          });
+          
+          if (!cicdMappingResult.success) {
+            console.error('Actions layer: Failed to create CICD mapping:', cicdMappingResult.error);
+          } else {
+            console.log('Actions layer: CICD mapping created successfully');
+            
+            // Trigger the job if needed
+            const triggerResult = await provider.triggerJob(jobId);
+            if (!triggerResult.success) {
+              console.warn('Actions layer: Failed to trigger Jenkins job:', triggerResult.error);
+            } else {
+              console.log('Actions layer: Jenkins job triggered successfully');
+            }
+          }
         }
-      } catch (error) {
-        console.error('Actions layer: Error in Jenkins integration:', error);
-        // Don't fail the deployment creation if Jenkins integration fails
       }
+    } catch (cicdError) {
+      console.error('Actions layer: Error in CI/CD integration:', cicdError);
+      // Continue deployment without failing due to CI/CD issues
     }
+
+    // Revalidate the deployments list
+    revalidatePath('/[locale]/[tenant]/deployment');
     
-    return { success: true, deploymentId };
+    return { 
+      success: true, 
+      deploymentId: result.id 
+    };
   } catch (error) {
     console.error('Error creating deployment:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create deployment' };
@@ -1189,8 +1213,60 @@ export async function deleteDeployment(id: string): Promise<{ success: boolean; 
       return { success: false, error: 'User not authenticated' };
     }
     
-    // Import the deployment database module
+    // Import the deployment and cicd database modules
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Check if there's a CICD mapping for this deployment
+    const mappingResult = await cicdDb.getCICDDeploymentMapping({
+      where: { deployment_id: id }
+    });
+    
+    // If there's a CICD mapping, delete the Jenkins job
+    if (mappingResult.success && mappingResult.data) {
+      console.log(`Actions layer: Found CICD mapping for deployment ${id}, deleting Jenkins job`);
+      
+      try {
+        const mapping = mappingResult.data;
+        
+        // Import the CI/CD service
+        const { getCICDProvider } = await import('@/lib/services/cicd');
+        const providerResult = await getCICDProvider(mapping.provider_id, user.tenant_id);
+        
+        if (providerResult.success && providerResult.data) {
+          const provider = providerResult.data;
+          
+          // Delete the job in Jenkins
+          if (provider.deleteJob) {
+            console.log(`Actions layer: Deleting Jenkins job ${mapping.job_id}`);
+            
+            // Use the same folder path that was used for creation
+            const folderPath = 'trial/joachim_djibril'; // Fixed folder path for now
+            const jobDeleteResult = await provider.deleteJob(mapping.job_id, folderPath);
+            
+            if (!jobDeleteResult.success) {
+              console.error('Actions layer: Failed to delete Jenkins job:', jobDeleteResult.error);
+              // Log the error but continue to delete the DB records
+              console.warn('Actions layer: Proceeding to delete database records despite Jenkins job deletion failure');
+            } else {
+              console.log('Actions layer: Jenkins job deleted successfully');
+            }
+          } else {
+            console.warn('Actions layer: Provider does not support job deletion');
+          }
+        }
+        
+        // Delete the CICD mapping regardless of Jenkins job deletion result
+        await cicdDb.deleteCICDDeploymentMapping({
+          where: { id: mapping.id }
+        });
+        
+        console.log(`Actions layer: Deleted CICD mapping for deployment ${id}`);
+      } catch (cicdError) {
+        // Log the error but continue with deployment deletion
+        console.error(`Actions layer: Error deleting Jenkins job:`, cicdError);
+      }
+    }
     
     // Delete the deployment from the database
     const result = await deploymentDb.delete({
@@ -1215,7 +1291,7 @@ export async function deleteDeployment(id: string): Promise<{ success: boolean; 
 }
 
 /**
- * Run an existing deployment
+ * Run a deployment
  * @param deploymentId Deployment ID to run
  * @returns Object with success status and optional error
  */
@@ -1280,18 +1356,20 @@ export async function runDeploymentAction(
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
     
     await deploymentDb.create({
-      name: `${deployment.name} (Run)`,
-      description: deployment.description,
-      repository_id: deployment.repositoryId,
-      scripts_path: deployment.scriptsPath,
-      scripts_parameters: deployment.scriptsParameters,
-      host_ids: deployment.hostIds,
-      status: 'pending',
-      schedule_type: 'now',
-      environment_vars: deployment.environmentVars || [],
-      tenant_id: user.tenant_id,
-      user_id: user.id,
-      parent_deployment_id: deploymentId
+      data: {
+        name: `${deployment.name} (Run)`,
+        description: deployment.description,
+        repository_id: deployment.repositoryId,
+        scripts_path: deployment.scriptsPath,
+        scripts_parameters: deployment.scriptsParameters,
+        host_ids: deployment.hostIds,
+        status: 'pending',
+        schedule_type: 'now',
+        environment_vars: deployment.environmentVars || [],
+        tenant_id: user.tenant_id,
+        user_id: user.id,
+        parent_deployment_id: deploymentId
+      }
     });
     
     return { success: true };
