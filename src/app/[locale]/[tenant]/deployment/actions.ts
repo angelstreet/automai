@@ -1230,53 +1230,52 @@ export async function deleteDeployment(id: string): Promise<{ success: boolean; 
     const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
     
     // Check if there's a CICD mapping for this deployment
-    const mappingResult = await cicdDb.getCICDDeploymentMapping({
+    const mappingResult = await cicdDb.getDeploymentCICDMappings({
       where: { deployment_id: id }
     });
     
     // If there's a CICD mapping, delete the Jenkins job
-    if (mappingResult.success && mappingResult.data) {
-      console.log(`Actions layer: Found CICD mapping for deployment ${id}, deleting Jenkins job`);
+    if (mappingResult.success && mappingResult.data && mappingResult.data.length > 0) {
+      console.log(`Actions layer: Found ${mappingResult.data.length} CICD mappings for deployment ${id}, deleting Jenkins jobs`);
       
-      try {
-        const mapping = mappingResult.data;
-        
-        // Import the CI/CD service
-        const { getCICDProvider } = await import('@/lib/services/cicd');
-        const providerResult = await getCICDProvider(mapping.provider_id, user.tenant_id);
-        
-        if (providerResult.success && providerResult.data) {
-          const provider = providerResult.data;
+      // Process each mapping
+      for (const mapping of mappingResult.data) {
+        try {
+          // Import the CI/CD service
+          const { getCICDProvider } = await import('@/lib/services/cicd');
+          const providerResult = await getCICDProvider(mapping.provider_id, user.tenant_id);
           
-          // Delete the job in Jenkins
-          if (provider.deleteJob) {
-            console.log(`Actions layer: Deleting Jenkins job ${mapping.job_id}`);
+          if (providerResult.success && providerResult.data) {
+            const provider = providerResult.data;
             
-            // Use the same folder path that was used for creation
-            const folderPath = 'trial/joachim_djibril'; // Fixed folder path for now
-            const jobDeleteResult = await provider.deleteJob(mapping.job_id, folderPath);
-            
-            if (!jobDeleteResult.success) {
-              console.error('Actions layer: Failed to delete Jenkins job:', jobDeleteResult.error);
-              // Log the error but continue to delete the DB records
-              console.warn('Actions layer: Proceeding to delete database records despite Jenkins job deletion failure');
+            // Delete the job in Jenkins
+            if (provider.deleteJob) {
+              console.log(`Actions layer: Deleting Jenkins job ${mapping.job_id}`);
+              
+              // Use the same folder path that was used for creation
+              const folderPath = 'trial/joachim_djibril'; // Fixed folder path for now
+              const jobDeleteResult = await provider.deleteJob(mapping.job_id, folderPath);
+              
+              if (!jobDeleteResult.success) {
+                console.error('Actions layer: Failed to delete Jenkins job:', jobDeleteResult.error);
+                // Log the error but continue to delete the DB records
+                console.warn('Actions layer: Proceeding to delete database records despite Jenkins job deletion failure');
+              } else {
+                console.log('Actions layer: Jenkins job deleted successfully');
+              }
             } else {
-              console.log('Actions layer: Jenkins job deleted successfully');
+              console.warn('Actions layer: Provider does not support job deletion');
             }
-          } else {
-            console.warn('Actions layer: Provider does not support job deletion');
           }
+          
+          // Delete the CICD mapping regardless of Jenkins job deletion result
+          await cicdDb.deleteDeploymentCICDMapping(mapping.id);
+          
+          console.log(`Actions layer: Deleted CICD mapping with ID ${mapping.id} for deployment ${id}`);
+        } catch (cicdError) {
+          // Log the error but continue with the next mapping and deployment deletion
+          console.error(`Actions layer: Error processing CICD mapping ${mapping.id}:`, cicdError);
         }
-        
-        // Delete the CICD mapping regardless of Jenkins job deletion result
-        await cicdDb.deleteCICDDeploymentMapping({
-          where: { id: mapping.id }
-        });
-        
-        console.log(`Actions layer: Deleted CICD mapping for deployment ${id}`);
-      } catch (cicdError) {
-        // Log the error but continue with deployment deletion
-        console.error(`Actions layer: Error deleting Jenkins job:`, cicdError);
       }
     }
     
@@ -1388,5 +1387,88 @@ export async function runDeploymentAction(
   } catch (error: any) {
     console.error(`Actions layer: Error running deployment:`, error);
     return { success: false, error: error.message || 'Failed to run deployment' };
+  }
+}
+
+/**
+ * Test the Jenkins API directly using the provider credentials from the database
+ */
+export async function testJenkinsAPI(): Promise<ServerActionResult<any>> {
+  try {
+    // Get authenticated user
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return { success: false, error: 'Unauthorized access' };
+    }
+    
+    console.log('Actions layer: Testing Jenkins API with authenticated user', user.id);
+    
+    // Get all Jenkins providers for the tenant
+    const providers = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
+    
+    if (!providers.success || !providers.data || providers.data.length === 0) {
+      return { success: false, error: 'No Jenkins provider found' };
+    }
+    
+    // Find the Jenkins provider (first one available)
+    const jenkinsProvider = providers.data.find(p => p.type === 'jenkins');
+    
+    if (!jenkinsProvider) {
+      return { success: false, error: 'No Jenkins provider found' };
+    }
+    
+    console.log('Actions layer: Found Jenkins provider:', {
+      id: jenkinsProvider.id,
+      name: jenkinsProvider.name,
+      url: jenkinsProvider.url,
+      auth_type: jenkinsProvider.config.auth_type,
+      credentials_available: {
+        username: !!jenkinsProvider.config.credentials.username,
+        token: !!jenkinsProvider.config.credentials.token,
+      }
+    });
+    
+    // Import the CICD provider
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+    
+    // Get the provider instance
+    const providerResult = await getCICDProvider(jenkinsProvider.id, user.tenant_id);
+    
+    if (!providerResult.success || !providerResult.data) {
+      return { success: false, error: providerResult.error || 'Failed to initialize Jenkins provider' };
+    }
+    
+    const provider = providerResult.data;
+    
+    // Test the connection
+    const testResult = await provider.testConnection();
+    
+    console.log('Actions layer: Jenkins connection test result:', testResult);
+    
+    if (!testResult.success) {
+      return { success: false, error: `Connection test failed: ${testResult.error}` };
+    }
+    
+    // Try to get a crumb
+    const crumbResult = await provider['getCrumb']();
+    
+    console.log('Actions layer: Jenkins crumb result:', crumbResult);
+    
+    return { 
+      success: true, 
+      data: {
+        connectionTest: testResult,
+        crumbTest: crumbResult,
+        provider: {
+          id: jenkinsProvider.id,
+          name: jenkinsProvider.name,
+          url: jenkinsProvider.url,
+          type: jenkinsProvider.type
+        }
+      }
+    };
+  } catch (error: any) {
+    console.error('Actions layer: Error testing Jenkins API:', error);
+    return { success: false, error: error.message || 'Error testing Jenkins API' };
   }
 }

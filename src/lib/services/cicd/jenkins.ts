@@ -28,15 +28,38 @@ export class JenkinsProvider implements CICDProvider {
       // Jenkins API token authentication
       const token = config.credentials.token;
       const username = config.credentials.username || 'admin';
-      console.log(`[JENKINS] Using token auth with username: ${username}`);
+      
+      if (!token) {
+        console.error('[JENKINS] ERROR: Token authentication configured but no token provided');
+      }
+
+      // Check if it's a modern Jenkins API token (if token starts with 11 or more numbers/letters followed by underscore)
+      const isModernToken = /^[a-zA-Z0-9]{11,}_[a-zA-Z0-9]+/.test(token || '');
+      
+      console.log(`[JENKINS] Using token auth with username: ${username}, token type: ${isModernToken ? 'modern API token' : 'legacy token or password'}`);
+      
+      // Basic auth with username:token for Jenkins
       this.authHeader = `Basic ${Buffer.from(`${username}:${token}`).toString('base64')}`;
+      
+      // Log the first few chars of the auth header to verify it's formatted correctly
+      if (this.authHeader) {
+        console.log(`[JENKINS] Auth header generated: ${this.authHeader.substring(0, 15)}...`);
+      } else {
+        console.error('[JENKINS] Failed to generate auth header');
+      }
     } else if (config.auth_type === 'basic_auth') {
       // Basic authentication
       const { username, password } = config.credentials;
+      
+      if (!username || !password) {
+        console.error('[JENKINS] ERROR: Basic auth configured but username or password missing');
+      }
+      
       console.log(`[JENKINS] Using basic auth with username: ${username}`);
       this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
     } else {
       console.warn(`[JENKINS] Unknown auth type: ${config.auth_type}, no authentication will be used`);
+      this.authHeader = '';
     }
     
     console.log(`[JENKINS] Provider initialized with auth header (present: ${!!this.authHeader})`);
@@ -129,6 +152,22 @@ export class JenkinsProvider implements CICDProvider {
       const url = `${this.baseUrl}${path}`;
       console.log(`[JENKINS] Full URL: ${url}`);
       
+      // Ensure we have a valid auth header
+      if (!this.authHeader) {
+        console.error('[JENKINS] No authentication credentials available');
+        console.error('[JENKINS] Auth config:', {
+          type: this.config.auth_type,
+          username: !!this.config.credentials.username,
+          token: !!this.config.credentials.token,
+          password: !!this.config.credentials.password
+        });
+        
+        return {
+          success: false,
+          error: 'No authentication credentials available for Jenkins'
+        };
+      }
+      
       // Add authentication headers
       let headers: HeadersInit = {
         ...options.headers,
@@ -149,9 +188,10 @@ export class JenkinsProvider implements CICDProvider {
           
           if (crumbResult.success && crumbResult.data) {
             this.crumb = crumbResult.data;
+            console.log('[JENKINS] Successfully obtained CSRF crumb');
           } else {
             console.warn('[JENKINS] Failed to get CSRF crumb, proceeding without it:', crumbResult.error);
-            // Continue without crumb - some Jenkins instances don't require it
+            // Try to proceed anyway - some Jenkins instances don't require CSRF protection
           }
         }
         
@@ -159,10 +199,12 @@ export class JenkinsProvider implements CICDProvider {
         if (this.crumb) {
           headers[this.crumb.crumbRequestField] = this.crumb.crumb;
           console.log(`[JENKINS] Added CSRF crumb to request headers: ${this.crumb.crumbRequestField}=${this.crumb.crumb.substring(0, 10)}...`);
+        } else {
+          console.warn('[JENKINS] No CSRF crumb available, proceeding without it');
         }
       }
       
-      console.log(`[JENKINS] Headers prepared (auth header present: ${!!this.authHeader})`);
+      console.log(`[JENKINS] Headers prepared:`, Object.keys(headers));
 
       console.log(`[JENKINS] Sending request to ${url}`);
       const response = await fetch(url, {
@@ -171,20 +213,40 @@ export class JenkinsProvider implements CICDProvider {
         cache: 'no-store' // Important for real-time data
       });
       console.log(`[JENKINS] Response received: Status ${response.status} ${response.statusText}`);
-      console.log(`[JENKINS] Response headers:`, JSON.stringify(Object.fromEntries([...response.headers.entries()])));
+      
+      // Log all response headers for debugging
+      const responseHeaders = Object.fromEntries([...response.headers.entries()]);
+      console.log(`[JENKINS] Response headers:`, JSON.stringify(responseHeaders));
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[JENKINS] Request failed with status ${response.status}: ${errorText}`);
         
-        // If we get a 403 with a crumb error, our crumb might be expired
-        if (response.status === 403 && errorText.includes('No valid crumb') && this.crumb) {
+        // If we get a 403 with a crumb error, our crumb might be expired or invalid
+        if (response.status === 403 && errorText.includes('No valid crumb')) {
           console.log('[JENKINS] CSRF crumb validation failed, clearing cached crumb');
           this.crumb = null;
           
-          // Retry the request once with a fresh crumb
-          console.log('[JENKINS] Retrying request with fresh CSRF crumb');
-          return this.jenkinsRequest<T>(path, options);
+          // If this was the first try, retry the request with a fresh crumb
+          if (!options._retryWithCrumb) {
+            console.log('[JENKINS] Retrying request with fresh CSRF crumb');
+            return this.jenkinsRequest<T>(path, { ...options, _retryWithCrumb: true });
+          } else {
+            console.error('[JENKINS] Still failing after refresh of CSRF crumb');
+            return {
+              success: false,
+              error: `Jenkins CSRF protection error: ${errorText}`
+            };
+          }
+        }
+        
+        // If we get a 401/403, we might have authentication issues
+        if (response.status === 401 || response.status === 403) {
+          console.error('[JENKINS] Authentication error. Check your credentials.');
+          return {
+            success: false,
+            error: `Jenkins authentication error: ${errorText}`
+          };
         }
         
         return {
@@ -504,8 +566,16 @@ export class JenkinsProvider implements CICDProvider {
       }
       
       console.log(`[JENKINS] Creating new job at endpoint: ${endpoint}`);
+      console.log(`[JENKINS] Authorization header present: ${!!this.authHeader}`);
+      console.log(`[JENKINS] Token auth configured: ${this.config?.auth_type === 'token'}`);
       
-      // Make POST request to Jenkins API
+      // For debugging purposes, log auth details (without revealing sensitive information)
+      if (this.config?.auth_type === 'token') {
+        console.log(`[JENKINS] Token auth username: ${this.config.credentials.username || 'admin'}`);
+        console.log(`[JENKINS] Token present: ${!!this.config.credentials.token}`);
+      }
+      
+      // Make POST request to Jenkins API with XML content
       const result = await this.jenkinsRequest<any>(
         endpoint,
         {

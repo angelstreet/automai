@@ -30,7 +30,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
-import { Button } from '@/components/shadcn/button';
 import { toast } from '@/components/shadcn/use-toast';
 import { DeploymentActions } from './DeploymentActions';
 

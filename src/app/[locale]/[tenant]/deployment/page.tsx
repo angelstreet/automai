@@ -16,10 +16,10 @@ const DeploymentPage = () => {
   return (
     <>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
-          {view === 'list' ? 'Deployments' : 'Create Deployment'}
-        </h1>
-        <div className="flex items-center gap-2">
+        
+        <div className="flex-1"></div>
+        
+        <div className="flex items-center gap-2 ml-auto">
           {view === 'list' && (
             <button 
               className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
