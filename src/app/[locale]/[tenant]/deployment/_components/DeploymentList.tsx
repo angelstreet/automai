@@ -265,15 +265,11 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                     {displayDeployments.map((deployment) => (
                       <tr 
                         key={deployment.id} 
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer group"
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer relative group"
                         onClick={() => handleViewDeployment(deployment)}
                       >
-                        <td className="px-2 py-1 whitespace-nowrap relative">
+                        <td className="px-2 py-1 whitespace-nowrap">
                           <div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div>
-                          <div className="absolute left-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg p-3 text-xs z-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
-                            <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
-                          </div>
                         </td>
                         <td className="px-2 py-1 whitespace-nowrap">
                           <div className="text-sm text-gray-600 dark:text-gray-300">{getRepositoryName(deployment)}</div>
@@ -295,8 +291,11 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                         </td>
                         <td className="px-2 py-1 whitespace-nowrap text-right text-sm font-medium">
                           {/* View button removed as requested */}
-                          <span className="sr-only">View</span>
                         </td>
+                        <div className="absolute left-4 bottom-full mb-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg p-2 text-xs z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
+                          <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
+                          <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
+                        </div>
                       </tr>
                     ))}
                   </tbody>
