@@ -42,8 +42,13 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ deployment
             variant: 'default',
           });
           
-          // Refresh the page to update the list
+          // Force a complete refresh of the page
           router.refresh();
+          
+          // Add a small delay then navigate to the deployments list to ensure refresh
+          setTimeout(() => {
+            router.push(`/${locale}/${tenant}/deployment`);
+          }, 500);
         } else {
           toast({
             title: 'Error',
