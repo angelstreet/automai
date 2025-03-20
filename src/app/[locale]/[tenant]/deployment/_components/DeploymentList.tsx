@@ -32,6 +32,7 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { Button } from '@/components/shadcn/button';
 import { toast } from '@/components/shadcn/use-toast';
+import { DeploymentActions } from './DeploymentActions';
 
 interface DeploymentListProps {
   onViewDeployment?: (deploymentId: string) => void;
@@ -350,23 +351,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                                 : '-'}
                         </td>
                         <td className="px-2 py-1 whitespace-nowrap text-sm text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem 
-                                onClick={(e) => handleDeleteClick(deployment, e)}
-                                className="text-red-600 dark:text-red-400"
-                              >
-                                <Trash className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <DeploymentActions deploymentId={deployment.id} />
                         </td>
                       </tr>
                     ))}

@@ -154,36 +154,25 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
    * Create a new deployment
    * @param formData Deployment form data
    */
-  const handleCreateDeployment = useCallback(async (formData: DeploymentFormData) => {
+  const createDeployment = async (formData: DeploymentFormData) => {
     setLoading(true);
-    setError(null);
-    
     try {
-      // Use cached user data when available
-      if (!currentUser) {
-        await fetchUserData();
-      }
-      
+      console.log('Creating deployment with form data:', formData);
       const result = await createDeploymentAction(formData);
       
-      if (!result.success) {
-        setError(result.error || 'Failed to create deployment');
+      if (result.success) {
+        fetchDeployments(); // Refresh the deployments list
+        return { success: true, deploymentId: result.deploymentId };
+      } else {
         return { success: false, error: result.error };
       }
-      
-      // Refresh the deployments list after successful creation
-      await fetchDeployments();
-      
-      return { success: true, deploymentId: result.deploymentId };
-    } catch (err) {
-      const errorMessage = 'Failed to create deployment';
-      setError(errorMessage);
-      console.error('Error creating deployment:', err);
-      return { success: false, error: errorMessage };
+    } catch (error: any) {
+      console.error('Error creating deployment:', error);
+      return { success: false, error: error.message || 'Failed to create deployment' };
     } finally {
       setLoading(false);
     }
-  }, [currentUser, fetchUserData, fetchDeployments]);
+  };
 
   /**
    * Abort a deployment
@@ -342,7 +331,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     // Core actions
     fetchDeployments,
     fetchDeploymentById: handleFetchDeploymentById,
-    createDeployment: handleCreateDeployment,
+    createDeployment,
     abortDeployment: handleAbortDeployment,
     refreshDeployment: handleRefreshDeployment,
     

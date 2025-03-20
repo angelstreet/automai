@@ -373,6 +373,56 @@ export class JenkinsProvider implements CICDProvider {
   }
 
   /**
+   * Create a new Jenkins job
+   */
+  async createJob(jobName: string, jobXml: string, folderPath?: string): Promise<CICDResponse<string>> {
+    try {
+      // Construct the API endpoint - handle folder path if specified
+      let endpoint = '/createItem?name=' + encodeURIComponent(jobName);
+      
+      // If folder path is specified, modify the endpoint to create in that folder
+      if (folderPath) {
+        // Format: /job/folder/job/subfolder/createItem?name=jobName
+        const folderSegments = folderPath.split('/').filter(Boolean);
+        endpoint = folderSegments.map(segment => `/job/${encodeURIComponent(segment)}`).join('') + endpoint;
+      }
+      
+      console.log(`[JENKINS] Creating new job at endpoint: ${endpoint}`);
+      
+      // Make POST request to Jenkins API
+      const result = await this.jenkinsRequest<any>(
+        endpoint,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/xml'
+          },
+          body: jobXml
+        }
+      );
+      
+      if (!result.success) {
+        console.error(`[JENKINS] Failed to create job: ${result.error}`);
+        return result;
+      }
+      
+      console.log(`[JENKINS] Job created successfully: ${jobName}`);
+      
+      // Return the job name as confirmation
+      return {
+        success: true,
+        data: jobName
+      };
+    } catch (error: any) {
+      console.error(`[JENKINS] Error creating job ${jobName}:`, error);
+      return {
+        success: false,
+        error: error.message || `Failed to create Jenkins job ${jobName}`
+      };
+    }
+  }
+
+  /**
    * Get Jenkins build status
    */
   async getBuildStatus(jobId: string, buildId: string): Promise<CICDResponse<CICDBuild>> {
