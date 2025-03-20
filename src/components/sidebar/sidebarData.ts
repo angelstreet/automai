@@ -122,6 +122,12 @@ export const sidebarData: SidebarData = {
           icon: Rocket,
           roles: ['admin', 'developer', 'tester'],
         },
+        {
+          title: 'CI/CD',
+          href: '/cicd',
+          icon: GitBranch,
+          roles: ['admin', 'developer'],
+        },
       ],
     },
     {
