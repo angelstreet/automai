@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { DeploymentNavbar } from './_components/DeploymentNavbar';
 import { DeploymentProvider } from './context';
 
 export default function DeploymentLayout({
@@ -18,8 +17,6 @@ export default function DeploymentLayout({
             Manage deployments and CI/CD integrations
           </p>
         </div>
-        
-        <DeploymentNavbar />
         
         <div className="space-y-6">
           {children}
