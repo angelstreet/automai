@@ -289,7 +289,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                                 ? `Scheduled for ${getFormattedTime(deployment.scheduledTime)}` 
                                 : '-'}
                         </td>
-                        <div className="absolute left-4  py-2 mb-2 w-28 bg-white dark:bg-gray-800 rounded-md shadow-lg p-2 text-xs z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
+                        <div className="absolute left-4 w-28 bg-white dark:bg-gray-800 rounded-md shadow-lg p-2 text-xs z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
                           <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
                           <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
                         </div>
