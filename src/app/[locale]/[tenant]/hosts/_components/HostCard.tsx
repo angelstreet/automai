@@ -260,7 +260,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[160px]">
-                <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)}>
+                <DropdownMenuItem onClick={() => router.push(`/${locale}/${tenant}/logs/${host.name}`)}>
                   <ScrollText className="mr-2 h-4 w-4" />
                   <span>{t('logs')}</span>
                 </DropdownMenuItem>

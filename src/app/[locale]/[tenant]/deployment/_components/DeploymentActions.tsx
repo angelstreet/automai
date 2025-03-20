@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Eye, Trash2, PlayCircle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { DeploymentRunAction } from './DeploymentRunAction';
 import {
   DropdownMenu,
@@ -20,10 +20,12 @@ interface DeploymentActionsProps {
 
 export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ deploymentId }) => {
   const router = useRouter();
+  const params = useParams();
+  const { locale, tenant } = params;
   
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(`/deployment/${deploymentId}`);
+    router.push(`/${locale}/${tenant}/deployment/${deploymentId}`);
   };
   
   const handleDelete = async (e: React.MouseEvent) => {

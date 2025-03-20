@@ -108,7 +108,7 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
                     <DropdownMenuContent align="end" className="w-[140px]">
                       <DropdownMenuItem
                         key={`logs-${host.id}`}
-                        onClick={() => router.push(`/logs/${host.name}`)}
+                        onClick={() => router.push(`/${locale}/${tenant}/logs/${host.name}`)}
                         className="py-1.5"
                       >
                         <ScrollText className="mr-2 h-3.5 w-3.5" />

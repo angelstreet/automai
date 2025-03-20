@@ -251,7 +251,7 @@ export async function createDeployment(
     console.log('Actions layer: Calling deployment.create with data');
     
     // Create the deployment in the database
-    const createResult = await deploymentDb.create(deploymentData);
+    const createResult = await deploymentDb.create({ data: deploymentData });
     
     if (!createResult.success) {
       console.error('Actions layer: Error creating deployment:', createResult.error);
