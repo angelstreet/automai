@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { PlayCircle } from 'lucide-react';
-import { Button } from '@/components/shadcn/ui/button';
+import { Button } from '@/components/shadcn/button';
 import { toast } from '@/components/shadcn/use-toast';
 import { runDeploymentAction } from '../actions';
 

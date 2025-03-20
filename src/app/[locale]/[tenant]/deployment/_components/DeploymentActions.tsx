@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Button } from '@/components/shadcn/ui/button';
+import { Button } from '@/components/shadcn/button';
 import { Eye, Trash2, PlayCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { DeploymentRunAction } from './DeploymentRunAction';
