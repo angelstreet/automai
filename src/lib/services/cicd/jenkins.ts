@@ -16,51 +16,20 @@ export class JenkinsProvider implements CICDProvider {
     this.config = config;
     this.baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
     
-    console.log(`[JENKINS] Initializing provider with config: url=${this.baseUrl}, type=${config.type}, auth_type=${config.auth_type}`);
-    console.log(`[JENKINS] Credentials available:`, {
-      username: !!config.credentials.username,
-      password: !!config.credentials.password,
-      token: !!config.credentials.token
-    });
+    console.log(`[JENKINS] Initializing provider with config: url=${this.baseUrl}, type=${config.type}`);
     
-    // Set up authentication
-    if (config.auth_type === 'token') {
-      // Jenkins API token authentication
-      const token = config.credentials.token;
-      const username = config.credentials.username || 'admin';
-      
-      if (!token) {
-        console.error('[JENKINS] ERROR: Token authentication configured but no token provided');
-      }
-
-      // Check if it's a modern Jenkins API token (if token starts with 11 or more numbers/letters followed by underscore)
-      const isModernToken = /^[a-zA-Z0-9]{11,}_[a-zA-Z0-9]+/.test(token || '');
-      
-      console.log(`[JENKINS] Using token auth with username: ${username}, token type: ${isModernToken ? 'modern API token' : 'legacy token or password'}`);
-      
-      // Basic auth with username:token for Jenkins
-      this.authHeader = `Basic ${Buffer.from(`${username}:${token}`).toString('base64')}`;
-      
-      // Log the first few chars of the auth header to verify it's formatted correctly
-      if (this.authHeader) {
-        console.log(`[JENKINS] Auth header generated: ${this.authHeader.substring(0, 15)}...`);
-      } else {
-        console.error('[JENKINS] Failed to generate auth header');
-      }
-    } else if (config.auth_type === 'basic_auth') {
-      // Basic authentication
-      const { username, password } = config.credentials;
-      
-      if (!username || !password) {
-        console.error('[JENKINS] ERROR: Basic auth configured but username or password missing');
-      }
-      
-      console.log(`[JENKINS] Using basic auth with username: ${username}`);
-      this.authHeader = `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
-    } else {
-      console.warn(`[JENKINS] Unknown auth type: ${config.auth_type}, no authentication will be used`);
-      this.authHeader = '';
+    // Always use token-based authentication for Jenkins
+    const token = config.credentials?.token;
+    const username = config.credentials?.username || 'admin';
+    
+    if (!token) {
+      console.error('[JENKINS] ERROR: No token provided for Jenkins authentication');
     }
+    
+    console.log(`[JENKINS] Using token auth with username: ${username}`);
+    
+    // Basic auth with username:token for Jenkins
+    this.authHeader = `Basic ${Buffer.from(`${username}:${token}`).toString('base64')}`;
     
     console.log(`[JENKINS] Provider initialized with auth header (present: ${!!this.authHeader})`);
   }
