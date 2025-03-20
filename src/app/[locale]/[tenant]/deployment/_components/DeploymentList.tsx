@@ -6,11 +6,32 @@ import {
   Clock, 
   RefreshCw, 
   Play, 
+  MoreHorizontal,
+  Trash
 } from 'lucide-react';
 import { useDeployments } from '../context';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
+import { deleteDeployment } from '../actions';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/shadcn/alert-dialog';
+import { Button } from '@/components/shadcn/button';
+import { toast } from '@/components/shadcn/use-toast';
 
 interface DeploymentListProps {
   onViewDeployment?: (deploymentId: string) => void;
@@ -25,6 +46,8 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const [repositories, setRepositories] = useState<Record<string, Repository>>({});
   const [sortBy, setSortBy] = useState('date');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   // Fetch repositories on component mount
   useEffect(() => {
@@ -51,9 +74,53 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   };
 
   // Handle viewing a deployment
-  const handleViewDeployment = (deployment: Deployment) => {
+  const handleViewDeployment = (deployment: Deployment, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     if (onViewDeployment) {
       onViewDeployment(deployment.id);
+    }
+  };
+
+  // Handle delete click
+  const handleDeleteClick = (deployment: Deployment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedDeployment(deployment);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Confirm deletion of a deployment
+  const handleConfirmDelete = async () => {
+    if (!selectedDeployment) return;
+    
+    try {
+      const result = await deleteDeployment(selectedDeployment.id);
+      
+      if (result.success) {
+        toast({
+          title: 'Deployment Deleted',
+          description: 'The deployment has been successfully deleted.',
+          variant: 'default',
+        });
+        
+        // Refresh the list
+        fetchDeployments();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to delete the deployment',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
     }
   };
 
@@ -256,8 +323,8 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                       <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Runtime
                       </th>
-                      <th scope="col" className="relative px-2 py-1">
-                        <span className="sr-only">Actions</span>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Actions
                       </th>
                     </tr>
                   </thead>
@@ -266,7 +333,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                       <tr 
                         key={deployment.id} 
                         className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer relative group"
-                        onClick={() => handleViewDeployment(deployment)}
+                        onClick={(e) => handleViewDeployment(deployment, e)}
                       >
                         <td className="px-2 py-1 whitespace-nowrap">
                           <div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div>
@@ -289,11 +356,24 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                                 ? `Scheduled for ${getFormattedTime(deployment.scheduledTime)}` 
                                 : '-'}
                         </td>
-                        <td className="relative p-0">
-                          <div className="absolute left-4 w-28 bg-white dark:bg-gray-800 rounded-md shadow-lg p-2 text-xs z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity">
-                            <div className="mb-1"><span className="font-medium">Hosts:</span> {deployment.hostIds?.length || 0}</div>
-                            <div><span className="font-medium">Scripts:</span> {deployment.scriptsPath?.length || 0}</div>
-                          </div>
+                        <td className="px-2 py-1 whitespace-nowrap text-sm text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={(e) => handleDeleteClick(deployment, e)}
+                                className="text-red-600 dark:text-red-400"
+                              >
+                                <Trash className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
@@ -304,6 +384,24 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Deployment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

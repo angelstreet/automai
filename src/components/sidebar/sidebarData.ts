@@ -82,10 +82,10 @@ export const sidebarData: SidebarData = {
       title: 'Main',
       items: [
         {
-          title: 'Repositories',
-          href: '/repositories',
-          icon: GitBranch,
-          roles: ['admin', 'developer'],
+          title: 'Deployment',
+          href: '/deployment',
+          icon: Rocket,
+          roles: ['admin', 'developer', 'tester'],
         },
         {
           title: 'Runs',
@@ -105,6 +105,12 @@ export const sidebarData: SidebarData = {
       title: 'Environment',
       items: [
         {
+          title: 'CI/CD',
+          href: '/cicd',
+          icon: GitBranch,
+          roles: ['admin', 'developer'],
+        },
+        {
           title: 'Devices',
           href: '/devices',
           icon: Monitor,
@@ -117,17 +123,12 @@ export const sidebarData: SidebarData = {
           roles: ['admin', 'developer', 'tester'],
         },
         {
-          title: 'Deployment',
-          href: '/deployment',
-          icon: Rocket,
-          roles: ['admin', 'developer', 'tester'],
-        },
-        {
-          title: 'CI/CD',
-          href: '/cicd',
+          title: 'Repositories',
+          href: '/repositories',
           icon: GitBranch,
           roles: ['admin', 'developer'],
         },
+        
       ],
     },
     {

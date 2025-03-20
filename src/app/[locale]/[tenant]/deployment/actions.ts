@@ -1181,3 +1181,45 @@ export async function syncCICDJobsAction(
     return { success: false, error: error.message || 'Failed to sync CI/CD jobs' };
   }
 }
+
+/**
+ * Delete a deployment
+ * @param id Deployment ID to delete
+ * @returns Object with success status and optional error message
+ */
+export async function deleteDeployment(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log(`Actions layer: Deleting deployment ${id}`);
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot delete deployment - user not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Delete the deployment from the database
+    const result = await deploymentDb.delete({
+      where: { id, tenant_id: user.tenant_id }
+    });
+    
+    if (!result.success) {
+      console.error('Actions layer: Error deleting deployment:', result.error);
+      return { success: false, error: result.error || 'Failed to delete deployment' };
+    }
+    
+    console.log('Actions layer: Deployment deleted successfully');
+    
+    // Revalidate the deployments list
+    revalidatePath('/[locale]/[tenant]/deployment');
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting deployment:', error);
+    return { success: false, error: error.message || 'Failed to delete deployment' };
+  }
+}
