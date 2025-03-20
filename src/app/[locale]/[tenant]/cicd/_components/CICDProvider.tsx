@@ -90,8 +90,10 @@ export default function CICDProvider() {
         name: provider.name,
         type: provider.type,
         url: provider.url,
-        auth_type: provider.config.auth_type,
-        credentials: provider.config.credentials
+        config: {
+          auth_type: provider.config?.auth_type,
+          credentials: provider.config?.credentials
+        }
       };
       
       const result = await testCICDProviderAction(providerPayload);

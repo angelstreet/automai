@@ -16,7 +16,7 @@ export class JenkinsProvider implements CICDProvider {
     this.baseUrl = config.url.endsWith('/') ? config.url.slice(0, -1) : config.url;
     
     // Set up authentication
-    if (config.auth_type === 'api_token') {
+    if (config.auth_type === 'token') {
       // Jenkins API token authentication
       const token = config.credentials.token;
       const username = config.credentials.username || 'admin';
@@ -432,6 +432,37 @@ export class JenkinsProvider implements CICDProvider {
       return {
         success: false,
         error: error.message || `Failed to get Jenkins build logs for ${jobId}/${buildId}`
+      };
+    }
+  }
+
+  /**
+   * Test connection to Jenkins
+   */
+  async testConnection(): Promise<CICDResponse<boolean>> {
+    try {
+      console.log('[JENKINS] Testing connection to Jenkins server');
+      
+      const response = await this.jenkinsRequest<any>('/api/json');
+      
+      if (response.success) {
+        console.log('[JENKINS] Connection test successful');
+        return {
+          success: true,
+          data: true
+        };
+      } else {
+        console.error('[JENKINS] Connection test failed:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to connect to Jenkins server'
+        };
+      }
+    } catch (error: any) {
+      console.error('[JENKINS] Connection test failed with exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to connect to Jenkins server'
       };
     }
   }

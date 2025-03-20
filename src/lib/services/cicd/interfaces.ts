@@ -42,7 +42,7 @@ export interface CICDBuild {
 export interface CICDProviderConfig {
   id: string;
   url: string;
-  auth_type: 'api_token' | 'basic_auth' | 'oauth';
+  auth_type: 'token' | 'basic_auth' | 'oauth';
   credentials: Record<string, string>;
   type: string;
   name: string;
@@ -52,6 +52,9 @@ export interface CICDProviderConfig {
 export interface CICDProvider {
   // Initialize the provider with configuration
   initialize(config: CICDProviderConfig): void;
+  
+  // Test connection to the provider
+  testConnection(): Promise<CICDResponse<boolean>>;
   
   // Get available jobs
   getAvailableJobs(): Promise<CICDResponse<CICDJob[]>>;

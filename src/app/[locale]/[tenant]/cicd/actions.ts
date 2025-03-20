@@ -1,49 +1,41 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createClient } from '@/lib/supabase/server';
 import { 
   ActionResult, 
   CICDProviderPayload, 
   CICDProviderListResult,
   CICDProviderActionResult
 } from '@/types/cicd';
+import { getUser } from '@/app/actions/user';
 
 /**
  * Fetch all CI/CD providers for the current tenant
  */
 export async function getCICDProvidersAction(): Promise<CICDProviderListResult> {
   try {
-    const supabase = createClient();
+    // Get the current authenticated user
+    const user = await getUser();
     
-    // Get the current tenant from the authenticated user
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return { success: false, error: 'Unauthorized', data: [] };
+      console.error('User not authenticated');
+      return { success: false, error: 'User not authenticated', data: [] };
     }
     
-    const { data: tenant } = await supabase
-      .from('user_tenants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    console.log('Fetching CICD providers for tenant:', user.tenant_id);
     
-    if (!tenant) {
-      return { success: false, error: 'No tenant found for user', data: [] };
-    }
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
     
     // Get CICD providers for the tenant
-    const { data, error } = await supabase
-      .from('tenant_cicd_providers')
-      .select('*')
-      .eq('tenant_id', tenant.tenant_id);
+    const result = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
     
-    if (error) {
-      console.error('Error fetching CICD providers:', error);
-      return { success: false, error: error.message, data: [] };
+    if (!result.success) {
+      console.error('Error fetching CICD providers:', result.error);
+      return { success: false, error: result.error, data: [] };
     }
     
-    return { success: true, data: data || [] };
+    return { success: true, data: result.data || [] };
   } catch (error: any) {
     console.error('Unexpected error fetching CICD providers:', error);
     return { success: false, error: error.message || 'An unexpected error occurred', data: [] };
@@ -51,57 +43,42 @@ export async function getCICDProvidersAction(): Promise<CICDProviderListResult> 
 }
 
 /**
- * Create a new CI/CD provider
+ * Create a new CICD provider for the current tenant
  */
-export async function createCICDProviderAction(providerData: CICDProviderPayload): Promise<CICDProviderActionResult> {
+export async function createCICDProviderAction(payload: CICDProviderPayload): Promise<CICDProviderActionResult> {
   try {
-    const supabase = createClient();
+    // Get the current authenticated user
+    const user = await getUser();
     
-    // Get the current tenant from the authenticated user
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return { success: false, error: 'Unauthorized' };
+      console.error('User not authenticated');
+      return { success: false, error: 'User not authenticated' };
     }
     
-    const { data: tenant } = await supabase
-      .from('user_tenants')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
     
-    if (!tenant) {
-      return { success: false, error: 'No tenant found for user' };
-    }
-    
-    // Prepare provider data with proper structure
-    const { auth_type, credentials, ...restData } = providerData;
-    const providerRecord = {
-      ...restData,
-      tenant_id: tenant.tenant_id,
-      config: {
-        auth_type,
-        credentials
-      },
-      created_by: user.id,
-      updated_by: user.id
+    // Prepare data for database
+    const providerData = {
+      tenant_id: user.tenant_id,
+      name: payload.name,
+      type: payload.type,
+      url: payload.url,
+      config: payload.config || {}
     };
     
-    // Insert the new provider
-    const { data, error } = await supabase
-      .from('tenant_cicd_providers')
-      .insert(providerRecord)
-      .select()
-      .single();
+    // Create the provider
+    const result = await cicdDb.createCICDProvider({ data: providerData });
     
-    if (error) {
-      console.error('Error creating CICD provider:', error);
-      return { success: false, error: error.message };
+    if (!result.success) {
+      console.error('Error creating CICD provider:', result.error);
+      return { success: false, error: result.error };
     }
     
-    // Revalidate paths for UI updates
-    revalidatePath('/deployment/cicd');
+    // Revalidate the providers list
+    revalidatePath(`/[locale]/[tenant]/cicd`);
     
-    return { success: true, data };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Unexpected error creating CICD provider:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
@@ -109,52 +86,45 @@ export async function createCICDProviderAction(providerData: CICDProviderPayload
 }
 
 /**
- * Update an existing CI/CD provider
+ * Update an existing CICD provider
  */
-export async function updateCICDProviderAction(providerData: CICDProviderPayload): Promise<CICDProviderActionResult> {
+export async function updateCICDProviderAction(id: string, payload: CICDProviderPayload): Promise<CICDProviderActionResult> {
   try {
-    const { id, auth_type, credentials, ...restData } = providerData;
+    // Get the current authenticated user
+    const user = await getUser();
     
-    if (!id) {
-      return { success: false, error: 'Provider ID is required' };
-    }
-    
-    const supabase = createClient();
-    
-    // Get the current user
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return { success: false, error: 'Unauthorized' };
+      console.error('User not authenticated');
+      return { success: false, error: 'User not authenticated' };
     }
     
-    // Prepare update data
-    const updateData = {
-      ...restData,
-      config: {
-        auth_type,
-        credentials
-      },
-      updated_by: user.id,
-      updated_at: new Date().toISOString()
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Prepare data for database
+    const providerData = {
+      id,
+      name: payload.name,
+      type: payload.type,
+      url: payload.url,
+      config: payload.config || {}
     };
     
     // Update the provider
-    const { data, error } = await supabase
-      .from('tenant_cicd_providers')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+    const result = await cicdDb.updateCICDProvider({ 
+      data: providerData,
+      where: { id, tenant_id: user.tenant_id }
+    });
     
-    if (error) {
-      console.error('Error updating CICD provider:', error);
-      return { success: false, error: error.message };
+    if (!result.success) {
+      console.error('Error updating CICD provider:', result.error);
+      return { success: false, error: result.error };
     }
     
-    // Revalidate paths for UI updates
-    revalidatePath('/deployment/cicd');
+    // Revalidate the providers list
+    revalidatePath(`/[locale]/[tenant]/cicd`);
     
-    return { success: true, data };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Unexpected error updating CICD provider:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
@@ -162,54 +132,33 @@ export async function updateCICDProviderAction(providerData: CICDProviderPayload
 }
 
 /**
- * Delete a CI/CD provider
+ * Delete a CICD provider
  */
-export async function deleteCICDProviderAction(providerId: string): Promise<ActionResult> {
+export async function deleteCICDProviderAction(id: string): Promise<ActionResult> {
   try {
-    if (!providerId) {
-      return { success: false, error: 'Provider ID is required' };
-    }
+    // Get the current authenticated user
+    const user = await getUser();
     
-    const supabase = createClient();
-    
-    // Get the current user
-    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return { success: false, error: 'Unauthorized' };
+      console.error('User not authenticated');
+      return { success: false, error: 'User not authenticated' };
     }
     
-    // Check if the provider is in use by any deployments
-    const { data: deployments, error: deploymentError } = await supabase
-      .from('deployments')
-      .select('id')
-      .eq('cicd_provider_id', providerId)
-      .limit(1);
-    
-    if (deploymentError) {
-      console.error('Error checking deployments:', deploymentError);
-      return { success: false, error: deploymentError.message };
-    }
-    
-    if (deployments && deployments.length > 0) {
-      return { 
-        success: false, 
-        error: 'Cannot delete provider as it is currently in use by one or more deployments' 
-      };
-    }
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
     
     // Delete the provider
-    const { error } = await supabase
-      .from('tenant_cicd_providers')
-      .delete()
-      .eq('id', providerId);
+    const result = await cicdDb.deleteCICDProvider({ 
+      where: { id, tenant_id: user.tenant_id } 
+    });
     
-    if (error) {
-      console.error('Error deleting CICD provider:', error);
-      return { success: false, error: error.message };
+    if (!result.success) {
+      console.error('Error deleting CICD provider:', result.error);
+      return { success: false, error: result.error };
     }
     
-    // Revalidate paths for UI updates
-    revalidatePath('/deployment/cicd');
+    // Revalidate the providers list
+    revalidatePath(`/[locale]/[tenant]/cicd`);
     
     return { success: true };
   } catch (error: any) {
@@ -219,107 +168,63 @@ export async function deleteCICDProviderAction(providerId: string): Promise<Acti
 }
 
 /**
- * Test connection to a CI/CD provider
+ * Test a CICD provider connection
  */
-export async function testCICDProviderAction(providerData: CICDProviderPayload): Promise<ActionResult> {
+export async function testCICDProviderAction(provider: CICDProviderPayload): Promise<ActionResult> {
   try {
-    // In a real implementation, this would connect to the CI/CD provider API
-    // and verify the credentials and access
+    // Basic validation
+    if (!provider.url) {
+      return { success: false, error: 'Provider URL is required' };
+    }
     
-    // For now, simulate a successful connection
-    // In the future, implement actual API calls to the provider
+    if (!provider.type) {
+      return { success: false, error: 'Provider type is required' };
+    }
     
-    // Example pattern for provider-specific tests:
-    switch (providerData.type) {
-      case 'jenkins':
-        // Test Jenkins connection
-        // e.g. Make a test request to Jenkins API
-        return simulateJenkinsTest(providerData);
-        
-      case 'github':
-        // Test GitHub API connection
-        return simulateGitHubTest(providerData);
-        
-      case 'gitlab':
-        // Test GitLab API connection
-        return simulateGitLabTest(providerData);
-        
-      case 'azure_devops':
-        // Test Azure DevOps API connection
-        return simulateAzureDevOpsTest(providerData);
-        
-      default:
-        return { 
-          success: false, 
-          error: `Unsupported provider type: ${providerData.type}` 
-        };
+    if (!provider.config) {
+      return { success: false, error: 'Provider configuration is required' };
+    }
+    
+    // Get the current authenticated user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('User not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD service directly
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+    
+    // Format the provider config in the expected structure
+    const providerConfig = {
+      id: provider.id || 'temp-id',
+      name: provider.name,
+      type: provider.type,
+      url: provider.url,
+      auth_type: provider.config.auth_type,
+      credentials: provider.config.credentials
+    };
+    
+    // Create provider instance directly for testing
+    // This is fine since we're not storing anything in the database
+    try {
+      const providerInstance = getCICDProvider(providerConfig);
+      const result = await providerInstance.testConnection();
+      
+      return { 
+        success: result.success, 
+        error: result.success ? undefined : result.error
+      };
+    } catch (error: any) {
+      console.error('Failed to create or test CICD provider:', error);
+      return { 
+        success: false, 
+        error: error.message || 'Failed to test CICD provider'
+      };
     }
   } catch (error: any) {
-    console.error('Error testing CICD provider:', error);
-    return { success: false, error: error.message || 'An unexpected error occurred during testing' };
+    console.error('Unexpected error testing CICD provider:', error);
+    return { success: false, error: error.message || 'An unexpected error occurred' };
   }
-}
-
-// Simulated connection tests for different provider types
-// These would be replaced with actual API calls in production
-
-function simulateJenkinsTest(providerData: CICDProviderPayload): ActionResult {
-  // Check for required fields
-  if (!providerData.url) {
-    return { success: false, error: 'Jenkins URL is required' };
-  }
-  
-  if (providerData.auth_type === 'token' && !providerData.credentials.token) {
-    return { success: false, error: 'API token is required for token authentication' };
-  }
-  
-  if (providerData.auth_type === 'basic_auth' && 
-      (!providerData.credentials.username || !providerData.credentials.password)) {
-    return { success: false, error: 'Username and password are required for basic authentication' };
-  }
-  
-  // Simulate a successful test
-  return { success: true };
-}
-
-function simulateGitHubTest(providerData: CICDProviderPayload): ActionResult {
-  // Check for required fields
-  if (!providerData.url) {
-    return { success: false, error: 'GitHub repository URL is required' };
-  }
-  
-  if (providerData.auth_type === 'token' && !providerData.credentials.token) {
-    return { success: false, error: 'GitHub token is required' };
-  }
-  
-  // Simulate a successful test
-  return { success: true };
-}
-
-function simulateGitLabTest(providerData: CICDProviderPayload): ActionResult {
-  // Check for required fields
-  if (!providerData.url) {
-    return { success: false, error: 'GitLab URL is required' };
-  }
-  
-  if (providerData.auth_type === 'token' && !providerData.credentials.token) {
-    return { success: false, error: 'GitLab token is required' };
-  }
-  
-  // Simulate a successful test
-  return { success: true };
-}
-
-function simulateAzureDevOpsTest(providerData: CICDProviderPayload): ActionResult {
-  // Check for required fields
-  if (!providerData.url) {
-    return { success: false, error: 'Azure DevOps URL is required' };
-  }
-  
-  if (providerData.auth_type === 'token' && !providerData.credentials.token) {
-    return { success: false, error: 'Azure DevOps token is required' };
-  }
-  
-  // Simulate a successful test
-  return { success: true };
 } 

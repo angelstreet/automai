@@ -151,54 +151,67 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   };
 
   // Form submission handler
-  const onSubmit = async (data: FormValues) => {
+  const handleSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     
     try {
       // Prepare credentials based on auth type
-      const credentials: any = {};
-      if (data.auth_type === 'token') {
-        credentials.token = data.token;
-      } else if (data.auth_type === 'basic_auth') {
-        credentials.username = data.username;
-        credentials.password = data.password;
+      let credentials: any = {};
+      
+      switch(data.auth_type) {
+        case 'basic_auth':
+          credentials = {
+            username: data.username,
+            password: data.password
+          };
+          break;
+        case 'token':
+          credentials = {
+            token: data.token
+          };
+          break;
+        // Add other auth types as needed
       }
       
-      // Create provider data object
-      const providerData: CICDProviderPayload = {
+      // Prepare provider payload
+      const providerPayload: CICDProviderPayload = {
         id: providerId,
         name: data.name,
         type: data.type,
         url: data.url,
-        auth_type: data.auth_type,
-        credentials
+        config: {
+          auth_type: data.auth_type,
+          credentials
+        }
       };
       
-      // Create or update provider
-      const result = isEditMode
-        ? await updateCICDProviderAction(providerData)
-        : await createCICDProviderAction(providerData);
+      // Create or update the provider
+      const action = providerId 
+        ? () => updateCICDProviderAction(providerId, providerPayload)
+        : () => createCICDProviderAction(providerPayload);
+      
+      const result = await action();
       
       if (result.success) {
         toast({
-          title: isEditMode ? 'Provider Updated' : 'Provider Created',
-          description: isEditMode
-            ? 'The CI/CD provider has been updated successfully.'
-            : 'The CI/CD provider has been created successfully.',
+          title: providerId ? 'Provider Updated' : 'Provider Created',
+          description: `The ${data.name} provider has been successfully ${providerId ? 'updated' : 'created'}.`,
           variant: 'success',
         });
+        
+        // Close the dialog and refresh the list
         onComplete();
       } else {
         toast({
           title: 'Error',
-          description: result.error || `Failed to ${isEditMode ? 'update' : 'create'} CI/CD provider.`,
+          description: result.error || `Failed to ${providerId ? 'update' : 'create'} the provider`,
           variant: 'destructive',
         });
       }
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'An unexpected error occurred.',
+        description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
     } finally {
@@ -218,7 +231,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
       </h2>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           {/* Provider Type */}
           <FormField
             control={form.control}

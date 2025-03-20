@@ -36,8 +36,10 @@ export interface CICDProviderPayload {
   name: string;
   type: CICDProviderType;
   url: string;
-  auth_type: CICDAuthType;
-  credentials: CICDCredentials;
+  config: {
+    auth_type: CICDAuthType;
+    credentials: CICDCredentials;
+  };
 }
 
 /**

@@ -401,4 +401,44 @@ export class GitHubProvider implements CICDProvider {
       };
     }
   }
+
+  /**
+   * Test connection to GitHub
+   */
+  async testConnection(): Promise<CICDResponse<boolean>> {
+    try {
+      console.log('[GITHUB] Testing connection to GitHub server');
+      
+      if (!this.owner || !this.repo) {
+        console.error('[GITHUB] Missing repository owner or name');
+        return {
+          success: false,
+          error: 'Repository owner or name is missing'
+        };
+      }
+      
+      // Test by getting repo information
+      const response = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}`);
+      
+      if (response.success) {
+        console.log('[GITHUB] Connection test successful');
+        return {
+          success: true,
+          data: true
+        };
+      } else {
+        console.error('[GITHUB] Connection test failed:', response.error);
+        return {
+          success: false,
+          error: response.error || 'Failed to connect to GitHub repository'
+        };
+      }
+    } catch (error: any) {
+      console.error('[GITHUB] Connection test failed with exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to connect to GitHub repository'
+      };
+    }
+  }
 } 
