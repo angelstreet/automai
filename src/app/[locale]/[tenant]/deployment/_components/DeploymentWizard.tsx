@@ -7,6 +7,7 @@ import { useRepositories, useRepositoryScripts } from '../../repositories/hooks'
 import { useHosts } from '../../hosts/hooks';
 import { useDeploymentContext } from '../context';
 import { Host as SystemHost } from '../../hosts/types';
+import { toast } from '@/components/shadcn/use-toast';
 import DeploymentWizardStep1 from './DeploymentWizardStep1';
 import DeploymentWizardStep2 from './DeploymentWizardStep2';
 import DeploymentWizardStep3 from './DeploymentWizardStep3';
@@ -326,17 +327,29 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
       
       if (result.success) {
         console.log('Deployment created successfully with ID:', result.deploymentId);
-        alert('Deployment created successfully!');
+        toast({
+          title: 'Success',
+          description: 'Deployment created successfully!',
+          variant: 'default'
+        });
         onComplete();
       } else {
         console.error('Failed to create deployment:', result.error);
         setSubmissionError(result.error || 'Failed to create deployment');
-        alert(`Error creating deployment: ${result.error || 'Unknown error'}`);
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to create deployment',
+          variant: 'destructive'
+        });
       }
     } catch (error: any) {
       console.error('Error creating deployment:', error);
       setSubmissionError(error.message || 'An unexpected error occurred');
-      alert(`Error creating deployment: ${error.message || 'Unknown error'}`);
+      toast({
+        title: 'Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive'
+      });
     } finally {
       setIsCreating(false);
     }

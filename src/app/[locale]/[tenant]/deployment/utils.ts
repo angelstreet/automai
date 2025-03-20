@@ -104,3 +104,57 @@ export const formatDate = (dateString: string | null | undefined): string => {
       return acc;
     }, {} as Record<string, Array<{ environment: string; [key: string]: any }>>);
   };
+
+/**
+ * Maps deployment data to CI/CD job parameters
+ * @param deployment The deployment data
+ * @returns A record of parameter name to parameter value
+ */
+export function mapDeploymentToParameters(deployment: any): Record<string, any> {
+  // Basic deployment info
+  const parameters: Record<string, any> = {
+    DEPLOYMENT_NAME: deployment.name || '',
+    DEPLOYMENT_DESCRIPTION: deployment.description || '',
+    REPOSITORY_ID: deployment.repositoryId || deployment.repository_id || '',
+  };
+  
+  // Add scripts information
+  if (deployment.scriptIds && deployment.scriptIds.length > 0) {
+    parameters.SCRIPT_IDS = deployment.scriptIds.join(',');
+  } else if (deployment.scripts_path && deployment.scripts_path.length > 0) {
+    parameters.SCRIPT_PATHS = deployment.scripts_path.join(',');
+  }
+  
+  // Add host information
+  if (deployment.hostIds && deployment.hostIds.length > 0) {
+    parameters.HOST_IDS = deployment.hostIds.join(',');
+  } else if (deployment.host_ids && deployment.host_ids.length > 0) {
+    parameters.HOST_IDS = deployment.host_ids.join(',');
+  }
+  
+  // Add schedule information
+  parameters.SCHEDULE_TYPE = deployment.schedule || deployment.schedule_type || 'now';
+  if (deployment.scheduledTime || deployment.scheduled_time) {
+    parameters.SCHEDULED_TIME = deployment.scheduledTime || deployment.scheduled_time;
+  }
+  
+  // Add script parameters if available
+  if (deployment.scriptParameters && Object.keys(deployment.scriptParameters).length > 0) {
+    Object.entries(deployment.scriptParameters).forEach(([scriptId, params]) => {
+      if (params && params.raw) {
+        parameters[`SCRIPT_PARAMS_${scriptId}`] = params.raw;
+      }
+    });
+  }
+  
+  // Add environment variables
+  if (deployment.environmentVars && deployment.environmentVars.length > 0) {
+    deployment.environmentVars.forEach((env: any, index: number) => {
+      if (env.key) {
+        parameters[`ENV_${env.key}`] = env.value || '';
+      }
+    });
+  }
+  
+  return parameters;
+}

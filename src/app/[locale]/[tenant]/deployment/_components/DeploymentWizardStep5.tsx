@@ -73,18 +73,25 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   
   // Update Jenkins config when providers change
   useEffect(() => {
-    if (providers.length > 0 && jenkinsConfig.enabled && !jenkinsConfig.providerId) {
-      // Auto-select the first Jenkins provider if none is selected
+    if (providers.length > 0 && jenkinsConfig.enabled) {
+      // Auto-select the first Jenkins provider if it's available
       const jenkinsProviders = providers.filter(p => p.type === 'jenkins');
       if (jenkinsProviders.length > 0) {
-        onJenkinsConfigChange(true, {
-          ...jenkinsConfig,
-          providerId: jenkinsProviders[0].id,
-          url: jenkinsProviders[0].url
-        });
+        // Always use the first provider (default provider)
+        const defaultProvider = jenkinsProviders[0];
+        
+        // Only update if the provider changed or no provider is selected
+        if (!jenkinsConfig.providerId || jenkinsConfig.providerId !== defaultProvider.id) {
+          console.log('Auto-selecting default Jenkins provider:', defaultProvider.name);
+          onJenkinsConfigChange(true, {
+            ...jenkinsConfig,
+            providerId: defaultProvider.id,
+            url: defaultProvider.url
+          });
+        }
       }
     }
-  }, [providers, jenkinsConfig.enabled, jenkinsConfig.providerId]);
+  }, [providers, jenkinsConfig.enabled]);
   
   // Handle provider selection
   const handleProviderChange = (providerId: string) => {

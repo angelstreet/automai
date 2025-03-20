@@ -5,6 +5,7 @@ import { AuthUser } from '@/types/user';
 import { Deployment, DeploymentFormData, DeploymentStatus, Repository } from './types';
 import repository, { Repository as DbRepository } from '@/lib/supabase/db-repositories/repository';
 import { getUser } from '@/app/actions/user';
+import { mapDeploymentToParameters } from './utils';
 
 /**
  * Get all deployments for the current user
@@ -269,36 +270,73 @@ export async function createDeployment(
     console.log('Actions layer: Deployment created with ID:', result.id);
 
     // If Jenkins integration is enabled, create the CICD mapping
-    if (formData.jenkinsConfig?.enabled && 
-        formData.jenkinsConfig.providerId && 
-        formData.jenkinsConfig.jobId) {
-      
+    if (formData.jenkinsConfig?.enabled) {
       console.log('Actions layer: Jenkins integration enabled, creating CICD mapping');
       
-      const cicdMappingData = {
-        deployment_id: result.id,
-        provider_id: formData.jenkinsConfig.providerId,
-        job_id: formData.jenkinsConfig.jobId,
-        tenant_id: user.tenant_id,
-        parameters: formData.jenkinsConfig.parameters || {}
-      };
-      
-      console.log('Actions layer: Calling createDeploymentCICDMapping with data:', JSON.stringify({
-        deployment_id: cicdMappingData.deployment_id,
-        provider_id: cicdMappingData.provider_id,
-        job_id: cicdMappingData.job_id,
-        tenant_id: cicdMappingData.tenant_id,
-        parameters: Object.keys(cicdMappingData.parameters || {})
-      }));
-      
-      const cicdResult = await cicdDb.createDeploymentCICDMapping(cicdMappingData);
-      
-      if (!cicdResult.success) {
-        console.error('Actions layer: Failed to create CICD mapping:', cicdResult.error);
-        // We don't fail the whole deployment if CICD mapping fails
-        // Just log the error and continue
-      } else {
-        console.log('Actions layer: CICD mapping created successfully');
+      try {
+        // Get provider ID - use the one from form or get the default
+        const providerId = formData.jenkinsConfig.providerId || 
+                          await getDefaultProviderIdForTenant(user.tenant_id);
+        
+        if (!providerId) {
+          console.error('Actions layer: No CI/CD provider found for tenant');
+          // Continue deployment without CI/CD
+        } else {
+          // Import the CI/CD service
+          const { getCICDProvider } = await import('@/lib/services/cicd');
+          
+          // Get the provider instance
+          const providerResult = await getCICDProvider(providerId, user.tenant_id);
+          
+          if (!providerResult.success || !providerResult.data) {
+            console.error('Actions layer: Error getting CI/CD provider:', providerResult.error);
+          } else {
+            const provider = providerResult.data;
+            
+            // Use job ID from config or create one based on deployment
+            const jobId = formData.jenkinsConfig.jobId || `deployment-${result.id}`;
+            
+            // Prepare job parameters using the utility function
+            const jobParameters = mapDeploymentToParameters({
+              ...formData,
+              id: result.id
+            });
+            
+            console.log('Actions layer: Triggering CI/CD job with parameters:', JSON.stringify(jobParameters));
+            
+            // Trigger the job
+            const triggerResult = await provider.triggerJob(jobId, jobParameters);
+            
+            if (!triggerResult.success) {
+              console.error('Actions layer: Failed to trigger CI/CD job:', triggerResult.error);
+            } else {
+              console.log('Actions layer: CI/CD job triggered successfully:', triggerResult.data.id);
+              
+              // Create the CICD mapping in the database
+              const cicdMappingData = {
+                deployment_id: result.id,
+                provider_id: providerId,
+                job_id: jobId,
+                build_id: triggerResult.data.id,
+                tenant_id: user.tenant_id,
+                parameters: jobParameters
+              };
+              
+              const cicdResult = await cicdDb.createDeploymentCICDMapping(cicdMappingData);
+              
+              if (!cicdResult.success) {
+                console.error('Actions layer: Failed to create CICD mapping:', cicdResult.error);
+                // We don't fail the whole deployment if CICD mapping fails
+                // Just log the error and continue
+              } else {
+                console.log('Actions layer: CICD mapping created successfully');
+              }
+            }
+          }
+        }
+      } catch (cicdError) {
+        console.error('Actions layer: Error in CI/CD integration:', cicdError);
+        // Continue deployment without failing due to CI/CD issues
       }
     }
 
@@ -340,12 +378,44 @@ export async function refreshDeployment(
   id: string
 ): Promise<{ success: boolean; deployment?: Deployment; error?: string }> {
   try {
-    // TODO: Implement actual API call to refresh deployment
-    // This is a stub implementation
-    return { success: true };
-  } catch (error) {
+    console.log(`Actions layer: Refreshing deployment ${id}`);
+    
+    // Get the deployment
+    const deployment = await getDeploymentById(id);
+    
+    if (!deployment) {
+      console.error(`Actions layer: Deployment ${id} not found`);
+      return { success: false, error: 'Deployment not found' };
+    }
+    
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Check if this deployment has CI/CD integration
+    const mappingResult = await cicdDb.getDeploymentCICDMapping({ deployment_id: id });
+    
+    if (mappingResult.success && mappingResult.data) {
+      console.log(`Actions layer: Deployment ${id} has CI/CD integration, updating status`);
+      
+      // Update CI/CD status
+      const statusResult = await updateDeploymentCICDStatus(id);
+      
+      if (!statusResult.success) {
+        console.error(`Actions layer: Failed to update CI/CD status: ${statusResult.error}`);
+        // Continue with regular refreshing even if CI/CD status update failed
+      }
+    }
+    
+    // Get the latest deployment data
+    const refreshedDeployment = await getDeploymentById(id);
+    
+    return { 
+      success: true, 
+      deployment: refreshedDeployment || deployment
+    };
+  } catch (error: any) {
     console.error(`Error refreshing deployment ${id}:`, error);
-    return { success: false, error: 'Failed to refresh deployment' };
+    return { success: false, error: error.message || 'Failed to refresh deployment' };
   }
 }
 
@@ -431,5 +501,299 @@ export async function getRepositories(user?: AuthUser | null): Promise<Repositor
   } catch (error) {
     console.error('Error in getRepositories:', error);
     return [];
+  }
+}
+
+/**
+ * Get CI/CD providers for the current tenant
+ * @returns Object with providers array and optional error
+ */
+export async function getCICDProvidersAction(): Promise<{ providers: any[]; error?: string }> {
+  try {
+    console.log('Actions layer: Fetching CI/CD providers');
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot fetch providers - user not authenticated');
+      return { providers: [], error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Fetch providers from the database
+    const result = await cicdDb.getCICDProvider({ tenant_id: user.tenant_id });
+    
+    if (!result.success) {
+      console.error('Actions layer: Error fetching CI/CD providers:', result.error);
+      return { providers: [], error: result.error };
+    }
+    
+    // Format the providers data
+    const providers = Array.isArray(result.data) ? result.data : [result.data].filter(Boolean);
+    
+    console.log(`Actions layer: Found ${providers.length} CI/CD providers`);
+    
+    return { providers };
+  } catch (error: any) {
+    console.error('Error fetching CI/CD providers:', error);
+    return { providers: [], error: error.message || 'Failed to fetch CI/CD providers' };
+  }
+}
+
+/**
+ * Get default provider ID for the current tenant
+ * @param tenantId Tenant ID
+ * @returns Provider ID or null if none found
+ */
+export async function getDefaultProviderIdForTenant(tenantId: string): Promise<string | null> {
+  try {
+    console.log(`Actions layer: Getting default CI/CD provider for tenant ${tenantId}`);
+    
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Fetch providers from the database
+    const result = await cicdDb.getCICDProvider({ tenant_id: tenantId });
+    
+    if (!result.success || !result.data) {
+      console.error('Actions layer: Error getting default provider:', result.error);
+      return null;
+    }
+    
+    // Get the first provider as default
+    const providers = Array.isArray(result.data) ? result.data : [result.data].filter(Boolean);
+    
+    if (providers.length === 0) {
+      console.log('Actions layer: No CI/CD providers found for tenant');
+      return null;
+    }
+    
+    console.log(`Actions layer: Default provider ID: ${providers[0].id}`);
+    return providers[0].id;
+  } catch (error: any) {
+    console.error('Error getting default CI/CD provider:', error);
+    return null;
+  }
+}
+
+/**
+ * Get CI/CD jobs for a provider
+ * @param providerId Provider ID
+ * @returns Object with jobs array and optional error
+ */
+export async function getCICDJobsAction(providerId: string): Promise<{ jobs: any[]; error?: string }> {
+  try {
+    console.log(`Actions layer: Fetching CI/CD jobs for provider ${providerId}`);
+    
+    if (!providerId) {
+      console.error('Actions layer: Cannot fetch jobs - provider ID not provided');
+      return { jobs: [], error: 'Provider ID is required' };
+    }
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot fetch jobs - user not authenticated');
+      return { jobs: [], error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD service
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+    
+    // Get the provider instance
+    const providerResult = await getCICDProvider(providerId, user.tenant_id);
+    
+    if (!providerResult.success || !providerResult.data) {
+      console.error('Actions layer: Error getting CI/CD provider:', providerResult.error);
+      return { jobs: [], error: providerResult.error };
+    }
+    
+    // Get jobs from the provider
+    const provider = providerResult.data;
+    const jobsResult = await provider.getAvailableJobs();
+    
+    if (!jobsResult.success) {
+      console.error('Actions layer: Error fetching jobs from provider:', jobsResult.error);
+      return { jobs: [], error: jobsResult.error };
+    }
+    
+    console.log(`Actions layer: Found ${jobsResult.data.length} CI/CD jobs`);
+    
+    return { jobs: jobsResult.data || [] };
+  } catch (error: any) {
+    console.error('Error fetching CI/CD jobs:', error);
+    return { jobs: [], error: error.message || 'Failed to fetch CI/CD jobs' };
+  }
+}
+
+/**
+ * Get details for a specific CI/CD job
+ * @param providerId Provider ID
+ * @param jobId Job ID
+ * @returns Object with job details and optional error
+ */
+export async function getCICDJobDetailsAction(providerId: string, jobId: string): Promise<{ jobDetails: any; error?: string }> {
+  try {
+    console.log(`Actions layer: Fetching CI/CD job details for provider ${providerId}, job ${jobId}`);
+    
+    if (!providerId || !jobId) {
+      console.error('Actions layer: Cannot fetch job details - provider ID or job ID not provided');
+      return { jobDetails: null, error: 'Provider ID and Job ID are required' };
+    }
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot fetch job details - user not authenticated');
+      return { jobDetails: null, error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD service
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+    
+    // Get the provider instance
+    const providerResult = await getCICDProvider(providerId, user.tenant_id);
+    
+    if (!providerResult.success || !providerResult.data) {
+      console.error('Actions layer: Error getting CI/CD provider:', providerResult.error);
+      return { jobDetails: null, error: providerResult.error };
+    }
+    
+    // Get job details from the provider
+    const provider = providerResult.data;
+    const jobResult = await provider.getJobDetails(jobId);
+    
+    if (!jobResult.success) {
+      console.error('Actions layer: Error fetching job details from provider:', jobResult.error);
+      return { jobDetails: null, error: jobResult.error };
+    }
+    
+    console.log('Actions layer: Successfully fetched job details');
+    
+    return { 
+      jobDetails: {
+        job: jobResult.data,
+        parameters: jobResult.data.parameters || []
+      }
+    };
+  } catch (error: any) {
+    console.error('Error fetching CI/CD job details:', error);
+    return { jobDetails: null, error: error.message || 'Failed to fetch CI/CD job details' };
+  }
+}
+
+/**
+ * Update deployment status based on CI/CD job status
+ * @param deploymentId Deployment ID
+ * @returns Object with success status
+ */
+export async function updateDeploymentCICDStatus(
+  deploymentId: string
+): Promise<{ success: boolean; status?: string; error?: string }> {
+  try {
+    console.log(`Actions layer: Updating CI/CD status for deployment ${deploymentId}`);
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot update status - user not authenticated');
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Get the deployment
+    const deployment = await getDeploymentById(deploymentId);
+    
+    if (!deployment) {
+      console.error(`Actions layer: Deployment ${deploymentId} not found`);
+      return { success: false, error: 'Deployment not found' };
+    }
+    
+    // Import the database modules
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Get the CI/CD mapping
+    const mappingResult = await cicdDb.getDeploymentCICDMapping({ 
+      deployment_id: deploymentId,
+      tenant_id: user.tenant_id 
+    });
+    
+    if (!mappingResult.success || !mappingResult.data) {
+      console.error(`Actions layer: No CI/CD mapping found for deployment ${deploymentId}`);
+      return { success: false, error: 'No CI/CD mapping found' };
+    }
+    
+    const mapping = mappingResult.data;
+    
+    // Import the CI/CD service
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+    
+    // Get the provider
+    const providerResult = await getCICDProvider(mapping.provider_id, user.tenant_id);
+    
+    if (!providerResult.success || !providerResult.data) {
+      console.error(`Actions layer: Failed to get CI/CD provider ${mapping.provider_id}`);
+      return { success: false, error: 'Failed to get CI/CD provider' };
+    }
+    
+    const provider = providerResult.data;
+    
+    // Get the build status
+    const buildResult = await provider.getBuildStatus(mapping.job_id, mapping.build_id);
+    
+    if (!buildResult.success) {
+      console.error(`Actions layer: Failed to get build status: ${buildResult.error}`);
+      return { success: false, error: buildResult.error };
+    }
+    
+    const buildStatus = buildResult.data.status;
+    console.log(`Actions layer: Current build status: ${buildStatus}`);
+    
+    // Map CI/CD status to deployment status
+    let deploymentStatus: DeploymentStatus;
+    switch (buildStatus) {
+      case 'success':
+        deploymentStatus = 'completed';
+        break;
+      case 'failure':
+        deploymentStatus = 'failed';
+        break;
+      case 'running':
+        deploymentStatus = 'running';
+        break;
+      case 'pending':
+        deploymentStatus = 'pending';
+        break;
+      default:
+        deploymentStatus = 'pending';
+    }
+    
+    // Update the deployment status
+    await deploymentDb.update({
+      where: { id: deploymentId },
+      data: { status: deploymentStatus }
+    });
+    
+    // Update the CI/CD mapping status
+    await cicdDb.updateDeploymentCICDMapping({
+      where: { id: mapping.id },
+      data: { status: buildStatus }
+    });
+    
+    console.log(`Actions layer: Updated deployment status to ${deploymentStatus}`);
+    
+    return { 
+      success: true, 
+      status: deploymentStatus
+    };
+  } catch (error: any) {
+    console.error(`Error updating CI/CD status for deployment ${deploymentId}:`, error);
+    return { success: false, error: error.message || 'Failed to update deployment status' };
   }
 }
