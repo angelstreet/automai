@@ -22,12 +22,12 @@ let noSessionErrorLogged = false;
 
 // Add a function to invalidate the cache when needed
 export async function invalidateUserCache() {
-  console.log('[SERVER] Invalidating user cache');
+  console.log('[SERVER-CACHE] Invalidating user cache');
   userCache = null;
   
   // Also clear any client-side cache if possible
   if (typeof window !== 'undefined') {
-    console.log('[CLIENT] Clearing localStorage cache');
+    console.log('[CLIENT-CACHE] Clearing localStorage cache');
     localStorage.removeItem('user-data-cache');
     localStorage.removeItem('cached_user');
   }
@@ -37,35 +37,66 @@ export async function invalidateUserCache() {
 
 /**
  * Get the current authenticated user
+ * Step 3: Enhanced to ensure complete user data is returned
  */
 export async function getUser(): Promise<AuthUser | null> {
+  console.log('[SERVER-ACTION] getUser called');
+  
   // Check if we have a valid cache
   const now = Date.now();
   if (userCache && now - userCache.timestamp < CACHE_EXPIRATION) {
+    console.log('[SERVER-CACHE] Using cached user data, age:', Math.round((now - userCache.timestamp)/1000), 'seconds');
+    
     // Return cached data if available and not expired
     if (userCache.error) {
       // If the cached error is a session missing error, just return null
       if (userCache.error === 'No active session' || userCache.error === 'Auth session missing!') {
+        console.log('[SERVER-CACHE] Returning null from cache (no session)');
         return null;
       }
+      console.log('[SERVER-CACHE] Cached error:', userCache.error);
       throw new Error(userCache.error);
     }
-    return userCache.data;
+    
+    // Verify the cached data has required fields
+    if (userCache.data && userCache.data.tenant_id && userCache.data.tenant_name) {
+      return userCache.data;
+    } else {
+      console.log('[SERVER-CACHE] Cached data missing required fields, fetching fresh data');
+      // Cache is invalid, continue to fetch fresh data
+    }
   }
 
   try {
     // Enhanced logging for debugging tenant issues
-    console.log('[Auth] Getting user data from server (cache expired or missing)');
+    console.log('[SERVER-ACTION] Getting user data from auth service');
+    
     const result = await supabaseAuth.getUser();
     
     if (result.success && result.data) {
-      console.log('[Auth] User data successfully retrieved', {
+      // Verify the user data has all required fields and log complete structure
+      console.log('[SERVER-ACTION] Auth service returned user data:', { 
         id: result.data.id,
-        tenant_id: result.data.tenant_id,
-        tenant_name: result.data.tenant_name
+        hasTenantId: !!result.data.tenant_id,
+        hasTenantName: !!result.data.tenant_name,
+        email: result.data.email,
+        hasRole: !!(result.data as any).role
       });
+      
+      // Additional log to debug the exact structure
+      console.log('[SERVER-ACTION] Full user data structure:', {
+        ...result.data,
+        // Don't log sensitive information
+        user_metadata: result.data.user_metadata ? 'exists' : 'missing'
+      });
+      
+      // Add role to result.data if needed
+      if (!(result.data as any).role && result.data) {
+        console.log('[SERVER-ACTION] Adding role to user data');
+        (result.data as any).role = result.data.user_metadata?.role || 'viewer';
+      }
     } else {
-      console.error('[Auth] Failed to get user data:', result.error);
+      console.error('[SERVER-ACTION] Failed to get user data:', result.error);
     }
 
     // Update cache with a longer expiration for successful auth
@@ -74,6 +105,8 @@ export async function getUser(): Promise<AuthUser | null> {
       timestamp: Date.now(),
       error: result.success ? null : result.error || null,
     };
+    
+    console.log('[SERVER-CACHE] User cache updated, success:', result.success);
 
     if (!result.success || !result.data) {
       // For "No active session" errors or "Auth session missing!" errors, just return null instead of throwing an error
@@ -99,6 +132,8 @@ export async function getUser(): Promise<AuthUser | null> {
       timestamp: Date.now(),
       error: error instanceof Error ? error.message : 'Unknown error',
     };
+    
+    console.log('[SERVER-CACHE] Cached error:', userCache.error);
 
     // Only log if we haven't logged this specific error before
     if (

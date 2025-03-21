@@ -21,9 +21,17 @@ export async function getHosts(
   filter?: HostFilter,
   user?: AuthUser | null
 ): Promise<{ success: boolean; error?: string; data?: Host[] }> {
+  console.log('[HostsActions] getHosts called', { 
+    hasFilter: !!filter, 
+    userProvided: !!user 
+  });
+  
   try {
     // Use provided user data or fetch it if not provided
     const currentUser = user || await getUser();
+    
+    console.log('[HostsActions] User status:', currentUser ? 'authenticated' : 'not authenticated');
+    
     if (!currentUser) {
       return { 
         success: false, 
@@ -37,9 +45,12 @@ export async function getHosts(
     // Check cache first
     const cached = serverCache.get<Host[]>(cacheKey);
     if (cached) {
+      console.log('[HostsActions] Using cached hosts data', { count: cached.length });
       return { success: true, data: cached };
     }
-
+    
+    console.log('[HostsActions] No cache found, fetching from database');
+    
     const where: Record<string, any> = {};
 
     if (filter?.status) {

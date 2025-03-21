@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
-export default function TenantPage({ params }: { params: { locale: string; tenant: string } }) {
-  redirect(`/${params.locale}/${params.tenant}/dashboard`);
+export default async function TenantPage({ params }: { params: Promise<{ locale: string; tenant: string }> }) {
+  const { locale, tenant } = await params;
+  redirect(`/${locale}/${tenant}/dashboard`);
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode, useState, useCallback } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useCallback, useEffect } from 'react';
 import { HostProvider, useHostContext } from './HostContext';
 import { DeploymentProvider, useDeploymentContext } from './DeploymentContext';
 import { RepositoryProvider, useRepositoryContext } from './RepositoryContext';
@@ -29,6 +29,8 @@ type AppContextState = Record<ContextName, boolean>;
 
 // Provider component that composes all other providers
 export function AppProvider({ children }: { children: ReactNode }) {
+  console.log('[AppContext] AppProvider initializing');
+  
   // Manage which contexts are initialized
   const [contextState, setContextState] = useState<AppContextState>({
     host: false,
@@ -41,10 +43,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Function to initialize a context on demand
   const initContext = useCallback((name: ContextName) => {
     if (!contextState[name]) {
-      console.log(`[Context] Initializing ${name} context on demand`);
+      console.log(`[AppContext] Initializing ${name} context on demand`);
       setContextState(prev => ({ ...prev, [name]: true }));
     }
   }, [contextState]);
+  
+  // Log when AppProvider mounts and unmounts
+  useEffect(() => {
+    console.log('[AppContext] AppProvider mounted, user context enabled');
+    
+    return () => {
+      console.log('[AppContext] AppProvider unmounting');
+    };
+  }, []);
   
   // Create context value with state and init function
   const contextValue = { contextState, initContext };
@@ -100,6 +111,28 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   const cicdContext = contextState.cicd ? useCICDContext() : null;
   const userContext = contextState.user ? useUserContext() : null;
   
+  useEffect(() => {
+    console.log('[AppContext] Bridge component mounted', {
+      availableContexts: {
+        user: !!userContext,
+        userHasData: userContext ? !!userContext.user : false,
+        host: !!hostContext,
+        deployment: !!deploymentContext,
+        repository: !!repositoryContext,
+        cicd: !!cicdContext
+      }
+    });
+    
+    // Additional logging for debug
+    if (userContext) {
+      console.log('[AppContext] User context details', {
+        userPresent: !!userContext.user,
+        loading: userContext.loading,
+        hasError: !!userContext.error
+      });
+    }
+  }, [userContext, hostContext, deploymentContext, repositoryContext, cicdContext]);
+  
   // Combine contexts
   const appContextValue: AppContextType = {
     host: hostContext,
@@ -131,6 +164,7 @@ function useInitContext(name: ContextName) {
   
   // Initialize this context if not already initialized
   if (!contextState[name]) {
+    console.log(`[AppContext] Auto-initializing ${name} context`);
     initContext(name);
   }
   
@@ -181,6 +215,10 @@ export function useUser() {
   // Use _ prefix to indicate intentionally unused variable
   const _isInitialized = useInitContext('user');
   const context = useAppContext();
+  
+  if (!context.user && typeof window !== 'undefined') {
+    console.log('[AppContext] useUser hook returned null user');
+  }
   
   return context.user;
 } 

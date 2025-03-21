@@ -1,18 +1,38 @@
 'use client';
 
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '../types';
-import { useHost } from '@/context';
+import { useHost, useUser } from '@/context';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
 
 export default function HostContainer() {
+  // Add logging for component mount
+  useEffect(() => {
+    console.log('[DEBUG] HostContainer mounted');
+    
+    return () => {
+      console.log('[DEBUG] HostContainer unmounted');
+    };
+  }, []);
+  
+  // Check user context to debug authentication issues
+  const userContext = useUser();
+  
+  useEffect(() => {
+    console.log('[DEBUG] HostContainer: User context state:', {
+      hasUser: !!userContext?.user,
+      isLoading: userContext?.loading,
+      hasError: !!userContext?.error,
+    });
+  }, [userContext]);
+  
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
@@ -41,20 +61,32 @@ export default function HostContainer() {
     testAllConnections,
   } = useHost();
 
+  // Add logging to track when host data changes
+  useEffect(() => {
+    console.log('[DEBUG] HostContainer: hosts data changed', { 
+      hostCount: hosts?.length || 0,
+      loading,
+      error
+    });
+  }, [hosts, loading, error]);
+
   // Handle refresh all hosts
   const handleRefreshAll = async () => {
     if (isRefreshing) return;
     
+    console.log('[DEBUG] HostContainer: refreshing all hosts');
     setIsRefreshing(true);
     try {
       await testAllConnections();
     } finally {
       setIsRefreshing(false);
+      console.log('[DEBUG] HostContainer: refreshing all hosts complete');
     }
   };
 
   // Handle add host form submission
   const handleSaveHost = async () => {
+    console.log('[DEBUG] HostContainer: saving new host', formData.name);
     setIsSaving(true);
     try {
       const success = await addHost({
@@ -70,6 +102,8 @@ export default function HostContainer() {
         updated_at: new Date(),
         is_windows: false,
       });
+
+      console.log('[DEBUG] HostContainer: save host result', { success });
 
       if (success) {
         setShowAddHost(false);
@@ -90,6 +124,7 @@ export default function HostContainer() {
 
   // Handle host selection
   const handleSelectHost = (id: string) => {
+    console.log('[DEBUG] HostContainer: host selection changed', id);
     setSelectedHosts((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
@@ -100,6 +135,13 @@ export default function HostContainer() {
       return newSet;
     });
   };
+
+  // Add logging for each render
+  console.log('[DEBUG] HostContainer rendering', { 
+    hostCount: hosts?.length || 0, 
+    loading, 
+    viewMode 
+  });
 
   return (
     <div className="container mx-auto py-6">

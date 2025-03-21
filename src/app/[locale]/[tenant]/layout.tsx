@@ -9,7 +9,7 @@ import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { ToasterProvider } from '@/components/shadcn/toaster';
 // UserProvider is now handled by AppContext
 // import { UserProvider } from '@/context/UserContext';
-import { AppProvider } from '@/context/AppContext';
+import { AppProvider } from '@/context';
 
 export default function TenantLayout({
   children,
@@ -20,6 +20,8 @@ export default function TenantLayout({
 }) {
   const params = useParams();
   const tenant = params.tenant as string;
+
+  console.log('[TenantLayout] Rendering tenant layout, tenant:', tenant);
 
   return (
     <SidebarProvider>

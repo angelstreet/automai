@@ -10,6 +10,9 @@ import { locales, defaultLocale } from '@/config';
  * - Allows updating cookies in the response
  */
 export const createClient = (request: NextRequest) => {
+  // Log request details
+  console.log(`[Middleware:createClient] URL: ${request.nextUrl.pathname}${request.nextUrl.search}, Method: ${request.method}`);
+  
   // Create response to manipulate cookies
   const response = NextResponse.next({
     request: {
@@ -25,13 +28,16 @@ export const createClient = (request: NextRequest) => {
       cookies: {
         getAll() {
           // Simply map the cookies to the expected format
-          return request.cookies.getAll().map((cookie) => ({
+          const cookies = request.cookies.getAll().map((cookie) => ({
             name: cookie.name,
             value: cookie.value,
           }));
+          console.log(`[Middleware:cookies] Found ${cookies.length} cookies`);
+          return cookies;
         },
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
           // Set cookies both on the request (for Supabase) and response (for browser)
+          console.log(`[Middleware:cookies] Setting ${cookiesToSet.length} cookies`);
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set({
               name,
@@ -56,6 +62,7 @@ export const createClient = (request: NextRequest) => {
  * Clears all Supabase auth-related cookies
  */
 function clearAuthCookies(response: NextResponse): NextResponse {
+  console.log('[Middleware:clearAuthCookies] Clearing auth cookies');
   // Known Supabase auth cookie names
   const authCookies = ['sb-access-token', 'sb-refresh-token', 'supabase-auth-token'];
 
@@ -80,6 +87,9 @@ function clearAuthCookies(response: NextResponse): NextResponse {
  * - Redirects to login if no authenticated user is found
  */
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
+  console.log(`[Middleware:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`);
+  const startTime = Date.now();
+  
   // Create the Supabase client
   const { supabase, response } = createClient(request);
 
@@ -94,6 +104,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   } else if (data.user) {
     // Just log minimal user info
     console.log('🔍 AUTH MIDDLEWARE: User authenticated', data.user.id);
+    console.log(`[Middleware:auth] User authenticated in ${Date.now() - startTime}ms`);
   }
 
   // Check if this is a data fetching request (POST to a page route)
@@ -101,13 +112,15 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const isDataFetchRequest = request.method === 'POST' && 
     !request.nextUrl.pathname.startsWith('/api/');
 
+  console.log(`[Middleware:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`);
+
   // If no user is found or there's an error, redirect to login ONLY for GET requests
   // Allow data fetching POST requests to proceed even without authentication
   if ((error || !data.user) && !isDataFetchRequest) {
-    console.log('No authenticated user found. Redirecting to login page.');
+    console.log('[Middleware:redirect] No authenticated user found. Redirecting to login page.');
     // Reduce logging to essential information only
     if (error) {
-      console.log('Auth error details:', error?.message);
+      console.log('[Middleware:redirect] Auth error details:', error?.message);
     }
 
     // Check if there are some auth cookies present even though we couldn't get a user
@@ -117,11 +130,11 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       .some((c) => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
 
     if (hasAuthCookies) {
-      console.log('Auth cookies present but failed to authenticate - possible cookie issue');
+      console.log('[Middleware:cookies] Auth cookies present but failed to authenticate - possible cookie issue');
       // For debugging: if auth cookies exist but auth failed, we'll still let the request through
       // This helps diagnose issues where cookies exist but aren't being properly parsed
       // In production, you'd want to remove this and always redirect to login
-      console.log('Allowing request to proceed despite auth failure due to cookie presence');
+      console.log('[Middleware:cookies] Allowing request to proceed despite auth failure due to cookie presence');
       return response;
     }
 
@@ -132,6 +145,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
     // Create a new URL for the redirect
     const redirectUrl = new URL(`/${locale}/login`, request.url);
+    console.log(`[Middleware:redirect] Redirecting to ${redirectUrl.toString()}`);
 
     // Create a redirect response
     const redirectResponse = NextResponse.redirect(redirectUrl, { status: 307 });
@@ -141,5 +155,6 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   }
 
   // Return the response with updated cookies for authenticated users
+  console.log(`[Middleware:complete] Finished processing request in ${Date.now() - startTime}ms`);
   return response;
 }
