@@ -1,0 +1,126 @@
+# Database Organization Guidelines
+
+## Overview
+This document outlines the proper organization of database modules in our application's architecture. Proper database organization is crucial for maintainability, readability, and scalability.
+
+## Key Principles
+
+1. **Feature-based organization**: Each feature should have its own database module.
+2. **Proper directory structure**: Use the correct folder structure for database modules.
+3. **Cookie handling**: All database functions should accept cookieStore as a parameter.
+4. **Code patterns**: Follow consistent patterns for database operations.
+
+## Directory Structure
+
+All database modules should follow this structure:
+
+```
+src/lib/supabase/
+  └── db-[feature]/           # Specific feature database module
+      ├── index.ts            # Exports from this module
+      └── [feature].ts        # Implementation of database operations
+```
+
+For example:
+```
+src/lib/supabase/
+  ├── db-hosts/
+  ├── db-repositories/
+  ├── db-deployment/
+  ├── db-cicd/
+  └── db-users/
+```
+
+## Implementation Guidelines
+
+### Database Module File Structure
+
+Each database module should:
+
+1. Import the Supabase client creation function
+2. Define relevant types and interfaces
+3. Implement database operations as functions
+4. Export all operations in a default export object
+
+Example:
+```typescript
+// src/lib/supabase/db-feature/feature.ts
+import { createClient } from '@/lib/supabase/server';
+
+// Types and interfaces
+interface FeatureItem {
+  id: string;
+  name: string;
+  // ...
+}
+
+// Database operations
+async function findMany(options: any, cookieStore?: any): Promise<{ success: boolean; data?: FeatureItem[] }> {
+  try {
+    const supabase = await createClient(cookieStore);
+    // Implementation...
+  } catch (error) {
+    // Error handling...
+  }
+}
+
+export default {
+  findMany,
+  // Other operations...
+};
+```
+
+### Index File
+
+Each database module should have an index.ts file that re-exports the operations:
+
+```typescript
+// src/lib/supabase/db-feature/index.ts
+import feature from './feature';
+
+export { feature };
+export default feature;
+```
+
+## Cross-Feature Relationships
+
+Some features may require data from other features. When this occurs:
+
+1. Import the required database module directly
+2. Do not nest one feature's database operations inside another feature's module
+3. Create a separate function that composes operations from multiple features if needed
+
+Example of how to handle relationships:
+```typescript
+// Good: In an action file
+async function getDeploymentWithCICD(id: string) {
+  const deployment = await deploymentDb.findUnique(id);
+  const cicdMapping = await cicdDb.getCICDDeploymentMapping({ 
+    where: { deployment_id: id } 
+  });
+  return { deployment, cicdMapping };
+}
+
+// Bad: Nesting one feature in another's database module
+// Don't do this: src/lib/supabase/db-deployment/cicd.ts
+```
+
+## Common Pitfalls to Avoid
+
+1. **Nesting database modules**: Don't put one feature's database operations in another feature's folder
+2. **Missing cookieStore parameter**: Always accept and pass cookieStore to enable proper authentication
+3. **Inconsistent error handling**: Always use a consistent error handling pattern
+4. **Missing type definitions**: Always define proper types for all operations
+
+## Implementation Steps for New Features
+
+1. Create a new directory: `src/lib/supabase/db-[feature]/`
+2. Create feature implementation: `src/lib/supabase/db-[feature]/[feature].ts`
+3. Create index file: `src/lib/supabase/db-[feature]/index.ts`
+4. Implement database operations following the patterns above
+5. Import and use in your server actions
+
+## Related Rules
+- data-supabase.mdc - Supabase database patterns
+- data-cookies.mdc - Cookie handling guidelines
+- core-architecture.mdc - Three-layer architecture overview 

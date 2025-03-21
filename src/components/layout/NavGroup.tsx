@@ -115,7 +115,7 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
                       className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                     >
                       <Link
-                        href={`/${params.locale as string}/${params.tenant as string}${item.href}`}
+                        href={`/${params.locale as string}/${params.tenant as string}${item.href.startsWith('/') ? item.href : `/${item.href}`}`}
                       >
                         <Icon className="h-4 w-4" />
                         <span>{item.title}</span>
@@ -142,7 +142,7 @@ const NavGroup = React.memo(function NavGroup({ title, items }: NavGroupProps) {
                             className="hover:bg-accent/50 data-[active=true]:bg-accent/50"
                           >
                             <Link
-                              href={`/${params.locale as string}/${params.tenant as string}${subItem.href}`}
+                              href={`/${params.locale as string}/${params.tenant as string}${subItem.href.startsWith('/') ? subItem.href : `/${subItem.href}`}`}
                             >
                               <SubIcon className="h-4 w-4" />
                               <span>{subItem.title}</span>

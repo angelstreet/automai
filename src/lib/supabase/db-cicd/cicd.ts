@@ -83,18 +83,15 @@ interface GetParams {
   where?: WhereClause;
 }
 
-// Initialize Supabase client for each function call to ensure fresh context
-async function getSupabaseClient() {
-  console.log('DB layer: Creating new server client for CICD operations');
-  return await createClient();
-}
-
 /**
  * Create a new CI/CD provider
  */
-async function createCICDProvider({ data }: CreateProviderParams): Promise<{ success: boolean; id?: string; error?: string }> {
+async function createCICDProvider({ data }: CreateProviderParams, cookieStore?: any): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Creating new CI/CD provider');
     
     // Create provider with config object
     const { data: provider, error } = await supabase
@@ -129,9 +126,12 @@ async function createCICDProvider({ data }: CreateProviderParams): Promise<{ suc
 /**
  * Update an existing CI/CD provider
  */
-async function updateCICDProvider({ where, data }: UpdateProviderParams): Promise<{ success: boolean; error?: string }> {
+async function updateCICDProvider({ where, data }: UpdateProviderParams, cookieStore?: any): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Updating CI/CD provider');
     
     // Build update query
     let query = supabase
@@ -167,9 +167,12 @@ async function updateCICDProvider({ where, data }: UpdateProviderParams): Promis
 /**
  * Delete a CI/CD provider
  */
-async function deleteCICDProvider({ where }: DeleteParams): Promise<{ success: boolean; error?: string }> {
+async function deleteCICDProvider({ where }: DeleteParams, cookieStore?: any): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Deleting CI/CD provider');
     
     // Build delete query
     let query = supabase
@@ -202,13 +205,16 @@ async function deleteCICDProvider({ where }: DeleteParams): Promise<{ success: b
 /**
  * Get a specific CI/CD provider
  */
-async function getCICDProvider({ where }: GetParams): Promise<{ 
+async function getCICDProvider({ where }: GetParams, cookieStore?: any): Promise<{ 
   success: boolean; 
   data?: CICDProvider; 
   error?: string 
 }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Getting specific CI/CD provider');
     
     // Build query
     let query = supabase
@@ -244,13 +250,16 @@ async function getCICDProvider({ where }: GetParams): Promise<{
 /**
  * Get all CI/CD providers
  */
-async function getCICDProviders({ where }: GetParams = {}): Promise<{ 
+async function getCICDProviders({ where }: GetParams = {}, cookieStore?: any): Promise<{ 
   success: boolean; 
   data?: CICDProvider[]; 
   error?: string 
 }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Getting all CI/CD providers');
     
     // Build query
     let query = supabase
@@ -288,9 +297,12 @@ async function getCICDProviders({ where }: GetParams = {}): Promise<{
 /**
  * Create a new CI/CD job
  */
-async function createCICDJob({ data }: CreateJobParams): Promise<{ success: boolean; id?: string; error?: string }> {
+async function createCICDJob({ data }: CreateJobParams, cookieStore?: any): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Creating new CI/CD job');
     
     // Create job
     const { data: job, error } = await supabase
@@ -326,13 +338,16 @@ async function createCICDJob({ data }: CreateJobParams): Promise<{ success: bool
  */
 async function getCICDJob({ 
   where 
-}: GetParams = {}): Promise<{ 
+}: GetParams = {}, cookieStore?: any): Promise<{ 
   success: boolean; 
   data?: CICDJob; 
   error?: string 
 }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Getting specific CI/CD job');
     
     // Build query
     let query = supabase
@@ -375,13 +390,16 @@ async function getCICDJob({
  */
 async function getCICDJobs({ 
   where 
-}: GetParams = {}): Promise<{ 
+}: GetParams = {}, cookieStore?: any): Promise<{ 
   success: boolean; 
   data?: CICDJob[]; 
   error?: string 
 }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Getting all CI/CD jobs');
     
     // Build query
     let query = supabase
@@ -417,12 +435,15 @@ async function getCICDJobs({
 async function updateCICDJob({ 
   where, 
   data 
-}: UpdateJobParams): Promise<{ 
+}: UpdateJobParams, cookieStore?: any): Promise<{ 
   success: boolean; 
   error?: string 
 }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Updating CI/CD job');
     
     // Build query
     let query = supabase
@@ -457,12 +478,15 @@ async function updateCICDJob({
  */
 async function deleteCICDJob({ 
   where 
-}: DeleteParams): Promise<{ 
+}: DeleteParams, cookieStore?: any): Promise<{ 
   success: boolean; 
   error?: string 
 }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Deleting CI/CD job');
     
     // Build query
     let query = supabase
@@ -500,10 +524,14 @@ async function createDeploymentCICDMapping(
     parameters?: any;
     build_number?: number;
     build_url?: string;
-  }
+  },
+  cookieStore?: any
 ): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Creating deployment CICD mapping');
     
     // Create mapping
     const { data: mapping, error } = await supabase
@@ -539,10 +567,14 @@ async function createDeploymentCICDMapping(
  */
 async function updateDeploymentCICDMapping(
   id: string,
-  data: Partial<Omit<CICDDeploymentMapping, 'id' | 'created_at' | 'updated_at'>>
+  data: Partial<Omit<CICDDeploymentMapping, 'id' | 'created_at' | 'updated_at'>>,
+  cookieStore?: any
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Updating deployment CICD mapping');
     
     // Build update object
     const updateData: any = {
@@ -578,9 +610,12 @@ async function getDeploymentCICDMappings({
   where = {}
 }: {
   where?: any;
-} = {}): Promise<{ success: boolean; data?: any[]; error?: string }> {
+} = {}, cookieStore?: any): Promise<{ success: boolean; data?: any[]; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Getting deployment CICD mappings');
     
     // Build query
     let query = supabase
@@ -617,9 +652,12 @@ async function getCICDDeploymentMapping({
   where = {}
 }: {
   where?: any;
-} = {}): Promise<{ success: boolean; data?: any; error?: string }> {
+} = {}, cookieStore?: any): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Getting specific CI/CD deployment mapping');
     
     // Build query
     let query = supabase
@@ -653,10 +691,14 @@ async function getCICDDeploymentMapping({
  * Delete a CI/CD deployment mapping
  */
 async function deleteDeploymentCICDMapping(
-  mapping_id: string
+  mapping_id: string,
+  cookieStore?: any
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await getSupabaseClient();
+    // Create Supabase client with cookieStore
+    const supabase = await createClient(cookieStore);
+    
+    console.log('DB layer: Deleting deployment CICD mapping');
     
     // Delete mapping
     const { error } = await supabase
@@ -697,4 +739,4 @@ export default {
   getDeploymentCICDMappings,
   getCICDDeploymentMapping,
   deleteDeploymentCICDMapping
-};
+}; 

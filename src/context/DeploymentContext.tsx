@@ -7,13 +7,16 @@ import {
   getDeploymentById, 
   createDeployment as createDeploymentAction, 
   abortDeployment as abortDeploymentAction, 
-  refreshDeployment as refreshDeploymentAction
+  refreshDeployment as refreshDeploymentAction,
+  updateDeployment,
+  deleteDeployment
 } from '@/app/[locale]/[tenant]/deployment/actions';
 import { getRepositories } from '@/app/[locale]/[tenant]/repositories/actions';
 import { getHosts as getAvailableHosts } from '@/app/[locale]/[tenant]/hosts/actions';
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { DeploymentContextType, DeploymentData, DeploymentActions, DEPLOYMENT_CACHE_KEYS } from '@/types/context/deployment';
+import { useUser } from '@/hooks/useUser';
 
 // Debounce function to prevent multiple rapid calls
 const useDebounce = (fn: Function, delay: number) => {
@@ -48,6 +51,9 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
   const [state, setState] = useState<DeploymentData>(initialState);
   const fetchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
+  const isFetchingRef = useRef<boolean>(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { user } = useUser();
   
   // Configure fetch cooldown in milliseconds
   const FETCH_COOLDOWN = 5000; // Only allow fetches every 5 seconds
@@ -266,6 +272,58 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     initialize();
   }, [refreshUserData, fetchDeployments]);
 
+  // Handle updating a deployment
+  const handleUpdateDeployment = useCallback(async (id: string, data: Partial<DeploymentFormData>) => {
+    try {
+      console.log(`Context: Updating deployment with id ${id}`);
+      const result = await updateDeployment(id, data);
+      
+      if (result) {
+        setState(prev => ({
+          ...prev,
+          deployments: prev.deployments.map(d => (d.id === id ? result : d))
+        }));
+      }
+      
+      return result;
+    } catch (error: any) {
+      setState(prev => ({ ...prev, error: error.message || `Failed to update deployment with id ${id}` }));
+      return null;
+    }
+  }, []);
+
+  // Handle deleting a deployment
+  const handleDeleteDeployment = useCallback(async (id: string) => {
+    try {
+      console.log(`Context: Deleting deployment with id ${id}`);
+      const success = await deleteDeployment(id);
+      
+      if (success) {
+        setState(prev => ({
+          ...prev,
+          deployments: prev.deployments.filter(d => d.id !== id)
+        }));
+      }
+      
+      return success;
+    } catch (error: any) {
+      setState(prev => ({ ...prev, error: error.message || `Failed to delete deployment with id ${id}` }));
+      return false;
+    }
+  }, []);
+
+  // Handle refreshing deployments
+  const refreshDeployments = useCallback(async () => {
+    if (state.isRefreshing) return;
+    
+    try {
+      setState(prev => ({ ...prev, isRefreshing: true }));
+      await fetchDeployments();
+    } finally {
+      setState(prev => ({ ...prev, isRefreshing: false }));
+    }
+  }, [fetchDeployments, state.isRefreshing]);
+
   // Combine all methods and state into context value
   const contextValue: DeploymentContextType = {
     // State
@@ -280,7 +338,10 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     fetchScriptsForRepository,
     fetchAvailableHosts,
     fetchRepositories,
-    refreshUserData
+    refreshUserData,
+    updateDeployment: handleUpdateDeployment,
+    deleteDeployment: handleDeleteDeployment,
+    refreshDeployments
   };
   
   return (

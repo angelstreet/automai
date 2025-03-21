@@ -7,70 +7,98 @@ import repository, { Repository as DbRepository } from '@/lib/supabase/db-reposi
 import { getUser } from '@/app/actions/user';
 import { mapDeploymentToParameters } from './utils';
 import { unstable_cache } from 'next/cache';
+import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 
 // Configure the deployment cache
 const DEPLOYMENT_CACHE_TTL = 60; // 60 seconds
 
 /**
- * Get all deployments for the current user with caching
- * @param user The authenticated user
- * @returns Array of deployments
+ * Helper function to get deployments without caching
+ * Used internally by the cached getDeployments function
  */
-export const getDeployments = unstable_cache(
-  async (user: AuthUser | null): Promise<Deployment[]> => {
-    try {
-      console.log('Actions layer: Fetching deployments for user:', user?.id);
-      
-      if (!user) {
-        console.error('Actions layer: Cannot fetch deployments - user not authenticated');
+async function getDeploymentsInternal(tenantId: string, cookieStore: any): Promise<Deployment[]> {
+  try {
+    console.log('Actions layer: Fetching deployments for tenant:', tenantId);
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Fetch deployments from the database
+    const where = { tenant_id: tenantId };
+    console.log('Actions layer: Fetching deployments with where:', JSON.stringify(where));
+    
+    const result = await deploymentDb.findMany({ where }, cookieStore);
+    
+    // Handle the result based on its structure
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false && 'error' in result) {
+        console.error('Actions layer: Error fetching deployments:', result.error);
         return [];
       }
       
-      // Import the deployment database module
-      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      let dbDeployments: any[] = [];
       
-      // Fetch deployments from the database
-      const where = { tenant_id: user.tenant_id };
-      console.log('Actions layer: Fetching deployments with where:', JSON.stringify(where));
-      
-      const result = await deploymentDb.findMany({ where });
-      
-      // Handle the result based on its structure
-      if (result && typeof result === 'object') {
-        if ('success' in result && result.success === false && 'error' in result) {
-          console.error('Actions layer: Error fetching deployments:', result.error);
-          return [];
-        }
-        
-        let dbDeployments: any[] = [];
-        
-        if ('data' in result && Array.isArray(result.data)) {
-          dbDeployments = result.data;
-        } else if (Array.isArray(result)) {
-          dbDeployments = result;
-        }
-        
-        // Map database results to Deployment type
-        const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
-        
-        console.log('Actions layer: Fetched deployments count:', deployments.length);
-        
-        return deployments;
+      if ('data' in result && Array.isArray(result.data)) {
+        dbDeployments = result.data;
+      } else if (Array.isArray(result)) {
+        dbDeployments = result;
       }
       
-      console.error('Actions layer: Unexpected result structure from database');
-      return [];
-    } catch (error) {
-      console.error('Error fetching deployments:', error);
-      throw new Error('Failed to fetch deployments');
+      // Map database results to Deployment type
+      const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
+      
+      console.log('Actions layer: Fetched deployments count:', deployments.length);
+      
+      return deployments;
     }
-  },
-  ['deployments-list'],
-  { 
-    revalidate: DEPLOYMENT_CACHE_TTL,
-    tags: ['deployments']
+    
+    console.error('Actions layer: Unexpected result structure from database');
+    return [];
+  } catch (error) {
+    console.error('Error fetching deployments:', error);
+    throw new Error('Failed to fetch deployments');
   }
-);
+}
+
+/**
+ * Get all deployments for the current user with caching
+ * This wrapper function handles user authentication outside the cache
+ */
+export async function getDeployments(user?: AuthUser | null): Promise<Deployment[]> {
+  try {
+    // Get current user if not provided
+    if (!user) {
+      user = await getUser();
+    }
+    
+    if (!user) {
+      console.error('Actions layer: Cannot fetch deployments - user not authenticated');
+      return [];
+    }
+    
+    console.log('Actions layer: Fetching deployments for user:', user.id);
+    
+    // Get the cookie store outside the cached function
+    const cookieStore = await cookies();
+    
+    // Create a cached version of getDeploymentsInternal for this specific tenant
+    const getCachedDeploymentsForTenant = unstable_cache(
+      async (tenantId: string) => getDeploymentsInternal(tenantId, cookieStore),
+      [`deployments-list-by-tenant-${user.tenant_id}`],
+      { 
+        revalidate: DEPLOYMENT_CACHE_TTL,
+        tags: ['deployments']
+      }
+    );
+    
+    // Use the cached function with just the tenant ID
+    return await getCachedDeploymentsForTenant(user.tenant_id);
+  } catch (error) {
+    console.error('Error in getDeployments wrapper:', error);
+    return [];
+  }
+}
 
 // Define a function to map database deployment to Deployment type
 function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
@@ -101,62 +129,49 @@ function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
  * @param id Deployment ID
  * @returns Deployment object or null if not found
  */
-export const getDeploymentById = unstable_cache(
-  async (id: string): Promise<Deployment | null> => {
-    try {
-      console.log(`Actions layer: Fetching deployment with ID: ${id}`);
-      
-      // Import the deployment database module
-      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-      
-      // Fetch the deployment from the database
-      const result = await deploymentDb.findUnique(id);
-      
-      // Handle the result
-      if (result && typeof result === 'object') {
-        if ('success' in result && result.success === false && 'error' in result) {
-          console.error(`Actions layer: Error fetching deployment with ID ${id}:`, result.error);
+export async function getDeploymentById(id: string): Promise<Deployment | null> {
+  try {
+    console.log(`Actions layer: Fetching deployment with ID: ${id}`);
+    
+    // Get cookie store outside the cache
+    const cookieStore = await cookies();
+    
+    // Create a cached function for this specific deployment ID
+    const getCachedDeployment = unstable_cache(
+      async (deploymentId: string) => {
+        // Import the deployment database module
+        const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+        
+        // Fetch the deployment from the database
+        const result = await deploymentDb.findUnique(deploymentId, cookieStore);
+        
+        // Handle the result
+        if (!result) {
           return null;
         }
         
-        let dbDeployment = null;
-        
-        if ('data' in result) {
-          dbDeployment = result.data;
-        } else if (!('success' in result)) {
-          dbDeployment = result;
-        }
-        
-        if (dbDeployment) {
-          // Map database result to Deployment type
-          return mapDbDeploymentToDeployment(dbDeployment);
-        }
+        return mapDbDeploymentToDeployment(result);
+      },
+      [`deployment-by-id-${id}`],
+      { 
+        revalidate: DEPLOYMENT_CACHE_TTL,
+        tags: ['deployments', `deployment-${id}`]
       }
-      
-      console.error(`Actions layer: Deployment with ID ${id} not found`);
-      return null;
-    } catch (error) {
-      console.error(`Error fetching deployment with ID ${id}:`, error);
-      return null;
-    }
-  },
-  ['deployment-by-id'],
-  { 
-    revalidate: DEPLOYMENT_CACHE_TTL,
-    tags: ['deployments']
+    );
+    
+    return await getCachedDeployment(id);
+  } catch (error) {
+    console.error(`Error fetching deployment with ID ${id}:`, error);
+    return null;
   }
-);
+}
 
 /**
  * Create a new deployment
  * @param formData Deployment form data
- * @returns Result with success status and deploymentId or error
+ * @returns Newly created deployment or null if failed
  */
-export async function createDeployment(formData: DeploymentFormData): Promise<{ 
-  success: boolean; 
-  deploymentId?: string; 
-  error?: string 
-}> {
+export async function createDeployment(formData: DeploymentFormData): Promise<Deployment | null> {
   try {
     console.log('Actions layer: Creating deployment with form data:', JSON.stringify(formData, null, 2));
     
@@ -165,24 +180,24 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
     
     if (!user) {
       console.error('Actions layer: Cannot create deployment - user not authenticated');
-      return { 
-        success: false, 
-        error: 'You must be logged in to create a deployment' 
-      };
+      return null;
     }
+    
+    // Get cookie store
+    const cookieStore = await cookies();
     
     // Prepare deployment data
     const deploymentData = {
       name: formData.name,
       description: formData.description || '',
-      repository_id: formData.repositoryId,
-      scripts_path: formData.scriptsPath,
-      scripts_parameters: formData.scriptsParameters,
-      host_ids: formData.hostIds,
-      status: 'pending',
+      repository_id: formData.repository,
+      scripts_path: formData.selectedScripts || [],
+      scripts_parameters: formData.parameters || [],
+      host_ids: formData.selectedHosts || [],
+      status: 'pending' as DeploymentStatus,
       user_id: user.id,
       tenant_id: user.tenant_id,
-      schedule_type: formData.scheduleType || 'now',
+      schedule_type: formData.schedule || 'now',
       scheduled_time: formData.scheduledTime || null,
       cron_expression: formData.cronExpression || null,
       repeat_count: formData.repeatCount || 0,
@@ -195,52 +210,110 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
     
     // Create the deployment in the database
-    const result = await deploymentDb.create({ data: deploymentData });
+    const result = await deploymentDb.create(deploymentData, cookieStore);
     console.log('Actions layer: Create deployment result:', JSON.stringify(result, null, 2));
     
     // Handle the result
-    if (result && typeof result === 'object') {
-      if ('success' in result && result.success === false && 'error' in result) {
-        console.error('Actions layer: Error creating deployment:', result.error);
-        return { 
-          success: false, 
-          error: result.error || 'Failed to create deployment' 
-        };
-      }
-      
-      let deploymentId = '';
-      
-      if ('data' in result && result.data && 'id' in result.data) {
-        deploymentId = result.data.id as string;
-      } else if ('id' in result) {
-        deploymentId = result.id as string;
-      }
-      
-      if (deploymentId) {
-        console.log(`Actions layer: Successfully created deployment with ID: ${deploymentId}`);
-        
-        // Revalidate the cache
-        revalidatePath('/[locale]/[tenant]/deployment');
-        
-        // Return success response
-        return { 
-          success: true, 
-          deploymentId 
-        };
-      }
+    if (!result || (result && 'success' in result && !result.success)) {
+      return null;
     }
     
-    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
-    return { 
-      success: false, 
-      error: 'Failed to create deployment due to unexpected response structure' 
-    };
+    // Revalidate cache
+    revalidatePath('/deployment', 'page');
+    
+    // If successful and we have data, map to Deployment type
+    if (result.data) {
+      return mapDbDeploymentToDeployment(result.data);
+    }
+    
+    return null;
   } catch (error: any) {
     console.error('Error creating deployment:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to create deployment' 
+    return null;
+  }
+}
+
+/**
+ * Update a deployment by ID
+ * @param id Deployment ID
+ * @param data Updated deployment data
+ * @returns Updated deployment or null if not found/error
+ */
+export async function updateDeployment(id: string, data: Partial<DeploymentFormData>): Promise<Deployment | null> {
+  try {
+    console.log(`Actions layer: Updating deployment with ID: ${id}`);
+    
+    // Get cookie store
+    const cookieStore = await cookies();
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Map the form data to database format
+    const dbData = {
+      name: data.name,
+      description: data.description,
+      repository_id: data.repository,
+      scripts_path: data.scripts,
+      scripts_parameters: data.parameters,
+      host_ids: data.hosts,
+      status: data.status,
+      schedule_type: data.schedule,
+      scheduled_time: data.scheduledTime,
+      cron_expression: data.cronExpression,
+      repeat_count: data.repeatCount,
+      environment_vars: data.environmentVars
     };
+    
+    // Update the deployment in the database
+    const result = await deploymentDb.update(id, dbData, cookieStore);
+    
+    // Revalidate cache
+    revalidatePath('/deployment', 'page');
+    
+    // Handle the result
+    if (!result || (result && 'success' in result && !result.success)) {
+      return null;
+    }
+    
+    // If successful and we have data, map to Deployment type
+    const updatedDeployment = result.data 
+      ? mapDbDeploymentToDeployment(result.data)
+      : null;
+    
+    return updatedDeployment;
+  } catch (error) {
+    console.error(`Error updating deployment with ID ${id}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Delete a deployment by ID
+ * @param id Deployment ID
+ * @returns True if deleted successfully, false otherwise
+ */
+export async function deleteDeployment(id: string): Promise<boolean> {
+  try {
+    console.log(`Actions layer: Deleting deployment with ID: ${id}`);
+    
+    // Get cookie store
+    const cookieStore = await cookies();
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Delete the deployment from the database
+    const result = await deploymentDb.delete(id, cookieStore);
+    
+    // Revalidate cache
+    revalidatePath('/deployment', 'page');
+    
+    // Return success status
+    return result && 'success' in result ? result.success : false;
+  } catch (error) {
+    console.error(`Error deleting deployment with ID ${id}:`, error);
+    return false;
   }
 }
 
@@ -256,16 +329,8 @@ export async function abortDeployment(id: string): Promise<{
   try {
     console.log(`Actions layer: Aborting deployment with ID: ${id}`);
     
-    // Get the current user
-    const user = await getUser();
-    
-    if (!user) {
-      console.error('Actions layer: Cannot abort deployment - user not authenticated');
-      return { 
-        success: false, 
-        error: 'You must be logged in to abort a deployment' 
-      };
-    }
+    // Get cookie store
+    const cookieStore = await cookies();
     
     // Import the deployment database module
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
@@ -279,33 +344,23 @@ export async function abortDeployment(id: string): Promise<{
     console.log(`Actions layer: Updating deployment ${id} with data:`, JSON.stringify(updateData, null, 2));
     
     // Update the deployment in the database
-    const result = await deploymentDb.update(id, { data: updateData });
-    console.log('Actions layer: Abort deployment result:', JSON.stringify(result, null, 2));
+    const result = await deploymentDb.update(id, updateData, cookieStore);
+    
+    // Revalidate cache
+    revalidatePath('/deployment', 'page');
     
     // Handle the result
-    if (result && typeof result === 'object') {
-      if ('success' in result && result.success === false && 'error' in result) {
-        console.error('Actions layer: Error aborting deployment:', result.error);
-        return { 
-          success: false, 
-          error: result.error || 'Failed to abort deployment' 
-        };
-      }
-      
-      console.log(`Actions layer: Successfully aborted deployment with ID: ${id}`);
-      
-      // Revalidate the cache
-      revalidatePath('/[locale]/[tenant]/deployment');
-      
-      // Return success response
-      return { success: true };
+    if (!result || (result && 'success' in result && !result.success)) {
+      const errorMessage = result && 'error' in result ? result.error : 'Failed to abort deployment';
+      console.error('Actions layer: Error aborting deployment:', errorMessage);
+      return { 
+        success: false, 
+        error: errorMessage
+      };
     }
     
-    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
-    return { 
-      success: false, 
-      error: 'Failed to abort deployment due to unexpected response structure' 
-    };
+    console.log(`Actions layer: Successfully aborted deployment with ID: ${id}`);
+    return { success: true };
   } catch (error: any) {
     console.error(`Error aborting deployment ${id}:`, error);
     return { 
@@ -328,6 +383,7 @@ export async function refreshDeployment(id: string): Promise<{
   try {
     console.log(`Actions layer: Refreshing deployment with ID: ${id}`);
     
+    // Fetch updated deployment
     const deployment = await getDeploymentById(id);
     
     if (!deployment) {
@@ -338,8 +394,8 @@ export async function refreshDeployment(id: string): Promise<{
       };
     }
     
-    // Revalidate the cache
-    revalidatePath('/[locale]/[tenant]/deployment');
+    // Revalidate the cache for this specific deployment
+    revalidatePath('/deployment', 'page');
     
     return { 
       success: true, 
@@ -350,69 +406,6 @@ export async function refreshDeployment(id: string): Promise<{
     return { 
       success: false, 
       error: error.message || 'Failed to refresh deployment' 
-    };
-  }
-}
-
-/**
- * Delete a deployment
- * @param id Deployment ID
- * @returns Result with success status and error if applicable
- */
-export async function deleteDeployment(id: string): Promise<{ 
-  success: boolean; 
-  error?: string 
-}> {
-  try {
-    console.log(`Actions layer: Deleting deployment with ID: ${id}`);
-    
-    // Get the current user
-    const user = await getUser();
-    
-    if (!user) {
-      console.error('Actions layer: Cannot delete deployment - user not authenticated');
-      return { 
-        success: false, 
-        error: 'You must be logged in to delete a deployment' 
-      };
-    }
-    
-    // Import the deployment database module
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-    
-    // Delete the deployment from the database
-    const result = await deploymentDb.delete(id);
-    console.log('Actions layer: Delete deployment result:', JSON.stringify(result, null, 2));
-    
-    // Handle the result
-    if (result && typeof result === 'object') {
-      if ('success' in result && result.success === false && 'error' in result) {
-        console.error('Actions layer: Error deleting deployment:', result.error);
-        return { 
-          success: false, 
-          error: result.error || 'Failed to delete deployment' 
-        };
-      }
-      
-      console.log(`Actions layer: Successfully deleted deployment with ID: ${id}`);
-      
-      // Revalidate the cache
-      revalidatePath('/[locale]/[tenant]/deployment');
-      
-      // Return success response
-      return { success: true };
-    }
-    
-    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
-    return { 
-      success: false, 
-      error: 'Failed to delete deployment due to unexpected response structure' 
-    };
-  } catch (error: any) {
-    console.error(`Error deleting deployment ${id}:`, error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to delete deployment' 
     };
   }
 }
@@ -519,7 +512,7 @@ export async function getCICDProvidersAction(): Promise<{ providers: any[]; erro
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Fetch providers from the database
     const result = await cicdDb.getCICDProvider({ tenant_id: user.tenant_id });
@@ -551,7 +544,7 @@ export async function getDefaultProviderIdForTenant(tenantId: string): Promise<s
     console.log(`Actions layer: Getting default CI/CD provider for tenant ${tenantId}`);
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Fetch providers from the database
     const result = await cicdDb.getCICDProvider({ tenant_id: tenantId });
@@ -713,7 +706,7 @@ export async function updateDeploymentCICDStatus(
     }
     
     // Import the database modules
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
     
     // Get the CI/CD mapping
@@ -821,7 +814,7 @@ export async function createCICDProviderAction(
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Map form data to database schema
     const dbProviderData = {
@@ -890,7 +883,7 @@ export async function updateCICDProviderAction(
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Get the existing provider data
     const existingProvider = await cicdDb.getCICDProvider({
@@ -962,7 +955,7 @@ export async function deleteCICDProviderAction(
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Check if there are any deployment mappings using jobs from this provider
     const mappings = await cicdDb.getDeploymentCICDMappings({});
@@ -1096,7 +1089,7 @@ export async function syncCICDJobsAction(
     }
     
     // Import the CI/CD database and service modules
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     const { getCICDProvider } = await import('@/lib/services/cicd');
     
     // Get the provider from the database
@@ -1206,7 +1199,7 @@ export async function runDeploymentAction(
     }
     
     // Get CICD mapping if it exists
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     const mappingResult = await cicdDb.getCICDDeploymentMapping({
       where: { deployment_id: deploymentId }
     });

@@ -93,9 +93,13 @@ export default async function middleware(request: NextRequest) {
         pathParts[1],
       ));
 
-  // For auth-only paths like login, we need to check if the user is already authenticated
-  // If they are, redirect them to dashboard
-  if (isAuthOnlyPath) {
+  // Check if it's a locale-only path (like /en or /fr)
+  const isLocaleOnlyPath = 
+    pathParts.length === 1 && 
+    locales.includes(pathParts[0] as any);
+
+  // Check authentication for locale-only paths and auth-only paths
+  if (isAuthOnlyPath || isLocaleOnlyPath) {
     // Import from supabase/middleware.ts
     const { supabase, response } = createClient(request);
     try {
@@ -118,7 +122,7 @@ export default async function middleware(request: NextRequest) {
       // User not logged in, continue to login page
       return NextResponse.next();
     } catch (error) {
-      console.error('Error checking authentication for auth-only path:', error);
+      console.error('Error checking authentication:', error);
       return NextResponse.next();
     }
   }

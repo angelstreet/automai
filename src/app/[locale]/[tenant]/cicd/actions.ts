@@ -25,7 +25,7 @@ export async function getCICDProvidersAction(): Promise<CICDProviderListResult> 
     console.log('Fetching CICD providers for tenant:', user.tenant_id);
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Get CICD providers for the tenant
     console.log('Calling cicdDb.getCICDProviders with params:', { where: { tenant_id: user.tenant_id } });
@@ -60,7 +60,7 @@ export async function createCICDProviderAction(payload: CICDProviderPayload): Pr
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Prepare data for database
     const providerData = {
@@ -103,7 +103,7 @@ export async function updateCICDProviderAction(id: string, payload: CICDProvider
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Prepare data for database
     const providerData = {
@@ -149,7 +149,7 @@ export async function deleteCICDProviderAction(id: string): Promise<ActionResult
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     
     // Delete the provider
     const result = await cicdDb.deleteCICDProvider({ 

@@ -1,0 +1,114 @@
+# Cookie Handling Guidelines
+
+## Overview
+This document outlines how cookies should be handled across the three-layer architecture in our application. Proper cookie handling is critical for authentication, user sessions, and secure data access.
+
+## Key Principles
+
+1. **Always use async/await with cookies**: The `cookies()` function is asynchronous and should always be awaited.
+2. **Pass cookie store down through layers**: Pass the cookie store from actions to database operations.
+3. **Handle cookies at the appropriate layer**: Server actions are responsible for obtaining cookies.
+4. **Cache with cookies properly**: Ensure cookie handling is compatible with cache invalidation.
+
+## Three-Layer Architecture for Cookie Handling
+
+### Database Layer (`/src/lib/supabase/db-*.ts`)
+- Functions should accept an optional `cookieStore` parameter
+- Create Supabase client using the provided cookieStore or provide a fallback
+- Example:
+  ```typescript
+  // In db-deployment/deployment.ts
+  export async function findMany(options: FindManyOptions, cookieStore?: any) {
+    try {
+      // Create Supabase client with cookieStore
+      const supabase = await createClient(cookieStore);
+      
+      // Rest of the function
+    } catch (error) {
+      // Error handling
+    }
+  }
+  ```
+
+### Server Actions Layer (`/src/app/[locale]/[tenant]/*/actions.ts`)
+- Obtain cookies using `cookies()` function and await it
+- Pass cookieStore to database functions
+- Handle caching with cookies correctly
+- Example:
+  ```typescript
+  // In deployment/actions.ts
+  export async function getDeployments(user?: AuthUser | null): Promise<Deployment[]> {
+    try {
+      // Get current user if not provided
+      if (!user) {
+        user = await getUser();
+      }
+      
+      // Get the cookie store outside the cached function
+      const cookieStore = await cookies();
+      
+      // Create a cached version of the function with cookies
+      const getCachedDeploymentsForTenant = unstable_cache(
+        async (tenantId: string) => getDeploymentsInternal(tenantId, cookieStore),
+        [`deployments-list-by-tenant-${user.tenant_id}`],
+        { revalidate: CACHE_TTL, tags: ['deployments'] }
+      );
+      
+      // Use the cached function
+      return await getCachedDeploymentsForTenant(user.tenant_id);
+    } catch (error) {
+      // Error handling
+    }
+  }
+  ```
+
+### Context Layer (Client Components)
+- Use the server actions that handle cookies internally
+- No direct cookie handling at this layer
+- Example:
+  ```typescript
+  // In DeploymentContext.tsx
+  const fetchDeployments = useCallback(async () => {
+    try {
+      // This function internally handles cookies in the server action
+      const results = await getDeployments(user);
+      setDeployments(results);
+    } catch (err) {
+      // Error handling
+    }
+  }, [user]);
+  ```
+
+## Common Patterns
+
+### Caching with Cookies
+When using Next.js caching with `unstable_cache`, follow these steps:
+1. Obtain cookies outside the cached function
+2. Pass cookieStore to the function being cached
+3. Use proper cache keys and tags for invalidation
+
+### Cookie Store Creation
+The `createClient` function in `src/lib/supabase/server.ts` should:
+1. Accept an optional cookieStore parameter
+2. Use the provided cookieStore or create a new one with `await cookies()`
+3. Set up cookie methods (get, set, remove) to interact with the cookies
+
+## Common Pitfalls to Avoid
+
+1. **Not awaiting cookies()**: Always use `await cookies()` as it returns a Promise
+2. **Accessing cookies inside cached functions**: Get cookies outside and pass them in
+3. **Recreating cookie store unnecessarily**: Pass the same cookie store down through layers
+4. **Missing cookie handling in DB functions**: All DB functions should accept a cookieStore parameter
+
+## Implementation Guide
+
+When implementing cookie handling in a new feature:
+
+1. Update database modules to accept cookieStore parameter
+2. Ensure server actions obtain cookies and pass to DB layer
+3. Make context components use server actions without direct cookie handling
+
+## Related Rules
+- data-supabase.mdc - Supabase database patterns
+- data-auth.mdc - Authentication patterns
+- data-caching.mdc - Caching strategies 

@@ -3,10 +3,10 @@ import { cookies } from 'next/headers';
 
 // Deployment DB operations
 const deployment = {
-  async findMany(options: any = {}) {
+  async findMany(options: any = {}, cookieStore?: any) {
     console.log('DB layer: Finding many deployments with options:', JSON.stringify(options));
     
-    const cookieStore = await cookies();
+    // Create client with provided cookie store or get a new one
     const supabase = await createClient(cookieStore);
 
     // Make sure to select all required fields explicitly
@@ -68,8 +68,8 @@ const deployment = {
     return data || [];
   },
 
-  async findUnique({ where }: { where: any }) {
-    const cookieStore = await cookies();
+  async findUnique(id: string, cookieStore?: any) {
+    // Create client with provided cookie store or get a new one
     const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase.from('deployments').select(`
@@ -91,7 +91,7 @@ const deployment = {
       host_ids,
       environment_vars,
       tenant_id
-    `).match(where).single();
+    `).eq('id', id).single();
 
     if (error) {
       console.error('Error finding deployment:', error);
@@ -101,12 +101,12 @@ const deployment = {
     return data;
   },
 
-  async create({ data }: { data: any }): Promise<any> {
+  async create({ data }: { data: any }, cookieStore?: any): Promise<any> {
     console.log('DB layer: Creating deployment with data:', JSON.stringify(data, null, 2));
     
     try {
       console.log('DB layer: Creating Supabase client...');
-      const cookieStore = await cookies();
+      // Create client with provided cookie store or get a new one
       const supabase = await createClient(cookieStore);
       console.log('DB layer: Supabase client created');
       
@@ -158,13 +158,13 @@ const deployment = {
     }
   },
 
-  async update({ where, data }: { where: any; data: any }) {
-    console.log('DB layer: Updating deployment with where:', JSON.stringify(where));
+  async update(id: string, data: any, cookieStore?: any) {
+    console.log('DB layer: Updating deployment with id:', id);
     console.log('DB layer: Updating deployment with data:', JSON.stringify(data, null, 2));
     
     try {
       console.log('DB layer: Creating Supabase client...');
-      const cookieStore = await cookies();
+      // Create client with provided cookie store or get a new one
       const supabase = await createClient(cookieStore);
       console.log('DB layer: Supabase client created');
 
@@ -189,7 +189,7 @@ const deployment = {
       const { data: result, error } = await supabase
         .from('deployments')
         .update(updateData)
-        .match(where)
+        .eq('id', id)
         .select()
         .single();
       
@@ -215,19 +215,19 @@ const deployment = {
     }
   },
 
-  async delete({ where }: { where: any }) {
-    console.log('DB layer: Deleting deployment with where:', JSON.stringify(where));
+  async delete(id: string, cookieStore?: any) {
+    console.log('DB layer: Deleting deployment with id:', id);
     
     try {
       console.log('DB layer: Creating Supabase client...');
-      const cookieStore = await cookies();
+      // Create client with provided cookie store or get a new one
       const supabase = await createClient(cookieStore);
       console.log('DB layer: Supabase client created');
 
       const { error } = await supabase
         .from('deployments')
         .delete()
-        .match(where);
+        .eq('id', id);
       
       if (error) {
         console.error('DB layer: Error deleting deployment:', error);
@@ -248,7 +248,7 @@ const deployment = {
         error: `Failed to delete deployment: ${error instanceof Error ? error.message : String(error)}`
       };
     }
-  },
+  }
 };
 
 export default deployment;

@@ -5,10 +5,11 @@ import { CICDContextType } from './cicd';
 
 /**
  * Root AppContext type that combines all other contexts
+ * Each context can be null if not yet initialized
  */
 export interface AppContextType {
-  host: HostContextType;
-  deployment: DeploymentContextType;
-  repository: RepositoryContextType;
-  cicd: CICDContextType;
+  host: HostContextType | null;
+  deployment: DeploymentContextType | null;
+  repository: RepositoryContextType | null;
+  cicd: CICDContextType | null;
 } 
