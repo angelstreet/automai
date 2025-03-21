@@ -6,171 +6,135 @@ alwaysApply: true
 
 # General Development Guidelines
 
-## CRITICAL RULES - ALWAYS FOLLOW
+## AI Guidelines
+Always review applicable guidelines before making changes, follow the three-layer architecture, provide clear plans before implementing, make focused changes, and avoid modifying shadcn components. Never run servers without explicit permission. Adhere to feature-first organization and follow established patterns for all aspects of development.
 
-1. **✅ ALWAYS review all applicable rules before taking action**
-   - Read through relevant Cursor rules before starting work
-   - Understand project-specific guidelines and constraints
-   - When in doubt, ask for clarification
+## Key Patterns
 
-2. **✅ NEVER run servers without explicit permission**
-   - Do not run `npm run dev` or any server unless specifically asked
-   - Use curl and static analysis for debugging instead of running servers
-   - If server testing is necessary, propose it first with clear justification
-   - For debugging authentication/API issues, use curl or similar tools instead
+### Critical Development Rules
+- **Review Before Acting**: Read through relevant Cursor rules before starting work
+- **Server Execution**: Never run servers without explicit user permission
+- **Clear Plans**: Always provide plans before implementing changes
+- **Focused Changes**: Make minimal changes to achieve the goal
+- **Follow Architecture**: Strictly adhere to the three-layer architecture
+- **UI Components**: Never modify shadcn components directly
 
-3. **✅ ALWAYS provide clear plans before implementing changes**
-   - Outline your approach before writing code
-   - Get explicit agreement on the plan
-   - Document any deviations from the approved plan
+### Three-Layer Architecture
+- **DB Layer (Core)**: `/src/lib/supabase/db-*.ts` - Database operations
+- **Server Actions Layer (Bridge)**: `/src/app/[locale]/[tenant]/*/actions.ts` - Business logic
+- **Client Hooks Layer (Interface)**: Context providers and hooks - UI state
 
-4. **✅ ALWAYS make minimal, focused changes**
-   - Make the smallest change necessary to achieve the goal
-   - Avoid refactoring unrelated code
-   - Keep changes focused on solving the specific issue
+### Project Organization
+- **Feature-First**: Group related files by feature
+- **App Router**: 100% App Router based architecture
+- **Server Components**: Use by default, Client Components when necessary
+- **Shared Components**: Place in `/components` directory
+- **Feature Components**: Place in feature's `_components` directory
 
-5. **✅ ALWAYS adhere to the three-layer architecture**
-   - Server DB Layer (Core) - `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
-   - Server Actions Layer (Bridge) - `/src/app/actions/*.ts` or feature-specific actions
-   - Client Hooks Layer (Interface) - `/src/hooks/*.ts` or feature-specific hooks
+### Change Management
+- **Planning**: Outline your approach before writing code
+- **Agreement**: Get explicit agreement before implementing
+- **Documentation**: Document any deviations from approved plans
+- **Code Reviews**: Request thorough code reviews for all changes
 
-6. **✅ NEVER modify shadcn components**
-   - Do not modify any files in `/src/components/shadcn/`
-   - These are UI primitives that should remain unchanged
-   - Extend functionality by composing components, not modifying them
+## Examples
 
-## Architecture Overview
+### Good Change Implementation
 
-### Next.js App Router
+```typescript
+// 1. Clear plan communicated first:
+// "I'll add a status filter to the HostList component by:
+// 1. Adding a filter state in the HostProvider
+// 2. Updating the getHostsAction to accept a status parameter
+// 3. Adding a FilterBar component to the HostList UI"
 
-- 100% App Router based architecture (no Pages Router components)
-- Server Components by default, Client Components only when necessary
-- Feature-first organization approach
+// 2. Minimal, focused implementation:
+// In src/context/host/HostProvider.tsx
+export function HostProvider({ children }: { children: React.ReactNode }) {
+  // ... existing state
+  const [filter, setFilter] = useState<HostFilter>({});
+  
+  const fetchHosts = useCallback(async () => {
+    setLoading(true);
+    const result = await getHostsAction(filter); // Pass filter to action
+    // ... rest of implementation
+  }, [filter]); // Add filter to dependencies
+  
+  const updateFilter = useCallback((newFilter: Partial<HostFilter>) => {
+    setFilter(prev => ({...prev, ...newFilter}));
+  }, []);
+  
+  // ... provide updateFilter in context value
+}
 
-### Project Structure
-
+// 3. Follows architecture and patterns:
+// In src/app/[locale]/[tenant]/hosts/actions.ts
+export async function getHostsAction(
+  filter?: HostFilter,
+  user?: AuthUser
+): Promise<ActionResult<Host[]>> {
+  // Get user if not provided
+  if (!user) {
+    const userResult = await getUser();
+    if (!userResult.success) {
+      return { success: false, error: 'Authentication required' };
+    }
+    user = userResult.data;
+  }
+  
+  // Pass filter to DB layer
+  const result = await getHosts(user.tenant_id, filter);
+  // ... rest of implementation
+}
 ```
-Check documentation here .cursor/rules/frontend-components.mdc
+
+### Bad Change Implementation
+
+```typescript
+// DON'T DO THIS: Running server without permission
+// "Let me run the server to see if this works"
+// This violates the rule about not running servers
+
+// DON'T DO THIS: Modifying shadcn component
+// In src/components/shadcn/button.tsx
+export function Button({ children, ...props }) {
+  // Adding custom logic directly to shadcn component
+  const theme = useTheme();
+  // ...modification to the component
+}
+
+// DON'T DO THIS: Bypassing architecture layers
+// In src/app/[locale]/[tenant]/hosts/page.tsx
+export default function HostsPage() {
+  const { data, error } = supabase.from('hosts').select('*');
+  // Directly accessing database from UI layer
+}
+
+// DON'T DO THIS: Unfocused changes
+// "While fixing the host filter, I also refactored the
+// authentication system and redesigned the navigation"
 ```
 
-### Feature-First Organization
+## Rule Organization
 
-- Group all related files for a feature together in its own directory
-- Feature directories live in `/app/[locale]/[tenant]/`
-- Feature-specific code should be in the feature directory:
-  - Components in `_components/`
-  - Server actions in `actions.ts`
-  - Types in `types.ts`
-  - Constants in `constants.ts`
-  - Custom hooks in `hooks.ts`
-  - Utility functions in `utils.ts`
-- Only extract code to shared locations when used across multiple features
+This codebase maintains a set of specific guidelines for different aspects of development:
 
-## Core Principles
+- **code-quality.mdc** - Code quality and style standards
+- **core-architecture.mdc** - System architecture principles
+- **core-testing.mdc** - Testing strategies and patterns
+- **api-design.mdc** - API design principles
+- **api-implementation.mdc** - API implementation details
+- **ui-components.mdc** - UI component patterns
+- **ui-state.mdc** - State management patterns
+- **data-supabase.mdc** - Supabase database patterns
+- **data-auth.mdc** - Authentication patterns
+- **data-caching.mdc** - Caching strategies
+- **feature-specific.mdc** - Feature-specific guidelines
 
-1. **Thoughtful Change Management**
-   - Always provide a plan before making changes
-   - Wait for explicit agreement before implementing
-   - Document significant architectural decisions
+Refer to the specific rule file for detailed guidance on each area.
 
-2. **Code Quality**
-   - Write clean, maintainable, and self-documenting code
-   - Follow established patterns and conventions
-   - Keep functions and components small and focused
-
-3. **User Experience**
-   - Prioritize user experience in all design decisions
-   - Ensure interfaces are intuitive and accessible
-   - Optimize for performance and responsiveness
-
-4. **Security and Privacy**
-   - Treat security as a core requirement, not an add-on
-   - Follow secure coding practices
-   - Protect user data and respect privacy
-
-5. **Testing and Quality Assurance**
-   - Write tests for new features and bug fixes
-   - Verify changes work across supported environments
-   - Use automated testing where appropriate
-
-## Critical Process Guidelines
-
-### Change Management Process
-
-1. **✅ ALWAYS provide a plan before implementing changes**
-   - Analyze the issue or requirement
-   - Outline proposed changes
-   - Identify potential impacts
-   - Get explicit agreement before proceeding
-
-2. **✅ ALWAYS provide context for why a change is needed**
-   - Explain the problem being solved
-   - Describe the expected outcome
-   - Reference relevant issues or requirements
-
-3. **✅ Minimize code changes**
-   - Make the smallest change necessary to achieve the goal
-   - Avoid refactoring unrelated code in the same PR
-   - Keep pull requests focused on a single concern
-
-### Safety Measures
-
-1. **✅ NEVER edit code without approval**
-   - Always wait for explicit agreement on the plan
-   - If requirements change, update the plan and seek approval again
-   - Document any deviations from the approved plan
-
-2. **✅ NEVER deploy untested code**
-   - Test changes thoroughly before submitting
-   - Verify changes in a development environment
-   - Include appropriate unit, integration, or e2e tests
-
-3. **✅ NEVER commit secrets or sensitive data**
-   - Keep secrets in environment variables or secure storage
-   - Do not hardcode API keys, passwords, or tokens
-   - Check for accidentally committed secrets before pushing
-
-4. **✅ NEVER run development servers without explicit request**
-   - Do not run `npm run dev` unless specifically asked
-   - Always get confirmation before starting any server
-   - Prefer analyzing code over running it when possible
-   - For debugging authentication/API issues, use curl or similar tools instead
-
-## Communication Guidelines
-
-1. **Be clear and specific**
-   - Use precise language when describing changes
-   - Include relevant details like file paths and function names
-   - Provide concrete examples when possible
-
-2. **Ask questions when requirements are unclear**
-   - Don't make assumptions about unclear requirements
-   - Request clarification from stakeholders
-   - Document the clarification for future reference
-
-3. **Document important decisions**
-   - Record the reasoning behind significant architectural choices
-   - Document unexpected challenges and their solutions
-   - Update documentation when implementation details change
-
-## Continuous Improvement
-
-1. **Learn from past issues**
-   - Review past bugs and incidents for lessons
-   - Apply those lessons to prevent similar issues
-   - Update guidelines based on new learnings
-
-2. **Share knowledge**
-   - Document complex parts of the codebase
-   - Provide context in comments and pull requests
-   - Mentor others on best practices
-
-3. **Stay current with technology**
-   - Keep dependencies updated
-   - Follow security advisories
-   - Adopt new best practices when appropriate
-
-4. **Update Cursor rules**
-   - Update Cursor rules when new patterns or requirements emerge
-   - Immediately update rules when mistakes are identified to prevent repetition
-   - Use rules as a living document that evolves with the codebase
+## Related Rules
+- core-architecture.mdc - Three-layer architecture
+- code-quality.mdc - Code quality standards 
+- api-design.mdc - API design principles
+- ui-components.mdc - UI component patterns

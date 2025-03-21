@@ -29,7 +29,7 @@ export class JenkinsProvider implements CICDProvider {
     console.log(`[JENKINS] Using token auth with username: ${username}`);
     
     // Basic auth with username:token for Jenkins
-    this.authHeader = `Basic ${Buffer.from(`${username}:${token}`).toString('base64')}`;
+      this.authHeader = `Basic ${Buffer.from(`${username}:${token}`).toString('base64')}`;
     
     console.log(`[JENKINS] Provider initialized with auth header (present: ${!!this.authHeader})`);
   }

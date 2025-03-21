@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { toast } from '@/components/shadcn/use-toast';
-import { deleteDeployment } from '../actions';
+import { useDeployment } from '@/context';
 
 interface DeploymentActionsProps {
   deploymentId: string;
@@ -22,6 +22,8 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ deployment
   const router = useRouter();
   const params = useParams();
   const { locale, tenant } = params;
+  
+  const { deleteDeployment } = useDeployment();
   
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();

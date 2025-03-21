@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import * as React from 'react';
+import { useHost } from '@/context';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -16,7 +17,6 @@ import {
   DialogDescription,
 } from '@/components/shadcn/dialog';
 import { Host } from '../types';
-import { useHosts } from '../hooks';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 
@@ -30,7 +30,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   const t = useTranslations('Common');
   const params = useParams();
   const locale = params.locale as string;
-  const { addHost, testConnection } = useHosts();
+  const { addHost, testConnection } = useHost();
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');

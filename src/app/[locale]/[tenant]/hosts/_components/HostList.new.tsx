@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '../types';
+// Import the new context hook
 import { useHost } from '@/context';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
@@ -29,16 +30,15 @@ export default function HostContainer() {
     password: '',
   });
 
-  // Use the centralized context instead of the feature-specific hook
+  // Use the new context hook instead of the SWR hook
   const {
     hosts,
     loading,
     error,
     fetchHosts,
     addHost,
-    deleteHost,
+    removeHost: deleteHost,
     testConnection,
-    testAllConnections,
   } = useHost();
 
   // Handle refresh all hosts
@@ -47,7 +47,8 @@ export default function HostContainer() {
     
     setIsRefreshing(true);
     try {
-      await testAllConnections();
+      // Simplified to just refresh all hosts for now
+      await fetchHosts();
     } finally {
       setIsRefreshing(false);
     }
@@ -57,7 +58,7 @@ export default function HostContainer() {
   const handleSaveHost = async () => {
     setIsSaving(true);
     try {
-      const success = await addHost({
+      const result = await addHost({
         name: formData.name,
         description: formData.description,
         type: formData.type as 'ssh' | 'docker' | 'portainer',
@@ -71,7 +72,7 @@ export default function HostContainer() {
         is_windows: false,
       });
 
-      if (success) {
+      if (result.success) {
         setShowAddHost(false);
         setFormData({
           name: '',
@@ -101,89 +102,108 @@ export default function HostContainer() {
     });
   };
 
+  // Handle delete hosts
+  const handleDeleteHosts = async () => {
+    for (const id of selectedHosts) {
+      await deleteHost(id);
+    }
+    setSelectedHosts(new Set());
+  };
+
+  // Handle test connection
+  const handleTestConnection = async (id: string) => {
+    await testConnection(id);
+  };
+
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Hosts</h1>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className="border rounded-md p-1 mr-2">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'ghost'}
-              size="sm"
-              className="px-2"
-              onClick={() => setViewMode('grid')}
-              aria-label="Grid view"
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'ghost'}
-              size="sm"
-              className="px-2"
-              onClick={() => setViewMode('table')}
-              aria-label="Table view"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button 
-            onClick={handleRefreshAll} 
-            variant="outline" 
-            size="sm"
-            disabled={isRefreshing || loading}
+          <Button
+            variant="outline"
+            size="icon"
+            className={viewMode === 'grid' ? 'bg-gray-100' : ''}
+            onClick={() => setViewMode('grid')}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <Grid className="h-4 w-4" />
           </Button>
-          <Button onClick={() => setShowAddHost(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            size="icon"
+            className={viewMode === 'table' ? 'bg-gray-100' : ''}
+            onClick={() => setViewMode('table')}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshAll}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh All'}
+          </Button>
+          <Button size="sm" onClick={() => setShowAddHost(true)}>
+            <Plus className="mr-2 h-4 w-4" />
             Add Host
           </Button>
         </div>
       </div>
 
-      {loading && hosts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10">
-          <RefreshCw className="h-8 w-8 animate-spin mb-4" />
-          <p className="text-muted-foreground">Loading hosts...</p>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <p>Loading hosts...</p>
         </div>
-      ) : !loading && hosts.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">No hosts found</p>
-          <Button onClick={() => setShowAddHost(true)} className="mt-4">
-            Add your first host
+      ) : error ? (
+        <div className="flex items-center justify-center h-64">
+          <p className="text-red-500">{error}</p>
+        </div>
+      ) : hosts?.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-64 border border-dashed rounded-lg">
+          <p className="text-gray-500 mb-4">No hosts found</p>
+          <Button size="sm" onClick={() => setShowAddHost(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Host
           </Button>
         </div>
       ) : viewMode === 'grid' ? (
-        <HostGrid
+        <HostGrid 
           hosts={hosts}
+          onSelect={handleSelectHost}
           selectedHosts={selectedHosts}
           selectMode={selectMode}
-          onSelect={handleSelectHost}
+          onTestConnection={handleTestConnection}
+          onRefresh={fetchHosts}
           onDelete={deleteHost}
-          onTestConnection={(host: Host) => testConnection(host.id)}
         />
       ) : (
-        <HostTable
+        <HostTable 
           hosts={hosts}
+          onSelect={handleSelectHost}
+          selectedHosts={selectedHosts}
+          selectMode={selectMode}
+          onTestConnection={handleTestConnection}
+          onRefresh={fetchHosts}
           onDelete={deleteHost}
-          onTestConnection={(host: Host) => testConnection(host.id)}
         />
       )}
 
       <Dialog open={showAddHost} onOpenChange={setShowAddHost}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Add New Host</DialogTitle>
           </DialogHeader>
-          <ConnectionForm 
-            formData={formData} 
-            onChange={setFormData} 
-            onSave={handleSaveHost}
+          <ConnectionForm
+            formData={formData}
+            setFormData={setFormData}
+            onSubmit={handleSaveHost}
             isSaving={isSaving}
           />
         </DialogContent>
       </Dialog>
     </div>
   );
-}
+} 

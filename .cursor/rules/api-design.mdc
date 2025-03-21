@@ -1,0 +1,177 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# API Design Guidelines
+
+## AI Guidelines
+Design APIs following REST principles with consistent URL patterns, standard response formats, and proper error handling. Use Server Actions for all backend API functionality and follow the three-layer architecture. Enforce tenant isolation and authentication on all endpoints.
+
+## Key Patterns
+
+### URL Structure
+- **API Routes**: `/api/[feature]/[action]` 
+- **RESTful Patterns**: Use standard HTTP methods (GET, POST, PUT, DELETE)
+- **Resource Identifiers**: Use plural nouns for collections `/api/repositories`
+- **Sub-resources**: Nest related resources `/api/repositories/{id}/files`
+- **Query Parameters**: Use for filtering, sorting, pagination
+
+### Server Actions
+- **Location**: Feature-specific `/src/app/[locale]/[tenant]/[feature]/actions.ts`
+- **Directive**: Include 'use server' at the beginning of the file
+- **Export Style**: Named exports for all action functions
+- **Error Handling**: Try/catch blocks with consistent error responses
+- **Type Safety**: Define input/output types for all action functions
+
+### Response Format
+- **Standard Structure**:
+```typescript
+type ActionResult<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+  redirectUrl?: string;
+};
+```
+- **Success Response**: `{success: true, data: result}`
+- **Error Response**: `{success: false, error: 'Error message'}`
+- **Status Codes**: Use appropriate HTTP status codes
+
+### API Security
+- **Authentication**: Validate user in every API endpoint
+- **Tenant Isolation**: Enforce tenant access restrictions
+- **Rate Limiting**: Implement in middleware for public endpoints
+- **Input Validation**: Validate all input data before processing
+- **Error Details**: Limit error details in production environment
+
+## Examples
+
+### Server Action Implementation
+
+```typescript
+// In /src/app/[locale]/[tenant]/hosts/actions.ts
+'use server';
+
+import { getHosts, createHost } from '@/lib/supabase/db-hosts';
+import { serverCache } from '@/lib/cache';
+import { mapDbHostToHost } from './mappers';
+import { CACHE_TTL } from './constants';
+import { getUser } from '@/app/actions/user';
+import { AuthUser } from '@/types/user';
+
+export async function getHostsAction(filter?: HostFilter, user?: AuthUser | null): Promise<ActionResult<Host[]>> {
+  try {
+    // Get user if not provided
+    if (!user) {
+      const userResult = await getUser();
+      if (!userResult.success) {
+        return { success: false, error: 'Authentication failed' };
+      }
+      user = userResult.data;
+    }
+    
+    // Check cache
+    const cacheKey = `tenant:${user.tenant_id}:hosts`;
+    const cachedData = serverCache.get<Host[]>(cacheKey);
+    if (cachedData) {
+      return { success: true, data: cachedData };
+    }
+    
+    // Fetch from database
+    const result = await getHosts(user.tenant_id);
+    
+    if (result.success && result.data) {
+      // Map to UI types
+      const mappedData = result.data.map(mapDbHostToHost);
+      // Cache the result
+      serverCache.set(cacheKey, mappedData, CACHE_TTL.HOSTS);
+      return { success: true, data: mappedData };
+    }
+    
+    return { success: false, error: result.error };
+  } catch (error) {
+    console.error('Error in getHostsAction:', error);
+    return { success: false, error: 'Failed to fetch hosts' };
+  }
+}
+```
+
+### API Route Implementation
+
+```typescript
+// In /src/app/api/hosts/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getHostsAction } from '@/app/[locale]/[tenant]/hosts/actions';
+import { getUser } from '@/app/actions/user';
+
+export async function GET(request: NextRequest) {
+  try {
+    // Get auth user
+    const userResult = await getUser();
+    if (!userResult.success) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' }, 
+        { status: 401 }
+      );
+    }
+    
+    // Parse query parameters
+    const searchParams = request.nextUrl.searchParams;
+    const filter = {
+      status: searchParams.get('status') || undefined,
+      type: searchParams.get('type') || undefined,
+    };
+    
+    // Call the action with user context
+    const result = await getHostsAction(filter, userResult.data);
+    
+    if (result.success) {
+      return NextResponse.json(result, { status: 200 });
+    } else {
+      return NextResponse.json(result, { status: 400 });
+    }
+  } catch (error) {
+    console.error('Error in hosts API:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' }, 
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Client-Side Usage
+
+```typescript
+// From React component using fetch
+async function fetchHosts(filter) {
+  const params = new URLSearchParams();
+  if (filter?.status) params.append('status', filter.status);
+  if (filter?.type) params.append('type', filter.type);
+  
+  const response = await fetch(`/api/hosts?${params.toString()}`);
+  const result = await response.json();
+  
+  if (result.success) {
+    return result.data;
+  } else {
+    throw new Error(result.error || 'Failed to fetch hosts');
+  }
+}
+
+// Preferred way: Using server action directly from context
+import { useHost } from '@/context';
+
+function HostList() {
+  const { hosts, loading, fetchHosts } = useHost();
+  
+  // Use the hosts data directly
+}
+```
+
+## Related Rules
+- core-architecture.mdc - Three-layer architecture
+- data-supabase.mdc - Database access patterns
+- data-auth.mdc - Authentication patterns
+- data-caching.mdc - Caching strategies 

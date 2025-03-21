@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useCICD } from '@/context';
 import {
   Form,
   FormControl,
@@ -20,7 +21,6 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { toast } from '@/components/shadcn/use-toast';
-import { createCICDProviderAction, updateCICDProviderAction, testCICDProviderAction } from '../actions';
 import { CICDProvider, CICDProviderPayload, CICDProviderType, CICDAuthType } from '@/types/cicd';
 
 interface CICDProviderFormProps {
@@ -50,6 +50,12 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
     success: boolean;
     message: string;
   } | null>(null);
+
+  const {
+    createProvider,
+    updateProvider,
+    testProvider
+  } = useCICD();
 
   const isEditMode = !!providerId;
 
@@ -98,7 +104,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
     }
   };
 
-  // Test the connection to the CI/CD provider
+  // Test the connection to the CI/CD provider using the context
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestMessage(null);
@@ -126,8 +132,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         credentials
       };
       
-      // Test the connection
-      const result = await testCICDProviderAction(providerData);
+      // Test the connection using the context
+      const result = await testProvider(providerData);
       
       if (result.success) {
         setTestMessage({
@@ -150,7 +156,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
     }
   };
 
-  // Form submission handler
+  // Form submission handler using the context
   const handleSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     
@@ -185,12 +191,13 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         }
       };
       
-      // Create or update the provider
-      const action = providerId 
-        ? () => updateCICDProviderAction(providerId, providerPayload)
-        : () => createCICDProviderAction(providerPayload);
-      
-      const result = await action();
+      // Create or update the provider using the context
+      let result;
+      if (providerId) {
+        result = await updateProvider(providerId, providerPayload);
+      } else {
+        result = await createProvider(providerPayload);
+      }
       
       if (result.success) {
         toast({

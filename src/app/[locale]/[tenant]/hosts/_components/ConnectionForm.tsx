@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
-import { useHosts } from '../hooks';
+import { useHost } from '@/context';
 import { verifyFingerprint as verifyFingerprintAction } from '../actions';
 
 export interface FormData {
@@ -33,15 +33,19 @@ export interface FormData {
 
 interface ConnectionFormProps {
   formData: FormData;
-  onChange: (formData: FormData) => void;
-  onSave?: () => void;
-  onTestSuccess?: () => void;
+  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  onSubmit: () => void;
   isSaving?: boolean;
 }
 
-export function ConnectionForm({ formData, onChange, onSave, onTestSuccess, isSaving = false }: ConnectionFormProps) {
+export function ConnectionForm({ 
+  formData, 
+  setFormData, 
+  onSubmit, 
+  isSaving = false 
+}: ConnectionFormProps) {
   const t = useTranslations('Common');
-  const { testConnection } = useHosts();
+  const { testConnection } = useHost();
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
@@ -50,345 +54,293 @@ export function ConnectionForm({ formData, onChange, onSave, onTestSuccess, isSa
   const [testing, setTesting] = useState(false);
   const [testError, setTestError] = useState<string | null>(null);
   const [testSuccess, setTestSuccess] = useState(false);
-  const lastRequestTime = useRef<number>(0);
-  const REQUEST_THROTTLE_MS = 500; // minimum time between requests
+  const [showFingerprint, setShowFingerprint] = useState(false);
+  const [fingerprintData, setFingerprintData] = useState<{
+    hostname: string;
+    fingerprint: string;
+  } | null>(null);
+  const { locale, tenant } = useParams() as { locale: string; tenant: string };
 
-  // State for fingerprint verification
-  const [fingerprint, setFingerprint] = useState<string | null>(null);
-  const [fingerprintVerified, setFingerprintVerified] = useState(false);
-  const [requireVerification, setRequireVerification] = useState(false);
-  const [verifyingFingerprint, setVerifyingFingerprint] = useState(false);
-
-  // State for test status
-  const [testStatus, setTestStatus] = useState<'error' | 'success'>('error');
-
+  // Handle connection type change
   const handleTypeChange = (value: string) => {
-    setConnectionType(value as 'ssh' | 'docker' | 'portainer' | 'docker' | 'portainer');
-    onChange({
+    setConnectionType(value as 'ssh' | 'docker' | 'portainer');
+    
+    // Update form data with the new type and default port
+    const defaultPort = value === 'ssh' ? '22' : value === 'docker' ? '2375' : '9000';
+    setFormData({
       ...formData,
       type: value,
-      port: value === 'ssh' ? '22' : value === 'docker' ? '2375' : '9000',
+      port: defaultPort,
     });
   };
 
+  // Handle input change for any field
   const handleInputChange = (field: string, value: string) => {
-    if (field === 'name') {
-      // Only allow lowercase letters, numbers, and hyphens
-      value = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-    }
-    onChange({ ...formData, [field]: value });
+    setFormData({
+      ...formData,
+      [field]: value,
+    });
   };
 
-  // Handle keydown event to trigger test connection on Enter
+  // Handle enter key to submit form
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !testing) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      testHostConnection();
+      onSubmit();
     }
   };
 
-  // Update the testConnection function to use the API service
+  // Test the connection
   const testHostConnection = async () => {
-    // Throttle requests
-    const now = Date.now();
-    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
-      return;
-    }
-    lastRequestTime.current = now;
+    if (testing) return;
 
+    // Reset status
     setTesting(true);
     setTestError(null);
     setTestSuccess(false);
-    setFingerprint(null);
-    setRequireVerification(false);
-    setFingerprintVerified(false);
-
-    // Set initial failed state (red)
-    setTestStatus('error');
-
-    // Small delay to show the red state
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    setShowFingerprint(false);
 
     try {
-      const data = await testConnection({
-        type: formData.type,
+      // Create a test host object
+      const testHost = {
+        name: formData.name || 'Test Connection',
+        type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port),
-        username: formData.username,
+        user: formData.username,
         password: formData.password,
-      });
+      };
 
-      if (data.requireVerification) {
-        setRequireVerification(true);
-        setFingerprint(data.fingerprint || null);
-        setTestError(data.message || null);
-      } else if (data.success) {
+      // Test the connection - this will be replaced by testConnection from the context
+      const result = await testConnection(testHost);
+
+      if (result.success) {
         setTestSuccess(true);
-        setTestStatus('success');
-        if (data.fingerprint) {
-          setFingerprint(data.fingerprint);
-          setFingerprintVerified(data.fingerprintVerified || false);
-        }
-        if (onTestSuccess) {
-          onTestSuccess();
-        }
+        setTestError(null);
+      } else if (result.fingerprint) {
+        // Show fingerprint confirmation
+        setShowFingerprint(true);
+        setFingerprintData({
+          hostname: formData.ip,
+          fingerprint: result.fingerprint,
+        });
       } else {
-        setTestError(data.message || null);
-        setTestStatus('error');
+        setTestError(result.error || 'Connection failed');
       }
-    } catch (error) {
-      setTestError(error instanceof Error ? error.message : 'Failed to test connection');
-      setTestStatus('error');
-      console.error('Error testing connection:', error);
+    } catch (error: any) {
+      setTestError(error.message || 'An unexpected error occurred');
     } finally {
       setTesting(false);
     }
   };
 
-  // Update verifyFingerprint to use the API service
+  // Verify host fingerprint
   const verifyHostFingerprint = async () => {
-    const now = Date.now();
-    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
-      return;
-    }
-    lastRequestTime.current = now;
+    if (!fingerprintData) return;
 
     setTesting(true);
-    setTestError(null);
-
     try {
-      if (!fingerprint) {
-        setTestError('Fingerprint is required');
-        return;
-      }
-
-      setVerifyingFingerprint(true);
-      const data = await verifyFingerprintAction({
-        fingerprint: fingerprint,
-        host: formData.ip,
-        port: parseInt(formData.port),
+      const result = await verifyFingerprintAction({
+        host: fingerprintData.hostname,
+        fingerprint: fingerprintData.fingerprint,
+        tenant_id: tenant,
       });
 
-      if (data.success) {
+      if (result.success) {
+        setShowFingerprint(false);
         setTestSuccess(true);
-        setFingerprintVerified(true);
-        setRequireVerification(false);
-        if (onTestSuccess) {
-          onTestSuccess();
-        }
       } else {
-        setTestError(data.message || null);
+        setTestError(result.error || 'Failed to verify fingerprint');
+        setShowFingerprint(false);
       }
-    } catch (error) {
-      setTestError(error instanceof Error ? error.message : 'Failed to verify fingerprint');
-      console.error('Error verifying fingerprint:', error);
+    } catch (error: any) {
+      setTestError(error.message || 'An unexpected error occurred');
+      setShowFingerprint(false);
     } finally {
       setTesting(false);
     }
   };
 
   return (
-    <div className="space-y-3 py-2">
-      <form onKeyDown={handleKeyDown} onSubmit={(e) => e.preventDefault()}>
-        <div className="grid grid-cols-12 items-center gap-3">
-          <Label htmlFor="name" className="text-right col-span-2">
-            {t('form.name')}
-          </Label>
-          <div className="col-span-10 space-y-1">
-            <Input
-              id="name"
-              placeholder={t('form.namePlaceholder')}
-              value={formData.name}
-              onChange={(e) => handleInputChange('name', e.target.value)}
-              className="w-full"
-            />
-            <p className="text-xs text-muted-foreground">{t('form.nameHint')}</p>
-          </div>
+    <div className="grid gap-6">
+      <div className="grid gap-3">
+        <div className="grid gap-2">
+          <Label htmlFor="name">{t('name')}</Label>
+          <Input
+            id="name"
+            placeholder="My Host"
+            value={formData.name}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
         </div>
-
-        <div className="grid grid-cols-12 items-center gap-3 mt-3">
-          <Label htmlFor="type" className="text-right col-span-2 whitespace-nowrap">
-            {t('form.connection')}
-          </Label>
-          <div className="col-span-10">
-            <Select value={formData.type} onValueChange={handleTypeChange}>
-              <SelectTrigger>
-                <SelectValue placeholder={t('form.selectType')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ssh">{t('ssh')}</SelectItem>
-                <SelectItem value="docker">{t('docker')}</SelectItem>
-                <SelectItem value="portainer">{t('portainer')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="description">{t('description')}</Label>
+          <Textarea
+            id="description"
+            placeholder="Description of this host"
+            value={formData.description}
+            onChange={(e) => handleInputChange('description', e.target.value)}
+            className="h-20"
+          />
         </div>
-
-        <div className="grid grid-cols-12 items-center gap-3 mt-3">
-          <Label htmlFor="ip" className="text-right col-span-2 whitespace-nowrap">
-            {t('form.ipAddress')}
-          </Label>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="type">{t('connectionType')}</Label>
+          <Select
+            value={connectionType}
+            onValueChange={handleTypeChange}
+          >
+            <SelectTrigger id="type">
+              <SelectValue placeholder="Select connection type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ssh">SSH</SelectItem>
+              <SelectItem value="docker">Docker</SelectItem>
+              <SelectItem value="portainer">Portainer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="grid gap-2">
+          <Label htmlFor="ip">{t('ipAddress')}</Label>
           <Input
             id="ip"
-            placeholder={t('form.ipAddress')}
+            placeholder="192.168.1.1"
             value={formData.ip}
             onChange={(e) => handleInputChange('ip', e.target.value)}
-            className="col-span-7"
-          />
-          <Label htmlFor="port" className="text-right whitespace-nowrap col-span-1">
-            {t('form.port')}
-          </Label>
-          <Input
-            id="port"
-            placeholder={t('form.port')}
-            value={formData.port}
-            onChange={(e) => handleInputChange('port', e.target.value)}
-            className="col-span-2"
+            onKeyDown={handleKeyDown}
           />
         </div>
-
+        
+        <div className="grid gap-2">
+          <Label htmlFor="port">{t('port')}</Label>
+          <Input
+            id="port"
+            placeholder={connectionType === 'ssh' ? '22' : connectionType === 'docker' ? '2375' : '9000'}
+            value={formData.port}
+            onChange={(e) => handleInputChange('port', e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+        </div>
+        
         {connectionType === 'ssh' && (
           <>
-            <div className="grid grid-cols-12 items-center gap-3 mt-3">
-              <Label htmlFor="username" className="text-right col-span-2 whitespace-nowrap">
-                {t('form.username')}
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="username">{t('username')}</Label>
               <Input
                 id="username"
-                placeholder={t('form.username')}
+                placeholder="root"
                 value={formData.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
-                className="col-span-10"
+                onKeyDown={handleKeyDown}
               />
             </div>
-            <div className="grid grid-cols-12 items-center gap-3 mt-3">
-              <Label htmlFor="password" className="text-right col-span-2 whitespace-nowrap">
-                {t('form.password')}
-              </Label>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="password">{t('password')}</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder={t('form.password')}
+                placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className="col-span-10"
+                onKeyDown={handleKeyDown}
               />
             </div>
           </>
         )}
-
-        <div className="grid grid-cols-12 items-center gap-3 mt-3">
-          <Label htmlFor="description" className="text-right col-span-2">
-            Description
-          </Label>
-          <Textarea
-            id="description"
-            placeholder="Description (optional)"
-            value={formData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
-            className="col-span-10 h-16"
-          />
-        </div>
-
-        <div className="flex justify-end space-x-2 mt-4">
-          <Button variant="outline" onClick={testHostConnection} disabled={testing} type="button">
-            {testing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                {t('testing')}
-              </>
-            ) : (
-              <>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {t('testConnection')}
-              </>
-            )}
-          </Button>
-
-          {onSave && (
-            <Button onClick={onSave} disabled={testing || isSaving} type="button">
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  {t('saving')}
-                </>
-              ) : (
-                t('save')
-              )}
-            </Button>
-          )}
-        </div>
-      </form>
-
-      {requireVerification && fingerprint && (
-        <Alert className="mt-4">
-          <AlertTitle className="flex items-center">
-            <ShieldAlert className="h-4 w-4 mr-2" />
-            Host Key Verification Failed
-          </AlertTitle>
-          <AlertDescription className="mt-2">
-            <p className="text-sm text-muted-foreground">
-              The authenticity of host &apos;{formData.ip}&apos; can&apos;t be established.
-            </p>
-            <p className="mb-2">
-              Fingerprint: <code className="bg-muted p-1 rounded">{fingerprint}</code>
-            </p>
-            <p className="mb-4">Are you sure you want to continue connecting?</p>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={verifyHostFingerprint}
-                disabled={testing}
-              >
-                {testing ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Check className="h-4 w-4 mr-2" />
-                )}
-                Yes, trust this host
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setRequireVerification(false)}>
-                <X className="h-4 w-4 mr-2" />
-                No, cancel
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {testError && !requireVerification && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertTitle className="flex items-center">
-            <AlertCircle className="h-4 w-4 mr-2" />
-            Connection Failed
-          </AlertTitle>
-          <AlertDescription>{testError}</AlertDescription>
-        </Alert>
-      )}
-
-      {testSuccess && (
-        <Alert className="mt-4" variant="success">
-          <AlertTitle className="flex items-center">
-            <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
-            Connection Successful
-          </AlertTitle>
-          <AlertDescription>
-            <p>Successfully connected to the remote host</p>
-            {fingerprint && (
-              <p className="mt-2">
-                <span className="font-medium">Host fingerprint:</span>{' '}
-                <code className="bg-muted p-1 rounded">{fingerprint}</code>{' '}
-                {fingerprintVerified && (
-                  <Badge variant="outline" className="ml-2">
-                    Verified
-                  </Badge>
-                )}
+        
+        {testError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t('connectionFailed')}</AlertTitle>
+            <AlertDescription className="mt-2 text-sm whitespace-pre-wrap">
+              {testError}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {testSuccess && (
+          <Alert className="border-green-500 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            <AlertTitle className="text-green-800">{t('connectionSuccessful')}</AlertTitle>
+            <AlertDescription className="text-green-700">
+              {t('readyToConnect')}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {showFingerprint && fingerprintData && (
+          <Alert className="border-yellow-500 bg-yellow-50">
+            <ShieldAlert className="h-4 w-4 text-yellow-500" />
+            <AlertTitle className="text-yellow-800">{t('verifyFingerprint')}</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              <p className="mb-2">
+                {t('hostKeyChanged', { hostname: fingerprintData.hostname })}
               </p>
-            )}
-          </AlertDescription>
-        </Alert>
-      )}
+              <div className="bg-yellow-100 p-2 rounded-md font-mono text-xs mb-2">
+                {fingerprintData.fingerprint}
+              </div>
+              <div className="flex space-x-2 mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={verifyHostFingerprint}
+                  disabled={testing}
+                  className="text-green-700 border-green-300 hover:text-green-800 hover:bg-green-50"
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  {t('accept')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFingerprint(false)}
+                  disabled={testing}
+                  className="text-red-700 border-red-300 hover:text-red-800 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  {t('reject')}
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+      
+      <div className="flex justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={testHostConnection}
+          disabled={!formData.ip || testing || isSaving}
+        >
+          {testing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {t('testing')}
+            </>
+          ) : (
+            t('testConnection')
+          )}
+        </Button>
+        
+        <Button 
+          type="button" 
+          onClick={onSubmit} 
+          disabled={!formData.name || !formData.ip || isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {t('saving')}
+            </>
+          ) : (
+            t('save')
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

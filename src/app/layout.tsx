@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
 import { ThemeProviders, SWRProvider } from '@/components/providers';
 import { cookies } from 'next/headers';
+import { AppProvider } from '@/context';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -50,23 +51,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   
                   // Fallback to ensure sidebar is always visible
                   setTimeout(function() {
-                    var sidebar = document.querySelector('.sidebar-visible');
-                    if (sidebar) {
-                      sidebar.classList.add('sidebar-ready');
-                      sidebar.style.opacity = '0.999';
+                    if (!document.documentElement.classList.contains('hydrated')) {
+                      document.documentElement.classList.add('hydrated');
                     }
-                  }, 100);
-                  
-                  // Final safeguard - force sidebar visibility after 500ms
-                  setTimeout(function() {
-                    var sidebar = document.querySelector('.sidebar-visible');
-                    if (sidebar) {
-                      sidebar.classList.add('sidebar-ready');
-                      sidebar.style.opacity = '0.999';
-                      sidebar.style.visibility = 'visible';
-                      sidebar.style.display = 'block';
-                    }
-                  }, 500);
+                  }, 1000);
                 });
               })();
             `,
@@ -75,7 +63,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <ThemeProviders defaultTheme={theme}>
-          <SWRProvider>{children}</SWRProvider>
+          <SWRProvider>
+            <AppProvider>
+              {children}
+            </AppProvider>
+          </SWRProvider>
         </ThemeProviders>
       </body>
     </html>

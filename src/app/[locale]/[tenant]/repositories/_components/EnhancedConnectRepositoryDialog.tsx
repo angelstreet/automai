@@ -7,6 +7,7 @@ import {
   ArrowRight,
   RefreshCw
 } from 'lucide-react';
+import { useRepository } from '@/context';
 import { 
   Dialog, 
   DialogContent, 
@@ -53,6 +54,13 @@ export function EnhancedConnectRepositoryDialog({
   const [serverUrl, setServerUrl] = useState('');
   const { toast } = useToast();
   
+  // Use the repository context
+  const {
+    createGitProvider,
+    createRepository,
+    verifyRepositoryUrl
+  } = useRepository();
+  
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
   };
@@ -63,25 +71,12 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
     
     try {
-      // Call API to initiate OAuth flow
-      const response = await fetch('/api/git-providers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: currentProvider,
-          displayName: `My ${currentProvider === 'github' ? 'GitHub' : 'GitLab'} Account`,
-          method: 'oauth'
-        }),
+      // Call API to initiate OAuth flow using the context
+      const result = await createGitProvider({
+        type: currentProvider,
+        displayName: `My ${currentProvider === 'github' ? 'GitHub' : 'GitLab'} Account`,
+        method: 'oauth'
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to initiate OAuth connection');
-      }
-      
-      const result = await response.json();
       
       // If we have an authUrl, redirect the user to it
       if (result.success && result.authUrl) {
@@ -112,37 +107,28 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
     
     try {
-      // Call API to connect with token
-      const response = await fetch('/api/git-providers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: currentProvider,
-          displayName: `${currentProvider === 'github' ? 'GitHub' : currentProvider === 'gitlab' ? 'GitLab' : 'Gitea'} Account`,
-          method: 'token',
-          token: accessToken,
-          serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
-        }),
+      // Call API to connect with token using the context
+      const result = await createGitProvider({
+        type: currentProvider,
+        displayName: `${currentProvider === 'github' ? 'GitHub' : currentProvider === 'gitlab' ? 'GitLab' : 'Gitea'} Account`,
+        method: 'token',
+        token: accessToken,
+        serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to connect with token');
-      }
-      
       // Completed successfully
-      if (onSubmit) {
-        onSubmit({
-          type: currentProvider as any,
-          method: 'token',
-          displayName: `${currentProvider === 'github' ? 'GitHub' : currentProvider === 'gitlab' ? 'GitLab' : 'Gitea'} Account`,
-          accessToken,
-          serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
-        });
+      if (result.success) {
+        if (onSubmit) {
+          onSubmit({
+            type: currentProvider as any,
+            method: 'token',
+            displayName: `${currentProvider === 'github' ? 'GitHub' : currentProvider === 'gitlab' ? 'GitLab' : 'Gitea'} Account`,
+            accessToken,
+            serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
+          });
+        }
+        onOpenChange(false);
       }
-      onOpenChange(false);
     } catch (error) {
       console.error('Error connecting with token:', error);
       // Display error to user
@@ -174,44 +160,22 @@ export function EnhancedConnectRepositoryDialog({
     setIsCloning(true);
     
     try {
-      // Verify if the repository exists before attempting to clone it
-      const verifyResponse = await fetch('/api/repositories/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: quickCloneUrl,
-        }),
-      });
+      // Verify if the repository exists before attempting to clone it using the context
+      const verifyResult = await verifyRepositoryUrl(quickCloneUrl);
       
-      const verifyData = await verifyResponse.json();
-      
-      if (!verifyResponse.ok || !verifyData.exists) {
-        throw new Error(verifyData.error || 'Repository not found. Please check the URL and try again.');
+      if (!verifyResult.exists) {
+        throw new Error(verifyResult.error || 'Repository not found. Please check the URL and try again.');
       }
       
-      // Call API to create repository from URL
-      const response = await fetch('/api/repositories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          quickClone: true,
-          url: quickCloneUrl,
-          isPrivate: false,
-          description: `Imported from ${quickCloneUrl}`
-        }),
+      // Call API to create repository from URL using the context
+      const result = await createRepository({
+        quickClone: true,
+        url: quickCloneUrl,
+        isPrivate: false,
+        description: `Imported from ${quickCloneUrl}`
       });
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to clone repository');
-      }
-      
-      if (data.success) {
+      if (result.success) {
         // Repository appears in the list, so no need for success toast
         
         if (onSubmit) {

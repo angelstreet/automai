@@ -1,0 +1,253 @@
+# Testing Standards
+
+## AI Guidelines
+Implement comprehensive testing with a focus on unit tests for functions, integration tests for components, and end-to-end tests for critical flows. Structure tests logically with arrange-act-assert pattern, use clear error messages, and leverage mocking appropriately. Maintain test hygiene and follow consistent naming conventions.
+
+## Key Patterns
+
+### Test Organization
+- **Test Location**: Co-locate tests with source files
+  - Source: `src/features/auth/login.ts`
+  - Tests: `src/features/auth/login.test.ts`
+- **Test Structure**: Arrange-Act-Assert pattern
+- **Test Grouping**: Use `describe` blocks to group related tests
+- **Test Coverage**: Aim for 80%+ coverage of business logic
+
+### Unit Testing
+- **Function Testing**: Test each function's:
+  - Normal operation with valid inputs
+  - Edge cases and boundary conditions
+  - Error handling with invalid inputs
+- **Pure Functions**: Fully test all paths
+- **Assertions**: Use specific assertions with clear error messages
+- **Mocking**: Mock external dependencies for isolation
+
+### Component Testing
+- **Rendering Tests**: Verify component renders properly
+- **Interaction Tests**: Test click handlers and user interactions
+- **Props Testing**: Test component behavior with different props
+- **State Tests**: Verify state updates correctly
+
+### Integration Testing
+- **Component Integration**: Test component interactions
+- **API Integration**: Test server actions with mock data
+- **Form Submission**: Test complete form submission flows
+- **Authentication Flow**: Test complete auth flows
+
+### End-to-End Testing
+- **Critical User Journeys**: Test complete user workflows
+- **Real API Calls**: Use test database, not mocks
+- **UI Verification**: Verify UI elements and interactions
+
+## Examples
+
+### Unit Test Example
+
+```typescript
+// Function to test
+function calculateTotal(items: CartItem[], discount: number = 0): number {
+  if (!items || items.length === 0) return 0;
+  if (discount < 0 || discount > 100) throw new Error('Invalid discount percentage');
+  
+  const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  return subtotal * (1 - discount/100);
+}
+
+// Unit test
+describe('calculateTotal', () => {
+  // Test normal operation
+  it('calculates total correctly without discount', () => {
+    // Arrange
+    const items = [
+      { id: '1', name: 'Item 1', price: 10, quantity: 2 },
+      { id: '2', name: 'Item 2', price: 15, quantity: 1 }
+    ];
+    
+    // Act
+    const result = calculateTotal(items);
+    
+    // Assert
+    expect(result).toBe(35);
+  });
+
+  // Test with discount
+  it('applies discount correctly', () => {
+    const items = [
+      { id: '1', name: 'Item 1', price: 100, quantity: 1 }
+    ];
+    
+    const result = calculateTotal(items, 20);
+    
+    expect(result).toBe(80);
+  });
+  
+  // Test edge cases
+  it('returns 0 for empty cart', () => {
+    expect(calculateTotal([])).toBe(0);
+  });
+  
+  it('returns 0 when items is null', () => {
+    expect(calculateTotal(null as any)).toBe(0);
+  });
+  
+  // Test error handling
+  it('throws error for invalid discount', () => {
+    const items = [{ id: '1', name: 'Item 1', price: 10, quantity: 1 }];
+    
+    expect(() => calculateTotal(items, 101)).toThrow('Invalid discount percentage');
+    expect(() => calculateTotal(items, -5)).toThrow('Invalid discount percentage');
+  });
+});
+```
+
+### Component Test Example
+
+```typescript
+// Component to test
+function UserGreeting({ user, onLogout }: UserGreetingProps) {
+  return (
+    <div className="greeting">
+      <h2>Welcome, {user.name}!</h2>
+      <span>Role: {user.role}</span>
+      <button onClick={onLogout}>Log Out</button>
+    </div>
+  );
+}
+
+// Component test
+import { render, screen, fireEvent } from '@testing-library/react';
+import { UserGreeting } from './UserGreeting';
+
+describe('UserGreeting', () => {
+  const mockUser = {
+    id: '123',
+    name: 'John Doe',
+    role: 'admin'
+  };
+  
+  const mockLogout = jest.fn();
+  
+  beforeEach(() => {
+    mockLogout.mockClear();
+  });
+  
+  it('renders user name correctly', () => {
+    render(<UserGreeting user={mockUser} onLogout={mockLogout} />);
+    
+    expect(screen.getByText('Welcome, John Doe!')).toBeInTheDocument();
+  });
+  
+  it('displays user role', () => {
+    render(<UserGreeting user={mockUser} onLogout={mockLogout} />);
+    
+    expect(screen.getByText('Role: admin')).toBeInTheDocument();
+  });
+  
+  it('calls logout handler when button is clicked', () => {
+    render(<UserGreeting user={mockUser} onLogout={mockLogout} />);
+    
+    fireEvent.click(screen.getByText('Log Out'));
+    
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+### Integration Test Example
+
+```typescript
+// Integration test for a form component with submission
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { AuthForm } from './AuthForm';
+import { loginUser } from '@/app/actions/auth';
+
+// Mock the server action
+jest.mock('@/app/actions/auth', () => ({
+  loginUser: jest.fn()
+}));
+
+describe('AuthForm Integration', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  
+  it('submits form with user credentials', async () => {
+    // Mock the server action response
+    (loginUser as jest.Mock).mockResolvedValue({
+      success: true,
+      data: { id: '123', name: 'John' }
+    });
+    
+    // Render the component
+    render(<AuthForm />);
+    
+    // Fill out the form
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'test@example.com' }
+    });
+    
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'password123' }
+    });
+    
+    // Submit the form
+    fireEvent.click(screen.getByRole('button', { name: 'Log In' }));
+    
+    // Verify server action was called with correct data
+    expect(loginUser).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'password123'
+    });
+    
+    // Verify success message appears
+    await waitFor(() => {
+      expect(screen.getByText('Login successful')).toBeInTheDocument();
+    });
+  });
+  
+  it('displays error message on failed login', async () => {
+    // Mock error response
+    (loginUser as jest.Mock).mockResolvedValue({
+      success: false,
+      error: 'Invalid credentials'
+    });
+    
+    // Render component
+    render(<AuthForm />);
+    
+    // Fill form
+    fireEvent.change(screen.getByLabelText('Email'), {
+      target: { value: 'test@example.com' }
+    });
+    
+    fireEvent.change(screen.getByLabelText('Password'), {
+      target: { value: 'wrong' }
+    });
+    
+    // Submit
+    fireEvent.click(screen.getByRole('button', { name: 'Log In' }));
+    
+    // Verify error message
+    await waitFor(() => {
+      expect(screen.getByText('Invalid credentials')).toBeInTheDocument();
+    });
+  });
+});
+```
+
+## Test Best Practices
+
+1. **Test Naming**: Use descriptive names (`it('calculates total with tax'`)
+2. **Test Independence**: Each test should run independently
+3. **Test Speed**: Keep tests fast and optimized
+4. **Test Reliability**: Avoid flaky tests with timeouts or race conditions
+5. **Test Readability**: Keep test code clean and easy to understand
+6. **Snapshot Testing**: Use sparingly for UI components
+7. **Code Coverage**: Track but don't obsess over coverage metrics
+8. **Mocking Strategy**: Mock external dependencies, not internal functions
+
+## Related Rules
+- code-quality.mdc - Code quality standards
+- api-design.mdc - API implementation
+- ui-components.mdc - Component design
+- ui-state.mdc - State management 

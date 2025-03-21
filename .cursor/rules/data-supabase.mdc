@@ -1,0 +1,124 @@
+# Supabase Database Guidelines
+
+## AI Guidelines
+Organize database operations in feature-specific modules following the three-layer architecture. Use consistent response formats, implement proper error handling, and follow tenant isolation principles. Always map database types to UI types.
+
+## Key Patterns
+
+### DB Layer Organization
+- **Core DB Module**: `/src/lib/supabase/db.ts` - Legacy DB interface
+- **Feature-Specific Modules**:
+  - `/src/lib/supabase/db-repositories/` - Repository DB operations
+  - `/src/lib/supabase/db-hosts/` - Host DB operations
+  - `/src/lib/supabase/db-deployment/` - Deployment DB operations
+- **Module Structure**:
+  - `index.ts` - Exports all module functions
+  - Feature-specific files (e.g., `repository.ts`, `git-provider.ts`)
+
+### Response Format
+- **Standard Response**:
+```typescript
+type DbResponse<T> = {
+  success: boolean;
+  data?: T;
+  error?: string;
+};
+```
+- **Success**: Return `{success: true, data: result}`
+- **Error**: Return `{success: false, error: errorMessage}`
+- **Consistent Format**: Maintain this format at all DB layer boundaries
+
+### Type Mapping
+- **Map DB to UI Types**: Create mapper functions to convert between formats
+- **Handle Nulls**: Safely handle null/undefined values in mapping
+- **Type Annotations**: Properly annotate input/output types for functions
+- **Export Types**: Export db-specific types from the module
+
+### Tenant Isolation
+- **Every Query**: Always filter by tenant_id on every database query
+- **Data Creation**: Always include tenant_id when creating data
+- **RLS Policies**: Rely on Row Level Security as backup, not primary control
+- **User Context**: Include user information in appropriate queries
+
+## Examples
+
+```typescript
+// GOOD: Proper organization and response format
+// in /src/lib/supabase/db-hosts/index.ts
+export async function getHosts(tenantId: string, userId: string): Promise<DbResponse<DbHost[]>> {
+  try {
+    const { data, error } = await supabase
+      .from('hosts')
+      .select('*')
+      .eq('tenant_id', tenantId);
+      
+    if (error) return { success: false, error: error.message };
+    return { success: true, data };
+  } catch (err) {
+    return { success: false, error: 'Failed to fetch hosts' };
+  }
+}
+
+// GOOD: Type mapping function
+export function mapDbHostToHost(dbHost: DbHost): Host {
+  return {
+    id: dbHost.id,
+    name: dbHost.name || 'Unnamed Host',
+    ip: dbHost.ip,
+    port: dbHost.port || 22,
+    status: dbHost.status || 'unknown',
+    type: dbHost.type || 'ssh',
+    createdAt: dbHost.created_at ? new Date(dbHost.created_at) : new Date(),
+    updatedAt: dbHost.updated_at ? new Date(dbHost.updated_at) : new Date(),
+  };
+}
+
+// BAD: Missing tenant isolation
+// DON'T DO THIS
+export async function getHosts(): Promise<DbResponse<DbHost[]>> {
+  const { data, error } = await supabase
+    .from('hosts')
+    .select('*');
+    
+  if (error) return { success: false, error: error.message };
+  return { success: true, data };
+}
+
+// BAD: Inconsistent response format
+// DON'T DO THIS
+export async function getHost(id: string) {
+  const { data, error } = await supabase
+    .from('hosts')
+    .select('*')
+    .eq('id', id)
+    .single();
+    
+  if (error) throw new Error(error.message);
+  return data;
+}
+```
+
+### Import Patterns
+
+```typescript
+// 1. Direct import from feature-specific module (PREFERRED)
+import { hostDb } from '@/lib/supabase/db-hosts';
+const result = await hostDb.getHosts(tenantId, userId);
+
+// 2. Via main DB object (LEGACY)
+import db from '@/lib/supabase/db';
+const result = await db.hosts.findMany({ tenantId });
+```
+
+## Database Schema Principles
+- **Tenant Column**: Include tenant_id in all tables
+- **Timestamps**: Include created_at and updated_at in all tables
+- **Soft Delete**: Use deleted_at for soft delete when appropriate
+- **Foreign Keys**: Always create proper foreign key relationships
+- **Indexes**: Create indexes for frequently queried columns
+- **Types**: Use appropriate PostgreSQL types for columns
+
+## Related Rules
+- core-architecture.mdc - Three-layer architecture
+- data-auth.mdc - Authentication patterns
+- data-caching.mdc - Caching strategies 

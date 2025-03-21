@@ -3,9 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { DeploymentData, DeploymentFormData, ScriptParameter, Repository, Host as HostType } from '../types';
-import { useRepositories, useRepositoryScripts } from '../../repositories/hooks';
-import { useHosts } from '../../hosts/hooks';
-import { useDeploymentContext } from '../context';
+import { useRepository, useHost, useDeployment } from '@/context';
 import { Host as SystemHost } from '../../hosts/types';
 import { toast } from '@/components/shadcn/use-toast';
 import DeploymentWizardStep1 from './DeploymentWizardStep1';
@@ -58,30 +56,58 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
   const [showJenkinsView, setShowJenkinsView] = useState(false);
   
-  // Use the repository hook
+  // Use the repository hook from the new context system
   const { 
     repositories, 
     loading: isLoadingRepositories, 
-    error: repositoryError 
-  } = useRepositories();
+    error: repositoryError,
+    fetchRepositoryScripts
+  } = useRepository();
   
-  // Use the repository scripts hook
-  const {
-    scripts: repositoryScripts,
-    isLoading: isLoadingScripts,
-    error: scriptsError
-  } = useRepositoryScripts(deploymentData.repositoryId || undefined, deploymentData.selectedRepository);
+  // State for repository scripts
+  const [repositoryScripts, setRepositoryScripts] = useState<any[]>([]);
+  const [isLoadingScripts, setIsLoadingScripts] = useState(false);
+  const [scriptsError, setScriptsError] = useState<string | null>(null);
 
-  // Use the hosts hook
+  // Use the hosts hook from the new context system
   const { 
     hosts: systemHosts, 
     loading: isLoadingHosts, 
     error: hostsError 
-  } = useHosts();
+  } = useHost();
+  
+  // Use the deployment context from the new context system
+  const {
+    createDeployment
+  } = useDeployment();
   
   // Adapt hosts for deployment
   const availableHosts = adaptHostsForDeployment(systemHosts);
 
+  // Fetch scripts when repositoryId changes
+  useEffect(() => {
+    const loadScripts = async () => {
+      if (!deploymentData.repositoryId) {
+        setRepositoryScripts([]);
+        return;
+      }
+      
+      try {
+        setIsLoadingScripts(true);
+        setScriptsError(null);
+        const scripts = await fetchRepositoryScripts(deploymentData.repositoryId);
+        setRepositoryScripts(scripts);
+      } catch (error) {
+        console.error('Error fetching scripts:', error);
+        setScriptsError('Failed to load scripts');
+      } finally {
+        setIsLoadingScripts(false);
+      }
+    };
+    
+    loadScripts();
+  }, [deploymentData.repositoryId, fetchRepositoryScripts]);
+  
   // Add debug logging for the scripts
   useEffect(() => {
     console.log('Repository scripts:', repositoryScripts);
@@ -254,101 +280,59 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     setStep(prev => prev - 1);
   };
 
-  // Get the deployment creation hook
-  const { createDeployment, loading: isSubmitting } = useDeploymentContext();
-  
   const [isCreating, setIsCreating] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check if the event was triggered by a select all/unselect all button or environment tag
-    const target = e.target as HTMLElement;
-    const isSelectAllButton = target.closest('button')?.textContent?.includes('Select All') || 
-                             target.closest('button')?.textContent?.includes('Unselect All');
-    const isFilterButton = target.closest('button')?.textContent?.includes('Filter');
-    const isEnvironmentTag = target.closest('button')?.textContent?.startsWith('#');
-    
-    if (isSelectAllButton || isFilterButton || isEnvironmentTag) {
-      // Don't proceed with form submission if it was triggered by select all/unselect all or environment tag
-      return;
-    }
-    
-    // Only proceed with form submission if we're on the final step (review)
-    if (step !== 5) {
-      return;
-    }
-    
-    // Reset errors
-    setSubmissionError(null);
     setIsCreating(true);
-    
-    console.log('Deployment data submitted:', deploymentData);
+    setSubmissionError(null);
     
     try {
-      // Create scriptMapping from repositoryScripts array
-      const scriptMapping: Record<string, {path: string; name: string; type: string}> = {};
+      console.log('Submitting form with data:', deploymentData);
       
-      // Populate scriptMapping for each selected script
-      deploymentData.scriptIds.forEach(scriptId => {
-        const script = repositoryScripts.find((s: any) => s.id === scriptId);
-        if (script) {
-          scriptMapping[scriptId] = {
-            path: script.path,
-            name: script.name,
-            type: script.type || 'shell' // Default to shell if type is not specified
-          };
-        }
-      });
-      
-      // Map DeploymentData to DeploymentFormData format expected by the server action
       const formData: DeploymentFormData = {
         name: deploymentData.name,
         description: deploymentData.description,
-        repository: deploymentData.repositoryId, // Note field name change
-        selectedScripts: deploymentData.scriptIds, // Note field name change
-        selectedHosts: deploymentData.hostIds, // Note field name change
+        repositoryId: deploymentData.repositoryId,
+        scriptIds: deploymentData.scriptIds,
+        scriptParameters: deploymentData.scriptParameters,
+        hostIds: deploymentData.hostIds,
         schedule: deploymentData.schedule,
-        scheduledTime: deploymentData.scheduledTime,
-        cronExpression: deploymentData.cronExpression || '',
-        repeatCount: deploymentData.repeatCount || 0,
-        environmentVars: deploymentData.environmentVars,
-        parameters: deploymentData.scriptParameters,
+        ...(deploymentData.schedule === 'scheduled' && { scheduledTime: deploymentData.scheduledTime }),
+        ...(deploymentData.schedule === 'cron' && { cronExpression: deploymentData.cronExpression }),
+        ...(deploymentData.schedule === 'recurring' && { repeatCount: deploymentData.repeatCount }),
+        environmentVars: deploymentData.environmentVars.filter(env => env.key && env.value),
         notifications: deploymentData.notifications,
-        jenkinsConfig: deploymentData.jenkinsConfig || { enabled: false },
-        scriptMapping: scriptMapping // Add the script mapping data
+        jenkinsConfig: deploymentData.jenkinsConfig
       };
       
-      console.log('Calling createDeployment with formData:', formData);
-      
-      // Call the server action through the hook
+      // Submit using the context's create deployment function
       const result = await createDeployment(formData);
       
       if (result.success) {
-        console.log('Deployment created successfully with ID:', result.deploymentId);
         toast({
-          title: 'Success',
-          description: 'Deployment created successfully!',
-          variant: 'default'
+          title: "Deployment created",
+          description: "Your deployment has been created successfully.",
+          variant: "success"
         });
+        
+        // Navigate to the deployment details
         onComplete();
       } else {
-        console.error('Failed to create deployment:', result.error);
         setSubmissionError(result.error || 'Failed to create deployment');
         toast({
-          title: 'Error',
-          description: result.error || 'Failed to create deployment',
-          variant: 'destructive'
+          title: "Error creating deployment",
+          description: result.error || "Something went wrong while creating your deployment.",
+          variant: "destructive"
         });
       }
     } catch (error: any) {
-      console.error('Error creating deployment:', error);
-      setSubmissionError(error.message || 'An unexpected error occurred');
+      setSubmissionError(error.message || 'Failed to create deployment');
       toast({
-        title: 'Error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive'
+        title: "Error creating deployment",
+        description: error.message || "Something went wrong while creating your deployment.",
+        variant: "destructive"
       });
     } finally {
       setIsCreating(false);
@@ -529,7 +513,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
               }));
             }}
             onPrevStep={handlePrevStep}
-            isSubmitting={isCreating || isSubmitting}
+            isSubmitting={isCreating}
           />
         )}
       </form>

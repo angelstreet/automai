@@ -9,7 +9,7 @@ import {
   MoreHorizontal,
   Trash
 } from 'lucide-react';
-import { useDeployments } from '../context';
+import { useDeployment } from '@/context';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
@@ -40,7 +40,7 @@ interface DeploymentListProps {
 const DeploymentList: React.FC<DeploymentListProps> = ({ 
   onViewDeployment 
 }) => {
-  const { deployments, loading, error, fetchDeployments, isRefreshing, fetchRepositories } = useDeployments();
+  const { deployments, loading, error, fetchDeployments, isRefreshing, fetchRepositories } = useDeployment();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [repositories, setRepositories] = useState<Record<string, Repository>>({});

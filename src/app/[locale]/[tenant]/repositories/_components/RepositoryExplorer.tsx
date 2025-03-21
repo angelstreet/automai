@@ -5,6 +5,7 @@ import {
   Settings, Terminal, FileCode, Folder, Star, GitFork, Eye, 
   ChevronRight, ChevronDown, Download, History, PlusCircle
 } from 'lucide-react';
+import { useRepository } from '@/context';
 
 import {
   Card,

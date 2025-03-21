@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { PlayCircle } from 'lucide-react';
 import { Button } from '@/components/shadcn/button';
 import { toast } from '@/components/shadcn/use-toast';
-import { runDeploymentAction } from '../actions';
+import { useDeployment } from '@/context';
 
 interface DeploymentRunActionProps {
   deploymentId: string;
@@ -14,11 +14,12 @@ export const DeploymentRunAction: React.FC<DeploymentRunActionProps> = ({
   deploymentId 
 }) => {
   const [isRunning, setIsRunning] = useState(false);
+  const { runDeployment } = useDeployment();
   
   const handleRun = async () => {
     setIsRunning(true);
     try {
-      const result = await runDeploymentAction(deploymentId);
+      const result = await runDeployment(deploymentId);
       
       if (result.success) {
         toast({

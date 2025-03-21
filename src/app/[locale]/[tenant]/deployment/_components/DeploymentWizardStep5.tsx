@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Host as HostType, ScriptParameter, CICDProvider, CICDJob } from '../types';
 import CustomSwitch from './CustomSwitch';
-import { useCICDProviders, useCICDJobs, useCICDJobDetails } from '../hooks';
+import { useCICD } from '@/context';
 
 interface DeploymentWizardStep5Props {
   showJenkinsView: boolean;
@@ -46,26 +46,95 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   onPrevStep,
   isSubmitting = false,
 }) => {
+  // Use the CICD context from the new context system
+  const {
+    fetchCICDProviders,
+    fetchCICDJobs,
+    fetchCICDJobDetails
+  } = useCICD();
+  
+  // State for providers, jobs, and job details
+  const [providers, setProviders] = useState<CICDProvider[]>([]);
+  const [isLoadingProviders, setIsLoadingProviders] = useState(false);
+  const [providersError, setProvidersError] = useState<string | null>(null);
+  
+  const [jobs, setJobs] = useState<CICDJob[]>([]);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+  
+  const [jobDetails, setJobDetails] = useState<any>(null);
+  const [isLoadingJobDetails, setIsLoadingJobDetails] = useState(false);
+  const [jobDetailsError, setJobDetailsError] = useState<string | null>(null);
+  
   // Fetch CI/CD providers
-  const { 
-    providers, 
-    isLoading: isLoadingProviders,
-    error: providersError
-  } = useCICDProviders();
+  useEffect(() => {
+    const loadProviders = async () => {
+      try {
+        setIsLoadingProviders(true);
+        setProvidersError(null);
+        const result = await fetchCICDProviders();
+        setProviders(result.providers || []);
+        if (result.error) setProvidersError(result.error);
+      } catch (err: any) {
+        setProvidersError(err.message || 'Failed to fetch CI/CD providers');
+        console.error('Error fetching CI/CD providers:', err);
+      } finally {
+        setIsLoadingProviders(false);
+      }
+    };
+    
+    loadProviders();
+  }, [fetchCICDProviders]);
   
   // Fetch CI/CD jobs when a provider is selected
-  const {
-    jobs,
-    isLoading: isLoadingJobs,
-    error: jobsError
-  } = useCICDJobs(jenkinsConfig.providerId);
+  useEffect(() => {
+    const loadJobs = async () => {
+      if (!jenkinsConfig.providerId) {
+        setJobs([]);
+        return;
+      }
+      
+      try {
+        setIsLoadingJobs(true);
+        setJobsError(null);
+        const result = await fetchCICDJobs(jenkinsConfig.providerId);
+        setJobs(result.jobs || []);
+        if (result.error) setJobsError(result.error);
+      } catch (err: any) {
+        setJobsError(err.message || 'Failed to fetch CI/CD jobs');
+        console.error('Error fetching CI/CD jobs:', err);
+      } finally {
+        setIsLoadingJobs(false);
+      }
+    };
+    
+    loadJobs();
+  }, [jenkinsConfig.providerId, fetchCICDJobs]);
   
   // Fetch job details when a job is selected
-  const {
-    jobDetails,
-    isLoading: isLoadingJobDetails,
-    error: jobDetailsError
-  } = useCICDJobDetails(jenkinsConfig.providerId, jenkinsConfig.jobId);
+  useEffect(() => {
+    const loadJobDetails = async () => {
+      if (!jenkinsConfig.providerId || !jenkinsConfig.jobId) {
+        setJobDetails(null);
+        return;
+      }
+      
+      try {
+        setIsLoadingJobDetails(true);
+        setJobDetailsError(null);
+        const result = await fetchCICDJobDetails(jenkinsConfig.providerId, jenkinsConfig.jobId);
+        setJobDetails(result.jobDetails || null);
+        if (result.error) setJobDetailsError(result.error);
+      } catch (err: any) {
+        setJobDetailsError(err.message || 'Failed to fetch job details');
+        console.error('Error fetching job details:', err);
+      } finally {
+        setIsLoadingJobDetails(false);
+      }
+    };
+    
+    loadJobDetails();
+  }, [jenkinsConfig.providerId, jenkinsConfig.jobId, fetchCICDJobDetails]);
   
   // Extract job and parameters from job details
   const job = jobDetails?.job;

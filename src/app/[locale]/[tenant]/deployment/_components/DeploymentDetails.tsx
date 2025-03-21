@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, RefreshCw, Terminal, Files, ChartBar, StopCircle, X } from 'lucide-react';
-import { useDeploymentDetails } from '../context';
+import { useDeployment } from '@/context';
 import StatusBadge from './StatusBadge';
 import { calculateDuration, formatDate } from '../utils';
-import { DeploymentScript, DeploymentHost } from '../types';
+import { DeploymentScript, DeploymentHost, Deployment } from '../types';
 
 interface DeploymentDetailsProps {
   deploymentId: string;
@@ -17,17 +17,35 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
   onBack
 }) => {
   const { 
-    deployment, 
-    loading, 
-    isRefreshing, 
+    deployments,
+    loading,
+    isRefreshing,
+    fetchDeploymentById,
     refreshDeployment,
     abortDeployment
-  } = useDeploymentDetails(deploymentId);
+  } = useDeployment();
   
+  const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedScript, setSelectedScript] = useState<DeploymentScript | null>(null);
 
-  if (loading) {
+  useEffect(() => {
+    const loadDeployment = async () => {
+      const deploymentData = await fetchDeploymentById(deploymentId);
+      setDeployment(deploymentData);
+    };
+    
+    loadDeployment();
+  }, [deploymentId, fetchDeploymentById]);
+
+  const handleRefresh = async () => {
+    const result = await refreshDeployment(deploymentId);
+    if (result.success && result.deployment) {
+      setDeployment(result.deployment);
+    }
+  };
+
+  if (loading && !deployment) {
     return (
       <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 flex justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -56,13 +74,9 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
     );
   }
 
-  const handleRefresh = () => {
-    refreshDeployment();
-  };
-
   const handleStopDeployment = async () => {
     if (window.confirm('Are you sure you want to stop this deployment? This action cannot be undone.')) {
-      await abortDeployment();
+      await abortDeployment(deploymentId);
     }
   };
 

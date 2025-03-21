@@ -1,0 +1,412 @@
+# Feature-Specific Guidelines
+
+## AI Guidelines
+Implement features consistently following domain-specific patterns. For hosts, focus on connection management and terminal integration; for repositories, implement Git provider integrations; for deployments, create proper workflow management. Follow feature-specific UI patterns, data structures, and interaction models while maintaining core architecture principles.
+
+## Key Patterns
+
+### Host Management
+- **Connection Types**: Support SSH, Docker, and Portainer connections
+- **Connection Testing**: Always include connection testing functionality
+- **Terminal Integration**: Use xterm.js for SSH terminal emulation
+- **Status Tracking**: Implement real-time connection status updates
+- **Credential Management**: Securely store and manage host credentials
+- **Host Groups**: Support organizing hosts into logical groups
+
+### Repository Management
+- **Git Providers**: Support GitHub, GitLab, and Gitea integrations
+- **Repository Explorer**: Implement file tree navigation pattern
+- **Branch/Tag Selection**: Use dropdown-based branch selection
+- **Synchronization**: Provide clear sync status and refresh mechanism
+- **Access Management**: Implement repository-level permissions
+- **Webhooks**: Support webhook configuration for automation
+
+### Deployment Management
+- **Deployment Flow**: Implement wizard-based deployment creation
+- **Pipeline Visualization**: Show deployment steps with status indicators
+- **Log Streaming**: Real-time log streaming during deployment
+- **Environment Variables**: Support for environment-specific configurations
+- **Rollback Support**: Enable version rollback functionality
+- **Scheduling**: Support one-time and recurring deployments
+
+### User Management
+- **Role-Based Access**: Implement RBAC across the application
+- **Team Management**: Support for organizing users into teams
+- **Access Logs**: Track authentication and access events
+- **Profile Management**: Self-service profile and preference updates
+- **Invitation System**: Email-based user invitation workflow
+- **SSO Integration**: Support for external identity providers
+
+## Examples
+
+### Host Connection Implementation
+
+```typescript
+// In /src/app/[locale]/[tenant]/hosts/_components/HostConnection.tsx
+'use client';
+
+import { useState } from 'react';
+import { useHost } from '@/context/host';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { XTerminal } from '@/components/terminal/XTerminal';
+import { ConnectionStatus } from './ConnectionStatus';
+
+interface HostConnectionProps {
+  hostId: string;
+}
+
+export function HostConnection({ hostId }: HostConnectionProps) {
+  const { hosts, connectToHost, disconnectFromHost } = useHost();
+  const [terminalVisible, setTerminalVisible] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const host = hosts.find(h => h.id === hostId);
+  if (!host) return <div>Host not found</div>;
+  
+  const handleConnect = async () => {
+    setError(null);
+    const result = await connectToHost(hostId);
+    
+    if (result.success) {
+      setTerminalVisible(true);
+    } else {
+      setError(result.error);
+    }
+  };
+  
+  const handleDisconnect = async () => {
+    await disconnectFromHost(hostId);
+    setTerminalVisible(false);
+  };
+  
+  return (
+    <div className="host-connection">
+      <div className="connection-header">
+        <h3>{host.name}</h3>
+        <ConnectionStatus status={host.status} />
+      </div>
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      <div className="connection-actions">
+        {host.status === 'disconnected' ? (
+          <Button onClick={handleConnect}>
+            Connect to {host.type.toUpperCase()}
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={handleDisconnect}>
+            Disconnect
+          </Button>
+        )}
+      </div>
+      
+      {terminalVisible && host.status === 'connected' && (
+        <XTerminal 
+          sessionId={host.sessionId!} 
+          height={400}
+          width="100%"
+        />
+      )}
+    </div>
+  );
+}
+```
+
+### Repository Explorer Implementation
+
+```typescript
+// In /src/app/[locale]/[tenant]/repositories/_components/RepositoryExplorer.tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRepository } from '@/context/repository';
+import { Breadcrumb, FileTree, FileViewer } from '@/components/repository';
+import { BranchSelector } from './BranchSelector';
+import { LoadingSpinner } from '@/components/ui/loading';
+
+interface RepositoryExplorerProps {
+  repositoryId: string;
+}
+
+export function RepositoryExplorer({ repositoryId }: RepositoryExplorerProps) {
+  const { 
+    getRepository, 
+    fetchBranches, 
+    fetchFileTree, 
+    fetchFileContent,
+    syncRepository
+  } = useRepository();
+  
+  const [currentPath, setCurrentPath] = useState('');
+  const [currentBranch, setCurrentBranch] = useState<string>('');
+  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  const repository = getRepository(repositoryId);
+  
+  useEffect(() => {
+    if (repository && repository.defaultBranch) {
+      setCurrentBranch(repository.defaultBranch);
+    }
+  }, [repository]);
+  
+  useEffect(() => {
+    async function loadFileTree() {
+      if (repositoryId && currentBranch) {
+        setLoading(true);
+        await fetchFileTree(repositoryId, currentBranch);
+        setLoading(false);
+      }
+    }
+    
+    loadFileTree();
+  }, [repositoryId, currentBranch, fetchFileTree]);
+  
+  const handleBranchChange = (branch: string) => {
+    setCurrentBranch(branch);
+    setCurrentPath('');
+    setFileContent(null);
+  };
+  
+  const handleFileSelect = async (path: string) => {
+    setCurrentPath(path);
+    setLoading(true);
+    
+    try {
+      const content = await fetchFileContent(repositoryId, currentBranch, path);
+      setFileContent(content);
+    } catch (error) {
+      console.error('Failed to fetch file content:', error);
+      setFileContent(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleSync = async () => {
+    setLoading(true);
+    await syncRepository(repositoryId);
+    setLoading(false);
+  };
+  
+  if (!repository) return <div>Repository not found</div>;
+  
+  return (
+    <div className="repository-explorer">
+      <div className="explorer-header">
+        <h2>{repository.name}</h2>
+        <div className="actions">
+          <BranchSelector
+            branches={repository.branches || []}
+            currentBranch={currentBranch}
+            onChange={handleBranchChange}
+          />
+          <Button variant="outline" onClick={handleSync}>
+            Sync Repository
+          </Button>
+        </div>
+      </div>
+      
+      {loading && <LoadingSpinner />}
+      
+      <Breadcrumb path={currentPath} onNavigate={setCurrentPath} />
+      
+      <div className="explorer-content">
+        <div className="file-tree-container">
+          <FileTree
+            files={repository.fileTree || []}
+            currentPath={currentPath}
+            onSelectFile={handleFileSelect}
+          />
+        </div>
+        
+        <div className="file-viewer-container">
+          {fileContent !== null ? (
+            <FileViewer 
+              content={fileContent} 
+              filename={currentPath.split('/').pop() || ''} 
+            />
+          ) : (
+            <div className="no-file-selected">
+              Select a file to view its contents
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### Deployment Workflow Implementation
+
+```typescript
+// In /src/app/[locale]/[tenant]/deployments/_components/DeploymentWizard.tsx
+'use client';
+
+import { useState } from 'react';
+import { useHost } from '@/context/host';
+import { useRepository } from '@/context/repository';
+import { useDeployment } from '@/context/deployment';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { StepHostSelection } from './steps/StepHostSelection';
+import { StepRepositorySelection } from './steps/StepRepositorySelection';
+import { StepConfiguration } from './steps/StepConfiguration';
+import { StepReview } from './steps/StepReview';
+
+const STEPS = ['host', 'repository', 'config', 'review'];
+
+export function DeploymentWizard() {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [formData, setFormData] = useState({
+    name: '',
+    hostId: '',
+    repositoryId: '',
+    branch: '',
+    deployPath: '',
+    command: '',
+    environmentVariables: [] as {name: string, value: string}[]
+  });
+  
+  const { createDeployment } = useDeployment();
+  
+  const updateForm = (data: Partial<typeof formData>) => {
+    setFormData(prev => ({...prev, ...data}));
+  };
+  
+  const handleNext = () => {
+    if (currentStep < STEPS.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+  
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+  
+  const handleSubmit = async () => {
+    try {
+      const result = await createDeployment(formData);
+      
+      if (result.success) {
+        // Show success notification and redirect
+        window.location.href = `/deployments/${result.data.id}`;
+      } else {
+        // Show error notification
+        console.error(result.error);
+      }
+    } catch (error) {
+      console.error('Failed to create deployment:', error);
+    }
+  };
+  
+  return (
+    <div className="deployment-wizard">
+      <h2>Create New Deployment</h2>
+      
+      <Tabs value={STEPS[currentStep]} className="wizard-tabs">
+        <TabsList>
+          <TabsTrigger value="host">Host Selection</TabsTrigger>
+          <TabsTrigger value="repository">Repository</TabsTrigger>
+          <TabsTrigger value="config">Configuration</TabsTrigger>
+          <TabsTrigger value="review">Review</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="host">
+          <StepHostSelection
+            selectedHostId={formData.hostId}
+            onSelect={hostId => updateForm({hostId})}
+          />
+        </TabsContent>
+        
+        <TabsContent value="repository">
+          <StepRepositorySelection
+            selectedRepositoryId={formData.repositoryId}
+            selectedBranch={formData.branch}
+            onSelect={(repositoryId, branch) => 
+              updateForm({repositoryId, branch})
+            }
+          />
+        </TabsContent>
+        
+        <TabsContent value="config">
+          <StepConfiguration
+            name={formData.name}
+            deployPath={formData.deployPath}
+            command={formData.command}
+            envVars={formData.environmentVariables}
+            onChange={updateForm}
+          />
+        </TabsContent>
+        
+        <TabsContent value="review">
+          <StepReview formData={formData} />
+        </TabsContent>
+      </Tabs>
+      
+      <div className="wizard-actions">
+        {currentStep > 0 && (
+          <Button variant="outline" onClick={handleBack}>
+            Back
+          </Button>
+        )}
+        
+        {currentStep < STEPS.length - 1 ? (
+          <Button onClick={handleNext}>
+            Next
+          </Button>
+        ) : (
+          <Button onClick={handleSubmit}>
+            Create Deployment
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+```
+
+## Feature-Specific Best Practices
+
+### Host Management
+- Always verify connection status before performing actions
+- Cache connection details for faster reconnection
+- Implement proper terminal cleanup on disconnection
+- Support connection timeouts and automatic reconnection
+- Store minimal credential information client-side
+
+### Repository Management
+- Implement pagination for large repositories
+- Cache repository contents for better performance
+- Support file type detection for proper rendering
+- Use lazy loading for large directory structures
+- Implement proper error handling for Git provider API rate limits
+
+### Deployment Management
+- Support CI/CD integrations with external tools
+- Keep detailed logs of all deployment steps
+- Implement appropriate status transitions and validations
+- Support deployment templates for quick setup
+- Create clear deployment history and activity logs
+
+### User Experience
+- Provide clear loading and progress indicators
+- Implement appropriate error messages and recovery paths
+- Design multi-step processes with proper state preservation
+- Support keyboard shortcuts for power users
+- Ensure mobile-responsive design for all features
+
+## Related Rules
+- core-architecture.mdc - Three-layer architecture
+- ui-components.mdc - Component design
+- api-design.mdc - API implementation
+- data-supabase.mdc - Database patterns
+- ui-state.mdc - State management 

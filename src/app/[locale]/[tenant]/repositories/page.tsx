@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { GitBranch, Plus, RefreshCw, Search, Filter, Star, ChevronLeft, ChevronRight, Trash } from 'lucide-react';
+import { useRepository } from '@/context';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -40,11 +41,22 @@ import { REPOSITORY_CATEGORIES } from './constants';
 export default function EnhancedRepositoryPage() {
   const { toast } = useToast();
   const t = useTranslations('repositories');
+  
+  // Use the repository context from the new context system
+  const {
+    repositories,
+    loading: isLoading,
+    error,
+    fetchRepositories,
+    starRepository,
+    unstarRepository,
+    syncRepository,
+    refreshAllRepositories,
+    deleteRepository
+  } = useRepository();
 
-  // State for repositories and UI
-  const [repositories, setRepositories] = useState<Repository[]>([]);
+  // State for UI
   const [starredRepos, setStarredRepos] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,54 +76,27 @@ export default function EnhancedRepositoryPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Fetch repositories
-    const fetchRepositories = async () => {
-      setIsLoading(true);
+    // Fetch repositories using the context
+    fetchRepositories();
+    
+    // Fetch starred repositories
+    const loadStarredRepos = async () => {
       try {
-        // Call API endpoint
-        const response = await fetch('/api/repositories');
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch repositories: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        // Process the response based on its format
-        if (Array.isArray(result)) {
-          setRepositories(result);
-        } else if (result.success && Array.isArray(result.data)) {
-          setRepositories(result.data);
-        } else {
-          throw new Error('Invalid API response format');
-        }
-
-        // Also fetch starred repositories
-        try {
-          const starredResponse = await fetch('/api/repositories/starred');
-          if (starredResponse.ok) {
-            const starredResult = await starredResponse.json();
-            if (starredResult.success && Array.isArray(starredResult.data)) {
-              const starredIds = new Set<string>(starredResult.data.map((repo: any) => repo.repository_id as string));
-              setStarredRepos(starredIds);
-            }
+        const starredResponse = await fetch('/api/repositories/starred');
+        if (starredResponse.ok) {
+          const starredResult = await starredResponse.json();
+          if (starredResult.success && Array.isArray(starredResult.data)) {
+            const starredIds = new Set<string>(starredResult.data.map((repo: any) => repo.repository_id as string));
+            setStarredRepos(starredIds);
           }
-        } catch (error) {
-          console.error('Error fetching starred repositories:', error);
         }
       } catch (error) {
-        console.error('Error fetching repositories:', error);
-        
-        // Set empty repository list without showing an error toast
-        // This is normal for new users who don't have any repositories yet
-        setRepositories([]);
-      } finally {
-        setIsLoading(false);
+        console.error('Error fetching starred repositories:', error);
       }
     };
-
-    fetchRepositories();
-  }, [toast]);
+    
+    loadStarredRepos();
+  }, [fetchRepositories]);
 
   // Handle repository starring/unstarring
   const handleToggleStarred = async (id: string) => {
@@ -126,15 +111,12 @@ export default function EnhancedRepositoryPage() {
       return newStarred;
     });
 
-    // Call API to update starred status
+    // Call API to update starred status using the context
     try {
-      const endpoint = `/api/repositories/${id}/${starredRepos.has(id) ? 'unstar' : 'star'}`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to update starred status');
+      if (starredRepos.has(id)) {
+        await unstarRepository(id);
+      } else {
+        await starRepository(id);
       }
     } catch (error) {
       console.error('Error updating starred status:', error);
@@ -162,26 +144,8 @@ export default function EnhancedRepositoryPage() {
   const handleSyncRepository = async (id: string) => {
     setSyncingRepoId(id);
     try {
-      // Call the API to sync the repository
-      const response = await fetch(`/api/repositories/${id}/sync`, {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to sync repository');
-      }
-      
-      const result = await response.json();
-      
-      // Update repository in the UI with the returned data
-      if (result.success && result.data) {
-        setRepositories(prev => 
-          prev.map(repo => 
-            repo.id === id ? { ...repo, ...result.data } : repo
-          )
-        );
-      }
+      // Call the context to sync the repository
+      await syncRepository(id);
       
       toast({
         title: 'Success',
@@ -194,18 +158,6 @@ export default function EnhancedRepositoryPage() {
         description: t('syncFailed'),
         variant: 'destructive',
       });
-      
-      // Update repository status to error
-      setRepositories(prev => 
-        prev.map(repo => 
-          repo.id === id 
-            ? { 
-                ...repo, 
-                syncStatus: 'ERROR', 
-              } 
-            : repo
-        )
-      );
     } finally {
       setSyncingRepoId(null);
     }
@@ -215,32 +167,8 @@ export default function EnhancedRepositoryPage() {
   const handleRefreshAll = async () => {
     setIsRefreshingAll(true);
     try {
-      // Call API endpoint to refresh all repositories
-      const response = await fetch('/api/repositories/refresh-all', {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to refresh repositories');
-      }
-      
-      // Fetch the updated list
-      const listResponse = await fetch('/api/repositories');
-      
-      if (!listResponse.ok) {
-        throw new Error('Failed to fetch updated repositories');
-      }
-      
-      const result = await listResponse.json();
-      
-      // Update repositories state
-      if (Array.isArray(result)) {
-        setRepositories(result);
-      } else if (result.success && Array.isArray(result.data)) {
-        setRepositories(result.data);
-      } else {
-        throw new Error('Invalid API response format');
-      }
+      // Use the context to refresh all repositories
+      await refreshAllRepositories();
       
       toast({
         title: 'Success',
@@ -248,7 +176,6 @@ export default function EnhancedRepositoryPage() {
       });
     } catch (error) {
       console.error('Error refreshing repositories:', error);
-      
       toast({
         title: 'Error',
         description: t('refreshFailed'),
@@ -308,23 +235,18 @@ export default function EnhancedRepositoryPage() {
     if (!repositoryToDelete) return;
     
     setIsDeleting(repositoryToDelete);
-    setDeleteDialogOpen(false);
-    
     try {
-      // Call API to delete the repository
-      const response = await fetch(`/api/repositories/${repositoryToDelete}`, {
-        method: 'DELETE',
+      // Use the context to delete the repository
+      await deleteRepository(repositoryToDelete);
+      
+      toast({
+        title: 'Success',
+        description: t('deleteSuccess'),
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to delete repository');
-      }
-      
-      // Remove the repository from the state
-      setRepositories(prev => prev.filter(repo => repo.id !== repositoryToDelete));
+      setDeleteDialogOpen(false);
     } catch (error) {
       console.error('Error deleting repository:', error);
-      
       toast({
         title: 'Error',
         description: t('deleteFailed'),
