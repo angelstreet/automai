@@ -3,8 +3,9 @@ description: Core Principles and General Development Guidelines
 globs: ["**/*"]
 alwaysApply: true
 ---
-
 # General Development Guidelines
+
+**IMPORTANT: This is the primary rule file for the entire codebase. Always consult this document first before making any changes.**
 
 ## AI Guidelines
 Always review applicable guidelines before making changes, follow the three-layer architecture, provide clear plans before implementing, make focused changes, and avoid modifying shadcn components. Never run servers without explicit permission. Adhere to feature-first organization and follow established patterns for all aspects of development.
@@ -36,6 +37,68 @@ Always review applicable guidelines before making changes, follow the three-laye
 - **Agreement**: Get explicit agreement before implementing
 - **Documentation**: Document any deviations from approved plans
 - **Code Reviews**: Request thorough code reviews for all changes
+
+# General Development Guidelines
+
+**IMPORTANT: This is the primary rule file for the entire codebase. Always consult this document first before making any changes.**
+
+## AI Guidelines
+Always review applicable guidelines before making changes, follow the three-layer architecture, provide clear plans before implementing, make focused changes, and avoid modifying shadcn components. Never run servers without explicit permission. Adhere to feature-first organization and follow established patterns for all aspects of development.
+
+## Key Patterns
+
+### Critical Development Rules
+- **Review Before Acting**: Read through relevant Cursor rules before starting work
+- **Server Execution**: Never run servers without explicit user permission
+- **Clear Plans**: Always provide plans before implementing changes
+- **Focused Changes**: Make minimal changes to achieve the goal
+- **Follow Architecture**: Strictly adhere to the three-layer architecture
+- **UI Components**: Never modify shadcn components directly
+
+### Three-Layer Architecture
+- **DB Layer (Core)**: `/src/lib/supabase/db-*.ts` - Database operations
+- **Server Actions Layer (Bridge)**: `/src/app/[locale]/[tenant]/*/actions.ts` - Business logic
+- **Client Hooks Layer (Interface)**: Context providers and hooks - UI state
+
+### Project Organization
+- **Feature-First**: Group related files by feature
+- **App Router**: 100% App Router based architecture
+- **Server Components**: Use by default, Client Components when necessary
+- **Shared Components**: Place in `/components` directory
+- **Feature Components**: Place in feature's `_components` directory
+
+### Change Management
+- **Planning**: Outline your approach before writing code
+- **Agreement**: Get explicit agreement before implementing
+- **Documentation**: Document any deviations from approved plans
+- **Code Reviews**: Request thorough code reviews for all changes
+
+## Summary of Key Themes
+
+### Authentication Overview
+- **Secure Authentication**: Use Supabase Auth for secure authentication, session management, and role-based access control.
+- **Session Management**: Secure token storage, session validation, and proper logout handling are crucial.
+- **Tenant Isolation**: Use tenant identifiers and row-level security for tenant isolation.
+
+*See Also: [data-auth.mdc]*
+
+### API Design Overview
+- **REST Principles**: Follow RESTful patterns, consistent URL structures, and standard response formats.
+- **Server Actions**: Use server actions for backend API functionality, focusing on error handling and type safety.
+- **API Security**: Ensure authentication, tenant isolation, rate limiting, and input validation.
+
+*See Also: [api-design.mdc]*
+
+## When to Reference Other Rules
+
+While this document provides the core principles, you should reference other rule files when working on specific aspects of the codebase:
+
+- For architectural details: **core-architecture.mdc**
+- For code style and quality: **code-quality.mdc**
+- For API work: **api-design.mdc** and **api-implementation.mdc**
+- For UI work: **ui-components.mdc** and **ui-state.mdc**
+- For data-related work: **data-supabase.mdc**, **data-auth.mdc**, and **data-caching.mdc**
+- For testing guidance: **core-testing.mdc**
 
 ## Examples
 
@@ -138,3 +201,116 @@ Refer to the specific rule file for detailed guidance on each area.
 - code-quality.mdc - Code quality standards 
 - api-design.mdc - API design principles
 - ui-components.mdc - UI component patterns
+
+## When to Reference Other Rules
+
+While this document provides the core principles, you should reference other rule files when working on specific aspects of the codebase:
+
+- For architectural details: **core-architecture.mdc**
+- For code style and quality: **code-quality.mdc**
+- For API work: **api-design.mdc** and **api-implementation.mdc**
+- For UI work: **ui-components.mdc** and **ui-state.mdc**
+- For data-related work: **data-supabase.mdc**, **data-auth.mdc**, and **data-caching.mdc**
+- For testing guidance: **core-testing.mdc**
+
+## Examples
+
+### Good Change Implementation
+
+```typescript
+// 1. Clear plan communicated first:
+// "I'll add a status filter to the HostList component by:
+// 1. Adding a filter state in the HostProvider
+// 2. Updating the getHostsAction to accept a status parameter
+// 3. Adding a FilterBar component to the HostList UI"
+
+// 2. Minimal, focused implementation:
+// In src/context/host/HostProvider.tsx
+export function HostProvider({ children }: { children: React.ReactNode }) {
+  // ... existing state
+  const [filter, setFilter] = useState<HostFilter>({});
+  
+  const fetchHosts = useCallback(async () => {
+    setLoading(true);
+    const result = await getHostsAction(filter); // Pass filter to action
+    // ... rest of implementation
+  }, [filter]); // Add filter to dependencies
+  
+  const updateFilter = useCallback((newFilter: Partial<HostFilter>) => {
+    setFilter(prev => ({...prev, ...newFilter}));
+  }, []);
+  
+  // ... provide updateFilter in context value
+}
+
+// 3. Follows architecture and patterns:
+// In src/app/[locale]/[tenant]/hosts/actions.ts
+export async function getHostsAction(
+  filter?: HostFilter,
+  user?: AuthUser
+): Promise<ActionResult<Host[]>> {
+  // Get user if not provided
+  if (!user) {
+    const userResult = await getUser();
+    if (!userResult.success) {
+      return { success: false, error: 'Authentication required' };
+    }
+    user = userResult.data;
+  }
+  
+  // Pass filter to DB layer
+  const result = await getHosts(user.tenant_id, filter);
+  // ... rest of implementation
+}
+```
+
+### Bad Change Implementation
+
+```typescript
+// DON'T DO THIS: Running server without permission
+// "Let me run the server to see if this works"
+// This violates the rule about not running servers
+
+// DON'T DO THIS: Modifying shadcn component
+// In src/components/shadcn/button.tsx
+export function Button({ children, ...props }) {
+  // Adding custom logic directly to shadcn component
+  const theme = useTheme();
+  // ...modification to the component
+}
+
+// DON'T DO THIS: Bypassing architecture layers
+// In src/app/[locale]/[tenant]/hosts/page.tsx
+export default function HostsPage() {
+  const { data, error } = supabase.from('hosts').select('*');
+  // Directly accessing database from UI layer
+}
+
+// DON'T DO THIS: Unfocused changes
+// "While fixing the host filter, I also refactored the
+// authentication system and redesigned the navigation"
+```
+
+## Rule Organization
+
+This codebase maintains a set of specific guidelines for different aspects of development:
+
+- **code-quality.mdc** - Code quality and style standards
+- **core-architecture.mdc** - System architecture principles
+- **core-testing.mdc** - Testing strategies and patterns
+- **api-design.mdc** - API design principles
+- **api-implementation.mdc** - API implementation details
+- **ui-components.mdc** - UI component patterns
+- **ui-state.mdc** - State management patterns
+- **data-supabase.mdc** - Supabase database patterns
+- **data-auth.mdc** - Authentication patterns
+- **data-caching.mdc** - Caching strategies
+- **feature-specific.mdc** - Feature-specific guidelines
+
+Refer to the specific rule file for detailed guidance on each area.
+
+## Related Rules
+- core-architecture.mdc - Three-layer architecture
+- code-quality.mdc - Code quality standards 
+- api-design.mdc - API design principles
+- ui-components.mdc - UI component patterns 
