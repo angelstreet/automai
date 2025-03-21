@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
@@ -15,6 +15,7 @@ import { HostTable } from './HostTable';
 export default function HostContainer() {
   // Track render count for debugging
   const renderCount = useRef(0);
+  const isInitialized = useRef(false);
   
   // Add logging for component mount
   useEffect(() => {
@@ -31,6 +32,8 @@ export default function HostContainer() {
   
   // Log user context on each render and when it changes
   useEffect(() => {
+    if (!userContext) return;
+    
     console.log('[HostContainer] User context state:', {
       hasUser: !!userContext?.user,
       isLoading: userContext?.loading,
@@ -61,16 +64,32 @@ export default function HostContainer() {
   });
 
   // Use the centralized context with proper hooks
+  const hostContext = useHost();
+
+  // Add safety check for null context during initial render
+  if (!hostContext) {
+    console.log('[HostContainer] Host context not yet available, showing loading state');
+    return (
+      <div className="flex flex-col items-center justify-center py-10">
+        <div className="h-8 w-8 animate-spin mb-4 border-t-2 border-b-2 border-primary rounded-full"></div>
+        <p className="text-muted-foreground">Initializing host service...</p>
+      </div>
+    );
+  }
+
   const {
     hosts,
     loading,
     error,
     fetchHosts,
     addHost,
-    deleteHost,
+    removeHost,
     testConnection,
     testAllConnections,
-  } = useHost();
+  } = hostContext;
+
+  // Memoize user data to prevent dependency loop
+  const userData = userContext?.user;
 
   // Add logging to track when host data changes
   useEffect(() => {
@@ -83,15 +102,15 @@ export default function HostContainer() {
   }, [hosts, loading, error]);
 
   // Handle refresh all hosts - pass user data from context
-  const handleRefreshAll = async () => {
+  const handleRefreshAll = useCallback(async () => {
     if (isRefreshing) return;
     
     console.log('[HostContainer] Refreshing all hosts');
     setIsRefreshing(true);
     try {
       // Pass user data to prevent redundant auth
-      if (userContext?.user) {
-        await testAllConnections(userContext.user);
+      if (userData) {
+        await testAllConnections(userData);
       } else {
         await testAllConnections();
       }
@@ -99,10 +118,10 @@ export default function HostContainer() {
       setIsRefreshing(false);
       console.log('[HostContainer] Host refresh complete');
     }
-  };
+  }, [isRefreshing, testAllConnections, userData]);
 
   // Handle add host form submission with user data
-  const handleSaveHost = async () => {
+  const handleSaveHost = useCallback(async () => {
     console.log('[HostContainer] Saving new host', formData.name);
     setIsSaving(true);
     try {
@@ -119,8 +138,8 @@ export default function HostContainer() {
       };
     
       // Pass user data to prevent redundant auth
-      if (userContext?.user) {
-        await addHost(hostData, userContext.user);
+      if (userData) {
+        await addHost(hostData, userData);
       } else {
         await addHost(hostData);
       }
@@ -143,10 +162,10 @@ export default function HostContainer() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [addHost, formData, userData]);
 
   // Handle host selection
-  const handleSelectHost = (id: string) => {
+  const handleSelectHost = useCallback((id: string) => {
     console.log('[DEBUG] HostContainer: host selection changed', id);
     setSelectedHosts((prev) => {
       const newSet = new Set(prev);
@@ -157,7 +176,7 @@ export default function HostContainer() {
       }
       return newSet;
     });
-  };
+  }, []);
 
   // Add logging for each render
   console.log('[DEBUG] HostContainer rendering', { 
@@ -225,13 +244,13 @@ export default function HostContainer() {
           selectedHosts={selectedHosts}
           selectMode={selectMode}
           onSelect={handleSelectHost}
-          onDelete={deleteHost}
+          onDelete={removeHost}
           onTestConnection={(host: Host) => testConnection(host.id)}
         />
       ) : (
         <HostTable
           hosts={hosts}
-          onDelete={deleteHost}
+          onDelete={removeHost}
           onTestConnection={(host: Host) => testConnection(host.id)}
         />
       )}

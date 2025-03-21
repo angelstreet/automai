@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
 import { 
-  getCICDProvidersAction,
+  getCICDProviders,
   createCICDProviderAction,
   updateCICDProviderAction,
   deleteCICDProviderAction,
@@ -17,6 +17,7 @@ import {
   ActionResult
 } from '@/types/cicd';
 import { CICDContextType, CICDData, CICDActions } from '@/types/context/cicd';
+import { useRequestProtection } from '@/hooks/useRequestProtection';
 
 // Initial state
 const initialState: CICDData = {
@@ -37,74 +38,93 @@ const CICDContext = createContext<CICDContextType | undefined>(undefined);
 export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<CICDData>(initialState);
   
+  // Add request protection
+  const { protectedFetch, safeUpdateState, renderCount } = useRequestProtection('CICDContext');
+  
   // Fetch user data
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
-    try {
-      const user = await getUser();
-      setState(prev => ({ ...prev, currentUser: user }));
-      return user;
-    } catch (err) {
-      console.error('Error fetching user data:', err);
-      return null;
-    }
-  }, []);
+    return await protectedFetch('fetchUserData', async () => {
+      try {
+        const user = await getUser();
+        
+        safeUpdateState(
+          setState,
+          { ...state, currentUser: state.currentUser },
+          { ...state, currentUser: user },
+          'currentUser'
+        );
+        
+        return user;
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        return null;
+      }
+    });
+  }, [protectedFetch, safeUpdateState, state]);
 
   // Fetch CI/CD providers
   const fetchProviders = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-    
-    try {
-      // Use cached user data when available
-      const user = state.currentUser || await fetchUserData();
+    return await protectedFetch('fetchProviders', async () => {
+      setState(prev => ({ ...prev, loading: true, error: null }));
       
-      console.log('[CICDContext] fetchProviders called', {
-        hasUser: !!user,
-        renderCount: renderCount.current++,
-        componentState: 'loading'
-      });
-      
-      // Pass user data to the server action to avoid redundant auth
-      const result = await getCICDProviders(user, 'CICDContext', renderCount.current);
-      
-      if (result.success) {
-        setState(prev => ({
-          ...prev,
-          providers: result.data || [],
-          loading: false
-        }));
+      try {
+        // Use cached user data when available
+        const user = state.currentUser || await fetchUserData();
         
-        console.log('[CICDContext] fetchProviders complete', {
-          providerCount: result.data?.length || 0,
-          componentState: 'loaded'
+        console.log('[CICDContext] fetchProviders called', {
+          hasUser: !!user,
+          renderCount: renderCount,
+          componentState: 'loading'
         });
         
-        return result;
-      } else {
+        // Pass user data to the server action to avoid redundant auth
+        const result = await getCICDProviders(user, 'CICDContext', renderCount);
+        
+        if (result.success) {
+          safeUpdateState(
+            setState,
+            { ...state, providers: state.providers },
+            {
+              ...state,
+              providers: result.data || [],
+              loading: false
+            },
+            'providers'
+          );
+          
+          console.log('[CICDContext] fetchProviders complete', {
+            providerCount: result.data?.length || 0,
+            componentState: 'loaded'
+          });
+          
+          return result;
+        } else {
+          setState(prev => ({
+            ...prev,
+            error: result.error || 'Failed to fetch CI/CD providers',
+            loading: false
+          }));
+          
+          console.error('[CICDContext] Error fetching providers:', result.error);
+          return result;
+        }
+      } catch (err: any) {
+        console.error('[CICDContext] Unexpected error in fetchProviders:', err);
+        
         setState(prev => ({
           ...prev,
-          error: result.error || 'Failed to fetch CI/CD providers',
+          error: err.message || 'An unexpected error occurred',
           loading: false
         }));
         
-        console.error('[CICDContext] Error fetching providers:', result.error);
-        return result;
+        return {
+          success: false,
+          data: [],
+          error: err.message || 'An unexpected error occurred'
+        };
       }
-    } catch (err: any) {
-      console.error('[CICDContext] Unexpected error in fetchProviders:', err);
-      
-      setState(prev => ({
-        ...prev,
-        error: err.message || 'An unexpected error occurred',
-        loading: false
-      }));
-      
-      return {
-        success: false,
-        data: [],
-        error: err.message || 'An unexpected error occurred'
-      };
-    }
-  }, [state.currentUser, fetchUserData]);
+    });
+  }, [protectedFetch, safeUpdateState, state, fetchUserData, renderCount]);
 
   // Get provider by ID
   const getProviderById = useCallback(async (id: string): Promise<CICDProviderType | null> => {
@@ -119,7 +139,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const result = await fetchProviders();
       
       if (result.success && result.data) {
-        const provider = result.data.find(p => p.id === id);
+        const provider = result.data.find((p: CICDProviderType) => p.id === id);
         return provider || null;
       }
       
@@ -289,12 +309,27 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Initialize CI/CD data
   useEffect(() => {
+    const didInitialize = useRef(false);
+    
+    if (didInitialize.current) {
+      console.log('[CICDContext] Already initialized, skipping');
+      return;
+    }
+    
+    console.log('[CICDContext] Initializing context...');
+    didInitialize.current = true;
+    
     const initialize = async () => {
       await fetchUserData();
-      fetchProviders();
+      await fetchProviders();
     };
     
     initialize();
+    
+    return () => {
+      console.log('[CICDContext] CICDContext unmounting...');
+      didInitialize.current = false;
+    };
   }, [fetchUserData, fetchProviders]);
   
   // Create context value
@@ -322,7 +357,8 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     
     // UI state management
     setSelectedProvider: (provider) => setState(prev => ({ ...prev, selectedProvider: provider })),
-    setSelectedJob: (job) => setState(prev => ({ ...prev, selectedJob: job }))
+    setSelectedJob: (job) => setState(prev => ({ ...prev, selectedJob: job })),
+    refreshUserData: fetchUserData
   };
   
   return (

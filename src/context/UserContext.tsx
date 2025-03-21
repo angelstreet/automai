@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useState, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import { updateProfile as updateProfileAction } from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
@@ -66,6 +66,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Add a flag to track client-side rendering
   const [isClient, setIsClient] = useState(false);
+  
+  // Add initialization tracker to prevent duplicate initialization
+  const initialized = useRef(false);
 
   // Set isClient once the component mounts on the client
   useEffect(() => {
@@ -73,13 +76,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setIsClient(true);
     
     // Attempt to fetch user data on mount
-    setTimeout(() => {
+    // Don't use setTimeout, fetch immediately
+    if (!initialized.current) {
+      initialized.current = true;
       console.log('[UserContext] Triggering initial data fetch');
       fetchUserData().catch(e => console.error('[UserContext] Initial fetch error:', e));
-    }, 100);
+    }
     
     return () => {
       console.log('[UserContext] UserProvider unmounting');
+      initialized.current = false;
     };
   }, []);
 
@@ -128,7 +134,39 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const authUser = await getUser();
       console.log('[UserContext] Server returned auth user:', authUser ? 'found' : 'not found');
       
-      if (!authUser) return null;
+      if (!authUser) {
+        console.log('[UserContext] No auth user returned from server, retrying once');
+        // Add a retry after a short delay
+        return new Promise((resolve) => {
+          setTimeout(async () => {
+            try {
+              const retryUser = await getUser();
+              console.log('[UserContext] Retry server returned auth user:', retryUser ? 'found' : 'still not found');
+              
+              if (!retryUser) {
+                resolve(null);
+                return;
+              }
+              
+              try {
+                const user = mapAuthUserToUser(retryUser);
+                // Cache the user in localStorage
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('cached_user', JSON.stringify(user));
+                  localStorage.setItem('cached_user_time', Date.now().toString());
+                }
+                resolve(user);
+              } catch (err) {
+                console.error('[UserContext] Retry user mapping error:', err);
+                resolve(null);
+              }
+            } catch (err) {
+              console.error('[UserContext] Retry fetch error:', err);
+              resolve(null);
+            }
+          }, 1000);
+        });
+      }
 
       try {
         // Map to our User type - will throw if tenant data is missing
@@ -171,13 +209,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     fetchUserData,
     {
       fallbackData: null,
-      revalidateOnFocus: false, // Don't revalidate on focus since we're using it for debug
-      revalidateOnReconnect: false, // Don't revalidate on reconnect since we're using it for debug
-      dedupingInterval: 60000, // Dedupe requests within 1 minute
+      revalidateOnFocus: true, // Enable revalidation on focus to ensure fresh data
+      revalidateOnReconnect: true, // Enable revalidation on reconnect
+      dedupingInterval: 10000, // Reduce deduping interval to 10 seconds
       keepPreviousData: true, // Keep previous data while revalidating
       loadingTimeout: 3000, // Consider slow after 3 seconds
-      revalidateIfStale: false, // Don't revalidate if stale to prevent redirect loops
-      refreshInterval: 300000, // Only refresh every 5 minutes
+      revalidateIfStale: true, // Revalidate if stale to keep data fresh
+      refreshInterval: 60000, // Refresh every minute
       onSuccess: (data) => {
         console.log('[UserContext] SWR cache success:', data ? 'user found' : 'no user');
       },
