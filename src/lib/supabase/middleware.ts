@@ -96,8 +96,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     console.log('🔍 AUTH MIDDLEWARE: User authenticated', data.user.id);
   }
 
-  // If no user is found or there's an error, redirect to login
-  if (error || !data.user) {
+  // Check if this is a data fetching request (POST to a page route)
+  // These should not be redirected to prevent redirect loops
+  const isDataFetchRequest = request.method === 'POST' && 
+    !request.nextUrl.pathname.startsWith('/api/');
+
+  // If no user is found or there's an error, redirect to login ONLY for GET requests
+  // Allow data fetching POST requests to proceed even without authentication
+  if ((error || !data.user) && !isDataFetchRequest) {
     console.log('No authenticated user found. Redirecting to login page.');
     // Reduce logging to essential information only
     if (error) {

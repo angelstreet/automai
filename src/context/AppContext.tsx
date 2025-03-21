@@ -1,344 +1,163 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode, useState, useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import React, { createContext, useContext, ReactNode, useState, useCallback } from 'react';
 import { HostProvider, useHostContext } from './HostContext';
 import { DeploymentProvider, useDeploymentContext } from './DeploymentContext';
 import { RepositoryProvider, useRepositoryContext } from './RepositoryContext';
 import { CICDProvider, useCICDContext } from './CICDContext';
 import { AppContextType } from '@/types/context/app';
 
-// Debug tracking system
-interface ContextCallTracker {
-  [contextName: string]: {
-    [methodName: string]: {
-      callCount: number;
-      lastCalledBy: string;
-      lastCalledAt: Date;
-    }
-  }
-}
-
-const callTracker: ContextCallTracker = {};
-
-// Function to track context method calls
-function trackContextCall(contextName: string, methodName: string, componentName: string) {
-  if (!callTracker[contextName]) {
-    callTracker[contextName] = {};
-  }
-  if (!callTracker[contextName][methodName]) {
-    callTracker[contextName][methodName] = {
-      callCount: 0,
-      lastCalledBy: '',
-      lastCalledAt: new Date()
-    };
-  }
-  
-  callTracker[contextName][methodName].callCount++;
-  callTracker[contextName][methodName].lastCalledBy = componentName;
-  callTracker[contextName][methodName].lastCalledAt = new Date();
-  
-  console.log(`[Context Tracker] ${contextName}.${methodName} called by ${componentName} (total: ${callTracker[contextName][methodName].callCount})`);
-}
-
 // Create the app context
-const AppContext = createContext<AppContextType | undefined>(undefined);
+const AppContext = createContext<{
+  contextState: AppContextState;
+  initContext: (name: ContextName) => void;
+}>({
+  contextState: {
+    host: false,
+    deployment: false,
+    repository: false,
+    cicd: false
+  },
+  initContext: () => {}
+});
+
+// Track which contexts are initialized
+type ContextName = 'host' | 'deployment' | 'repository' | 'cicd';
+type AppContextState = Record<ContextName, boolean>;
 
 // Provider component that composes all other providers
 export function AppProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  
-  // Determine which contexts to initialize based on current route or explicit usage
-  const [activeContexts, setActiveContexts] = useState({
+  // Manage which contexts are initialized
+  const [contextState, setContextState] = useState<AppContextState>({
     host: false,
     deployment: false,
     repository: false,
     cicd: false
   });
   
-  // Call counters for debug tracking
-  const initCountRef = useRef({
-    host: 0,
-    deployment: 0,
-    repository: 0,
-    cicd: 0
-  });
-
-  // Initialize contexts based on route
-  useEffect(() => {
-    const newActiveContexts = {
-      // Always initialize all contexts to ensure they're available everywhere
-      host: true,
-      deployment: true,
-      repository: true,
-      cicd: true
-    };
+  // Function to initialize a context on demand
+  const initContext = useCallback((name: ContextName) => {
+    if (!contextState[name]) {
+      console.log(`[Context] Initializing ${name} context on demand`);
+      setContextState(prev => ({ ...prev, [name]: true }));
+    }
+  }, [contextState]);
+  
+  // Create context value with state and init function
+  const contextValue = { contextState, initContext };
+  
+  // Render nested providers based on which are initialized
+  const renderWithProviders = (node: React.ReactNode): React.ReactNode => {
+    let result = node;
     
-    // Log initializations
-    Object.entries(newActiveContexts).forEach(([context, isActive]) => {
-      if (isActive && !activeContexts[context as keyof typeof activeContexts]) {
-        initCountRef.current[context as keyof typeof initCountRef.current]++;
-        console.log(`[Context Tracker] Initializing ${context} context (route: ${pathname}, init #${initCountRef.current[context as keyof typeof initCountRef.current]})`);
-      }
-    });
+    // Wrap with each provider that's initialized, innermost first
+    if (contextState.cicd) {
+      result = <CICDProvider>{result}</CICDProvider>;
+    }
     
-    setActiveContexts(newActiveContexts);
-  }, [pathname, activeContexts]);
-
-  // Render providers based on active contexts
-  // We use nested conditionals to avoid unnecessary re-renders
-  const renderChildren = () => {
-    return (
-      <>
-        {activeContexts.host ? (
-          <HostProvider>
-            {activeContexts.deployment ? (
-              <DeploymentProvider>
-                {activeContexts.repository ? (
-                  <RepositoryProvider>
-                    {activeContexts.cicd ? (
-                      <CICDProvider>
-                        <AppContextBridge>
-                          {children}
-                        </AppContextBridge>
-                      </CICDProvider>
-                    ) : (
-                      <AppContextBridge>
-                        {children}
-                      </AppContextBridge>
-                    )}
-                  </RepositoryProvider>
-                ) : activeContexts.cicd ? (
-                  <CICDProvider>
-                    <AppContextBridge>
-                      {children}
-                    </AppContextBridge>
-                  </CICDProvider>
-                ) : (
-                  <AppContextBridge>
-                    {children}
-                  </AppContextBridge>
-                )}
-              </DeploymentProvider>
-            ) : activeContexts.repository ? (
-              <RepositoryProvider>
-                {activeContexts.cicd ? (
-                  <CICDProvider>
-                    <AppContextBridge>
-                      {children}
-                    </AppContextBridge>
-                  </CICDProvider>
-                ) : (
-                  <AppContextBridge>
-                    {children}
-                  </AppContextBridge>
-                )}
-              </RepositoryProvider>
-            ) : activeContexts.cicd ? (
-              <CICDProvider>
-                <AppContextBridge>
-                  {children}
-                </AppContextBridge>
-              </CICDProvider>
-            ) : (
-              <AppContextBridge>
-                {children}
-              </AppContextBridge>
-            )}
-          </HostProvider>
-        ) : activeContexts.deployment ? (
-          <DeploymentProvider>
-            {activeContexts.repository ? (
-              <RepositoryProvider>
-                {activeContexts.cicd ? (
-                  <CICDProvider>
-                    <AppContextBridge>
-                      {children}
-                    </AppContextBridge>
-                  </CICDProvider>
-                ) : (
-                  <AppContextBridge>
-                    {children}
-                  </AppContextBridge>
-                )}
-              </RepositoryProvider>
-            ) : activeContexts.cicd ? (
-              <CICDProvider>
-                <AppContextBridge>
-                  {children}
-                </AppContextBridge>
-              </CICDProvider>
-            ) : (
-              <AppContextBridge>
-                {children}
-              </AppContextBridge>
-            )}
-          </DeploymentProvider>
-        ) : activeContexts.repository ? (
-          <RepositoryProvider>
-            {activeContexts.cicd ? (
-              <CICDProvider>
-                <AppContextBridge>
-                  {children}
-                </AppContextBridge>
-              </CICDProvider>
-            ) : (
-              <AppContextBridge>
-                {children}
-              </AppContextBridge>
-            )}
-          </RepositoryProvider>
-        ) : activeContexts.cicd ? (
-          <CICDProvider>
-            <AppContextBridge>
-              {children}
-            </AppContextBridge>
-          </CICDProvider>
-        ) : (
-          children
-        )}
-      </>
-    );
-  };
-
-  return renderChildren();
-}
-
-// Bridge component that collects all context values and provides them through AppContext
-function AppContextBridge({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  
-  // Function to wrap context methods with tracking
-  const wrapWithTracking = <T extends Record<string, any>>(
-    context: T,
-    contextName: string
-  ): T => {
-    const wrappedContext = { ...context } as T;
+    if (contextState.repository) {
+      result = <RepositoryProvider>{result}</RepositoryProvider>;
+    }
     
-    // Loop through the context's properties
-    Object.keys(context).forEach(key => {
-      const value = context[key];
-      
-      // Only wrap functions
-      if (typeof value === 'function') {
-        wrappedContext[key as keyof T] = ((...args: any[]) => {
-          // Get calling component from stack trace or use pathname as fallback
-          const stack = new Error().stack || '';
-          const callerMatch = stack.match(/at\s+(.*?)\s+\(/);
-          const caller = callerMatch ? callerMatch[1] : pathname || 'unknown';
-          
-          // Track the call
-          trackContextCall(contextName, key, caller);
-          
-          // Call original method
-          return value(...args);
-        }) as T[keyof T];
-      }
-    });
+    if (contextState.deployment) {
+      result = <DeploymentProvider>{result}</DeploymentProvider>;
+    }
     
-    return wrappedContext;
-  };
-  
-  // Get values from each context, with safety checks
-  let hostContext;
-  try {
-    hostContext = useHostContext();
-  } catch (e) {
-    hostContext = null;
-  }
-  
-  let deploymentContext;
-  try {
-    deploymentContext = useDeploymentContext();
-  } catch (e) {
-    deploymentContext = null;
-  }
-  
-  let repositoryContext;
-  try {
-    repositoryContext = useRepositoryContext();
-  } catch (e) {
-    repositoryContext = null;
-  }
-  
-  let cicdContext;
-  try {
-    cicdContext = useCICDContext();
-  } catch (e) {
-    cicdContext = null;
-  }
-  
-  // Wrap each context's methods with tracking
-  const trackedHostContext = hostContext ? wrapWithTracking(hostContext, 'host') : null;
-  const trackedDeploymentContext = deploymentContext ? wrapWithTracking(deploymentContext, 'deployment') : null;
-  const trackedRepositoryContext = repositoryContext ? wrapWithTracking(repositoryContext, 'repository') : null;
-  const trackedCicdContext = cicdContext ? wrapWithTracking(cicdContext, 'cicd') : null;
-  
-  // Combine contexts
-  const appContextValue: AppContextType = {
-    host: trackedHostContext,
-    deployment: trackedDeploymentContext,
-    repository: trackedRepositoryContext,
-    cicd: trackedCicdContext
+    if (contextState.host) {
+      result = <HostProvider>{result}</HostProvider>;
+    }
+    
+    return result;
   };
   
   return (
-    <AppContext.Provider value={appContextValue}>
-      {children}
+    <AppContext.Provider value={contextValue}>
+      {renderWithProviders(
+        <AppContextBridge>
+          {children}
+        </AppContextBridge>
+      )}
     </AppContext.Provider>
   );
 }
 
-// Hook to use the app context with lazy initialization capabilities
-export function useAppContext() {
-  const context = useContext(AppContext);
+// Bridge component that collects all context values
+function AppContextBridge({ children }: { children: ReactNode }) {
+  const { contextState } = useContext(AppContext);
   
-  if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
-  }
+  // Get values from each context, with safety checks
+  const hostContext = contextState.host ? useHostContext() : null;
+  const deploymentContext = contextState.deployment ? useDeploymentContext() : null;
+  const repositoryContext = contextState.repository ? useRepositoryContext() : null;
+  const cicdContext = contextState.cicd ? useCICDContext() : null;
   
-  return context;
+  // Combine contexts
+  const appContextValue: AppContextType = {
+    host: hostContext,
+    deployment: deploymentContext,
+    repository: repositoryContext,
+    cicd: cicdContext
+  };
+  
+  return (
+    <InnerAppContext.Provider value={appContextValue}>
+      {children}
+    </InnerAppContext.Provider>
+  );
 }
 
-// Convenience hooks to access individual contexts directly, with lazy initialization
-export function useHost() {
-  const context = useAppContext();
+// Inner context for the actual context values
+const InnerAppContext = createContext<AppContextType>({
+  host: null,
+  deployment: null,
+  repository: null,
+  cicd: null
+});
+
+// Singleton-like initialization helpers
+function useInitContext(name: ContextName) {
+  const { contextState, initContext } = useContext(AppContext);
   
-  // If host context isn't initialized but is being accessed, mark it for initialization
-  if (!context.host) {
-    console.log('[Context Tracker] Host context accessed but not initialized. Scheduling initialization.');
-    // This would typically trigger initialization but for now just log
+  // Initialize this context if not already initialized
+  if (!contextState[name]) {
+    initContext(name);
   }
   
+  return contextState[name];
+}
+
+// Hook to use the app context (for consuming the values)
+export function useAppContext() {
+  return useContext(InnerAppContext);
+}
+
+// Singleton-like hooks for each context
+export function useHost() {
+  const isInitialized = useInitContext('host');
+  const context = useAppContext();
+  
+  // During initialization, context.host will be null
+  // After rerender with the provider, it will have a value
   return context.host;
 }
 
 export function useDeployment() {
+  const isInitialized = useInitContext('deployment');
   const context = useAppContext();
-  
-  if (!context.deployment) {
-    console.log('[Context Tracker] Deployment context accessed but not initialized. Scheduling initialization.');
-  }
   
   return context.deployment;
 }
 
 export function useRepository() {
+  const isInitialized = useInitContext('repository');
   const context = useAppContext();
-  
-  if (!context.repository) {
-    console.log('[Context Tracker] Repository context accessed but not initialized. Scheduling initialization.');
-  }
   
   return context.repository;
 }
 
 export function useCICD() {
+  const isInitialized = useInitContext('cicd');
   const context = useAppContext();
-  
-  if (!context.cicd) {
-    console.log('[Context Tracker] CICD context accessed but not initialized. Scheduling initialization.');
-  }
   
   return context.cicd;
 } 

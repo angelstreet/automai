@@ -73,11 +73,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const cachedUser = localStorage.getItem('cached_user');
         if (cachedUser) {
           try {
-            return JSON.parse(cachedUser);
+            const parsedUser = JSON.parse(cachedUser);
+            // Check if the cached user data is fresh (less than 5 minutes old)
+            const cachedTime = localStorage.getItem('cached_user_time');
+            if (cachedTime) {
+              const timeDiff = Date.now() - parseInt(cachedTime, 10);
+              // If cache is less than 5 minutes old, use it
+              if (timeDiff < 5 * 60 * 1000) {
+                console.log('Using cached user data');
+                return parsedUser;
+              }
+            }
+            // Still return the cache for initial render, but will update after
+            return parsedUser;
           } catch (e) {
             // Invalid JSON, ignore and continue
             console.error('Invalid cached user data:', e);
             localStorage.removeItem('cached_user');
+            localStorage.removeItem('cached_user_time');
           }
         }
       }
@@ -93,6 +106,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         // Cache the user in localStorage
         if (typeof window !== 'undefined') {
           localStorage.setItem('cached_user', JSON.stringify(user));
+          localStorage.setItem('cached_user_time', Date.now().toString());
         }
         
         return user;
@@ -125,8 +139,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       dedupingInterval: 60000, // Dedupe requests within 1 minute
       keepPreviousData: true, // Keep previous data while revalidating
       loadingTimeout: 3000, // Consider slow after 3 seconds
+      revalidateIfStale: false, // Don't revalidate if stale to prevent redirect loops
+      refreshInterval: 300000, // Only refresh every 5 minutes
       onSuccess: (data) => {
-        console.log('SWR cache success:', data);
+        console.log('SWR cache success:', data ? 'user found' : 'no user');
       },
     },
   );
@@ -136,6 +152,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     // Clear localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('cached_user');
+      localStorage.removeItem('cached_user_time');
     }
     // Clear SWR cache and set user to null
     await mutateUser(null, false);
