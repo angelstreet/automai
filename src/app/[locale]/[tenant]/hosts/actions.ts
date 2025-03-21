@@ -16,21 +16,31 @@ export interface HostFilter {
  * Get all hosts with optional filtering
  * @param filter Optional filter criteria for hosts
  * @param user Optional pre-fetched user data to avoid redundant auth calls
+ * @param origin The component or hook that triggered this action
+ * @param renderCount Optional render count for debugging
  */
 export async function getHosts(
   filter?: HostFilter,
-  user?: AuthUser | null
+  user?: AuthUser | null,
+  origin: string = 'unknown',
+  renderCount?: number
 ): Promise<{ success: boolean; error?: string; data?: Host[] }> {
-  console.log('[HostsActions] getHosts called', { 
+  console.log(`[HostsActions] getHosts called from ${origin}${renderCount ? ` (render #${renderCount})` : ''}`, { 
     hasFilter: !!filter, 
-    userProvided: !!user 
+    userProvided: !!user,
+    filterValues: filter ? JSON.stringify(filter) : 'none',
+    cached: !!user?.tenant_id ? (serverCache.has(`hosts:${user.tenant_id}`)) : false
   });
   
   try {
     // Use provided user data or fetch it if not provided
     const currentUser = user || await getUser();
     
-    console.log('[HostsActions] User status:', currentUser ? 'authenticated' : 'not authenticated');
+    console.log(`[HostsActions] User status for ${origin}:`, {
+      authenticated: !!currentUser,
+      tenant: currentUser?.tenant_id || 'unknown',
+      hasRole: !!currentUser?.role
+    });
     
     if (!currentUser) {
       return { 
@@ -39,19 +49,27 @@ export async function getHosts(
       };
     }
 
-    // Create cache key based on filter
-    const cacheKey = filter ? `hosts:filtered:${JSON.stringify(filter)}` : 'hosts:all';
+    // Create cache key based on tenant and filter
+    const cacheKey = filter ? 
+      `hosts:${currentUser.tenant_id}:filtered:${JSON.stringify(filter)}` : 
+      `hosts:${currentUser.tenant_id}`;
     
     // Check cache first
     const cached = serverCache.get<Host[]>(cacheKey);
     if (cached) {
-      console.log('[HostsActions] Using cached hosts data', { count: cached.length });
+      console.log(`[HostsActions] Using cached hosts data for ${origin}`, { 
+        count: cached.length,
+        cacheKey,
+        age: serverCache.getAge(cacheKey) 
+      });
       return { success: true, data: cached };
     }
     
-    console.log('[HostsActions] No cache found, fetching from database');
+    console.log(`[HostsActions] No cache found for ${origin}, fetching from database`);
     
-    const where: Record<string, any> = {};
+    const where: Record<string, any> = {
+      tenant_id: currentUser.tenant_id
+    };
 
     if (filter?.status) {
       where.status = filter.status;
@@ -63,18 +81,21 @@ export async function getHosts(
     });
 
     if (!data) {
+      console.log(`[HostsActions] No hosts found in database for ${origin}`);
       return {
         success: false,
         error: 'Failed to fetch hosts',
       };
     }
 
+    console.log(`[HostsActions] Successfully fetched ${data.length} hosts for ${origin}`);
+    
     // Cache the result for 5 minutes (default TTL)
     serverCache.set(cacheKey, data);
 
     return { success: true, data };
   } catch (error: any) {
-    console.error('Error in getHosts:', error);
+    console.error(`[HostsActions] Error in getHosts (${origin}):`, error);
     return { success: false, error: error.message || 'Failed to fetch hosts' };
   }
 }

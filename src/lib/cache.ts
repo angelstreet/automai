@@ -6,6 +6,7 @@
 type CacheEntry<T> = {
   value: T;
   expiry: number;
+  created: number;
 };
 
 class ServerCache {
@@ -42,6 +43,42 @@ class ServerCache {
   }
 
   /**
+   * Check if a key exists in the cache
+   * @param key Cache key
+   * @returns True if key exists and is not expired
+   */
+  has(key: string): boolean {
+    const entry = this.cache.get(key);
+    if (!entry) return false;
+    
+    // Check if entry has expired
+    if (entry.expiry < Date.now()) {
+      this.cache.delete(key);
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Get the age of a cache entry in milliseconds
+   * @param key Cache key
+   * @returns Age in milliseconds or undefined if not in cache
+   */
+  getAge(key: string): number | undefined {
+    const entry = this.cache.get(key);
+    if (!entry) return undefined;
+    
+    // Check if entry has expired
+    if (entry.expiry < Date.now()) {
+      this.cache.delete(key);
+      return undefined;
+    }
+    
+    return Date.now() - entry.created;
+  }
+
+  /**
    * Set a value in cache
    * @param key Cache key
    * @param value Value to cache
@@ -51,6 +88,7 @@ class ServerCache {
     this.cache.set(key, {
       value,
       expiry: Date.now() + ttl,
+      created: Date.now()
     });
   }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
@@ -13,23 +13,34 @@ import { HostGrid } from './HostGrid';
 import { HostTable } from './HostTable';
 
 export default function HostContainer() {
+  // Track render count for debugging
+  const renderCount = useRef(0);
+  
   // Add logging for component mount
   useEffect(() => {
-    console.log('[DEBUG] HostContainer mounted');
+    renderCount.current++;
+    console.log(`[HostContainer] mounted (render #${renderCount.current})`);
     
     return () => {
-      console.log('[DEBUG] HostContainer unmounted');
+      console.log('[HostContainer] unmounted');
     };
   }, []);
   
-  // Check user context to debug authentication issues
+  // Get user data from context
   const userContext = useUser();
   
+  // Log user context on each render and when it changes
   useEffect(() => {
-    console.log('[DEBUG] HostContainer: User context state:', {
+    console.log('[HostContainer] User context state:', {
       hasUser: !!userContext?.user,
       isLoading: userContext?.loading,
       hasError: !!userContext?.error,
+      userData: userContext?.user ? {
+        id: userContext.user.id,
+        role: userContext.user.role,
+        tenant: userContext.user.tenant_id
+      } : null,
+      renderCount: renderCount.current
     });
   }, [userContext]);
   
@@ -49,7 +60,7 @@ export default function HostContainer() {
     password: '',
   });
 
-  // Use the centralized context instead of the feature-specific hook
+  // Use the centralized context with proper hooks
   const {
     hosts,
     loading,
@@ -63,33 +74,39 @@ export default function HostContainer() {
 
   // Add logging to track when host data changes
   useEffect(() => {
-    console.log('[DEBUG] HostContainer: hosts data changed', { 
+    console.log('[HostContainer] Hosts data updated', { 
       hostCount: hosts?.length || 0,
       loading,
-      error
+      error,
+      renderCount: renderCount.current
     });
   }, [hosts, loading, error]);
 
-  // Handle refresh all hosts
+  // Handle refresh all hosts - pass user data from context
   const handleRefreshAll = async () => {
     if (isRefreshing) return;
     
-    console.log('[DEBUG] HostContainer: refreshing all hosts');
+    console.log('[HostContainer] Refreshing all hosts');
     setIsRefreshing(true);
     try {
-      await testAllConnections();
+      // Pass user data to prevent redundant auth
+      if (userContext?.user) {
+        await testAllConnections(userContext.user);
+      } else {
+        await testAllConnections();
+      }
     } finally {
       setIsRefreshing(false);
-      console.log('[DEBUG] HostContainer: refreshing all hosts complete');
+      console.log('[HostContainer] Host refresh complete');
     }
   };
 
-  // Handle add host form submission
+  // Handle add host form submission with user data
   const handleSaveHost = async () => {
-    console.log('[DEBUG] HostContainer: saving new host', formData.name);
+    console.log('[HostContainer] Saving new host', formData.name);
     setIsSaving(true);
     try {
-      const success = await addHost({
+      const hostData = {
         name: formData.name,
         description: formData.description,
         type: formData.type as 'ssh' | 'docker' | 'portainer',
@@ -99,24 +116,30 @@ export default function HostContainer() {
         password: formData.password,
         status: 'connected',
         created_at: new Date(),
-        updated_at: new Date(),
-        is_windows: false,
-      });
-
-      console.log('[DEBUG] HostContainer: save host result', { success });
-
-      if (success) {
-        setShowAddHost(false);
-        setFormData({
-          name: '',
-          description: '',
-          type: 'ssh',
-          ip: '',
-          port: '22',
-          username: '',
-          password: '',
-        });
+      };
+    
+      // Pass user data to prevent redundant auth
+      if (userContext?.user) {
+        await addHost(hostData, userContext.user);
+      } else {
+        await addHost(hostData);
       }
+      
+      // Close dialog
+      setShowAddHost(false);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        description: '',
+        type: 'ssh',
+        ip: '',
+        port: '22',
+        username: '',
+        password: '',
+      });
+    } catch (error) {
+      console.error('[HostContainer] Error adding host:', error);
     } finally {
       setIsSaving(false);
     }

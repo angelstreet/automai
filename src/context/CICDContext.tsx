@@ -54,7 +54,17 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      const result = await getCICDProvidersAction();
+      // Use cached user data when available
+      const user = state.currentUser || await fetchUserData();
+      
+      console.log('[CICDContext] fetchProviders called', {
+        hasUser: !!user,
+        renderCount: renderCount.current++,
+        componentState: 'loading'
+      });
+      
+      // Pass user data to the server action to avoid redundant auth
+      const result = await getCICDProviders(user, 'CICDContext', renderCount.current);
       
       if (result.success) {
         setState(prev => ({
@@ -62,16 +72,26 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           providers: result.data || [],
           loading: false
         }));
+        
+        console.log('[CICDContext] fetchProviders complete', {
+          providerCount: result.data?.length || 0,
+          componentState: 'loaded'
+        });
+        
+        return result;
       } else {
         setState(prev => ({
           ...prev,
           error: result.error || 'Failed to fetch CI/CD providers',
           loading: false
         }));
+        
+        console.error('[CICDContext] Error fetching providers:', result.error);
+        return result;
       }
-      
-      return result;
     } catch (err: any) {
+      console.error('[CICDContext] Unexpected error in fetchProviders:', err);
+      
       setState(prev => ({
         ...prev,
         error: err.message || 'An unexpected error occurred',
@@ -84,7 +104,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         error: err.message || 'An unexpected error occurred'
       };
     }
-  }, []);
+  }, [state.currentUser, fetchUserData]);
 
   // Get provider by ID
   const getProviderById = useCallback(async (id: string): Promise<CICDProviderType | null> => {

@@ -129,8 +129,25 @@ export const HostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       // Use cached user data when available
       const user = state.currentUser || await refreshUserData();
+      console.log('[HostContext] fetchHosts called', {
+        hasUser: !!user,
+        renderCount: renderCount.current++,
+        componentState: 'loading'
+      });
       
-      const hosts = await getHosts(user);
+      // Pass user data to the action to avoid server refetching
+      const result = await getHosts(state.filter, user, 'HostContext', renderCount.current);
+      
+      if (!result.success) {
+        setState(prev => ({
+          ...prev,
+          error: result.error || 'Failed to fetch hosts',
+          loading: false
+        }));
+        return [];
+      }
+      
+      const hosts = result.data || [];
       const filteredHosts = applyFilters(hosts);
       
       setState(prev => ({ 
@@ -145,17 +162,23 @@ export const HostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         checkHostStatus(host.id);
       });
       
+      console.log('[HostContext] fetchHosts complete', {
+        hostCount: hosts.length,
+        filteredCount: filteredHosts.length,
+        componentState: 'loaded'
+      });
+      
       return hosts;
     } catch (err: any) {
+      console.error('[HostContext] Error fetching hosts:', err);
       setState(prev => ({ 
         ...prev, 
-        error: 'Failed to load hosts', 
+        error: err.message || 'Failed to load hosts', 
         loading: false 
       }));
-      console.error('Error fetching hosts:', err);
       return [];
     }
-  }, [state.currentUser, refreshUserData, applyFilters]);
+  }, [state.currentUser, state.filter, refreshUserData, applyFilters, checkHostStatus]);
 
   // Fetch host by ID
   const getHostById = useCallback(async (id: string): Promise<Host | null> => {
@@ -513,60 +536,4 @@ export const HostProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       return mockCapabilities;
     } catch (err) {
-      console.error(`Error fetching capabilities for host ${hostId}:`, err);
-      return null;
-    }
-  }, []);
-
-  // Initialize by fetching user data and hosts
-  useEffect(() => {
-    const initialize = async () => {
-      await refreshUserData();
-      fetchHosts();
-    };
-    
-    initialize();
-  }, [refreshUserData, fetchHosts]);
-
-  // Create context value
-  const contextValue: HostContextType = {
-    // State
-    ...state,
-    
-    // Actions
-    fetchHosts,
-    getHost: getHostById,
-    addHost,
-    updateHost: updateExistingHost,
-    deleteHost: removeHost,
-    testConnection: testHostConnection,
-    checkHostStatus,
-    verifyFingerprint: verifyHostFingerprint,
-    scanNetwork: scanNetworkForHosts,
-    fetchHostStats,
-    selectHost,
-    updateFilter,
-    sendCommand: sendCommandToHost,
-    getHostTerminals: getTerminalsForHost,
-    executeHostCommands: executeCommandsOnHost,
-    abortHostCommand: abortCommandOnHost,
-    enableAccessToHost: enableHostAccess,
-    fetchHostCapabilities,
-    refreshUserData
-  };
-  
-  return (
-    <HostContext.Provider value={contextValue}>
-      {children}
-    </HostContext.Provider>
-  );
-};
-
-// Hook to use the context
-export function useHostContext() {
-  const context = useContext(HostContext);
-  if (context === undefined) {
-    throw new Error('useHostContext must be used within a HostProvider');
-  }
-  return context;
-} 
+      console.error(`
