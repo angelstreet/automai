@@ -3,11 +3,11 @@
 import React, { useState } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { DeploymentWizard, DeploymentList } from './_components';
-import { useDeployments } from './context';
+import { useDeployment } from '@/context';
 
 const DeploymentPage = () => {
   const [view, setView] = useState('list'); // 'list' or 'create'
-  const { isRefreshing, fetchDeployments } = useDeployments();
+  const { isRefreshing, fetchDeployments } = useDeployment();
 
   const handleRefresh = () => {
     fetchDeployments();

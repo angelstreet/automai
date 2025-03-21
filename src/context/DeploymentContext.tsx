@@ -1,21 +1,35 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { Deployment, DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
 import { 
   getDeployments, 
   getDeploymentById, 
   createDeployment as createDeploymentAction, 
   abortDeployment as abortDeploymentAction, 
-  refreshDeployment as refreshDeploymentAction,
-  getScriptsForRepository,
-  getAvailableHosts,
-  getDeploymentStatus,
-  getRepositories
+  refreshDeployment as refreshDeploymentAction
 } from '@/app/[locale]/[tenant]/deployment/actions';
+import { getRepositories } from '@/app/[locale]/[tenant]/repositories/actions';
+import { getHosts as getAvailableHosts } from '@/app/[locale]/[tenant]/hosts/actions';
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { DeploymentContextType, DeploymentData, DeploymentActions, DEPLOYMENT_CACHE_KEYS } from '@/types/context/deployment';
+
+// Debounce function to prevent multiple rapid calls
+const useDebounce = (fn: Function, delay: number) => {
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  return useCallback((...args: any[]) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      fn(...args);
+      timeoutRef.current = null;
+    }, delay);
+  }, [fn, delay]);
+};
 
 // Initial state
 const initialState: DeploymentData = {
@@ -32,6 +46,11 @@ const DeploymentContext = createContext<DeploymentContextType | undefined>(undef
 // Provider component
 export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<DeploymentData>(initialState);
+  const fetchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
+  
+  // Configure fetch cooldown in milliseconds
+  const FETCH_COOLDOWN = 5000; // Only allow fetches every 5 seconds
   
   // Fetch user data
   const refreshUserData = useCallback(async (): Promise<AuthUser | null> => {
@@ -45,15 +64,40 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, []);
 
-  // Fetch all deployments
+  // Fetch all deployments with cooldown
   const fetchDeployments = useCallback(async (): Promise<void> => {
+    // Check if we're already refreshing
     if (state.isRefreshing) return;
     
-    setState(prev => ({ ...prev, loading: true, error: null, isRefreshing: true }));
+    // Check if we need to enforce cooldown
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    
+    if (timeSinceLastFetch < FETCH_COOLDOWN) {
+      console.log(`DeploymentContext: Throttling fetch, last fetch was ${timeSinceLastFetch}ms ago`);
+      
+      // Set a timer for the remaining cooldown time if one doesn't exist
+      if (!fetchTimerRef.current) {
+        const remainingTime = FETCH_COOLDOWN - timeSinceLastFetch;
+        console.log(`DeploymentContext: Scheduling fetch in ${remainingTime}ms`);
+        
+        fetchTimerRef.current = setTimeout(() => {
+          fetchTimerRef.current = null;
+          fetchDeployments();
+        }, remainingTime);
+      }
+      
+      return;
+    }
+    
+    setState(prev => ({ ...prev, loading: !prev.deployments.length, error: null, isRefreshing: true }));
     
     try {
       // Use cached user data when available
       const user = state.currentUser || await refreshUserData();
+      
+      // Update last fetch time
+      lastFetchTimeRef.current = Date.now();
       
       const data = await getDeployments(user);
       setState(prev => ({ 
@@ -73,10 +117,20 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [state.currentUser, state.isRefreshing, refreshUserData]);
 
-  // Fetch deployment by ID
+  // Debounced version of fetchDeployments to prevent multiple calls
+  const debouncedFetchDeployments = useDebounce(fetchDeployments, 300);
+
+  // Fetch deployment by ID, first check state cache
   const fetchDeploymentById = useCallback(async (id: string): Promise<Deployment | null> => {
     try {
-      // Use cached user data when available
+      // First check if we already have the deployment in state
+      const cachedDeployment = state.deployments.find(d => d.id === id);
+      if (cachedDeployment) {
+        console.log(`DeploymentContext: Found deployment ${id} in state cache`);
+        return cachedDeployment;
+      }
+      
+      // If not in state, use cached user data when available
       if (!state.currentUser) {
         await refreshUserData();
       }
@@ -86,7 +140,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
       console.error('Error fetching deployment by ID:', err);
       return null;
     }
-  }, [state.currentUser, refreshUserData]);
+  }, [state.deployments, state.currentUser, refreshUserData]);
 
   // Create new deployment
   const createDeployment = useCallback(async (formData: DeploymentFormData): Promise<{ 
@@ -98,8 +152,8 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
       const result = await createDeploymentAction(formData);
       
       if (result.success && result.deploymentId) {
-        // Refresh the deployments list
-        fetchDeployments();
+        // Refresh the deployments list, but debounced to prevent rapid calls
+        debouncedFetchDeployments();
         return { success: true, deploymentId: result.deploymentId };
       }
       
@@ -107,7 +161,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (err: any) {
       return { success: false, error: err.message || 'Failed to create deployment' };
     }
-  }, [fetchDeployments]);
+  }, [debouncedFetchDeployments]);
 
   // Abort a running deployment
   const abortDeployment = useCallback(async (id: string): Promise<{ 
@@ -118,8 +172,8 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
       const result = await abortDeploymentAction(id);
       
       if (result.success) {
-        // Refresh the deployments list
-        fetchDeployments();
+        // Refresh the deployments list, but debounced to prevent rapid calls
+        debouncedFetchDeployments();
         return { success: true };
       }
       
@@ -127,7 +181,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     } catch (err: any) {
       return { success: false, error: err.message || 'Failed to abort deployment' };
     }
-  }, [fetchDeployments]);
+  }, [debouncedFetchDeployments]);
 
   // Refresh deployment status
   const refreshDeployment = useCallback(async (id: string): Promise<{ 
@@ -139,7 +193,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
       const result = await refreshDeploymentAction(id);
       
       if (result.success) {
-        // Update the deployment in the local state
+        // Update the deployment in the local state without fetching all deployments
         setState(prev => {
           const updatedDeployments = prev.deployments.map(d => 
             d.id === id && result.deployment ? result.deployment : d
@@ -163,7 +217,10 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
   // Fetch scripts for a repository
   const fetchScriptsForRepository = useCallback(async (repositoryId: string): Promise<any[]> => {
     try {
-      return await getScriptsForRepository(repositoryId);
+      // This function needs to be implemented or replaced with an appropriate API call
+      // For now, return an empty array
+      console.error('fetchScriptsForRepository needs to be implemented');
+      return [];
     } catch (err) {
       console.error('Error fetching scripts:', err);
       return [];
@@ -179,7 +236,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
       return [];
     }
   }, []);
-
+  
   // Fetch repositories
   const fetchRepositories = useCallback(async (): Promise<any[]> => {
     try {
@@ -190,24 +247,14 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, []);
 
-  // Fetch deployment status
-  const fetchDeploymentStatus = useCallback(async (id: string): Promise<{
-    success: boolean;
-    deployment?: any;
-    cicd?: any;
-    error?: string;
-  }> => {
-    try {
-      // Use cached user data when available
-      if (!state.currentUser) {
-        await refreshUserData();
+  // Clean up timers on component unmount
+  useEffect(() => {
+    return () => {
+      if (fetchTimerRef.current) {
+        clearTimeout(fetchTimerRef.current);
       }
-      
-      return await getDeploymentStatus(id, state.currentUser);
-    } catch (err: any) {
-      return { success: false, error: err.message || 'Failed to get deployment status' };
-    }
-  }, [state.currentUser, refreshUserData]);
+    };
+  }, []);
 
   // Initialize by fetching user data and deployments
   useEffect(() => {
@@ -233,7 +280,6 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     fetchScriptsForRepository,
     fetchAvailableHosts,
     fetchRepositories,
-    fetchDeploymentStatus,
     refreshUserData
   };
   

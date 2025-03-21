@@ -53,6 +53,11 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   useEffect(() => {
     const loadRepositories = async () => {
       try {
+        if (Object.keys(repositories).length > 0) {
+          // Skip fetching repositories if we already have them loaded
+          return;
+        }
+        
         const repos = await fetchRepositories();
         // Convert array to record for easy lookup
         const repoMap = repos.reduce((acc: Record<string, Repository>, repo: Repository) => {
@@ -66,10 +71,14 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     };
 
     loadRepositories();
-  }, [fetchRepositories]);
+  }, [fetchRepositories, repositories]);
 
-  // Handle refresh button click
+  // Handle refresh button click with debounce
   const handleRefresh = () => {
+    if (isRefreshing) {
+      // Don't allow refresh while already refreshing
+      return;
+    }
     fetchDeployments();
   };
 

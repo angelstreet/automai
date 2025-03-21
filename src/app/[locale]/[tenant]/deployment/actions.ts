@@ -6,66 +6,71 @@ import { Deployment, DeploymentFormData, DeploymentStatus, Repository } from './
 import repository, { Repository as DbRepository } from '@/lib/supabase/db-repositories/repository';
 import { getUser } from '@/app/actions/user';
 import { mapDeploymentToParameters } from './utils';
+import { unstable_cache } from 'next/cache';
+
+// Configure the deployment cache
+const DEPLOYMENT_CACHE_TTL = 60; // 60 seconds
 
 /**
- * Get all deployments for the current user
+ * Get all deployments for the current user with caching
  * @param user The authenticated user
  * @returns Array of deployments
  */
-export async function getDeployments(user: AuthUser | null): Promise<Deployment[]> {
-  try {
-    console.log('Actions layer: Fetching deployments for user:', user?.id);
-    
-    if (!user) {
-      console.error('Actions layer: Cannot fetch deployments - user not authenticated');
-      return [];
-    }
-    
-    // Import the deployment database module
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-    
-    // Fetch deployments from the database
-    const where = { tenant_id: user.tenant_id };
-    console.log('Actions layer: Fetching deployments with where:', JSON.stringify(where));
-    
-    const result = await deploymentDb.findMany({ where });
-    console.log('Actions layer: Raw result from database:', JSON.stringify(result, null, 2));
-    
-    // Handle the result based on its structure
-    if (result && typeof result === 'object') {
-      if ('success' in result && result.success === false && 'error' in result) {
-        console.error('Actions layer: Error fetching deployments:', result.error);
+export const getDeployments = unstable_cache(
+  async (user: AuthUser | null): Promise<Deployment[]> => {
+    try {
+      console.log('Actions layer: Fetching deployments for user:', user?.id);
+      
+      if (!user) {
+        console.error('Actions layer: Cannot fetch deployments - user not authenticated');
         return [];
       }
       
-      let dbDeployments: any[] = [];
+      // Import the deployment database module
+      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
       
-      if ('data' in result && Array.isArray(result.data)) {
-        dbDeployments = result.data;
-      } else if (Array.isArray(result)) {
-        dbDeployments = result;
+      // Fetch deployments from the database
+      const where = { tenant_id: user.tenant_id };
+      console.log('Actions layer: Fetching deployments with where:', JSON.stringify(where));
+      
+      const result = await deploymentDb.findMany({ where });
+      
+      // Handle the result based on its structure
+      if (result && typeof result === 'object') {
+        if ('success' in result && result.success === false && 'error' in result) {
+          console.error('Actions layer: Error fetching deployments:', result.error);
+          return [];
+        }
+        
+        let dbDeployments: any[] = [];
+        
+        if ('data' in result && Array.isArray(result.data)) {
+          dbDeployments = result.data;
+        } else if (Array.isArray(result)) {
+          dbDeployments = result;
+        }
+        
+        // Map database results to Deployment type
+        const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
+        
+        console.log('Actions layer: Fetched deployments count:', deployments.length);
+        
+        return deployments;
       }
       
-      // Map database results to Deployment type
-      const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
-      
-      console.log('Actions layer: Fetched deployments count:', deployments.length);
-      if (deployments.length > 0) {
-        console.log('Actions layer: First deployment sample:', JSON.stringify(deployments[0], null, 2));
-      } else {
-        console.log('Actions layer: No deployments found');
-      }
-      
-      return deployments;
+      console.error('Actions layer: Unexpected result structure from database');
+      return [];
+    } catch (error) {
+      console.error('Error fetching deployments:', error);
+      throw new Error('Failed to fetch deployments');
     }
-    
-    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
-    return [];
-  } catch (error) {
-    console.error('Error fetching deployments:', error);
-    throw new Error('Failed to fetch deployments');
+  },
+  ['deployments-list'],
+  { 
+    revalidate: DEPLOYMENT_CACHE_TTL,
+    tags: ['deployments']
   }
-}
+);
 
 // Define a function to map database deployment to Deployment type
 function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
@@ -92,380 +97,323 @@ function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
 }
 
 /**
- * Get a specific deployment by ID
+ * Get a specific deployment by ID with caching
  * @param id Deployment ID
  * @returns Deployment object or null if not found
  */
-export async function getDeploymentById(id: string): Promise<Deployment | null> {
-  try {
-    console.log(`Actions layer: Fetching deployment with ID: ${id}`);
-    
-    // Get the current user
-    const user = await getUser();
-    
-    if (!user) {
-      console.error('Actions layer: Cannot fetch deployment - user not authenticated');
+export const getDeploymentById = unstable_cache(
+  async (id: string): Promise<Deployment | null> => {
+    try {
+      console.log(`Actions layer: Fetching deployment with ID: ${id}`);
+      
+      // Import the deployment database module
+      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      
+      // Fetch the deployment from the database
+      const result = await deploymentDb.findUnique(id);
+      
+      // Handle the result
+      if (result && typeof result === 'object') {
+        if ('success' in result && result.success === false && 'error' in result) {
+          console.error(`Actions layer: Error fetching deployment with ID ${id}:`, result.error);
+          return null;
+        }
+        
+        let dbDeployment = null;
+        
+        if ('data' in result) {
+          dbDeployment = result.data;
+        } else if (!('success' in result)) {
+          dbDeployment = result;
+        }
+        
+        if (dbDeployment) {
+          // Map database result to Deployment type
+          return mapDbDeploymentToDeployment(dbDeployment);
+        }
+      }
+      
+      console.error(`Actions layer: Deployment with ID ${id} not found`);
+      return null;
+    } catch (error) {
+      console.error(`Error fetching deployment with ID ${id}:`, error);
       return null;
     }
-    
-    // Import the deployment database module
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-    
-    // Fetch deployment from the database
-    const where = { id, tenant_id: user.tenant_id };
-    console.log('Actions layer: Fetching deployment with where:', JSON.stringify(where));
-    
-    const result = await deploymentDb.findUnique({ where });
-    console.log('Actions layer: Raw result from database:', JSON.stringify(result, null, 2));
-    
-    // Handle the result based on its structure
-    if (result && typeof result === 'object') {
-      if ('success' in result && result.success === false && 'error' in result && result.error) {
-        console.error('Actions layer: Error fetching deployment:', result.error);
-        return null;
-      }
-      
-      let dbDeployment: any = null;
-      
-      if ('data' in result) {
-        dbDeployment = result.data;
-      } else if (!('success' in result)) {
-        dbDeployment = result;
-      }
-      
-      if (!dbDeployment) {
-        console.log(`Actions layer: No deployment found with ID: ${id}`);
-        return null;
-      }
-      
-      // Map database result to Deployment type
-      const deployment = mapDbDeploymentToDeployment(dbDeployment);
-      console.log('Actions layer: Fetched deployment:', JSON.stringify(deployment, null, 2));
-      
-      return deployment;
-    }
-    
-    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
-    return null;
-  } catch (error) {
-    console.error(`Error fetching deployment ${id}:`, error);
-    throw new Error('Failed to fetch deployment');
+  },
+  ['deployment-by-id'],
+  { 
+    revalidate: DEPLOYMENT_CACHE_TTL,
+    tags: ['deployments']
   }
-}
+);
 
 /**
  * Create a new deployment
  * @param formData Deployment form data
- * @returns Object with success status and optional deployment ID
+ * @returns Result with success status and deploymentId or error
  */
-export async function createDeployment(
-  formData: DeploymentFormData
-): Promise<{ success: boolean; deploymentId?: string; error?: string }> {
+export async function createDeployment(formData: DeploymentFormData): Promise<{ 
+  success: boolean; 
+  deploymentId?: string; 
+  error?: string 
+}> {
   try {
-    console.log('Actions layer: Creating deployment with form data:', JSON.stringify({
-      name: formData.name,
-      description: formData.description,
-      repository: formData.repository,
-      selectedScripts: formData.selectedScripts?.length,
-      selectedHosts: formData.selectedHosts?.length,
-      schedule: formData.schedule,
-      jenkinsEnabled: formData.jenkinsConfig?.enabled
-    }));
-
+    console.log('Actions layer: Creating deployment with form data:', JSON.stringify(formData, null, 2));
+    
     // Get the current user
     const user = await getUser();
     
     if (!user) {
       console.error('Actions layer: Cannot create deployment - user not authenticated');
-      return { success: false, error: 'User not authenticated' };
+      return { 
+        success: false, 
+        error: 'You must be logged in to create a deployment' 
+      };
     }
-
-    // Import the deployment and CICD database modules
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
-
-    // Extract script paths and parameters from the scriptMapping
-    const scriptPaths: string[] = [];
-    const scriptParameters: string[] = [];
     
-    console.log('Actions layer: Raw parameters from form:', JSON.stringify(formData.parameters, null, 2));
-    
-    if (formData.scriptMapping) {
-      Object.entries(formData.scriptMapping).forEach(([scriptId, scriptInfo]) => {
-        if (scriptInfo && scriptInfo.path) {
-          scriptPaths.push(scriptInfo.path);
-          
-          // Store parameters for this script path if they exist
-          if (formData.parameters && formData.parameters[scriptId] && formData.parameters[scriptId].raw) {
-            // Just use the raw parameter value as a string
-            const rawParam = formData.parameters[scriptId].raw;
-            console.log(`Actions layer: For script ${scriptId}, using raw parameter: "${rawParam}"`);
-            scriptParameters.push(rawParam);
-          } else {
-            // Add an empty string if no parameters
-            console.log(`Actions layer: No parameters for script ${scriptId}, using empty string`);
-            scriptParameters.push('');
-          }
-        }
-      });
-    }
-
-    console.log('Actions layer: Script paths:', scriptPaths);
-    console.log('Actions layer: Script parameters:', scriptParameters);
-
-    // Check if the selected hosts are valid UUIDs
-    const isValidUUID = (id: string) => {
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      return uuidRegex.test(id);
-    };
-    
-    const validHostIds = formData.selectedHosts?.filter(id => {
-      const isValid = isValidUUID(id);
-      if (!isValid) {
-        console.warn(`Actions layer: Filtering out invalid host ID: ${id}`);
-      }
-      return isValid;
-    }) || [];
-
-    console.log('Actions layer: Valid host IDs:', validHostIds);
-
-    // Map form data to database schema
+    // Prepare deployment data
     const deploymentData = {
       name: formData.name,
       description: formData.description || '',
-      repository_id: formData.repository,
-      scripts_path: scriptPaths,
-      scripts_parameters: scriptParameters,
-      host_ids: validHostIds,
+      repository_id: formData.repositoryId,
+      scripts_path: formData.scriptsPath,
+      scripts_parameters: formData.scriptsParameters,
+      host_ids: formData.hostIds,
       status: 'pending',
-      schedule_type: formData.schedule,
+      user_id: user.id,
+      tenant_id: user.tenant_id,
+      schedule_type: formData.scheduleType || 'now',
       scheduled_time: formData.scheduledTime || null,
       cron_expression: formData.cronExpression || null,
       repeat_count: formData.repeatCount || 0,
-      environment_vars: formData.environmentVars || [], 
-      tenant_id: user.tenant_id,
-      user_id: user.id
+      environment_vars: formData.environmentVars || []
     };
-
-    console.log('Actions layer: Final deployment data:', JSON.stringify(deploymentData, null, 2));
-    console.log('Actions layer: Calling deployment.create with data');
+    
+    console.log('Actions layer: Prepared deployment data:', JSON.stringify(deploymentData, null, 2));
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
     
     // Create the deployment in the database
     const result = await deploymentDb.create({ data: deploymentData });
-
-    if (!result.success) {
-      console.error('Error creating deployment:', result.error);
-      
-      // Provide more specific error messages based on the error type
-      if (result.error?.code === '22P02') {
+    console.log('Actions layer: Create deployment result:', JSON.stringify(result, null, 2));
+    
+    // Handle the result
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false && 'error' in result) {
+        console.error('Actions layer: Error creating deployment:', result.error);
         return { 
           success: false, 
-          error: 'Invalid data type for one or more fields. Please ensure all IDs are valid UUIDs.' 
+          error: result.error || 'Failed to create deployment' 
         };
       }
       
-      return { success: false, error: result.error?.message || 'Failed to create deployment' };
-    }
-
-    console.log('Actions layer: Deployment created with ID:', result.id);
-
-    // Always try to create the CICD mapping if we have a provider
-    console.log('Actions layer: Checking for Jenkins integration');
-    
-    try {
-      // Get provider ID - use the one from form config or get the default
-      const providerId = formData.jenkinsConfig?.providerId || 
-                       await getDefaultProviderIdForTenant(user.tenant_id);
+      let deploymentId = '';
       
-      if (!providerId) {
-        console.error('Actions layer: No CI/CD provider found for tenant');
-        // Continue deployment without CI/CD
-      } else {
-        console.log('Actions layer: Jenkins integration possible, creating job with provider:', providerId);
-        
-        // Import the CI/CD service and XML generator
-        const { getCICDProvider } = await import('@/lib/services/cicd');
-        const { generateJenkinsPipelineXml } = await import('@/lib/services/cicd/xml-generators');
-        
-        // Get the provider instance
-        const providerResult = await getCICDProvider(providerId, user.tenant_id);
-        
-        if (!providerResult.success || !providerResult.data) {
-          console.error('Actions layer: Error getting CI/CD provider:', providerResult.error);
-        } else {
-          const provider = providerResult.data;
-          
-          // Create job name and XML
-          const jobName = `deployment_${deploymentData.name.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase()}`;
-          const folderPath = 'trial/joachim_djibril'; // Fixed folder path for now
-          
-          // Generate Jenkins job XML
-          const jobXml = generateJenkinsPipelineXml(
-            deploymentData.name,
-            deploymentData.repository_id,
-            deploymentData.scripts_path,
-            deploymentData.scripts_parameters,
-            deploymentData.host_ids
-          );
-          
-          console.log('Actions layer: Creating Jenkins job with XML:', jobXml);
-          
-          // DEBUG: Log provider details before job creation
-          console.log('Actions layer: Jenkins provider details:', {
-            providerConfigured: !!provider,
-            providerType: provider?.constructor?.name,
-            baseUrl: provider['baseUrl'],
-            authPresent: !!provider['authHeader'],
-          });
-          
-          // Test the connection first
-          const testResult = await provider.testConnection();
-          console.log('Actions layer: Jenkins connection test result:', testResult);
-          
-          // Create the job in Jenkins
-          const createResult = await provider.createJob(jobName, jobXml, folderPath);
-          if (!createResult.success) {
-            console.error('Actions layer: Failed to create Jenkins job:', createResult.error);
-            // Fail the entire deployment creation to maintain sync with Jenkins
-            return { success: false, error: `Failed to create Jenkins job: ${createResult.error}` };
-          }
-          
-          // Get created job ID
-          const jobId = createResult.data;
-          
-          console.log(`Actions layer: Jenkins job created successfully with ID: ${jobId}`);
-          
-          // Store mapping in database for future reference
-          const cicdMappingResult = await cicdDb.createCICDDeploymentMapping({
-            deployment_id: result.id,
-            provider_id: providerId,
-            job_id: jobId,
-            parameters: {
-              repository_id: deploymentData.repository_id,
-              host_ids: deploymentData.host_ids,
-            }
-          });
-          
-          if (!cicdMappingResult.success) {
-            console.error('Actions layer: Failed to create CICD mapping:', cicdMappingResult.error);
-          } else {
-            console.log('Actions layer: CICD mapping created successfully');
-            
-            // Only trigger the job immediately if schedule type is 'now'
-            if (deploymentData.schedule_type === 'now') {
-              console.log('Actions layer: Schedule type is "now", triggering Jenkins job immediately');
-              const triggerResult = await provider.triggerJob(jobId);
-              if (!triggerResult.success) {
-                console.error('Actions layer: Failed to trigger Jenkins job:', triggerResult.error);
-                // Log error but don't fail the deployment creation
-                console.warn('Actions layer: Continuing despite Jenkins trigger failure. User can manually trigger the job later.');
-              } else {
-                console.log('Actions layer: Jenkins job triggered successfully with build ID:', triggerResult.data.id);
-                console.log('Actions layer: Build URL:', triggerResult.data.url);
-                
-                // Update the CICD mapping with build information if available
-                if (triggerResult.data && triggerResult.data.id) {
-                  try {
-                    await cicdDb.updateDeploymentCICDMapping(
-                      cicdMappingResult.id,
-                      {
-                        build_number: triggerResult.data.id,
-                        build_url: triggerResult.data.url
-                      }
-                    );
-                    console.log('Actions layer: Updated CICD mapping with build information');
-                  } catch (updateError) {
-                    console.error('Actions layer: Failed to update CICD mapping with build info:', updateError);
-                  }
-                }
-              }
-            } else {
-              console.log(`Actions layer: Schedule type is "${deploymentData.schedule_type}", not triggering Jenkins job now`);
-            }
-          }
-        }
+      if ('data' in result && result.data && 'id' in result.data) {
+        deploymentId = result.data.id as string;
+      } else if ('id' in result) {
+        deploymentId = result.id as string;
       }
-    } catch (cicdError) {
-      console.error('Actions layer: Error in CI/CD integration:', cicdError);
-      // Continue deployment without failing due to CI/CD issues
+      
+      if (deploymentId) {
+        console.log(`Actions layer: Successfully created deployment with ID: ${deploymentId}`);
+        
+        // Revalidate the cache
+        revalidatePath('/[locale]/[tenant]/deployment');
+        
+        // Return success response
+        return { 
+          success: true, 
+          deploymentId 
+        };
+      }
     }
-
-    // Revalidate the deployments list
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
     
+    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
     return { 
-      success: true, 
-      deploymentId: result.id 
+      success: false, 
+      error: 'Failed to create deployment due to unexpected response structure' 
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating deployment:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to create deployment' };
+    return { 
+      success: false, 
+      error: error.message || 'Failed to create deployment' 
+    };
   }
 }
 
 /**
  * Abort a running deployment
  * @param id Deployment ID
- * @returns Object with success status
+ * @returns Result with success status and error if applicable
  */
-export async function abortDeployment(id: string): Promise<{ success: boolean; error?: string }> {
+export async function abortDeployment(id: string): Promise<{ 
+  success: boolean; 
+  error?: string 
+}> {
   try {
-    // TODO: Implement actual API call to abort deployment
-    // This is a stub implementation
-    return { success: true };
-  } catch (error) {
+    console.log(`Actions layer: Aborting deployment with ID: ${id}`);
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot abort deployment - user not authenticated');
+      return { 
+        success: false, 
+        error: 'You must be logged in to abort a deployment' 
+      };
+    }
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Update the deployment status to aborted
+    const updateData = {
+      status: 'aborted' as DeploymentStatus,
+      completed_at: new Date().toISOString()
+    };
+    
+    console.log(`Actions layer: Updating deployment ${id} with data:`, JSON.stringify(updateData, null, 2));
+    
+    // Update the deployment in the database
+    const result = await deploymentDb.update(id, { data: updateData });
+    console.log('Actions layer: Abort deployment result:', JSON.stringify(result, null, 2));
+    
+    // Handle the result
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false && 'error' in result) {
+        console.error('Actions layer: Error aborting deployment:', result.error);
+        return { 
+          success: false, 
+          error: result.error || 'Failed to abort deployment' 
+        };
+      }
+      
+      console.log(`Actions layer: Successfully aborted deployment with ID: ${id}`);
+      
+      // Revalidate the cache
+      revalidatePath('/[locale]/[tenant]/deployment');
+      
+      // Return success response
+      return { success: true };
+    }
+    
+    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
+    return { 
+      success: false, 
+      error: 'Failed to abort deployment due to unexpected response structure' 
+    };
+  } catch (error: any) {
     console.error(`Error aborting deployment ${id}:`, error);
-    return { success: false, error: 'Failed to abort deployment' };
+    return { 
+      success: false, 
+      error: error.message || 'Failed to abort deployment' 
+    };
   }
 }
 
 /**
- * Refresh deployment data
+ * Refresh a deployment's status
  * @param id Deployment ID
- * @returns Object with success status and optional updated deployment
+ * @returns Result with success status, deployment data, and error if applicable
  */
-export async function refreshDeployment(
-  id: string
-): Promise<{ success: boolean; deployment?: Deployment; error?: string }> {
+export async function refreshDeployment(id: string): Promise<{ 
+  success: boolean; 
+  deployment?: Deployment; 
+  error?: string 
+}> {
   try {
-    console.log(`Actions layer: Refreshing deployment ${id}`);
+    console.log(`Actions layer: Refreshing deployment with ID: ${id}`);
     
-    // Get the deployment
     const deployment = await getDeploymentById(id);
     
     if (!deployment) {
-      console.error(`Actions layer: Deployment ${id} not found`);
-      return { success: false, error: 'Deployment not found' };
+      console.error(`Actions layer: Deployment with ID ${id} not found`);
+      return { 
+        success: false, 
+        error: 'Deployment not found' 
+      };
     }
     
-    // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
-    
-    // Check if this deployment has CI/CD integration
-    const mappingResult = await cicdDb.getDeploymentCICDMapping({ deployment_id: id });
-    
-    if (mappingResult.success && mappingResult.data) {
-      console.log(`Actions layer: Deployment ${id} has CI/CD integration, updating status`);
-      
-      // Update CI/CD status
-      const statusResult = await updateDeploymentCICDStatus(id);
-      
-      if (!statusResult.success) {
-        console.error(`Actions layer: Failed to update CI/CD status: ${statusResult.error}`);
-        // Continue with regular refreshing even if CI/CD status update failed
-      }
-    }
-    
-    // Get the latest deployment data
-    const refreshedDeployment = await getDeploymentById(id);
+    // Revalidate the cache
+    revalidatePath('/[locale]/[tenant]/deployment');
     
     return { 
       success: true, 
-      deployment: refreshedDeployment || deployment
+      deployment 
     };
   } catch (error: any) {
     console.error(`Error refreshing deployment ${id}:`, error);
-    return { success: false, error: error.message || 'Failed to refresh deployment' };
+    return { 
+      success: false, 
+      error: error.message || 'Failed to refresh deployment' 
+    };
+  }
+}
+
+/**
+ * Delete a deployment
+ * @param id Deployment ID
+ * @returns Result with success status and error if applicable
+ */
+export async function deleteDeployment(id: string): Promise<{ 
+  success: boolean; 
+  error?: string 
+}> {
+  try {
+    console.log(`Actions layer: Deleting deployment with ID: ${id}`);
+    
+    // Get the current user
+    const user = await getUser();
+    
+    if (!user) {
+      console.error('Actions layer: Cannot delete deployment - user not authenticated');
+      return { 
+        success: false, 
+        error: 'You must be logged in to delete a deployment' 
+      };
+    }
+    
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    
+    // Delete the deployment from the database
+    const result = await deploymentDb.delete(id);
+    console.log('Actions layer: Delete deployment result:', JSON.stringify(result, null, 2));
+    
+    // Handle the result
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false && 'error' in result) {
+        console.error('Actions layer: Error deleting deployment:', result.error);
+        return { 
+          success: false, 
+          error: result.error || 'Failed to delete deployment' 
+        };
+      }
+      
+      console.log(`Actions layer: Successfully deleted deployment with ID: ${id}`);
+      
+      // Revalidate the cache
+      revalidatePath('/[locale]/[tenant]/deployment');
+      
+      // Return success response
+      return { success: true };
+    }
+    
+    console.error('Actions layer: Unexpected result structure from database:', JSON.stringify(result));
+    return { 
+      success: false, 
+      error: 'Failed to delete deployment due to unexpected response structure' 
+    };
+  } catch (error: any) {
+    console.error(`Error deleting deployment ${id}:`, error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to delete deployment' 
+    };
   }
 }
 
@@ -1229,99 +1177,6 @@ export async function syncCICDJobsAction(
   } catch (error: any) {
     console.error('Error syncing CI/CD jobs:', error);
     return { success: false, error: error.message || 'Failed to sync CI/CD jobs' };
-  }
-}
-
-/**
- * Delete a deployment
- * @param id Deployment ID to delete
- * @returns Object with success status and optional error message
- */
-export async function deleteDeployment(id: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    console.log(`Actions layer: Deleting deployment ${id}`);
-    
-    // Get the current user
-    const user = await getUser();
-    
-    if (!user) {
-      console.error('Actions layer: Cannot delete deployment - user not authenticated');
-      return { success: false, error: 'User not authenticated' };
-    }
-    
-    // Import the deployment and cicd database modules
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
-    
-    // Check if there's a CICD mapping for this deployment
-    const mappingResult = await cicdDb.getDeploymentCICDMappings({
-      where: { deployment_id: id }
-    });
-    
-    // If there's a CICD mapping, delete the Jenkins job
-    if (mappingResult.success && mappingResult.data && mappingResult.data.length > 0) {
-      console.log(`Actions layer: Found ${mappingResult.data.length} CICD mappings for deployment ${id}, deleting Jenkins jobs`);
-      
-      // Process each mapping
-      for (const mapping of mappingResult.data) {
-        try {
-          // Import the CI/CD service
-          const { getCICDProvider } = await import('@/lib/services/cicd');
-          const providerResult = await getCICDProvider(mapping.provider_id, user.tenant_id);
-          
-          if (providerResult.success && providerResult.data) {
-            const provider = providerResult.data;
-            
-            // Delete the job in Jenkins
-            if (provider.deleteJob) {
-              console.log(`Actions layer: Deleting Jenkins job ${mapping.job_id}`);
-              
-              // Use the same folder path that was used for creation
-              const folderPath = 'trial/joachim_djibril'; // Fixed folder path for now
-              const jobDeleteResult = await provider.deleteJob(mapping.job_id, folderPath);
-              
-              if (!jobDeleteResult.success) {
-                console.error('Actions layer: Failed to delete Jenkins job:', jobDeleteResult.error);
-                // Log the error but continue to delete the DB records
-                console.warn('Actions layer: Proceeding to delete database records despite Jenkins job deletion failure');
-              } else {
-                console.log('Actions layer: Jenkins job deleted successfully');
-              }
-            } else {
-              console.warn('Actions layer: Provider does not support job deletion');
-            }
-          }
-          
-          // Delete the CICD mapping regardless of Jenkins job deletion result
-          await cicdDb.deleteDeploymentCICDMapping(mapping.id);
-          
-          console.log(`Actions layer: Deleted CICD mapping with ID ${mapping.id} for deployment ${id}`);
-        } catch (cicdError) {
-          // Log the error but continue with the next mapping and deployment deletion
-          console.error(`Actions layer: Error processing CICD mapping ${mapping.id}:`, cicdError);
-        }
-      }
-    }
-    
-    // Delete the deployment from the database
-    const result = await deploymentDb.delete({
-      where: { id, tenant_id: user.tenant_id }
-    });
-    
-    if (!result.success) {
-      console.error('Actions layer: Error deleting deployment:', result.error);
-      return { success: false, error: result.error || 'Failed to delete deployment' };
-    }
-    
-    console.log('Actions layer: Deployment deleted successfully');
-    
-    // Revalidate the deployments list
-    revalidatePath('/[locale]/[tenant]/deployment', 'page');
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error deleting deployment:', error);
-    return { success: false, error: error.message || 'Failed to delete deployment' };
   }
 }
 

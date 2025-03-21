@@ -1,10 +1,10 @@
 'use client';
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { HostProvider, useHostContext } from './host';
-import { DeploymentProvider, useDeploymentContext } from './deployment';
-import { RepositoryProvider, useRepositoryContext } from './repository';
-import { CICDProvider, useCICDContext } from './cicd';
+import { HostProvider, useHostContext } from './HostContext';
+import { DeploymentProvider, useDeploymentContext } from './DeploymentContext';
+import { RepositoryProvider, useRepositoryContext } from './RepositoryContext';
+import { CICDProvider, useCICDContext } from './CICDContext';
 import { AppContextType } from '@/types/context/app';
 
 // Create the context
