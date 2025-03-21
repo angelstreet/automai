@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 import { cn } from '@/lib/utils';
 
 // Define team type for consistency

@@ -157,13 +157,16 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
     try {
       const result = await createDeploymentAction(formData);
       
-      if (result.success && result.deploymentId) {
+      if (result && result.success && result.deploymentId) {
         // Refresh the deployments list, but debounced to prevent rapid calls
         debouncedFetchDeployments();
         return { success: true, deploymentId: result.deploymentId };
       }
       
-      return { success: false, error: result.error || 'Failed to create deployment' };
+      return { 
+        success: false, 
+        error: result && result.error ? result.error : 'Failed to create deployment' 
+      };
     } catch (err: any) {
       return { success: false, error: err.message || 'Failed to create deployment' };
     }
@@ -236,7 +239,8 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
   // Fetch available hosts
   const fetchAvailableHosts = useCallback(async (): Promise<any[]> => {
     try {
-      return await getAvailableHosts();
+      const response = await getAvailableHosts();
+      return response.data || [];
     } catch (err) {
       console.error('Error fetching hosts:', err);
       return [];
@@ -246,7 +250,8 @@ export const DeploymentProvider: React.FC<{ children: ReactNode }> = ({ children
   // Fetch repositories
   const fetchRepositories = useCallback(async (): Promise<any[]> => {
     try {
-      return await getRepositories();
+      const response = await getRepositories();
+      return response.data || [];
     } catch (err) {
       console.error('Error fetching repositories:', err);
       return [];

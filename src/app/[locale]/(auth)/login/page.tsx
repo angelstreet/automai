@@ -7,7 +7,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 import {
   signInWithOAuth as signInWithOAuthAction,
   signInWithPassword as signInWithPasswordAction,

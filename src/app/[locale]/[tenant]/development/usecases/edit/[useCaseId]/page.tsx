@@ -5,7 +5,7 @@ import * as React from 'react';
 import { useEffect } from 'react';
 
 import { Button } from '@/components/shadcn/button';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 
 export default function UseCaseEditPage() {
   const router = useRouter();

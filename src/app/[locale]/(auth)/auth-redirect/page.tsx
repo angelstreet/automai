@@ -4,7 +4,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { exchangeCodeForSession } from '@/app/actions/auth';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 
 // Add error boundary component
 function ErrorFallback({ error, locale }: { error: Error; locale: string }) {

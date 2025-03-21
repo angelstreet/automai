@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useTranslations } from 'next-intl';

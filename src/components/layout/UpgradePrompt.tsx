@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/shadcn/button';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 
 interface UpgradePromptProps {
   feature: string;

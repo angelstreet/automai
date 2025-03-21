@@ -33,7 +33,7 @@ import {
 } from '@/components/shadcn/table';
 import { Textarea } from '@/components/shadcn/textarea';
 import { useToast } from '@/components/shadcn/use-toast';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 import { PlanType, getUpgradeMessage } from '@/lib/features';
 import { User } from '@/types/user';
 

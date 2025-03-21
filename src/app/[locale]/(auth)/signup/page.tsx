@@ -8,7 +8,7 @@ import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 
 export default function SignUpPage() {
   const router = useRouter();

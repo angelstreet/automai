@@ -5,6 +5,7 @@ import { HostProvider, useHostContext } from './HostContext';
 import { DeploymentProvider, useDeploymentContext } from './DeploymentContext';
 import { RepositoryProvider, useRepositoryContext } from './RepositoryContext';
 import { CICDProvider, useCICDContext } from './CICDContext';
+import { UserProvider, useUser as useUserContext } from './UserContext';
 import { AppContextType } from '@/types/context/app';
 
 // Create the app context
@@ -16,13 +17,14 @@ const AppContext = createContext<{
     host: false,
     deployment: false,
     repository: false,
-    cicd: false
+    cicd: false,
+    user: true // User context is important and should be initialized by default
   },
   initContext: () => {}
 });
 
 // Track which contexts are initialized
-type ContextName = 'host' | 'deployment' | 'repository' | 'cicd';
+type ContextName = 'host' | 'deployment' | 'repository' | 'cicd' | 'user';
 type AppContextState = Record<ContextName, boolean>;
 
 // Provider component that composes all other providers
@@ -32,7 +34,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     host: false,
     deployment: false,
     repository: false,
-    cicd: false
+    cicd: false,
+    user: true // Initialize user context by default
   });
   
   // Function to initialize a context on demand
@@ -67,6 +70,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       result = <HostProvider>{result}</HostProvider>;
     }
     
+    // Always include UserProvider since it's fundamental
+    if (contextState.user) {
+      result = <UserProvider>{result}</UserProvider>;
+    }
+    
     return result;
   };
   
@@ -90,13 +98,15 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   const deploymentContext = contextState.deployment ? useDeploymentContext() : null;
   const repositoryContext = contextState.repository ? useRepositoryContext() : null;
   const cicdContext = contextState.cicd ? useCICDContext() : null;
+  const userContext = contextState.user ? useUserContext() : null;
   
   // Combine contexts
   const appContextValue: AppContextType = {
     host: hostContext,
     deployment: deploymentContext,
     repository: repositoryContext,
-    cicd: cicdContext
+    cicd: cicdContext,
+    user: userContext
   };
   
   return (
@@ -111,7 +121,8 @@ const InnerAppContext = createContext<AppContextType>({
   host: null,
   deployment: null,
   repository: null,
-  cicd: null
+  cicd: null,
+  user: null
 });
 
 // Singleton-like initialization helpers
@@ -133,7 +144,8 @@ export function useAppContext() {
 
 // Singleton-like hooks for each context
 export function useHost() {
-  const isInitialized = useInitContext('host');
+  // Use _ prefix to indicate intentionally unused variable
+  const _isInitialized = useInitContext('host');
   const context = useAppContext();
   
   // During initialization, context.host will be null
@@ -142,22 +154,33 @@ export function useHost() {
 }
 
 export function useDeployment() {
-  const isInitialized = useInitContext('deployment');
+  // Use _ prefix to indicate intentionally unused variable
+  const _isInitialized = useInitContext('deployment');
   const context = useAppContext();
   
   return context.deployment;
 }
 
 export function useRepository() {
-  const isInitialized = useInitContext('repository');
+  // Use _ prefix to indicate intentionally unused variable
+  const _isInitialized = useInitContext('repository');
   const context = useAppContext();
   
   return context.repository;
 }
 
 export function useCICD() {
-  const isInitialized = useInitContext('cicd');
+  // Use _ prefix to indicate intentionally unused variable
+  const _isInitialized = useInitContext('cicd');
   const context = useAppContext();
   
   return context.cicd;
+}
+
+export function useUser() {
+  // Use _ prefix to indicate intentionally unused variable
+  const _isInitialized = useInitContext('user');
+  const context = useAppContext();
+  
+  return context.user;
 } 

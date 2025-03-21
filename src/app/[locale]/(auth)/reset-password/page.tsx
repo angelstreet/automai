@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 import { updatePassword } from '@/app/actions/auth';
 
 export default function ResetPasswordPage() {

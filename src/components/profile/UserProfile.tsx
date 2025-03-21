@@ -16,7 +16,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/hooks/useUser';
 import { signOut } from '@/app/actions/auth';
 
 interface UserProfileProps {

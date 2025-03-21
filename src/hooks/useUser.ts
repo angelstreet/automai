@@ -1,11 +1,11 @@
 'use client';
 
-import { useUser as useUserContext } from '@/context/UserContext';
+import { useUser as useAppUserContext } from '@/context/AppContext';
 
 /**
  * Hook to access user data and authentication functions
- * Re-exports the UserContext hook for consistent import paths
+ * Uses the centralized AppContext pattern for consistent data handling
  */
-export const useUser = useUserContext;
+export const useUser = useAppUserContext;
 
 export default useUser;
