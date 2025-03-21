@@ -18,6 +18,8 @@ export interface Host {
   type: 'ssh' | 'docker' | 'portainer';
   ip: string;
   port?: number;
+  hostname?: string;
+  host_type?: string;
 
   // SSH specific fields
   user?: string;
@@ -33,4 +35,28 @@ export interface Host {
   // Additional fields used in components
   os_type?: string;
   errorMessage?: string;
+}
+
+export interface HostFormData {
+  name: string;
+  description?: string;
+  type: 'ssh' | 'docker' | 'portainer';
+  ip: string;
+  port?: number;
+  username?: string;
+  password?: string;
+}
+
+export interface HostConnectionStatus {
+  status: string;
+  lastChecked: string;
+  message?: string;
+}
+
+export interface HostAnalytics {
+  cpu: number;
+  memory: number;
+  disk: number;
+  uptime: string;
+  lastUpdated: string;
 } 

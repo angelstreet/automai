@@ -29,10 +29,25 @@ export interface ContextError {
  */
 export interface HostData {
   hosts: Host[];
+  filteredHosts: Host[];
+  selectedHost: Host | null;
+  connectionStatuses: Record<string, any>;
+  hostStats: Record<string, any>;
+  hostTerminals: Record<string, any>;
+  hostCapabilities: Record<string, any>;
   loadingStatus: LoadingStatus;
   error: ContextError | null;
   // Keep loading boolean for backward compatibility
   loading?: boolean;
+  isScanning?: boolean;
+  currentUser: any | null;
+  filter: {
+    query: string;
+    status: string;
+    type: string;
+    sortBy: string;
+    sortDir: string;
+  };
 }
 
 /**
