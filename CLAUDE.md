@@ -14,11 +14,18 @@ alwaysApply: true
    - Follow the established project structure
 
 2. **✅ ALWAYS adhere to the three-layer architecture**
-   - Server DB Layer (Core):
-     - Core DB: `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
-     - Feature-specific DB: `/src/lib/supabase/db-{feature}/` folders
-   - Server Actions Layer (Bridge) - `/src/app/actions/*.ts`
-   - Client Hooks Layer (Interface) - `/src/hooks/*.ts`
+   - DB Layer (Core):
+     - Feature-specific modules: `/src/lib/supabase/db-{feature}/` folders
+     - Handles direct database interaction via Supabase
+     - Returns consistent `DbResponse<T>` objects
+   - Server Actions Layer (Bridge):
+     - Feature-specific: `/src/app/[locale]/[tenant]/[feature]/actions.ts`
+     - Handles business logic, validation, and authentication
+     - Returns consistent `ActionResult<T>` objects
+   - Client Hooks Layer (Interface):
+     - Centralized context system with domain-specific providers in `/src/context/[domain]/`
+     - Uses hooks as the primary API for UI components
+     - NEVER calls DB Layer directly, only through Server Actions
 
 3. **✅ NEVER expose sensitive data or credentials**
    - Keep all secrets and API keys in environment variables
@@ -58,11 +65,153 @@ alwaysApply: true
   - `/src/app/[locale]/[tenant]` - Main app structure with locale and tenant segments
   - `/src/components` - Shared components
   - `/src/lib` - Core utilities, services, and business logic
-  - `/src/hooks` - Custom React hooks
-  - `/src/context` - React context providers
+  - `/src/context` - Centralized React context providers (by domain)
   - `/src/types` - TypeScript type definitions
   - `/src/i18n` - Internationalization utilities
   - `/src/config` - Application configuration
+
+## Centralized Context Architecture
+
+### Context Organization
+
+- **Use the centralized context system** in `/src/context/`:
+  - Import contexts from the centralized location: `import { useHost, useRepository } from '@/context'`
+  - NEVER import from feature-specific contexts
+  - Context is organized by domain, not by feature
+
+### Context Provider Structure
+
+- **Provider Components**: Located in `/src/context/[domain]/[Domain]Provider.tsx`
+- **Hook Exports**: Named exports as `use[Domain]` (e.g., `useHost`, `useRepository`)
+- **Context Root Provider**: All context providers are composed in `AppProvider`
+
+```typescript
+// Proper context provider implementation
+// In /src/context/host/HostProvider.tsx
+import { createContext, useContext, useState, useCallback } from 'react';
+import { getHostsAction, createHostAction } from '@/app/actions/host';
+
+// Context type with strong typing
+interface HostContextType {
+  hosts: Host[];
+  loading: boolean;
+  error: string | null;
+  // ...state properties
+  fetchHosts: () => Promise<void>;
+  createHost: (data: HostInput) => Promise<ActionResult<Host>>;
+  // ...action methods
+}
+
+// Create context
+const HostContext = createContext<HostContextType | undefined>(undefined);
+
+// Provider component
+export function HostProvider({ children }: { children: React.ReactNode }) {
+  const [hosts, setHosts] = useState<Host[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Action methods with proper error handling
+  const fetchHosts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const result = await getHostsAction();
+      
+      if (result.success) {
+        setHosts(result.data);
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('Failed to fetch hosts');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  
+  // Other action methods...
+  
+  // Create value object
+  const value = {
+    hosts,
+    loading,
+    error,
+    fetchHosts,
+    // ...other properties and methods
+  };
+  
+  return (
+    <HostContext.Provider value={value}>
+      {children}
+    </HostContext.Provider>
+  );
+}
+
+// Hook for consuming the context
+export function useHost() {
+  const context = useContext(HostContext);
+  
+  if (context === undefined) {
+    throw new Error('useHost must be used within a HostProvider');
+  }
+  
+  return context;
+}
+```
+
+### Common Context Patterns
+
+- **Loading States**: Use discriminated union for request states
+  ```typescript
+  type RequestState<T> = 
+    | { status: 'idle' }
+    | { status: 'loading' }
+    | { status: 'success', data: T }
+    | { status: 'error', error: string };
+  ```
+
+- **List/Item Pattern**: For collection management
+  ```typescript
+  interface HostState {
+    hosts: Host[];          // Collection
+    selectedHostId: string | null; // Selection
+    loadingState: RequestState<Host[]>;
+    itemLoadingState: Record<string, RequestState<Host>>;
+  }
+  ```
+
+- **Optimistic Updates**: For better UX
+  ```typescript
+  const createHost = useCallback(async (data) => {
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const tempHost = { ...data, id: tempId, status: 'creating' };
+    
+    setHosts(prev => [...prev, tempHost]);
+    
+    try {
+      const result = await createHostAction(data);
+      
+      if (result.success) {
+        // Replace temp with real data
+        setHosts(prev => prev.map(h => 
+          h.id === tempId ? result.data : h
+        ));
+        return { success: true, data: result.data };
+      } else {
+        // Remove temp on failure
+        setHosts(prev => prev.filter(h => h.id !== tempId));
+        return { success: false, error: result.error };
+      }
+    } catch (err) {
+      // Remove temp on error
+      setHosts(prev => prev.filter(h => h.id !== tempId));
+      return { success: false, error: 'Failed to create host' };
+    }
+  }, []);
+  ```
 
 ## Supabase Integration and Authentication
 
@@ -77,10 +226,8 @@ alwaysApply: true
 
 ### Three-Layer Architecture for Supabase
 
-1. **Server DB Layer** (Core)
-   - **Core DB**:
-     - Lives in `/src/lib/supabase/db.ts` and `/src/lib/supabase/auth.ts`
-   - **Feature-specific DB**:
+1. **DB Layer** (Core)
+   - **Feature-specific DB modules**:
      - Lives in `/src/lib/supabase/db-{feature}/` folders
      - Examples: `/src/lib/supabase/db-repositories/`, `/src/lib/supabase/db-hosts/`, etc.
      - Organized by domain to improve maintainability
@@ -91,35 +238,31 @@ alwaysApply: true
    - Returns data in a consistent format: `{success, error, data}`
 
 2. **Server Actions Layer** (Bridge)
-   - Lives in `/src/app/actions/*.ts`
+   - Lives in `/src/app/[locale]/[tenant]/[feature]/actions.ts`
    - Server-only functions marked with 'use server'
    - MUST NOT create Supabase clients directly
-   - MUST import and call functions from the Server DB Layer
+   - MUST import and call functions from the DB Layer
    - Adds error handling, validation, and business logic
    - Returns data in a consistent format: `{success, error, data, ...additionalProps}`
 
 3. **Client Hooks Layer** (Interface)
-   - Lives in `/src/hooks/*.ts`
-   - Client-side React hooks marked with 'use client'
+   - Lives in `/src/context/[domain]/` for domain-specific state
+   - Client-side React providers marked with 'use client'
    - MUST NOT create Supabase clients directly
-   - MUST call Server Actions (not Server DB directly)
+   - MUST call Server Actions (not DB Layer directly)
    - Manages loading states, errors, and data caching
    - Returns React-specific values like state and handlers
 
 ### Tenant Isolation
 
 - Always enforce tenant boundaries in database operations
-- Accept tenant_id as a parameter in Server DB Layer
+- Accept tenant_id as a parameter in DB Layer
 - Get tenant_id from the current user in Server Actions Layer
 - Never allow cross-tenant access
 
 ### DB Organization & Feature-Based Structure
 
-- **Core DB Files**:
-  - `/src/lib/supabase/db.ts` - Generic DB functions and legacy interface
-  - `/src/lib/supabase/auth.ts` - Authentication-specific functions
-  
-- **Feature-Specific DB Files**:
+- **Feature-Specific DB Modules**:
   - `/src/lib/supabase/db-repositories/` - Repository-related DB functions
     - `git-provider.ts` - Git provider operations
     - `repository.ts` - Repository operations
@@ -129,104 +272,121 @@ alwaysApply: true
   
 - **Module Import Patterns**:
   ```typescript
-  // Import directly from the supabase index (preferred)
-  import { gitProvider, repository } from '@/lib/supabase';
+  // Import directly from the feature-specific module (preferred)
+  import { getHosts, createHost } from '@/lib/supabase/db-hosts';
   
-  // Or use the legacy db interface
-  import db from '@/lib/supabase/db';
+  // Or via shorthand imports if set up
+  import { hostDb } from '@/lib/supabase';
   ```
 
-### OAuth Authentication Flow
+### Authentication Flow
 
-Follow this specific flow for OAuth authentication:
+- **Authentication Core**: In `/src/lib/supabase/auth.ts`
+- **User Management**: In `/src/context/auth/AuthProvider.tsx`
+- **Authentication Helper**: Server action `getUser()` in `/src/app/actions/user.ts`
+- **Permission Check**: Always validate user in every server action
 
-1. **Initiate OAuth Flow**:
-   - Client Component calls hook method: `signInWithOAuth('github', redirectUrl)`
-   - Hook calls Server Action: `signInWithOAuthAction('github', redirectUrl)`
-   - Server Action calls Server DB: `supabaseAuth.signInWithOAuth('github', {redirectTo})`
-   - User is redirected to OAuth provider
+```typescript
+// Example of proper authentication in server action
+export async function getItemsAction(
+  filter?: ItemFilter,
+  user?: AuthUser
+): Promise<ActionResult<Item[]>> {
+  try {
+    // Get user if not provided (reuse pattern)
+    if (!user) {
+      const userResult = await getUser();
+      if (!userResult.success) {
+        return { success: false, error: 'Authentication required' };
+      }
+      user = userResult.data;
+    }
+    
+    // Use tenant_id from user for isolation
+    const result = await getItems(user.tenant_id, filter);
+    
+    // Map and return data
+    if (result.success) {
+      return { success: true, data: result.data.map(mapDbItemToItem) };
+    } else {
+      return { success: false, error: result.error };
+    }
+  } catch (error) {
+    console.error('Error in getItemsAction:', error);
+    return { success: false, error: 'Failed to fetch items' };
+  }
+}
+```
 
-2. **Handle OAuth Callback**:
-   - OAuth provider redirects back to your callback URL with a code
-   - Client Component (`auth-redirect/page.tsx`) calls hook method: `exchangeCodeForSession()`
-   - Hook calls Server Action: `handleAuthCallbackAction(url)`
-   - Server Action calls Server DB: `supabaseAuth.handleOAuthCallback(code)`
-   - Server Action determines redirect URL based on user data
-   - Client redirects user to the appropriate page
+## Caching and State Management
 
-## Caching Strategy and State Management
+### State Management Approach
 
-### Three-Layer Caching Architecture
+- **State Categories**:
+  - **Server State**: Data from API (hosts, repositories, deployments)
+    - Managed through context providers
+    - Fetched via server actions
+  - **Form State**: User input data (use React Hook Form)
+  - **UI State**: Visual/interaction state (modals, tabs, selections)
+    - Keep local when possible
+    - Lift to context when shared
 
-1. **Server DB Layer**: ❌ NO caching
+- **When to Use Context**:
+  - State needed across multiple components
+  - State that persists across route changes
+  - Complex data fetching with loading/error states
+
+- **When to Use Local State**:
+  - UI-specific state (open/closed, selected tabs)
+  - Form input state before submission
+  - Animation or transition states
+
+### Context Performance Optimization
+
+- **Split Contexts by Update Frequency**:
+  - Separate frequently updated state from stable state
+  - Use context selectors to prevent unnecessary re-renders
+
+- **Memoization**:
+  - Use `useCallback` for all functions passed through context
+  - Use `useMemo` for derived values and context value objects
+  - Use `memo` for expensive components that consume context
+
+```typescript
+// Optimized context value creation
+const value = useMemo(() => ({
+  hosts,
+  loading,
+  error,
+  fetchHosts,
+  createHost,
+  deleteHost
+}), [
+  hosts,
+  loading,
+  error,
+  fetchHosts,
+  createHost,
+  deleteHost
+]);
+```
+
+### Caching Strategy
+
+1. **DB Layer**: ❌ NO caching
    - Always fetch fresh data from Supabase
    - Never cache at this level
 
 2. **Server Actions Layer**: ✅ Optional TTL-based caching for expensive operations
-   ```typescript
-   let actionCache = null;
-   let cacheTimestamp = 0;
-   const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-   
-   export async function getExpensiveData() {
-     // Check if cache is valid
-     if (actionCache && Date.now() - cacheTimestamp < CACHE_TTL) {
-       return actionCache;
-     }
-     
-     // Fetch fresh data
-     const result = await db.getExpensiveData();
-     
-     // Update cache
-     actionCache = result;
-     cacheTimestamp = Date.now();
-     
-     return result;
-   }
-   ```
+   - Use `serverCache` utility for server-side caching
+   - Clear cache on mutations
+   - Use appropriate TTL values for different data types
 
-3. **Client Hooks Layer**: ✅ Primary caching using SWR + localStorage
-   ```typescript
-   // SWR Implementation
-   export function useData() {
-     return useSWR('key', async () => {
-       // Try localStorage
-       if (typeof window !== 'undefined') {
-         const cached = localStorage.getItem('key');
-         if (cached) {
-           const parsed = JSON.parse(cached);
-           if (Date.now() < parsed.expiry) {
-             return parsed.data;
-           }
-         }
-       }
-       
-       // Fetch from Server Action
-       const { data } = await serverAction();
-       
-       // Update localStorage
-       if (data) {
-         localStorage.setItem('key', JSON.stringify({
-           data,
-           expiry: Date.now() + (5 * 60 * 1000) // 5 minutes
-         }));
-       }
-       
-       return data;
-     }, {
-       dedupingInterval: 60000,
-       revalidateOnFocus: false,
-       revalidateOnReconnect: true
-     });
-   }
-   ```
-
-### Cache Invalidation Rules
-
-- Clear relevant caches after mutations
-- Implement cache versioning for major data structure changes
-- Handle cache misses gracefully
-- Never store sensitive data in localStorage
+3. **Client Context Layer**: ✅ Primary state management
+   - Store fetched data in context state
+   - Implement refetch mechanisms for data staleness
+   - Support manual refresh when needed
+   - Optionally persist in localStorage for specific cases
 
 ## Frontend Component Development
 
@@ -239,16 +399,15 @@ Follow this specific flow for OAuth authentication:
     - `actions.ts` - Server actions for the feature
     - `types.ts` - Type definitions for the feature
     - `constants.ts` - Constants for the feature
-    - `hooks.ts` - Custom hooks for the feature
+    - `hooks.ts` - Feature-specific hooks
     - `utils.ts` - Utility functions for the feature
     - `page.tsx` - Page component for the feature
   
 - **Shared functionality** goes in dedicated directories:
   - `/src/components/` - Shared components used across multiple features
-  - `/src/hooks/` - Shared hooks used across multiple features
+  - `/src/context/` - Shared context providers organized by domain
   - `/src/types/` - Shared type definitions
   - `/src/lib/` - Core utilities, services, and business logic
-  - `/src/context/` - Shared context providers
 
 ```
 app/
@@ -257,7 +416,6 @@ app/
           └── feature/           # Feature directory (e.g., dashboard, hosts, deployment)
               ├── _components/   # Feature-specific components
               ├── actions.ts     # Feature-specific server actions
-              ├── hooks.ts       # Feature-specific hooks
               ├── types.ts       # Feature-specific types
               ├── constants.ts   # Feature-specific constants
               ├── utils.ts       # Feature-specific utilities
@@ -269,6 +427,34 @@ app/
 - **Layout components** go in `/src/components/layout/`
 - **Form components** go in `/src/components/form/`
 
+### Using Context in Components
+
+```typescript
+// Proper context usage in components
+'use client';
+
+import { useHost } from '@/context'; // Import from centralized location
+
+export function HostList() {
+  const { hosts, loading, error, fetchHosts } = useHost();
+  
+  // Use the context values in your component
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+  
+  return (
+    <div>
+      <button onClick={fetchHosts}>Refresh</button>
+      <ul>
+        {hosts.map(host => (
+          <li key={host.id}>{host.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
 ### Server vs. Client Components
 
 - Use Server Components by default
@@ -277,6 +463,7 @@ app/
   - Effects (useEffect, useLayoutEffect)
   - Browser-only APIs
   - Event handlers
+  - Context consumers (components using context hooks)
 - **IMPORTANT:** Never use `React.use()` in Client Components:
   - `React.use()` is for unwrapping promises in Server Components only
   - In Client Components, hooks like `useParams()` already return resolved values, not promises
@@ -314,6 +501,25 @@ app/
   ```
 
 ## API Design and Implementation
+
+### Server Action Implementation
+
+- **Location**: Feature-specific `/src/app/[locale]/[tenant]/[feature]/actions.ts`
+- **Directive**: Always include 'use server' at the top of the file
+- **Authentication**: Validate user in every action
+- **Validation**: Use zod for input validation
+- **Response Format**: Return consistent `ActionResult<T>` objects
+
+### Function Structure
+
+- **Parameter Validation**: Validate inputs before processing
+- **Authentication Check**: Verify user is authenticated
+- **Permission Check**: Verify user has appropriate permissions
+- **Cache Check**: Check cache before database access
+- **Database Operation**: Perform core operation
+- **Response Mapping**: Convert DB types to UI types
+- **Cache Update**: Update or invalidate cache as needed
+- **Error Handling**: Catch and handle all errors
 
 ### URL Structure
 
@@ -376,6 +582,15 @@ All API responses must follow a standard format:
   - UPPER_CASE for constants
 - Prefix boolean variables with "is", "has", "should", etc.
 - Prefix event handlers with "handle" or "on"
+- Prefix custom hooks with "use"
+
+### TypeScript Best Practices
+
+- Use explicit type annotations for function parameters and returns
+- Avoid `any` in favor of proper types or `unknown`
+- Use discriminated unions for complex state management
+- Create interfaces for component props and context values
+- Use generics for reusable types and functions
 
 ### Functions and Methods
 
@@ -423,7 +638,8 @@ npm run electron-pack     # Package Electron application
 
 ## Common Pitfalls to Avoid
 
-- **Bypassing the Three-Layer Architecture** - Never call Server DB directly from Client Hooks
+- **Bypassing the Three-Layer Architecture** - Never call DB Layer directly from Client Hooks
+- **Using Old Feature-Specific Contexts** - Always use the centralized context system
 - **Missing Tenant Isolation** - Always include tenant_id in database queries
 - **Direct Supabase Usage** - Never import Supabase clients directly in components or hooks
 - **Not Awaiting Async APIs** - Remember to await all async operations
@@ -434,4 +650,21 @@ npm run electron-pack     # Package Electron application
 - **Modifying shadcn Components** - Never modify components in `/src/components/shadcn/`
 - **Running Servers Without Permission** - Never run development servers without explicit request
 - **Using Wrong DB Module** - Use the appropriate feature-specific DB module for domain operations
-- **Not Following Standard Response Format** - Always return `{success, error, data}` from DB operations 
+- **Not Following Standard Response Format** - Always return `{success, error, data}` from operations
+
+## Useful Cursor Rules References
+
+For more detailed guidelines on specific aspects of the codebase, refer to these Cursor rules:
+
+- **core-general.mdc** - General development guidelines
+- **core-architecture.mdc** - Three-layer architecture details
+- **code-quality.mdc** - Code quality and style standards
+- **ui-state.mdc** - Context and state management patterns
+- **ui-components.mdc** - UI component patterns
+- **api-design.mdc** - API design principles
+- **api-implementation.mdc** - API implementation details
+- **data-supabase.mdc** - Supabase database patterns
+- **data-auth.mdc** - Authentication patterns
+- **data-caching.mdc** - Caching strategies
+- **core-testing.mdc** - Testing strategies and patterns
+- **feature-specific.mdc** - Feature-specific guidelines 
