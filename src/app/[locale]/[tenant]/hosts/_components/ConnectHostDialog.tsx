@@ -6,7 +6,6 @@ import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import * as React from 'react';
 
-import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
   DialogContent,
@@ -83,36 +82,61 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   };
 
   const handleCreate = async () => {
-    if (!validateFormData()) return;
+    console.log('handleCreate called with formData:', formData);
+    
+    if (!validateFormData()) {
+      console.log('Form validation failed');
+      return;
+    }
 
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
+      console.log('Request throttled');
       return;
     }
     lastRequestTime.current = now;
 
     setIsCreating(true);
+    console.log('Starting host creation process...');
+    
     try {
-      const result = await addHost({
+      // Ensure formData structure matches what the addHost action expects
+      const hostData = {
         name: formData.name,
         description: formData.description || '',
         type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port),
-        user: formData.username,
+        user: formData.username,  // Note: backend expects 'user' not 'username'
         password: formData.password,
-        status: 'connected',
+        status: 'connected' as const,  // Type assertion to make TypeScript happy
         created_at: new Date(),
         updated_at: new Date(),
         is_windows: false
+      };
+      
+      console.log('Calling addHost with:', {
+        ...hostData,
+        password: '[REDACTED]' // Don't log the actual password
       });
+      
+      const result = await addHost(hostData);
 
-      toast.success(t('success.connected', { name: formData.name }));
-      resetForm();
-      onOpenChange(false);
+      console.log('addHost result:', result);
 
-      if (onSuccess && result.success && result.data) {
-        onSuccess(result.data);
+      if (result.success && result.data) {
+        console.log('Host created successfully:', result.data);
+        toast.success(t('success.connected', { name: formData.name }));
+        resetForm();
+        onOpenChange(false);
+
+        if (onSuccess) {
+          console.log('Calling onSuccess with host data');
+          onSuccess(result.data);
+        }
+      } else {
+        console.error('Host creation failed with result:', result);
+        toast.error(result.error || t('errors.createFailed'));
       }
     } catch (error) {
       console.error('Error creating connection:', error);
@@ -123,8 +147,19 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   };
 
   const handleFormChange = (newFormData: FormData) => {
+    const previousFormData = formData;
     setFormData(newFormData);
-    if (testStatus !== 'idle') {
+    
+    // Only reset test status if connection-related fields change
+    const connectionFieldsChanged = 
+      previousFormData.ip !== newFormData.ip ||
+      previousFormData.port !== newFormData.port ||
+      previousFormData.username !== newFormData.username ||
+      previousFormData.password !== newFormData.password ||
+      previousFormData.type !== newFormData.type;
+    
+    if (testStatus !== 'idle' && connectionFieldsChanged) {
+      console.log('Connection fields changed, resetting test status');
       setTestStatus('idle');
       setTestError(null);
     }
@@ -148,8 +183,23 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         <ConnectionForm
           formData={formData}
           onChange={handleFormChange}
-          onTestSuccess={() => setTestStatus('success')}
-          onSubmit={handleCreate}
+          onTestSuccess={() => {
+            console.log('Test connection successful, enabling Save button');
+            setTestStatus('success');
+            console.log('testStatus set to:', 'success');
+          }}
+          onSubmit={async () => {
+            console.log('onSubmit called from ConnectionForm');
+            try {
+              // Call the handleCreate function directly
+              await handleCreate();
+              console.log('handleCreate completed successfully');
+              return true; // Return a success value
+            } catch (error) {
+              console.error('Error in handleCreate:', error);
+              return false; // Return a failure value
+            }
+          }}
           onCancel={() => onOpenChange(false)}
           isSaving={isCreating}
           testStatus={testStatus}

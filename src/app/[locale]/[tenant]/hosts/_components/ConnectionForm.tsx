@@ -2,7 +2,7 @@ import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { Badge } from '@/components/shadcn/badge';
@@ -67,6 +67,21 @@ export function ConnectionForm({
   const lastRequestTime = useRef<number>(0);
   const REQUEST_THROTTLE_MS = 500;
 
+  // Synchronize testSuccess with testStatus
+  useEffect(() => {
+    // If testStatus changes to success, update internal testSuccess
+    if (testStatus === 'success' && !testSuccess) {
+      console.log('useEffect: testStatus is success, setting testSuccess to true');
+      setTestSuccess(true);
+    }
+    
+    // If internal testSuccess becomes true, call onTestSuccess to update parent
+    if (testSuccess && testStatus !== 'success' && onTestSuccess) {
+      console.log('useEffect: testSuccess is true but testStatus is not, calling onTestSuccess');
+      onTestSuccess();
+    }
+  }, [testSuccess, testStatus, onTestSuccess]);
+
   // Handle connection type change
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
@@ -110,6 +125,7 @@ export function ConnectionForm({
     setTesting(true);
     setTestError(null);
     setTestSuccess(false);
+    console.log('Starting connection test...');
 
     try {
       const result = await testConnectionAction({
@@ -120,17 +136,23 @@ export function ConnectionForm({
         password: formData.password,
       });
 
+      console.log('Connection test result:', result);
+
       if (result.success) {
+        console.log('Connection test successful, setting testSuccess=true');
         setTestSuccess(true);
+        // Make sure we call the parent's onTestSuccess to update testStatus
         if (onTestSuccess) {
+          console.log('Calling onTestSuccess callback');
           onTestSuccess();
         }
       } else {
-        setTestError(result.message || 'Connection test failed');
+        console.log('Connection test failed:', result.message);
+        setTestError(result.message || t('errors.testFailed'));
       }
     } catch (error) {
-      setTestError(error instanceof Error ? error.message : 'Failed to test connection');
       console.error('Error testing connection:', error);
+      setTestError(error instanceof Error ? error.message : t('errors.testFailed'));
     } finally {
       setTesting(false);
     }
@@ -282,9 +304,29 @@ export function ConnectionForm({
         </Button>
         
         <Button 
-          onClick={onSubmit} 
-          disabled={isSaving || testStatus !== 'success'}
-          variant="default"
+          onClick={async (e) => {
+            e.preventDefault(); // Prevent any default form behavior
+            console.log('Save button clicked, testStatus:', testStatus, 'testSuccess:', testSuccess);
+            
+            // Check if onSubmit exists
+            if (typeof onSubmit !== 'function') {
+              console.error('onSubmit is not a function:', onSubmit);
+              return;
+            }
+            
+            console.log('onSubmit callback exists and is a function');
+            
+            try {
+              console.log('Calling onSubmit callback...');
+              const result = await onSubmit();
+              console.log('onSubmit callback completed with result:', result);
+            } catch (error) {
+              console.error('Error executing onSubmit callback:', error);
+            }
+          }} 
+          disabled={isSaving || (!testSuccess && testStatus !== 'success')} 
+          variant={(testSuccess || testStatus === 'success') ? "default" : "outline"}
+          className={(testSuccess || testStatus === 'success') ? "bg-green-600 hover:bg-green-700" : ""}
         >
           {isSaving ? (
             <>
@@ -292,7 +334,10 @@ export function ConnectionForm({
               {t('saving')}
             </>
           ) : (
-            t('save')
+            <>
+              {(testSuccess || testStatus === 'success') && <Check className="h-4 w-4 mr-2" />}
+              {t('save')}
+            </>
           )}
         </Button>
       </div>
@@ -319,6 +364,14 @@ export function ConnectionForm({
             {t('cancel')}
           </Button>
         )}
+      </div>
+
+      {/* Debug information - remove in production */}
+      <div className="text-xs text-gray-500 mt-2">
+        testStatus: {testStatus}, 
+        testSuccess: {testSuccess ? 'true' : 'false'},
+        onSubmit: {typeof onSubmit === 'function' ? 'function provided' : 'not provided'},
+        onTestSuccess: {typeof onTestSuccess === 'function' ? 'function provided' : 'not provided'}
       </div>
     </div>
   );

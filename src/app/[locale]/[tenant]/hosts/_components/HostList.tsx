@@ -7,6 +7,7 @@ import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '../types';
 import { useHost, useUser } from '@/context';
+import { addHost as addHostAction } from '../actions';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 import { HostGrid } from './HostGrid';
@@ -141,36 +142,43 @@ export default function HostContainer() {
         port: parseInt(formData.port),
         user: formData.username,
         password: formData.password,
-        status: 'connected',
+        status: 'connected' as const,
         created_at: new Date(),
+        updated_at: new Date(),
+        is_windows: false
       };
-    
-      // Pass user data to prevent redundant auth
-      if (userData) {
-        await addHost(hostData, userData);
+      
+      // Call the server action directly
+      const result = userData 
+        ? await addHostAction(hostData, userData)
+        : await addHostAction(hostData);
+      
+      if (result.success) {
+        // Close dialog
+        setShowAddHost(false);
+        
+        // Reset form
+        setFormData({
+          name: '',
+          description: '',
+          type: 'ssh',
+          ip: '',
+          port: '22',
+          username: '',
+          password: '',
+        });
+        
+        // Refresh the hosts list
+        fetchHosts && fetchHosts();
       } else {
-        await addHost(hostData);
+        console.error('[HostContainer] Error adding host:', result.error);
       }
-      
-      // Close dialog
-      setShowAddHost(false);
-      
-      // Reset form
-      setFormData({
-        name: '',
-        description: '',
-        type: 'ssh',
-        ip: '',
-        port: '22',
-        username: '',
-        password: '',
-      });
     } catch (error) {
       console.error('[HostContainer] Error adding host:', error);
     } finally {
       setIsSaving(false);
     }
-  }, [addHost, formData, userData]);
+  }, [formData, userData, addHostAction, fetchHosts, setShowAddHost]);
 
   // Handle host selection
   const handleSelectHost = useCallback((id: string) => {
@@ -266,7 +274,7 @@ export default function HostContainer() {
           <ConnectionForm 
             formData={formData} 
             onChange={setFormData} 
-            onSave={handleSaveHost}
+            onSubmit={handleSaveHost}
             isSaving={isSaving}
           />
         </DialogContent>
