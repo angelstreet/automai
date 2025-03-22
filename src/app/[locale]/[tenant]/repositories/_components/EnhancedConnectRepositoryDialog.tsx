@@ -28,21 +28,24 @@ import { Label } from '@/components/shadcn/label';
 import { Badge } from '@/components/shadcn/badge';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { ConnectRepositoryValues } from '../types';
+import { 
+  ConnectRepositoryValues, 
+  EnhancedConnectRepositoryDialogProps,
+  CreateGitProviderParams,
+  CreateRepositoryParams 
+} from '../types';
+import { 
+  CONNECT_REPOSITORY_TABS,
+  AUTH_METHODS,
+  PROVIDER_DISPLAY_INFO
+} from '../constants';
 import { useToast } from '@/components/shadcn/use-toast';
-
-interface EnhancedConnectRepositoryDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSubmit?: (values: ConnectRepositoryValues) => void;
-  defaultTab?: string;
-}
 
 export function EnhancedConnectRepositoryDialog({ 
   open, 
   onOpenChange,
   onSubmit,
-  defaultTab = 'quick-clone'
+  defaultTab = CONNECT_REPOSITORY_TABS.QUICK_CLONE
 }: EnhancedConnectRepositoryDialogProps) {
   const t = useTranslations('repositories');
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
@@ -96,11 +99,12 @@ export function EnhancedConnectRepositoryDialog({
         return;
       }
       
-      const result = await createGitProvider({
+      const params: CreateGitProviderParams = {
         name: `${currentProvider} Provider`,
         provider_type: currentProvider.toLowerCase(),
-        auth_type: 'oauth'
-      });
+        auth_type: AUTH_METHODS.OAUTH
+      };
+      const result = await createGitProvider(params);
       
       if (result.success && result.authUrl) {
         // Redirect to the OAuth login page
@@ -140,13 +144,14 @@ export function EnhancedConnectRepositoryDialog({
       }
       
       // Create git provider with token authentication
-      const result = await createGitProvider({
+      const params: CreateGitProviderParams = {
         name: `${currentProvider} Provider`,
         provider_type: currentProvider.toLowerCase(),
-        auth_type: 'token',
+        auth_type: AUTH_METHODS.TOKEN,
         url: serverUrl, // Optional server URL for self-hosted instances
         token: accessToken
-      });
+      };
+      const result = await createGitProvider(params);
       
       if (result.success) {
         toast({
@@ -158,7 +163,7 @@ export function EnhancedConnectRepositoryDialog({
         if (onSubmit) {
           onSubmit({
             provider: currentProvider.toLowerCase(),
-            method: 'token',
+            method: AUTH_METHODS.TOKEN,
             token: accessToken,
             url: serverUrl
           });
@@ -213,10 +218,11 @@ export function EnhancedConnectRepositoryDialog({
       }
       
       // Create the repository
-      const result = await createRepository({
+      const params: CreateRepositoryParams = {
         url: quickCloneUrl,
         name: verifyResult.data?.name || quickCloneUrl.split('/').pop()?.replace('.git', '') || 'Repository'
-      });
+      };
+      const result = await createRepository(params);
       
       if (result.success) {
         toast({
@@ -228,7 +234,7 @@ export function EnhancedConnectRepositoryDialog({
         if (onSubmit) {
           onSubmit({
             url: quickCloneUrl,
-            method: 'url'
+            method: AUTH_METHODS.URL
           });
         }
         
@@ -264,18 +270,18 @@ export function EnhancedConnectRepositoryDialog({
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
           <TabsList className="grid grid-cols-2 mb-4">
-            <TabsTrigger value="oauth" className="flex items-center justify-center">
+            <TabsTrigger value={CONNECT_REPOSITORY_TABS.OAUTH} className="flex items-center justify-center">
               <Github className="w-4 h-4 mr-2" />
               {t('gitProvider')}
             </TabsTrigger>
-            <TabsTrigger value="quick-clone" className="flex items-center justify-center">
+            <TabsTrigger value={CONNECT_REPOSITORY_TABS.QUICK_CLONE} className="flex items-center justify-center">
               <Globe className="w-4 h-4 mr-2" />
               {t('publicRepository')}
             </TabsTrigger>
           </TabsList>
           
           {/* Git Provider Authentication Tab */}
-          <TabsContent value="oauth">
+          <TabsContent value={CONNECT_REPOSITORY_TABS.OAUTH}>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* GitHub Card */}
@@ -329,15 +335,15 @@ export function EnhancedConnectRepositoryDialog({
                     </Badge>
                   </div>
                   
-                  <Tabs defaultValue={currentProvider === 'gitea' ? 'token' : 'oauth'} className="w-full">
+                  <Tabs defaultValue={currentProvider === 'gitea' ? AUTH_METHODS.TOKEN : AUTH_METHODS.OAUTH} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="oauth" disabled={currentProvider === 'gitea'}>
+                      <TabsTrigger value={AUTH_METHODS.OAUTH} disabled={currentProvider === 'gitea'}>
                         OAuth
                       </TabsTrigger>
-                      <TabsTrigger value="token">{t('accessToken')}</TabsTrigger>
+                      <TabsTrigger value={AUTH_METHODS.TOKEN}>{t('accessToken')}</TabsTrigger>
                     </TabsList>
                     
-                    <TabsContent value="oauth">
+                    <TabsContent value={AUTH_METHODS.OAUTH}>
                       {currentProvider !== 'gitea' ? (
                         <div className="space-y-4 mt-4">
                           <p className="text-sm">
@@ -381,7 +387,7 @@ export function EnhancedConnectRepositoryDialog({
                       )}
                     </TabsContent>
                     
-                    <TabsContent value="token">
+                    <TabsContent value={AUTH_METHODS.TOKEN}>
                       <div className="space-y-4 mt-4">
                         {currentProvider === 'gitea' && (
                           <div className="space-y-2">
@@ -445,7 +451,7 @@ export function EnhancedConnectRepositoryDialog({
           </TabsContent>
           
           {/* Quick Clone Tab */}
-          <TabsContent value="quick-clone">
+          <TabsContent value={CONNECT_REPOSITORY_TABS.QUICK_CLONE}>
             <div className="space-y-6">
               <p className="text-sm">
                 {t('quickCloneDescription')}

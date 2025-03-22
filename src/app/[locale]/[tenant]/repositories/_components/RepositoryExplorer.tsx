@@ -17,7 +17,13 @@ import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { FILE_EXTENSION_COLORS } from '../constants';
+import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../constants';
+import { 
+  RepositoryExplorerProps, 
+  RepositoryFile, 
+  FilesAPIResponse, 
+  FileAPIResponse 
+} from '../types';
 import { 
   Breadcrumb, 
   BreadcrumbItem, 
@@ -28,20 +34,15 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shadcn/tooltip';
 import { cn } from '@/lib/utils';
 
-interface RepositoryExplorerProps {
-  repository: any; // We'll replace this with proper types later
-  onBack: () => void;
-}
-
 export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerProps) {
   const t = useTranslations('repositories');
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [files, setFiles] = useState<any[]>([]);
+  const [files, setFiles] = useState<RepositoryFile[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('code');
+  const [activeTab, setActiveTab] = useState(EXPLORER_TABS.CODE);
   
   // Validate repository has required properties
   const isValidRepository = repository && 
@@ -110,7 +111,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
           throw new Error(errorData.error || 'Failed to fetch repository files');
         }
         
-        const data = await response.json();
+        const data = await response.json() as FilesAPIResponse;
         
         if (data.success && data.data) {
           // Sort files: directories first, then files, both alphabetically
@@ -137,7 +138,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   }, [repository?.id, repository?.providerId, repository?.url, currentPath, isValidRepository]);
 
   // Navigate through repository files
-  const handleNavigate = async (item: any, isFolder = false) => {
+  const handleNavigate = async (item: RepositoryFile, isFolder = false) => {
     // Check if repository data is valid before navigating
     if (!isValidRepository) {
       setError('Repository data is not fully loaded yet. Please wait...');
@@ -161,7 +162,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
           throw new Error(errorData.error || 'Failed to fetch file content');
         }
         
-        const data = await response.json();
+        const data = await response.json() as FileAPIResponse;
         
         if (data.success && data.data) {
           // Decode base64 content if needed
@@ -354,10 +355,10 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-transparent h-10 p-0">
               <TabsTrigger 
-                value="code" 
+                value={EXPLORER_TABS.CODE} 
                 className={cn(
                   "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'code' ? "border-primary" : "border-transparent"
+                  activeTab === EXPLORER_TABS.CODE ? "border-primary" : "border-transparent"
                 )}
               >
                 <Code className="h-4 w-4 mr-2" />
@@ -365,30 +366,30 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
               </TabsTrigger>
               
               <TabsTrigger 
-                value="issues" 
+                value={EXPLORER_TABS.ISSUES} 
                 className={cn(
                   "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'issues' ? "border-primary" : "border-transparent"
+                  activeTab === EXPLORER_TABS.ISSUES ? "border-primary" : "border-transparent"
                 )}
               >
                 <span>Issues</span>
               </TabsTrigger>
               
               <TabsTrigger 
-                value="prs" 
+                value={EXPLORER_TABS.PULL_REQUESTS} 
                 className={cn(
                   "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'prs' ? "border-primary" : "border-transparent"
+                  activeTab === EXPLORER_TABS.PULL_REQUESTS ? "border-primary" : "border-transparent"
                 )}
               >
                 <span>Pull Requests</span>
               </TabsTrigger>
               
               <TabsTrigger 
-                value="actions" 
+                value={EXPLORER_TABS.ACTIONS} 
                 className={cn(
                   "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'actions' ? "border-primary" : "border-transparent"
+                  activeTab === EXPLORER_TABS.ACTIONS ? "border-primary" : "border-transparent"
                 )}
               >
                 <Play className="h-4 w-4 mr-2" />
@@ -396,10 +397,10 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
               </TabsTrigger>
               
               <TabsTrigger 
-                value="settings" 
+                value={EXPLORER_TABS.SETTINGS} 
                 className={cn(
                   "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'settings' ? "border-primary" : "border-transparent"
+                  activeTab === EXPLORER_TABS.SETTINGS ? "border-primary" : "border-transparent"
                 )}
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -412,7 +413,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       
       {/* Main content area */}
       <div className="mt-4">
-        {activeTab === 'code' && (
+        {activeTab === EXPLORER_TABS.CODE && (
           <div className="space-y-2">
             {/* GitHub-style repository stats */}
             <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-2">
@@ -520,7 +521,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
           </div>
         )}
         
-        {activeTab !== 'code' && (
+        {activeTab !== EXPLORER_TABS.CODE && (
           <Alert className="mb-4">
             <AlertDescription>{t('featureNotImplemented')}</AlertDescription>
           </Alert>

@@ -15,17 +15,8 @@ import {
 import { Button } from '@/components/shadcn/button';
 import { Badge } from '@/components/shadcn/badge';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { LANGUAGE_COLORS } from '../constants';
-
-interface EnhancedRepositoryCardProps {
-  repository: any; // We'll replace this with proper types later
-  onSync: (id: string) => Promise<void>;
-  onDelete?: (id: string) => void;
-  isSyncing: boolean;
-  isDeleting?: boolean;
-  onToggleStarred: (id: string) => void;
-  isStarred: boolean;
-}
+import { LANGUAGE_COLORS, SYNC_STATUS_STYLES } from '../constants';
+import { EnhancedRepositoryCardProps } from '../types';
 
 export function EnhancedRepositoryCard({
   repository,
@@ -42,13 +33,7 @@ export function EnhancedRepositoryCard({
   const [isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
   
-  // Debug log repository data
-  console.log('[EnhancedRepositoryCard] Rendering with repo:', { 
-    id: repository?.id, 
-    name: repository?.name,
-    provider: repository?.provider,
-    isPrivate: repository?.isPrivate
-  });
+  // Initialize component
   
   // This effect only runs on the client after hydration is complete
   useEffect(() => {
@@ -168,7 +153,10 @@ export function EnhancedRepositoryCard({
       
       <CardFooter className={`py-3 px-3 border-t flex justify-between transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex items-center gap-1">
-          <Badge variant={repository?.syncStatus === 'SYNCED' ? 'default' : 'outline'} className="text-xs py-0">
+          <Badge 
+            variant={repository?.syncStatus === 'SYNCED' ? 'default' : 'outline'} 
+            className={`text-xs py-0 ${SYNC_STATUS_STYLES[repository?.syncStatus || 'IDLE']}`}
+          >
             {repository?.syncStatus || 'IDLE'}
           </Badge>
         </div>
