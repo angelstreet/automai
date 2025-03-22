@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
-import { verifyFingerprint as verifyFingerprintAction } from '../actions';
+import { verifyFingerprint as verifyFingerprintAction, testConnection as testConnectionAction } from '../actions';
 
 export interface FormData {
   name: string;
@@ -32,16 +32,22 @@ export interface FormData {
 
 interface ConnectionFormProps {
   formData: FormData;
-  setFormData: React.Dispatch<React.SetStateAction<FormData>>;
-  onSubmit: () => void;
+  onChange: (formData: FormData) => void;
+  onTestSuccess?: () => void;
+  onSubmit?: () => void;
+  onCancel?: () => void;
   isSaving?: boolean;
+  testStatus?: 'idle' | 'success' | 'error';
 }
 
 export function ConnectionForm({ 
   formData, 
-  setFormData, 
-  onSubmit, 
-  isSaving = false 
+  onChange,
+  onTestSuccess,
+  onSubmit,
+  onCancel,
+  isSaving = false,
+  testStatus = 'idle'
 }: ConnectionFormProps) {
   const t = useTranslations('Common');
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
@@ -58,6 +64,8 @@ export function ConnectionForm({
     fingerprint: string;
   } | null>(null);
   const { locale, tenant } = useParams() as { locale: string; tenant: string };
+  const lastRequestTime = useRef<number>(0);
+  const REQUEST_THROTTLE_MS = 500;
 
   // Handle connection type change
   const handleTypeChange = (value: string) => {
@@ -65,7 +73,7 @@ export function ConnectionForm({
     
     // Update form data with the new type and default port
     const defaultPort = value === 'ssh' ? '22' : value === 'docker' ? '2375' : '9000';
-    setFormData({
+    onChange({
       ...formData,
       type: value,
       port: defaultPort,
@@ -74,7 +82,10 @@ export function ConnectionForm({
 
   // Handle input change for any field
   const handleInputChange = (field: string, value: string) => {
-    setFormData({
+    if (field === 'name') {
+      value = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    }
+    onChange({
       ...formData,
       [field]: value,
     });
@@ -84,47 +95,42 @@ export function ConnectionForm({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSubmit();
+      onTestSuccess?.();
     }
   };
 
   // Test the connection using the provided function
   const testHostConnection = async () => {
-    if (testing) return;
+    const now = Date.now();
+    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
+      return;
+    }
+    lastRequestTime.current = now;
 
-    // Reset status
     setTesting(true);
     setTestError(null);
     setTestSuccess(false);
-    setShowFingerprint(false);
 
     try {
-      // We'll mock a test connection response for now
-      // In a real implementation, you would call an API endpoint
-      const mockResponse = {
-        success: true,
-        // Simulate fingerprint verification sometimes
-        fingerprint: Math.random() > 0.5 ? null : "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99",
-      };
+      const result = await testConnectionAction({
+        type: formData.type,
+        ip: formData.ip,
+        port: parseInt(formData.port),
+        username: formData.username,
+        password: formData.password,
+      });
 
-      if (mockResponse.success) {
+      if (result.success) {
         setTestSuccess(true);
-        setTestError(null);
-      } else if (mockResponse.fingerprint) {
-        // Show fingerprint confirmation
-        setShowFingerprint(true);
-        setFingerprintData({
-          hostname: formData.ip,
-          fingerprint: mockResponse.fingerprint,
-        });
+        if (onTestSuccess) {
+          onTestSuccess();
+        }
       } else {
-        setTestError("Connection failed");
+        setTestError(result.message || 'Connection test failed');
       }
-
-      // Simulate delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (error: any) {
-      setTestError(error.message || 'An unexpected error occurred');
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : 'Failed to test connection');
+      console.error('Error testing connection:', error);
     } finally {
       setTesting(false);
     }
@@ -158,184 +164,161 @@ export function ConnectionForm({
   };
 
   return (
-    <div className="grid gap-6">
-      <div className="grid gap-3">
-        <div className="grid gap-2">
-          <Label htmlFor="name">{t('name')}</Label>
+    <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="name" className="text-right">
+          {t('name')}
+        </Label>
+        <div className="col-span-3">
           <Input
             id="name"
-            placeholder="My Host"
+            placeholder={t('form.namePlaceholder')}
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            onKeyDown={handleKeyDown}
           />
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('form.nameHint')}
+          </p>
         </div>
-        
-        <div className="grid gap-2">
-          <Label htmlFor="description">{t('description')}</Label>
-          <Textarea
-            id="description"
-            placeholder="Description of this host"
-            value={formData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
-            className="h-20"
-          />
-        </div>
-        
-        <div className="grid gap-2">
-          <Label htmlFor="type">{t('connectionType')}</Label>
-          <Select
-            value={connectionType}
-            onValueChange={handleTypeChange}
-          >
-            <SelectTrigger id="type">
-              <SelectValue placeholder="Select connection type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ssh">SSH</SelectItem>
-              <SelectItem value="docker">Docker</SelectItem>
-              <SelectItem value="portainer">Portainer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="grid gap-2">
-          <Label htmlFor="ip">{t('ipAddress')}</Label>
-          <Input
-            id="ip"
-            placeholder="192.168.1.1"
-            value={formData.ip}
-            onChange={(e) => handleInputChange('ip', e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-        </div>
-        
-        <div className="grid gap-2">
-          <Label htmlFor="port">{t('port')}</Label>
+      </div>
+
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="type" className="text-right">
+          {t('connectionType')}
+        </Label>
+        <Select value={formData.type} onValueChange={handleTypeChange}>
+          <SelectTrigger className="col-span-3">
+            <SelectValue placeholder={t('form.selectType')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ssh">{t('ssh')}</SelectItem>
+            <SelectItem value="docker">{t('docker')}</SelectItem>
+            <SelectItem value="portainer">{t('portainer')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="ip" className="text-right">
+          {t('ipAddress')}
+        </Label>
+        <Input
+          id="ip"
+          placeholder={t('ipAddress')}
+          value={formData.ip}
+          onChange={(e) => handleInputChange('ip', e.target.value)}
+          className="col-span-2"
+        />
+        <div className="flex gap-2 items-center">
+          <Label htmlFor="port" className="text-right whitespace-nowrap">
+            {t('port')}
+          </Label>
           <Input
             id="port"
-            placeholder={connectionType === 'ssh' ? '22' : connectionType === 'docker' ? '2375' : '9000'}
+            placeholder={t('port')}
             value={formData.port}
             onChange={(e) => handleInputChange('port', e.target.value)}
-            onKeyDown={handleKeyDown}
+            className="w-20"
           />
         </div>
-        
-        {connectionType === 'ssh' && (
-          <>
-            <div className="grid gap-2">
-              <Label htmlFor="username">{t('username')}</Label>
-              <Input
-                id="username"
-                placeholder="root"
-                value={formData.username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="password">{t('password')}</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
-            </div>
-          </>
-        )}
-        
-        {testError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('connectionFailed')}</AlertTitle>
-            <AlertDescription className="mt-2 text-sm whitespace-pre-wrap">
-              {testError}
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {testSuccess && (
-          <Alert className="border-green-500 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-500" />
-            <AlertTitle className="text-green-800">{t('connectionSuccessful')}</AlertTitle>
-            <AlertDescription className="text-green-700">
-              {t('readyToConnect')}
-            </AlertDescription>
-          </Alert>
-        )}
-        
-        {showFingerprint && fingerprintData && (
-          <Alert className="border-yellow-500 bg-yellow-50">
-            <ShieldAlert className="h-4 w-4 text-yellow-500" />
-            <AlertTitle className="text-yellow-800">{t('verifyFingerprint')}</AlertTitle>
-            <AlertDescription className="text-yellow-700">
-              <p className="mb-2">
-                {t('hostKeyChanged', { hostname: fingerprintData.hostname })}
-              </p>
-              <div className="bg-yellow-100 p-2 rounded-md font-mono text-xs mb-2">
-                {fingerprintData.fingerprint}
-              </div>
-              <div className="flex space-x-2 mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={verifyHostFingerprint}
-                  disabled={testing}
-                  className="text-green-700 border-green-300 hover:text-green-800 hover:bg-green-50"
-                >
-                  <Check className="h-4 w-4 mr-1" />
-                  {t('accept')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFingerprint(false)}
-                  disabled={testing}
-                  className="text-red-700 border-red-300 hover:text-red-800 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  {t('reject')}
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
       </div>
-      
-      <div className="flex justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={testHostConnection}
-          disabled={!formData.ip || testing || isSaving}
-        >
+
+      {formData.type === 'ssh' && (
+        <>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="username" className="text-right">
+              {t('username')}
+            </Label>
+            <Input
+              id="username"
+              placeholder={t('username')}
+              value={formData.username}
+              onChange={(e) => handleInputChange('username', e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="password" className="text-right">
+              {t('password')}
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder={t('password')}
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              className="col-span-3"
+            />
+          </div>
+        </>
+      )}
+
+      <div className="grid grid-cols-4 items-center gap-4">
+        <Label htmlFor="description" className="text-right">
+          {t('description')}
+        </Label>
+        <Textarea
+          id="description"
+          placeholder={t('form.descriptionPlaceholder')}
+          value={formData.description}
+          onChange={(e) => handleInputChange('description', e.target.value)}
+          className="col-span-3"
+        />
+      </div>
+
+      <div className="flex justify-end space-x-4 mt-6">
+        <Button variant="outline" onClick={testHostConnection} disabled={testing}>
           {testing ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
               {t('testing')}
             </>
           ) : (
-            t('testConnection')
+            <>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              {t('testConnection')}
+            </>
           )}
         </Button>
         
         <Button 
-          type="button" 
           onClick={onSubmit} 
-          disabled={!formData.name || !formData.ip || isSaving}>
+          disabled={isSaving || testStatus !== 'success'}
+          variant="default"
+        >
           {isSaving ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
               {t('saving')}
             </>
           ) : (
             t('save')
           )}
         </Button>
+      </div>
+
+      {testError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>{t('connectionFailed')}</AlertTitle>
+          <AlertDescription>{testError}</AlertDescription>
+        </Alert>
+      )}
+
+      {testSuccess && (
+        <Alert variant="success">
+          <Check className="h-4 w-4" />
+          <AlertTitle>{t('connectionSuccessful')}</AlertTitle>
+          <AlertDescription>{t('readyToConnect')}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex justify-end space-x-2 mt-4">
+        {onCancel && (
+          <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+            {t('cancel')}
+          </Button>
+        )}
       </div>
     </div>
   );

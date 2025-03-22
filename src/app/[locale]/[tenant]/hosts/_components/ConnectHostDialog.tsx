@@ -12,8 +12,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-  DialogDescription,
 } from '@/components/shadcn/dialog';
 import { addHost, testConnection } from '../actions';
 import { Host } from '../types';
@@ -31,11 +29,10 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   const params = useParams();
   const locale = params.locale as string;
   const [isCreating, setIsCreating] = useState(false);
-  const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [testError, setTestError] = useState<string | null>(null);
   const lastRequestTime = useRef<number>(0);
-  const REQUEST_THROTTLE_MS = 500; // minimum time between requests
+  const REQUEST_THROTTLE_MS = 500;
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -45,8 +42,6 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     username: '',
     password: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -90,7 +85,6 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   const handleCreate = async () => {
     if (!validateFormData()) return;
 
-    // Throttle requests
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
       return;
@@ -99,8 +93,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
     setIsCreating(true);
     try {
-      // Create the new host data
-      const hostData = {
+      const result = await addHost({
         name: formData.name,
         description: formData.description || '',
         type: formData.type as 'ssh' | 'docker' | 'portainer',
@@ -108,24 +101,17 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         port: parseInt(formData.port),
         user: formData.username,
         password: formData.password,
-        status: 'connected' as const, // Set to connected by default
+        status: 'connected',
         created_at: new Date(),
         updated_at: new Date(),
-        is_windows: false // Default value
-      };
-
-      const result = await addHost(hostData);
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to create host');
-      }
+        is_windows: false
+      });
 
       toast.success(t('success.connected', { name: formData.name }));
-
       resetForm();
       onOpenChange(false);
 
-      if (onSuccess && result.data) {
+      if (onSuccess && result.success && result.data) {
         onSuccess(result.data);
       }
     } catch (error) {
@@ -136,88 +122,12 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     }
   };
 
-  const getDetailedErrorMessage = (errorData: any): string => {
-    if (!errorData) return t('errors.unknownError');
-
-    if (errorData.message) {
-      const message = errorData.message;
-
-      if (message.includes('timeout')) {
-        return t('errors.timeout');
-      }
-
-      if (message.includes('refused')) {
-        return t('errors.refused');
-      }
-
-      if (message.includes('authentication') || message.includes('password')) {
-        return t('errors.authentication');
-      }
-
-      return message;
-    }
-
-    return t('errors.hostConnection');
-  };
-
-  const handleTestConnection = async (): Promise<boolean> => {
-    if (!validateFormData()) return false;
-
-    // Throttle requests
-    const now = Date.now();
-    if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
-      return false;
-    }
-    lastRequestTime.current = now;
-
-    setIsTesting(true);
-    setTestStatus('idle');
-    setTestError(null);
-
-    try {
-      const data = await testConnection({
-        type: formData.type,
-        ip: formData.ip,
-        port: parseInt(formData.port),
-        username: formData.username,
-        password: formData.password
-      });
-
-      if (data.success) {
-        setTestStatus('success');
-        return true;
-      } else {
-        setTestStatus('error');
-        const errorMessage = getDetailedErrorMessage(data);
-        setTestError(errorMessage || t('errors.testFailed'));
-        return false;
-      }
-    } catch (error) {
-      console.error('Error testing connection:', error);
-      setTestStatus('error');
-      setTestError(error instanceof Error ? error.message : t('errors.testFailed'));
-      return false;
-    } finally {
-      setIsTesting(false);
-    }
-  };
-
   const handleFormChange = (newFormData: FormData) => {
     setFormData(newFormData);
     if (testStatus !== 'idle') {
       setTestStatus('idle');
       setTestError(null);
     }
-  };
-
-  const isFormValid = (): boolean => {
-    if (!formData.name.trim() || !formData.ip.trim()) return false;
-
-    if (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim())) {
-      return false;
-    }
-
-    return true;
   };
 
   return (
@@ -230,38 +140,22 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         onOpenChange(newOpen);
       }}
     >
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Connect to Host</DialogTitle>
-          <DialogDescription>Enter the connection details for your host.</DialogDescription>
+          <DialogTitle>{t('addNewHost')}</DialogTitle>
         </DialogHeader>
 
         <ConnectionForm
           formData={formData}
-          setFormData={setFormData}
+          onChange={handleFormChange}
+          onTestSuccess={() => setTestStatus('success')}
           onSubmit={handleCreate}
+          onCancel={() => onOpenChange(false)}
           isSaving={isCreating}
+          testStatus={testStatus}
         />
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleCreate}
-            disabled={!isFormValid() || isCreating || testStatus !== 'success'}
-          >
-            {isCreating ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Connecting...
-              </>
-            ) : (
-              'Save'
-            )}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+  

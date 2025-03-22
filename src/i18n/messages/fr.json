@@ -103,42 +103,34 @@
     "errorDetails": "Détails de l'erreur",
     "noErrorDetails": "Aucun détail d'erreur disponible",
     "metrics": "Métriques",
-    "form": {
-      "name": "Nom",
-      "namePlaceholder": "Nom de l'hôte (lettres minuscules, chiffres et traits d'union uniquement)",
-      "nameHint": "Seuls les lettres minuscules, les chiffres et les traits d'union sont autorisés",
-      "connection": "Connexion",
-      "selectType": "Sélectionner le type",
-      "ipAddress": "Adresse IP",
-      "port": "Port",
-      "username": "Nom d'utilisateur",
-      "password": "Mot de passe"
-    },
-    "errors": {
-      "validation": "Erreur de validation",
-      "nameRequired": "Veuillez fournir un nom pour la connexion",
-      "ipRequired": "Veuillez fournir une adresse IP",
-      "invalidPort": "Le port doit être un nombre entre 1 et 65535",
-      "sshCredentials": "Le nom d'utilisateur et le mot de passe sont requis pour les connexions SSH",
-      "connectionFailed": "Échec de la connexion",
-      "createFailed": "Échec de la création de la connexion",
-      "unknownError": "Une erreur inconnue s'est produite",
-      "timeout": "Délai de connexion dépassé. Veuillez vérifier que l'adresse IP et le port sont corrects et que les pare-feu autorisent la connexion.",
-      "refused": "Connexion refusée. Veuillez vérifier que le service est en cours d'exécution sur l'hôte cible et que le port est correct.",
-      "authentication": "Échec de l'authentification. Veuillez vérifier votre nom d'utilisateur et votre mot de passe.",
-      "hostConnection": "Échec de la connexion à l'hôte distant. Veuillez vérifier vos détails de connexion.",
-      "testFailed": "Le test de connexion a échoué",
-      "fingerprintFailed": "Échec de la vérification de l'empreinte digitale"
-    },
-    "success": {
-      "created": "Connexion créée",
-      "connected": "Connecté avec succès à {name}"
-    },
     "connectionType": "Type de connexion",
     "ipAddress": "Adresse IP",
     "port": "Port",
     "username": "Nom d'utilisateur",
-    "password": "Mot de passe"
+    "password": "Mot de passe",
+    "saving": "Enregistrement...",
+    "connectionFailed": "Échec de la connexion",
+    "connectionSuccessful": "Connexion réussie",
+    "readyToConnect": "Connexion réussie à l'hôte distant",
+    "addNewHost": "Ajouter un nouvel hôte",
+    "form": {
+      "namePlaceholder": "Nom de l'hôte (lettres minuscules, chiffres et traits d'union uniquement)",
+      "nameHint": "Uniquement les lettres minuscules, les chiffres et les traits d'union sont autorisés",
+      "descriptionPlaceholder": "Description (optionnelle)",
+      "selectType": "Sélectionner le type"
+    },
+    "errors": {
+      "nameRequired": "Le nom est requis",
+      "ipRequired": "L'adresse IP est requise",
+      "invalidPort": "Numéro de port invalide",
+      "sshCredentials": "Nom d'utilisateur et mot de passe sont requis pour les connexions SSH",
+      "createFailed": "Échec de la création de l'hôte",
+      "testFailed": "Échec du test de connexion"
+    },
+    "success": {
+      "created": "Connexion créée",
+      "connected": "Connecté avec succès à {name}"
+    }
   },
   "Dashboard": {
     "title": "Tableau de bord",

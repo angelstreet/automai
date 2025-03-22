@@ -218,12 +218,7 @@ export default function HostContainer() {
               <List className="h-4 w-4" />
             </Button>
           </div>
-          <Button 
-            onClick={handleRefreshAll} 
-            variant="outline" 
-            size="sm"
-            disabled={isRefreshing || loading}
-          >
+          <Button onClick={handleRefreshAll} variant="outline" size="sm" disabled={isRefreshing || loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
@@ -236,7 +231,7 @@ export default function HostContainer() {
 
       {loading && hosts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10">
-          <RefreshCw className="h-8 w-8 animate-spin mb-4" />
+          <div className="h-8 w-8 animate-spin mb-4"></div>
           <p className="text-muted-foreground">Loading hosts...</p>
         </div>
       ) : !loading && hosts.length === 0 ? (
