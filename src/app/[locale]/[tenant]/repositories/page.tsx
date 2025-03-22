@@ -83,6 +83,7 @@ export default function EnhancedRepositoryPage() {
   const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
   const [isExplorerView, setIsExplorerView] = useState<boolean>(false);
   const [isRefreshingAll, setIsRefreshingAll] = useState<boolean>(false);
+  const [syncingRepoIds, setSyncingRepoIds] = useState<Record<string, boolean>>({});
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -164,60 +165,96 @@ export default function EnhancedRepositoryPage() {
     }
   };
 
-  // Handle repository sync
-  const handleSyncRepository = async (id: string): Promise<void> => {
-    setSyncingRepoId(id);
+  // Handle refreshing all repositories
+  const handleRefreshAll = async (): Promise<void> => {
+    if (isRefreshingAll || !repositories || repositories.length === 0) return;
+    
+    setIsRefreshingAll(true);
+    
     try {
-      // Since we don't have a direct syncRepository function in the context,
-      // we'll manually call the API endpoint
-      const response = await fetch(`/api/repositories/${id}/sync`, {
-        method: 'POST',
-      });
+      // Import the test connection action
+      const { testGitProviderConnection } = await import('@/app/[locale]/[tenant]/repositories/actions');
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to sync repository');
+      // Process each repository one by one
+      for (const repo of repositories as Repository[]) {
+        try {
+          // Update state to show this specific repo is syncing
+          setSyncingRepoIds(prev => ({ ...prev, [repo.id]: true }));
+          
+          // Create test data - needs provider type and token
+          const testData = {
+            type: repo.providerType,
+            serverUrl: repo.provider?.serverUrl,
+            token: repo.provider?.token || process.env.GITHUB_TOKEN || ''
+          };
+          
+          // Test the connection
+          const result = await testGitProviderConnection(testData);
+          
+          if (!result.success) {
+            console.error(`Error testing connection for repository ${repo.id}:`, result.error);
+          }
+          
+          // Small delay between tests to avoid overwhelming the server
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (error) {
+          console.error(`Error testing repository ${repo.id}:`, error);
+        } finally {
+          // Mark this repo as no longer syncing
+          setSyncingRepoIds(prev => ({ ...prev, [repo.id]: false }));
+        }
       }
       
-      // Refresh repositories after sync
+      // Refresh the entire list after all tests are complete
       await fetchRepositories();
-      
-      toast({
-        title: 'Success',
-        description: t('syncSuccess'),
-      });
     } catch (error: unknown) {
-      console.error('Error syncing repository:', error);
-      toast({
-        title: 'Error',
-        description: t('syncFailed'),
-        variant: 'destructive',
-      });
+      console.error('Error refreshing repositories:', error);
     } finally {
-      setSyncingRepoId(null);
+      setIsRefreshingAll(false);
+      // Clear all syncing states
+      setSyncingRepoIds({});
     }
   };
 
-  // Handle refreshing all repositories
-  const handleRefreshAll = async (): Promise<void> => {
-    setIsRefreshingAll(true);
+  // Re-implement handleSyncRepository for individual repository sync
+  const handleSyncRepository = async (id: string): Promise<void> => {
+    if (!id) return;
+    
     try {
-      // Call the fetchRepositories method from context
-      await fetchRepositories();
+      setSyncingRepoId(id);
+      setSyncingRepoIds(prev => ({ ...prev, [id]: true }));
       
-      toast({
-        title: 'Success',
-        description: t('refreshSuccess'),
-      });
+      // Import the test connection action
+      const { testGitProviderConnection } = await import('@/app/[locale]/[tenant]/repositories/actions');
+      
+      // Find the repository
+      const repo = repositories?.find(r => r.id === id);
+      if (!repo) {
+        console.error('Repository not found');
+        return;
+      }
+      
+      // Create test data - needs provider type and token
+      const testData = {
+        type: repo.providerType,
+        serverUrl: repo.provider?.serverUrl,
+        token: repo.provider?.token || process.env.GITHUB_TOKEN || ''
+      };
+      
+      // Test the connection
+      const result = await testGitProviderConnection(testData);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to test repository connection');
+      }
+      
+      // Refresh the repository list
+      await fetchRepositories();
     } catch (error: unknown) {
-      console.error('Error refreshing repositories:', error);
-      toast({
-        title: 'Error',
-        description: t('refreshFailed'),
-        variant: 'destructive',
-      });
+      console.error('Error testing repository connection:', error);
     } finally {
-      setIsRefreshingAll(false);
+      setSyncingRepoId(null);
+      setSyncingRepoIds(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -394,9 +431,9 @@ export default function EnhancedRepositoryPage() {
   // Render repository cards
   const renderRepositoryCards = (): React.ReactNode => {
     
-    // Only show loading state if we have no repositories
-    // This prevents the infinite loading issue
-    if (isLoading && filteredRepositories.length === 0) {
+    // Only show loading state during initial data fetch
+    // This prevents the skeleton from showing when filtering
+    if (isLoading && repositories?.length === 0) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -413,13 +450,28 @@ export default function EnhancedRepositoryPage() {
       );
     }
 
+    // Show empty state when we have repositories but none match the filter
     if (filteredRepositories.length === 0) {
+      // Customize the message based on which filter is active
+      let emptyStateMessage = '';
+      if (searchQuery) {
+        emptyStateMessage = t('noRepositoriesMatchingSearch', { fallback: 'No repositories match your search criteria.' });
+      } else if (activeTab === 'starred') {
+        emptyStateMessage = t('noStarredRepositories', { fallback: 'You haven\'t starred any repositories yet.' });
+      } else if (activeTab === 'public') {
+        emptyStateMessage = t('noPublicRepositories', { fallback: 'No public repositories found.' });
+      } else if (activeTab === 'private') {
+        emptyStateMessage = t('noPrivateRepositories', { fallback: 'No private repositories found.' });
+      } else {
+        emptyStateMessage = t('noRepositoriesYet', { fallback: 'No repositories found.' });
+      }
+      
       return (
         <div>
           <EmptyState
             icon={<GitBranch className="h-10 w-10" />}
             title={t('noRepositories')}
-            description={searchQuery ? t('noRepositoriesMatchingSearch') : t('noRepositoriesYet')}
+            description={emptyStateMessage}
             action={
               <Button onClick={() => setConnectDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -444,7 +496,7 @@ export default function EnhancedRepositoryPage() {
                 <EnhancedRepositoryCard
                   repository={repo}
                   onSync={handleSyncRepository}
-                  isSyncing={syncingRepoId === repo.id}
+                  isSyncing={syncingRepoIds[repo.id] === true}
                   onToggleStarred={handleToggleStarred}
                   isStarred={starredRepos.has(repo.id)}
                   onDelete={handleDeleteRepository}
@@ -454,8 +506,7 @@ export default function EnhancedRepositoryPage() {
             ))
           ) : (
             <div className="col-span-3 p-4 text-center bg-gray-50 rounded-md">
-              <p className="text-gray-500">No repositories available to display.</p>
-              <p className="text-sm text-gray-400">Array exists but is empty.</p>
+              <p className="text-gray-500">{t('noRepositoriesToDisplay', { fallback: 'No repositories available to display.' })}</p>
             </div>
           )}
         </div>
@@ -554,17 +605,8 @@ export default function EnhancedRepositoryPage() {
                   onClick={handleRefreshAll} 
                   disabled={isRefreshingAll}
                 >
-                  {isRefreshingAll ? (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      {t('refreshing')}
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      {t('refresh')}
-                    </>
-                  )}
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingAll ? 'animate-spin' : ''}`} />
+                  {t('refresh')}
                 </Button>
               </div>
             </div>
