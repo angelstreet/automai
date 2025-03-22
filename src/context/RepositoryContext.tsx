@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
-import { Repository, RepositoryConnectionStatus, RepositoryFile } from '@/app/[locale]/[tenant]/repositories/types';
+import { Repository, RepositorySyncStatus, RepositoryFile } from '@/app/[locale]/[tenant]/repositories/types';
 import { 
   getRepositories,
   getRepository as getRepositoryById,
@@ -10,15 +10,19 @@ import {
 } from '@/app/[locale]/[tenant]/repositories/actions';
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
-import { RepositoryContextType, RepositoryData, RepositoryActions } from '@/types/context/repository';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
-import { useUser } from './UserContext';
 
 // Reduce logging with a DEBUG flag
 const DEBUG = false;
 const log = (...args: any[]) => DEBUG && console.log(...args);
 
-// Define Repository type if not imported
+// Define interface for filter options
+interface RepositoryFilterOptions {
+  searchTerm?: string;
+  filterConnected?: boolean;
+}
+
+// Define Repository data structure locally to avoid conflicts
 interface RepositoryData {
   repositories: Repository[];
   filteredRepositories: Repository[];
@@ -26,7 +30,7 @@ interface RepositoryData {
   loading: boolean;
   error: string | null;
   connectionStatuses: {[key: string]: boolean};
-  currentUser?: AuthUser;
+  currentUser: AuthUser | null;
   filter: {
     query: string;
     status: string;
@@ -74,72 +78,112 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   log('[RepositoryContext] RepositoryProvider initializing');
   
   // Get initial repository data synchronously from localStorage
-  const [initialState, setInitialState] = useState<RepositoryData>(() => {
+  const [state, setState] = useState<RepositoryData>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cachedRepos = localStorage.getItem('cached_repositories');
-        if (cachedRepos) {
-          const parsedRepos = JSON.parse(cachedRepos);
+        const cachedData = localStorage.getItem('cached_repository');
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData) as RepositoryData;
           log('[RepositoryContext] Using initial cached repository data from localStorage');
-          return parsedRepos;
+          return parsedData;
         }
       } catch (e) {
         // Ignore localStorage errors
         log('[RepositoryContext] Error reading from localStorage:', e);
       }
     }
-    return initialRepositoryData;
+    return {
+      repositories: [],
+      filteredRepositories: [],
+      starredRepositories: [],
+      loading: false,
+      error: null,
+      currentUser: null,
+      connectionStatuses: {},
+      filter: {
+        query: '',
+        status: 'all',
+        type: 'all',
+        sortBy: 'created_at',
+        sortDir: 'desc'
+      }
+    };
   });
   
-  const [state, setState] = useState<RepositoryData>(initialState);
-  const renderCount = useRef<number>(0);
-  
   // Add request protection
-  const { protectedFetch, safeUpdateState, renderCount: protectedRenderCount } = useRequestProtection('RepositoryContext');
+  const { protectedFetch, safeUpdateState, renderCount } = useRequestProtection('RepositoryContext');
   
   // Add initialization tracker
   const initialized = useRef(false);
   
-  // Fetch user data
-  const refreshUserData = useCallback(async (): Promise<AuthUser | null> => {
-    return await protectedFetch('fetchUserData', async () => {
+  // Add repository caching to localStorage
+  useEffect(() => {
+    if (state.repositories.length > 0) {
       try {
-        const user = await getUser();
+        localStorage.setItem('cached_repository', JSON.stringify(state));
+        localStorage.setItem('cached_repository_time', Date.now().toString());
+        log('[RepositoryContext] Saved repository data to localStorage cache');
+      } catch (e) {
+        log('[RepositoryContext] Error saving to localStorage:', e);
+      }
+    }
+  }, [state.repositories.length]);
+
+  // Fetch user data - use server action directly
+  const fetchUserData = useCallback(async () => {
+    log('[RepositoryContext] Fetching user data...');
+    
+    try {
+      return await protectedFetch('fetchUserData', async () => {
+        // Just get user data from the server action
+        const userData = await getUser();
+        if (userData) {
+          log('[RepositoryContext] User data fetched successfully:', { 
+            id: userData.id, 
+            tenant: userData.tenant_name
+          });
+        } else {
+          log('[RepositoryContext] No user data returned from server');
+        }
         
+        // Update state with user data
         safeUpdateState(
           setState,
-          { ...state, currentUser: state.currentUser },
-          { ...state, currentUser: user },
-          'currentUser'
+          state,
+          {
+            ...state,
+            currentUser: userData || null
+          },
+          'user-data-updated'
         );
         
-        return user;
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-        return null;
-      }
-    });
+        return userData;
+      });
+    } catch (error) {
+      log('[RepositoryContext] Error fetching user data:', error);
+      return null;
+    }
   }, [protectedFetch, safeUpdateState, state]);
   
-  // Fetch repositories safely
+  // Fetch repositories safely with better null handling
   const fetchRepositories = useCallback(async (): Promise<Repository[]> => {
-    return await protectedFetch('fetchRepositories', async () => {
+    const result = await protectedFetch('fetchRepositories', async () => {
       try {
         // Check for user data first
-        const user = state.currentUser || await refreshUserData();
+        const user = state.currentUser || await fetchUserData();
         if (!user) {
           console.log('[RepositoryContext] No user data available');
           safeUpdateState(
             setState,
             state,
             { 
-              ...initialState,
+              ...initialRepositoryData,
               loading: false,
               error: 'No user data available'
             },
             'no-user-data'
           );
-          return [];
+          return [] as Repository[];
         }
         
         console.log('[RepositoryContext] Fetching repositories');
@@ -150,16 +194,19 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           'start-loading'
         );
         
-        const data = await getRepositories();
+        const response = await getRepositories();
+        // Extract repositories array from response
+        const repositories = response.success && response.data ? response.data : [];
         
         // Set connection status for each repository
         const connectionStatuses: {[key: string]: boolean} = {};
-        data.forEach(repo => {
-          connectionStatuses[repo.id] = repo.isConnected || false;
+        repositories.forEach((repo: Repository) => {
+          // Use a type assertion for isConnected since it might not be in the type
+          connectionStatuses[repo.id] = (repo as any).isConnected || false;
         });
         
         // Sort by creation date (newest first)
-        const sortedRepositories = [...data].sort((a, b) => {
+        const sortedRepositories = [...repositories].sort((a, b) => {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
         
@@ -196,12 +243,14 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           },
           'fetch-error'
         );
-        return [];
+        return [] as Repository[];
       }
     });
-  }, [state, safeUpdateState, protectedFetch, refreshUserData]);
+    
+    return result || [] as Repository[];
+  }, [state, safeUpdateState, protectedFetch, fetchUserData]);
   
-  // Filter repositories
+  // Filter repositories - fix URL optional check
   const filterRepositories = useCallback((options: RepositoryFilterOptions) => {
     const { searchTerm, filterConnected } = options;
     
@@ -212,7 +261,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(repo => 
         repo.name.toLowerCase().includes(term) || 
-        repo.url.toLowerCase().includes(term)
+        (repo.url && repo.url.toLowerCase().includes(term))
       );
     }
     
@@ -257,15 +306,15 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       }
       
       initialized.current = true;
-      await refreshUserData();
+      await fetchUserData();
       await fetchRepositories();
       
       // Cache repository data in localStorage after successful fetch
       if (state.repositories.length > 0) {
         try {
-          localStorage.setItem('cached_repositories', JSON.stringify(state));
-          localStorage.setItem('cached_repositories_time', Date.now().toString());
-          log('[RepositoryContext] Saved repositories to localStorage cache');
+          localStorage.setItem('cached_repository', JSON.stringify(state));
+          localStorage.setItem('cached_repository_time', Date.now().toString());
+          log('[RepositoryContext] Saved repository data to localStorage cache');
         } catch (e) {
           log('[RepositoryContext] Error saving to localStorage:', e);
         }
@@ -278,7 +327,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       log('[RepositoryContext] RepositoryContext unmounting...');
       initialized.current = false;
     };
-  }, [refreshUserData]);
+  }, [fetchUserData, fetchRepositories]);
 
   // Add one useful log when data is loaded
   useEffect(() => {
@@ -293,7 +342,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   // Create context value
   const contextValue: RepositoryContextType = {
     ...state,
-    refreshRepositories: fetchRepositories,
+    refreshRepositories: async () => { await fetchRepositories(); },
     filterRepositories,
     toggleStarRepository
   };

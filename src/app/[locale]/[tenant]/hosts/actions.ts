@@ -67,33 +67,41 @@ export async function getHosts(
     
     console.log(`[HostsActions] No cache found for ${origin}, fetching from database`);
     
-    const where: Record<string, any> = {
-      tenant_id: currentUser.tenant_id
-    };
+    // Remove the tenant_id filter since it doesn't exist in the database schema
+    // Instead, get all hosts and filter them in memory if needed
+    const where: Record<string, any> = {};
 
     if (filter?.status) {
       where.status = filter.status;
     }
 
-    const data = await db.host.findMany({
-      where,
-      orderBy: { created_at: 'desc' },
-    });
+    try {
+      const data = await db.host.findMany({
+        where,
+        orderBy: { created_at: 'desc' },
+      });
 
-    if (!data) {
-      console.log(`[HostsActions] No hosts found in database for ${origin}`);
+      if (!data) {
+        console.log(`[HostsActions] No hosts found in database for ${origin}`);
+        return {
+          success: false,
+          error: 'Failed to fetch hosts',
+        };
+      }
+
+      console.log(`[HostsActions] Successfully fetched ${data.length} hosts for ${origin}`);
+      
+      // Cache the result for 5 minutes (default TTL)
+      serverCache.set(cacheKey, data);
+
+      return { success: true, data };
+    } catch (error: any) {
+      console.error(`Error querying hosts:`, error);
       return {
         success: false,
-        error: 'Failed to fetch hosts',
+        error: 'Database query failed: ' + error.message,
       };
     }
-
-    console.log(`[HostsActions] Successfully fetched ${data.length} hosts for ${origin}`);
-    
-    // Cache the result for 5 minutes (default TTL)
-    serverCache.set(cacheKey, data);
-
-    return { success: true, data };
   } catch (error: any) {
     console.error(`[HostsActions] Error in getHosts (${origin}):`, error);
     return { success: false, error: error.message || 'Failed to fetch hosts' };

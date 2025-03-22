@@ -51,11 +51,14 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
     message: string;
   } | null>(null);
 
+  const cicdContext = useCICD();
+
+  // Handle the case where context is still initializing (null)
   const {
-    createProvider,
-    updateProvider,
-    testProvider
-  } = useCICD();
+    createProvider = async () => ({ success: false, error: 'CICD context not initialized' }),
+    updateProvider = async () => ({ success: false, error: 'CICD context not initialized' }),
+    testProvider = async () => ({ success: false, error: 'CICD context not initialized' })
+  } = cicdContext || {};
 
   const isEditMode = !!providerId;
 

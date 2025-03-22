@@ -17,7 +17,6 @@ import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { DeploymentContextType, DeploymentData, DeploymentActions, DEPLOYMENT_CACHE_KEYS } from '@/types/context/deployment';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
-import { UserContext } from './UserContext';
 
 // Reduce logging with a DEBUG flag
 const DEBUG = false;
@@ -92,8 +91,39 @@ export const DeploymentProvider: React.FC<{
   const debouncedFetchRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
 
-  const userContext = useContext(UserContext);
-  
+  // Add deployment caching to localStorage
+  useEffect(() => {
+    if (state.deployments.length > 0) {
+      try {
+        localStorage.setItem('cached_deployment', JSON.stringify(state));
+        localStorage.setItem('cached_deployment_time', Date.now().toString());
+        log('[DeploymentContext] Saved deployment data to localStorage cache');
+      } catch (e) {
+        log('[DeploymentContext] Error saving to localStorage:', e);
+      }
+    }
+  }, [state.deployments.length]);
+
+  // Fetch user data - use userData prop directly
+  const fetchUserData = useCallback(async () => {
+    log('[DeploymentContext] Fetching user data...');
+    
+    if (!userData) {
+      log('[DeploymentContext] No user data available in props');
+      return;
+    }
+    
+    try {
+      await protectedFetch('fetchUserData', async () => {
+        // Use userData prop directly
+        log('[DeploymentContext] User data available from props:', userData);
+        return userData;
+      });
+    } catch (error) {
+      log('[DeploymentContext] Error fetching user data:', error);
+    }
+  }, [userData, protectedFetch]);
+
   // For fetchDeployments, let's declare it first with proper type
   const fetchDeployments = useCallback(async (): Promise<Deployment[] | null> => {
     return await protectedFetch('fetchDeployments', async () => {
@@ -164,30 +194,6 @@ export const DeploymentProvider: React.FC<{
     });
   }, [userData, fetchDeployments, protectedFetch]);
 
-  // Fetch user data
-  const fetchUserData = useCallback(async () => {
-    log('[DeploymentContext] Fetching user data...');
-    
-    if (!userContext) {
-      log('[DeploymentContext] No user context available');
-      return;
-    }
-    
-    try {
-      await protectedFetch('fetchUserData', async () => {
-        // Just get user data from the context, don't do actual fetch
-        if (userContext.user) {
-          log('[DeploymentContext] User data available:', userContext.user);
-        } else {
-          log('[DeploymentContext] No user data in context');
-        }
-        return userContext.user;
-      });
-    } catch (error) {
-      log('[DeploymentContext] Error fetching user data:', error);
-    }
-  }, [userContext, protectedFetch]);
-
   // Initialize deployment data
   useEffect(() => {
     log('[DeploymentContext] Initializing DeploymentContext...');
@@ -253,13 +259,17 @@ export const DeploymentProvider: React.FC<{
     const result = await protectedFetch('createDeployment', async () => {
       try {
         console.log('[DeploymentContext] Creating new deployment');
-        // Assume createDeploymentAction returns { success: boolean, deploymentId?: string, error?: string }
-        const apiResult = await createDeploymentAction(formData);
+        // Cast the result to the expected response type
+        const apiResult = await createDeploymentAction(formData) as unknown as { 
+          success: boolean; 
+          data?: { id: string }; 
+          error?: string 
+        };
         
-        if (apiResult && apiResult.success && apiResult.deploymentId) {
+        if (apiResult && apiResult.success && apiResult.data?.id) {
           // Refresh the deployments list after creating
           fetchDeployments();
-          return { success: true, deploymentId: apiResult.deploymentId };
+          return { success: true, deploymentId: apiResult.data.id };
         }
         
         return { 
@@ -413,10 +423,19 @@ export const DeploymentProvider: React.FC<{
   }, [protectedFetch]);
 
   // Create the context value
-  const contextValue = {
-    ...state,
-    refreshUserData,
-    fetchDeployments,
+  const contextValue: DeploymentContextType = {
+    deployments: state.deployments,
+    loading: state.loading,
+    error: state.error,
+    isRefreshing: state.isRefreshing,
+    currentUser: state.currentUser,
+    refreshUserData: async () => {
+      await refreshUserData();
+      return state.currentUser;
+    },
+    fetchDeployments: async () => { 
+      await fetchDeployments(); 
+    },
     fetchDeploymentById,
     createDeployment,
     abortDeployment,
@@ -427,7 +446,7 @@ export const DeploymentProvider: React.FC<{
     fetchAvailableHosts,
     fetchRepositories,
     fetchDeploymentStatus
-  };
+  } as DeploymentContextType;
 
   return (
     <DeploymentContext.Provider value={contextValue}>

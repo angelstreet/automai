@@ -47,15 +47,18 @@ export default function CICDProvider() {
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Use the CICD context
+  // Use the CICD context with null safety
+  const cicdContext = useCICD();
+  
+  // Handle the case where context is still initializing (null)
   const {
-    providers,
-    loading,
-    error,
-    fetchProviders,
-    testProvider,
-    deleteProvider
-  } = useCICD();
+    providers = [],
+    loading = false,
+    error = null,
+    fetchProviders = async () => { console.log('CICD context not initialized'); },
+    testProvider = async () => ({ success: false, error: 'CICD context not initialized' }),
+    deleteProvider = async () => ({ success: false, error: 'CICD context not initialized' })
+  } = cicdContext || {};
   
   // Load providers on component mount
   useEffect(() => {

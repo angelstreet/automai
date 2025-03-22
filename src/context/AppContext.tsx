@@ -247,10 +247,13 @@ export function useUser() {
   // Add just one useful log when the user is initially loaded - not on every call
   useEffect(() => {
     if (context.user?.user && !context.user.loading && !hasLoggedUserData.current) {
-      console.log('[AppContext] User data available:', { 
-        id: context.user.user.id,
-        tenant: context.user.user.tenant_name
-      });
+      // Only log this on first successful load if DEBUG is true
+      if (DEBUG) {
+        console.log('[AppContext] User data available:', { 
+          id: context.user.user.id,
+          tenant: context.user.user.tenant_name
+        });
+      }
       hasLoggedUserData.current = true;
     }
   }, [context.user?.user, context.user?.loading]);

@@ -56,30 +56,45 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
   const [showJenkinsView, setShowJenkinsView] = useState(false);
   
-  // Use the repository hook from the new context system
+  // Use the repository hook from the new context system with null safety
+  const repositoryContext = useRepository();
+  
+  // Handle the case where repository context is still initializing (null)
   const { 
-    repositories, 
-    loading: isLoadingRepositories, 
-    error: repositoryError,
-    fetchRepositoryScripts
-  } = useRepository();
+    repositories = [], 
+    loading: isLoadingRepositories = false, 
+    error: repositoryError = null,
+    fetchRepositoryScripts = async () => {
+      console.log('Repository context not initialized');
+      return [];
+    }
+  } = repositoryContext || {};
   
   // State for repository scripts
   const [repositoryScripts, setRepositoryScripts] = useState<any[]>([]);
   const [isLoadingScripts, setIsLoadingScripts] = useState(false);
   const [scriptsError, setScriptsError] = useState<string | null>(null);
 
-  // Use the hosts hook from the new context system
-  const { 
-    hosts: systemHosts, 
-    loading: isLoadingHosts, 
-    error: hostsError 
-  } = useHost();
+  // Use the hosts hook from the new context system with null safety
+  const hostContext = useHost();
   
-  // Use the deployment context from the new context system
+  // Handle the case where host context is still initializing (null)
+  const { 
+    hosts: systemHosts = [], 
+    loading: isLoadingHosts = false, 
+    error: hostsError = null 
+  } = hostContext || {};
+  
+  // Use the deployment context from the new context system with null safety
+  const deploymentContext = useDeployment();
+  
+  // Handle the case where deployment context is still initializing (null)
   const {
-    createDeployment
-  } = useDeployment();
+    createDeployment = async () => ({ 
+      success: false, 
+      error: 'Deployment context not initialized' 
+    })
+  } = deploymentContext || {};
   
   // Adapt hosts for deployment
   const availableHosts = adaptHostsForDeployment(systemHosts);

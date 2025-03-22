@@ -43,17 +43,20 @@ export default function EnhancedRepositoryPage() {
   const t = useTranslations('repositories');
   
   // Use the repository context from the new context system
+  const repositoryContext = useRepository();
+
+  // Handle the case where context is still initializing (null)
   const {
-    repositories,
-    loading: isLoading,
-    error,
-    fetchRepositories,
-    starRepository,
-    unstarRepository,
-    syncRepository,
-    refreshAllRepositories,
-    deleteRepository
-  } = useRepository();
+    repositories = [],
+    loading: isLoading = false,
+    error = null,
+    fetchRepositories = async () => { console.log('Repository context not initialized'); },
+    starRepository = async () => { console.log('Repository context not initialized'); },
+    unstarRepository = async () => { console.log('Repository context not initialized'); },
+    syncRepository = async () => { console.log('Repository context not initialized'); },
+    refreshAllRepositories = async () => { console.log('Repository context not initialized'); },
+    deleteRepository = async () => { console.log('Repository context not initialized'); }
+  } = repositoryContext || {};
 
   // State for UI
   const [starredRepos, setStarredRepos] = useState<Set<string>>(new Set());
