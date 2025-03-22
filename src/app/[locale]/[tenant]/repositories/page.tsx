@@ -71,7 +71,7 @@ export default function EnhancedRepositoryPage() {
     user = null,
     providers = [],
   } = repositoryContext || {};
-  
+
   // Rename loading to isLoading for our component
   const isLoading = loading;
   // State for UI
@@ -178,24 +178,53 @@ export default function EnhancedRepositoryPage() {
 
   // Handle refreshing all repositories
   const handleRefreshAll = async (): Promise<void> => {
-    if (isRefreshingAll || !repositories || repositories.length === 0) return;
+    console.log("🔎 [DEBUG] handleRefreshAll: Starting function...");
+    
+    if (isRefreshingAll || !repositories || repositories.length === 0) {
+      console.log("🔎 [DEBUG] handleRefreshAll: Early return - isRefreshing:", isRefreshingAll, 
+                  "repos:", repositories?.length);
+      return;
+    }
     
     setIsRefreshingAll(true);
-    console.log("[DEBUG] Starting handleRefreshAll for", repositories.length, "repositories");
+    console.log("🔎 [DEBUG] handleRefreshAll: Processing", repositories.length, "repositories");
     
     try {
-      // Import the test repository action and repository update action
-      const { testGitRepository, updateRepository, clearRepositoriesCache } = await import('@/app/[locale]/[tenant]/repositories/actions');
+      console.log("🔎 [DEBUG] handleRefreshAll: Importing actions...");
       
-      // First clear the cache to ensure we'll get fresh data
-      await clearRepositoriesCache();
+      // Log what actions we're trying to import
+      const actionPath = '@/app/[locale]/[tenant]/repositories/actions';
+      console.log("🔎 [DEBUG] handleRefreshAll: Importing from path:", actionPath);
+      
+      // Import the test repository action and repository update action
+      const actions = await import('@/app/[locale]/[tenant]/repositories/actions');
+      console.log("🔎 [DEBUG] handleRefreshAll: Imported actions:", Object.keys(actions));
+      
+      const { testGitRepository, updateRepository, clearRepositoriesCache } = actions;
+      
+      if (!testGitRepository) {
+        console.error("🔴 [DEBUG] handleRefreshAll: testGitRepository is undefined!");
+      }
+      
+      if (!updateRepository) {
+        console.error("🔴 [DEBUG] handleRefreshAll: updateRepository is undefined!");
+      }
+      
+      if (!clearRepositoriesCache) {
+        console.error("🔴 [DEBUG] handleRefreshAll: clearRepositoriesCache is undefined!");
+      }
+      
+      // No need to clear all caches before starting
+      // We'll update the repositories one by one and clear only necessary caches
+      
+      console.log("🔎 [DEBUG] handleRefreshAll: Starting repository testing loop...");
       
       // Process each repository one by one
       for (const repo of repositories as Repository[]) {
         try {
           // Skip repositories without a URL
           if (!repo.url) {
-            console.log(`Repository ${repo.id} has no URL, skipping test`);
+            console.log(`🔶 [DEBUG] handleRefreshAll: Repository ${repo.id} has no URL, skipping test`);
             continue;
           }
           
@@ -208,15 +237,18 @@ export default function EnhancedRepositoryPage() {
             token: repo.provider?.token || ''
           };
           
-          console.log(`[DEBUG] Testing repository ${repo.id} (${repo.name}) with URL: ${repo.url}`);
+          console.log(`🔎 [DEBUG] handleRefreshAll: Testing repository ${repo.id} (${repo.name}) with URL: ${repo.url}`);
           
           // Test the repository
           const result = await testGitRepository(testData);
           
-          console.log(`Repository ${repo.name} test result:`, result);
+          console.log(`🔎 [DEBUG] handleRefreshAll: Repository ${repo.name} test result:`, result);
+          
+          // Check if updateRepository function exists
+          console.log(`🔎 [DEBUG] handleRefreshAll: updateRepository is type:`, typeof updateRepository);
           
           // Update repository syncStatus based on test result
-          if (repo.id && user?.id) {
+          if (repo.id) {
             let newSyncStatus: 'SYNCED' | 'FAILED' | 'IDLE' = 'IDLE';
             
             if (result.success) {
@@ -225,46 +257,56 @@ export default function EnhancedRepositoryPage() {
               newSyncStatus = 'FAILED';
             }
             
-            console.log(`[DEBUG] Updating repository ${repo.id} status to ${newSyncStatus}`);
+            console.log(`🔎 [DEBUG] handleRefreshAll: About to update repository ${repo.id} status to ${newSyncStatus}`);
             
             // Get the current user for the update call
             try {
               // Update the repository in the database - need to use current user
+              console.log(`🔎 [DEBUG] handleRefreshAll: Calling updateRepository...`);
               const updateResult = await updateRepository(repo.id, { 
                 syncStatus: newSyncStatus,
                 lastSyncedAt: new Date().toISOString()
               });
-              console.log(`[DEBUG] Update result for ${repo.id}:`, updateResult);
+              console.log(`🔎 [DEBUG] handleRefreshAll: Update result for ${repo.id}:`, updateResult);
+              
+              // Clear only the cache for this specific repository
+              if (repo.id) {
+                await clearRepositoriesCache(repo.id);
+              }
             } catch (updateError) {
-              console.error(`Error updating repository ${repo.id} status:`, updateError);
+              console.error(`🔴 [DEBUG] handleRefreshAll: Error updating repository ${repo.id} status:`, updateError);
             }
           } else {
-            console.warn(`[DEBUG] Cannot update repository ${repo.id}, user.id: ${user?.id}`);
+            console.warn(`🔶 [DEBUG] handleRefreshAll: Cannot update repository - ID is missing:`, repo);
           }
           
           // Small delay between tests to avoid overwhelming the server
           await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (error) {
-          console.error(`Error testing repository ${repo.id}:`, error);
+    } catch (error) {
+          console.error(`🔴 [DEBUG] handleRefreshAll: Error testing repository ${repo.id}:`, error);
         } finally {
           // Mark this repo as no longer syncing
           setSyncingRepoIds(prev => ({ ...prev, [repo.id]: false }));
         }
       }
       
-      console.log("[DEBUG] Repository tests complete, refreshing repository list");
+      console.log("🔎 [DEBUG] handleRefreshAll: Repository tests complete, refreshing repository list");
       
-      // Clear the cache again before the final refresh to ensure we get the most up-to-date data
+      // Only clear the 'all' repositories cache at the end, not individual repository caches
+      console.log("🔎 [DEBUG] handleRefreshAll: Final cache clearing for 'all' repositories...");
       await clearRepositoriesCache();
       
       // Refresh the entire list after all tests are complete
+      console.log("🔎 [DEBUG] handleRefreshAll: Calling fetchRepositories to get updated data...");
       await fetchRepositories();
+      console.log("🔎 [DEBUG] handleRefreshAll: fetchRepositories complete");
     } catch (error: unknown) {
-      console.error('Error refreshing repositories:', error);
+      console.error('🔴 [DEBUG] handleRefreshAll: Unexpected error:', error);
     } finally {
       setIsRefreshingAll(false);
       // Clear all syncing states
       setSyncingRepoIds({});
+      console.log("🔎 [DEBUG] handleRefreshAll: Function complete");
     }
   };
 
@@ -279,8 +321,8 @@ export default function EnhancedRepositoryPage() {
       // Import the test repository action and repository update action
       const { testGitRepository, updateRepository, clearRepositoriesCache } = await import('@/app/[locale]/[tenant]/repositories/actions');
       
-      // Clear the cache to ensure we'll get fresh data
-      await clearRepositoriesCache();
+      // Only clear the cache for this specific repository
+      await clearRepositoriesCache(id);
       
       // Find the repository
       const repo = repositories?.find(r => r.id === id);
@@ -307,7 +349,7 @@ export default function EnhancedRepositoryPage() {
       console.log(`Repository ${repo.name} test result:`, result);
       
       // Update repository syncStatus based on test result
-      if (repo.id && user?.id) {
+      if (repo.id) {
         let newSyncStatus: 'SYNCED' | 'FAILED' | 'IDLE' = 'IDLE';
         
         if (result.success) {
@@ -322,15 +364,15 @@ export default function EnhancedRepositoryPage() {
             syncStatus: newSyncStatus,
             lastSyncedAt: new Date().toISOString()
           });
+          
+          // Clear this repository's cache after update
+          await clearRepositoriesCache(id);
         } catch (updateError) {
           console.error(`Error updating repository ${repo.id} status:`, updateError);
         }
       }
       
-      // Clear the cache again before the final refresh
-      await clearRepositoriesCache();
-      
-      // Refresh the repository list
+      // Only clear all repositories cache at the end if needed
       await fetchRepositories();
     } catch (error: unknown) {
       console.error('Error testing repository connection:', error);
@@ -550,17 +592,17 @@ export default function EnhancedRepositoryPage() {
       
       return (
         <div>
-          <EmptyState
-            icon={<GitBranch className="h-10 w-10" />}
-            title={t('noRepositories')}
+        <EmptyState
+          icon={<GitBranch className="h-10 w-10" />}
+          title={t('noRepositories')}
             description={emptyStateMessage}
-            action={
-              <Button onClick={() => setConnectDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('addRepository')}
-              </Button>
-            }
-          />
+          action={
+            <Button onClick={() => setConnectDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addRepository')}
+            </Button>
+          }
+        />
         </div>
       );
     }
@@ -570,21 +612,21 @@ export default function EnhancedRepositoryPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentRepositories && currentRepositories.length > 0 ? (
             currentRepositories.map(repo => (
-              <div
-                key={repo.id}
-                onClick={() => handleViewRepository(repo)}
-                className="cursor-pointer"
-              >
-                <EnhancedRepositoryCard
-                  repository={repo}
-                  onSync={handleSyncRepository}
+            <div
+              key={repo.id}
+              onClick={() => handleViewRepository(repo)}
+              className="cursor-pointer"
+            >
+              <EnhancedRepositoryCard
+                repository={repo}
+                onSync={handleSyncRepository}
                   isSyncing={syncingRepoIds[repo.id] === true}
-                  onToggleStarred={handleToggleStarred}
-                  isStarred={starredRepos.has(repo.id)}
-                  onDelete={handleDeleteRepository}
-                  isDeleting={isDeleting === repo.id}
-                />
-              </div>
+                onToggleStarred={handleToggleStarred}
+                isStarred={starredRepos.has(repo.id)}
+                onDelete={handleDeleteRepository}
+                isDeleting={isDeleting === repo.id}
+              />
+            </div>
             ))
           ) : (
             <div className="col-span-3 p-4 text-center bg-gray-50 rounded-md">
@@ -688,7 +730,7 @@ export default function EnhancedRepositoryPage() {
                   disabled={isRefreshingAll}
                 >
                   <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingAll ? 'animate-spin' : ''}`} />
-                  {t('refresh')}
+                      {t('refresh')}
                 </Button>
               </div>
             </div>

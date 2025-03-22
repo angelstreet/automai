@@ -205,44 +205,93 @@ export async function createRepository(
  * Update an existing repository
  * @param id Repository ID to update
  * @param updates Updates to apply to the repository
- * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
 export async function updateRepository(
   id: string,
-  updates: Partial<Repository>,
-  user?: AuthUser | null
+  updates: Partial<Repository>
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
-    if (!currentUser) {
+    console.log(`[updateRepository] Starting update for repo ${id}`);
+    
+    // Always get fresh user data from the server - don't rely on user from client
+    const currentUserResult = await getUser();
+    if (!currentUserResult) {
+      console.log('[updateRepository] Failed - user not authenticated');
       return { 
         success: false, 
         error: 'Unauthorized - Please sign in' 
       };
     }
-
-    const updated = await db.repository.update({
-      where: { id },
-      data: updates,
+    
+    const currentUser = currentUserResult;
+    
+    console.log(`[updateRepository] User authenticated, profile_id: ${currentUser.id}`);
+    
+    // IMPORTANT: The db.repository.update call requires BOTH id AND profile_id in the where clause
+    console.log(`[updateRepository] Calling db.repository.update with:`, { 
+      where: { id, profile_id: currentUser.id },
+      data: updates
     });
 
-    if (!updated) {
-      return {
-        success: false,
-        error: 'Repository not found or update failed',
-      };
+    try {
+      const updated = await db.repository.update({
+        where: { id, profile_id: currentUser.id },
+        data: updates,
+      });
+
+      if (!updated) {
+        console.log(`[updateRepository] Failed - repository not found or update failed`);
+        return {
+          success: false,
+          error: 'Repository not found or update failed',
+        };
+      }
+
+      // Map to our Repository type
+      const repository: Repository = mapDbRepositoryToRepository(updated);
+      
+      // Invalidate cache after update
+      serverCache.delete(`repositories:${repository.providerId}`);
+      serverCache.delete('repositories:all');
+      serverCache.delete(`repository:${id}`);
+      
+      console.log(`[updateRepository] Success - updated repo ${id}, invalidated cache`);
+
+      return { success: true, data: repository };
+    } catch (dbError: any) {
+      console.error('[updateRepository] Database layer error:', dbError);
+      
+      // Try a different approach if the first one failed
+      console.log('[updateRepository] Attempting direct Supabase update as fallback...');
+      
+      try {
+        // Attempt to call the core db function directly with both parameters
+        const result = await db.repository.updateRepository(id, {
+          ...updates,
+          updated_at: new Date().toISOString(),
+          last_synced_at: updates.lastSyncedAt ? new Date(updates.lastSyncedAt).toISOString() : new Date().toISOString(),
+          sync_status: updates.syncStatus
+        }, currentUser.id);
+        
+        if (result.success && result.data) {
+          console.log('[updateRepository] Fallback succeeded:', result);
+          
+          // Invalidate cache after update
+          serverCache.delete('repositories:all');
+          
+          return { 
+            success: true, 
+            data: mapDbRepositoryToRepository(result.data)
+          };
+        } else {
+          console.error('[updateRepository] Fallback update failed:', result.error);
+          return { success: false, error: result.error || 'Update failed' };
+        }
+      } catch (fallbackError: any) {
+        console.error('[updateRepository] Fallback attempt failed:', fallbackError);
+        return { success: false, error: fallbackError.message || 'Failed to update repository' };
+      }
     }
-
-    // Map to our Repository type
-    const repository: Repository = mapDbRepositoryToRepository(updated);
-    
-    // Invalidate cache after update
-    serverCache.delete(`repositories:${repository.providerId}`);
-    serverCache.delete('repositories:all');
-    serverCache.delete(`repository:${id}`);
-
-    return { success: true, data: repository };
   } catch (error: any) {
     console.error('Error in updateRepository:', error);
     return { success: false, error: error.message || 'Failed to update repository' };
@@ -1351,15 +1400,29 @@ export async function testGitRepository(
 /**
  * Clear the repositories cache
  * This is useful when we need to ensure we get fresh data after updates
+ * @param repositoryId Optional repository ID to only clear cache for a specific repository
+ * @param providerId Optional provider ID to only clear cache for a specific provider
  */
-export async function clearRepositoriesCache(): Promise<void> {
+export async function clearRepositoriesCache(
+  repositoryId?: string,
+  providerId?: string
+): Promise<void> {
   try {
-    // Clear all repository-related cache keys
-    serverCache.delete('repositories:all');
+    console.log(`[actions] Clearing repositories cache${repositoryId ? ` for repository ${repositoryId}` : ''}${providerId ? ` for provider ${providerId}` : ''}`);
     
-    // Clear any potentially cached repositories by provider
-    // For simplicity, we're just clearing the general cache here
-    console.log('[actions] Cleared repositories cache');
+    if (repositoryId) {
+      // Clear specific repository cache
+      serverCache.delete(`repository:${repositoryId}`);
+      console.log(`[actions] Cleared cache for repository:${repositoryId}`);
+    } else if (providerId) {
+      // Clear provider-specific repositories cache
+      serverCache.delete(`repositories:${providerId}`);
+      console.log(`[actions] Cleared cache for repositories:${providerId}`);
+    } else {
+      // Clear all repository-related caches
+      serverCache.delete('repositories:all');
+      console.log('[actions] Cleared repositories:all cache');
+    }
   } catch (error) {
     console.error('Error clearing repositories cache:', error);
   }
