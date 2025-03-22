@@ -133,7 +133,12 @@
     "success": {
       "created": "Connection created",
       "connected": "Successfully connected to {name}"
-    }
+    },
+    "connectionType": "Connection Type",
+    "ipAddress": "IP Address",
+    "port": "Port",
+    "username": "Username",
+    "password": "Password"
   },
   "Dashboard": {
     "title": "Dashboard",

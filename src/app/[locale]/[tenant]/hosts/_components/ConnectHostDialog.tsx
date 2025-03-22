@@ -5,7 +5,6 @@ import { useTranslations } from 'next-intl';
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import * as React from 'react';
-import { useHost } from '@/context';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -16,6 +15,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/shadcn/dialog';
+import { addHost, testConnection } from '../actions';
 import { Host } from '../types';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
@@ -30,7 +30,6 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   const t = useTranslations('Common');
   const params = useParams();
   const locale = params.locale as string;
-  const { addHost, testConnection } = useHost();
   const [isCreating, setIsCreating] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -100,24 +99,34 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
     setIsCreating(true);
     try {
-      const host = await addHost({
+      // Create the new host data
+      const hostData = {
         name: formData.name,
         description: formData.description || '',
-        type: 'ssh',
+        type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port),
         user: formData.username,
         password: formData.password,
-        status: 'connected', // Set to connected by default
-      });
+        status: 'connected' as const, // Set to connected by default
+        created_at: new Date(),
+        updated_at: new Date(),
+        is_windows: false // Default value
+      };
+
+      const result = await addHost(hostData);
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create host');
+      }
 
       toast.success(t('success.connected', { name: formData.name }));
 
       resetForm();
       onOpenChange(false);
 
-      if (onSuccess && host) {
-        onSuccess(host);
+      if (onSuccess && result.data) {
+        onSuccess(result.data);
       }
     } catch (error) {
       console.error('Error creating connection:', error);
@@ -151,7 +160,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     return t('errors.hostConnection');
   };
 
-  const testConnectionHandler = async (): Promise<boolean> => {
+  const handleTestConnection = async (): Promise<boolean> => {
     if (!validateFormData()) return false;
 
     // Throttle requests
@@ -167,11 +176,11 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
     try {
       const data = await testConnection({
-        type: 'ssh',
+        type: formData.type,
         ip: formData.ip,
         port: parseInt(formData.port),
         username: formData.username,
-        password: formData.password,
+        password: formData.password
       });
 
       if (data.success) {
@@ -229,8 +238,9 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
 
         <ConnectionForm
           formData={formData}
-          onChange={handleFormChange}
-          onTestSuccess={() => setTestStatus('success')}
+          setFormData={setFormData}
+          onSubmit={handleCreate}
+          isSaving={isCreating}
         />
 
         <DialogFooter>
