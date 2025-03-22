@@ -26,9 +26,13 @@ const UserContext = createContext<UserContextType>({
   clearCache: async () => {},
 });
 
+// Reduce logging with a DEBUG flag
+const DEBUG = false;
+const log = (...args: any[]) => DEBUG && console.log(...args);
+
 // Map the auth user to our User type
 const mapAuthUserToUser = (authUser: AuthUser): User => {
-  console.log('[UserContext] Mapping auth user to user:', {
+  log('[UserContext] Mapping auth user to user:', {
     id: authUser.id,
     hasTenantId: !!authUser.tenant_id,
     hasTenantName: !!authUser.tenant_name,
@@ -46,7 +50,7 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
   // Try to extract role from different possible locations
   const role = (authUser as any).role || 'viewer';
   
-  console.log('[UserContext] User role determined:', role);
+  log('[UserContext] User role determined:', role);
 
   return {
     id: authUser.id,
@@ -61,45 +65,38 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
 };
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  console.log('[UserContext] UserProvider initializing');
+  log('[UserContext] UserProvider initializing');
   const [error, setError] = useState<Error | null>(null);
-
-  // Add a flag to track client-side rendering
-  const [isClient, setIsClient] = useState(false);
-  
-  // Add initialization tracker to prevent duplicate initialization
   const initialized = useRef(false);
-
-  // Set isClient once the component mounts on the client
-  useEffect(() => {
-    console.log('[UserContext] Client-side initialization');
-    setIsClient(true);
-    
-    // Attempt to fetch user data on mount
-    // Don't use setTimeout, fetch immediately
-    if (!initialized.current) {
-      initialized.current = true;
-      console.log('[UserContext] Triggering initial data fetch');
-      fetchUserData().catch(e => console.error('[UserContext] Initial fetch error:', e));
+  
+  // Get initial user data synchronously from localStorage
+  const [initialUser, setInitialUser] = useState<User | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedUser = localStorage.getItem('cached_user');
+        if (cachedUser) {
+          const parsedUser = JSON.parse(cachedUser);
+          log('[UserContext] Using initial cached user data from localStorage');
+          return parsedUser;
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+        log('[UserContext] Error reading from localStorage:', e);
+      }
     }
-    
-    return () => {
-      console.log('[UserContext] UserProvider unmounting');
-      initialized.current = false;
-    };
-  }, []);
+    return null;
+  });
 
   // Fetch user data with better SSR handling
   const fetchUserData = async (): Promise<User | null> => {
-    console.log('[UserContext] fetchUserData called');
+    log('[UserContext] fetchUserData called');
     try {
       // On the server, return null to avoid hydration mismatches
       if (typeof window === 'undefined') {
-        console.log('[UserContext] Server-side render, returning null');
+        log('[UserContext] Server-side render, returning null');
         return null;
       }
 
-      // Step 2: Improved caching strategy
       // Try to get cached user from localStorage
       if (typeof window !== 'undefined') {
         const cachedUser = localStorage.getItem('cached_user');
@@ -112,66 +109,33 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
               const timeDiff = Date.now() - parseInt(cachedTime, 10);
               // If cache is less than 5 minutes old, use it
               if (timeDiff < 5 * 60 * 1000) {
-                console.log('[UserContext] Using cached user data, age:', Math.round(timeDiff/1000), 'seconds');
+                log('[UserContext] Using cached user data, age:', Math.round(timeDiff/1000), 'seconds');
                 return parsedUser;
               }
-              console.log('[UserContext] Cached user data expired, age:', Math.round(timeDiff/1000), 'seconds');
+              log('[UserContext] Cached user data expired, age:', Math.round(timeDiff/1000), 'seconds');
             }
           } catch (e) {
             // Invalid JSON, ignore and continue
-            console.error('[UserContext] Invalid cached user data:', e);
+            log('[UserContext] Invalid cached user data:', e);
             localStorage.removeItem('cached_user');
             localStorage.removeItem('cached_user_time');
           }
         } else {
-          console.log('[UserContext] No cached user data found');
+          log('[UserContext] No cached user data found');
         }
       }
 
       // Fetch fresh user data directly from server action
-      // This reuses middleware authentication without extra API route
-      console.log('[UserContext] Fetching fresh user data from server');
+      log('[UserContext] Fetching fresh user data from server');
       const authUser = await getUser();
-      console.log('[UserContext] Server returned auth user:', authUser ? 'found' : 'not found');
+      log('[UserContext] Server returned auth user:', authUser ? 'found' : 'not found');
       
-      if (!authUser) {
-        console.log('[UserContext] No auth user returned from server, retrying once');
-        // Add a retry after a short delay
-        return new Promise((resolve) => {
-          setTimeout(async () => {
-            try {
-              const retryUser = await getUser();
-              console.log('[UserContext] Retry server returned auth user:', retryUser ? 'found' : 'still not found');
-              
-              if (!retryUser) {
-                resolve(null);
-                return;
-              }
-              
-              try {
-                const user = mapAuthUserToUser(retryUser);
-                // Cache the user in localStorage
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('cached_user', JSON.stringify(user));
-                  localStorage.setItem('cached_user_time', Date.now().toString());
-                }
-                resolve(user);
-              } catch (err) {
-                console.error('[UserContext] Retry user mapping error:', err);
-                resolve(null);
-              }
-            } catch (err) {
-              console.error('[UserContext] Retry fetch error:', err);
-              resolve(null);
-            }
-          }, 1000);
-        });
-      }
+      if (!authUser) return null;
 
       try {
         // Map to our User type - will throw if tenant data is missing
         const user = mapAuthUserToUser(authUser);
-        console.log('[UserContext] Successfully mapped user data:', { 
+        log('[UserContext] Successfully mapped user data:', { 
           id: user.id,
           tenant: user.tenant_name,
           role: user.role 
@@ -179,20 +143,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         
         // Cache the user in localStorage
         if (typeof window !== 'undefined') {
-          console.log('[UserContext] Storing user data in localStorage cache');
+          log('[UserContext] Storing user data in localStorage cache');
           localStorage.setItem('cached_user', JSON.stringify(user));
           localStorage.setItem('cached_user_time', Date.now().toString());
         }
         
         return user;
       } catch (error) {
-        console.error('[UserContext] User data mapping error:', error);
+        log('[UserContext] User data mapping error:', error);
         setError(error instanceof Error ? error : new Error('Invalid user data'));
         return null;
       }
 
     } catch (error) {
-      console.error('[UserContext] Error fetching user:', error);
+      log('[UserContext] Error fetching user:', error);
       setError(error instanceof Error ? error : new Error('Failed to fetch user'));
       return null;
     }
@@ -204,27 +168,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     isLoading: loading,
     mutate: mutateUser,
   } = useSWR(
-    // Only run SWR on the client side to avoid hydration mismatches
-    isClient ? 'user-data' : null,
+    'user-data',
     fetchUserData,
     {
-      fallbackData: null,
-      revalidateOnFocus: true, // Enable revalidation on focus to ensure fresh data
-      revalidateOnReconnect: true, // Enable revalidation on reconnect
-      dedupingInterval: 10000, // Reduce deduping interval to 10 seconds
-      keepPreviousData: true, // Keep previous data while revalidating
-      loadingTimeout: 3000, // Consider slow after 3 seconds
-      revalidateIfStale: true, // Revalidate if stale to keep data fresh
-      refreshInterval: 60000, // Refresh every minute
+      fallbackData: initialUser, // Use initial data to avoid flicker
+      revalidateOnFocus: false,  // Don't revalidate on every tab focus
+      revalidateOnReconnect: true,
+      dedupingInterval: 60000,   // Dedupe requests for 1 minute
+      keepPreviousData: true, 
+      loadingTimeout: 3000,     // Consider slow after 3 seconds
+      revalidateIfStale: true,  // Revalidate if stale
+      refreshInterval: 300000,  // Refresh every 5 minutes
       onSuccess: (data) => {
-        console.log('[UserContext] SWR cache success:', data ? 'user found' : 'no user');
+        log('[UserContext] SWR cache success:', data ? 'user found' : 'no user');
       },
     },
   );
 
   // Function to clear all caches
   const clearCache = useCallback(async () => {
-    console.log('[UserContext] Clearing all user caches');
+    log('[UserContext] Clearing all user caches');
     // Clear localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('cached_user');
@@ -235,48 +198,53 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [mutateUser]);
 
   const refreshUser = useCallback(async () => {
-    console.log('[UserContext] Manually refreshing user data');
+    log('[UserContext] Manually refreshing user data');
     try {
       const freshUserData = await mutateUser();
-      console.log('[UserContext] User refresh complete:', freshUserData ? 'success' : 'no data');
+      log('[UserContext] User refresh complete:', freshUserData ? 'success' : 'no data');
       return freshUserData || null;
     } catch (error) {
-      console.error('[UserContext] Error refreshing user:', error);
+      log('[UserContext] Error refreshing user:', error);
       return user;
     }
   }, [mutateUser, user]);
 
   const handleUpdateProfile = async (formData: FormData) => {
-    console.log('[UserContext] Updating user profile');
+    log('[UserContext] Updating user profile');
     try {
       await updateProfileAction(formData);
       await refreshUser();
     } catch (err) {
-      console.error('[UserContext] Profile update error:', err);
+      log('[UserContext] Profile update error:', err);
       setError(err instanceof Error ? err : new Error('Failed to update profile'));
     }
   };
 
   const handleRoleUpdate = async (role: Role) => {
-    console.log('[UserContext] Updating user role to:', role);
+    log('[UserContext] Updating user role to:', role);
     try {
       if (!user?.id) throw new Error('No user found');
       const formData = new FormData();
       formData.append('role', role);
       await handleUpdateProfile(formData);
     } catch (err) {
-      console.error('[UserContext] Role update error:', err);
+      log('[UserContext] Role update error:', err);
       setError(err instanceof Error ? err : new Error('Failed to update role'));
       throw err;
     }
   };
 
-  // Log current context state on each render
-  console.log('[UserContext] Current state:', { 
-    hasUser: !!user,
-    loading,
-    hasError: !!error
-  });
+  // Log current context state on significant changes only
+  useEffect(() => {
+    if (user?.id && !initialized.current) {
+      initialized.current = true;
+      console.log('[UserContext] User loaded:', { 
+        id: user.id, 
+        tenant: user.tenant_name,
+        role: user.role
+      });
+    }
+  }, [user]);
 
   const contextValue = React.useMemo(
     () => ({
@@ -288,10 +256,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       updateRole: handleRoleUpdate,
       clearCache,
     }),
-    [user, loading, error, refreshUser, handleRoleUpdate, clearCache],
+    [user, loading, error, refreshUser, clearCache]
   );
 
-  return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
+  return (
+    <UserContext.Provider value={contextValue}>
+      {children}
+    </UserContext.Provider>
+  );
 }
 
-export const useUser = () => useContext(UserContext);
+export function useUser() {
+  const context = useContext(UserContext);
+  if (context === undefined) {
+    throw new Error('useUser must be used within a UserProvider');
+  }
+  return context;
+}

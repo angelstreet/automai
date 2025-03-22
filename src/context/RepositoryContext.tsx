@@ -14,6 +14,10 @@ import { RepositoryContextType, RepositoryData, RepositoryActions } from '@/type
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 import { useUser } from './UserContext';
 
+// Reduce logging with a DEBUG flag
+const DEBUG = false;
+const log = (...args: any[]) => DEBUG && console.log(...args);
+
 // Define Repository type if not imported
 interface RepositoryData {
   repositories: Repository[];
@@ -23,6 +27,13 @@ interface RepositoryData {
   error: string | null;
   connectionStatuses: {[key: string]: boolean};
   currentUser?: AuthUser;
+  filter: {
+    query: string;
+    status: string;
+    type: string;
+    sortBy: string;
+    sortDir: string;
+  };
 }
 
 interface RepositoryContextType {
@@ -37,14 +48,22 @@ interface RepositoryContextType {
   toggleStarRepository: (repository: Repository) => void;
 }
 
-// Initial state
-const initialState: RepositoryData = {
+// Rename the initial state constant to avoid naming conflicts
+const initialRepositoryData: RepositoryData = {
   repositories: [],
   filteredRepositories: [],
   starredRepositories: [],
   loading: false,
   error: null,
+  currentUser: null,
   connectionStatuses: {},
+  filter: {
+    query: '',
+    status: 'all',
+    type: 'all',
+    sortBy: 'name',
+    sortDir: 'asc',
+  }
 };
 
 // Create the context
@@ -52,16 +71,33 @@ export const RepositoryContext = createContext<RepositoryContextType | null>(nul
 
 // Provider component
 export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  log('[RepositoryContext] RepositoryProvider initializing');
+  
+  // Get initial repository data synchronously from localStorage
+  const [initialState, setInitialState] = useState<RepositoryData>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedRepos = localStorage.getItem('cached_repositories');
+        if (cachedRepos) {
+          const parsedRepos = JSON.parse(cachedRepos);
+          log('[RepositoryContext] Using initial cached repository data from localStorage');
+          return parsedRepos;
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+        log('[RepositoryContext] Error reading from localStorage:', e);
+      }
+    }
+    return initialRepositoryData;
+  });
+  
   const [state, setState] = useState<RepositoryData>(initialState);
+  const renderCount = useRef<number>(0);
   
-  // Initialize the request protection hook
-  const { 
-    protectedFetch, 
-    safeUpdateState,
-    renderCount 
-  } = useRequestProtection();
+  // Add request protection
+  const { protectedFetch, safeUpdateState, renderCount: protectedRenderCount } = useRequestProtection('RepositoryContext');
   
-  // Add initialization protection
+  // Add initialization tracker
   const initialized = useRef(false);
   
   // Fetch user data
@@ -209,15 +245,50 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     );
   }, [state, safeUpdateState]);
   
-  // Initialize repositories when user context changes
+  // Initialize by fetching user data and repositories
   useEffect(() => {
-    if (initialized.current) return;
-    if (!state.currentUser) return;
+    log('[RepositoryContext] Initializing RepositoryContext...');
     
-    console.log('[RepositoryContext] Initializing repositories');
-    initialized.current = true;
-    fetchRepositories();
-  }, [state.currentUser, fetchRepositories]);
+    const initialize = async () => {
+      // Prevent double initialization
+      if (initialized.current) {
+        log('[RepositoryContext] Already initialized, skipping');
+        return;
+      }
+      
+      initialized.current = true;
+      await refreshUserData();
+      await fetchRepositories();
+      
+      // Cache repository data in localStorage after successful fetch
+      if (state.repositories.length > 0) {
+        try {
+          localStorage.setItem('cached_repositories', JSON.stringify(state));
+          localStorage.setItem('cached_repositories_time', Date.now().toString());
+          log('[RepositoryContext] Saved repositories to localStorage cache');
+        } catch (e) {
+          log('[RepositoryContext] Error saving to localStorage:', e);
+        }
+      }
+    };
+    
+    initialize();
+    
+    return () => {
+      log('[RepositoryContext] RepositoryContext unmounting...');
+      initialized.current = false;
+    };
+  }, [refreshUserData]);
+
+  // Add one useful log when data is loaded
+  useEffect(() => {
+    if (state.repositories.length > 0 && !state.loading) {
+      console.log('[RepositoryContext] Repositories loaded:', { 
+        count: state.repositories.length,
+        filtered: state.filteredRepositories.length
+      });
+    }
+  }, [state.repositories.length, state.filteredRepositories.length, state.loading]);
   
   // Create context value
   const contextValue: RepositoryContextType = {

@@ -19,6 +19,10 @@ import {
 import { CICDContextType, CICDData, CICDActions } from '@/types/context/cicd';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 
+// Reduce logging with a DEBUG flag
+const DEBUG = false;
+const log = (...args: any[]) => DEBUG && console.log(...args);
+
 // Initial state
 const initialState: CICDData = {
   providers: [],
@@ -36,10 +40,34 @@ const CICDContext = createContext<CICDContextType | undefined>(undefined);
 
 // Provider component
 export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<CICDData>(initialState);
+  log('[CICDContext] CICDProvider initializing');
+  
+  // Get initial CICD data synchronously from localStorage
+  const [state, setState] = useState<CICDData>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedData = localStorage.getItem('cached_cicd');
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData) as CICDData;
+          log('[CICDContext] Using initial cached CICD data from localStorage');
+          return parsedData;
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+        log('[CICDContext] Error reading from localStorage:', e);
+      }
+    }
+    return initialState;
+  });
+  
+  // Add render count for debugging
+  const renderCount = useRef<number>(0);
   
   // Add request protection
-  const { protectedFetch, safeUpdateState, renderCount } = useRequestProtection('CICDContext');
+  const { protectedFetch, safeUpdateState, renderCount: protectedRenderCount } = useRequestProtection('CICDContext');
+  
+  // Add initialization tracker
+  const initialized = useRef(false);
   
   // Fetch user data
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
@@ -309,28 +337,47 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Initialize CI/CD data
   useEffect(() => {
-    const didInitialize = useRef(false);
-    
-    if (didInitialize.current) {
-      console.log('[CICDContext] Already initialized, skipping');
-      return;
-    }
-    
-    console.log('[CICDContext] Initializing context...');
-    didInitialize.current = true;
+    log('[CICDContext] Initializing CICDContext...');
     
     const initialize = async () => {
+      // Prevent double initialization
+      if (initialized.current) {
+        log('[CICDContext] Already initialized, skipping');
+        return;
+      }
+      
+      initialized.current = true;
       await fetchUserData();
       await fetchProviders();
+      
+      // Cache CICD data in localStorage after successful fetch
+      if (state.providers.length > 0) {
+        try {
+          localStorage.setItem('cached_cicd', JSON.stringify(state));
+          localStorage.setItem('cached_cicd_time', Date.now().toString());
+          log('[CICDContext] Saved CICD data to localStorage cache');
+        } catch (e) {
+          log('[CICDContext] Error saving to localStorage:', e);
+        }
+      }
     };
     
     initialize();
     
     return () => {
-      console.log('[CICDContext] CICDContext unmounting...');
-      didInitialize.current = false;
+      log('[CICDContext] CICDContext unmounting...');
+      initialized.current = false;
     };
   }, [fetchUserData, fetchProviders]);
+  
+  // Add one useful log when providers are loaded
+  useEffect(() => {
+    if (state.providers.length > 0 && !state.loading) {
+      console.log('[CICDContext] CICD providers loaded:', { 
+        count: state.providers.length
+      });
+    }
+  }, [state.providers.length, state.loading]);
   
   // Create context value
   const contextValue: CICDContextType = {

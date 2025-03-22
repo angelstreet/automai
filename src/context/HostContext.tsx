@@ -15,8 +15,12 @@ import { AuthUser } from '@/types/user';
 import { HostContextType, HostData, HostActions } from '@/types/context/host';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 
+// Reduce logging with a DEBUG flag
+const DEBUG = false;
+const log = (...args: any[]) => DEBUG && console.log(...args);
+
 // Initial state
-const initialState: HostData = {
+const initialHostData: HostData = {
   hosts: [],
   filteredHosts: [],
   selectedHost: null,
@@ -50,6 +54,26 @@ export const HostProvider: React.FC<{
   children: ReactNode;
   userData?: AuthUser | null;
 }> = ({ children, userData }) => {
+  log('[HostContext] HostProvider initializing');
+  
+  // Get initial host data synchronously from localStorage
+  const [initialState, setInitialState] = useState<HostData>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedHosts = localStorage.getItem('cached_hosts');
+        if (cachedHosts) {
+          const parsedHosts = JSON.parse(cachedHosts);
+          log('[HostContext] Using initial cached host data from localStorage');
+          return parsedHosts;
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+        log('[HostContext] Error reading from localStorage:', e);
+      }
+    }
+    return initialHostData;
+  });
+  
   const [state, setState] = useState<HostData>(initialState);
   // Add render count for debugging
   const renderCount = useRef<number>(0);
@@ -67,7 +91,7 @@ export const HostProvider: React.FC<{
       setState(prev => ({ ...prev, currentUser: user }));
       return user;
     } catch (err) {
-      console.error('Error fetching user data:', err);
+      log('[HostContext] Error fetching user data:', err);
       return null;
     }
   }, []);
@@ -154,7 +178,7 @@ export const HostProvider: React.FC<{
         // Use cached user data when available
         const user = state.currentUser || await refreshUserData();
         
-        console.log('[HostContext] fetchHosts called', {
+        log('[HostContext] fetchHosts called', {
           hasUser: !!user,
           renderCount: protectedRenderCount,
           componentState: 'loading'
@@ -195,7 +219,7 @@ export const HostProvider: React.FC<{
           'hosts'
         );
         
-        console.log('[HostContext] fetchHosts complete', {
+        log('[HostContext] fetchHosts complete', {
           hostCount: fetchedHosts.length,
           filteredCount: filteredHosts.length,
           componentState: 'loaded'
@@ -203,7 +227,7 @@ export const HostProvider: React.FC<{
         
         return fetchedHosts;
       } catch (err: any) {
-        console.error('[HostContext] Error fetching hosts:', err);
+        log('[HostContext] Error fetching hosts:', err);
         
         setState(prev => ({ 
           ...prev, 
@@ -221,24 +245,35 @@ export const HostProvider: React.FC<{
 
   // Initialize by fetching user data and hosts
   useEffect(() => {
-    console.log('[HostContext] Initializing HostContext...');
+    log('[HostContext] Initializing HostContext...');
     
     const initialize = async () => {
       // Prevent double initialization
       if (initialized.current) {
-        console.log('[HostContext] Already initialized, skipping');
+        log('[HostContext] Already initialized, skipping');
         return;
       }
       
       initialized.current = true;
       await refreshUserData();
       await fetchHosts();
+      
+      // Cache host data in localStorage after successful fetch
+      if (state.hosts.length > 0) {
+        try {
+          localStorage.setItem('cached_hosts', JSON.stringify(state));
+          localStorage.setItem('cached_hosts_time', Date.now().toString());
+          log('[HostContext] Saved hosts to localStorage cache');
+        } catch (e) {
+          log('[HostContext] Error saving to localStorage:', e);
+        }
+      }
     };
     
     initialize();
     
     return () => {
-      console.log('[HostContext] HostContext unmounting...');
+      log('[HostContext] HostContext unmounting...');
       initialized.current = false;
     };
   // Remove fetchHosts from dependencies to prevent loops
@@ -248,7 +283,7 @@ export const HostProvider: React.FC<{
   const checkHostStatus = useCallback(async (hostId: string): Promise<HostConnectionStatus | null> => {
     try {
       // Stub implementation
-      console.log('[HostContext] checkHostStatus called for host:', hostId);
+      log('[HostContext] checkHostStatus called for host:', hostId);
       
       // Mock status for UI display
       const mockStatus: HostConnectionStatus = {
@@ -267,7 +302,7 @@ export const HostProvider: React.FC<{
       
       return mockStatus;
     } catch (err) {
-      console.error(`[HostContext] Error checking host status for ${hostId}:`, err);
+      log(`[HostContext] Error checking host status for ${hostId}:`, err);
       return null;
     }
   }, []);
@@ -280,11 +315,11 @@ export const HostProvider: React.FC<{
       if (cachedHost) return cachedHost;
       
       // If not cached, fetch from server
-      console.log('[HostContext] Fetching host by ID:', id);
+      log('[HostContext] Fetching host by ID:', id);
       const result = await getHost(id);
       return result.success && result.data ? result.data : null;
     } catch (err) {
-      console.error(`[HostContext] Error getting host ${id}:`, err);
+      log(`[HostContext] Error getting host ${id}:`, err);
       return null;
     }
   }, [state.hosts]);
@@ -292,7 +327,7 @@ export const HostProvider: React.FC<{
   // Add a new host
   const addHost = useCallback(async (hostData: any): Promise<{ success: boolean; hostId?: string; error?: string }> => {
     try {
-      console.log('[HostContext] Adding new host');
+      log('[HostContext] Adding new host');
       
       // Mock implementation
       const mockResult = {
@@ -305,7 +340,7 @@ export const HostProvider: React.FC<{
       
       return mockResult;
     } catch (err: any) {
-      console.error('[HostContext] Error adding host:', err);
+      log('[HostContext] Error adding host:', err);
       return { success: false, error: err.message };
     }
   }, [fetchHosts]);
@@ -313,7 +348,7 @@ export const HostProvider: React.FC<{
   // Remove a host
   const removeHost = useCallback(async (id: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('[HostContext] Removing host:', id);
+      log('[HostContext] Removing host:', id);
       
       // Mock implementation
       const mockResult = { success: true };
@@ -327,7 +362,7 @@ export const HostProvider: React.FC<{
       
       return mockResult;
     } catch (err: any) {
-      console.error('[HostContext] Error removing host:', err);
+      log('[HostContext] Error removing host:', err);
       return { success: false, error: err.message };
     }
   }, []);
@@ -335,7 +370,7 @@ export const HostProvider: React.FC<{
   // Update an existing host
   const updateExistingHost = useCallback(async (id: string, updates: any): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('[HostContext] Updating host:', id);
+      log('[HostContext] Updating host:', id);
       
       // Mock implementation
       const mockResult = { success: true };
@@ -349,7 +384,7 @@ export const HostProvider: React.FC<{
       
       return mockResult;
     } catch (err: any) {
-      console.error('[HostContext] Error updating host:', err);
+      log('[HostContext] Error updating host:', err);
       return { success: false, error: err.message };
     }
   }, []);
@@ -357,12 +392,12 @@ export const HostProvider: React.FC<{
   // Test connection
   const testConnection = useCallback(async (id: string): Promise<{ success: boolean; error?: string; message?: string }> => {
     try {
-      console.log('[HostContext] Testing connection for host:', id);
+      log('[HostContext] Testing connection for host:', id);
       
       // Mock implementation
       return { success: true, message: 'Connection successful' };
     } catch (err: any) {
-      console.error('[HostContext] Connection test failed:', err);
+      log('[HostContext] Connection test failed:', err);
       return { success: false, error: err.message };
     }
   }, []);
@@ -370,11 +405,11 @@ export const HostProvider: React.FC<{
   // Test all connections
   const testAllConnections = useCallback(async (): Promise<void> => {
     try {
-      console.log('[HostContext] Testing all connections');
+      log('[HostContext] Testing all connections');
       
       // Mock implementation - do nothing
     } catch (err) {
-      console.error('[HostContext] Test all connections failed:', err);
+      log('[HostContext] Test all connections failed:', err);
     }
   }, []);
 
@@ -426,6 +461,16 @@ export const HostProvider: React.FC<{
       loadingStatus: {state: 'idle', operation: null, entityId: null}
     }))
   } as HostContextType;
+  
+  // Add one useful log when data is loaded
+  useEffect(() => {
+    if (state.hosts.length > 0 && !state.loading) {
+      console.log('[HostContext] Hosts loaded:', { 
+        count: state.hosts.length,
+        filtered: state.filteredHosts.length
+      });
+    }
+  }, [state.hosts.length, state.filteredHosts.length, state.loading]);
   
   return (
     <HostContext.Provider value={contextValue}>

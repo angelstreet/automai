@@ -1,12 +1,16 @@
 'use client';
 
-import React, { createContext, useContext, ReactNode, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useCallback, useEffect, useRef } from 'react';
 import { HostProvider, useHostContext } from './HostContext';
 import { DeploymentProvider, useDeploymentContext } from './DeploymentContext';
 import { RepositoryProvider, useRepositoryContext } from './RepositoryContext';
 import { CICDProvider, useCICDContext } from './CICDContext';
 import { UserProvider, useUser as useUserContext } from './UserContext';
 import { AppContextType } from '@/types/context/app';
+
+// Reduce logging with a DEBUG flag
+const DEBUG = false;
+const log = (...args: any[]) => DEBUG && console.log(...args);
 
 // Create the app context
 const AppContext = createContext<{
@@ -29,7 +33,7 @@ type AppContextState = Record<ContextName, boolean>;
 
 // Provider component that composes all other providers
 export function AppProvider({ children }: { children: ReactNode }) {
-  console.log('[AppContext] AppProvider initializing');
+  log('[AppContext] AppProvider initializing');
   
   // Manage which contexts are initialized
   const [contextState, setContextState] = useState<AppContextState>({
@@ -43,17 +47,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Function to initialize a context on demand
   const initContext = useCallback((name: ContextName) => {
     if (!contextState[name]) {
-      console.log(`[AppContext] Initializing ${name} context on demand`);
+      log(`[AppContext] Initializing ${name} context on demand`);
       setContextState(prev => ({ ...prev, [name]: true }));
     }
   }, [contextState]);
   
   // Log when AppProvider mounts and unmounts
   useEffect(() => {
-    console.log('[AppContext] AppProvider mounted, user context enabled');
+    log('[AppContext] AppProvider mounted, user context enabled');
     
     return () => {
-      console.log('[AppContext] AppProvider unmounting');
+      log('[AppContext] AppProvider unmounting');
     };
   }, []);
   
@@ -112,7 +116,7 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   const userContext = contextState.user ? useUserContext() : null;
   
   useEffect(() => {
-    console.log('[AppContext] Bridge component mounted', {
+    log('[AppContext] Bridge component mounted', {
       availableContexts: {
         user: !!userContext,
         userHasData: userContext ? !!userContext.user : false,
@@ -125,7 +129,7 @@ function AppContextBridge({ children }: { children: ReactNode }) {
     
     // Additional logging for debug
     if (userContext) {
-      console.log('[AppContext] User context details', {
+      log('[AppContext] User context details', {
         userPresent: !!userContext.user,
         loading: userContext.loading,
         hasError: !!userContext.error
@@ -167,7 +171,7 @@ function useInitContext(name: ContextName) {
   useEffect(() => {
     // Initialize this context if not already initialized
     if (!contextState[name]) {
-      console.log(`[AppContext] Auto-initializing ${name} context`);
+      log(`[AppContext] Auto-initializing ${name} context`);
       initContext(name);
     }
   }, [contextState, initContext, name]);
@@ -221,21 +225,35 @@ export function useUser() {
   const _isInitialized = useInitContext('user');
   const context = useAppContext();
   
-  // Add more detailed logging for troubleshooting
-  if (typeof window !== 'undefined') {
+  // Track if we've already logged the user data for this component
+  const hasLoggedUserData = useRef(false);
+  
+  // Add more detailed logging for troubleshooting - only when DEBUG is true
+  if (typeof window !== 'undefined' && DEBUG) {
     if (!context.user) {
-      console.log('[AppContext] useUser hook returned null user context');
+      log('[AppContext] useUser hook returned null user context');
     } else if (context.user.loading) {
-      console.log('[AppContext] useUser hook: user context is loading');
+      log('[AppContext] useUser hook: user context is loading');
     } else if (!context.user.user) {
-      console.log('[AppContext] useUser hook: user context loaded but no user data found');
+      log('[AppContext] useUser hook: user context loaded but no user data found');
     } else {
-      console.log('[AppContext] useUser hook: user loaded successfully', { 
+      log('[AppContext] useUser hook: user loaded successfully', { 
         id: context.user.user.id,
         tenant: context.user.user.tenant_name
       });
     }
   }
+  
+  // Add just one useful log when the user is initially loaded - not on every call
+  useEffect(() => {
+    if (context.user?.user && !context.user.loading && !hasLoggedUserData.current) {
+      console.log('[AppContext] User data available:', { 
+        id: context.user.user.id,
+        tenant: context.user.user.tenant_name
+      });
+      hasLoggedUserData.current = true;
+    }
+  }, [context.user?.user, context.user?.loading]);
   
   return context.user;
 } 

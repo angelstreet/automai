@@ -17,6 +17,11 @@ import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { DeploymentContextType, DeploymentData, DeploymentActions, DEPLOYMENT_CACHE_KEYS } from '@/types/context/deployment';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
+import { UserContext } from './UserContext';
+
+// Reduce logging with a DEBUG flag
+const DEBUG = false;
+const log = (...args: any[]) => DEBUG && console.log(...args);
 
 // Debounce function to prevent multiple rapid calls
 const useDebounce = (fn: Function, delay: number) => {
@@ -51,27 +56,46 @@ export const DeploymentProvider: React.FC<{
   children: ReactNode;
   userData?: AuthUser | null;
 }> = ({ children, userData }) => {
-  const [state, setState] = useState<DeploymentData>(initialState);
-  const lastFetchTimeRef = useRef<number>(0);
-  const user = userData;
+  log('[DeploymentContext] DeploymentProvider initializing');
+  
+  // Get initial deployment data synchronously from localStorage
+  const [state, setState] = useState<DeploymentData>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedData = localStorage.getItem('cached_deployment');
+        if (cachedData) {
+          const parsedData = JSON.parse(cachedData) as DeploymentData;
+          log('[DeploymentContext] Using initial cached deployment data from localStorage');
+          return parsedData;
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+        log('[DeploymentContext] Error reading from localStorage:', e);
+      }
+    }
+    return initialState;
+  });
+
+  // Add render count for debugging
+  const renderCount = useRef<number>(0);
   
   // Add request protection
-  const { protectedFetch, safeUpdateState, renderCount } = useRequestProtection('DeploymentContext');
+  const { protectedFetch, safeUpdateState, renderCount: protectedRenderCount } = useRequestProtection('DeploymentContext');
+  
+  // Add initialization tracker
+  const initialized = useRef(false);
   
   // Configure fetch cooldown in milliseconds
   const FETCH_COOLDOWN = 5000; // Only allow fetches every 5 seconds
   
   // Fix the missing debouncedFetchRef and ensure proper typing
   const debouncedFetchRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
 
-  // Add initialization protection
-  const initialized = useRef(false);
-  
-  // Fix the circular dependency by declaring functions in the right order
-  // and adding proper type annotations
+  const userContext = useContext(UserContext);
   
   // For fetchDeployments, let's declare it first with proper type
-  const fetchDeployments = useCallback(async (): Promise<Deployment[]> => {
+  const fetchDeployments = useCallback(async (): Promise<Deployment[] | null> => {
     return await protectedFetch('fetchDeployments', async () => {
       try {
         if (debouncedFetchRef.current) {
@@ -115,43 +139,87 @@ export const DeploymentProvider: React.FC<{
           { ...state, loading: false, error: err.message || 'Failed to fetch deployments' },
           'fetch-error'
         );
-        return [];
+        return null;
       }
     });
   }, [state, safeUpdateState, protectedFetch]);
   
   // Now define refreshUserData which depends on fetchDeployments
   const refreshUserData = useCallback(async () => {
-    if (!user) return;
+    if (!userData) return;
     
     await protectedFetch('refreshUserData', async () => {
       try {
-        const userData = user;
         if (!userData || !userData.id) {
           console.log('[DeploymentContext] No user data available');
-          safeUpdateState(
-            setState,
-            state,
-            {
-              ...state,
-              loading: false,
-              deployments: [],
-              error: 'No user data available'
-            },
-            'no-user-data'
-          );
           return null;
         }
         
-        console.log('[DeploymentContext] User data available, fetching deployments');
-        await fetchDeployments();
-        return userData;
-      } catch (err) {
-        console.error('[DeploymentContext] Error refreshing user data:', err);
+        const result = await fetchDeployments();
+        return result;
+      } catch (error) {
+        console.error('[DeploymentContext] Error refreshing user data:', error);
         return null;
       }
     });
-  }, [user, fetchDeployments, protectedFetch, safeUpdateState, state]);
+  }, [userData, fetchDeployments, protectedFetch]);
+
+  // Fetch user data
+  const fetchUserData = useCallback(async () => {
+    log('[DeploymentContext] Fetching user data...');
+    
+    if (!userContext) {
+      log('[DeploymentContext] No user context available');
+      return;
+    }
+    
+    try {
+      await protectedFetch('fetchUserData', async () => {
+        // Just get user data from the context, don't do actual fetch
+        if (userContext.user) {
+          log('[DeploymentContext] User data available:', userContext.user);
+        } else {
+          log('[DeploymentContext] No user data in context');
+        }
+        return userContext.user;
+      });
+    } catch (error) {
+      log('[DeploymentContext] Error fetching user data:', error);
+    }
+  }, [userContext, protectedFetch]);
+
+  // Initialize deployment data
+  useEffect(() => {
+    log('[DeploymentContext] Initializing DeploymentContext...');
+    
+    const initialize = async () => {
+      // Prevent double initialization
+      if (initialized.current) {
+        log('[DeploymentContext] Already initialized, skipping');
+        return;
+      }
+      
+      initialized.current = true;
+      await fetchUserData();
+      await fetchDeployments();
+    };
+    
+    initialize();
+    
+    return () => {
+      log('[DeploymentContext] DeploymentContext unmounting...');
+      initialized.current = false;
+    };
+  }, [fetchUserData, fetchDeployments]);
+  
+  // Add one useful log when deployments are loaded
+  useEffect(() => {
+    if (state.deployments.length > 0 && !state.loading) {
+      console.log('[DeploymentContext] Deployments loaded:', { 
+        count: state.deployments.length
+      });
+    }
+  }, [state.deployments.length, state.loading]);
 
   // Fetch deployment by ID with protection
   const fetchDeploymentById = useCallback(async (id: string): Promise<Deployment | null> => {
@@ -175,29 +243,6 @@ export const DeploymentProvider: React.FC<{
       }
     });
   }, [protectedFetch, refreshUserData, state]);
-
-  // Update the useEffect to use initialized ref
-  useEffect(() => {
-    if (initialized.current) {
-      console.log('[DeploymentContext] Already initialized, skipping');
-      return;
-    }
-    
-    console.log('[DeploymentContext] Initializing context...');
-    initialized.current = true;
-    
-    const initialize = async () => {
-      await refreshUserData();
-      await fetchDeployments();
-    };
-    
-    initialize();
-    
-    return () => {
-      console.log('[DeploymentContext] DeploymentContext unmounting...');
-      initialized.current = false;
-    };
-  }, [refreshUserData, fetchDeployments]);
 
   // Fix the createDeployment function to handle properly typed responses
   const createDeployment = useCallback(async (formData: DeploymentFormData): Promise<{ 
