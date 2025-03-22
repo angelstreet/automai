@@ -172,28 +172,31 @@ export default function EnhancedRepositoryPage() {
     setIsRefreshingAll(true);
     
     try {
-      // Import the test connection action
-      const { testGitProviderConnection } = await import('@/app/[locale]/[tenant]/repositories/actions');
+      // Import the test repository action
+      const { testGitRepository } = await import('@/app/[locale]/[tenant]/repositories/actions');
       
       // Process each repository one by one
       for (const repo of repositories as Repository[]) {
         try {
+          // Skip repositories without a URL
+          if (!repo.url) {
+            console.log(`Repository ${repo.id} has no URL, skipping test`);
+            continue;
+          }
+          
           // Update state to show this specific repo is syncing
           setSyncingRepoIds(prev => ({ ...prev, [repo.id]: true }));
           
-          // Create test data - needs provider type and token
+          // Create test data with the repository URL
           const testData = {
-            type: repo.providerType,
-            serverUrl: repo.provider?.serverUrl,
-            token: repo.provider?.token || process.env.GITHUB_TOKEN || ''
+            url: repo.url,
+            token: repo.provider?.token || ''
           };
           
-          // Test the connection
-          const result = await testGitProviderConnection(testData);
+          // Test the repository
+          const result = await testGitRepository(testData);
           
-          if (!result.success) {
-            console.error(`Error testing connection for repository ${repo.id}:`, result.error);
-          }
+          console.log(`Repository ${repo.name} test result:`, result);
           
           // Small delay between tests to avoid overwhelming the server
           await new Promise(resolve => setTimeout(resolve, 300));
@@ -224,8 +227,8 @@ export default function EnhancedRepositoryPage() {
       setSyncingRepoId(id);
       setSyncingRepoIds(prev => ({ ...prev, [id]: true }));
       
-      // Import the test connection action
-      const { testGitProviderConnection } = await import('@/app/[locale]/[tenant]/repositories/actions');
+      // Import the test repository action
+      const { testGitRepository } = await import('@/app/[locale]/[tenant]/repositories/actions');
       
       // Find the repository
       const repo = repositories?.find(r => r.id === id);
@@ -234,19 +237,22 @@ export default function EnhancedRepositoryPage() {
         return;
       }
       
-      // Create test data - needs provider type and token
+      // Skip repositories without a URL
+      if (!repo.url) {
+        console.log(`Repository ${repo.id} has no URL, skipping test`);
+        return;
+      }
+      
+      // Create test data with the repository URL
       const testData = {
-        type: repo.providerType,
-        serverUrl: repo.provider?.serverUrl,
-        token: repo.provider?.token || process.env.GITHUB_TOKEN || ''
+        url: repo.url,
+        token: repo.provider?.token || ''
       };
       
-      // Test the connection
-      const result = await testGitProviderConnection(testData);
+      // Test the repository
+      const result = await testGitRepository(testData);
       
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to test repository connection');
-      }
+      console.log(`Repository ${repo.name} test result:`, result);
       
       // Refresh the repository list
       await fetchRepositories();

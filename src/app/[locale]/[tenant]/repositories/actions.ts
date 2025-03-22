@@ -32,6 +32,14 @@ const gitProviderCreateSchema = z.object({
 
 type GitProviderCreateInput = z.infer<typeof gitProviderCreateSchema>;
 
+// Schema for testing a repository
+const testRepositorySchema = z.object({
+  url: z.string().url('Invalid URL'),
+  token: z.string().optional(),
+});
+
+type TestRepositoryInput = z.infer<typeof testRepositorySchema>;
+
 /**
  * Convert DB repository to our Repository type
  * @param dbRepo The database repository
@@ -418,8 +426,15 @@ export async function testGitProviderConnection(
   data: TestConnectionInput,
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
+    console.log('[testGitProviderConnection] Starting with data:', {
+      type: data.type,
+      serverUrl: data.serverUrl || 'undefined',
+      hasToken: data.token ? 'YES' : 'NO'
+    });
+
     // Validate input data
     const validatedData = testConnectionSchema.parse(data);
+    console.log('[testGitProviderConnection] Data validated successfully');
 
     // Test connection with timeout
     const controller = new AbortController();
@@ -431,7 +446,10 @@ export async function testGitProviderConnection(
         : validatedData.type === 'github'
           ? 'https://api.github.com'
           : 'https://gitlab.com/api/v4';
+    
+    console.log('[testGitProviderConnection] Using baseUrl:', baseUrl);
 
+    console.log('[testGitProviderConnection] Making request to:', `${baseUrl}/api/v1/user`);
     const response = await fetch(`${baseUrl}/api/v1/user`, {
       headers: {
         Authorization: `token ${validatedData.token}`,
@@ -440,9 +458,12 @@ export async function testGitProviderConnection(
     });
 
     clearTimeout(timeout);
+    console.log('[testGitProviderConnection] Response status:', response.status);
 
     // Handle response
     if (!response.ok) {
+      const errorText = await response.text();
+      console.log('[testGitProviderConnection] Error response:', errorText);
       return {
         success: false,
         error: 'Connection to git provider failed',
@@ -454,7 +475,7 @@ export async function testGitProviderConnection(
       message: 'Connection test successful',
     };
   } catch (error: any) {
-    console.error('Error in testGitProviderConnection:', error);
+    console.error('[testGitProviderConnection] Error details:', error);
 
     // Handle specific errors
     if (error instanceof Error) {
@@ -1259,6 +1280,70 @@ export async function getRepositoriesWithStarred(
     return { 
       success: false, 
       error: error.message || 'Failed to fetch repository data' 
+    };
+  }
+}
+
+/**
+ * Test if a repository URL is accessible
+ * This is different from testGitProviderConnection as it tests a specific repository URL
+ * rather than the git provider API
+ * @param data Repository URL and optional token
+ */
+export async function testGitRepository(
+  data: TestRepositoryInput,
+): Promise<{ success: boolean; error?: string; message?: string; status?: number }> {
+  try {
+    console.log('[testGitRepository] Starting with data:', {
+      url: data.url,
+      hasToken: data.token ? 'YES' : 'NO'
+    });
+
+    // Validate input data
+    const validatedData = testRepositorySchema.parse(data);
+    console.log('[testGitRepository] Data validated successfully');
+
+    // Test connection with timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    // Prepare headers
+    const headers: Record<string, string> = {};
+    if (validatedData.token) {
+      headers.Authorization = `token ${validatedData.token}`;
+    }
+
+    console.log('[testGitRepository] Making request to:', validatedData.url);
+    const response = await fetch(validatedData.url, {
+      method: 'HEAD', // Use HEAD to just check if the URL is accessible
+      headers,
+      signal: controller.signal,
+      redirect: 'follow',
+    });
+
+    clearTimeout(timeout);
+    console.log('[testGitRepository] Response status:', response.status);
+
+    // Return status code for the calling component to handle
+    return {
+      success: response.ok,
+      status: response.status,
+      message: response.ok ? 'Repository is accessible' : 'Repository is not accessible',
+    };
+  } catch (error: any) {
+    console.error('[testGitRepository] Error details:', error);
+
+    // Handle specific errors
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.name === 'AbortError' ? 'Connection timeout after 5s' : error.message,
+      };
+    }
+
+    return {
+      success: false,
+      error: 'Failed to test repository connection',
     };
   }
 }
