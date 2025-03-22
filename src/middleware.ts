@@ -21,6 +21,29 @@ async function getIntlMiddleware() {
 }
 
 export default async function middleware(request: NextRequest) {
+  // Check content type and accept headers for HTML content
+  const contentType = request.headers.get('content-type') || '';
+  const acceptHeader = request.headers.get('accept') || '';
+  const userAgent = request.headers.get('user-agent') || '';
+  
+  // Skip middleware for known HTML content types
+  if (contentType.includes('text/html') || 
+      acceptHeader.includes('text/html') || 
+      contentType.includes('application/xhtml+xml')) {
+    console.log('[Middleware] Detected HTML-related content type, bypassing middleware processing');
+    return NextResponse.next();
+  }
+  
+  // Skip for specific patterns in URL that might indicate HTML content
+  // or for certain clients that might send HTML without proper headers
+  if (request.nextUrl.pathname.endsWith('.html') || 
+      userAgent.includes('crawl') || 
+      userAgent.includes('bot') ||
+      (request.method === 'POST' && !contentType)) {
+    console.log('[Middleware] Detected potential HTML-related request, bypassing processing');
+    return NextResponse.next();
+  }
+
   // 1. First, normalize URL case (lowercase)
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
   const originalPath = request.nextUrl.pathname;
@@ -133,22 +156,28 @@ export default async function middleware(request: NextRequest) {
   }
 
   // 4. For all other paths, use Supabase's updateSession
-  // This will handle session validation and token refresh
-  const response = await updateSession(request);
+  try {
+    // This will handle session validation and token refresh
+    const response = await updateSession(request);
 
-  // If the response is a redirect (unauthenticated), return it directly
-  if (response.headers.has('location')) {
-    console.log('Redirecting to:', response.headers.get('location'));
-    return response;
+    // If the response is a redirect (unauthenticated), return it directly
+    if (response.headers.has('location')) {
+      console.log('Redirecting to:', response.headers.get('location'));
+      return response;
+    }
+
+    // Access user session info from cookies if needed for debugging (non-invasive)
+    // We don't actually extract the data here to avoid breaking anything
+    console.log('Middleware: Processing authenticated request');
+
+    // 5. Apply internationalization middleware for non-redirect responses
+    const intl = await getIntlMiddleware();
+    return intl(response);
+  } catch (error) {
+    // If there's an error in updateSession, log it and proceed with the request
+    console.error('[Middleware] Error in updateSession:', error);
+    return NextResponse.next();
   }
-
-  // Access user session info from cookies if needed for debugging (non-invasive)
-  // We don't actually extract the data here to avoid breaking anything
-  console.log('Middleware: Processing authenticated request');
-
-  // 5. Apply internationalization middleware for non-redirect responses
-  const intl = await getIntlMiddleware();
-  return intl(response);
 }
 
 export const config = {
