@@ -335,9 +335,11 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     
     return () => {
       log('[RepositoryContext] RepositoryContext unmounting...');
-      initialized.current = false;
+      // Don't reset initialized flag when component unmounts
+      // This prevents the initialization loop when the component is remounted
+      // initialized.current = false;
     };
-  }, [fetchUserData, fetchRepositories]);
+  }, []); // Empty dependency array to run only once
 
   // Add one useful log when data is loaded
   useEffect(() => {

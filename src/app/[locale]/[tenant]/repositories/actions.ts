@@ -270,7 +270,9 @@ export async function updateRepository(
           ...updates,
           updated_at: new Date().toISOString(),
           last_synced_at: updates.lastSyncedAt ? new Date(updates.lastSyncedAt).toISOString() : new Date().toISOString(),
-          sync_status: updates.syncStatus
+          sync_status: updates.syncStatus,
+          default_branch: updates.defaultBranch,
+          is_private: updates.isPrivate
         }, currentUser.id);
         
         if (result.success && result.data) {
