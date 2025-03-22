@@ -114,7 +114,7 @@
     "readyToConnect": "Connexion réussie à l'hôte distant",
     "addNewHost": "Ajouter un nouvel hôte",
     "form": {
-      "namePlaceholder": "Nom de l'hôte (lettres minuscules, chiffres et traits d'union uniquement)",
+      "namePlaceholder": "Nom de l'hôte",
       "nameHint": "Uniquement les lettres minuscules, les chiffres et les traits d'union sont autorisés",
       "descriptionPlaceholder": "Description (optionnelle)",
       "selectType": "Sélectionner le type"

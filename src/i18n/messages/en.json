@@ -114,7 +114,7 @@
     "readyToConnect": "Successfully connected to the remote host",
     "addNewHost": "Add New Host",
     "form": {
-      "namePlaceholder": "Host name (lowercase letters, numbers, and hyphens only)",
+      "namePlaceholder": "Host name",
       "nameHint": "Only lowercase letters, numbers, and hyphens are allowed",
       "descriptionPlaceholder": "Description (optional)",
       "selectType": "Select type"
