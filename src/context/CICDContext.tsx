@@ -415,11 +415,18 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// Hook to use the context
+// Export the hook for accessing the CICD context
 export function useCICDContext() {
   const context = useContext(CICDContext);
-  if (context === undefined) {
+  console.log('[DEBUG] useCICDContext called, returning:', {
+    isNull: context === null,
+    hasProviders: context ? !!context.providers : false,
+    providersCount: context?.providers?.length || 0
+  });
+  
+  if (!context) {
     throw new Error('useCICDContext must be used within a CICDProvider');
   }
+  
   return context;
 } 

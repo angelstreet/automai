@@ -9,7 +9,7 @@ import { UserProvider, useUser as useUserContext } from './UserContext';
 import { AppContextType } from '@/types/context/app';
 
 // Reduce logging with a DEBUG flag
-const DEBUG = false;
+const DEBUG = true;
 const log = (...args: any[]) => DEBUG && console.log(...args);
 
 // Create the app context
@@ -216,6 +216,22 @@ export function useCICD() {
   // Use _ prefix to indicate intentionally unused variable
   const _isInitialized = useInitContext('cicd');
   const context = useAppContext();
+  
+  // Debug log to help diagnose missing CICD data
+  if (DEBUG) {
+    console.log('[AppContext] useCICD hook called:', {
+      contextNull: !context, 
+      cicdNull: !context.cicd,
+      initiated: _isInitialized,
+    });
+    
+    if (context.cicd) {
+      console.log('[AppContext] CICD data available:', {
+        providers: context.cicd.providers?.length || 0,
+        loading: context.cicd.loading
+      });
+    }
+  }
   
   return context.cicd;
 }

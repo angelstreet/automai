@@ -47,18 +47,66 @@ export default function CICDProvider() {
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Use the CICD context with null safety
-  const cicdContext = useCICD();
+  // Use state to store context values so they update properly
+  const [contextValues, setContextValues] = useState({
+    providers: [] as CICDProviderType[],
+    loading: false,
+    error: null as string | null,
+    contextIsNull: true, // Track if context is null
+  });
   
-  // Handle the case where context is still initializing (null)
-  const {
-    providers = [],
-    loading = false,
-    error = null,
-    fetchProviders = async () => { console.log('CICD context not initialized'); },
-    testProvider = async () => ({ success: false, error: 'CICD context not initialized' }),
-    deleteProvider = async () => ({ success: false, error: 'CICD context not initialized' })
-  } = cicdContext || {};
+  // Use the CICD context with better error handling
+  let fetchProviders = async () => { console.log('CICD context not initialized'); };
+  let testProvider = async () => ({ success: false, error: 'CICD context not initialized' });
+  let deleteProvider = async () => ({ success: false, error: 'CICD context not initialized' });
+  
+  try {
+    const cicdContext = useCICD();
+    
+    // Update functions whenever context changes
+    useEffect(() => {
+      if (cicdContext) {
+        // Update state with values from context
+        setContextValues({
+          providers: cicdContext.providers || [],
+          loading: cicdContext.loading || false,
+          error: cicdContext.error || null,
+          contextIsNull: false,
+        });
+        
+        // Update functions
+        fetchProviders = cicdContext.fetchProviders || fetchProviders;
+        testProvider = cicdContext.testProvider || testProvider;
+        deleteProvider = cicdContext.deleteProvider || deleteProvider;
+        
+        console.log('[CICDProvider] Context updated with values:', {
+          providersCount: cicdContext.providers?.length || 0
+        });
+      } else {
+        setContextValues(prev => ({
+          ...prev,
+          contextIsNull: true
+        }));
+      }
+    }, [cicdContext]);
+    
+    // Debug logging for troubleshooting
+    console.log('[CICDProvider] CICD context received:', {
+      providersLength: cicdContext?.providers?.length || 0,
+      contextIsNull: cicdContext === null,
+      contextKeys: cicdContext ? Object.keys(cicdContext) : 'none'
+    });
+  } catch (error: any) {
+    console.error('CICDProvider component: Exception occurred:', error);
+    toast({
+      title: 'Error',
+      description: error.message || 'An unexpected error occurred',
+      variant: 'destructive',
+    });
+  }
+  
+  // Destructure values from state for use in component
+  const { providers, loading, error, contextIsNull } = contextValues;
   
   // Load providers on component mount
   useEffect(() => {
@@ -96,6 +144,7 @@ export default function CICDProvider() {
         }
       };
       
+      // Use the testProvider function from context
       const result = await testProvider(providerPayload);
       
       if (result.success) {
@@ -144,6 +193,7 @@ export default function CICDProvider() {
     if (!selectedProvider) return;
     
     try {
+      // Use the deleteProvider function from context
       const result = await deleteProvider(selectedProvider.id);
       
       if (result.success) {
@@ -192,6 +242,15 @@ export default function CICDProvider() {
     }
   };
   
+  // Debug providers data before render
+  console.log('[CICDProvider] Debug before render:', {
+    providersArray: providers,
+    providersLength: providers?.length,
+    isLoading: loading,
+    hasError: !!error,
+    contextNull: contextIsNull
+  });
+
   return (
     <Card className="shadow-md">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b">

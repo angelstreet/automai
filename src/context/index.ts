@@ -2,13 +2,15 @@
 // Step 1: Enforce single source of truth for context access
 // Export ONLY hooks from AppContext to ensure consistent access pattern
 export { AppProvider } from './AppContext';
+
+// Re-export hooks with type checks to ensure proper usage
 export { 
   useUser, 
   useHost, 
   useDeployment, 
   useRepository, 
   useCICD,
-  useAppContext  
+  useAppContext 
 } from './AppContext';
 
 // Export types for context usage
