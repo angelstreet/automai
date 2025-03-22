@@ -3,7 +3,7 @@
  */
 
 // Import types
-import { Repository, GitProvider, GitProviderType } from './types';
+import { Repository, GitProvider, GitProviderType, RepositorySyncStatus } from './types';
 
 // Language color mapping for repository cards
 export const LANGUAGE_COLORS: Record<string, string> = {
@@ -205,7 +205,7 @@ export const AUTH_METHODS = {
 };
 
 // Repository sync status styling
-export const SYNC_STATUS_STYLES: Record<string, string> = {
+export const SYNC_STATUS_STYLES: Record<RepositorySyncStatus | string, string> = {
   SYNCED: 'bg-green-100 text-green-800 border-green-200',
   SYNCING: 'bg-blue-100 text-blue-800 border-blue-200',
   ERROR: 'bg-red-100 text-red-800 border-red-200',

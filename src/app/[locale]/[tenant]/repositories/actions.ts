@@ -2,43 +2,24 @@
 
 import db from '@/lib/supabase/db';
 import { repository as dbRepositoryOld, gitProvider } from '@/lib/supabase';
-import { GitProvider, Repository, GitProviderType, RepositorySyncStatus } from '@/app/[locale]/[tenant]/repositories/types';
-import { z } from 'zod';
+import { 
+  GitProvider, 
+  Repository, 
+  GitProviderType, 
+  RepositorySyncStatus,
+  TestConnectionInput,
+  GitProviderCreateInput,
+  TestRepositoryInput,
+  RepositoryFilter,
+  testConnectionSchema,
+  gitProviderCreateSchema,
+  testRepositorySchema
+} from '@/app/[locale]/[tenant]/repositories/types';
 import { getUser } from '@/app/actions/user';
 import { serverCache } from '@/lib/cache';
 import { AuthUser } from '@/types/user';
 import { starRepository } from '@/lib/supabase/db-repositories';
-
-// Schema for testing a connection
-const testConnectionSchema = z.object({
-  type: z.enum(['github', 'gitlab', 'gitea', 'self-hosted'] as const, {
-    required_error: 'Provider type is required',
-  }),
-  serverUrl: z.string().url('Invalid URL').optional(),
-  token: z.string({
-    required_error: 'Access token is required',
-  }),
-});
-
-type TestConnectionInput = z.infer<typeof testConnectionSchema>;
-
-// Schema for creating a git provider
-const gitProviderCreateSchema = z.object({
-  type: z.enum(['github', 'gitlab', 'gitea', 'self-hosted']),
-  displayName: z.string().min(2, 'Display name must be at least 2 characters'),
-  serverUrl: z.string().url('Invalid URL').optional(),
-  token: z.string().optional(),
-});
-
-type GitProviderCreateInput = z.infer<typeof gitProviderCreateSchema>;
-
-// Schema for testing a repository
-const testRepositorySchema = z.object({
-  url: z.string().url('Invalid URL'),
-  token: z.string().optional(),
-});
-
-type TestRepositoryInput = z.infer<typeof testRepositorySchema>;
+import { GitProvider as DbGitProvider } from '@/lib/supabase/db-repositories/git-provider';
 
 /**
  * Convert DB repository to our Repository type
@@ -88,11 +69,21 @@ function mapDbRepositoryToRepository(dbRepo: any): Repository {
   };
 }
 
-// Repository related functions
-
-export interface RepositoryFilter {
-  providerId?: string;
+// Add a mapping function to convert DB GitProvider to interface GitProvider
+function mapDbGitProviderToGitProvider(dbProvider: DbGitProvider): GitProvider {
+  return {
+    id: dbProvider.id,
+    type: dbProvider.type,
+    name: dbProvider.name,
+    displayName: dbProvider.name, // Use name as displayName
+    status: 'connected', // Default status
+    serverUrl: dbProvider.server_url,
+    createdAt: dbProvider.created_at,
+    updatedAt: dbProvider.updated_at
+  };
 }
+
+// Repository related functions
 
 /**
  * Get all repositories with optional filtering
@@ -551,7 +542,7 @@ export async function testGitProviderConnection(
 export async function getGitProviders(): Promise<{
   success: boolean;
   error?: string;
-  data?: any[];
+  data?: GitProvider[];
 }> {
   try {
     const user = await getUser();
@@ -559,19 +550,22 @@ export async function getGitProviders(): Promise<{
       return { success: false, error: 'Unauthorized', data: [] };
     }
 
-    const data = await db.gitProvider.findMany({
+    const dbProviders = await db.gitProvider.findMany({
       where: { user_id: user.id },
       orderBy: { created_at: 'desc' },
     });
 
-    if (!data) {
+    if (!dbProviders) {
       return {
         success: false,
         error: 'Failed to fetch git providers',
       };
     }
 
-    return { success: true, data };
+    // Map DB results to interface type
+    const providers = dbProviders.map(provider => mapDbGitProviderToGitProvider(provider));
+
+    return { success: true, data: providers };
   } catch (error: any) {
     console.error('Error in getGitProviders:', error);
     return { success: false, error: error.message || 'Failed to fetch git providers' };
@@ -583,25 +577,28 @@ export async function getGitProviders(): Promise<{
  */
 export async function getGitProvider(
   id: string,
-): Promise<{ success: boolean; error?: string; data?: any }> {
+): Promise<{ success: boolean; error?: string; data?: GitProvider }> {
   try {
     const user = await getUser();
     if (!user) {
-      return { success: false, error: 'Unauthorized', data: null };
+      return { success: false, error: 'Unauthorized' };
     }
 
-    const data = await db.gitProvider.findUnique({
+    const dbProvider = await db.gitProvider.findUnique({
       where: {
         id,
         user_id: user.id,
       },
     });
 
-    if (!data) {
+    if (!dbProvider) {
       return { success: false, error: 'Git provider not found' };
     }
 
-    return { success: true, data };
+    // Map DB result to interface type
+    const provider = mapDbGitProviderToGitProvider(dbProvider);
+
+    return { success: true, data: provider };
   } catch (error: any) {
     console.error('Error in getGitProvider:', error);
     return { success: false, error: error.message || 'Failed to fetch git provider' };
@@ -647,7 +644,7 @@ export async function addGitProvider(provider: Omit<GitProvider, 'id'>): Promise
       throw new Error('Failed to create git provider');
     }
 
-    return result;
+    return mapDbGitProviderToGitProvider(result);
   } catch (error) {
     console.error('Error in addGitProvider:', error);
     throw error;
@@ -668,7 +665,7 @@ export async function updateGitProvider(
       throw new Error('Failed to update git provider');
     }
 
-    return result;
+    return mapDbGitProviderToGitProvider(result);
   } catch (error) {
     console.error('Error in updateGitProvider:', error);
     throw error;
@@ -686,7 +683,7 @@ export async function refreshGitProvider(id: string): Promise<GitProvider> {
       throw new Error('Failed to refresh git provider');
     }
 
-    return result;
+    return mapDbGitProviderToGitProvider(result);
   } catch (error) {
     console.error('Error in refreshGitProvider:', error);
     throw error;

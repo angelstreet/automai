@@ -11,6 +11,9 @@ export interface RepositoryData {
   loading: boolean;
   error: string | null;
   currentUser: AuthUser | null;
+  starredRepositories: Repository[];
+  providers: GitProvider[];
+  user: AuthUser | null;
 }
 
 /**
@@ -37,6 +40,10 @@ export interface RepositoryActions {
   }>;
   setSelectedRepository: (repository: Repository | null) => void;
   fetchUserData: () => Promise<AuthUser | null>;
+  starRepository: (repository: Repository) => void;
+  unstarRepository: (repository: Repository) => void;
+  deleteRepository: (id: string) => void;
+  createRepository: (data: any) => Promise<any>;
 }
 
 /**

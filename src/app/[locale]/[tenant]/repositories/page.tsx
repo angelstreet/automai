@@ -40,6 +40,9 @@ export default function EnhancedRepositoryPage() {
   const { toast } = useToast();
   const t = useTranslations('repositories');
   
+  // Explicitly track if we've started initial loading
+  const [initialLoading, setInitialLoading] = useState<boolean>(true);
+  
   // Use the repository context from the new context system
   const repositoryContext = useRepository();
 
@@ -72,8 +75,9 @@ export default function EnhancedRepositoryPage() {
     providers = [],
   } = repositoryContext || {};
 
-  // Rename loading to isLoading for our component
-  const isLoading = loading;
+  // Combined loading state - true if either context is loading or we're in initial loading
+  const isLoading = loading || initialLoading;
+  
   // State for UI
   const [starredRepos, setStarredRepos] = useState<Set<string>>(() => {
     // Initialize from context's starredRepositories
@@ -108,7 +112,10 @@ export default function EnhancedRepositoryPage() {
   useEffect(() => {
     // Always trigger a fetch when component mounts
     console.log('[RepositoriesPage] Component mounted, triggering repository fetch');
-    fetchRepositories();
+    fetchRepositories().then(() => {
+      // Only set initialLoading to false after first fetch completes
+      setInitialLoading(false);
+    });
   }, [fetchRepositories]);
   
   // Update starredRepos when starredRepositories change in context
@@ -551,10 +558,8 @@ export default function EnhancedRepositoryPage() {
 
   // Render repository cards
   const renderRepositoryCards = (): React.ReactNode => {
-    
-    // Only show loading state during initial data fetch
-    // This prevents the skeleton from showing when filtering
-    if (isLoading && repositories?.length === 0) {
+    // First check if we're loading - always show skeleton loader when loading
+    if (isLoading) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -571,7 +576,7 @@ export default function EnhancedRepositoryPage() {
       );
     }
 
-    // Show empty state when we have repositories but none match the filter
+    // Only show empty state when we're not loading AND have confirmed there are no repositories
     if (filteredRepositories.length === 0) {
       // Customize the message based on which filter is active
       let emptyStateMessage = '';
