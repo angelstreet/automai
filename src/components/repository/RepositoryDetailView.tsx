@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/Breadcrumb';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shadcn/tooltip';
 import { cn } from '@/lib/utils';
+import { getRepositoryFiles, getFileContent } from '@/app/[locale]/[tenant]/repositories/actions';
 
 // File extension colors for syntax highlighting
 const FILE_EXTENSION_COLORS = {
@@ -63,6 +64,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('code');
   const [viewMode, setViewMode] = useState<'code' | 'preview'>('code');
+  const [fileMetadata, setFileMetadata] = useState<any>(null);
 
   // Get provider icon and name
   const getProviderIcon = () => {
@@ -94,19 +96,12 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
       
       try {
         const path = currentPath.join('/');
-        const response = await fetch(`/api/repositories/${repository.id}/files?path=${path}`);
+        const result = await getRepositoryFiles(repository.id, path);
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch repository files');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success && Array.isArray(data.data)) {
-          setFiles(data.data);
+        if (result.success && Array.isArray(result.data)) {
+          setFiles(result.data);
         } else {
-          throw new Error('Invalid API response format');
+          throw new Error(result.error || 'Failed to fetch repository files');
         }
       } catch (error: any) {
         console.error('Error fetching repository files:', error);
@@ -130,23 +125,18 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
       setSelectedFile(item.path);
       
       try {
-        const response = await fetch(`/api/repositories/${repository.id}/file-content?path=${item.path}`);
+        const result = await getFileContent(repository.id, item.path);
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch file content');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success && data.data) {
-          setFileContent(data.data.content);
+        if (result.success && result.data) {
+          setFileContent(result.data.content || '');
+          setFileMetadata(result.data);
         } else {
-          throw new Error('Invalid API response format');
+          throw new Error(result.error || 'Failed to fetch file content');
         }
       } catch (error: any) {
         console.error('Error fetching file content:', error);
-        setFileContent(`Error loading file: ${error.message}`);
+        setError(error.message || 'Failed to fetch file content');
+        setFileContent('');
       }
     }
   };
@@ -169,37 +159,49 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
 
   // Refresh current directory
   const handleRefresh = () => {
-    // Re-fetch the current directory
-    const fetchFiles = async () => {
-      setIsLoading(true);
-      setError(null);
+    if (selectedFile) {
+      const fetchContent = async () => {
+        setIsLoading(true);
+        try {
+          const result = await getFileContent(repository.id, selectedFile);
+          
+          if (result.success && result.data) {
+            setFileContent(result.data.content || '');
+            setFileMetadata(result.data);
+          } else {
+            throw new Error(result.error || 'Failed to fetch file content');
+          }
+        } catch (error: any) {
+          console.error('Error refreshing file content:', error);
+          setError(error.message || 'Failed to fetch file content');
+        } finally {
+          setIsLoading(false);
+        }
+      };
       
-      try {
-        const path = currentPath.join('/');
-        const response = await fetch(`/api/repositories/${repository.id}/files?path=${path}`);
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch repository files');
+      fetchContent();
+    } else {
+      const fetchFiles = async () => {
+        setIsLoading(true);
+        try {
+          const path = currentPath.join('/');
+          const result = await getRepositoryFiles(repository.id, path);
+          
+          if (result.success && Array.isArray(result.data)) {
+            setFiles(result.data);
+          } else {
+            throw new Error(result.error || 'Failed to fetch repository files');
+          }
+        } catch (error: any) {
+          console.error('Error refreshing files:', error);
+          setError(error.message || 'Failed to fetch repository files');
+        } finally {
+          setIsLoading(false);
         }
-        
-        const data = await response.json();
-        
-        if (data.success && Array.isArray(data.data)) {
-          setFiles(data.data);
-        } else {
-          throw new Error('Invalid API response format');
-        }
-      } catch (error: any) {
-        console.error('Error fetching repository files:', error);
-        setError(error.message || 'Failed to fetch repository files');
-        setFiles([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchFiles();
+      };
+      
+      fetchFiles();
+    }
   };
 
   // Render file list

@@ -233,6 +233,7 @@
     "connect": "Connect",
     "connecting": "Connecting...",
     "refresh": "Refresh",
+    "refresh_all": "Refresh All",
     "sync": "Sync",
     "deleteAction": "Delete",
     "confirm_delete": "Are you sure you want to delete this Git provider?",
@@ -320,7 +321,8 @@
     "codeViewNotImplemented": "Code view is not yet implemented",
     "terminalNotImplemented": "Terminal functionality is not yet implemented",
     "settingsNotImplemented": "Repository settings are not yet implemented",
-    "emptyDirectory": "This directory is empty"
+    "emptyDirectory": "This directory is empty",
+    "connect_repository": "Connect Repository"
   },
   "Settings": {
     "title": "Settings",

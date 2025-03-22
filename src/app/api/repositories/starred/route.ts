@@ -1,34 +1,30 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { starRepository } from '@/lib/supabase/db-repositories';
+import { getUser } from '@/app/actions/user';
 
 export async function GET() {
   console.log('Starred repositories API route called');
   try {
-    // Get the current user's profile ID
-    const supabase = await createClient();
+    // Get the current user using the centralized getUser action
+    const user = await getUser();
     
-    console.log('Supabase client created');
-    
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    console.log('User retrieved:', user ? 'Yes' : 'No', 'Error:', userError ? 'Yes' : 'No');
-    
-    if (userError || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 },
       );
     }
     
-    // Get the profile ID for the current user
+    // Create Supabase client only for DB operations
+    const supabase = await createClient();
+    
+    // Get the profile ID for the current user using user.id from the centralized context
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
-    
-    console.log('Profile retrieved:', profile ? 'Yes' : 'No', 'Error:', profileError ? 'Yes' : 'No');
     
     if (profileError || !profile) {
       console.log('Profile not found, returning empty array');
@@ -69,23 +65,24 @@ export async function POST(request: Request) {
     
     console.log('Repository ID to star:', repositoryId);
     
-    // Get the current user's profile ID
-    const supabase = await createClient();
+    // Get the current user using the centralized getUser action
+    const user = await getUser();
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 },
       );
     }
     
-    // Get the profile ID for the current user
+    // Create Supabase client only for DB operations
+    const supabase = await createClient();
+    
+    // Get the profile ID for the current user using user.id from the centralized context
     let { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
     
     if (profileError || !profile) {
@@ -126,23 +123,24 @@ export async function DELETE(request: Request) {
     
     console.log('Repository ID to unstar:', repositoryId);
     
-    // Get the current user's profile ID
-    const supabase = await createClient();
+    // Get the current user using the centralized getUser action
+    const user = await getUser();
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 },
       );
     }
     
-    // Get the profile ID for the current user
+    // Create Supabase client only for DB operations
+    const supabase = await createClient();
+    
+    // Get the profile ID for the current user using user.id from the centralized context
     let { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single();
     
     if (profileError || !profile) {

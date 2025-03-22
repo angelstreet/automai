@@ -1,12 +1,13 @@
 'use server';
 
 import db from '@/lib/supabase/db';
-import { repository as dbRepository, gitProvider } from '@/lib/supabase';
+import { repository as dbRepositoryOld, gitProvider } from '@/lib/supabase';
 import { GitProvider, Repository, GitProviderType, RepositorySyncStatus } from '@/app/[locale]/[tenant]/repositories/types';
 import { z } from 'zod';
 import { getUser } from '@/app/actions/user';
 import { serverCache } from '@/lib/cache';
 import { AuthUser } from '@/types/user';
+import { starRepository } from '@/lib/supabase/db-repositories';
 
 // Schema for testing a connection
 const testConnectionSchema = z.object({
@@ -364,7 +365,7 @@ export async function createRepositoryFromUrl(
       profileId: user.id
     });
     
-    const result = await dbRepository.createRepositoryFromUrl(
+    const result = await dbRepositoryOld.createRepositoryFromUrl(
       {
         url,
         is_private: isPrivate,
@@ -740,5 +741,524 @@ export async function createGitProvider(
   } catch (error: any) {
     console.error('Error in createGitProvider:', error);
     return { success: false, error: error.message || 'Failed to create git provider' };
+  }
+}
+
+/**
+ * Get starred repositories for the current user
+ * @param user Optional pre-fetched user data to avoid redundant auth calls
+ */
+export async function getStarredRepositories(
+  user?: AuthUser | null
+): Promise<{ success: boolean; error?: string; data?: any[] }> {
+  try {
+    console.log('[actions.getStarredRepositories] Starting');
+    
+    // Use provided user data or fetch it if not provided
+    const currentUser = user || await getUser();
+    if (!currentUser) {
+      console.log('[actions.getStarredRepositories] No authenticated user found');
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    // Check cache
+    const cacheKey = `starred-repos:${currentUser.id}`;
+    const cached = serverCache.get<any[]>(cacheKey);
+    if (cached) {
+      console.log('[actions.getStarredRepositories] Using cached starred repositories data');
+      return { success: true, data: cached };
+    }
+    
+    console.log('[actions.getStarredRepositories] User ID:', currentUser.id);
+    
+    // Call the DB layer function
+    const result = await starRepository.getStarredRepositories(currentUser.id);
+    
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+    
+    // Cache the result
+    serverCache.set(cacheKey, result.data || [], 60 * 5); // 5 minute cache
+    
+    return { success: true, data: result.data || [] };
+  } catch (error: any) {
+    console.error('Error in getStarredRepositories:', error);
+    return { success: false, error: error.message || 'Failed to fetch starred repositories' };
+  }
+}
+
+/**
+ * Star a repository for the current user
+ * @param repositoryId The repository ID to star
+ * @param user Optional pre-fetched user data to avoid redundant auth calls
+ */
+export async function starRepositoryAction(
+  repositoryId: string,
+  user?: AuthUser | null
+): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    console.log('[actions.starRepositoryAction] Starting with repository ID:', repositoryId);
+    
+    // Use provided user data or fetch it if not provided
+    const currentUser = user || await getUser();
+    if (!currentUser) {
+      console.log('[actions.starRepositoryAction] No authenticated user found');
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    console.log('[actions.starRepositoryAction] User ID:', currentUser.id);
+    
+    // Call the DB layer function
+    const result = await starRepository.starRepository(repositoryId, currentUser.id);
+    
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+    
+    // Invalidate cache
+    serverCache.delete(`starred-repos:${currentUser.id}`);
+    
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error('Error in starRepositoryAction:', error);
+    return { success: false, error: error.message || 'Failed to star repository' };
+  }
+}
+
+/**
+ * Unstar a repository for the current user
+ * @param repositoryId The repository ID to unstar
+ * @param user Optional pre-fetched user data to avoid redundant auth calls
+ */
+export async function unstarRepositoryAction(
+  repositoryId: string,
+  user?: AuthUser | null
+): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    console.log('[actions.unstarRepositoryAction] Starting with repository ID:', repositoryId);
+    
+    // Use provided user data or fetch it if not provided
+    const currentUser = user || await getUser();
+    if (!currentUser) {
+      console.log('[actions.unstarRepositoryAction] No authenticated user found');
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    console.log('[actions.unstarRepositoryAction] User ID:', currentUser.id);
+    
+    // Call the DB layer function
+    const result = await starRepository.unstarRepository(repositoryId, currentUser.id);
+    
+    if (!result.success) {
+      return { success: false, error: result.error };
+    }
+    
+    // Invalidate cache
+    serverCache.delete(`starred-repos:${currentUser.id}`);
+    
+    return { success: true, data: result.data };
+  } catch (error: any) {
+    console.error('Error in unstarRepositoryAction:', error);
+    return { success: false, error: error.message || 'Failed to unstar repository' };
+  }
+}
+
+/**
+ * Get files for a repository at a specific path
+ * @param repositoryId The repository ID
+ * @param path The path to get files from (optional, defaults to root)
+ * @param user Optional pre-fetched user data to avoid redundant auth calls
+ */
+export async function getRepositoryFiles(
+  repositoryId: string,
+  path: string = '',
+  user?: AuthUser | null
+): Promise<{ success: boolean; error?: string; data?: any[] }> {
+  try {
+    console.log('[actions.getRepositoryFiles] Starting with repository ID:', repositoryId, 'path:', path);
+    
+    // Use provided user data or fetch it if not provided
+    const currentUser = user || await getUser();
+    if (!currentUser) {
+      console.log('[actions.getRepositoryFiles] No authenticated user found');
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    // Check cache
+    const cacheKey = `repo-files:${repositoryId}:${path}`;
+    const cached = serverCache.get<any[]>(cacheKey);
+    if (cached) {
+      console.log('[actions.getRepositoryFiles] Using cached files data');
+      return { success: true, data: cached };
+    }
+    
+    // Create Supabase client
+    const supabase = await import('@/lib/supabase/server').then(m => m.createClient());
+    
+    // Get the repository details
+    const { data: repository, error: repoError } = await supabase
+      .from('repositories')
+      .select('*')
+      .eq('id', repositoryId)
+      .single();
+    
+    if (repoError || !repository) {
+      return { success: false, error: 'Repository not found' };
+    }
+    
+    // Get the provider details
+    const { data: provider, error: providerError } = await supabase
+      .from('git_providers')
+      .select('*')
+      .eq('id', repository.provider_id)
+      .single();
+    
+    if (providerError || !provider) {
+      return { success: false, error: 'Git provider not found' };
+    }
+    
+    let files = [];
+    
+    // Handle different Git providers
+    if (provider.type === 'github' || 
+        (provider.type === undefined && repository.owner === 'angelstreet')) {
+      // Use GitHub API
+      const githubToken = process.env.GITHUB_TOKEN;
+      
+      if (!githubToken) {
+        return { success: false, error: 'GitHub token is not configured' };
+      }
+      
+      const { Octokit } = await import('@octokit/rest');
+      const octokit = new Octokit({
+        auth: githubToken,
+      });
+      
+      try {
+        // If path is empty, we're at the root of the repository
+        const response = await octokit.repos.getContent({
+          owner: repository.owner,
+          repo: repository.name,
+          path: path || '',
+        });
+        
+        // GitHub API returns either an array (directory) or a single object (file)
+        const contents = Array.isArray(response.data) ? response.data : [response.data];
+        
+        files = contents.map((item: any) => ({
+          name: item.name,
+          path: item.path,
+          type: item.type === 'dir' ? 'folder' : 'file',
+          size: item.size,
+          lastModified: new Date().toISOString(),
+          url: item.html_url || undefined,
+          download_url: item.download_url,
+        }));
+      } catch (error: any) {
+        console.error('Error fetching GitHub repository contents:', error);
+        return { success: false, error: error.message || 'Failed to fetch repository contents' };
+      }
+    } else if (provider.type === 'gitlab') {
+      return { success: false, error: 'GitLab API integration not implemented yet' };
+    } else if (provider.type === 'gitea') {
+      return { success: false, error: 'Gitea API integration not implemented yet' };
+    } else {
+      // Fallback to mock data for unsupported providers
+      files = [
+        {
+          name: 'README.md',
+          path: path ? `${path}/README.md` : 'README.md',
+          type: 'file',
+          size: 1024,
+          lastModified: new Date().toISOString(),
+        },
+        {
+          name: 'src',
+          path: path ? `${path}/src` : 'src',
+          type: 'folder',
+          lastModified: new Date().toISOString(),
+        },
+        {
+          name: 'package.json',
+          path: path ? `${path}/package.json` : 'package.json',
+          type: 'file',
+          size: 512,
+          lastModified: new Date().toISOString(),
+        },
+        {
+          name: 'tsconfig.json',
+          path: path ? `${path}/tsconfig.json` : 'tsconfig.json',
+          type: 'file',
+          size: 256,
+          lastModified: new Date().toISOString(),
+        },
+      ];
+    }
+    
+    // Cache the result - 5 minute cache
+    serverCache.set(cacheKey, files, 60 * 5);
+    
+    return { success: true, data: files };
+  } catch (error: any) {
+    console.error('Error in getRepositoryFiles:', error);
+    return { success: false, error: error.message || 'Failed to fetch repository files' };
+  }
+}
+
+/**
+ * Get file content from a repository
+ * @param repositoryId The repository ID
+ * @param path The file path
+ * @param user Optional pre-fetched user data to avoid redundant auth calls
+ */
+export async function getFileContent(
+  repositoryId: string,
+  path: string,
+  user?: AuthUser | null
+): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    console.log('[actions.getFileContent] Starting with repository ID:', repositoryId, 'path:', path);
+    
+    // Use provided user data or fetch it if not provided
+    const currentUser = user || await getUser();
+    if (!currentUser) {
+      console.log('[actions.getFileContent] No authenticated user found');
+      return { success: false, error: 'Unauthorized' };
+    }
+    
+    if (!path) {
+      return { success: false, error: 'File path is required' };
+    }
+    
+    // Check cache
+    const cacheKey = `repo-file-content:${repositoryId}:${path}`;
+    const cached = serverCache.get<any>(cacheKey);
+    if (cached) {
+      console.log('[actions.getFileContent] Using cached file content');
+      return { success: true, data: cached };
+    }
+    
+    // Create Supabase client
+    const supabase = await import('@/lib/supabase/server').then(m => m.createClient());
+    
+    // Get the repository details
+    const { data: repository, error: repoError } = await supabase
+      .from('repositories')
+      .select('*')
+      .eq('id', repositoryId)
+      .single();
+    
+    if (repoError || !repository) {
+      return { success: false, error: 'Repository not found' };
+    }
+    
+    // Get the provider details
+    const { data: provider, error: providerError } = await supabase
+      .from('git_providers')
+      .select('*')
+      .eq('id', repository.provider_id)
+      .single();
+    
+    if (providerError || !provider) {
+      return { success: false, error: 'Git provider not found' };
+    }
+    
+    let fileContent = '';
+    let fileMetadata: {
+      path: string;
+      lastModified: string;
+      size?: number;
+      url?: string;
+      sha?: string;
+    } = {
+      path: path,
+      lastModified: new Date().toISOString()
+    };
+    
+    // Handle different Git providers
+    if (provider.provider_type === 'github' || 
+        (provider.provider_type === undefined && repository.owner === 'angelstreet')) {
+      // Use GitHub API
+      const githubToken = process.env.GITHUB_TOKEN;
+      
+      if (!githubToken) {
+        return { success: false, error: 'GitHub token is not configured' };
+      }
+      
+      const { Octokit } = await import('@octokit/rest');
+      const octokit = new Octokit({
+        auth: githubToken,
+      });
+      
+      try {
+        // Get file content from GitHub
+        const response = await octokit.repos.getContent({
+          owner: repository.owner,
+          repo: repository.name,
+          path: path,
+        });
+        
+        // GitHub API returns file content in base64
+        if ('content' in response.data && !Array.isArray(response.data)) {
+          const content = response.data.content;
+          const encoding = response.data.encoding;
+          
+          if (encoding === 'base64') {
+            fileContent = Buffer.from(content, 'base64').toString('utf-8');
+          } else {
+            fileContent = content;
+          }
+          
+          fileMetadata = {
+            path: response.data.path,
+            lastModified: new Date().toISOString(), // Use current date as fallback
+            size: response.data.size,
+            url: response.data.html_url || undefined,
+            sha: response.data.sha
+          };
+        } else {
+          return { success: false, error: 'Path does not point to a file' };
+        }
+      } catch (error: any) {
+        console.error('Error fetching file content from GitHub:', error);
+        return { success: false, error: error.message || 'Failed to fetch file content' };
+      }
+    } else if (provider.provider_type === 'gitlab') {
+      return { success: false, error: 'GitLab API integration not implemented yet' };
+    } else if (provider.provider_type === 'gitea') {
+      return { success: false, error: 'Gitea API integration not implemented yet' };
+    } else {
+      // Fallback to mock content based on file extension
+      if (path.endsWith('.md')) {
+        fileContent = `# ${repository.name}\n\nThis is a sample README file for the ${repository.name} repository.\n\n## Overview\n\nThis repository contains code for the project.\n\n## Getting Started\n\n1. Clone the repository\n2. Install dependencies\n3. Run the project`;
+      } else if (path.endsWith('.json')) {
+        const jsonContent = {
+          name: repository.name,
+          version: '1.0.0',
+          description: 'Sample repository',
+          main: 'index.js',
+          scripts: {
+            start: 'node index.js',
+            test: 'jest'
+          },
+          dependencies: {
+            react: '^18.2.0',
+            'next': '^13.4.0'
+          }
+        };
+        fileContent = JSON.stringify(jsonContent, null, 2);
+      } else if (path.endsWith('.js') || path.endsWith('.ts') || path.endsWith('.tsx')) {
+        fileContent = `/**
+ * ${path.split('/').pop()}
+ * 
+ * This is a sample file for demonstration purposes.
+ */
+
+import React from 'react';
+
+function Component() {
+  return (
+    <div>
+      <h1>Hello from ${repository.name}</h1>
+      <p>This is a sample component</p>
+    </div>
+  );
+}
+
+export default Component;`;
+      } else {
+        fileContent = `This is a sample content for ${path.split('/').pop()} in the ${repository.name} repository.`;
+      }
+    }
+    
+    const result = { 
+      content: fileContent,
+      ...fileMetadata
+    };
+    
+    // Cache the result - 10 minute cache
+    serverCache.set(cacheKey, result, 60 * 10);
+    
+    return { success: true, data: result };
+  } catch (error: any) {
+    console.error('Error in getFileContent:', error);
+    return { success: false, error: error.message || 'Failed to fetch file content' };
+  }
+}
+
+/**
+ * Get both repositories and starred repositories in a single call
+ * @param filter Optional filter criteria for repositories
+ * @param user Optional pre-fetched user data to avoid redundant auth calls
+ */
+export async function getRepositoriesWithStarred(
+  filter?: RepositoryFilter,
+  user?: AuthUser | null
+): Promise<{ 
+  success: boolean; 
+  error?: string; 
+  data?: { 
+    repositories: Repository[]; 
+    starredRepositoryIds: string[] 
+  } 
+}> {
+  try {
+    console.log('[actions.getRepositoriesWithStarred] Starting');
+    
+    // Use provided user data or fetch it if not provided
+    const currentUser = user || await getUser();
+    if (!currentUser) {
+      return { 
+        success: false, 
+        error: 'Unauthorized - Please sign in' 
+      };
+    }
+
+    // Create a cache key that includes both repositories and starred status
+    const cacheKey = `repositories-with-starred:${currentUser.id}:${filter?.providerId || 'all'}`;
+    
+    // Try to get from cache first
+    const cachedData = serverCache.get<{ repositories: Repository[]; starredRepositoryIds: string[] }>(cacheKey);
+    if (cachedData) {
+      console.log('[actions.getRepositoriesWithStarred] Using cached data');
+      return { success: true, data: cachedData };
+    }
+    
+    // Fetch repositories
+    const reposResult = await getRepositories(filter, currentUser);
+    
+    if (!reposResult.success || !reposResult.data) {
+      return {
+        success: false,
+        error: reposResult.error || 'Failed to fetch repositories',
+      };
+    }
+    
+    // Fetch starred repositories
+    const starredResult = await getStarredRepositories(currentUser);
+    
+    // Extract just the IDs from starred repositories for efficiency
+    const starredRepositoryIds = starredResult.success && starredResult.data 
+      ? starredResult.data.map((repo: any) => repo.repository_id || repo.id)
+      : [];
+    
+    // Combine the data
+    const combinedData = {
+      repositories: reposResult.data,
+      starredRepositoryIds
+    };
+    
+    // Cache the combined result
+    serverCache.set(cacheKey, combinedData, 60 * 5); // 5 minute cache
+    
+    console.log('[actions.getRepositoriesWithStarred] Successfully fetched data');
+    return { success: true, data: combinedData };
+  } catch (error: any) {
+    console.error('Error in getRepositoriesWithStarred:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to fetch repository data' 
+    };
   }
 }

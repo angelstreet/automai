@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { Octokit } from '@octokit/rest';
+import { getUser } from '@/app/actions/user';
 
 export async function GET(
   request: Request,
@@ -28,18 +29,18 @@ export async function GET(
       );
     }
     
-    // Get the current user's profile ID
-    const cookieStore = cookies();
-    const supabase = await createClient();
+    // Get the current user using the centralized getUser action
+    const user = await getUser();
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 },
       );
     }
+    
+    // Create Supabase client for DB operations only
+    const supabase = await createClient();
     
     // Get the repository details
     const { data: repository, error: repoError } = await supabase

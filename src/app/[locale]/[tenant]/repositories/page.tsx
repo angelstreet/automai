@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { GitBranch, Plus, RefreshCw, Search, Filter, Star, ChevronLeft, ChevronRight, Trash } from 'lucide-react';
 import { useRepository } from '@/context';
@@ -78,28 +78,22 @@ export default function EnhancedRepositoryPage() {
   const [repositoryToDelete, setRepositoryToDelete] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  // Add a ref to track initialization
+  const initialized = useRef(false);
+
   useEffect(() => {
-    // Fetch repositories using the context
-    fetchRepositories();
+    // Only fetch once on initial mount
+    if (!initialized.current) {
+      console.log('[RepositoriesPage] Initializing and fetching repositories');
+      initialized.current = true;
+      
+      // Fetch repositories using the context
+      // This will fetch both repositories and starred repositories in one call
+      fetchRepositories();
+    }
     
-    // Fetch starred repositories
-    const loadStarredRepos = async () => {
-      try {
-        const starredResponse = await fetch('/api/repositories/starred');
-        if (starredResponse.ok) {
-          const starredResult = await starredResponse.json();
-          if (starredResult.success && Array.isArray(starredResult.data)) {
-            const starredIds = new Set<string>(starredResult.data.map((repo: any) => repo.repository_id as string));
-            setStarredRepos(starredIds);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching starred repositories:', error);
-      }
-    };
-    
-    loadStarredRepos();
-  }, []);
+    // No need to separately fetch starred repositories - handled by context now
+  }, [fetchRepositories]);
 
   // Handle repository starring/unstarring
   const handleToggleStarred = async (id: string) => {
@@ -266,18 +260,29 @@ export default function EnhancedRepositoryPage() {
     setRepositoryToDelete(null);
   };
 
-  // Filter and sort repositories based on current UI state
+  // Filtered repositories
   const filteredRepositories = repositories
     .filter(repo => {
-      // Filter by search query
-      if (searchQuery && !repo.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
-          !repo.owner.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
+      // Safety check for null or undefined repo
+      if (!repo) return false;
+      
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const repoName = repo.name ? repo.name.toLowerCase() : '';
+        const repoOwner = repo.owner ? repo.owner.toLowerCase() : '';
+        const repoDescription = repo.description ? repo.description.toLowerCase() : '';
+        
+        if (!repoName.includes(query) && 
+            !repoOwner.includes(query) && 
+            !repoDescription.includes(query)) {
+          return false;
+        }
       }
       
       // Filter by tab
-      if (activeTab === 'public' && repo.isPrivate) return false;
-      if (activeTab === 'private' && !repo.isPrivate) return false;
+      if (activeTab === 'public' && repo.isPrivate === true) return false;
+      if (activeTab === 'private' && repo.isPrivate !== true) return false;
       if (activeTab === 'starred' && !starredRepos.has(repo.id)) return false;
       
       // Filter by category
@@ -299,9 +304,13 @@ export default function EnhancedRepositoryPage() {
         const dateB = b.lastSyncedAt ? new Date(b.lastSyncedAt).getTime() : 0;
         return dateB - dateA;
       } else if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
+        const nameA = a.name || '';
+        const nameB = b.name || '';
+        return nameA.localeCompare(nameB);
       } else if (sortBy === 'owner') {
-        return a.owner.localeCompare(b.owner);
+        const ownerA = a.owner || '';
+        const ownerB = b.owner || '';
+        return ownerA.localeCompare(ownerB);
       }
       
       return 0;

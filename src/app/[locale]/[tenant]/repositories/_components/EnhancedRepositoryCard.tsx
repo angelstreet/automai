@@ -42,6 +42,14 @@ export function EnhancedRepositoryCard({
   const [isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
   
+  // Debug log repository data
+  console.log('[EnhancedRepositoryCard] Rendering with repo:', { 
+    id: repository?.id, 
+    name: repository?.name,
+    provider: repository?.provider,
+    isPrivate: repository?.isPrivate
+  });
+  
   // This effect only runs on the client after hydration is complete
   useEffect(() => {
     setIsClient(true);
@@ -49,7 +57,7 @@ export function EnhancedRepositoryCard({
 
   // Format the last synced date - using a more stable approach to avoid hydration issues
   const getLastSyncedText = () => {
-    if (!repository.lastSyncedAt) return t('never');
+    if (!repository?.lastSyncedAt) return t('never');
     
     // Use a safer method that's less likely to cause hydration errors
     try {
@@ -67,7 +75,7 @@ export function EnhancedRepositoryCard({
 
   // Get the provider icon based on the type
   const getProviderIcon = () => {
-    switch(repository.providerType) {
+    switch(repository?.providerType) {
       case 'github':
         return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':
@@ -88,20 +96,20 @@ export function EnhancedRepositoryCard({
   // Handle sync button click without propagation
   const handleSyncClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSync(repository.id);
+    onSync(repository?.id || '');
   };
 
   // Handle star button click without propagation
   const handleStarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onToggleStarred(repository.id);
+    onToggleStarred(repository?.id || '');
   };
 
   // Handle delete button click without propagation
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onDelete) {
-      onDelete(repository.id);
+      onDelete(repository?.id || '');
     }
   };
 
@@ -116,7 +124,7 @@ export function EnhancedRepositoryCard({
           {getProviderIcon()}
           <div className="flex-1 min-w-0">
             <CardTitle className="text-base truncate">
-              {repository.name}
+              {repository?.name || 'Unnamed Repository'}
             </CardTitle>
           </div>
           <Button 
@@ -127,7 +135,7 @@ export function EnhancedRepositoryCard({
           >
             <Star className="h-4 w-4" />
           </Button>
-          {repository.isPrivate ? (
+          {repository?.isPrivate ? (
             <Badge variant="outline" className="flex items-center">
               <Lock className="h-3 w-3 mr-1" />
               {t('private')}
@@ -144,12 +152,12 @@ export function EnhancedRepositoryCard({
       <CardContent className="py-2 px-4">
         <div className="flex items-center text-xs text-muted-foreground">
           <GitBranch className="h-3 w-3 mr-1" />
-          {repository.defaultBranch || 'main'}
+          {repository?.defaultBranch || 'main'}
           <Badge 
             variant="outline" 
-            className={`ml-2 text-xs ${getLanguageColor(repository.language)}`}
+            className={`ml-2 text-xs ${getLanguageColor(repository?.language || '')}`}
           >
-            {repository.language}
+            {repository?.language || 'Unknown'}
           </Badge>
           <div className="ml-auto flex items-center">
             <Clock className="h-3 w-3 mr-1" />
@@ -160,8 +168,8 @@ export function EnhancedRepositoryCard({
       
       <CardFooter className={`py-3 px-3 border-t flex justify-between transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex items-center gap-1">
-          <Badge variant={repository.syncStatus === 'SYNCED' ? 'default' : 'outline'} className="text-xs py-0">
-            {repository.syncStatus}
+          <Badge variant={repository?.syncStatus === 'SYNCED' ? 'default' : 'outline'} className="text-xs py-0">
+            {repository?.syncStatus || 'IDLE'}
           </Badge>
         </div>
         <div className="flex gap-1">

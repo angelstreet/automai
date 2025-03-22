@@ -6,14 +6,15 @@ import {
   getRepositories,
   getRepository as getRepositoryById,
   createRepository,
-  updateRepository
+  updateRepository,
+  getRepositoriesWithStarred
 } from '@/app/[locale]/[tenant]/repositories/actions';
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 
 // Reduce logging with a DEBUG flag
-const DEBUG = false;
+const DEBUG = true;
 const log = (...args: any[]) => DEBUG && console.log(...args);
 
 // Define interface for filter options
@@ -186,7 +187,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           return [] as Repository[];
         }
         
-        console.log('[RepositoryContext] Fetching repositories');
+        console.log('[RepositoryContext] Fetching repositories and starred repositories');
         safeUpdateState(
           setState,
           state,
@@ -194,9 +195,15 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           'start-loading'
         );
         
-        const response = await getRepositories();
-        // Extract repositories array from response
-        const repositories = response.success && response.data ? response.data : [];
+        // Use the combined action instead of separate calls
+        const response = await getRepositoriesWithStarred();
+        
+        // Extract data from the combined response
+        if (!response.success || !response.data) {
+          throw new Error(response.error || 'Failed to fetch repositories');
+        }
+        
+        const { repositories, starredRepositoryIds } = response.data;
         
         // Set connection status for each repository
         const connectionStatuses: {[key: string]: boolean} = {};
@@ -210,18 +217,22 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
         
+        // Convert starred repository IDs to full Repository objects
+        const starredRepositories = sortedRepositories.filter(repo => 
+          starredRepositoryIds.includes(repo.id)
+        );
+        
+        console.log('[RepositoryContext] Repositories fetched:', sortedRepositories.length);
+        console.log('[RepositoryContext] Starred repositories:', starredRepositories.length);
+        
         safeUpdateState(
           setState,
-          { 
-            ...state, 
-            repositories: state.repositories,
-            filteredRepositories: state.filteredRepositories,
-            connectionStatuses: state.connectionStatuses
-          },
+          state,
           {
             ...state,
             repositories: sortedRepositories,
             filteredRepositories: sortedRepositories,
+            starredRepositories: starredRepositories,
             connectionStatuses,
             loading: false,
             error: null
@@ -229,7 +240,6 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           'repositories-fetched'
         );
         
-        console.log('[RepositoryContext] Repositories fetched:', sortedRepositories.length);
         return sortedRepositories;
       } catch (err: any) {
         console.error('[RepositoryContext] Error fetching repositories:', err);
@@ -248,7 +258,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     });
     
     return result || [] as Repository[];
-  }, [state, safeUpdateState, protectedFetch, fetchUserData]);
+  }, [fetchUserData, state, protectedFetch, safeUpdateState]);
   
   // Filter repositories - fix URL optional check
   const filterRepositories = useCallback((options: RepositoryFilterOptions) => {
