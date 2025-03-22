@@ -149,6 +149,8 @@ export function useHosts() {
   const testHostById = useCallback(
     async (id: string) => {
       try {
+        console.log(`[${new Date().toISOString()}] Setting host ${id} to testing state`);
+        
         // First update the host to testing state
         await mutate(
           async (currentHosts: Host[] = []) => {
@@ -167,11 +169,15 @@ export function useHosts() {
           false
         );
         
-        // Small delay to show the testing state animation
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        console.log(`[${new Date().toISOString()}] Host ${id} now in testing state`);
+        
+        // Increased delay to show the testing state animation
+        await new Promise((resolve) => setTimeout(resolve, 1200));
         
         // Now perform the actual connection test
+        console.log(`[${new Date().toISOString()}] Starting connection test for host ${id}`);
         const result = await testHostConnectionAction(id);
+        console.log(`[${new Date().toISOString()}] Test completed for host ${id}, result: ${result.success}`);
 
         if (!result.success) {
           toast({
@@ -284,8 +290,12 @@ export function useHosts() {
         const currentHosts = [...hosts];
         let successCount = 0;
         
+        console.log(`[${new Date().toISOString()}] Starting test of all hosts (${currentHosts.length})`);
+        
         // Test each host sequentially
         for (const host of currentHosts) {
+          console.log(`[${new Date().toISOString()}] Setting host ${host.id} to testing state`);
+          
           // First update the host to testing state
           await mutate(
             async (currentHosts: Host[] = []) => {
@@ -304,12 +314,16 @@ export function useHosts() {
             false
           );
           
-          // Small delay to show the testing state animation
-          await new Promise((resolve) => setTimeout(resolve, 300));
+          console.log(`[${new Date().toISOString()}] Host ${host.id} now in testing state`);
+          
+          // Increased delay to show the testing state animation
+          await new Promise((resolve) => setTimeout(resolve, 1200));
           
           // Now perform the actual connection test
           try {
+            console.log(`[${new Date().toISOString()}] Starting connection test for host ${host.id}`);
             const result = await testHostConnectionAction(host.id);
+            console.log(`[${new Date().toISOString()}] Test completed for host ${host.id}, result: ${result.success}`);
             
             // Update the host status in the cache based on the result
             await mutate(

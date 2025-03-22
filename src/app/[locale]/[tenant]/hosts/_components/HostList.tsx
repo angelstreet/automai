@@ -84,7 +84,6 @@ export default function HostContainer() {
     error,
     fetchHosts,
     addHost,
-    removeHost,
     testConnection,
     testAllConnections,
   } = hostContext;
@@ -193,6 +192,29 @@ export default function HostContainer() {
       return newSet;
     });
   }, []);
+
+  // Implement a proper removeHost function that calls the server action directly
+  const removeHost = useCallback(async (id: string) => {
+    try {
+      console.log('[HostContainer] Attempting to delete host ID:', id);
+      
+      // Import the deleteHost action
+      const { deleteHost } = await import('../actions');
+      
+      // Call the server action directly instead of the context function
+      const result = await deleteHost(id);
+      
+      if (result.success) {
+        console.log('[HostContainer] Host deleted successfully');
+        // Refresh hosts list after deletion
+        fetchHosts && fetchHosts();
+      } else {
+        console.error('[HostContainer] Failed to delete host:', result.error);
+      }
+    } catch (error) {
+      console.error('[HostContainer] Error deleting host:', error);
+    }
+  }, [fetchHosts]);
 
   // Add logging for each render
   console.log('[DEBUG] HostContainer rendering', { 

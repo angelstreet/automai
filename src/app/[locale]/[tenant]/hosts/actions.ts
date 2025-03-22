@@ -249,6 +249,8 @@ export async function deleteHost(
   user?: AuthUser | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log('Server action: Starting database deletion for host ID:', id);
+    
     // Use provided user data or fetch it if not provided
     const currentUser = user || await getUser();
     if (!currentUser) {
@@ -258,13 +260,19 @@ export async function deleteHost(
       };
     }
 
+    console.log('Server action: Authenticated user, proceeding with deletion');
+    
     await db.host.delete({
       where: { id },
     });
+    
+    console.log('Server action: Database deletion completed for host ID:', id);
 
     // Invalidate cache after deletion
     serverCache.delete(`host:${id}`);
     serverCache.delete('hosts:all');
+    
+    console.log('Server action: Cache invalidated, deletion complete');
 
     return { success: true };
   } catch (error: any) {

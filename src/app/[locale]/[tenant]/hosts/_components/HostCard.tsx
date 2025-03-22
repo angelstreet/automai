@@ -99,7 +99,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <div className={`${baseClasses} bg-yellow-500 animate-pulse`} />
+                <div className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60`} />
               </TooltipTrigger>
               <TooltipContent>
                 <p>{t('testing')}</p>
@@ -213,20 +213,28 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
     }
   };
 
-  const handleDelete = () => {
-    if (isDeleting) return;
+  const handleDelete = async () => {
+    if (isDeleting || !onDelete) return;
+    
+    console.log('HostCard: Starting delete process for host:', host.name, 'ID:', host.id);
     setIsDeleting(true);
     
-    // Mark as deleted before calling onDelete
-    setIsDeleted(true);
-    
-    // Call the onDelete handler
-    onDelete?.(host.id);
-    
-    // Reset the deleting state after a short delay
-    setTimeout(() => {
-      setIsDeleting(false);
-    }, 500);
+    try {
+      // Call the onDelete handler and wait for its completion
+      console.log('HostCard: Calling onDelete callback');
+      await onDelete(host.id);
+      
+      console.log('HostCard: Delete operation successful, updating UI');
+      // Only mark as deleted if the delete operation was successful
+      setIsDeleted(true);
+    } catch (error) {
+      console.error('Error deleting host:', error);
+    } finally {
+      // Reset the deleting state after a short delay
+      setTimeout(() => {
+        setIsDeleting(false);
+      }, 500);
+    }
   };
 
   // If the host is deleted, don't render anything

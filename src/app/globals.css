@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Animation for Host Status */
+@keyframes blink {
+  0% {
+    opacity: 1;
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.5);
+    background-color: #eab308; /* yellow-500 */
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.9);
+    background-color: #facc15; /* yellow-400 */
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 5px rgba(234, 179, 8, 0.5);
+    background-color: #eab308; /* yellow-500 */
+  }
+}
+
+/* Custom class for host testing state */
+.host-testing-animation {
+  animation: blink 1s infinite;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
