@@ -142,32 +142,27 @@ export function EnhancedRepositoryCard({
       </CardHeader>
       
       <CardContent className="py-2 px-4">
-        <div className="flex items-center text-xs text-muted-foreground">
-          <GitBranch className="h-3 w-3 mr-1" />
-          {repository?.defaultBranch || 'main'}
-          <Badge 
-            variant="outline" 
-            className={`ml-2 text-xs ${getLanguageColor(repository?.language || '')}`}
-          >
-            {repository?.language || 'Unknown'}
-          </Badge>
-          <div className="ml-auto flex items-center">
-            <Clock className="h-3 w-3 mr-1" />
-            {lastSyncedText}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center">
+            <GitBranch className="h-3 w-3 mr-1" />
+            {repository?.defaultBranch || 'main'}
           </div>
-        </div>
-      </CardContent>
-      
-      <CardFooter className={`py-3 px-3 border-t flex justify-between transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="flex items-center gap-1">
           <Badge 
             variant={repository?.syncStatus === 'SYNCED' ? 'default' : 'outline'} 
-            className={`text-xs py-0 ${SYNC_STATUS_STYLES[repository?.syncStatus || 'IDLE']}`}
+            className={`text-xs py-0 text-[10px] ml-auto ${SYNC_STATUS_STYLES[repository?.syncStatus || 'IDLE']}`}
           >
             {repository?.syncStatus || 'IDLE'}
           </Badge>
         </div>
-        <div className="flex gap-1">
+        <div className="flex items-center text-[10px] text-muted-foreground mt-1">
+            <Clock className="h-3 w-3 mr-1" />
+            {lastSyncedText}
+        </div>
+      </CardContent>
+      
+      <CardFooter className={`py-3 px-3 border-t flex justify-center transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
+      
+        <div className="flex gap-2">
           <Button 
             variant="ghost" 
             size="sm" 
