@@ -38,16 +38,22 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   const [currentPath, setCurrentPath] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [executionOutput, setExecutionOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [files, setFiles] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('code');
+  
+  // Validate repository has required properties
+  const isValidRepository = repository && 
+    repository.id && 
+    repository.providerId && 
+    repository.url &&
+    repository.name &&
+    repository.owner;
 
   // Get provider icon and name
   const getProviderIcon = () => {
-    switch(repository.providerType) {
+    switch(repository?.providerType) {
       case 'github':
         return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':
@@ -60,7 +66,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   };
   
   const getProviderName = () => {
-    switch(repository.providerType) {
+    switch(repository?.providerType) {
       case 'github':
         return 'GitHub';
       case 'gitlab':
@@ -82,6 +88,13 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
 
   // Load repository files
   useEffect(() => {
+    // Skip if repository is not valid yet
+    if (!isValidRepository) {
+      setIsLoading(true);
+      setError('Repository data is loading...');
+      return;
+    }
+    
     const fetchFiles = async () => {
       setIsLoading(true);
       setError(null);
@@ -90,7 +103,6 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         const pathString = currentPath.join('/');
         const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId}&repositoryUrl=${encodeURIComponent(repository.url)}&path=${encodeURIComponent(pathString)}&action=list`;
         
-        console.log('Fetching files from:', url);
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -122,10 +134,16 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     };
     
     fetchFiles();
-  }, [repository.id, repository.providerId, repository.url, currentPath]);
+  }, [repository?.id, repository?.providerId, repository?.url, currentPath, isValidRepository]);
 
   // Navigate through repository files
   const handleNavigate = async (item: any, isFolder = false) => {
+    // Check if repository data is valid before navigating
+    if (!isValidRepository) {
+      setError('Repository data is not fully loaded yet. Please wait...');
+      return;
+    }
+    
     if (isFolder) {
       setCurrentPath([...currentPath, item.name]);
       setSelectedFile(null);
@@ -136,7 +154,6 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       try {
         const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId}&repositoryUrl=${encodeURIComponent(repository.url)}&path=${encodeURIComponent(item.path)}&action=file`;
         
-        console.log('Fetching file content from:', url);
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -251,6 +268,21 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
 
   // Render breadcrumb navigation
   const renderBreadcrumb = () => {
+    if (!isValidRepository) {
+      return (
+        <Breadcrumb className="mb-4">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink>
+                <Folder className="h-4 w-4 mr-1 inline" />
+                Loading...
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      );
+    }
+    
     return (
       <Breadcrumb className="mb-4">
         <BreadcrumbList>
@@ -287,8 +319,10 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             
             <div className="flex items-center">
               {getProviderIcon()}
-              <span className="ml-2 font-semibold">{repository.owner} / {repository.name}</span>
-              {repository.isPrivate && (
+              <span className="ml-2 font-semibold">
+                {isValidRepository ? `${repository.owner} / ${repository.name}` : 'Loading...'}
+              </span>
+              {isValidRepository && repository.isPrivate && (
                 <Badge variant="outline" className="ml-2 text-xs">
                   {t('private')}
                 </Badge>
@@ -455,7 +489,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
                         {selectedFile ? (
                           <div className="flex items-center text-sm">
                             <FileCode className="h-4 w-4 mr-2" />
-                            <span className="font-medium">{selectedFile.split('/').pop()}</span>
+                            <span className="font-medium">{selectedFile?.split('/').pop() || 'File'}</span>
                           </div>
                         ) : (
                           <div className="text-sm text-muted-foreground">

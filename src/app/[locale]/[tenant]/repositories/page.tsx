@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { GitBranch, Plus, RefreshCw, Search, Filter, Star, ChevronLeft, ChevronRight, Trash } from 'lucide-react';
+import { GitBranch, Plus, RefreshCw, Search, Filter, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRepository } from '@/context';
+import { RepositoryContextType } from '@/types/context/repository';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { Badge } from '@/components/shadcn/badge';
 import { 
   Card, 
   CardContent, 
@@ -16,8 +16,6 @@ import {
 } from '@/components/shadcn/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/shadcn/select';
-import { Separator } from '@/components/shadcn/separator';
-import { Skeleton } from '@/components/shadcn/skeleton';
 import { useToast } from '@/components/shadcn/use-toast';
 import {
   Dialog,
@@ -46,57 +44,77 @@ export default function EnhancedRepositoryPage() {
   const repositoryContext = useRepository();
 
   // Handle the case where context is still initializing (null)
+  // IMPORTANT: Do not provide fallback values for repositories and starredRepositories
+  // Let them be undefined if not provided by the context
   const {
-    repositories = [],
-    loading: isLoading = false,
+    repositories,
+    loading = false,
     error = null,
-    fetchRepositories = async () => { console.log('Repository context not initialized'); },
-    starRepository = async () => { console.log('Repository context not initialized'); },
-    unstarRepository = async () => { console.log('Repository context not initialized'); },
-    syncRepository = async () => { console.log('Repository context not initialized'); },
-    refreshAllRepositories = async () => { console.log('Repository context not initialized'); },
-    deleteRepository = async () => { console.log('Repository context not initialized'); }
-  } = repositoryContext || {};
-
+    fetchRepositories = async (): Promise<Repository[]> => { 
+      console.log('Repository context not initialized'); 
+      return [];
+    },
+    // Custom properties not in the official RepositoryContextType interface but used in our component
+    starredRepositories,
+    toggleStarRepository = (repo: Repository): void => { 
+      console.log('Repository context not initialized'); 
+    }
+  } = (repositoryContext as any) || {};
+  
+  // Rename loading to isLoading for our component
+  const isLoading = loading;
   // State for UI
-  const [starredRepos, setStarredRepos] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState('all');
+  const [starredRepos, setStarredRepos] = useState<Set<string>>(() => {
+    // Initialize from context's starredRepositories
+    const initialStarred = new Set<string>();
+    if (starredRepositories) {
+      starredRepositories.forEach(repo => {
+        if (repo && repo.id) initialStarred.add(repo.id);
+      });
+    }
+    return initialStarred;
+  });
+  const [activeTab, setActiveTab] = useState<string>('all');
   const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('lastUpdated');
-  const [filterCategory, setFilterCategory] = useState('All');
-  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('lastUpdated');
+  const [filterCategory, setFilterCategory] = useState<string>('All');
+  const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
   const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
-  const [isExplorerView, setIsExplorerView] = useState(false);
-  const [isRefreshingAll, setIsRefreshingAll] = useState(false);
+  const [isExplorerView, setIsExplorerView] = useState<boolean>(false);
+  const [isRefreshingAll, setIsRefreshingAll] = useState<boolean>(false);
   
   // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(12);
 
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [repositoryToDelete, setRepositoryToDelete] = useState<string | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
 
-  // Add a ref to track initialization
-  const initialized = useRef(false);
-
+  // Refresh repositories on mount if empty
   useEffect(() => {
-    // Only fetch once on initial mount
-    if (!initialized.current) {
-      console.log('[RepositoriesPage] Initializing and fetching repositories');
-      initialized.current = true;
-      
-      // Fetch repositories using the context
-      // This will fetch both repositories and starred repositories in one call
-      fetchRepositories();
-    }
-    
-    // No need to separately fetch starred repositories - handled by context now
+    // Always trigger a fetch when component mounts
+    console.log('[RepositoriesPage] Component mounted, triggering repository fetch');
+    fetchRepositories();
   }, [fetchRepositories]);
+  
+  // Update starredRepos when starredRepositories change in context
+  useEffect(() => {
+    if (starredRepositories && starredRepositories.length > 0) {
+      console.log('[RepositoriesPage] Updating starredRepos from context:', starredRepositories.length);
+      
+      const newStarred = new Set<string>();
+      starredRepositories.forEach(repo => {
+        if (repo && repo.id) newStarred.add(repo.id);
+      });
+      
+      setStarredRepos(newStarred);
+    }
+  }, [starredRepositories]);
 
   // Handle repository starring/unstarring
-  const handleToggleStarred = async (id: string) => {
+  const handleToggleStarred = async (id: string): Promise<void> => {
     // Optimistic UI update
     setStarredRepos(prev => {
       const newStarred = new Set(prev);
@@ -108,14 +126,23 @@ export default function EnhancedRepositoryPage() {
       return newStarred;
     });
 
-    // Call API to update starred status using the context
+    // Find the repository object to toggle star status
+    if (!repositories) {
+      console.error('Repositories array is undefined');
+      return;
+    }
+    
+    const repository = repositories.find(repo => repo.id === id);
+    if (!repository) {
+      console.error('Repository not found for ID:', id);
+      return;
+    }
+
+    // Call context method to toggle star
     try {
-      if (starredRepos.has(id)) {
-        await unstarRepository(id);
-      } else {
-        await starRepository(id);
-      }
-    } catch (error) {
+      // No need to await since toggleStarRepository is synchronous
+      toggleStarRepository(repository);
+    } catch (error: unknown) {
       console.error('Error updating starred status:', error);
       
       // Revert the optimistic update on error
@@ -138,17 +165,28 @@ export default function EnhancedRepositoryPage() {
   };
 
   // Handle repository sync
-  const handleSyncRepository = async (id: string) => {
+  const handleSyncRepository = async (id: string): Promise<void> => {
     setSyncingRepoId(id);
     try {
-      // Call the context to sync the repository
-      await syncRepository(id);
+      // Since we don't have a direct syncRepository function in the context,
+      // we'll manually call the API endpoint
+      const response = await fetch(`/api/repositories/${id}/sync`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to sync repository');
+      }
+      
+      // Refresh repositories after sync
+      await fetchRepositories();
       
       toast({
         title: 'Success',
         description: t('syncSuccess'),
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error syncing repository:', error);
       toast({
         title: 'Error',
@@ -161,17 +199,17 @@ export default function EnhancedRepositoryPage() {
   };
 
   // Handle refreshing all repositories
-  const handleRefreshAll = async () => {
+  const handleRefreshAll = async (): Promise<void> => {
     setIsRefreshingAll(true);
     try {
-      // Use the context to refresh all repositories
-      await refreshAllRepositories();
+      // Call the fetchRepositories method from context
+      await fetchRepositories();
       
       toast({
         title: 'Success',
         description: t('refreshSuccess'),
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error refreshing repositories:', error);
       toast({
         title: 'Error',
@@ -184,57 +222,64 @@ export default function EnhancedRepositoryPage() {
   };
 
   // Handle repository connection
-  const handleConnectRepository = async (values: ConnectRepositoryValues) => {
+  const handleConnectRepository = async (values: ConnectRepositoryValues): Promise<void> => {
     console.log('Connect repository:', values);
     
     try {
-      setIsLoading(true);
+      // Connect repository via API
+      const connectResponse = await fetch('/api/repositories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      });
       
-      // After any repository connection, refresh the repositories list
-      const response = await fetch('/api/repositories');
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch repositories: ${response.status}`);
+      if (!connectResponse.ok) {
+        const errorData = await connectResponse.json();
+        throw new Error(errorData.error || 'Failed to connect repository');
       }
       
-      const result = await response.json();
-      
-      // Update repositories state
-      if (Array.isArray(result)) {
-        setRepositories(result);
-      } else if (result.success && Array.isArray(result.data)) {
-        setRepositories(result.data);
-      }
+      // Refresh repositories after connection
+      await fetchRepositories();
       
       toast({
         title: 'Success',
         description: t('connectSuccess'),
       });
-    } catch (error) {
-      console.error('Error refreshing repositories after connection:', error);
+    } catch (error: unknown) {
+      console.error('Error connecting repository:', error);
       
       toast({
         title: 'Warning',
         description: 'Repository may have been added. Please refresh the page.',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   // Handle repository deletion
-  const handleDeleteRepository = async (id: string) => {
+  const handleDeleteRepository = (id: string): void => {
     setRepositoryToDelete(id);
     setDeleteDialogOpen(true);
   };
 
-  const confirmDeleteRepository = async () => {
+  const confirmDeleteRepository = async (): Promise<void> => {
     if (!repositoryToDelete) return;
     
     setIsDeleting(repositoryToDelete);
     try {
-      // Use the context to delete the repository
-      await deleteRepository(repositoryToDelete);
+      // Manually call the API endpoint to delete the repository
+      const response = await fetch(`/api/repositories/${repositoryToDelete}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete repository');
+      }
+      
+      // Refresh repositories after deletion
+      await fetchRepositories();
       
       toast({
         title: 'Success',
@@ -242,7 +287,7 @@ export default function EnhancedRepositoryPage() {
       });
       
       setDeleteDialogOpen(false);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error deleting repository:', error);
       toast({
         title: 'Error',
@@ -255,16 +300,20 @@ export default function EnhancedRepositoryPage() {
     }
   };
 
-  const cancelDeleteRepository = () => {
+  const cancelDeleteRepository = (): void => {
     setDeleteDialogOpen(false);
     setRepositoryToDelete(null);
   };
 
-  // Filtered repositories
-  const filteredRepositories = repositories
-    .filter(repo => {
-      // Safety check for null or undefined repo
-      if (!repo) return false;
+  // Safely handle potentially undefined repositories array
+  const repoArray = repositories || [];
+  // Filter repositories
+  const filteredRepositories: Repository[] = repoArray
+    .filter((repo: Repository) => {
+      // We've already checked for null/undefined in the context, but just to be safe
+      if (!repo) {
+        return false;
+      }
       
       // Search filter
       if (searchQuery) {
@@ -287,8 +336,8 @@ export default function EnhancedRepositoryPage() {
       
       // Filter by category
       if (filterCategory !== 'All') {
-        // Implement category filtering logic here if needed
-        return true;
+        // For now, we don't have any category filtering yet
+        // Will be implemented when repository categories are available
       }
       
       return true;
@@ -321,15 +370,33 @@ export default function EnhancedRepositoryPage() {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentRepositories = filteredRepositories.slice(indexOfFirstItem, indexOfLastItem);
+  
+  // Debug filtering and pagination
+  console.log('[RepositoriesPage] Filtered repositories:', {
+    originalCount: repoArray.length,
+    filteredCount: filteredRepositories.length,
+    currentPage,
+    totalPages,
+    currentCount: currentRepositories.length,
+    filters: {
+      searchQuery,
+      activeTab,
+      filterCategory,
+      sortBy
+    }
+  });
 
   // Handle page change
-  const handlePageChange = (pageNumber: number) => {
+  const handlePageChange = (pageNumber: number): void => {
     setCurrentPage(pageNumber);
   };
 
   // Render repository cards
-  const renderRepositoryCards = () => {
-    if (isLoading) {
+  const renderRepositoryCards = (): React.ReactNode => {
+    
+    // Only show loading state if we have no repositories
+    // This prevents the infinite loading issue
+    if (isLoading && filteredRepositories.length === 0) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -348,40 +415,49 @@ export default function EnhancedRepositoryPage() {
 
     if (filteredRepositories.length === 0) {
       return (
-        <EmptyState
-          icon={<GitBranch className="h-10 w-10" />}
-          title={t('noRepositories')}
-          description={searchQuery ? t('noRepositoriesMatchingSearch') : t('noRepositoriesYet')}
-          action={
-            <Button onClick={() => setConnectDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('addRepository')}
-            </Button>
-          }
-        />
+        <div>
+          <EmptyState
+            icon={<GitBranch className="h-10 w-10" />}
+            title={t('noRepositories')}
+            description={searchQuery ? t('noRepositoriesMatchingSearch') : t('noRepositoriesYet')}
+            action={
+              <Button onClick={() => setConnectDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t('addRepository')}
+              </Button>
+            }
+          />
+        </div>
       );
     }
 
     return (
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {currentRepositories.map(repo => (
-            <div
-              key={repo.id}
-              onClick={() => handleViewRepository(repo)}
-              className="cursor-pointer"
-            >
-              <EnhancedRepositoryCard
-                repository={repo}
-                onSync={handleSyncRepository}
-                isSyncing={syncingRepoId === repo.id}
-                onToggleStarred={handleToggleStarred}
-                isStarred={starredRepos.has(repo.id)}
-                onDelete={handleDeleteRepository}
-                isDeleting={isDeleting === repo.id}
-              />
+          {currentRepositories && currentRepositories.length > 0 ? (
+            currentRepositories.map(repo => (
+              <div
+                key={repo.id}
+                onClick={() => handleViewRepository(repo)}
+                className="cursor-pointer"
+              >
+                <EnhancedRepositoryCard
+                  repository={repo}
+                  onSync={handleSyncRepository}
+                  isSyncing={syncingRepoId === repo.id}
+                  onToggleStarred={handleToggleStarred}
+                  isStarred={starredRepos.has(repo.id)}
+                  onDelete={handleDeleteRepository}
+                  isDeleting={isDeleting === repo.id}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="col-span-3 p-4 text-center bg-gray-50 rounded-md">
+              <p className="text-gray-500">No repositories available to display.</p>
+              <p className="text-sm text-gray-400">Array exists but is empty.</p>
             </div>
-          ))}
+          )}
         </div>
         
         {/* Pagination controls */}
@@ -422,13 +498,13 @@ export default function EnhancedRepositoryPage() {
   };
 
   // Select repository for viewing
-  const handleViewRepository = (repo: Repository) => {
+  const handleViewRepository = (repo: Repository): void => {
     setSelectedRepository(repo);
     setIsExplorerView(true);
   };
 
   // Return to repositories list
-  const handleBackToList = () => {
+  const handleBackToList = (): void => {
     setSelectedRepository(null);
     setIsExplorerView(false);
   };
@@ -457,6 +533,7 @@ export default function EnhancedRepositoryPage() {
       </PageHeader>
 
       <div className="mt-6">
+      
         <Card className="w-full">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
