@@ -110,7 +110,10 @@ export default function CICDProvider() {
   
   // Load providers on component mount
   useEffect(() => {
-    loadProviders();
+    console.log('CICDProvider component: Initial mount - loading providers');
+    if (!providers || providers.length === 0) {
+      loadProviders();
+    }
   }, []);
   
   // Fetch providers from the context

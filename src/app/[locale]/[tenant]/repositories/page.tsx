@@ -99,7 +99,7 @@ export default function EnhancedRepositoryPage() {
     };
     
     loadStarredRepos();
-  }, [fetchRepositories]);
+  }, []);
 
   // Handle repository starring/unstarring
   const handleToggleStarred = async (id: string) => {

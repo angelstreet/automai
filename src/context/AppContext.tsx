@@ -9,7 +9,7 @@ import { UserProvider, useUser as useUserContext } from './UserContext';
 import { AppContextType } from '@/types/context/app';
 
 // Reduce logging with a DEBUG flag
-const DEBUG = true;
+const DEBUG = false;
 const log = (...args: any[]) => DEBUG && console.log(...args);
 
 // Create the app context

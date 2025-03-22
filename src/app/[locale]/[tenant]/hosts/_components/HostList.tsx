@@ -101,6 +101,14 @@ export default function HostContainer() {
     });
   }, [hosts, loading, error]);
 
+  // Fetch hosts on initial mount
+  useEffect(() => {
+    if ((!hosts || hosts.length === 0) && !loading) {
+      console.log('[HostContainer] Initial mount - fetching hosts data');
+      fetchHosts && fetchHosts();
+    }
+  }, [hosts, loading, fetchHosts]);
+
   // Handle refresh all hosts - pass user data from context
   const handleRefreshAll = useCallback(async () => {
     if (isRefreshing) return;

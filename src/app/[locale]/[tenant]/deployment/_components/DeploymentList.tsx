@@ -65,20 +65,31 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
           return;
         }
         
-        const repos = await fetchRepositories();
-        // Convert array to record for easy lookup
-        const repoMap = repos.reduce((acc: Record<string, Repository>, repo: Repository) => {
-          acc[repo.id] = repo;
-          return acc;
-        }, {} as Record<string, Repository>);
-        setRepositories(repoMap);
+        console.log('[DeploymentList] Initial mount - loading repositories');
+        try {
+          // Safely call fetchRepositories and handle the response
+          const response = await fetchRepositories();
+          
+          // Only process if we got a valid array response
+          if (Array.isArray(response)) {
+            const repoMap = response.reduce((acc: Record<string, Repository>, repo: Repository) => {
+              acc[repo.id] = repo;
+              return acc;
+            }, {} as Record<string, Repository>);
+            setRepositories(repoMap);
+          } else {
+            console.warn('[DeploymentList] fetchRepositories did not return an array:', response);
+          }
+        } catch (fetchError) {
+          console.error('[DeploymentList] Error fetching repositories:', fetchError);
+        }
       } catch (error) {
         console.error('Error loading repositories:', error);
       }
     };
 
     loadRepositories();
-  }, [fetchRepositories, repositories]);
+  }, []);  // Empty dependency array to only run once on mount
 
   // Handle refresh button click with debounce
   const handleRefresh = () => {
@@ -111,24 +122,18 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     if (!selectedDeployment) return;
     
     try {
-      const result = await deleteDeployment(selectedDeployment.id);
+      // Call delete action
+      await deleteDeployment(selectedDeployment.id);
       
-      if (result.success) {
-        toast({
-          title: 'Deployment Deleted',
-          description: 'The deployment has been successfully deleted.',
-          variant: 'default',
-        });
-        
-        // Refresh the list
-        fetchDeployments();
-      } else {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to delete the deployment',
-          variant: 'destructive',
-        });
-      }
+      // Always show success toast unless an error is thrown
+      toast({
+        title: 'Deployment Deleted',
+        description: 'The deployment has been successfully deleted.',
+        variant: 'default',
+      });
+      
+      // Refresh the list
+      fetchDeployments();
     } catch (error: any) {
       toast({
         title: 'Error',

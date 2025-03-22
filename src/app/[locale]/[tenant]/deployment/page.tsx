@@ -7,7 +7,15 @@ import { useDeployment } from '@/context';
 
 const DeploymentPage = () => {
   const [view, setView] = useState('list'); // 'list' or 'create'
-  const { isRefreshing, fetchDeployments } = useDeployment();
+  
+  // Use the deployment context with null safety
+  const deploymentContext = useDeployment();
+  
+  // Handle the case where context is still initializing (null)
+  const {
+    isRefreshing = false,
+    fetchDeployments = async () => { console.log('Deployment context not initialized'); }
+  } = deploymentContext || {};
 
   const handleRefresh = () => {
     fetchDeployments();

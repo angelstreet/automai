@@ -16,14 +16,18 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
   deploymentId, 
   onBack
 }) => {
+  // Use deployment context with null safety
+  const deploymentContext = useDeployment();
+  
+  // Handle the case where context is still initializing (null)
   const { 
-    deployments,
-    loading,
-    isRefreshing,
-    fetchDeploymentById,
-    refreshDeployment,
-    abortDeployment
-  } = useDeployment();
+    deployments = [],
+    loading = false,
+    isRefreshing = false,
+    fetchDeploymentById = async () => null,
+    refreshDeployment = async () => {},
+    abortDeployment = async () => ({ success: false, error: 'Deployment context not initialized' })
+  } = deploymentContext || {};
   
   const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -57,9 +61,17 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
       return;
     }
     
-    const result = await refreshDeployment(deploymentId);
-    if (result.success && result.deployment) {
-      setDeployment(result.deployment);
+    try {
+      const result = await refreshDeployment(deploymentId);
+      
+      // Handle different possible result types
+      if (result && typeof result === 'object') {
+        if ('success' in result && result.success && result.deployment) {
+          setDeployment(result.deployment);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing deployment:', error);
     }
   };
 

@@ -54,12 +54,28 @@ export function EnhancedConnectRepositoryDialog({
   const [serverUrl, setServerUrl] = useState('');
   const { toast } = useToast();
   
-  // Use the repository context
+  // Use the repository context with null safety
+  const repositoryContext = useRepository();
+  
+  // Handle the case where context is still initializing (null)
   const {
-    createGitProvider,
-    createRepository,
-    verifyRepositoryUrl
-  } = useRepository();
+    createGitProvider = async () => ({ 
+      success: false, 
+      error: 'Repository context not initialized',
+      data: null,
+      authUrl: null
+    }),
+    createRepository = async () => ({ 
+      success: false, 
+      error: 'Repository context not initialized',
+      data: null  
+    }),
+    verifyRepositoryUrl = async () => ({ 
+      success: false, 
+      error: 'Repository context not initialized',
+      data: null
+    })
+  } = repositoryContext || {};
   
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -71,129 +87,164 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
     
     try {
-      // Call API to initiate OAuth flow using the context
-      const result = await createGitProvider({
-        type: currentProvider,
-        displayName: `My ${currentProvider === 'github' ? 'GitHub' : 'GitLab'} Account`,
-        method: 'oauth'
-      });
-      
-      // If we have an authUrl, redirect the user to it
-      if (result.success && result.authUrl) {
-        window.location.href = result.authUrl;
+      if (!repositoryContext) {
+        toast({
+          title: "Error",
+          description: "Repository context not initialized yet. Please try again later.",
+          variant: "destructive",
+        });
         return;
       }
       
-      // Otherwise, we're done
-      if (onSubmit) {
-        onSubmit({
-          type: currentProvider as any,
-          method: 'oauth',
-          displayName: `My ${currentProvider === 'github' ? 'GitHub' : 'GitLab'} Account`
+      const result = await createGitProvider({
+        name: `${currentProvider} Provider`,
+        provider_type: currentProvider.toLowerCase(),
+        auth_type: 'oauth'
+      });
+      
+      if (result.success && result.authUrl) {
+        // Redirect to the OAuth login page
+        window.location.href = result.authUrl;
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: result.error || "Failed to connect to the git provider",
+          variant: "destructive",
         });
       }
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error connecting with OAuth:', error);
-      // Display error to user
+    } catch (error: any) {
+      console.error("Error during OAuth connection:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setIsConnecting(false);
     }
   };
   
   const handleTokenConnect = async () => {
-    if (!accessToken) return;
+    if (!currentProvider || !accessToken) return;
     
     setIsConnecting(true);
     
     try {
-      // Call API to connect with token using the context
+      if (!repositoryContext) {
+        toast({
+          title: "Error",
+          description: "Repository context not initialized yet. Please try again later.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Create git provider with token authentication
       const result = await createGitProvider({
-        type: currentProvider,
-        displayName: `${currentProvider === 'github' ? 'GitHub' : currentProvider === 'gitlab' ? 'GitLab' : 'Gitea'} Account`,
-        method: 'token',
-        token: accessToken,
-        serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
+        name: `${currentProvider} Provider`,
+        provider_type: currentProvider.toLowerCase(),
+        auth_type: 'token',
+        url: serverUrl, // Optional server URL for self-hosted instances
+        token: accessToken
       });
       
-      // Completed successfully
       if (result.success) {
+        toast({
+          title: "Success",
+          description: "Git provider connected successfully",
+          variant: "default",
+        });
+        
         if (onSubmit) {
           onSubmit({
-            type: currentProvider as any,
+            provider: currentProvider.toLowerCase(),
             method: 'token',
-            displayName: `${currentProvider === 'github' ? 'GitHub' : currentProvider === 'gitlab' ? 'GitLab' : 'Gitea'} Account`,
-            accessToken,
-            serverUrl: currentProvider === 'gitea' ? serverUrl : undefined
+            token: accessToken,
+            url: serverUrl
           });
         }
+        
         onOpenChange(false);
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: result.error || "Failed to connect to the git provider",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error('Error connecting with token:', error);
-      // Display error to user
+    } catch (error: any) {
+      console.error("Error connecting with token:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
     } finally {
       setIsConnecting(false);
     }
   };
   
   const handleQuickClone = async () => {
-    if (!quickCloneUrl) {
-      toast({
-        title: "Error",
-        description: "Please enter a repository URL",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Validate that the URL contains .git
-    if (!quickCloneUrl.includes('.git')) {
-      toast({
-        title: "Error",
-        description: "Invalid Git URL. URL must contain .git extension.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!quickCloneUrl) return;
     
     setIsCloning(true);
     
     try {
-      // Verify if the repository exists before attempting to clone it using the context
-      const verifyResult = await verifyRepositoryUrl(quickCloneUrl);
-      
-      if (!verifyResult.exists) {
-        throw new Error(verifyResult.error || 'Repository not found. Please check the URL and try again.');
+      if (!repositoryContext) {
+        toast({
+          title: "Error",
+          description: "Repository context not initialized yet. Please try again later.",
+          variant: "destructive",
+        });
+        return;
       }
       
-      // Call API to create repository from URL using the context
+      // First verify the URL is valid
+      const verifyResult = await verifyRepositoryUrl(quickCloneUrl);
+      
+      if (!verifyResult.success) {
+        toast({
+          title: "Invalid Repository URL",
+          description: verifyResult.error || "The repository URL appears to be invalid",
+          variant: "destructive",
+        });
+        setIsCloning(false);
+        return;
+      }
+      
+      // Create the repository
       const result = await createRepository({
-        quickClone: true,
         url: quickCloneUrl,
-        isPrivate: false,
-        description: `Imported from ${quickCloneUrl}`
+        name: verifyResult.data?.name || quickCloneUrl.split('/').pop()?.replace('.git', '') || 'Repository'
       });
       
       if (result.success) {
-        // Repository appears in the list, so no need for success toast
+        toast({
+          title: "Success",
+          description: "Repository cloned successfully",
+          variant: "default",
+        });
         
         if (onSubmit) {
           onSubmit({
-            type: 'quick-clone',
-            url: quickCloneUrl
+            url: quickCloneUrl,
+            method: 'url'
           });
         }
         
-        setQuickCloneUrl('');
         onOpenChange(false);
+      } else {
+        toast({
+          title: "Clone Failed",
+          description: result.error || "Failed to clone the repository",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
-      console.error('Error cloning repository:', error);
-      
+      console.error("Error cloning repository:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to clone repository",
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {

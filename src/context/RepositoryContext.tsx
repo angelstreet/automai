@@ -293,7 +293,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       'star-toggled'
     );
   }, [state, safeUpdateState]);
-  
+
   // Initialize by fetching user data and repositories
   useEffect(() => {
     log('[RepositoryContext] Initializing RepositoryContext...');
@@ -338,7 +338,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       });
     }
   }, [state.repositories.length, state.filteredRepositories.length, state.loading]);
-  
+
   // Create context value
   const contextValue: RepositoryContextType = {
     ...state,

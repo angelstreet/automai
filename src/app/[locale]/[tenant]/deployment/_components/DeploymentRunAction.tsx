@@ -14,7 +14,14 @@ export const DeploymentRunAction: React.FC<DeploymentRunActionProps> = ({
   deploymentId 
 }) => {
   const [isRunning, setIsRunning] = useState(false);
-  const { runDeployment } = useDeployment();
+  
+  // Use deployment context with null safety
+  const deploymentContext = useDeployment();
+  
+  // Handle the case where context is still initializing (null)
+  const { 
+    runDeployment = async () => ({ success: false, error: 'Deployment context not initialized' }) 
+  } = deploymentContext || {};
   
   const handleRun = async () => {
     setIsRunning(true);

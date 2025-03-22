@@ -23,7 +23,11 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ deployment
   const params = useParams();
   const { locale, tenant } = params;
   
-  const { deleteDeployment } = useDeployment();
+  const deploymentContext = useDeployment();
+  
+  const { 
+    deleteDeployment = async () => ({ success: false, error: 'Deployment context not initialized' }) 
+  } = deploymentContext || {};
   
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
