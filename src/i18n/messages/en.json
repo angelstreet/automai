@@ -103,7 +103,7 @@
     "errorDetails": "Error Details",
     "noErrorDetails": "No error details available",
     "metrics": "Metrics",
-    "connectionType": "Connection Type",
+    "connectionType": "Connection",
     "ipAddress": "IP Address",
     "port": "Port",
     "username": "Username",

@@ -82,22 +82,17 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   };
 
   const handleCreate = async () => {
-    console.log('handleCreate called with formData:', formData);
-    
     if (!validateFormData()) {
-      console.log('Form validation failed');
       return;
     }
 
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS) {
-      console.log('Request throttled');
       return;
     }
     lastRequestTime.current = now;
 
     setIsCreating(true);
-    console.log('Starting host creation process...');
     
     try {
       // Ensure formData structure matches what the addHost action expects
@@ -115,23 +110,14 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         is_windows: false
       };
       
-      console.log('Calling addHost with:', {
-        ...hostData,
-        password: '[REDACTED]' // Don't log the actual password
-      });
-      
       const result = await addHost(hostData);
 
-      console.log('addHost result:', result);
-
       if (result.success && result.data) {
-        console.log('Host created successfully:', result.data);
         toast.success(t('success.connected', { name: formData.name }));
         resetForm();
         onOpenChange(false);
 
         if (onSuccess) {
-          console.log('Calling onSuccess with host data');
           onSuccess(result.data);
         }
       } else {
@@ -159,7 +145,6 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
       previousFormData.type !== newFormData.type;
     
     if (testStatus !== 'idle' && connectionFieldsChanged) {
-      console.log('Connection fields changed, resetting test status');
       setTestStatus('idle');
       setTestError(null);
     }
@@ -175,8 +160,8 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         onOpenChange(newOpen);
       }}
     >
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] p-4">
+        <DialogHeader className="pb-2">
           <DialogTitle>{t('addNewHost')}</DialogTitle>
         </DialogHeader>
 
@@ -184,16 +169,12 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
           formData={formData}
           onChange={handleFormChange}
           onTestSuccess={() => {
-            console.log('Test connection successful, enabling Save button');
             setTestStatus('success');
-            console.log('testStatus set to:', 'success');
           }}
           onSubmit={async () => {
-            console.log('onSubmit called from ConnectionForm');
             try {
               // Call the handleCreate function directly
               await handleCreate();
-              console.log('handleCreate completed successfully');
               return true; // Return a success value
             } catch (error) {
               console.error('Error in handleCreate:', error);

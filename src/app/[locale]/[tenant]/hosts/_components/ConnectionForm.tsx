@@ -71,13 +71,11 @@ export function ConnectionForm({
   useEffect(() => {
     // If testStatus changes to success, update internal testSuccess
     if (testStatus === 'success' && !testSuccess) {
-      console.log('useEffect: testStatus is success, setting testSuccess to true');
       setTestSuccess(true);
     }
     
     // If internal testSuccess becomes true, call onTestSuccess to update parent
     if (testSuccess && testStatus !== 'success' && onTestSuccess) {
-      console.log('useEffect: testSuccess is true but testStatus is not, calling onTestSuccess');
       onTestSuccess();
     }
   }, [testSuccess, testStatus, onTestSuccess]);
@@ -97,9 +95,6 @@ export function ConnectionForm({
 
   // Handle input change for any field
   const handleInputChange = (field: string, value: string) => {
-    if (field === 'name') {
-      value = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-    }
     onChange({
       ...formData,
       [field]: value,
@@ -125,7 +120,6 @@ export function ConnectionForm({
     setTesting(true);
     setTestError(null);
     setTestSuccess(false);
-    console.log('Starting connection test...');
 
     try {
       const result = await testConnectionAction({
@@ -136,18 +130,13 @@ export function ConnectionForm({
         password: formData.password,
       });
 
-      console.log('Connection test result:', result);
-
       if (result.success) {
-        console.log('Connection test successful, setting testSuccess=true');
         setTestSuccess(true);
         // Make sure we call the parent's onTestSuccess to update testStatus
         if (onTestSuccess) {
-          console.log('Calling onTestSuccess callback');
           onTestSuccess();
         }
       } else {
-        console.log('Connection test failed:', result.message);
         setTestError(result.message || t('errors.testFailed'));
       }
     } catch (error) {
@@ -186,8 +175,8 @@ export function ConnectionForm({
   };
 
   return (
-    <div className="grid gap-4 py-4">
-      <div className="grid grid-cols-4 items-center gap-4">
+    <div className="grid gap-3 py-2">
+      <div className="grid grid-cols-4 items-center gap-3">
         <Label htmlFor="name" className="text-right">
           {t('name')}
         </Label>
@@ -197,19 +186,17 @@ export function ConnectionForm({
             placeholder={t('form.namePlaceholder')}
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
+            className="h-8"
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            {t('form.nameHint')}
-          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 items-center gap-4">
+      <div className="grid grid-cols-4 items-center gap-3">
         <Label htmlFor="type" className="text-right">
           {t('connectionType')}
         </Label>
         <Select value={formData.type} onValueChange={handleTypeChange}>
-          <SelectTrigger className="col-span-3">
+          <SelectTrigger className="col-span-3 h-8">
             <SelectValue placeholder={t('form.selectType')} />
           </SelectTrigger>
           <SelectContent>
@@ -220,7 +207,7 @@ export function ConnectionForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-4 items-center gap-4">
+      <div className="grid grid-cols-4 items-center gap-3">
         <Label htmlFor="ip" className="text-right">
           {t('ipAddress')}
         </Label>
@@ -229,7 +216,7 @@ export function ConnectionForm({
           placeholder={t('ipAddress')}
           value={formData.ip}
           onChange={(e) => handleInputChange('ip', e.target.value)}
-          className="col-span-2"
+          className="col-span-2 h-8"
         />
         <div className="flex gap-2 items-center">
           <Label htmlFor="port" className="text-right whitespace-nowrap">
@@ -240,14 +227,14 @@ export function ConnectionForm({
             placeholder={t('port')}
             value={formData.port}
             onChange={(e) => handleInputChange('port', e.target.value)}
-            className="w-20"
+            className="w-20 h-8"
           />
         </div>
       </div>
 
       {formData.type === 'ssh' && (
         <>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <Label htmlFor="username" className="text-right">
               {t('username')}
             </Label>
@@ -256,10 +243,10 @@ export function ConnectionForm({
               placeholder={t('username')}
               value={formData.username}
               onChange={(e) => handleInputChange('username', e.target.value)}
-              className="col-span-3"
+              className="col-span-3 h-8"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-4 items-center gap-3">
             <Label htmlFor="password" className="text-right">
               {t('password')}
             </Label>
@@ -269,13 +256,13 @@ export function ConnectionForm({
               placeholder={t('password')}
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
-              className="col-span-3"
+              className="col-span-3 h-8"
             />
           </div>
         </>
       )}
 
-      <div className="grid grid-cols-4 items-center gap-4">
+      <div className="grid grid-cols-4 items-center gap-3">
         <Label htmlFor="description" className="text-right">
           {t('description')}
         </Label>
@@ -284,20 +271,20 @@ export function ConnectionForm({
           placeholder={t('form.descriptionPlaceholder')}
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
-          className="col-span-3"
+          className="col-span-3 min-h-[60px] py-1"
         />
       </div>
 
-      <div className="flex justify-end space-x-4 mt-6">
-        <Button variant="outline" onClick={testHostConnection} disabled={testing}>
+      <div className="flex justify-end space-x-3 mt-3">
+        <Button variant="outline" onClick={testHostConnection} disabled={testing} className="h-8 px-3 text-sm">
           {testing ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="h-3 w-3 animate-spin mr-2" />
               {t('testing')}
             </>
           ) : (
             <>
-              <CheckCircle className="h-4 w-4 mr-2" />
+              <CheckCircle className="h-3 w-3 mr-2" />
               {t('testConnection')}
             </>
           )}
@@ -306,7 +293,6 @@ export function ConnectionForm({
         <Button 
           onClick={async (e) => {
             e.preventDefault(); // Prevent any default form behavior
-            console.log('Save button clicked, testStatus:', testStatus, 'testSuccess:', testSuccess);
             
             // Check if onSubmit exists
             if (typeof onSubmit !== 'function') {
@@ -314,28 +300,24 @@ export function ConnectionForm({
               return;
             }
             
-            console.log('onSubmit callback exists and is a function');
-            
             try {
-              console.log('Calling onSubmit callback...');
               const result = await onSubmit();
-              console.log('onSubmit callback completed with result:', result);
             } catch (error) {
               console.error('Error executing onSubmit callback:', error);
             }
           }} 
           disabled={isSaving || (!testSuccess && testStatus !== 'success')} 
           variant={(testSuccess || testStatus === 'success') ? "default" : "outline"}
-          className={(testSuccess || testStatus === 'success') ? "bg-green-600 hover:bg-green-700" : ""}
+          className={(testSuccess || testStatus === 'success') ? "bg-green-600 hover:bg-green-700 h-8 px-3 text-sm" : "h-8 px-3 text-sm"}
         >
           {isSaving ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="h-3 w-3 animate-spin mr-2" />
               {t('saving')}
             </>
           ) : (
             <>
-              {(testSuccess || testStatus === 'success') && <Check className="h-4 w-4 mr-2" />}
+              {(testSuccess || testStatus === 'success') && <Check className="h-3 w-3 mr-2" />}
               {t('save')}
             </>
           )}
@@ -343,35 +325,27 @@ export function ConnectionForm({
       </div>
 
       {testError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>{t('connectionFailed')}</AlertTitle>
-          <AlertDescription>{testError}</AlertDescription>
+        <Alert variant="destructive" className="py-2">
+          <AlertCircle className="h-3 w-3" />
+          <AlertTitle className="text-sm">{t('connectionFailed')}</AlertTitle>
+          <AlertDescription className="text-xs">{testError}</AlertDescription>
         </Alert>
       )}
 
       {testSuccess && (
-        <Alert variant="success">
-          <Check className="h-4 w-4" />
-          <AlertTitle>{t('connectionSuccessful')}</AlertTitle>
-          <AlertDescription>{t('readyToConnect')}</AlertDescription>
+        <Alert variant="success" className="py-2">
+          <Check className="h-3 w-3" />
+          <AlertTitle className="text-sm">{t('connectionSuccessful')}</AlertTitle>
+          <AlertDescription className="text-xs">{t('readyToConnect')}</AlertDescription>
         </Alert>
       )}
 
-      <div className="flex justify-end space-x-2 mt-4">
+      <div className="flex justify-end space-x-2 mt-2">
         {onCancel && (
-          <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+          <Button variant="outline" onClick={onCancel} disabled={isSaving} className="h-8 px-3 text-sm">
             {t('cancel')}
           </Button>
         )}
-      </div>
-
-      {/* Debug information - remove in production */}
-      <div className="text-xs text-gray-500 mt-2">
-        testStatus: {testStatus}, 
-        testSuccess: {testSuccess ? 'true' : 'false'},
-        onSubmit: {typeof onSubmit === 'function' ? 'function provided' : 'not provided'},
-        onTestSuccess: {typeof onTestSuccess === 'function' ? 'function provided' : 'not provided'}
       </div>
     </div>
   );
