@@ -241,7 +241,7 @@ export default function EnhancedRepositoryPage() {
           // Create test data with the repository URL
           const testData = {
             url: repo.url,
-            token: repo.provider?.token || ''
+            token: repo.provider?.access_token || ''
           };
           
           console.log(`🔎 [DEBUG] handleRefreshAll: Testing repository ${repo.id} (${repo.name}) with URL: ${repo.url}`);
@@ -256,12 +256,12 @@ export default function EnhancedRepositoryPage() {
           
           // Update repository syncStatus based on test result
           if (repo.id) {
-            let newSyncStatus: 'SYNCED' | 'FAILED' | 'IDLE' = 'IDLE';
+            let newSyncStatus: 'SYNCED' | 'ERROR' | 'IDLE' = 'IDLE';
             
             if (result.success) {
               newSyncStatus = 'SYNCED';
             } else if (result.error || result.status === 404 || result.status === 401 || result.status === 403) {
-              newSyncStatus = 'FAILED';
+              newSyncStatus = 'ERROR';
             }
             
             console.log(`🔎 [DEBUG] handleRefreshAll: About to update repository ${repo.id} status to ${newSyncStatus}`);
@@ -289,7 +289,7 @@ export default function EnhancedRepositoryPage() {
           
           // Small delay between tests to avoid overwhelming the server
           await new Promise(resolve => setTimeout(resolve, 300));
-    } catch (error) {
+        } catch (error) {
           console.error(`🔴 [DEBUG] handleRefreshAll: Error testing repository ${repo.id}:`, error);
         } finally {
           // Mark this repo as no longer syncing
@@ -344,7 +344,7 @@ export default function EnhancedRepositoryPage() {
       // Create test data with the repository URL
       const testData = {
         url: repo.url,
-        token: repo.provider?.token || ''
+        token: repo.provider?.access_token || ''
       };
       
       // Test the repository
@@ -354,12 +354,12 @@ export default function EnhancedRepositoryPage() {
       
       // Update repository syncStatus based on test result
       if (repo.id) {
-        let newSyncStatus: 'SYNCED' | 'FAILED' | 'IDLE' = 'IDLE';
+        let newSyncStatus: 'SYNCED' | 'ERROR' | 'IDLE' = 'IDLE';
         
         if (result.success) {
           newSyncStatus = 'SYNCED';
         } else if (result.error || result.status === 404 || result.status === 401 || result.status === 403) {
-          newSyncStatus = 'FAILED';
+          newSyncStatus = 'ERROR';
         }
         
         try {
