@@ -1347,3 +1347,20 @@ export async function testGitRepository(
     };
   }
 }
+
+/**
+ * Clear the repositories cache
+ * This is useful when we need to ensure we get fresh data after updates
+ */
+export async function clearRepositoriesCache(): Promise<void> {
+  try {
+    // Clear all repository-related cache keys
+    serverCache.delete('repositories:all');
+    
+    // Clear any potentially cached repositories by provider
+    // For simplicity, we're just clearing the general cache here
+    console.log('[actions] Cleared repositories cache');
+  } catch (error) {
+    console.error('Error clearing repositories cache:', error);
+  }
+}

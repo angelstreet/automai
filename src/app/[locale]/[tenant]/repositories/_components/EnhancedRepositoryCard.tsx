@@ -33,7 +33,14 @@ export function EnhancedRepositoryCard({
   const [isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
   
-  // Initialize component
+  // Log whenever the card receives new props
+  useEffect(() => {
+    console.log(`[EnhancedRepositoryCard] Received update for repo: ${repository?.id}`, {
+      name: repository?.name,
+      syncStatus: repository?.syncStatus,
+      lastSyncedAt: repository?.lastSyncedAt
+    });
+  }, [repository]);
   
   // This effect only runs on the client after hydration is complete
   useEffect(() => {

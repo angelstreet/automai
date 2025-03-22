@@ -50,16 +50,27 @@ export default function EnhancedRepositoryPage() {
     repositories,
     loading = false,
     error = null,
-    fetchRepositories = async (): Promise<Repository[]> => { 
+    fetchRepositories = async () => { 
       console.log('Repository context not initialized'); 
       return [];
     },
     // Custom properties not in the official RepositoryContextType interface but used in our component
-    starredRepositories,
-    toggleStarRepository = (repo: Repository): void => { 
+    starredRepositories = [],
+    starRepository = () => { 
       console.log('Repository context not initialized'); 
-    }
-  } = (repositoryContext as any) || {};
+    },
+    unstarRepository = () => {
+      console.log('Repository context not initialized');
+    },
+    deleteRepository = () => {
+      console.log('Repository context not initialized');
+    },
+    createRepository = () => {
+      console.log('Repository context not initialized');
+    },
+    user = null,
+    providers = [],
+  } = repositoryContext || {};
   
   // Rename loading to isLoading for our component
   const isLoading = loading;
@@ -142,7 +153,7 @@ export default function EnhancedRepositoryPage() {
     // Call context method to toggle star
     try {
       // No need to await since toggleStarRepository is synchronous
-      toggleStarRepository(repository);
+      starRepository(repository);
     } catch (error: unknown) {
       console.error('Error updating starred status:', error);
       
@@ -170,10 +181,14 @@ export default function EnhancedRepositoryPage() {
     if (isRefreshingAll || !repositories || repositories.length === 0) return;
     
     setIsRefreshingAll(true);
+    console.log("[DEBUG] Starting handleRefreshAll for", repositories.length, "repositories");
     
     try {
-      // Import the test repository action
-      const { testGitRepository } = await import('@/app/[locale]/[tenant]/repositories/actions');
+      // Import the test repository action and repository update action
+      const { testGitRepository, updateRepository, clearRepositoriesCache } = await import('@/app/[locale]/[tenant]/repositories/actions');
+      
+      // First clear the cache to ensure we'll get fresh data
+      await clearRepositoriesCache();
       
       // Process each repository one by one
       for (const repo of repositories as Repository[]) {
@@ -193,10 +208,39 @@ export default function EnhancedRepositoryPage() {
             token: repo.provider?.token || ''
           };
           
+          console.log(`[DEBUG] Testing repository ${repo.id} (${repo.name}) with URL: ${repo.url}`);
+          
           // Test the repository
           const result = await testGitRepository(testData);
           
           console.log(`Repository ${repo.name} test result:`, result);
+          
+          // Update repository syncStatus based on test result
+          if (repo.id && user?.id) {
+            let newSyncStatus: 'SYNCED' | 'FAILED' | 'IDLE' = 'IDLE';
+            
+            if (result.success) {
+              newSyncStatus = 'SYNCED';
+            } else if (result.error || result.status === 404 || result.status === 401 || result.status === 403) {
+              newSyncStatus = 'FAILED';
+            }
+            
+            console.log(`[DEBUG] Updating repository ${repo.id} status to ${newSyncStatus}`);
+            
+            // Get the current user for the update call
+            try {
+              // Update the repository in the database - need to use current user
+              const updateResult = await updateRepository(repo.id, { 
+                syncStatus: newSyncStatus,
+                lastSyncedAt: new Date().toISOString()
+              });
+              console.log(`[DEBUG] Update result for ${repo.id}:`, updateResult);
+            } catch (updateError) {
+              console.error(`Error updating repository ${repo.id} status:`, updateError);
+            }
+          } else {
+            console.warn(`[DEBUG] Cannot update repository ${repo.id}, user.id: ${user?.id}`);
+          }
           
           // Small delay between tests to avoid overwhelming the server
           await new Promise(resolve => setTimeout(resolve, 300));
@@ -207,6 +251,11 @@ export default function EnhancedRepositoryPage() {
           setSyncingRepoIds(prev => ({ ...prev, [repo.id]: false }));
         }
       }
+      
+      console.log("[DEBUG] Repository tests complete, refreshing repository list");
+      
+      // Clear the cache again before the final refresh to ensure we get the most up-to-date data
+      await clearRepositoriesCache();
       
       // Refresh the entire list after all tests are complete
       await fetchRepositories();
@@ -227,8 +276,11 @@ export default function EnhancedRepositoryPage() {
       setSyncingRepoId(id);
       setSyncingRepoIds(prev => ({ ...prev, [id]: true }));
       
-      // Import the test repository action
-      const { testGitRepository } = await import('@/app/[locale]/[tenant]/repositories/actions');
+      // Import the test repository action and repository update action
+      const { testGitRepository, updateRepository, clearRepositoriesCache } = await import('@/app/[locale]/[tenant]/repositories/actions');
+      
+      // Clear the cache to ensure we'll get fresh data
+      await clearRepositoriesCache();
       
       // Find the repository
       const repo = repositories?.find(r => r.id === id);
@@ -253,6 +305,30 @@ export default function EnhancedRepositoryPage() {
       const result = await testGitRepository(testData);
       
       console.log(`Repository ${repo.name} test result:`, result);
+      
+      // Update repository syncStatus based on test result
+      if (repo.id && user?.id) {
+        let newSyncStatus: 'SYNCED' | 'FAILED' | 'IDLE' = 'IDLE';
+        
+        if (result.success) {
+          newSyncStatus = 'SYNCED';
+        } else if (result.error || result.status === 404 || result.status === 401 || result.status === 403) {
+          newSyncStatus = 'FAILED';
+        }
+        
+        try {
+          // Update the repository in the database - need to use current user
+          await updateRepository(repo.id, { 
+            syncStatus: newSyncStatus,
+            lastSyncedAt: new Date().toISOString()
+          });
+        } catch (updateError) {
+          console.error(`Error updating repository ${repo.id} status:`, updateError);
+        }
+      }
+      
+      // Clear the cache again before the final refresh
+      await clearRepositoriesCache();
       
       // Refresh the repository list
       await fetchRepositories();

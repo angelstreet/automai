@@ -218,6 +218,8 @@
     "noRepositories": "No repositories found",
     "noRepositoriesYet": "You don't have any repositories yet",
     "noRepositoriesMatchingSearch": "No repositories match your search criteria",
+    "noPrivateRepositories": "No private repositories found",
+    "noStarredRepositories": "You haven't starred any repositories yet",
     "addRepository": "Add Repository",
     "view_providers": "View Git Providers",
     "add_provider": "Add Git Provider",
