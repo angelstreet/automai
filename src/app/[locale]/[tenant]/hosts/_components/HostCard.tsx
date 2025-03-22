@@ -34,7 +34,6 @@ import {
   TooltipTrigger,
 } from '@/components/shadcn/tooltip';
 import { Host } from '../types';
-import { useHost } from '@/context';
 
 interface HostCardProps {
   host: Host;
@@ -49,184 +48,286 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   const t = useTranslations('Common');
-  
-  const { testConnection, removeHost } = useHost();
 
   const getStatusDot = (status: string) => {
+    const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
+
+    if (!status) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>
+              <div className={`${baseClasses} bg-gray-400`} />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('unknown')}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
     switch (status) {
       case 'connected':
-        return <div className="h-3 w-3 rounded-full bg-green-500 mr-2" />;
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-green-500`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('connected')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       case 'failed':
-        return <div className="h-3 w-3 rounded-full bg-red-500 mr-2" />;
-      case 'pending':
-        return <div className="h-3 w-3 rounded-full bg-yellow-500 mr-2" />;
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-red-500`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('failed')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       case 'testing':
-        return <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse mr-2" />;
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-yellow-500 animate-pulse`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('testing')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      case 'pending':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-yellow-500`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('pending')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
       default:
-        return <div className="h-3 w-3 rounded-full bg-gray-300 mr-2" />;
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <div className={`${baseClasses} bg-orange-500`} />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('unknown')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
     }
   };
 
   const handleTerminalClick = () => {
-    router.push(`/hosts/terminals/${host.id}`);
+    // Get the current URL path segments to extract locale and tenant
+    const pathSegments = window.location.pathname.split('/');
+    const locale = pathSegments[1] || 'en';
+    const tenant = pathSegments[2] || 'default';
+
+    // Set current host for terminal to use
+    try {
+      // Data should already be in sessionStorage, so just logging and confirming
+      // that we're accessing this host
+      console.log('Accessing terminal for host:', {
+        name: host.name,
+        id: host.id,
+        is_windows: host.is_windows === true,
+        os_type: host.os_type || 'unknown',
+      });
+
+      // Still store current host reference for direct access
+      sessionStorage.setItem('currentHost', `host_${host.id}`);
+      sessionStorage.setItem('currentHostLastAccessed', Date.now().toString());
+
+      // For debugging - check if the host was properly stored earlier
+      const storedHost = sessionStorage.getItem(`host_${host.id}`);
+      const storedHostByName = sessionStorage.getItem(`host_name_${host.name.toLowerCase()}`);
+
+      if (!storedHost && !storedHostByName) {
+        console.warn('Warning: Host not found in sessionStorage, storing it now');
+
+        // Ensure is_windows is explicitly included and is a boolean
+        const hostWithExplicitWindows = {
+          ...host,
+          is_windows: host.is_windows === true,
+        };
+
+        // Store it now as a fallback
+        sessionStorage.setItem(`host_${host.id}`, JSON.stringify(hostWithExplicitWindows));
+        sessionStorage.setItem(
+          `host_name_${host.name.toLowerCase()}`,
+          JSON.stringify(hostWithExplicitWindows),
+        );
+        sessionStorage.setItem('currentHost_full', JSON.stringify(hostWithExplicitWindows));
+      } else {
+        console.log('Host found in sessionStorage:', {
+          byId: !!storedHost,
+          byName: !!storedHostByName,
+        });
+
+        // For debugging - also store the full object directly
+        sessionStorage.setItem(
+          'currentHost_full',
+          JSON.stringify({
+            ...host,
+            is_windows: host.is_windows === true,
+          }),
+        );
+      }
+    } catch (e) {
+      console.error('Error processing host for terminal:', e);
+    }
+
+    // Build the correct path with locale and tenant
+    const terminalPath = `/${locale}/${tenant}/terminals/${host.name.toLowerCase()}`;
+    console.log(`Redirecting to terminal: ${terminalPath}`);
+    router.push(terminalPath);
   };
 
   const handleRefreshClick = async () => {
+    if (isRefreshing || !onTestConnection || isDeleting) return;
+
     setIsRefreshing(true);
     try {
-      if (onTestConnection) {
-        await onTestConnection(host);
-      } else {
-        await testConnection(host.id);
-      }
+      await onTestConnection(host);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!onDelete && !removeHost) return;
-    
+  const handleDelete = () => {
+    if (isDeleting) return;
     setIsDeleting(true);
-    try {
-      if (onDelete) {
-        await onDelete(host.id);
-      } else {
-        await removeHost(host.id);
-      }
-      setIsDeleted(true);
-    } finally {
+    
+    // Mark as deleted before calling onDelete
+    setIsDeleted(true);
+    
+    // Call the onDelete handler
+    onDelete?.(host.id);
+    
+    // Reset the deleting state after a short delay
+    setTimeout(() => {
       setIsDeleting(false);
-    }
+    }, 500);
   };
 
+  // If the host is deleted, don't render anything
   if (isDeleted) {
     return null;
   }
 
   return (
-    <Card className="relative overflow-hidden">
-      <div className="absolute top-3 right-3">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center">
-                {getStatusDot(host.status)}
-                <span className="text-xs font-medium">
-                  {host.status === 'connected' && 'Connected'}
-                  {host.status === 'failed' && 'Failed'}
-                  {host.status === 'pending' && 'Pending'}
-                  {host.status === 'testing' && 'Testing'}
-                </span>
+    <>
+      <Card className="relative w-[300px]">
+        <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
+          <div className="flex flex-col space-y-1.5">
+            <div className="flex items-center">
+              <div className="w-[200px] flex items-center">
+                <div className="mr-2">{getStatusDot(host.status)}</div>
+                <CardTitle className="text-base font-semibold truncate flex-1">
+                  {host.name}
+                </CardTitle>
               </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {host.status === 'connected' && 'Host is connected and ready'}
-              {host.status === 'failed' && 'Connection failed'}
-              {host.status === 'pending' && 'Connection pending'}
-              {host.status === 'testing' && 'Testing connection...'}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-
-      <CardHeader>
-        <CardTitle>{host.name}</CardTitle>
-        <CardDescription>
-          {host.description || `${host.type} host @ ${host.ip}`}
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent>
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <div>
-            <p className="text-sm font-medium">Type</p>
-            <p className="text-sm">{host.type}</p>
-          </div>
-          <div>
-            <p className="text-sm font-medium">IP Address</p>
-            <p className="text-sm">{host.ip}</p>
-          </div>
-          {host.port && (
-            <div>
-              <p className="text-sm font-medium">Port</p>
-              <p className="text-sm">{host.port}</p>
             </div>
-          )}
-          {host.user && (
-            <div>
-              <p className="text-sm font-medium">Username</p>
-              <p className="text-sm">{host.user}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleTerminalClick}
-            className="flex-1"
-          >
-            <Terminal className="h-4 w-4 mr-2" />
-            Terminal
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefreshClick}
-            disabled={isRefreshing}
-            className="flex-1"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Test
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {host.status === 'failed' && host.errorMessage && (
-                <DropdownMenuItem onClick={() => setShowError(true)}>
-                  <AlertCircle className="h-4 w-4 mr-2 text-red-500" />
-                  View Error
+            <CardDescription className="text-xs">
+              {host.ip}
+              {host.port ? `:${host.port}` : ''}
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[160px]">
+                <DropdownMenuItem onClick={() => router.push(`/logs/${host.name}`)}>
+                  <ScrollText className="mr-2 h-4 w-4" />
+                  <span>{t('logs')}</span>
                 </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={handleTerminalClick}>
-                <Terminal className="h-4 w-4 mr-2" />
-                Open Terminal
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDelete} disabled={isDeleting}>
-                <XCircle className="h-4 w-4 mr-2 text-red-500" />
-                {isDeleting ? 'Deleting...' : 'Delete Host'}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardContent>
+                <DropdownMenuItem
+                  onClick={handleRefreshClick}
+                  disabled={isRefreshing || isDeleting}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  <span>{isRefreshing ? t('refreshing') : t('refresh')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="text-destructive"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  <span>{t('delete')}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4 pt-2">
+          <div className="flex flex-col space-y-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full mt-2"
+              onClick={handleTerminalClick}
+              disabled={host.status !== 'connected'}
+            >
+              <Terminal className="h-4 w-4 mr-2" />
+              {t('terminal')}
+            </Button>
+            <p className="text-xs mt-1 text-muted-foreground">
+              {host.updated_at
+                ? `${t('updated_at')}: ${new Date(host.updated_at).toLocaleDateString()}`
+                : `${t('updated_at')}: ${t('never')}`}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Dialog open={showError} onOpenChange={setShowError}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Connection Error</DialogTitle>
+            <DialogTitle className="flex items-center text-destructive">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              {t('connectionError')}
+            </DialogTitle>
           </DialogHeader>
-          <div className="bg-red-50 p-4 rounded-md">
-            <div className="flex">
-              <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-2" />
-              <div>
-                <h3 className="text-sm font-medium text-red-800">
-                  Connection to {host.ip} failed
-                </h3>
-                <p className="mt-2 text-sm text-red-700 whitespace-pre-wrap font-mono">
-                  {host.errorMessage || 'Unknown error'}
-                </p>
-              </div>
+          <div className="space-y-4">
+            <div className="text-sm">
+              <p className="font-medium mb-2">{t('errorDetails')}:</p>
+              <pre className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-xs">
+                {host.errorMessage || t('noErrorDetails')}
+              </pre>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p>
+                {t('updated_at')}:{' '}
+                {host.updated_at ? new Date(host.updated_at).toLocaleString() : t('never')}
+              </p>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }
