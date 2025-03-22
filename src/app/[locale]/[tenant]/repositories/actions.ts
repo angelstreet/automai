@@ -208,7 +208,7 @@ export async function createRepository(
  */
 export async function updateRepository(
   id: string,
-  updates: Partial<Repository>
+  updates: Record<string, any>
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     console.log(`[updateRepository] Starting update for repo ${id}`);
@@ -226,6 +226,7 @@ export async function updateRepository(
     const currentUser = currentUserResult;
     
     console.log(`[updateRepository] User authenticated, profile_id: ${currentUser.id}`);
+    console.log(`[updateRepository] Using direct snake_case column names:`, updates);
     
     // IMPORTANT: The db.repository.update call requires BOTH id AND profile_id in the where clause
     console.log(`[updateRepository] Calling db.repository.update with:`, { 
@@ -266,14 +267,15 @@ export async function updateRepository(
       
       try {
         // Attempt to call the core db function directly with both parameters
-        const result = await db.repository.updateRepository(id, {
-          ...updates,
-          updated_at: new Date().toISOString(),
-          last_synced_at: updates.lastSyncedAt ? new Date(updates.lastSyncedAt).toISOString() : new Date().toISOString(),
-          sync_status: updates.syncStatus,
-          default_branch: updates.defaultBranch,
-          is_private: updates.isPrivate
-        }, currentUser.id);
+        // Add updated_at to transformedData since it's required in this fallback call
+        updates.updated_at = new Date().toISOString();
+        
+        // Ensure last_synced_at has a default value for the fallback method
+        if (updates.last_synced_at === undefined) {
+          updates.last_synced_at = new Date().toISOString();
+        }
+        
+        const result = await db.repository.updateRepository(id, updates, currentUser.id);
         
         if (result.success && result.data) {
           console.log('[updateRepository] Fallback succeeded:', result);

@@ -6,7 +6,7 @@ export type GitProviderType = 'github' | 'gitlab' | 'gitea' | 'self-hosted';
 
 export type GitProviderStatus = 'connected' | 'disconnected' | 'error';
 
-export type RepositorySyncStatus = 'SYNCED' | 'SYNCING' | 'ERROR' | 'IDLE' | 'PENDING';
+export type RepositorySyncStatus = 'SYNCED' | 'SYNCING' | 'ERROR' | 'IDLE' | 'PENDING' | 'FAILED';
 
 export interface GitProvider {
   id: string;

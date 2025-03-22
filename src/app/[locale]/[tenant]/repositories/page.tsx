@@ -264,8 +264,8 @@ export default function EnhancedRepositoryPage() {
               // Update the repository in the database - need to use current user
               console.log(`🔎 [DEBUG] handleRefreshAll: Calling updateRepository...`);
               const updateResult = await updateRepository(repo.id, { 
-                syncStatus: newSyncStatus,
-                lastSyncedAt: new Date().toISOString()
+                sync_status: newSyncStatus,
+                last_synced_at: new Date().toISOString()
               });
               console.log(`🔎 [DEBUG] handleRefreshAll: Update result for ${repo.id}:`, updateResult);
               
@@ -321,9 +321,6 @@ export default function EnhancedRepositoryPage() {
       // Import the test repository action and repository update action
       const { testGitRepository, updateRepository, clearRepositoriesCache } = await import('@/app/[locale]/[tenant]/repositories/actions');
       
-      // Only clear the cache for this specific repository
-      await clearRepositoriesCache(id);
-      
       // Find the repository
       const repo = repositories?.find(r => r.id === id);
       if (!repo) {
@@ -361,8 +358,8 @@ export default function EnhancedRepositoryPage() {
         try {
           // Update the repository in the database - need to use current user
           await updateRepository(repo.id, { 
-            syncStatus: newSyncStatus,
-            lastSyncedAt: new Date().toISOString()
+            sync_status: newSyncStatus,
+            last_synced_at: new Date().toISOString()
           });
           
           // Clear this repository's cache after update
