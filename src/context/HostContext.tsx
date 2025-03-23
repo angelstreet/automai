@@ -14,6 +14,7 @@ import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { HostContextType, HostData, HostActions } from '@/types/context/host';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
+import { persistedData } from './AppContext';
 
 // Reduce logging with a DEBUG flag
 const DEBUG = false;
@@ -615,6 +616,30 @@ export const HostProvider: React.FC<{
       });
     }
   }, [state.hosts.length, state.filteredHosts.length, state.loading]);
+  
+  // Initialize state from persisted data if available
+  const [hosts, setHosts] = useState<Host[]>(
+    persistedData?.hostData?.hosts || []
+  );
+
+  const [loading, setLoading] = useState<boolean>(
+    persistedData?.hostData?.loading !== undefined 
+      ? persistedData.hostData.loading 
+      : true
+  );
+
+  // Persist host data for cross-page navigation
+  useEffect(() => {
+    if (typeof persistedData !== 'undefined') {
+      persistedData.hostData = {
+        hosts: state.hosts,
+        loading: state.loading,
+        error: state.error,
+        // Include other state you want to persist
+      };
+      console.log('[HostContext] Persisted host data for cross-page navigation');
+    }
+  }, [state.hosts, state.loading, state.error]);
   
   return (
     <HostContext.Provider value={contextValue}>

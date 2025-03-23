@@ -26,6 +26,7 @@ import {
   ERROR_MESSAGES,
   LOG_PREFIX
 } from '@/app/[locale]/[tenant]/cicd/constants';
+import { persistedData } from './AppContext';
 
 // Reduce logging with a DEBUG flag
 const log = (...args: any[]) => DEBUG && console.log(...args);
@@ -373,6 +374,35 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     }
   }, [state.providers.length, state.loading]);
+  
+  // Initialize state from persisted data if available
+  const [providers, setProviders] = useState<CICDProvider[]>(
+    persistedData?.cicdData?.providers || []
+  );
+
+  const [jobs, setJobs] = useState<CICDJob[]>(
+    persistedData?.cicdData?.jobs || []
+  );
+
+  const [loading, setLoading] = useState<boolean>(
+    persistedData?.cicdData?.loading !== undefined 
+      ? persistedData.cicdData.loading 
+      : true
+  );
+
+  // Persist CICD data for cross-page navigation
+  useEffect(() => {
+    if (typeof persistedData !== 'undefined') {
+      persistedData.cicdData = {
+        providers: state.providers,
+        jobs: state.jobs,
+        loading: state.loading,
+        error: state.error,
+        // Include other state you want to persist
+      };
+      console.log('[CICDContext] Persisted CICD data for cross-page navigation');
+    }
+  }, [state.providers, state.jobs, state.loading, state.error]);
   
   // Create context value
   const contextValue: CICDContextType = {

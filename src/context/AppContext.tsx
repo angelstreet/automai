@@ -24,8 +24,9 @@ const globalInitStatus: Record<ContextName, boolean> = {
   user: true // User is always initialized
 };
 
-// Storage for data persistence between navigations
-const persistedData: Record<string, any> = {
+// Storage for data persistence between navigations - exported so it can be imported
+// in other context files directly, rather than using the global scope
+export const persistedData: Record<string, any> = {
   repositoryData: null,
   deploymentData: null,
   hostData: null,
@@ -96,8 +97,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       initContext('repository');
       initContext('deployment');
       initContext('host');
+      initContext('cicd');
       
-      log('[AppContext] Pre-initializing core contexts for persistence');
+      log('[AppContext] Pre-initializing all contexts for persistence');
     }
   }, [initContext]);
   

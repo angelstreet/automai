@@ -12,6 +12,7 @@ import {
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
+import { persistedData } from './AppContext';
 
 // Reduce logging with a DEBUG flag
 const DEBUG = true;
@@ -73,9 +74,6 @@ const initialRepositoryData: RepositoryData = {
 
 // Create the context
 export const RepositoryContext = createContext<RepositoryContextType | null>(null);
-
-// Reference to persisted data object from AppContext (for global persistence)
-declare const persistedData: Record<string, any>;
 
 // Provider component
 export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -369,14 +367,14 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   useEffect(() => {
     if (typeof persistedData !== 'undefined') {
       persistedData.repositoryData = {
-        repositories,
-        loading,
-        error,
+        repositories: state.repositories,
+        loading: state.loading,
+        error: state.error,
         // Include other state you want to persist
       };
       console.log('[RepositoryContext] Persisted repository data for cross-page navigation');
     }
-  }, [repositories, loading, error]);
+  }, [state.repositories, state.loading, state.error]);
 
   // Create context value
   const contextValue: RepositoryContextType = {

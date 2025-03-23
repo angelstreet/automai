@@ -18,6 +18,7 @@ import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { DeploymentContextType, DeploymentData, DeploymentActions, DEPLOYMENT_CACHE_KEYS } from '@/types/context/deployment';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
+import { persistedData } from './AppContext';
 
 // Reduce logging with a DEBUG flag
 const DEBUG = false;
@@ -38,9 +39,6 @@ const useDebounce = (fn: Function, delay: number) => {
     }, delay);
   }, [fn, delay]);
 };
-
-// Reference to persisted data object from AppContext (for global persistence)
-declare const persistedData: Record<string, any>;
 
 // Initial state
 const initialState: DeploymentData = {
@@ -664,15 +662,15 @@ export const DeploymentProvider: React.FC<{
   useEffect(() => {
     if (typeof persistedData !== 'undefined') {
       persistedData.deploymentData = {
-        deployments,
-        repositories,
-        loading,
-        error,
+        deployments: state.deployments,
+        repositories: state.repositories,
+        loading: state.loading,
+        error: state.error,
         // Include other state you want to persist
       };
       console.log('[DeploymentContext] Persisted deployment data for cross-page navigation');
     }
-  }, [deployments, repositories, loading, error]);
+  }, [state.deployments, state.repositories, state.loading, state.error]);
 
   return (
     <DeploymentContext.Provider value={contextValue}>
