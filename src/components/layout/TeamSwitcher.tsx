@@ -2,6 +2,14 @@
 
 import { Button } from '@/components/shadcn/button';
 import { CommandSeparator } from '@/components/shadcn/command';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu';
 import { useSidebar } from '@/context/SidebarContext';
 import { User } from '@/types/user';
 import {
@@ -11,6 +19,9 @@ import {
   PlusCircle,
   Settings,
   User as UserIcon,
+  Building2,
+  Factory,
+  Code2
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
