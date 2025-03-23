@@ -1,14 +1,13 @@
-'use client';
-
+import { Metadata } from 'next';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { CICDProvider } from './_components';
-import { AppProvider } from '@/context';
-import { useCICD } from '@/context';
 
-function CICDPageContent() {
-  // Get CICD context
-  const cicd = useCICD();
+export const metadata: Metadata = {
+  title: 'CI/CD Integration',
+  description: 'Configure CI/CD providers for automated deployments',
+};
 
+export default function CICDPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader 
@@ -18,13 +17,5 @@ function CICDPageContent() {
       
       <CICDProvider />
     </div>
-  );
-}
-
-export default function CICDPage() {
-  return (
-    <AppProvider>
-      <CICDPageContent />
-    </AppProvider>
   );
 } 

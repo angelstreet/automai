@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal } from 'lucide-react';
-import { useCICD } from '@/context';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import {
@@ -37,91 +36,45 @@ import {
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
 import { toast } from '@/components/shadcn/use-toast';
-import { CICDProviderForm } from './';
+import { CICDProviderForm } from '.';
+import { getCICDProvidersAction, deleteCICDProviderAction, testCICDProviderAction } from '../actions';
 import { Badge } from '@/components/shadcn/badge';
 import { CICDProvider as CICDProviderType } from '@/types/cicd';
 
 export default function CICDProvider() {
+  const [providers, setProviders] = useState<CICDProviderType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<CICDProviderType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Use state to store context values so they update properly
-  const [contextValues, setContextValues] = useState({
-    providers: [] as CICDProviderType[],
-    loading: false,
-    error: null as string | null,
-    contextIsNull: true, // Track if context is null
-  });
-  
-  // Use the CICD context with better error handling
-  let fetchProviders = async () => { console.log('CICD context not initialized'); };
-  let testProvider = async () => ({ success: false, error: 'CICD context not initialized' });
-  let deleteProvider = async () => ({ success: false, error: 'CICD context not initialized' });
-  
-  try {
-    const cicdContext = useCICD();
-    
-    // Update functions whenever context changes
-    useEffect(() => {
-      if (cicdContext) {
-        // Update state with values from context
-        setContextValues({
-          providers: cicdContext.providers || [],
-          loading: cicdContext.loading || false,
-          error: cicdContext.error || null,
-          contextIsNull: false,
-        });
-        
-        // Update functions
-        fetchProviders = cicdContext.fetchProviders || fetchProviders;
-        testProvider = cicdContext.testProvider || testProvider;
-        deleteProvider = cicdContext.deleteProvider || deleteProvider;
-        
-        console.log('[CICDProvider] Context updated with values:', {
-          providersCount: cicdContext.providers?.length || 0
-        });
-      } else {
-        setContextValues(prev => ({
-          ...prev,
-          contextIsNull: true
-        }));
-      }
-    }, [cicdContext]);
-    
-    // Debug logging for troubleshooting
-    console.log('[CICDProvider] CICD context received:', {
-      providersLength: cicdContext?.providers?.length || 0,
-      contextIsNull: cicdContext === null,
-      contextKeys: cicdContext ? Object.keys(cicdContext) : 'none'
-    });
-  } catch (error: any) {
-    console.error('CICDProvider component: Exception occurred:', error);
-    toast({
-      title: 'Error',
-      description: error.message || 'An unexpected error occurred',
-      variant: 'destructive',
-    });
-  }
-  
-  // Destructure values from state for use in component
-  const { providers, loading, error, contextIsNull } = contextValues;
-  
   // Load providers on component mount
   useEffect(() => {
-    console.log('CICDProvider component: Initial mount - loading providers');
-    if (!providers || providers.length === 0) {
-      loadProviders();
-    }
+    loadProviders();
   }, []);
   
-  // Fetch providers from the context
+  // Fetch providers from the backend
   const loadProviders = async () => {
+    setLoading(true);
+    
     try {
-      console.log('CICDProvider component: Calling fetchProviders');
-      await fetchProviders();
-      console.log('CICDProvider component: Providers loaded successfully');
+      console.log('CICDProvider component: Calling getCICDProvidersAction');
+      const result = await getCICDProvidersAction();
+      
+      console.log('CICDProvider component: Received result:', JSON.stringify(result, null, 2));
+      
+      if (result.success) {
+        console.log('CICDProvider component: Setting providers with data:', JSON.stringify(result.data, null, 2));
+        setProviders(result.data || []);
+      } else {
+        console.error('CICDProvider component: Error fetching providers:', result.error);
+        toast({
+          title: 'Error loading providers',
+          description: result.error || 'Failed to fetch CI/CD providers',
+          variant: 'destructive',
+        });
+      }
     } catch (error: any) {
       console.error('CICDProvider component: Exception occurred:', error);
       toast({
@@ -129,10 +82,12 @@ export default function CICDProvider() {
         description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
   
-  // Test a provider connection using the context
+  // Test a provider connection
   const handleTestProvider = async (provider: CICDProviderType) => {
     try {
       // Create provider payload for testing
@@ -147,8 +102,7 @@ export default function CICDProvider() {
         }
       };
       
-      // Use the testProvider function from context
-      const result = await testProvider(providerPayload);
+      const result = await testCICDProviderAction(providerPayload);
       
       if (result.success) {
         toast({
@@ -191,13 +145,12 @@ export default function CICDProvider() {
     setIsDeleteDialogOpen(true);
   };
   
-  // Confirm deletion of a provider using the context
+  // Confirm deletion of a provider
   const handleConfirmDelete = async () => {
     if (!selectedProvider) return;
     
     try {
-      // Use the deleteProvider function from context
-      const result = await deleteProvider(selectedProvider.id);
+      const result = await deleteCICDProviderAction(selectedProvider.id);
       
       if (result.success) {
         toast({
@@ -205,6 +158,9 @@ export default function CICDProvider() {
           description: 'The CI/CD provider has been successfully deleted.',
           variant: 'success',
         });
+        
+        // Refresh the list
+        loadProviders();
       } else {
         toast({
           title: 'Error',
@@ -245,29 +201,21 @@ export default function CICDProvider() {
     }
   };
   
-  // Debug providers data before render
-  console.log('[CICDProvider] Debug before render:', {
-    providersArray: providers,
-    providersLength: providers?.length,
-    isLoading: loading,
-    hasError: !!error,
-    contextNull: contextIsNull
-  });
-
   return (
-    <Card className="shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b">
-        <CardTitle className="text-2xl font-semibold text-gray-900 dark:text-white">CI/CD Providers</CardTitle>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-xl font-bold">CI/CD Providers</CardTitle>
         <Button
           onClick={() => handleAddEditProvider()}
-          className="inline-flex items-center px-3 py-1.5 text-sm font-medium"
+          size="sm"
+          className="h-8 gap-1"
         >
-          <PlusCircle className="h-4 w-4 mr-1" />
+          <PlusCircle className="h-4 w-4" />
           <span>Add Provider</span>
         </Button>
       </CardHeader>
       
-      <CardContent className="pt-4">
+      <CardContent>
         {loading ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-50"></div>

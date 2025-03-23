@@ -5,158 +5,44 @@ import {
   ActionResult, 
   CICDProviderPayload, 
   CICDProviderListResult,
-  CICDProviderActionResult,
-  CICDProvider,
-  CICDAuthType,
-  CICDCredentials,
-  CICDProviderType
+  CICDProviderActionResult
 } from '@/types/cicd';
 import { getUser } from '@/app/actions/user';
-import { logger } from '@/lib/logger';
-import { serverCache } from '@/lib/cache';
-import { AuthUser } from '@/types/user';
-import { getCICDProvider } from '@/lib/services/cicd';
-import cicdDb from '@/lib/supabase/db-cicd';
 
 /**
- * Map database auth type to application auth type
+ * Fetch all CI/CD providers for the current tenant
  */
-function mapAuthType(dbAuthType: 'token' | 'basic' | 'oauth'): CICDAuthType {
-  if (dbAuthType === 'basic') {
-    return 'basic_auth';
-  }
-  return dbAuthType as CICDAuthType;
-}
-
-/**
- * Map database provider type to application provider type
- */
-function mapProviderType(dbType: string): CICDProviderType {
-  if (dbType === 'bitbucket') {
-    return 'github'; // Map bitbucket to github for now
-  }
-  return dbType as CICDProviderType;
-}
-
-/**
- * Map database credentials to application credentials
- */
-function mapCredentials(dbCredentials: Record<string, string>): CICDCredentials {
-  return {
-    username: dbCredentials.username || undefined,
-    password: dbCredentials.password || undefined,
-    token: dbCredentials.token || undefined
-  };
-}
-
-/**
- * Map database provider to application provider type
- */
-function mapDatabaseProvider(dbProvider: {
-  id: string;
-  tenant_id: string;
-  name: string;
-  type: string;
-  url: string;
-  config: {
-    auth_type: 'token' | 'basic' | 'oauth';
-    credentials: Record<string, string>;
-    status?: string;
-  };
-  created_at?: string;
-  updated_at?: string;
-  created_by?: string;
-  updated_by?: string;
-}): CICDProvider {
-  return {
-    id: dbProvider.id,
-    tenant_id: dbProvider.tenant_id,
-    name: dbProvider.name,
-    type: mapProviderType(dbProvider.type),
-    url: dbProvider.url,
-    config: {
-      auth_type: mapAuthType(dbProvider.config.auth_type),
-      credentials: mapCredentials(dbProvider.config.credentials)
-    },
-    status: dbProvider.config.status,
-    created_at: dbProvider.created_at || new Date().toISOString(),
-    updated_at: dbProvider.updated_at || new Date().toISOString(),
-    created_by: dbProvider.created_by || 'system',
-    updated_by: dbProvider.updated_by || 'system'
-  };
-}
-
-/**
- * Get all CI/CD providers
- * @param user Optional pre-fetched user data to avoid redundant auth calls
- * @param origin The component or hook that triggered this action
- * @param renderCount Optional render count for debugging
- */
-export async function getCICDProviders(
-  user?: AuthUser | null,
-  origin: string = 'unknown',
-  renderCount?: number
-): Promise<{ success: boolean; error?: string; data?: CICDProvider[] }> {
-  console.log(`[CICDActions] getCICDProviders called from ${origin}${renderCount ? ` (render #${renderCount})` : ''}`, {
-    userProvided: !!user,
-    cached: user?.tenant_id ? serverCache.has(`cicd:${user.tenant_id}`) : false
-  });
-  
+export async function getCICDProvidersAction(): Promise<CICDProviderListResult> {
   try {
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
-
-    if (!currentUser) {
-      return { success: false, error: 'User not authenticated' };
-    }
-
-    console.log(`[CICDActions] User status for ${origin}:`, {
-      authenticated: !!currentUser,
-      tenant: currentUser.tenant_id || 'unknown',
-    });
-
-    // Create cache key using tenant
-    const cacheKey = `cicd:${currentUser.tenant_id}`;
+    // Get the current authenticated user
+    const user = await getUser();
     
-    // Check cache first
-    const cached = serverCache.get<CICDProvider[]>(cacheKey);
-    if (cached) {
-      console.log(`[CICDActions] Using cached CICD data for ${origin}`, { 
-        count: cached.length,
-        cacheKey,
-        age: serverCache.getAge(cacheKey)
-      });
-      return { success: true, data: cached };
+    if (!user) {
+      console.error('User not authenticated');
+      return { success: false, error: 'User not authenticated', data: [] };
     }
     
-    console.log(`[CICDActions] No cache found for ${origin}, fetching from service`);
+    console.log('Fetching CICD providers for tenant:', user.tenant_id);
     
-    // Get providers using the service layer
-    const result = await cicdDb.getCICDProviders({ 
-      where: { 
-        tenant_id: currentUser.tenant_id
-      }
-    });
-
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
+    
+    // Get CICD providers for the tenant
+    console.log('Calling cicdDb.getCICDProviders with params:', { where: { tenant_id: user.tenant_id } });
+    const result = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
+    
+    console.log('Raw result from cicdDb.getCICDProviders:', JSON.stringify(result, null, 2));
+    
     if (!result.success) {
-      throw new Error(result.error || 'Failed to fetch CICD providers');
+      console.error('Error fetching CICD providers:', result.error);
+      return { success: false, error: result.error, data: [] };
     }
-
-    // Map database providers to application type
-    const providers = (result.data || []).map(mapDatabaseProvider);
-
-    // Cache the result
-    serverCache.set(cacheKey, providers);
     
-    console.log(`[CICDActions] Successfully fetched CICD providers for ${origin}`);
-
-    return { success: true, data: providers };
+    console.log('Returning CICD providers:', JSON.stringify(result.data, null, 2));
+    return { success: true, data: result.data || [] };
   } catch (error: any) {
-    console.error(`[CICDActions] Error fetching CICD providers (${origin}):`, error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to fetch CI/CD providers' 
-    };
+    console.error('Unexpected error fetching CICD providers:', error);
+    return { success: false, error: error.message || 'An unexpected error occurred', data: [] };
   }
 }
 
@@ -174,7 +60,7 @@ export async function createCICDProviderAction(payload: CICDProviderPayload): Pr
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
     
     // Prepare data for database
     const providerData = {
@@ -217,7 +103,7 @@ export async function updateCICDProviderAction(id: string, payload: CICDProvider
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
     
     // Prepare data for database
     const providerData = {
@@ -263,7 +149,7 @@ export async function deleteCICDProviderAction(id: string): Promise<ActionResult
     }
     
     // Import the CI/CD database module
-    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
+    const { default: cicdDb } = await import('@/lib/supabase/db-deployment/cicd');
     
     // Delete the provider
     const result = await cicdDb.deleteCICDProvider({ 
