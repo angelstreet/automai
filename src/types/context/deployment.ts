@@ -6,6 +6,7 @@ import { Deployment, DeploymentFormData } from '@/app/[locale]/[tenant]/deployme
  */
 export interface DeploymentData {
   deployments: Deployment[];
+  repositories: any[];
   loading: boolean;
   error: string | null;
   isRefreshing: boolean;

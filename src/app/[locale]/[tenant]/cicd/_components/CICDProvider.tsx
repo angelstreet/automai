@@ -38,12 +38,12 @@ import { toast } from '@/components/shadcn/use-toast';
 import { CICDProviderForm } from './';
 import { getCICDProvidersAction, deleteCICDProviderAction, testCICDProviderAction } from '../actions';
 import { Badge } from '@/components/shadcn/badge';
-import { CICDProvider as CICDProviderType } from '@/types/context/cicd';
+import { CICDProvider as CICDProviderModel } from '../types';
 
 export default function CICDProvider() {
-  const [providers, setProviders] = useState<CICDProviderType[]>([]);
+  const [providers, setProviders] = useState<CICDProviderModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProvider, setSelectedProvider] = useState<CICDProviderType | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<CICDProviderModel | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -87,7 +87,7 @@ export default function CICDProvider() {
   };
   
   // Test a provider connection
-  const handleTestProvider = async (provider: CICDProviderType) => {
+  const handleTestProvider = async (provider: CICDProviderModel) => {
     try {
       // Create provider payload for testing
       const providerPayload = {
@@ -107,7 +107,7 @@ export default function CICDProvider() {
         toast({
           title: 'Connection Successful',
           description: 'Successfully connected to the CI/CD provider.',
-          variant: 'success',
+          variant: 'default',
         });
       } else {
         toast({
@@ -126,7 +126,7 @@ export default function CICDProvider() {
   };
   
   // Open the add/edit dialog
-  const handleAddEditProvider = (provider?: CICDProviderType) => {
+  const handleAddEditProvider = (provider?: CICDProviderModel) => {
     if (provider) {
       setSelectedProvider(provider);
       setIsEditing(true);
@@ -139,7 +139,7 @@ export default function CICDProvider() {
   };
   
   // Open the delete confirmation dialog
-  const handleDeleteClick = (provider: CICDProviderType) => {
+  const handleDeleteClick = (provider: CICDProviderModel) => {
     setSelectedProvider(provider);
     setIsDeleteDialogOpen(true);
   };
@@ -155,7 +155,7 @@ export default function CICDProvider() {
         toast({
           title: 'Provider Deleted',
           description: 'The CI/CD provider has been successfully deleted.',
-          variant: 'success',
+          variant: 'default',
         });
         
         // Refresh the list
@@ -312,7 +312,7 @@ export default function CICDProvider() {
             </DialogHeader>
             <CICDProviderForm
               providerId={selectedProvider?.id}
-              provider={selectedProvider}
+              provider={selectedProvider as any}
               onComplete={handleDialogComplete}
             />
           </DialogContent>

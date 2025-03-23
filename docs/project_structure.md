@@ -7,7 +7,7 @@ node scripts/generate-structure.js
 
 # automai3 project structure
 
-generated on: 3/13/2025, 1:01:42 AM
+generated on: 3/23/2025, 2:46:13 PM
 
 ## usage
 
@@ -49,6 +49,7 @@ this will create a new file at `docs/project_structure.md` containing the curren
         📄 comingsoon.tsx (typescript, 17 lines)
         📄 features.tsx (typescript, 72 lines)
         📄 hero.tsx (typescript, 43 lines)
+        📄 index.ts (typescript, 7 lines)
         📄 skiptomain.tsx (typescript, 13 lines)
       📄 layout.tsx (typescript, 13 lines)
     📁 [tenant]/
@@ -57,10 +58,21 @@ this will create a new file at `docs/project_structure.md` containing the curren
           📄 page.tsx (typescript, 60 lines)
       📁 billing/
         📄 page.tsx (typescript, 12 lines)
+      📁 cicd/
+        📁 _components/
+          📄 cicdprovider.tsx (typescript, 341 lines)
+          📄 cicdproviderform.tsx (typescript, 453 lines)
+          📄 index.ts (typescript, 3 lines)
+        📄 actions.ts (typescript, 247 lines)
+        📄 constants.ts (typescript, 43 lines)
+        📄 layout.tsx (typescript, 14 lines)
+        📄 page.tsx (typescript, 30 lines)
+        📄 types.ts (typescript, 96 lines)
       📁 dashboard/
         📁 _components/
           📄 dashboardheader.tsx (typescript, 17 lines)
           📄 dashboardtabs.tsx (typescript, 40 lines)
+          📄 index.ts (typescript, 10 lines)
           📄 maincontent.tsx (typescript, 163 lines)
           📄 overview.tsx (typescript, 83 lines)
           📄 recentsales.tsx (typescript, 76 lines)
@@ -71,39 +83,44 @@ this will create a new file at `docs/project_structure.md` containing the curren
         📄 types.ts (typescript, 29 lines)
       📁 deployment/
         📁 _components/
-          📄 deploymentdetails.tsx (typescript, 435 lines)
-          📄 deploymentlist.tsx (typescript, 274 lines)
-          📄 deploymentwizard.tsx (typescript, 548 lines)
-          📄 hostselector.tsx (typescript, 84 lines)
+          📄 customswitch.tsx (typescript, 41 lines)
+          📄 deploymentactions.tsx (typescript, 98 lines)
+          📄 deploymentdetails.tsx (typescript, 552 lines)
+          📄 deploymentlist.tsx (typescript, 444 lines)
+          📄 deploymentnavbar.tsx (typescript, 56 lines)
+          📄 deploymentrunaction.tsx (typescript, 75 lines)
+          📄 deploymentwizard.tsx (typescript, 539 lines)
+          📄 deploymentwizardstep1.tsx (typescript, 117 lines)
+          📄 deploymentwizardstep2.tsx (typescript, 86 lines)
+          📄 deploymentwizardstep3.tsx (typescript, 79 lines)
+          📄 deploymentwizardstep4.tsx (typescript, 146 lines)
+          📄 deploymentwizardstep5.tsx (typescript, 392 lines)
+          📄 enhancedscriptselector.tsx (typescript, 206 lines)
+          📄 hostselector.tsx (typescript, 184 lines)
+          📄 index.ts (typescript, 16 lines)
+          📄 jenkinsconfig.tsx (typescript, 414 lines)
           📄 scriptselector.tsx (typescript, 70 lines)
-          📄 statusbadge.tsx (typescript, 50 lines)
-        📄 actions.ts (typescript, 173 lines)
+          📄 statusbadge.tsx (typescript, 55 lines)
+        📄 actions.ts (typescript, 1346 lines)
         📄 constants.ts (typescript, 33 lines)
-        📄 page.tsx (typescript, 87 lines)
-        📄 types.ts (typescript, 99 lines)
-        📄 usedeployments.ts (typescript, 265 lines)
-        📄 utils.ts (typescript, 112 lines)
-      📁 development/
-        📁 projects/
-          📄 page.tsx (typescript, 448 lines)
-        📁 usecases/
-          📁 edit/
-            📁 [usecaseid]/
-              📄 page.tsx (typescript, 52 lines)
-          📄 page.tsx (typescript, 43 lines)
+        📄 layout.tsx (typescript, 24 lines)
+        📄 page.tsx (typescript, 66 lines)
+        📄 types.ts (typescript, 188 lines)
+        📄 utils.ts (typescript, 160 lines)
       📁 devices/
         📄 page.tsx (typescript, 11 lines)
       📁 hosts/
         📁 _components/
-          📄 connecthostdialog.tsx (typescript, 258 lines)
-          📄 connectionform.tsx (typescript, 395 lines)
-          📄 hostcard.tsx (typescript, 334 lines)
+          📄 connecthostdialog.tsx (typescript, 192 lines)
+          📄 connectionform.tsx (typescript, 348 lines)
+          📄 hostcard.tsx (typescript, 379 lines)
           📄 hostform.tsx (typescript, 2 lines)
           📄 hostgrid.tsx (typescript, 55 lines)
-          📄 hostlist.tsx (typescript, 190 lines)
+          📄 hostlist.tsx (typescript, 345 lines)
           📄 hostoverview.tsx (typescript, 227 lines)
           📄 hostsettings.tsx (typescript, 108 lines)
           📄 hosttable.tsx (typescript, 144 lines)
+          📄 index.ts (typescript, 13 lines)
           📄 statussummary.tsx (typescript, 118 lines)
         📁 analytics/
           📄 page.tsx (typescript, 8 lines)
@@ -111,29 +128,30 @@ this will create a new file at `docs/project_structure.md` containing the curren
           📄 page.tsx (typescript, 213 lines)
         📁 terminals/
           📄 page.tsx (typescript, 153 lines)
-        📄 actions.ts (typescript, 269 lines)
+        📄 actions.ts (typescript, 574 lines)
         📄 constants.ts (typescript, 1 lines)
-        📄 hooks.ts (typescript, 606 lines)
+        📄 hooks.ts (typescript, 622 lines)
+        📄 layout.tsx (typescript, 14 lines)
         📄 page.tsx (typescript, 6 lines)
-        📄 types.ts (typescript, 36 lines)
+        📄 types.ts (typescript, 62 lines)
       📁 profile/
         📄 page.tsx (typescript, 6 lines)
-      📁 projects/
-        📄 page.tsx (typescript, 13 lines)
       📁 reports/
         📄 page.tsx (typescript, 22 lines)
       📁 repositories/
         📁 _components/
-          📄 constants.ts (typescript, 238 lines)
-          📄 enhancedconnectrepositorydialog.tsx (typescript, 427 lines)
-          📄 enhancedrepositorycard.tsx (typescript, 172 lines)
-          📄 index.ts (typescript, 14 lines)
-          📄 repositoryexplorer.tsx (typescript, 287 lines)
-        📄 actions.ts (typescript, 469 lines)
-        📄 constants.ts (typescript, 1 lines)
-        📄 hooks.ts (typescript, 483 lines)
-        📄 page.tsx (typescript, 454 lines)
-        📄 types.ts (typescript, 60 lines)
+          📄 enhancedconnectrepositorydialog.tsx (typescript, 507 lines)
+          📄 enhancedrepositorycard.tsx (typescript, 204 lines)
+          📄 index.ts (typescript, 13 lines)
+          📄 repositorydetailview.tsx (typescript, 547 lines)
+          📄 repositoryexplorer.tsx (typescript, 532 lines)
+        📄 actions.ts (typescript, 1430 lines)
+        📄 constants.ts (typescript, 215 lines)
+        📄 layout.tsx (typescript, 14 lines)
+        📄 page.tsx (typescript, 815 lines)
+        📄 types.ts (typescript, 181 lines)
+      📁 repository/
+        📄 actions.ts (typescript, 120 lines)
       📁 settings/
         📁 profile/
           📄 page.tsx (typescript, 51 lines)
@@ -143,21 +161,20 @@ this will create a new file at `docs/project_structure.md` containing the curren
         📄 page.tsx (typescript, 23 lines)
       📁 terminals/
         📁 _components/
+          📄 index.ts (typescript, 4 lines)
           📄 terminal.tsx (typescript, 589 lines)
         📁 [hostname]/
           📄 page.tsx (typescript, 359 lines)
         📄 page.tsx (typescript, 89 lines)
-      📁 tests/
-        📄 page.tsx (typescript, 23 lines)
-      📄 layout.tsx (typescript, 48 lines)
-      📄 page.tsx (typescript, 6 lines)
+      📄 layout.tsx (typescript, 52 lines)
+      📄 page.tsx (typescript, 7 lines)
     📄 layout.tsx (typescript, 49 lines)
-    📄 page.tsx (typescript, 25 lines)
+    📄 page.tsx (typescript, 45 lines)
   📁 actions/
     📄 auth.ts (typescript, 231 lines)
     📄 index.ts (typescript, 5 lines)
     📄 session.ts (typescript, 23 lines)
-    📄 user.ts (typescript, 163 lines)
+    📄 user.ts (typescript, 217 lines)
   📁 api/
     📁 auth/
       📁 register/
@@ -185,14 +202,32 @@ this will create a new file at `docs/project_structure.md` containing the curren
       📄 route.ts (typescript, 101 lines)
     📁 repositories/
       📁 [id]/
-        📄 route.ts (typescript, 118 lines)
+        📁 file-content/
+          📄 route.ts (typescript, 221 lines)
+        📁 files/
+          📄 route.ts (typescript, 175 lines)
+        📁 star/
+          📄 route.ts (typescript, 83 lines)
+        📁 sync/
+          📄 route.ts (typescript, 43 lines)
+        📁 unstar/
+          📄 route.ts (typescript, 66 lines)
+        📄 route.ts (typescript, 119 lines)
+      📁 explore/
+        📄 route.ts (typescript, 370 lines)
+      📁 refresh-all/
+        📄 route.ts (typescript, 70 lines)
+      📁 starred/
+        📄 route.ts (typescript, 170 lines)
       📁 sync/
         📁 [id]/
           📄 route.ts (typescript, 32 lines)
       📁 test-connection/
         📄 route.ts (typescript, 32 lines)
         📄 schema.ts (typescript, 12 lines)
-      📄 route.ts (typescript, 56 lines)
+      📁 verify/
+        📄 route.ts (typescript, 94 lines)
+      📄 route.ts (typescript, 85 lines)
     📁 terminals/
       📁 [id]/
         📄 route.ts (typescript, 84 lines)
@@ -201,8 +236,12 @@ this will create a new file at `docs/project_structure.md` containing the curren
       📁 ws/
         📁 [id]/
           📄 route.ts (typescript, 29 lines)
-  📄 globals.css (css, 128 lines)
-  📄 layout.tsx (typescript, 84 lines)
+    📁 v1/
+      📁 cicd/
+        📁 test/
+          📄 route.ts (typescript, 25 lines)
+  📄 globals.css (css, 157 lines)
+  📄 layout.tsx (typescript, 76 lines)
   📄 page.tsx (typescript, 10 lines)
 📁 components/
   📁 dialog/
@@ -239,6 +278,8 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 topnav.tsx (typescript, 16 lines)
     📄 upgradeprompt.tsx (typescript, 35 lines)
     📄 workspaceheader.tsx (typescript, 124 lines)
+  📁 layouts/
+    📁 sidebar/
   📁 profile/
     📄 profilecontent.tsx (typescript, 170 lines)
     📄 profiledropdown.tsx (typescript, 99 lines)
@@ -247,6 +288,7 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 index.ts (typescript, 3 lines)
     📄 swrprovider.tsx (typescript, 19 lines)
     📄 themeprovider.tsx (typescript, 40 lines)
+  📁 repository/
   📁 settings/
     📄 languagesettings.tsx (typescript, 68 lines)
     📄 settingsheader.tsx (typescript, 28 lines)
@@ -256,6 +298,7 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 alert.tsx (typescript, 53 lines)
     📄 avatar.tsx (typescript, 49 lines)
     📄 badge.tsx (typescript, 35 lines)
+    📄 breadcrumb.tsx (typescript, 113 lines)
     📄 button.tsx (typescript, 51 lines)
     📄 card.tsx (typescript, 57 lines)
     📄 checkbox.tsx (typescript, 30 lines)
@@ -290,7 +333,7 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 index.tsx (typescript, 22 lines)
     📄 sidebar.tsx (typescript, 112 lines)
     📄 sidebarcontent.tsx (typescript, 22 lines)
-    📄 sidebardata.ts (typescript, 151 lines)
+    📄 sidebardata.ts (typescript, 158 lines)
     📄 sidebarfooter.tsx (typescript, 20 lines)
     📄 sidebargroup.tsx (typescript, 19 lines)
     📄 sidebargroupaction.tsx (typescript, 28 lines)
@@ -311,64 +354,113 @@ this will create a new file at `docs/project_structure.md` containing the curren
     📄 themeprovider.tsx (typescript, 39 lines)
     📄 themeswitch.tsx (typescript, 52 lines)
   📁 ui/
+    📄 breadcrumb.tsx (typescript, 113 lines)
     📄 loadingspinner.tsx (typescript, 18 lines)
     📄 longtext.tsx (typescript, 81 lines)
     📄 search.tsx (typescript, 36 lines)
 📁 config/
   📄 fonts.ts (typescript, 29 lines)
 📁 context/
+  📄 appcontext.tsx (typescript, 278 lines)
+  📄 cicdcontext.tsx (typescript, 430 lines)
+  📄 deploymentcontext.tsx (typescript, 480 lines)
   📄 fontcontext.tsx (typescript, 49 lines)
+  📄 hostcontext.tsx (typescript, 649 lines)
+  📄 index.ts (typescript, 28 lines)
+  📄 repositorycontext.tsx (typescript, 376 lines)
   📄 searchcontext.tsx (typescript, 42 lines)
   📄 sidebarcontext.tsx (typescript, 120 lines)
   📄 themecontext.tsx (typescript, 72 lines)
-  📄 usercontext.tsx (typescript, 175 lines)
+  📄 usercontext.tsx (typescript, 276 lines)
 📁 hooks/
   📄 usemobile.tsx (typescript, 22 lines)
+  📄 userequestprotection.ts (typescript, 99 lines)
   📄 usesidebar.ts (typescript, 74 lines)
-  📄 useuser.ts (typescript, 12 lines)
+  📄 useuser.ts (typescript, 15 lines)
 📁 i18n/
   📁 messages/
-    📄 en.json (json configuration, 339 lines)
-    📄 fr.json (json configuration, 337 lines)
+    📄 en.json (json configuration, 361 lines)
+    📄 fr.json (json configuration, 346 lines)
   📄 index.ts (typescript, 8 lines)
   📄 request.ts (typescript, 19 lines)
 📁 lib/
+  📁 gitea-api/
+    📄 index.ts (typescript, 213 lines)
+  📁 github-api/
+    📄 index.ts (typescript, 221 lines)
+  📁 gitlab-api/
+    📄 index.ts (typescript, 254 lines)
   📁 services/
-    📄 hosts.ts (typescript, 388 lines)
+    📁 cicd/
+      📄 factory.ts (typescript, 38 lines)
+      📄 github.ts (typescript, 444 lines)
+      📄 index.ts (typescript, 84 lines)
+      📄 interfaces.ts (typescript, 73 lines)
+      📄 jenkins.ts (typescript, 731 lines)
+      📄 xml-generators.ts (typescript, 72 lines)
+    📄 hosts.ts (typescript, 408 lines)
     📄 http.ts (typescript, 400 lines)
     📄 index.ts (typescript, 11 lines)
     📄 oauth.ts (typescript, 60 lines)
-    📄 repositories.ts (typescript, 300 lines)
     📄 ssh.ts (typescript, 458 lines)
     📄 terminal.ts (typescript, 194 lines)
     📄 websocket.ts (typescript, 298 lines)
   📁 supabase/
+    📁 db-cicd/
+      📄 cicd.ts (typescript, 742 lines)
+      📄 index.ts (typescript, 8 lines)
+    📁 db-deployment/
+      📄 deployment.ts (typescript, 254 lines)
+      📄 index.ts (typescript, 8 lines)
+    📁 db-hosts/
+      📄 host.ts (typescript, 109 lines)
+      📄 index.ts (typescript, 6 lines)
+    📁 db-repositories/
+      📄 git-provider.ts (typescript, 341 lines)
+      📄 index.ts (typescript, 12 lines)
+      📄 pin-repository.ts (typescript, 177 lines)
+      📄 repository.ts (typescript, 540 lines)
+      📄 star-repository.ts (typescript, 163 lines)
+      📄 utils.ts (typescript, 185 lines)
     📄 admin.ts (typescript, 36 lines)
-    📄 auth.ts (typescript, 436 lines)
+    📄 auth.ts (typescript, 520 lines)
     📄 client.ts (typescript, 31 lines)
-    📄 db.ts (typescript, 594 lines)
-    📄 index.ts (typescript, 12 lines)
-    📄 middleware.ts (typescript, 140 lines)
-    📄 server.ts (typescript, 31 lines)
-  📄 cache.ts (typescript, 106 lines)
+    📄 db.ts (typescript, 255 lines)
+    📄 index.ts (typescript, 17 lines)
+    📄 middleware.ts (typescript, 161 lines)
+    📄 server.ts (typescript, 33 lines)
+  📄 cache.ts (typescript, 144 lines)
   📄 chart.ts (typescript, 18 lines)
   📄 env.ts (typescript, 56 lines)
   📄 features.ts (typescript, 85 lines)
   📄 logger.ts (typescript, 52 lines)
   📄 utils.ts (typescript, 29 lines)
+📁 migrations/
 📁 types/
+  📁 context/
+    📄 app.ts (typescript, 15 lines)
+    📄 cicd.ts (typescript, 81 lines)
+    📄 constants.ts (typescript, 81 lines)
+    📄 deployment.ts (typescript, 67 lines)
+    📄 host.ts (typescript, 139 lines)
+    📄 repository.ts (typescript, 62 lines)
+    📄 user.ts (typescript, 14 lines)
   📄 environment.d.ts (typescript, 23 lines)
   📄 features.ts (typescript, 17 lines)
   📄 logger.ts (typescript, 33 lines)
   📄 scripts.ts (typescript, 38 lines)
   📄 sidebar.ts (typescript, 22 lines)
   📄 ssh.ts (typescript, 33 lines)
-  📄 supabase.ts (typescript, 421 lines)
-  📄 user.ts (typescript, 117 lines)
+  📄 supabase.ts (typescript, 440 lines)
+  📄 user.ts (typescript, 115 lines)
 📁 utils/
+  📄 contexthelpers.ts (typescript, 97 lines)
+  📄 createsafecontext.ts (typescript, 100 lines)
   📄 electronapi.ts (typescript, 75 lines)
   📄 iselectron.ts (typescript, 13 lines)
+  📄 logger.ts (typescript, 21 lines)
+  📄 loopprotectedcontext.md (documentation, 181 lines)
 📄 config.ts (typescript, 35 lines)
-📄 middleware.ts (typescript, 162 lines)
+📄 middleware.ts (typescript, 118 lines)
 ```
 

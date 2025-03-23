@@ -42,6 +42,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
 }) => {
   const { 
     deployments = [], 
+    repositories: contextRepositories = [],
     loading = false, 
     error = null, 
     fetchDeployments = () => {}, 
@@ -56,40 +57,68 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+  // Debug current render state
+  useEffect(() => {
+    console.log('[DeploymentList] Rendering with:', {
+      contextReposCount: contextRepositories?.length || 0,
+      localReposCount: Object.keys(repositories).length,
+      deploymentsCount: deployments?.length || 0,
+      displayDeploymentsCount: getSortedDeployments().length
+    });
+    
+    // Debug first deployment's repository link
+    if (deployments && deployments.length > 0) {
+      const firstDeployment = deployments[0];
+      console.log('[DeploymentList] First deployment:', {
+        id: firstDeployment.id,
+        name: firstDeployment.name,
+        repoId: firstDeployment.repositoryId,
+        repoFound: repositories[firstDeployment.repositoryId] ? 'YES' : 'NO',
+        repoName: getRepositoryName(firstDeployment)
+      });
+      
+      // Debug repositories mapping
+      console.log('[DeploymentList] Available repository IDs:', Object.keys(repositories));
+    }
+  }, [deployments, repositories, contextRepositories]);
+
+  // Convert context repositories to mapping if available
+  useEffect(() => {
+    if (contextRepositories && contextRepositories.length > 0 && Object.keys(repositories).length === 0) {
+      console.log('[DeploymentList] Using repositories from context:', contextRepositories.length);
+      const repoMap = contextRepositories.reduce((acc: Record<string, Repository>, repo: Repository) => {
+        acc[repo.id] = repo;
+        return acc;
+      }, {} as Record<string, Repository>);
+      setRepositories(repoMap);
+    }
+  }, [contextRepositories, repositories]);
+
   // Fetch repositories on component mount
   useEffect(() => {
     const loadRepositories = async () => {
-      try {
-        if (Object.keys(repositories).length > 0) {
-          // Skip fetching repositories if we already have them loaded
-          return;
-        }
-        
-        console.log('[DeploymentList] Initial mount - loading repositories');
-        try {
-          // Safely call fetchRepositories and handle the response
-          const response = await fetchRepositories();
-          
-          // Only process if we got a valid array response
-          if (Array.isArray(response)) {
-            const repoMap = response.reduce((acc: Record<string, Repository>, repo: Repository) => {
-              acc[repo.id] = repo;
-              return acc;
-            }, {} as Record<string, Repository>);
-            setRepositories(repoMap);
-          } else {
-            console.warn('[DeploymentList] fetchRepositories did not return an array:', response);
-          }
-        } catch (fetchError) {
-          console.error('[DeploymentList] Error fetching repositories:', fetchError);
-        }
-      } catch (error) {
-        console.error('Error loading repositories:', error);
+      // Skip fetching repositories if we already have them loaded
+      if (Object.keys(repositories).length > 0) {
+        console.log('[DeploymentList] Already have repositories loaded:', Object.keys(repositories).length);
+        return;
       }
+      
+      // Use repositories from context if available
+      if (contextRepositories && contextRepositories.length > 0) {
+        console.log('[DeploymentList] Using repositories from context:', contextRepositories.length);
+        const repoMap = contextRepositories.reduce((acc: Record<string, Repository>, repo: Repository) => {
+          acc[repo.id] = repo;
+          return acc;
+        }, {} as Record<string, Repository>);
+        setRepositories(repoMap);
+        return;
+      }
+      
+      console.log('[DeploymentList] No repositories available yet, will wait for context update');
     };
 
     loadRepositories();
-  }, []);  // Empty dependency array to only run once on mount
+  }, [repositories, contextRepositories]);
 
   // Handle refresh button click with debounce
   const handleRefresh = () => {
@@ -147,6 +176,14 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
 
   // Get repository name from deployment
   const getRepositoryName = (deployment: Deployment): string => {
+    // Debug every repository lookup
+    const hasRepoId = !!deployment.repositoryId;
+    const repoExists = hasRepoId && !!repositories[deployment.repositoryId];
+    
+    if (hasRepoId && !repoExists) {
+      console.log(`[DeploymentList] Repository not found for ID: ${deployment.repositoryId}`);
+    }
+    
     // Check if we have a valid repository ID and if it exists in our repositories object
     if (deployment.repositoryId && repositories[deployment.repositoryId]) {
       return repositories[deployment.repositoryId].name;

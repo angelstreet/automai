@@ -3,287 +3,77 @@ description:
 globs: 
 alwaysApply: false
 ---
-# Core Architecture
+# Core Architecture Guidelines
 
-## AI Guidelines
-Build features following the strict three-layer architecture: DB Layer for database operations, Server Actions Layer for business logic, and Client Hooks Layer for UI interaction. Structure the project with feature-first organization, ensure strict layer boundaries, and maintain proper tenant isolation throughout.
+## Three-Layer Architecture
+1. **DB Layer (Core)**: `/src/lib/supabase/db-*.ts`
+   - Direct database interaction via Supabase
+   - Feature-specific modules in `/src/lib/supabase/db-{feature}/`
+   - Returns consistent `DbResponse<T>` objects with `{success, data?, error?}`
 
-## Key Patterns
+2. **Server Actions Layer (Bridge)**: `/src/app/[locale]/[tenant]/*/actions.ts`
+   - Server-only functions with 'use server' directive 
+   - Call DB Layer functions, not other Server Actions
+   - Handle validation, authentication, and caching
+   - Return consistent `ActionResult<T>` objects
 
-### Three-Layer Architecture
-- **DB Layer (Core)**: `/src/lib/supabase/db-*.ts`
-  - Direct database interaction via Supabase
-  - Feature-specific modules like `/src/lib/supabase/db-hosts/`
-  - Handles type mapping from DB to UI types
-  - Returns consistent `DbResponse<T>` objects
+3. **Client Hooks Layer (Interface)**: `/src/context/*.tsx`
+   - Context providers and hooks export as `use[Feature]` (e.g., `useHost`)
+   - Call Server Actions, NEVER DB Layer directly
+   - Manage loading/error states and UI caching
+   - Import ONLY from the centralized context system, not feature-specific contexts
 
-- **Server Actions Layer (Bridge)**: `/src/app/[locale]/[tenant]/*/actions.ts`
-  - Business logic and orchestration
-  - Calls DB Layer methods
-  - Validates input and handles errors
-  - Manages caching behaviors
-  - Returns consistent `ActionResult<T>` objects
+## Tech Stack
+- Next.js App Router (React) with TypeScript
+- Tailwind CSS with shadcn-ui components
+- Supabase for authentication and database
+- SSR-compatible context system
 
-- **Client Hooks Layer (Interface)**: `/src/hooks/*.ts` or feature context
-  - React hooks and context for component data
-  - Calls Server Actions
-  - Manages loading/error states
-  - Optimistic updates and client caching
-  - NEVER directly calls DB Layer
+## Project Structure
+- Feature-first organization in `/app/[locale]/[tenant]/[feature]/`
+- Feature components in `_components/` subdirectory
+- Feature-specific types, constants, actions in separate files
+- Centralized context system in `/src/context/`
 
-### Feature-First Organization
-- **Feature Directories**: `/app/[locale]/[tenant]/[feature]/`
-- **Common Components**: Feature-specific UI in `_components/`
-- **Feature-Specific Files**:
-  - `page.tsx` - Route page component
-  - `actions.ts` - Server actions for feature
-  - `types.ts` - Feature-specific type definitions
-  - `constants.ts` - Feature constants
-  - `hooks.ts` - Feature-specific hooks
-  - `utils.ts` - Feature utility functions
-
-### Data Flow Principles
-- **One-Way Data Flow**: Client → Server Actions → DB Layer
-- **No Layer Skipping**: Components never call DB Layer directly
-- **Type Mapping**: Clear mapping between DB and UI types
-- **Error Handling**: Each layer handles errors appropriately
-- **Tenant Isolation**: Every operation filters by tenant
-
-## Examples
-
-### DB Layer Example
-
-```typescript
-// In /src/lib/supabase/db-hosts/index.ts
-import { supabase } from '../supabase-client';
-import { DbHost, Host } from './types';
-
-export async function getHosts(tenantId: string): Promise<DbResponse<DbHost[]>> {
-  try {
-    const { data, error } = await supabase
-      .from('hosts')
-      .select('*')
-      .eq('tenant_id', tenantId);
-      
-    if (error) return { success: false, error: error.message };
-    return { success: true, data: data || [] };
-  } catch (err) {
-    console.error('Error fetching hosts:', err);
-    return { success: false, error: 'Failed to fetch hosts' };
-  }
-}
-
-export function mapDbHostToHost(dbHost: DbHost): Host {
-  return {
-    id: dbHost.id,
-    name: dbHost.name,
-    ip: dbHost.ip,
-    port: dbHost.port || 22,
-    status: dbHost.status || 'unknown',
-    createdAt: new Date(dbHost.created_at),
-    updatedAt: new Date(dbHost.updated_at)
-  };
-}
-```
-
-### Server Actions Layer Example
-
-```typescript
-// In /src/app/[locale]/[tenant]/hosts/actions.ts
-'use server';
-
-import { getHosts, createHost, mapDbHostToHost } from '@/lib/supabase/db-hosts';
-import { serverCache } from '@/lib/cache';
-import { getUser } from '@/app/actions/user';
-import { CACHE_TTL } from './constants';
-import { z } from 'zod';
-
-// Input validation schema
-const hostSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  ip: z.string().min(1, 'IP Address is required'),
-  port: z.number().int().positive().optional(),
-  type: z.enum(['ssh', 'docker', 'portainer']),
-});
-
-// Action function with validation
-export async function getHostsAction(): Promise<ActionResult<Host[]>> {
-  try {
-    // Get authenticated user
-    const userResult = await getUser();
-    if (!userResult.success) {
-      return { success: false, error: 'Authentication failed' };
-    }
-    
-    const tenantId = userResult.data.tenant_id;
-    
-    // Check cache first
-    const cacheKey = `tenant:${tenantId}:hosts`;
-    const cachedHosts = serverCache.get<Host[]>(cacheKey);
-    if (cachedHosts) {
-      return { success: true, data: cachedHosts };
-    }
-    
-    // Fetch from database
-    const result = await getHosts(tenantId);
-    
-    if (!result.success) {
-      return { success: false, error: result.error };
-    }
-    
-    // Map DB types to UI types
-    const hosts = result.data.map(mapDbHostToHost);
-    
-    // Cache the result
-    serverCache.set(cacheKey, hosts, CACHE_TTL.HOSTS);
-    
-    return { success: true, data: hosts };
-  } catch (error) {
-    console.error('Error in getHostsAction:', error);
-    return { success: false, error: 'Failed to fetch hosts' };
-  }
-}
-
-export async function createHostAction(
-  data: z.infer<typeof hostSchema>
-): Promise<ActionResult<Host>> {
-  try {
-    // Validate input
-    const validationResult = hostSchema.safeParse(data);
-    if (!validationResult.success) {
-      return { 
-        success: false, 
-        error: validationResult.error.issues[0].message
-      };
-    }
-    
-    // Get authenticated user
-    const userResult = await getUser();
-    if (!userResult.success) {
-      return { success: false, error: 'Authentication failed' };
-    }
-    
-    // Create in database
-    const result = await createHost({
-      ...validationResult.data,
-      tenant_id: userResult.data.tenant_id,
-      created_by: userResult.data.id
-    });
-    
-    if (!result.success) {
-      return { success: false, error: result.error };
-    }
-    
-    // Map to UI type
-    const host = mapDbHostToHost(result.data);
-    
-    // Invalidate cache
-    serverCache.delete(`tenant:${userResult.data.tenant_id}:hosts`);
-    
-    return { success: true, data: host };
-  } catch (error) {
-    console.error('Error in createHostAction:', error);
-    return { success: false, error: 'Failed to create host' };
-  }
-}
-```
-
-### Client Hooks Layer Example
-
-```typescript
-// In /src/app/[locale]/[tenant]/hosts/hooks.ts
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
-import { Host } from './types';
-import { getHostsAction, createHostAction } from './actions';
-
-export function useHosts() {
-  const [hosts, setHosts] = useState<Host[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  const fetchHosts = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const result = await getHostsAction();
-      
-      if (result.success) {
-        setHosts(result.data);
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError('Failed to fetch hosts');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  
-  const createHost = useCallback(async (hostData) => {
-    try {
-      const result = await createHostAction(hostData);
-      
-      if (result.success) {
-        // Optimistic update
-        setHosts(prev => [...prev, result.data]);
-        return { success: true };
-      } else {
-        return { success: false, error: result.error };
-      }
-    } catch (err) {
-      console.error('Error creating host:', err);
-      return { success: false, error: 'Failed to create host' };
-    }
-  }, []);
-  
-  useEffect(() => {
-    fetchHosts();
-  }, [fetchHosts]);
-  
-  return {
-    hosts,
-    loading,
-    error,
-    fetchHosts,
-    createHost
-  };
-}
-```
-
-## Architecture Boundaries
-
-1. **DB Layer Boundaries**:
-   - ONLY knows about database schema
-   - NOT aware of authentication or frontend state
-   - NEVER references Server Actions or UI components
-
-2. **Server Actions Boundaries**:
-   - ONLY calls DB Layer, not other Server Actions
-   - Responsible for validation and error handling
-   - Manages authentication and permissions
-   - NEVER imports client-side code
-
-3. **Client Hooks Boundaries**:
-   - ONLY calls Server Actions, never DB Layer
-   - Manages loading/error states and client caching
-   - Provides data to UI components
-
-## Common Architecture Mistakes
-
-- ❌ **Skipping Layers**: Components directly calling DB Layer
-- ❌ **Circular Dependencies**: Server Actions importing from each other
-- ❌ **Missing Tenant Isolation**: DB queries without tenant filters
-- ❌ **Improper Type Mapping**: Using DB types directly in UI
-- ❌ **Missing Validation**: Server Actions without input validation
-- ❌ **Inconsistent Response Format**: Different error handling patterns
-
-## Related Rules
-- api-design.mdc - API implementation patterns
-- data-supabase.mdc - Database access patterns
-- data-auth.mdc - Authentication patterns
-- ui-state.mdc - State management
-- ui-components.mdc - Component design 
+## Complete Architecture Overview
+┌─────────────────────────────────┐
+│ Client Components               │
+│ /app/[locale]/[tenant]/*/      │ │  _components/ComponentName.tsx │
+└───────────────┬─────────────────┘
+│
+│ import { useFeature } from '@/context'
+▼
+┌─────────────────────────────────┐
+│ Centralized Context System      │
+│ /src/context/FeatureContext.tsx│
+│ - Exports useFeature() hook     │
+│ - Manages UI state              │
+│ - Handles loading/error states  │
+└───────────────┬─────────────────┘
+│
+│ Server Actions call
+▼
+┌─────────────────────────────────┐
+│ Server Actions Layer            │
+│ /app/[locale]/[tenant]/*/      │ │  actions.ts                    │
+│ - 'use server' directive        │
+│ - Authentication & validation   │
+│ - Caching logic                 │
+└───────────────┬─────────────────┘
+│
+│ DB Layer call
+▼
+┌─────────────────────────────────┐
+│ DB Layer                        │
+│ /src/lib/supabase/db-feature/ │
+│ - Direct database operations    │
+│ - Tenant isolation              │
+│ - Error handling                │
+└───────────────┬─────────────────┘
+│
+│ Database connection
+▼
+┌─────────────────────────────────┐
+│ Supabase/PostgreSQL             │
+│ - Data persistence              │
+└─────────────────────────────────┘

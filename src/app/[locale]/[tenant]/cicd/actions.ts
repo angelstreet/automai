@@ -3,19 +3,29 @@
 import { revalidatePath } from 'next/cache';
 import { 
   ActionResult, 
-  CICDProviderPayload, 
+  CICDProviderType,
+  CICDProviderPayload,
   CICDProviderListResult,
   CICDProviderActionResult
-} from '@/types/context/cicd';
+} from './types';
 import { getUser } from '@/app/actions/user';
+import { AuthUser } from '@/types/user';
 
 /**
  * Fetch all CI/CD providers for the current tenant
+ * 
+ * This function is used by CICDContext and is called as getCICDProviders
  */
-export async function getCICDProvidersAction(): Promise<CICDProviderListResult> {
+export async function getCICDProviders(
+  user?: AuthUser | null, 
+  caller?: string, 
+  renderCount?: any
+): Promise<CICDProviderListResult> {
   try {
-    // Get the current authenticated user
-    const user = await getUser();
+    // Use provided user or get the current authenticated user
+    if (!user) {
+      user = await getUser();
+    }
     
     if (!user) {
       console.error('User not authenticated');
@@ -46,6 +56,9 @@ export async function getCICDProvidersAction(): Promise<CICDProviderListResult> 
   }
 }
 
+// Keep the original action for backward compatibility
+export const getCICDProvidersAction = getCICDProviders;
+
 /**
  * Create a new CICD provider for the current tenant
  */
@@ -72,7 +85,7 @@ export async function createCICDProviderAction(payload: CICDProviderPayload): Pr
     };
     
     // Create the provider
-    const result = await cicdDb.createCICDProvider({ data: providerData });
+    const result = await cicdDb.createCICDProvider({ data: providerData as any });
     
     if (!result.success) {
       console.error('Error creating CICD provider:', result.error);
@@ -82,7 +95,7 @@ export async function createCICDProviderAction(payload: CICDProviderPayload): Pr
     // Revalidate the providers list
     revalidatePath(`/[locale]/[tenant]/cicd`);
     
-    return { success: true, data: result.data };
+    return { success: true, data: (result as any).data };
   } catch (error: any) {
     console.error('Unexpected error creating CICD provider:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
@@ -116,7 +129,7 @@ export async function updateCICDProviderAction(id: string, payload: CICDProvider
     
     // Update the provider
     const result = await cicdDb.updateCICDProvider({ 
-      data: providerData,
+      data: providerData as any,
       where: { id, tenant_id: user.tenant_id }
     });
     
@@ -128,7 +141,7 @@ export async function updateCICDProviderAction(id: string, payload: CICDProvider
     // Revalidate the providers list
     revalidatePath(`/[locale]/[tenant]/cicd`);
     
-    return { success: true, data: result.data };
+    return { success: true, data: (result as any).data };
   } catch (error: any) {
     console.error('Unexpected error updating CICD provider:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };

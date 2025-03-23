@@ -41,6 +41,7 @@ const useDebounce = (fn: Function, delay: number) => {
 // Initial state
 const initialState: DeploymentData = {
   deployments: [],
+  repositories: [],
   loading: false,
   error: null,
   isRefreshing: false,
@@ -81,15 +82,12 @@ export const DeploymentProvider: React.FC<{
   // Add request protection
   const { protectedFetch, safeUpdateState, renderCount: protectedRenderCount } = useRequestProtection('DeploymentContext');
   
-  // Add initialization tracker
-  const initialized = useRef(false);
-  
-  // Configure fetch cooldown in milliseconds
-  const FETCH_COOLDOWN = 5000; // Only allow fetches every 5 seconds
-  
   // Fix the missing debouncedFetchRef and ensure proper typing
   const debouncedFetchRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
+  
+  // Use a simple Boolean state for initialization instead of a ref
+  const [initialized, setInitialized] = useState(false);
 
   // Add deployment caching to localStorage
   useEffect(() => {
@@ -124,8 +122,46 @@ export const DeploymentProvider: React.FC<{
     }
   }, [userData, protectedFetch]);
 
+  // Fetch repositories with protection
+  const fetchRepositories = useCallback(async (): Promise<any[]> => {
+    // Remove all throttling code and just call the repository API
+    console.log('[DeploymentContext] Fetching repositories');
+    
+    try {
+      const result = await protectedFetch('fetchRepositories', async () => {
+        try {
+          const response = await getRepositories();
+          const data = response?.data || [];
+          console.log(`[DeploymentContext] Repository data fetched:`, data.length);
+          return data;
+        } catch (err) {
+          console.error('[DeploymentContext] Error fetching repositories:', err);
+          return [];
+        }
+      });
+      
+      // Store repositories in state for future use
+      if (result && Array.isArray(result) && result.length > 0) {
+        safeUpdateState(
+          setState,
+          state,
+          { ...state, repositories: result },
+          'repositories-updated'
+        );
+      }
+      
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error('[DeploymentContext] Error fetching repositories:', error);
+      return [];
+    }
+  }, [protectedFetch, state, safeUpdateState]);
+
   // For fetchDeployments, let's declare it first with proper type
   const fetchDeployments = useCallback(async (): Promise<Deployment[] | null> => {
+    // Remove all throttling comments
+    lastFetchTimeRef.current = Date.now();
+
     return await protectedFetch('fetchDeployments', async () => {
       try {
         if (debouncedFetchRef.current) {
@@ -149,12 +185,11 @@ export const DeploymentProvider: React.FC<{
         
         safeUpdateState(
           setState,
-          { ...state, deployments: state.deployments, loading: state.loading },
+          state,
           {
             ...state,
             deployments,
-            loading: false,
-            lastFetched: new Date()
+            loading: false
           },
           'deployments-fetched'
         );
@@ -194,29 +229,25 @@ export const DeploymentProvider: React.FC<{
     });
   }, [userData, fetchDeployments, protectedFetch]);
 
-  // Initialize deployment data
+  // Replace the initialization effect with the exact same pattern from the working implementation
   useEffect(() => {
-    log('[DeploymentContext] Initializing DeploymentContext...');
-    
-    const initialize = async () => {
-      // Prevent double initialization
-      if (initialized.current) {
-        log('[DeploymentContext] Already initialized, skipping');
-        return;
-      }
+    if (!initialized) {
+      console.log('[DeploymentContext] Initializing data');
+      const initializeData = async () => {
+        try {
+          await fetchUserData();
+          await fetchDeployments();
+          // Only set initialized here, not in fetchDeployments
+          setInitialized(true);
+          console.log('[DeploymentContext] Initialization complete');
+        } catch (error) {
+          console.error('[DeploymentContext] Error during initialization:', error);
+        }
+      };
       
-      initialized.current = true;
-      await fetchUserData();
-      await fetchDeployments();
-    };
-    
-    initialize();
-    
-    return () => {
-      log('[DeploymentContext] DeploymentContext unmounting...');
-      initialized.current = false;
-    };
-  }, [fetchUserData, fetchDeployments]);
+      initializeData();
+    }
+  }, [initialized, fetchUserData, fetchDeployments]);
   
   // Add one useful log when deployments are loaded
   useEffect(() => {
@@ -370,7 +401,7 @@ export const DeploymentProvider: React.FC<{
     return result || [];
   }, [protectedFetch]);
 
-  // Update the fetchAvailableHosts and fetchRepositories to handle null
+  // Update the fetchAvailableHosts to handle null
   const fetchAvailableHosts = useCallback(async (): Promise<any[]> => {
     const result = await protectedFetch('fetchAvailableHosts', async () => {
       try {
@@ -379,23 +410,6 @@ export const DeploymentProvider: React.FC<{
         return response?.data || [];
       } catch (err) {
         console.error('[DeploymentContext] Error fetching hosts:', err);
-        return [];
-      }
-    });
-    
-    // Handle null result case
-    return result || [];
-  }, [protectedFetch]);
-
-  // Fetch repositories with protection
-  const fetchRepositories = useCallback(async (): Promise<any[]> => {
-    const result = await protectedFetch('fetchRepositories', async () => {
-      try {
-        console.log('[DeploymentContext] Fetching repositories');
-        const response = await getRepositories();
-        return response?.data || [];
-      } catch (err) {
-        console.error('[DeploymentContext] Error fetching repositories:', err);
         return [];
       }
     });
@@ -425,6 +439,7 @@ export const DeploymentProvider: React.FC<{
   // Create the context value
   const contextValue: DeploymentContextType = {
     deployments: state.deployments,
+    repositories: state.repositories || [],
     loading: state.loading,
     error: state.error,
     isRefreshing: state.isRefreshing,
