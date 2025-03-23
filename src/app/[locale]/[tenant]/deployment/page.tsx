@@ -5,47 +5,66 @@ import { DeploymentWizard, DeploymentList } from './_components';
 import { useDeployment, useRepository } from '@/context';
 
 const DeploymentPage = () => {
-  // Replace view state with a dedicated wizardActive boolean state
+  // Simple state for wizard visibility
   const [wizardActive, setWizardActive] = useState(false);
   
-  // Use the deployment context with null safety
+  // Get contexts
   const deploymentContext = useDeployment();
-  // Also use repository context to ensure it's initialized
   const repositoryContext = useRepository();
   
-  // Get repositories from both contexts - deployment context is the primary source
-  // but fallback to repository context if needed
+  // Get combined repositories
   const deploymentRepos = deploymentContext?.repositories || [];
   const repositoryRepos = repositoryContext?.repositories || [];
   
-  // Use whichever source has more repositories
-  const repositories = deploymentRepos.length >= repositoryRepos.length 
-    ? deploymentRepos 
-    : repositoryRepos;
+  // Use whichever source has repositories
+  const repositories = deploymentRepos.length > 0 ? deploymentRepos : repositoryRepos;
   
-  // Handle the case where context is still initializing (null)
-  const {
-    isRefreshing = false,
-    fetchDeployments = async () => { console.log('Deployment context not initialized'); }
-  } = deploymentContext || {};
-
+  // Are repositories loaded?
+  const isDataReady = 
+    repositories.length > 0 && 
+    !deploymentContext?.loading && 
+    !repositoryContext?.loading;
+  
+  // Handle refreshing deployments
   const handleRefresh = () => {
-    fetchDeployments();
+    if (deploymentContext?.fetchDeployments) {
+      deploymentContext.fetchDeployments();
+    }
   };
 
-  // Force wizard to open when directly accessing the wizard via URL
+  // Setup event listeners once on mount
   useEffect(() => {
-    // Check if we're trying to access the wizard directly via URL (check URL hash or search params)
-    const isWizardPath = window.location.hash === '#wizard' || 
-                         new URLSearchParams(window.location.search).has('wizard');
+    console.log('[DeploymentPage] Setting up event listeners');
     
-    if (isWizardPath && !wizardActive) {
-      console.log('Setting wizard active due to URL parameter');
+    const handleToggleView = () => {
+      console.log('[DeploymentPage] Toggle deployment view event received');
+      setWizardActive(true);
+    };
+    
+    const handleRefreshEvent = () => {
+      if (!wizardActive) {
+        handleRefresh();
+      }
+    };
+    
+    // Add event listeners
+    document.addEventListener('toggle-deployment-view', handleToggleView);
+    document.addEventListener('refresh-deployments', handleRefreshEvent);
+    
+    // Handle direct URL access
+    if (window.location.hash === '#wizard' || 
+        new URLSearchParams(window.location.search).has('wizard')) {
+      console.log('[DeploymentPage] Activating wizard from URL parameter');
       setWizardActive(true);
     }
-  }, [wizardActive]);
+    
+    return () => {
+      document.removeEventListener('toggle-deployment-view', handleToggleView);
+      document.removeEventListener('refresh-deployments', handleRefreshEvent);
+    };
+  }, []);
   
-  // Listen for custom events from layout
+  // Update refresh event dependency on wizardActive state
   useEffect(() => {
     const handleRefreshEvent = () => {
       if (!wizardActive) {
@@ -53,70 +72,32 @@ const DeploymentPage = () => {
       }
     };
     
-    // Modified to simply activate the wizard if not already active
-    const handleToggleView = () => {
-      console.log('Toggle deployment view event received, current wizardActive:', wizardActive);
-      // Only activate if not already active
-      if (!wizardActive) {
-        console.log('Setting wizard active from event');
-        setWizardActive(true);
-      }
-    };
-    
-    // Add event listeners
     document.addEventListener('refresh-deployments', handleRefreshEvent);
-    document.addEventListener('toggle-deployment-view', handleToggleView);
-    
-    // Clean up event listeners
     return () => {
       document.removeEventListener('refresh-deployments', handleRefreshEvent);
-      document.removeEventListener('toggle-deployment-view', handleToggleView);
     };
-  }, [wizardActive, handleRefresh]);
-
-  // Fetch repositories only once on mount using a ref
-  const hasInitializedRef = useRef(false);
+  }, [wizardActive]);
   
-  useEffect(() => {
-    // Only fetch repositories once on initial mount
-    if (!hasInitializedRef.current) {
-      console.log('Fetching repositories on initial page mount (once only)');
-      hasInitializedRef.current = true;
-      
-      // Use only one method to fetch repositories
-      if (deploymentContext?.fetchRepositories) {
-        deploymentContext.fetchRepositories();
-      } else if (repositoryContext?.fetchRepositories) {
-        repositoryContext.fetchRepositories();
-      }
-    }
-  }, [deploymentContext, repositoryContext]);
-
-  // Log repositories when they change
-  useEffect(() => {
-    console.log(`Repositories available: ${repositories.length}`);
-  }, [repositories]);
-
+  // Handle cancel from wizard
   const handleCancelWizard = () => {
-    console.log('Cancelling wizard and returning to list view');
+    console.log('[DeploymentPage] Cancelling wizard');
     setWizardActive(false);
   };
 
   return (
     <>
-      {wizardActive ? (
+      {wizardActive && isDataReady ? (
         <DeploymentWizard 
           onCancel={handleCancelWizard}
           onDeploymentCreated={() => {
-            console.log('Deployment created successfully, refreshing deployments');
+            console.log('[DeploymentPage] Deployment created successfully');
             handleRefresh();
-            // Optionally close the wizard after successful creation:
-            // setWizardActive(false); 
+            setWizardActive(false);
           }}
           explicitRepositories={repositories}
         />
       ) : (
-        <DeploymentList onViewDeployment={(id) => console.log('View deployment:', id)} />
+        <DeploymentList onViewDeployment={(id) => console.log('[DeploymentPage] View deployment:', id)} />
       )}
     </>
   );

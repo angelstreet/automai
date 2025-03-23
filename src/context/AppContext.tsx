@@ -12,6 +12,27 @@ import { AppContextType } from '@/types/context/app';
 const DEBUG = false;
 const log = (...args: any[]) => DEBUG && console.log(...args);
 
+// Enable context persistence across page navigations
+const PERSIST_CONTEXTS = true;
+
+// Create a persistent storage for context initialization status
+const globalInitStatus: Record<ContextName, boolean> = {
+  host: false,
+  deployment: false,
+  repository: false,
+  cicd: false,
+  user: true // User is always initialized
+};
+
+// Storage for data persistence between navigations
+const persistedData: Record<string, any> = {
+  repositoryData: null,
+  deploymentData: null,
+  hostData: null,
+  cicdData: null,
+  userData: null
+};
+
 // Create the app context
 const AppContext = createContext<{
   contextState: AppContextState;
@@ -36,21 +57,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
   log('[AppContext] AppProvider initializing');
   
   // Manage which contexts are initialized
-  const [contextState, setContextState] = useState<AppContextState>({
-    host: false,
-    deployment: false,
-    repository: false,
-    cicd: false,
-    user: true // Initialize user context by default
+  const [contextState, setContextState] = useState<AppContextState>(() => {
+    // Use globally persisted initialization status if enabled
+    if (PERSIST_CONTEXTS) {
+      return { ...globalInitStatus };
+    }
+    
+    // Otherwise use default initialization
+    return {
+      host: false,
+      deployment: false,
+      repository: false,
+      cicd: false,
+      user: true // Initialize user context by default
+    };
   });
   
   // Function to initialize a context on demand
   const initContext = useCallback((name: ContextName) => {
     if (!contextState[name]) {
       log(`[AppContext] Initializing ${name} context on demand`);
-      setContextState(prev => ({ ...prev, [name]: true }));
+      
+      // Update both local state and global tracking
+      setContextState(prev => {
+        const newState = { ...prev, [name]: true };
+        if (PERSIST_CONTEXTS) {
+          globalInitStatus[name] = true;
+        }
+        return newState;
+      });
     }
   }, [contextState]);
+
+  // Initialize all core contexts by default
+  useEffect(() => {
+    if (PERSIST_CONTEXTS) {
+      // Initialize core contexts on first render
+      initContext('repository');
+      initContext('deployment');
+      initContext('host');
+      
+      log('[AppContext] Pre-initializing core contexts for persistence');
+    }
+  }, [initContext]);
   
   // Log when AppProvider mounts and unmounts
   useEffect(() => {

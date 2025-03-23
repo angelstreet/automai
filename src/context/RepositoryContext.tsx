@@ -74,10 +74,24 @@ const initialRepositoryData: RepositoryData = {
 // Create the context
 export const RepositoryContext = createContext<RepositoryContextType | null>(null);
 
+// Reference to persisted data object from AppContext (for global persistence)
+declare const persistedData: Record<string, any>;
+
 // Provider component
 export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   log('[RepositoryContext] RepositoryProvider initializing');
   
+  // First, in the useState initializers, check for persisted data:
+  const [repositories, setRepositories] = useState<Repository[]>(
+    persistedData?.repositoryData?.repositories || []
+  );
+
+  const [loading, setLoading] = useState<boolean>(
+    persistedData?.repositoryData?.loading !== undefined 
+      ? persistedData.repositoryData.loading 
+      : true
+  );
+
   // Get initial repository data synchronously from localStorage
   const [state, setState] = useState<RepositoryData>(() => {
     if (typeof window !== 'undefined') {
@@ -350,6 +364,19 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       });
     }
   }, [state.repositories.length, state.filteredRepositories.length, state.loading]);
+
+  // Persist repository data for cross-page navigation
+  useEffect(() => {
+    if (typeof persistedData !== 'undefined') {
+      persistedData.repositoryData = {
+        repositories,
+        loading,
+        error,
+        // Include other state you want to persist
+      };
+      console.log('[RepositoryContext] Persisted repository data for cross-page navigation');
+    }
+  }, [repositories, loading, error]);
 
   // Create context value
   const contextValue: RepositoryContextType = {

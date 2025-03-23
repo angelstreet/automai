@@ -39,6 +39,9 @@ const useDebounce = (fn: Function, delay: number) => {
   }, [fn, delay]);
 };
 
+// Reference to persisted data object from AppContext (for global persistence)
+declare const persistedData: Record<string, any>;
+
 // Initial state
 const initialState: DeploymentData = {
   deployments: [],
@@ -59,6 +62,21 @@ export const DeploymentProvider: React.FC<{
 }> = ({ children, userData }) => {
   log('[DeploymentContext] DeploymentProvider initializing');
   
+  // First, in the useState initializers, check for persisted data:
+  const [deployments, setDeployments] = useState<Deployment[]>(
+    persistedData?.deploymentData?.deployments || []
+  );
+
+  const [repositories, setRepositories] = useState<Repository[]>(
+    persistedData?.deploymentData?.repositories || []
+  );
+
+  const [loading, setLoading] = useState<boolean>(
+    persistedData?.deploymentData?.loading !== undefined 
+      ? persistedData.deploymentData.loading 
+      : true
+  );
+
   // Get initial deployment data synchronously from localStorage
   const [state, setState] = useState<DeploymentData>(() => {
     if (typeof window !== 'undefined') {
@@ -639,6 +657,22 @@ export const DeploymentProvider: React.FC<{
     fetchRepositories,
     fetchDeploymentStatus
   } as DeploymentContextType;
+
+  // Then, add this effect to persist data:
+
+  // Persist deployment data for cross-page navigation
+  useEffect(() => {
+    if (typeof persistedData !== 'undefined') {
+      persistedData.deploymentData = {
+        deployments,
+        repositories,
+        loading,
+        error,
+        // Include other state you want to persist
+      };
+      console.log('[DeploymentContext] Persisted deployment data for cross-page navigation');
+    }
+  }, [deployments, repositories, loading, error]);
 
   return (
     <DeploymentContext.Provider value={contextValue}>

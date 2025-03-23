@@ -27,6 +27,7 @@ interface DeploymentWizardProps {
   onCancel: () => void;
   onDeploymentCreated?: () => void;
   explicitRepositories?: any[];
+  isReady?: boolean;
 }
 
 const initialDeploymentData: DeploymentData = {
@@ -56,13 +57,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
   onCancel,
   onDeploymentCreated,
   explicitRepositories = [],
+  isReady = true,
 }) => {
   const [step, setStep] = useState(1);
   const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
   const [showJenkinsView, setShowJenkinsView] = useState(false);
   
   // Use ref for mounting tracking without state updates
-  const isMountedRef = useRef(false);
+  const isMountedRef = useRef(true);
   
   // Use the repository hook from the new context system with null safety
   const repositoryContext = useRepository();
@@ -204,7 +206,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
 
   // Handle cancel button click
   const handleCancelWizard = () => {
-    // Remove confirmation dialog and just call onCancel directly
+    // Always call onCancel directly without checking isReady
+    console.log('Executing cancel');
     onCancel();
   };
 
@@ -375,7 +378,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
         toast({
           title: "Deployment created",
           description: "Your deployment has been created successfully.",
-          variant: "success"
+          variant: "default"
         });
         
         // Reset the form 
@@ -430,7 +433,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
           <button 
             onClick={handleCancelWizard} 
             className="flex items-center text-xs text-blue-600 dark:text-blue-400 hover:underline"
-            disabled={!isMountedRef.current}
+            // Remove the disabled check
           >
             <ArrowLeft size={12} className="mr-1" />
             Back to Deployments
@@ -503,7 +506,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
             description={deploymentData.description}
             repositoryId={deploymentData.repositoryId}
             repositories={repositories}
-            isLoadingRepositories={isLoadingRepositories}
             repositoryError={repositoryError}
             onInputChange={handleInputChange}
             onNextStep={handleNextStep}
