@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
 # General Development Guidelines
 
@@ -13,6 +13,7 @@ alwaysApply: false
 - Document any deviations from the approved plan
 - Make minimal, focused changes to achieve the goal
 - NEVER edit a component ui layout without agreement
+- NEVER use mock data 
 
 ## Process
 - Review relevant code before proposing changes

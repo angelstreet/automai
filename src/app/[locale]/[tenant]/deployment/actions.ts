@@ -464,8 +464,7 @@ export async function refreshDeployment(id: string): Promise<{
  */
 export async function getScriptsForRepository(repositoryId: string): Promise<any[]> {
   try {
-    // TODO: Implement actual API call to fetch scripts
-    // This is a stub implementation
+    // TODO: Implement actual API call to fetch scripts from database
     return [];
   } catch (error) {
     console.error(`Error fetching scripts for repository ${repositoryId}:`, error);
@@ -479,8 +478,7 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
  */
 export async function getAvailableHosts(): Promise<any[]> {
   try {
-    // TODO: Implement actual API call to fetch hosts
-    // This is a stub implementation
+    // TODO: Implement actual API call to fetch hosts from database
     return [];
   } catch (error) {
     console.error('Error fetching available hosts:', error);
@@ -497,8 +495,7 @@ export async function getDeploymentStatus(
   id: string
 ): Promise<{ success: boolean; deployment?: any; cicd?: any; error?: string }> {
   try {
-    // TODO: Implement actual API call to fetch deployment status
-    // This is a stub implementation
+    // TODO: Implement actual API call to fetch deployment status from database
     return { success: true, deployment: {}, cicd: {} };
   } catch (error) {
     console.error(`Error fetching status for deployment ${id}:`, error);

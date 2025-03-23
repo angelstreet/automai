@@ -160,47 +160,11 @@ export async function GET(
         { status: 501 },
       );
     } else {
-      // Fallback to mock content based on file extension
-      if (path.endsWith('.md')) {
-        fileContent = `# ${repository.name}\n\nThis is a sample README file for the ${repository.name} repository.\n\n## Overview\n\nThis repository contains code for the project.\n\n## Getting Started\n\n1. Clone the repository\n2. Install dependencies\n3. Run the project`;
-      } else if (path.endsWith('.json')) {
-        const jsonContent = {
-          name: repository.name,
-          version: '1.0.0',
-          description: 'Sample repository',
-          main: 'index.js',
-          scripts: {
-            start: 'node index.js',
-            test: 'jest'
-          },
-          dependencies: {
-            react: '^18.2.0',
-            'next': '^13.4.0'
-          }
-        };
-        fileContent = JSON.stringify(jsonContent, null, 2);
-      } else if (path.endsWith('.js') || path.endsWith('.ts') || path.endsWith('.tsx')) {
-        fileContent = `/**
- * ${path.split('/').pop()}
- * 
- * This is a sample file for demonstration purposes.
- */
-
-import React from 'react';
-
-function Component() {
-  return (
-    <div>
-      <h1>Hello from ${repository.name}</h1>
-      <p>This is a sample component</p>
-    </div>
-  );
-}
-
-export default Component;`;
-      } else {
-        fileContent = `This is a sample content for ${path.split('/').pop()} in the ${repository.name} repository.`;
-      }
+      // Unsupported provider type
+      return NextResponse.json(
+        { success: false, error: 'Unsupported Git provider type' },
+        { status: 400 },
+      );
     }
     
     return NextResponse.json({ 

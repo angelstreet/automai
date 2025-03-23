@@ -63,11 +63,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
   const { 
     repositories = [], 
     loading: isLoadingRepositories = false, 
-    error: repositoryError = null,
-    fetchRepositoryScripts = async () => {
-      console.log('Repository context not initialized');
-      return [];
-    }
+    error: repositoryError = null
   } = repositoryContext || {};
   
   // State for repository scripts
@@ -93,7 +89,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     createDeployment = async () => ({ 
       success: false, 
       error: 'Deployment context not initialized' 
-    })
+    }),
+    fetchScriptsForRepository = async () => [] // Use the scripts function from deployment context
   } = deploymentContext || {};
   
   // Adapt hosts for deployment
@@ -110,7 +107,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
       try {
         setIsLoadingScripts(true);
         setScriptsError(null);
-        const scripts = await fetchRepositoryScripts(deploymentData.repositoryId);
+        // Use deployment context's fetchScriptsForRepository instead of repository context's function
+        const scripts = await fetchScriptsForRepository(deploymentData.repositoryId);
         setRepositoryScripts(scripts);
       } catch (error) {
         console.error('Error fetching scripts:', error);
@@ -121,7 +119,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     };
     
     loadScripts();
-  }, [deploymentData.repositoryId, fetchRepositoryScripts]);
+  }, [deploymentData.repositoryId, fetchScriptsForRepository]);
   
   // Add debug logging for the scripts
   useEffect(() => {

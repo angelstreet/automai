@@ -131,36 +131,11 @@ export async function GET(
         { status: 501 },
       );
     } else {
-      // Fallback to mock data for unsupported providers
-      files = [
-        {
-          name: 'README.md',
-          path: path ? `${path}/README.md` : 'README.md',
-          type: 'file',
-          size: 1024,
-          lastModified: new Date().toISOString(),
-        },
-        {
-          name: 'src',
-          path: path ? `${path}/src` : 'src',
-          type: 'folder',
-          lastModified: new Date().toISOString(),
-        },
-        {
-          name: 'package.json',
-          path: path ? `${path}/package.json` : 'package.json',
-          type: 'file',
-          size: 512,
-          lastModified: new Date().toISOString(),
-        },
-        {
-          name: 'tsconfig.json',
-          path: path ? `${path}/tsconfig.json` : 'tsconfig.json',
-          type: 'file',
-          size: 256,
-          lastModified: new Date().toISOString(),
-        },
-      ];
+      // Unsupported provider type
+      return NextResponse.json(
+        { success: false, error: 'Unsupported Git provider type' },
+        { status: 400 },
+      );
     }
     
     return NextResponse.json({ success: true, data: files });

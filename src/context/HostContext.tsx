@@ -282,13 +282,15 @@ export const HostProvider: React.FC<{
   // Check a host's connection status
   const checkHostStatus = useCallback(async (hostId: string): Promise<HostConnectionStatus | null> => {
     try {
-      // Stub implementation
-      log('[HostContext] checkHostStatus called for host:', hostId);
+      console.log('[HostContext] checkHostStatus called for host:', hostId);
       
-      // Mock status for UI display
-      const mockStatus: HostConnectionStatus = {
-        status: 'connected',
-        lastChecked: new Date().toISOString()
+      // Call test connection to check status
+      const result = await testHostConnection(hostId);
+      
+      const status: HostConnectionStatus = {
+        status: result.success ? 'connected' : 'failed',
+        lastChecked: new Date().toISOString(),
+        message: result.message
       };
       
       // Update connection status in state
@@ -296,11 +298,11 @@ export const HostProvider: React.FC<{
         ...prev,
         connectionStatuses: {
           ...prev.connectionStatuses,
-          [hostId]: mockStatus
+          [hostId]: status
         }
       }));
       
-      return mockStatus;
+      return status;
     } catch (err) {
       log(`[HostContext] Error checking host status for ${hostId}:`, err);
       return null;
@@ -329,16 +331,16 @@ export const HostProvider: React.FC<{
     try {
       log('[HostContext] Adding new host');
       
-      // Mock implementation
-      const mockResult = {
-        success: true,
-        hostId: `new-host-${Date.now()}`
-      };
+      // Call API to create host
+      const result = await createHost(hostData);
       
-      // Refresh the hosts list after adding
-      fetchHosts();
+      if (result.success && result.data) {
+        // Refresh the hosts list after adding
+        fetchHosts();
+        return { success: true, hostId: result.data.id };
+      }
       
-      return mockResult;
+      return { success: false, error: result.error || 'Failed to create host' };
     } catch (err: any) {
       log('[HostContext] Error adding host:', err);
       return { success: false, error: err.message };
@@ -350,17 +352,21 @@ export const HostProvider: React.FC<{
     try {
       log('[HostContext] Removing host:', id);
       
-      // Mock implementation
-      const mockResult = { success: true };
+      // Call API to delete host
+      const result = await deleteHost(id);
       
-      // Update local state
-      setState(prev => ({
-        ...prev,
-        hosts: prev.hosts.filter(h => h.id !== id),
-        filteredHosts: prev.filteredHosts.filter(h => h.id !== id)
-      }));
+      if (result.success) {
+        // Update local state
+        setState(prev => ({
+          ...prev,
+          hosts: prev.hosts.filter(h => h.id !== id),
+          filteredHosts: prev.filteredHosts.filter(h => h.id !== id)
+        }));
+        
+        return { success: true };
+      }
       
-      return mockResult;
+      return { success: false, error: result.error || 'Failed to delete host' };
     } catch (err: any) {
       log('[HostContext] Error removing host:', err);
       return { success: false, error: err.message };
@@ -372,17 +378,21 @@ export const HostProvider: React.FC<{
     try {
       log('[HostContext] Updating host:', id);
       
-      // Mock implementation
-      const mockResult = { success: true };
+      // Call API to update host
+      const result = await updateHost(id, updates);
       
-      // Update local state
-      setState(prev => ({
-        ...prev,
-        hosts: prev.hosts.map(h => h.id === id ? { ...h, ...updates } : h),
-        filteredHosts: prev.filteredHosts.map(h => h.id === id ? { ...h, ...updates } : h)
-      }));
+      if (result.success && result.data) {
+        // Update local state with proper type safety
+        setState(prev => ({
+          ...prev,
+          hosts: prev.hosts.map(h => h.id === id && result.data ? result.data : h),
+          filteredHosts: prev.filteredHosts.map(h => h.id === id && result.data ? result.data : h)
+        }));
+        
+        return { success: true };
+      }
       
-      return mockResult;
+      return { success: false, error: result.error || 'Failed to update host' };
     } catch (err: any) {
       log('[HostContext] Error updating host:', err);
       return { success: false, error: err.message };
@@ -562,22 +572,6 @@ export const HostProvider: React.FC<{
       console.error(`[${new Date().toISOString()}] [HostContext] Test all connections failed:`, err);
     }
   }, [state.hosts, testHostConnection]);
-
-  // Additional stub functions
-  const verifyHostFingerprint = useCallback(async () => ({ success: true, verified: true }), []);
-  const scanNetworkForHosts = useCallback(async () => [], []);
-  const fetchHostStats = useCallback(async () => null, []);
-  const selectHost = useCallback((host: Host | null) => {
-    setState(prev => ({ ...prev, selectedHost: host }));
-  }, []);
-  const sendCommandToHost = useCallback(async () => ({ success: true }), []);
-  const getTerminalsForHost = useCallback(async () => [], []);
-  const executeCommandsOnHost = useCallback(async () => ({ success: true }), []);
-  const abortCommandOnHost = useCallback(async () => ({ success: true }), []);
-  const enableHostAccess = useCallback(async () => ({ success: true }), []);
-  const fetchHostCapabilities = useCallback(async () => null, []);
-  const isLoading = useCallback(() => false, []);
-  const resetLoadingState = useCallback(() => {}, []);
 
   // Create context value
   const contextValue = {

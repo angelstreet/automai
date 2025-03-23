@@ -54,62 +54,16 @@ export async function getRepositories(
     
     console.log(`[RepoActions] No cache found for ${origin}, fetching from database`);
 
-    // Simulate database fetch by creating mock data
-    // TODO: Replace with actual database query
-    const mockRepos: Repository[] = [
-      {
-        id: '1',
-        name: 'frontend-app',
-        url: 'https://github.com/example/frontend-app',
-        provider: 'github',
-        default_branch: 'main',
-        description: 'Frontend web application',
-        language: 'typescript',
-        stars: 12,
-        forks: 3,
-        is_private: false,
-        last_commit: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        name: 'backend-api',
-        url: 'https://github.com/example/backend-api',
-        provider: 'github',
-        default_branch: 'main',
-        description: 'Backend API service',
-        language: 'typescript',
-        stars: 8,
-        forks: 2,
-        is_private: true,
-        last_commit: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      {
-        id: '3',
-        name: 'infrastructure',
-        url: 'https://gitlab.com/example/infrastructure',
-        provider: 'gitlab',
-        default_branch: 'master',
-        description: 'Infrastructure as code',
-        language: 'terraform',
-        stars: 5,
-        forks: 1,
-        is_private: true,
-        last_commit: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-    ];
+    // Remove mock data and return empty array
+    // TODO: Implement actual database query
+    const repositories: Repository[] = [];
 
     // Cache the result
-    serverCache.set(cacheKey, mockRepos);
+    serverCache.set(cacheKey, repositories);
     
     console.log(`[RepoActions] Successfully fetched repositories for ${origin}`);
 
-    return { success: true, data: mockRepos };
+    return { success: true, data: repositories };
   } catch (error: any) {
     console.error(`[RepoActions] Error in getRepositories (${origin}):`, error);
     return { 
