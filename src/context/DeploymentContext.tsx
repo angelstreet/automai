@@ -175,7 +175,7 @@ export const DeploymentProvider: React.FC<{
   }, [protectedFetch, state, safeUpdateState]);
 
   // For fetchDeployments, let's declare it first with proper type
-  const fetchDeployments = useCallback(async (): Promise<Deployment[] | null> => {
+  const fetchDeployments = useCallback(async (forceFresh: boolean = false): Promise<Deployment[] | null> => {
     // Remove all throttling comments
     lastFetchTimeRef.current = Date.now();
 
@@ -185,7 +185,7 @@ export const DeploymentProvider: React.FC<{
           clearTimeout(debouncedFetchRef.current);
         }
 
-        console.log('[DeploymentContext] Fetching deployments');
+        console.log('[DeploymentContext] Fetching deployments' + (forceFresh ? ' (force fresh)' : ''));
         
         // Check if we're refreshing cached data or doing an initial load
         const isRefreshingCachedData = state.deployments.length > 0;
@@ -201,6 +201,17 @@ export const DeploymentProvider: React.FC<{
           console.log('[DeploymentContext] Initial load, loading=TRUE');
         }
 
+        // Clear local storage cache if forceFresh is true
+        if (forceFresh && typeof window !== 'undefined') {
+          console.log('[DeploymentContext] Forcing fresh data, clearing localStorage cache');
+          try {
+            localStorage.removeItem('cached_deployment');
+            localStorage.removeItem('cached_deployment_time');
+          } catch (e) {
+            console.error('[DeploymentContext] Error clearing localStorage:', e);
+          }
+        }
+
         // Use the real API call instead of mock data
         const deployments = await getDeployments();
         
@@ -212,8 +223,18 @@ export const DeploymentProvider: React.FC<{
           isRefreshing: false
         }));
         console.log('[DeploymentContext] Set loading=FALSE, isRefreshing=FALSE');
-
         console.log('[DeploymentContext] Deployments fetched:', deployments.length);
+
+        // Update localStorage cache
+        try {
+          const updatedState = { ...state, deployments, loading: false, isRefreshing: false };
+          localStorage.setItem('cached_deployment', JSON.stringify(updatedState));
+          localStorage.setItem('cached_deployment_time', Date.now().toString());
+          console.log('[DeploymentContext] Updated localStorage cache with new deployments');
+        } catch (e) {
+          console.error('[DeploymentContext] Error saving to localStorage:', e);
+        }
+
         return deployments;
       } catch (err: any) {
         console.error('[DeploymentContext] Error fetching deployments:', err);
@@ -513,6 +534,85 @@ export const DeploymentProvider: React.FC<{
     return result || { status: 'unknown', progress: 0 };
   }, [protectedFetch]);
 
+  // Add deleteDeployment implementation
+  const deleteDeploymentImpl = useCallback(async (id: string): Promise<{
+    success: boolean;
+    error?: string
+  }> => {
+    console.log(`[DeploymentContext] Starting deletion process for deployment ${id}`);
+    const result = await protectedFetch(`deleteDeployment-${id}`, async () => {
+      try {
+        console.log(`[DeploymentContext] Deleting deployment ${id}`);
+        
+        // First remove from local state before API call to make UI feel faster
+        // This will be reverted if the deletion fails
+        const originalDeployments = [...state.deployments];
+        console.log(`[DeploymentContext] Original deployments count: ${originalDeployments.length}`);
+        
+        const filteredDeployments = state.deployments.filter(d => d.id !== id);
+        console.log(`[DeploymentContext] Filtered deployments count: ${filteredDeployments.length}`);
+        
+        safeUpdateState(
+          setState,
+          { ...state, deployments: state.deployments },
+          {
+            ...state,
+            deployments: filteredDeployments
+          },
+          `delete-deployment-${id}-optimistic`
+        );
+        
+        // Then call the API to actually delete
+        console.log(`[DeploymentContext] Calling deleteDeployment action for ID: ${id}`);
+        const success = await deleteDeployment(id);
+        console.log(`[DeploymentContext] deleteDeployment action returned: ${success}`);
+        
+        if (success) {
+          // Force a complete refresh of deployments rather than just using the filtered list
+          // This ensures we get the latest state from the server
+          console.log(`[DeploymentContext] Successfully deleted deployment ${id}, forcing full refresh`);
+          
+          // Set loading state to ensure UI shows loading indicator
+          safeUpdateState(
+            setState,
+            { ...state },
+            { ...state, loading: true, isRefreshing: true },
+            `delete-deployment-${id}-loading`
+          );
+          
+          // Fetch deployments with a short timeout to allow server cache to clear
+          setTimeout(() => {
+            fetchDeployments(true); // Pass true to force fresh data
+          }, 300);
+          
+          return { success: true };
+        } else {
+          // Deletion failed, restore the original deployments list
+          console.error(`[DeploymentContext] Failed to delete deployment ${id}, restoring local state`);
+          safeUpdateState(
+            setState,
+            { ...state, deployments: state.deployments },
+            { ...state, deployments: originalDeployments },
+            `delete-deployment-${id}-restore`
+          );
+          return { success: false, error: 'Failed to delete deployment from database' };
+        }
+      } catch (err: any) {
+        console.error(`[DeploymentContext] Error deleting deployment ${id}:`, err);
+        console.error(`[DeploymentContext] Error details:`, JSON.stringify(err, null, 2));
+        
+        // Ensure deployments list is refreshed to get accurate state
+        fetchDeployments();
+        
+        return { success: false, error: err.message || 'Failed to delete deployment' };
+      }
+    });
+    
+    // Handle null result case
+    console.log(`[DeploymentContext] Final deletion result:`, result);
+    return result || { success: false, error: 'Operation failed' };
+  }, [fetchDeployments, protectedFetch, safeUpdateState, state]);
+
   // Create the context value
   const contextValue: DeploymentContextType = {
     deployments: state.deployments,
@@ -525,15 +625,15 @@ export const DeploymentProvider: React.FC<{
       await refreshUserData();
       return state.currentUser;
     },
-    fetchDeployments: async () => { 
-      await fetchDeployments(); 
+    fetchDeployments: async (forceFresh: boolean = false) => { 
+      await fetchDeployments(forceFresh); 
     },
     fetchDeploymentById,
     createDeployment,
     abortDeployment,
     refreshDeployment,
     updateDeployment,
-    deleteDeployment,
+    deleteDeployment: deleteDeploymentImpl,
     fetchScriptsForRepository,
     fetchAvailableHosts,
     fetchRepositories,

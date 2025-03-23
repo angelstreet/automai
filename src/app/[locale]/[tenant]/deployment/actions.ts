@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { AuthUser } from '@/types/user';
 import { Deployment, DeploymentFormData, DeploymentStatus, Repository } from './types';
 import repository, { Repository as DbRepository } from '@/lib/supabase/db-repositories/repository';
@@ -294,25 +294,72 @@ export async function updateDeployment(id: string, data: Partial<DeploymentFormD
  * @returns True if deleted successfully, false otherwise
  */
 export async function deleteDeployment(id: string): Promise<boolean> {
+  console.log(`\n---------------------------------------`);
+  console.log(`Actions layer: DELETION START - Deployment ID: ${id}`);
+  console.log(`---------------------------------------`);
+  
   try {
     console.log(`Actions layer: Deleting deployment with ID: ${id}`);
     
+    if (!id) {
+      console.error('Actions layer: Cannot delete deployment - deployment ID is required');
+      return false;
+    }
+    
     // Get cookie store
     const cookieStore = await cookies();
+    console.log(`Actions layer: Cookie store obtained`);
     
     // Import the deployment database module
+    console.log(`Actions layer: Importing database module...`);
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    console.log(`Actions layer: Database module imported successfully`);
     
     // Delete the deployment from the database
+    console.log(`Actions layer: Calling database delete function for ID: ${id}`);
     const result = await deploymentDb.delete(id, cookieStore);
     
-    // Revalidate cache
-    revalidatePath('/deployment', 'page');
+    // Log detailed result for debugging
+    console.log(`Actions layer: Delete deployment result:`, JSON.stringify(result, null, 2));
     
-    // Return success status
-    return result && 'success' in result ? result.success : false;
+    // Enhanced cache invalidation
+    console.log(`Actions layer: Performing thorough cache invalidation...`);
+    
+    // Stronger cache invalidation by revalidating multiple paths
+    revalidatePath(`/deployment`, 'page');
+    revalidatePath(`/deployment/${id}`, 'page');
+    revalidatePath(`/`, 'layout');
+    
+    // Tag-based revalidation if available in Next.js version
+    try {
+      revalidateTag('deployments');
+      revalidateTag(`deployment-${id}`);
+      console.log(`Actions layer: Tag-based cache invalidation completed`);
+    } catch (e) {
+      console.log(`Actions layer: Tag-based cache invalidation not available, skipping`);
+    }
+    
+    console.log(`Actions layer: Cache invalidation completed`);
+    
+    // Return success status with better validation
+    const success = result && typeof result === 'object' && 'success' in result && result.success === true;
+    if (success) {
+      console.log(`Actions layer: Successfully deleted deployment with ID: ${id}`);
+    } else {
+      const errorMsg = result && typeof result === 'object' && 'error' in result ? result.error : 'Unknown error';
+      console.error(`Actions layer: Failed to delete deployment with ID: ${id}. Error: ${errorMsg}`);
+    }
+    
+    console.log(`\n---------------------------------------`);
+    console.log(`Actions layer: DELETION END - Result: ${success ? 'SUCCESS' : 'FAILURE'}`);
+    console.log(`---------------------------------------`);
+    return success;
   } catch (error) {
-    console.error(`Error deleting deployment with ID ${id}:`, error);
+    console.error(`Actions layer: Error deleting deployment with ID ${id}:`, error);
+    console.error(`Actions layer: Error details:`, error instanceof Error ? error.stack : JSON.stringify(error, null, 2));
+    console.log(`\n---------------------------------------`);
+    console.log(`Actions layer: DELETION END - Result: EXCEPTION`);
+    console.log(`---------------------------------------`);
     return false;
   }
 }

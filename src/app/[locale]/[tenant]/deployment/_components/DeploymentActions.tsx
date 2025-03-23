@@ -65,13 +65,22 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
           variant: 'default',
         });
         
-        // Force a complete refresh of the page
-        router.refresh();
+        // Clear cache first to ensure we get fresh data
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('cached_deployment');
+            localStorage.removeItem('cached_deployment_time');
+          }
+        } catch (e) {
+          console.error('Error clearing localStorage:', e);
+        }
         
-        // Add a small delay then navigate to the deployments list to ensure refresh
+        // Increase timeout and simplify flow to avoid race conditions
         setTimeout(() => {
+          // Refresh and navigate in sequence rather than parallel
+          router.refresh();
           router.push(`/${locale}/${tenant}/deployment`);
-        }, 500);
+        }, 1000);
       } else {
         toast({
           title: 'Error',

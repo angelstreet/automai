@@ -18,7 +18,7 @@ export interface DeploymentData {
  */
 export interface DeploymentActions {
   // Core deployment actions
-  fetchDeployments: () => Promise<void>;
+  fetchDeployments: (forceFresh?: boolean) => Promise<void>;
   fetchDeploymentById: (id: string) => Promise<Deployment | null>;
   createDeployment: (formData: DeploymentFormData) => Promise<{ 
     success: boolean; 
@@ -33,6 +33,10 @@ export interface DeploymentActions {
     success: boolean; 
     deployment?: Deployment; 
     error?: string 
+  }>;
+  deleteDeployment: (id: string) => Promise<{
+    success: boolean;
+    error?: string
   }>;
   
   // Supporting data fetching

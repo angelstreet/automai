@@ -216,18 +216,94 @@ const deployment = {
   },
 
   async delete(id: string, cookieStore?: any) {
+    console.log(`\n=======================================`);
+    console.log(`DB layer: DELETE OPERATION START - Deployment ID: ${id}`);
+    console.log(`=======================================`);
+    
     console.log('DB layer: Deleting deployment with id:', id);
+    console.log('DB layer: cookieStore provided:', !!cookieStore);
+    
+    if (!id) {
+      console.error('DB layer: Cannot delete deployment - ID is required');
+      return {
+        success: false,
+        error: 'Deployment ID is required'
+      };
+    }
     
     try {
       console.log('DB layer: Creating Supabase client...');
+      
       // Create client with provided cookie store or get a new one
-      const supabase = await createClient(cookieStore);
-      console.log('DB layer: Supabase client created');
-
-      const { error } = await supabase
-        .from('deployments')
-        .delete()
-        .eq('id', id);
+      let supabase;
+      try {
+        if (cookieStore) {
+          console.log('DB layer: Using provided cookieStore');
+          supabase = await createClient(cookieStore);
+        } else {
+          console.log('DB layer: No cookieStore provided, creating new one');
+          const newCookieStore = await cookies();
+          supabase = await createClient(newCookieStore);
+        }
+        console.log('DB layer: Supabase client created successfully');
+      } catch (clientError) {
+        console.error('DB layer: Error creating Supabase client:', clientError);
+        return {
+          success: false,
+          error: `Failed to create database client: ${clientError instanceof Error ? clientError.message : String(clientError)}`
+        };
+      }
+      
+      // First verify the deployment exists
+      console.log('DB layer: Checking if deployment exists...');
+      let findResult;
+      try {
+        findResult = await supabase
+          .from('deployments')
+          .select('id')
+          .eq('id', id)
+          .single();
+          
+        console.log('DB layer: Find deployment result:', JSON.stringify(findResult, null, 2));
+      } catch (findError) {
+        console.error('DB layer: Error querying deployment:', findError);
+        return {
+          success: false,
+          error: `Failed to query deployment: ${findError instanceof Error ? findError.message : String(findError)}`
+        };
+      }
+      
+      const { data: existingDeployment, error: findError } = findResult;
+      
+      if (findError || !existingDeployment) {
+        console.error('DB layer: Error finding deployment to delete:', findError?.message || 'Deployment not found');
+        return {
+          success: false,
+          error: `Failed to find deployment: ${findError?.message || 'Deployment not found'}`
+        };
+      }
+      
+      console.log('DB layer: Found deployment to delete, proceeding with deletion');
+      
+      // If deployment exists, delete it
+      console.log('DB layer: Executing delete operation...');
+      let deleteResult;
+      try {
+        deleteResult = await supabase
+          .from('deployments')
+          .delete()
+          .eq('id', id);
+          
+        console.log('DB layer: Delete operation result:', JSON.stringify(deleteResult, null, 2));
+      } catch (deleteError) {
+        console.error('DB layer: Exception during delete operation:', deleteError);
+        return {
+          success: false,
+          error: `Exception during delete: ${deleteError instanceof Error ? deleteError.message : String(deleteError)}`
+        };
+      }
+      
+      const { error } = deleteResult;
       
       if (error) {
         console.error('DB layer: Error deleting deployment:', error);
@@ -238,11 +314,18 @@ const deployment = {
       }
       
       console.log('DB layer: Deployment deleted successfully');
+      console.log(`\n=======================================`);
+      console.log(`DB layer: DELETE OPERATION END - SUCCESS`);
+      console.log(`=======================================`);
       return {
         success: true
       };
     } catch (error) {
       console.error('DB layer: Error deleting deployment:', error);
+      console.error('DB layer: Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
+      console.log(`\n=======================================`);
+      console.log(`DB layer: DELETE OPERATION END - EXCEPTION`);
+      console.log(`=======================================`);
       return {
         success: false,
         error: `Failed to delete deployment: ${error instanceof Error ? error.message : String(error)}`

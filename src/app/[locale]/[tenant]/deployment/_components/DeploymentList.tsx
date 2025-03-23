@@ -13,7 +13,8 @@ import { useDeployment } from '@/context';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
-import { deleteDeployment } from '../actions';
+import { deleteDeployment as deleteDeploymentAction } from '../actions';
+import { DeploymentContextType } from '@/types/context/deployment';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +41,9 @@ interface DeploymentListProps {
 const DeploymentList: React.FC<DeploymentListProps> = ({ 
   onViewDeployment 
 }) => {
+  // Get deployment context
+  const deploymentContext = useDeployment();
+  
   const { 
     deployments = [], 
     repositories: contextRepositories = [],
@@ -48,7 +52,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     fetchDeployments = () => {}, 
     isRefreshing = false,
     fetchRepositories = () => {} 
-  } = useDeployment() || {};
+  } = deploymentContext || {};
   
   // Use a loading state that defaults to true if undefined
   const isLoading = loading === undefined ? true : loading;
@@ -135,18 +139,56 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     if (!selectedDeployment) return;
     
     try {
-      // Call delete action
-      await deleteDeployment(selectedDeployment.id);
-      
-      // Always show success toast unless an error is thrown
-      toast({
-        title: 'Deployment Deleted',
-        description: 'The deployment has been successfully deleted.',
-        variant: 'default',
-      });
-      
-      // Refresh the list
-      fetchDeployments();
+      if (deploymentContext && 'deleteDeployment' in deploymentContext && 
+          typeof deploymentContext.deleteDeployment === 'function') {
+        // Use the deleteDeployment from the context with type assertion
+        const deleteDeploymentFn = deploymentContext.deleteDeployment as (id: string) => Promise<{
+          success: boolean;
+          error?: string;
+        }>;
+        
+        // Call the function with the correct type
+        const result = await deleteDeploymentFn(selectedDeployment.id);
+        
+        if (result.success) {
+          // Always show success toast unless an error is thrown
+          toast({
+            title: 'Deployment Deleted',
+            description: 'The deployment has been successfully deleted.',
+            variant: 'default',
+          });
+          
+          // Refresh the list
+          fetchDeployments();
+        } else {
+          // Show error toast if deleteDeployment returns failure
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to delete the deployment',
+            variant: 'destructive',
+          });
+        }
+      } else {
+        // Fallback to using the action directly
+        const success = await deleteDeploymentAction(selectedDeployment.id);
+        
+        if (success) {
+          toast({
+            title: 'Deployment Deleted',
+            description: 'The deployment has been successfully deleted.',
+            variant: 'default',
+          });
+          
+          // Refresh the list
+          fetchDeployments();
+        } else {
+          toast({
+            title: 'Error',
+            description: 'Failed to delete the deployment',
+            variant: 'destructive',
+          });
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
