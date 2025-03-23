@@ -1,7 +1,6 @@
 import { HostContextType } from './host';
 import { DeploymentContextType } from './deployment';
 import { RepositoryContextType } from './repository';
-import { CICDContextType } from './cicd';
 import { UserContextType } from './user';
 
 /**
@@ -12,6 +11,5 @@ export interface AppContextType {
   host: HostContextType | null;
   deployment: DeploymentContextType | null;
   repository: RepositoryContextType | null;
-  cicd: CICDContextType | null;
   user: UserContextType | null;
 } 

@@ -21,7 +21,7 @@ import {
 } from '@/components/shadcn/select';
 import { toast } from '@/components/shadcn/use-toast';
 import { createCICDProviderAction, updateCICDProviderAction, testCICDProviderAction } from '../actions';
-import { CICDProvider, CICDProviderPayload, CICDProviderType, CICDAuthType } from '@/types/cicd';
+import { CICDProvider, CICDProviderPayload, CICDProviderType, CICDAuthType } from '@/types/context/cicd';
 
 interface CICDProviderFormProps {
   providerId?: string;

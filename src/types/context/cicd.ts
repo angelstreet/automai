@@ -1,58 +1,80 @@
-import { AuthUser } from '@/types/user';
-import { 
-  CICDProvider, 
-  CICDProviderPayload, 
-  CICDJob, 
-  CICDBuild,
-  ActionResult,
-  CICDProviderListResult,
-  CICDProviderActionResult
-} from '@/types/cicd';
-
 /**
- * CICD data interface - contains all state
+ * CI/CD Providers types
  */
-export interface CICDData {
-  providers: CICDProvider[];
-  jobs: CICDJob[];
-  builds: CICDBuild[];
-  selectedProvider: CICDProvider | null;
-  selectedJob: CICDJob | null;
-  loading: boolean;
-  error: string | null;
-  currentUser: AuthUser | null;
+
+export type CICDProviderType = 'jenkins' | 'github' | 'gitlab' | 'azure_devops';
+
+export type CICDAuthType = 'token' | 'basic_auth' | 'oauth';
+
+export interface CICDCredentials {
+  username?: string;
+  password?: string;
+  token?: string;
+}
+
+export interface CICDProviderConfig {
+  auth_type: CICDAuthType;
+  credentials: CICDCredentials;
+}
+
+export interface CICDProvider {
+  id: string;
+  tenant_id: string;
+  name: string;
+  type: CICDProviderType;
+  url: string;
+  config: CICDProviderConfig;
+  status?: string;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string;
+}
+
+export interface CICDProviderPayload {
+  id?: string;
+  name: string;
+  type: CICDProviderType;
+  url: string;
+  config: {
+    auth_type: CICDAuthType;
+    credentials: CICDCredentials;
+  };
 }
 
 /**
- * CICD actions interface - contains all functions
+ * Results from server actions
  */
-export interface CICDActions {
-  // Provider actions
-  fetchProviders: () => Promise<CICDProviderListResult>;
-  getProviderById: (id: string) => Promise<CICDProvider | null>;
-  createProvider: (payload: CICDProviderPayload) => Promise<CICDProviderActionResult>;
-  updateProvider: (id: string, payload: CICDProviderPayload) => Promise<CICDProviderActionResult>;
-  deleteProvider: (id: string) => Promise<ActionResult>;
-  testProvider: (provider: CICDProviderPayload) => Promise<ActionResult>;
-  
-  // Job actions
-  fetchJobs: (providerId: string) => Promise<CICDJob[]>;
-  getJobById: (jobId: string) => Promise<CICDJob | null>;
-  triggerJob: (jobId: string, parameters?: Record<string, any>) => Promise<ActionResult>;
-  
-  // Build actions
-  getBuildStatus: (jobId: string, buildId: string) => Promise<CICDBuild | null>;
-  getBuildLogs: (jobId: string, buildId: string) => Promise<string>;
-  
-  // User management
-  fetchUserData: () => Promise<AuthUser | null>;
-  
-  // UI state management
-  setSelectedProvider: (provider: CICDProvider | null) => void;
-  setSelectedJob: (job: CICDJob | null) => void;
+export interface ActionResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+export interface CICDProviderListResult extends ActionResult {
+  data: CICDProvider[];
+}
+
+export interface CICDProviderActionResult extends ActionResult {
+  data?: CICDProvider;
 }
 
 /**
- * Combined CICD context type
+ * Job types
  */
-export interface CICDContextType extends CICDData, CICDActions {} 
+export interface CICDJob {
+  id: string;
+  name: string;
+  provider_id: string;
+  job_path: string;
+  parameters?: Record<string, any>;
+}
+
+export interface CICDBuild {
+  id: string;
+  job_id: string;
+  status: 'pending' | 'running' | 'success' | 'failed';
+  start_time: string;
+  end_time?: string;
+  logs?: string;
+} 

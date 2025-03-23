@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal } from 'lucide-react';
@@ -9,7 +9,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
@@ -36,10 +35,10 @@ import {
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
 import { toast } from '@/components/shadcn/use-toast';
-import { CICDProviderForm } from '.';
+import { CICDProviderForm } from './';
 import { getCICDProvidersAction, deleteCICDProviderAction, testCICDProviderAction } from '../actions';
 import { Badge } from '@/components/shadcn/badge';
-import { CICDProvider as CICDProviderType } from '@/types/cicd';
+import { CICDProvider as CICDProviderType } from '@/types/context/cicd';
 
 export default function CICDProvider() {
   const [providers, setProviders] = useState<CICDProviderType[]>([]);
