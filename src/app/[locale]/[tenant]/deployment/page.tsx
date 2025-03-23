@@ -20,10 +20,16 @@ const DeploymentPage = () => {
   const repositories = deploymentRepos.length > 0 ? deploymentRepos : repositoryRepos;
   
   // Are repositories loaded?
-  const isDataReady = 
-    repositories.length > 0 && 
-    !deploymentContext?.loading && 
-    !repositoryContext?.loading;
+  const isDataReady = repositories.length > 0;
+  
+  // Debug logs
+  console.log('[DeploymentPage] Debug status:', {
+    repositoriesCount: repositories.length,
+    deploymentLoading: deploymentContext?.loading,
+    repositoryLoading: repositoryContext?.loading,
+    isDataReady: isDataReady,
+    wizardActive: wizardActive
+  });
   
   // Handle refreshing deployments
   const handleRefresh = () => {
@@ -38,7 +44,9 @@ const DeploymentPage = () => {
     
     const handleToggleView = () => {
       console.log('[DeploymentPage] Toggle deployment view event received');
+      console.log('[DeploymentPage] Current wizardActive state:', wizardActive);
       setWizardActive(true);
+      console.log('[DeploymentPage] Set wizardActive to true');
     };
     
     const handleRefreshEvent = () => {
@@ -83,6 +91,9 @@ const DeploymentPage = () => {
     console.log('[DeploymentPage] Cancelling wizard');
     setWizardActive(false);
   };
+
+  // Debug rendering
+  console.log('[DeploymentPage] Rendering with:', { wizardActive, isDataReady });
 
   return (
     <>
