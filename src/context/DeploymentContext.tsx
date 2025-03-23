@@ -43,7 +43,7 @@ const useDebounce = (fn: Function, delay: number) => {
 const initialState: DeploymentData = {
   deployments: [],
   repositories: [],
-  loading: false,
+  loading: true,
   error: null,
   isRefreshing: false,
   currentUser: null
@@ -66,8 +66,13 @@ export const DeploymentProvider: React.FC<{
         const cachedData = localStorage.getItem('cached_deployment');
         if (cachedData) {
           const parsedData = JSON.parse(cachedData) as DeploymentData;
-          log('[DeploymentContext] Using initial cached deployment data from localStorage');
-          return parsedData;
+          console.log('[DeploymentContext] Using initial cached deployment data from localStorage:', 
+            parsedData.deployments?.length || 0, 'deployments,', 
+            parsedData.repositories?.length || 0, 'repositories');
+          return {
+            ...parsedData,
+            loading: false // Set loading to false for cached data
+          };
         }
       } catch (e) {
         // Ignore localStorage errors
@@ -125,7 +130,6 @@ export const DeploymentProvider: React.FC<{
 
   // Fetch repositories with protection
   const fetchRepositories = useCallback(async (): Promise<any[]> => {
-    // Remove all throttling code and just call the repository API
     console.log('[DeploymentContext] Fetching repositories');
     
     try {
@@ -142,13 +146,25 @@ export const DeploymentProvider: React.FC<{
       });
       
       // Store repositories in state for future use
-      if (result && Array.isArray(result) && result.length > 0) {
+      if (result && Array.isArray(result)) {
+        console.log(`[DeploymentContext] Updating state with ${result.length} repositories`);
         safeUpdateState(
           setState,
           state,
           { ...state, repositories: result },
           'repositories-updated'
         );
+        
+        // Also store in localStorage immediately for faster loading next time
+        try {
+          const updatedState = { ...state, repositories: result };
+          localStorage.setItem('cached_deployment', JSON.stringify(updatedState));
+          localStorage.setItem('cached_deployment_time', Date.now().toString());
+        } catch (e) {
+          console.error('[DeploymentContext] Error saving repositories to cache:', e);
+        }
+      } else {
+        console.log('[DeploymentContext] No repositories returned from API');
       }
       
       return Array.isArray(result) ? result : [];
@@ -170,41 +186,50 @@ export const DeploymentProvider: React.FC<{
         }
 
         console.log('[DeploymentContext] Fetching deployments');
-        safeUpdateState(
-          setState,
-          state,
-          { ...state, loading: true, error: null },
-          'start-loading'
-        );
+        
+        // Check if we're refreshing cached data or doing an initial load
+        const isRefreshingCachedData = state.deployments.length > 0;
+        
+        // Set appropriate flags based on whether we're refreshing or loading
+        if (isRefreshingCachedData) {
+          // If refreshing, just set isRefreshing=true without loading=true
+          setState(prevState => ({ ...prevState, isRefreshing: true, error: null }));
+          console.log('[DeploymentContext] Refreshing deployments, isRefreshing=TRUE');
+        } else {
+          // If initial load, set loading=true
+          setState(prevState => ({ ...prevState, loading: true, error: null }));
+          console.log('[DeploymentContext] Initial load, loading=TRUE');
+        }
 
         // Use the real API call instead of mock data
         const deployments = await getDeployments();
         
-        safeUpdateState(
-          setState,
-          state,
-          {
-            ...state,
-            deployments,
-            loading: false
-          },
-          'deployments-fetched'
-        );
+        // Always set loading explicitly using regular setState to ensure UI updates
+        setState(prevState => ({ 
+          ...prevState, 
+          deployments,
+          loading: false,
+          isRefreshing: false
+        }));
+        console.log('[DeploymentContext] Set loading=FALSE, isRefreshing=FALSE');
 
         console.log('[DeploymentContext] Deployments fetched:', deployments.length);
         return deployments;
       } catch (err: any) {
         console.error('[DeploymentContext] Error fetching deployments:', err);
-        safeUpdateState(
-          setState,
-          state,
-          { ...state, loading: false, error: err.message || 'Failed to fetch deployments' },
-          'fetch-error'
-        );
+        
+        // Always set loading explicitly using regular setState to ensure UI updates
+        setState(prevState => ({ 
+          ...prevState, 
+          loading: false,
+          isRefreshing: false,
+          error: err.message || 'Failed to fetch deployments' 
+        }));
+        
         return null;
       }
     });
-  }, [state, safeUpdateState, protectedFetch]);
+  }, [state, protectedFetch]);
   
   // Now define refreshUserData which depends on fetchDeployments
   const refreshUserData = useCallback(async () => {
@@ -232,20 +257,66 @@ export const DeploymentProvider: React.FC<{
       console.log('[DeploymentContext] Initializing data');
       const initializeData = async () => {
         try {
+          // Only set loading to true if we don't have cached data
+          if (state.deployments.length === 0) {
+            // Use regular setState to bypass safeUpdateState's change detection
+            setState(prevState => ({ ...prevState, loading: true }));
+            console.log('[DeploymentContext] No cached data, set loading state to TRUE directly');
+          } else {
+            console.log('[DeploymentContext] Using cached data, keeping loading FALSE while refreshing');
+          }
+          
+          // If we don't have cached repositories but have cached deployments, fetch repositories first
+          if (state.deployments.length > 0 && state.repositories.length === 0) {
+            console.log('[DeploymentContext] Have cached deployments but no repos, fetching repos first');
+            await fetchRepositories();
+          }
+          
           await fetchUserData();
+          
+          // Use a flag to track whether we're refreshing vs initial loading
+          const isRefreshingCachedData = state.deployments.length > 0;
+          if (isRefreshingCachedData) {
+            // For refreshing cached data, set isRefreshing but keep loading=false
+            setState(prevState => ({ ...prevState, isRefreshing: true }));
+          }
+          
+          // Always refresh the data
           await fetchDeployments();
-          await fetchRepositories();
+          
+          // Only fetch repositories if not already loaded
+          if (state.repositories.length === 0) {
+            await fetchRepositories();
+          }
+          
           // Only set initialized here, not in fetchDeployments
           setInitialized(true);
+          
+          // Use regular setState to bypass safeUpdateState's change detection
+          setState(prevState => ({ 
+            ...prevState, 
+            loading: false,
+            isRefreshing: false 
+          }));
+          console.log('[DeploymentContext] Set loading state to FALSE directly');
+          
           console.log('[DeploymentContext] Initialization complete');
         } catch (error) {
           console.error('[DeploymentContext] Error during initialization:', error);
+          
+          // Use regular setState to bypass safeUpdateState's change detection
+          setState(prevState => ({ 
+            ...prevState, 
+            loading: false, 
+            isRefreshing: false,
+            error: String(error) 
+          }));
         }
       };
       
       initializeData();
     }
-  }, [initialized, fetchUserData, fetchDeployments, fetchRepositories]);
+  }, [initialized, fetchUserData, fetchDeployments, fetchRepositories, state]);
   
   // Add one useful log when deployments are loaded
   useEffect(() => {

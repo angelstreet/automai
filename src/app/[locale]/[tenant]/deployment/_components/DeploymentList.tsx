@@ -9,7 +9,7 @@ import {
   MoreHorizontal,
   Trash
 } from 'lucide-react';
-import { useDeployment } from '@/context/AppContext';
+import { useDeployment } from '@/context';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
@@ -43,12 +43,16 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const { 
     deployments = [], 
     repositories: contextRepositories = [],
-    loading = false, 
+    loading,
     error = null, 
     fetchDeployments = () => {}, 
     isRefreshing = false,
     fetchRepositories = () => {} 
   } = useDeployment() || {};
+  
+  // Use a loading state that defaults to true if undefined
+  const isLoading = loading === undefined ? true : loading;
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [repositories, setRepositories] = useState<Record<string, Repository>>({});
@@ -56,36 +60,18 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
 
-  // Debug current render state
+  // Set hasAttemptedLoad when data loads or loading completes
   useEffect(() => {
-    console.log('[DeploymentList] Rendering with:', {
-      contextReposCount: contextRepositories?.length || 0,
-      localReposCount: Object.keys(repositories).length,
-      deploymentsCount: deployments?.length || 0,
-      displayDeploymentsCount: getSortedDeployments().length
-    });
-    
-    // Debug first deployment's repository link
-    if (deployments && deployments.length > 0) {
-      const firstDeployment = deployments[0];
-      console.log('[DeploymentList] First deployment:', {
-        id: firstDeployment.id,
-        name: firstDeployment.name,
-        repoId: firstDeployment.repositoryId,
-        repoFound: repositories[firstDeployment.repositoryId] ? 'YES' : 'NO',
-        repoName: getRepositoryName(firstDeployment)
-      });
-      
-      // Debug repositories mapping
-      console.log('[DeploymentList] Available repository IDs:', Object.keys(repositories));
+    if (!hasAttemptedLoad && (deployments.length > 0 || !isLoading)) {
+      setHasAttemptedLoad(true);
     }
-  }, [deployments, repositories, contextRepositories]);
+  }, [deployments.length, isLoading, hasAttemptedLoad]);
 
   // Convert context repositories to mapping if available
   useEffect(() => {
     if (contextRepositories && contextRepositories.length > 0 && Object.keys(repositories).length === 0) {
-      console.log('[DeploymentList] Using repositories from context:', contextRepositories.length);
       const repoMap = contextRepositories.reduce((acc: Record<string, Repository>, repo: Repository) => {
         acc[repo.id] = repo;
         return acc;
@@ -99,13 +85,11 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     const loadRepositories = async () => {
       // Skip fetching repositories if we already have them loaded
       if (Object.keys(repositories).length > 0) {
-        console.log('[DeploymentList] Already have repositories loaded:', Object.keys(repositories).length);
         return;
       }
       
       // Use repositories from context if available
       if (contextRepositories && contextRepositories.length > 0) {
-        console.log('[DeploymentList] Using repositories from context:', contextRepositories.length);
         const repoMap = contextRepositories.reduce((acc: Record<string, Repository>, repo: Repository) => {
           acc[repo.id] = repo;
           return acc;
@@ -176,21 +160,30 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
 
   // Get repository name from deployment
   const getRepositoryName = (deployment: Deployment): string => {
-    // Debug every repository lookup
-    const hasRepoId = !!deployment.repositoryId;
-    const repoExists = hasRepoId && !!repositories[deployment.repositoryId];
-    
-    if (hasRepoId && !repoExists) {
-      console.log(`[DeploymentList] Repository not found for ID: ${deployment.repositoryId}`);
+    if (!deployment.repositoryId) {
+      return 'Unknown';
     }
     
-    // Check if we have a valid repository ID and if it exists in our repositories object
-    if (deployment.repositoryId && repositories[deployment.repositoryId]) {
+    // First try local state
+    if (repositories[deployment.repositoryId]) {
       return repositories[deployment.repositoryId].name;
     }
     
+    // Then try context directly as a fallback
+    const contextRepo = contextRepositories?.find(r => r.id === deployment.repositoryId);
+    if (contextRepo) {
+      // Update our local cache for next time
+      const newRepos = { ...repositories };
+      newRepos[deployment.repositoryId] = contextRepo;
+      setRepositories(newRepos);
+      return contextRepo.name;
+    }
+    
+    // Debug missing repos
+    console.log(`[DeploymentList] Repository not found for ID: ${deployment.repositoryId}`);
+    
     // Fallback to the repository ID if name can't be found
-    return deployment.repositoryId || 'Unknown';
+    return deployment.repositoryId;
   };
 
   // Filter deployments based on tab, search query, and status filter
@@ -239,6 +232,32 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
 
   const displayDeployments = getSortedDeployments();
 
+  // Render loading skeleton rows
+  const renderSkeletonRows = () => {
+    return Array(5).fill(0).map((_, index) => (
+      <tr key={`skeleton-${index}`} className="animate-pulse">
+        <td className="px-2 py-3 whitespace-nowrap">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+        </td>
+        <td className="px-2 py-3 whitespace-nowrap">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+        </td>
+        <td className="px-2 py-3 whitespace-nowrap">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+        </td>
+        <td className="px-2 py-3 whitespace-nowrap">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+        </td>
+        <td className="px-2 py-3 whitespace-nowrap">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+        </td>
+        <td className="px-2 py-3 whitespace-nowrap">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
+        </td>
+      </tr>
+    ));
+  };
+
   return (
     <div className="w-full">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
@@ -250,23 +269,41 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
               </div>
               <input
                 type="text"
-                className="pl-10 w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 placeholder="Search deployments..."
+                className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center space-x-2">
+              <label htmlFor="sortBy" className="text-sm text-gray-600 dark:text-gray-400">
+                Sort by:
+              </label>
               <select
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                id="sortBy"
+                className="pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="date">Date</option>
+                <option value="name">Name</option>
+                <option value="status">Status</option>
+                <option value="repository">Repository</option>
+              </select>
+              <label htmlFor="filterStatus" className="text-sm text-gray-600 dark:text-gray-400">
+                Status:
+              </label>
+              <select
+                id="filterStatus"
+                className="pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
-                <option value="all">All Statuses</option>
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
                 <option value="success">Success</option>
                 <option value="failed">Failed</option>
-                <option value="in_progress">In Progress</option>
-                <option value="pending">Pending</option>
                 <option value="scheduled">Scheduled</option>
               </select>
             </div>
@@ -333,11 +370,39 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
             </div>
           </div>
           
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+          {isLoading ? (
+            <div className="overflow-x-auto">
+              <div className="relative">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Repository
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Runtime
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {renderSkeletonRows()}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          ) : displayDeployments.length === 0 ? (
+          ) : hasAttemptedLoad && displayDeployments.length === 0 ? (
             <div className="text-center py-8">
               <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
                 {activeTab === 'scheduled' ? <Clock className="h-12 w-12" /> : 
@@ -418,25 +483,25 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
             </div>
           )}
         </div>
+        
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Deployment</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-      
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Deployment</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
