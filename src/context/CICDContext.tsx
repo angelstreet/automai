@@ -6,7 +6,8 @@ import {
   createCICDProviderAction,
   updateCICDProviderAction,
   deleteCICDProviderAction,
-  testCICDProviderAction
+  testCICDProviderAction,
+  getCICDJobs
 } from '@/app/[locale]/[tenant]/cicd/actions';
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
@@ -331,40 +332,68 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }));
   }, []);
   
-  // Initialize CI/CD data
+  // Initialize by fetching CICD data
   useEffect(() => {
-    log(`${LOG_PREFIX} Initializing CICDContext...`);
-    
-    const initialize = async () => {
-      // Prevent double initialization
+    const initializeCICD = async () => {
+      // Check if already initialized or has persisted data
       if (initialized.current) {
-        log(`${LOG_PREFIX} Already initialized, skipping`);
         return;
       }
       
-      initialized.current = true;
-      await fetchUserData();
-      await fetchProviders();
-      
-      // Cache CICD data in localStorage after successful fetch
-      if (state.providers.length > 0) {
-        try {
-          localStorage.setItem(STORAGE_KEYS.CACHED_CICD, JSON.stringify(state));
-          localStorage.setItem(STORAGE_KEYS.CACHED_CICD_TIME, Date.now().toString());
-          log(`${LOG_PREFIX} Saved CICD data to localStorage cache`);
-        } catch (e) {
-          log(`${LOG_PREFIX} Error saving to localStorage:`, e);
-        }
+      // First check if we have persisted data
+      if (persistedData?.cicdData?.providers?.length > 0) {
+        console.log('[CICDContext] Using persisted CICD data:', 
+          persistedData.cicdData.providers.length, 'providers');
+          
+        // Update state with persisted data
+        setState(prevState => ({
+          ...prevState,
+          providers: persistedData.cicdData.providers,
+          jobs: persistedData.cicdData.jobs || [],
+          loading: false
+        }));
+        
+        initialized.current = true;
+        return;
       }
+      
+      // Set loading state
+      setState(prevState => ({ ...prevState, loading: true, error: null }));
+      
+      try {
+        // Fetch CICD providers
+        const providersResponse = await getCICDProviders();
+        
+        if (!providersResponse.success) {
+          throw new Error(providersResponse.error || 'Failed to fetch CICD providers');
+        }
+        
+        // Fetch CICD jobs if providers were retrieved successfully
+        const jobsResponse = await getCICDJobs();
+        
+        // Update state with fetched data
+        setState(prevState => ({
+          ...prevState,
+          providers: providersResponse.data || [],
+          jobs: jobsResponse.success ? jobsResponse.data : [],
+          loading: false
+        }));
+        
+        console.log('[CICDContext] Initialized with:', providersResponse.data?.length || 0, 'providers');
+      } catch (err) {
+        console.error('[CICDContext] Error initializing CICD context:', err);
+        setState(prevState => ({
+          ...prevState,
+          error: err.message || 'Failed to initialize CICD context',
+          loading: false
+        }));
+      }
+      
+      initialized.current = true;
     };
     
-    initialize();
-    
-    return () => {
-      log(`${LOG_PREFIX} CICDContext unmounting...`);
-      initialized.current = false;
-    };
-  }, [fetchUserData, fetchProviders]);
+    initializeCICD();
+  }, []);
   
   // Add one useful log when providers are loaded
   useEffect(() => {

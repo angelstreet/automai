@@ -1,6 +1,5 @@
 import * as React from 'react';
-
-import { useSidebar } from '@/hooks/useSidebar';
+import { useSidebar } from '@/context/SidebarContext';
 import { cn } from '@/lib/utils';
 
 export const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<'button'>>(

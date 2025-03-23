@@ -16,8 +16,9 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/hooks/useUser';
+import { useUser } from '@/context/UserContext';
 import { signOut } from '@/app/actions/auth';
+import { cn } from '@/lib/utils';
 
 interface UserProfileProps {
   tenant?: string;

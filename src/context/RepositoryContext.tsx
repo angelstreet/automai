@@ -328,6 +328,26 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       }
       
       initialized.current = true;
+      
+      // First check if we have persisted data with repositories
+      if (persistedData?.repositoryData?.repositories?.length > 0) {
+        log('[RepositoryContext] Using persisted repository data:', 
+          persistedData.repositoryData.repositories.length);
+          
+        // Skip fetching if we already have data
+        return;
+      }
+      
+      // Check for cached local storage data
+      const hasCachedData = typeof window !== 'undefined' && 
+        localStorage.getItem('cached_repository') !== null;
+        
+      if (hasCachedData) {
+        log('[RepositoryContext] Using cached repository data from localStorage');
+        // We'll still fetch to refresh in background, but won't block UI
+      }
+      
+      // Only fetch if we don't have data or need to refresh in background
       await fetchUserData();
       await fetchRepositories();
       
@@ -348,8 +368,6 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     return () => {
       log('[RepositoryContext] RepositoryContext unmounting...');
       // Don't reset initialized flag when component unmounts
-      // This prevents the initialization loop when the component is remounted
-      // initialized.current = false;
     };
   }, []); // Empty dependency array to run only once
 

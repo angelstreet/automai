@@ -15,7 +15,7 @@ import {
 } from '@/components/shadcn/dropdown-menu';
 import { signOut } from '@/app/actions/auth';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/hooks/useUser';
+import { useUser } from '@/context/UserContext';
 
 interface NavUserProps {
   user: UserType;

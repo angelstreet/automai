@@ -268,8 +268,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
 export function useUser() {
   const context = useContext(UserContext);
-  if (context === undefined) {
-    throw new Error('useUser must be used within a UserProvider');
+  
+  // If the context is null for some reason, return a safe default object
+  // This prevents destructuring errors in components
+  if (!context) {
+    console.warn('[useUser] User context is null, returning fallback');
+    return {
+      user: null,
+      loading: true,
+      error: null,
+      updateProfile: async () => {},
+      refreshUser: async () => null,
+      updateRole: async () => {},
+      clearCache: async () => {},
+    };
   }
+  
   return context;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useUser } from '@/hooks/useUser';
+import { useUser } from '@/context/UserContext';
 
 import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import {

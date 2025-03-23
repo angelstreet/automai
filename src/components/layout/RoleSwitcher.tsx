@@ -8,7 +8,7 @@ import {
 } from '@/components/shadcn/select';
 import { cn } from '@/lib/utils';
 import { Role } from '@/types/user';
-import { useUser } from '@/hooks/useUser';
+import { useUser } from '@/context/UserContext';
 
 // Define roles based on the Role type definition
 const roles: { value: Role; label: string }[] = [

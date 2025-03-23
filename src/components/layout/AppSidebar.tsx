@@ -12,7 +12,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/sidebar';
-import { useUser } from '@/hooks/useUser';
+import { useUser } from '@/context/UserContext';
 import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '../sidebar/constants';
 import { sidebarData } from '@/components/sidebar/sidebarData';
 import * as React from 'react';
@@ -20,7 +20,8 @@ import { Role } from '@/types/user';
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const AppSidebar = React.memo(function AppSidebar() {
-  const { user } = useUser();
+  const userContext = useUser();
+  const user = userContext?.user || null;
   const { open } = useSidebar();
   // Use state for isCollapsed to ensure hydration consistency
   const [isCollapsed, setIsCollapsed] = React.useState(false);

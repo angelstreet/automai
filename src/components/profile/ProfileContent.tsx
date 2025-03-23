@@ -4,10 +4,12 @@ import { ArrowLeft } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
+import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/hooks/useUser';
+import { useUser } from '@/context/UserContext';
+import { cn } from '@/lib/utils';
 
 export function ProfileContent() {
   const { user, loading, refreshUser, updateProfile } = useUser();

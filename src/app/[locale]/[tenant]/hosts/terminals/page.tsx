@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { useToast } from '@/components/shadcn/use-toast';
 import { logger } from '@/lib/logger';
-import { useUser } from '@/hooks/useUser';
+import { useUser } from '@/context/UserContext';
 
 import { Terminal } from '../../terminals/_components/Terminal';
 

@@ -244,41 +244,58 @@ export const HostProvider: React.FC<{
     return hosts || [];
   }, [protectedFetch, refreshUserData, applyFilters, safeUpdateState, state]);
 
-  // Initialize by fetching user data and hosts
+  // Initialize by fetching host data
   useEffect(() => {
-    log('[HostContext] Initializing HostContext...');
-    
-    const initialize = async () => {
-      // Prevent double initialization
+    const fetchData = async () => {
+      // Check if already initialized or has persisted data
       if (initialized.current) {
-        log('[HostContext] Already initialized, skipping');
         return;
       }
       
-      initialized.current = true;
-      await refreshUserData();
-      await fetchHosts();
-      
-      // Cache host data in localStorage after successful fetch
-      if (state.hosts.length > 0) {
-        try {
-          localStorage.setItem('cached_hosts', JSON.stringify(state));
-          localStorage.setItem('cached_hosts_time', Date.now().toString());
-          log('[HostContext] Saved hosts to localStorage cache');
-        } catch (e) {
-          log('[HostContext] Error saving to localStorage:', e);
-        }
+      // First check if we have persisted data
+      if (persistedData?.hostData?.hosts?.length > 0) {
+        console.log('[HostContext] Using persisted host data:', 
+          persistedData.hostData.hosts.length);
+        
+        // Update state with persisted data
+        setState(prevState => ({
+          ...prevState,
+          hosts: persistedData.hostData.hosts,
+          loading: false
+        }));
+        
+        initialized.current = true;
+        return;
       }
+      
+      // Set loading state
+      setState(prevState => ({ ...prevState, loading: true, error: null }));
+      
+      try {
+        const response = await getHosts();
+        if (response.success && response.data) {
+          setState(prevState => ({ 
+            ...prevState, 
+            hosts: response.data, 
+            loading: false 
+          }));
+        } else {
+          throw new Error(response.error || 'Failed to fetch hosts');
+        }
+      } catch (err) {
+        console.error('[HostContext] Error fetching hosts:', err);
+        setState(prevState => ({ 
+          ...prevState, 
+          error: err.message || 'Failed to fetch hosts', 
+          loading: false 
+        }));
+      }
+      
+      initialized.current = true;
     };
     
-    initialize();
-    
-    return () => {
-      log('[HostContext] HostContext unmounting...');
-      initialized.current = false;
-    };
-  // Remove fetchHosts from dependencies to prevent loops
-  }, [refreshUserData]);
+    fetchData();
+  }, []);
 
   // Check a host's connection status
   const checkHostStatus = useCallback(async (hostId: string): Promise<HostConnectionStatus | null> => {

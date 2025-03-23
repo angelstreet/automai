@@ -1,11 +1,14 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useLayoutEffect } from 'react';
 import Cookies from 'js-cookie';
 import { SidebarContext as SidebarContextType } from '@/types/sidebar';
-import { SIDEBAR_COOKIE_NAME } from '@/components/sidebar/constants';
+import { SIDEBAR_COOKIE_NAME, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
 
 export const SidebarContext = createContext<SidebarContextType | null>(null);
+
+// Create a safe version of useLayoutEffect that falls back to useEffect during SSR
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 interface SidebarProviderProps {
   children: React.ReactNode;
@@ -114,6 +117,66 @@ export const useSidebar = () => {
   if (!context) {
     throw new Error('useSidebar must be used within a SidebarProvider');
   }
+  
+  // First render: ensure CSS variables are set immediately on mount
+  useIsomorphicLayoutEffect(() => {
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      
+      // Immediately disable transitions to prevent initial layout shift
+      root.style.setProperty('transition', 'none');
+      
+      // Get the initial width from local storage if available
+      let initialOpen = context.open;
+      try {
+        const savedState = localStorage.getItem(SIDEBAR_COOKIE_NAME);
+        if (savedState !== null) {
+          initialOpen = savedState !== 'false';
+        }
+      } catch (e) {
+        // Fallback to context value if localStorage fails
+      }
+      
+      // Calculate initial offset based on the determined state
+      const initialOffset = initialOpen ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
+      
+      // Set CSS variable for sidebar width
+      root.style.setProperty('--sidebar-width-offset', initialOffset);
+      
+      // Force reflow to apply styles before any rendering
+      document.body.offsetHeight;
+      
+      // Restore transitions after a brief delay
+      const timer = setTimeout(() => {
+        root.style.removeProperty('transition');
+      }, 50);
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
-  return context;
+  // Use useLayoutEffect to set CSS variable for sidebar width offset before browser paint
+  // This helps prevent layout shifts and flickering for subsequent state changes
+  useIsomorphicLayoutEffect(() => {
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      const offset = context.open ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
+      root.style.setProperty('--sidebar-width-offset', offset);
+
+      // Also set a class on the body to help with responsive styling
+      if (context.open) {
+        document.body.classList.add('sidebar-expanded');
+        document.body.classList.remove('sidebar-collapsed');
+      } else {
+        document.body.classList.add('sidebar-collapsed');
+        document.body.classList.remove('sidebar-expanded');
+      }
+    }
+  }, [context.open]);
+
+  return {
+    ...context,
+    // Ensure isOpen is available for backward compatibility
+    isOpen: context.open,
+  };
 };

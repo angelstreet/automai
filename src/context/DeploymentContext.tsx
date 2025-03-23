@@ -288,12 +288,30 @@ export const DeploymentProvider: React.FC<{
     });
   }, [userData, fetchDeployments, protectedFetch]);
 
-  // Replace the initialization effect with the exact same pattern from the working implementation
+  // Replace the initialization effect with this optimized version
   useEffect(() => {
     if (!initialized) {
       console.log('[DeploymentContext] Initializing data');
       const initializeData = async () => {
         try {
+          // First check if we have persisted data with deployments
+          if (persistedData?.deploymentData?.deployments?.length > 0) {
+            console.log('[DeploymentContext] Using persisted deployment data:', 
+              persistedData.deploymentData.deployments.length);
+            
+            // Don't set loading since we're using persisted data
+            setState(prevState => ({ 
+              ...prevState, 
+              deployments: persistedData.deploymentData.deployments,
+              repositories: persistedData.deploymentData.repositories || [],
+              loading: false 
+            }));
+            
+            // Mark as initialized to prevent duplicate fetching
+            setInitialized(true);
+            return;
+          }
+          
           // Only set loading to true if we don't have cached data
           if (state.deployments.length === 0) {
             // Use regular setState to bypass safeUpdateState's change detection
@@ -329,7 +347,7 @@ export const DeploymentProvider: React.FC<{
           // Only set initialized here, not in fetchDeployments
           setInitialized(true);
           
-          // Use regular setState to bypass safeUpdateState's change detection
+          // Use regular setState 
           setState(prevState => ({ 
             ...prevState, 
             loading: false,

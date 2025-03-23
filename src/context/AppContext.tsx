@@ -15,13 +15,23 @@ const log = (...args: any[]) => DEBUG && console.log(...args);
 // Enable context persistence across page navigations
 const PERSIST_CONTEXTS = true;
 
-// Create a persistent storage for context initialization status
-const globalInitStatus: Record<ContextName, boolean> = {
-  host: false,
-  deployment: false,
+// Global initialization tracking
+export const globalInitStatus = {
   repository: false,
+  deployment: false,
+  host: false,
   cicd: false,
-  user: true // User is always initialized
+  
+  // Helper method to check if a context is initialized
+  isInitialized: function(contextType) {
+    return this[contextType] === true;
+  },
+  
+  // Helper method to mark a context as initialized
+  markInitialized: function(contextType) {
+    this[contextType] = true;
+    console.log(`[AppContext] Marked ${contextType} context as initialized`);
+  }
 };
 
 // Storage for data persistence between navigations - exported so it can be imported
@@ -164,10 +174,13 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   const deploymentContext = contextState.deployment ? useDeploymentContext() : null;
   const repositoryContext = contextState.repository ? useRepositoryContext() : null;
   const cicdContext = contextState.cicd ? useCICDContext() : null;
-  const userContext = contextState.user ? useUserContext() : null;
   
+  // Always attempt to get user context since it's fundamental
+  const userContext = useUserContext();
+  
+  // Log detailed diagnostic info for contexts
   useEffect(() => {
-    log('[AppContext] Bridge component mounted', {
+    console.log('[AppContext] Bridge component mounted', {
       availableContexts: {
         user: !!userContext,
         userHasData: userContext ? !!userContext.user : false,
@@ -178,13 +191,11 @@ function AppContextBridge({ children }: { children: ReactNode }) {
       }
     });
     
-    // Additional logging for debug
-    if (userContext) {
-      log('[AppContext] User context details', {
-        userPresent: !!userContext.user,
-        loading: userContext.loading,
-        hasError: !!userContext.error
-      });
+    // Additional logging for user context issues
+    if (!userContext) {
+      console.error('[AppContext] User context is null, this will cause errors');
+    } else if (!userContext.user && !userContext.loading) {
+      console.warn('[AppContext] User context exists but user is null and not loading');
     }
   }, [userContext, hostContext, deploymentContext, repositoryContext, cicdContext]);
   

@@ -1,17 +1,20 @@
 'use client';
 
-import { ChevronDown, Code2, Building2, Factory } from 'lucide-react';
-import * as React from 'react';
-import { useSidebar } from '@/hooks/useSidebar';
+import { Button } from '@/components/shadcn/button';
+import { CommandSeparator } from '@/components/shadcn/command';
+import { useSidebar } from '@/context/SidebarContext';
+import { User } from '@/types/user';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/hooks/useUser';
+  ChevronDown,
+  ChevronUp,
+  Compass,
+  PlusCircle,
+  Settings,
+  User as UserIcon,
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import * as React from 'react';
+import { useUser } from '@/context/UserContext';
 import { cn } from '@/lib/utils';
 
 // Define team type for consistency

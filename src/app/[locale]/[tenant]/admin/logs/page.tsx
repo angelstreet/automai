@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { useUser } from '@/hooks/useUser';
+import { useUser } from '@/context/UserContext';
 
 // Define a simplified interface for logs (even though we won't use it)
 interface ConnectionLog {
