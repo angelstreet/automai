@@ -24,15 +24,18 @@ export default async function middleware(request: NextRequest) {
   // 1. First check if it's a public path that should bypass auth
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
   
-  // Check if it's a login-related path
+  // Check if it's a login-related path or auth callback
   const isLoginPath = request.nextUrl.pathname.includes('/login') ||
                      request.nextUrl.pathname.includes('/signup') ||
                      request.nextUrl.pathname.includes('/forgot-password') ||
-                     request.nextUrl.pathname.includes('/reset-password') ||
-                     request.nextUrl.pathname.includes('/auth-redirect');
+                     request.nextUrl.pathname.includes('/reset-password');
 
-  // Skip auth check for login-related paths to prevent loops
-  if (isLoginPath) {
+  // Specifically check for auth-redirect with code param
+  const isAuthCallback = request.nextUrl.pathname.includes('/auth-redirect') && 
+                        request.nextUrl.searchParams.has('code');
+
+  // Skip auth check for login paths and initial auth callback
+  if (isLoginPath || isAuthCallback) {
     return NextResponse.next();
   }
 
