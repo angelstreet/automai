@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Repository, Script } from '../types';
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 
@@ -31,6 +32,8 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
   onNextStep,
   isStepValid
 }) => {
+  const t = useTranslations('deployment.wizard');
+  
   return (
     <div>
       <div className="flex justify-between mb-1">
@@ -39,7 +42,7 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
           onClick={onPrevStep}
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          Previous
+          {t('previous')}
         </button>
         
         <button
@@ -52,7 +55,7 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
               : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
           }`}
         >
-          Next
+          {t('next')}
         </button>
       </div>
       
@@ -60,10 +63,10 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
       {scriptsError && (
         <div className="mb-4 p-2 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 rounded-md">
           <p className="text-sm text-red-600 dark:text-red-400">
-            Error loading scripts: {scriptsError}
+            {t('scriptsError')}: {scriptsError}
           </p>
           <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-            Please try refreshing the page or contact support if the issue persists.
+            {t('tryRefreshing')}
           </p>
         </div>
       )}

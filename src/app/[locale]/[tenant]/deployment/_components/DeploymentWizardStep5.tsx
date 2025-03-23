@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Host as HostType, ScriptParameter, CICDProvider, CICDJob } from '../types';
 import CustomSwitch from './CustomSwitch';
 import { useCICD } from '@/context';
@@ -46,6 +47,8 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   onPrevStep,
   isSubmitting = false,
 }) => {
+  const t = useTranslations('deployment.wizard');
+
   // Use the CICD context from the new context system
   const {
     fetchCICDProviders,
@@ -76,7 +79,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         setProviders(result.providers || []);
         if (result.error) setProvidersError(result.error);
       } catch (err: any) {
-        setProvidersError(err.message || 'Failed to fetch CI/CD providers');
+        setProvidersError(err.message || t('failedFetchProviders'));
         console.error('Error fetching CI/CD providers:', err);
       } finally {
         setIsLoadingProviders(false);
@@ -84,7 +87,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
     };
     
     loadProviders();
-  }, [fetchCICDProviders]);
+  }, [fetchCICDProviders, t]);
   
   // Fetch CI/CD jobs when a provider is selected
   useEffect(() => {
@@ -101,7 +104,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         setJobs(result.jobs || []);
         if (result.error) setJobsError(result.error);
       } catch (err: any) {
-        setJobsError(err.message || 'Failed to fetch CI/CD jobs');
+        setJobsError(err.message || t('failedFetchJobs'));
         console.error('Error fetching CI/CD jobs:', err);
       } finally {
         setIsLoadingJobs(false);
@@ -109,7 +112,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
     };
     
     loadJobs();
-  }, [jenkinsConfig.providerId, fetchCICDJobs]);
+  }, [jenkinsConfig.providerId, fetchCICDJobs, t]);
   
   // Fetch job details when a job is selected
   useEffect(() => {
@@ -126,7 +129,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         setJobDetails(result.jobDetails || null);
         if (result.error) setJobDetailsError(result.error);
       } catch (err: any) {
-        setJobDetailsError(err.message || 'Failed to fetch job details');
+        setJobDetailsError(err.message || t('failedFetchJobDetails'));
         console.error('Error fetching job details:', err);
       } finally {
         setIsLoadingJobDetails(false);
@@ -134,7 +137,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
     };
     
     loadJobDetails();
-  }, [jenkinsConfig.providerId, jenkinsConfig.jobId, fetchCICDJobDetails]);
+  }, [jenkinsConfig.providerId, jenkinsConfig.jobId, fetchCICDJobDetails, t]);
   
   // Extract job and parameters from job details
   const job = jobDetails?.job;
@@ -203,7 +206,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
           onClick={onPrevStep}
           className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          Previous
+          {t('previous')}
         </button>
         
         <div className="flex items-center space-x-4">
@@ -215,7 +218,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
                 setShowJenkinsView(true);
               }
             }}
-            label="Jenkins Integration"
+            label={t('jenkinsIntegration')}
           />
         </div>
         
@@ -230,10 +233,10 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              Creating...
+              {t('creating')}
             </>
           ) : (
-            'Create Deployment'
+            t('createDeployment')
           )}
         </button>
       </div>
@@ -243,7 +246,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         {jenkinsConfig.enabled ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">Jenkins Pipeline Preview</h3>
+              <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">{t('jenkinsPipelinePreview')}</h3>
             </div>
             
             <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 p-4 overflow-auto max-h-96">
@@ -277,24 +280,24 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
           </div>
         ) : (
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-            <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Deployment Summary</h4>
+            <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{t('deploymentSummary')}</h4>
             
             <div className="space-y-4">
               {/* Scripts */}
               <div className="space-y-2 mb-4">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Selected Scripts ({scriptIds.length})
+                  {t('selectedScripts')} ({scriptIds.length})
                 </h3>
                 <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {scriptIds.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 p-3">No scripts selected</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 p-3">{t('noScripts')}</p>
                   ) : (
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">#</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">Script Path</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">Parameters</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">{t('scriptPath')}</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">{t('parameters')}</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -332,7 +335,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
               
               {/* Target Hosts */}
               <div>
-                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Target Hosts</h5>
+                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('targetHosts')}</h5>
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
                   {hostIds.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">
@@ -355,26 +358,26 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-500">No hosts selected</p>
+                    <p className="text-xs text-gray-500">{t('noHosts')}</p>
                   )}
                 </div>
               </div>
               
               {/* Schedule */}
               <div>
-                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Schedule</h5>
+                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('schedule')}</h5>
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
                   <div className="text-xs text-gray-800 dark:text-gray-200">
                     {schedule === 'now' ? (
-                      <span>Deploy immediately</span>
+                      <span>{t('deployImmediately')}</span>
                     ) : (
                       <div className="space-y-1">
-                        <div>Scheduled for: <span className="font-medium">{scheduledTime}</span></div>
+                        <div>{t('scheduledFor')}: <span className="font-medium">{scheduledTime}</span></div>
                         {cronExpression && (
                           <div>Cron: <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">{cronExpression}</code></div>
                         )}
                         {(repeatCount || 0) > 0 && (
-                          <div>Repeat: <span className="font-medium">{repeatCount || 0} times</span></div>
+                          <div>{t('repeat')}: <span className="font-medium">{repeatCount || 0} {t('times')}</span></div>
                         )}
                       </div>
                     )}

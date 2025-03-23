@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 import { Host } from '../types';
 import HostSelector from './HostSelector';
 
@@ -25,6 +26,8 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
   onNextStep,
   isStepValid
 }) => {
+  const t = useTranslations('deployment.wizard');
+  
   return (
     <div>
       <div className="flex justify-between mb-1">
@@ -33,7 +36,7 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
           onClick={onPrevStep}
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          Previous
+          {t('previous')}
         </button>
         
         <button
@@ -46,22 +49,22 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
               : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
           }`}
         >
-          Next
+          {t('next')}
         </button>
       </div>
       
       {isLoadingHosts ? (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-          <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">Loading hosts...</span>
+          <span className="ml-3 text-sm text-gray-600 dark:text-gray-400">{t('loadingHosts')}</span>
         </div>
       ) : hostsError ? (
         <div className="mb-2 p-2 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-900 rounded-md">
           <p className="text-xs text-red-600 dark:text-red-400">
-            Error loading hosts: {hostsError}
+            {t('hostsError')}: {hostsError}
           </p>
           <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-            Please try refreshing the page or contact support if the issue persists.
+            {t('tryRefreshing')}
           </p>
         </div>
       ) : (

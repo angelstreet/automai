@@ -202,23 +202,10 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
     }));
   };
 
-  // Improved back button handler with better safeguards
-  const handleBackClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    
-    // Prevent back navigation during initial render/mount
-    if (!isMountedRef.current) {
-      return;
-    }
-    
-    // Show confirmation dialog if form has been partially filled
-    if (deploymentData.name || deploymentData.repositoryId) {
-      if (window.confirm('Are you sure you want to cancel? Your changes will be lost.')) {
-        onCancel();
-      }
-    } else {
-      onCancel();
-    }
+  // Handle cancel button click
+  const handleCancelWizard = () => {
+    // Remove confirmation dialog and just call onCancel directly
+    onCancel();
   };
 
   const handleScriptsChange = (scriptIds: string[]) => {
@@ -441,7 +428,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
       <div className="mb-1">
         <div className="flex justify-between items-center">
           <button 
-            onClick={handleBackClick} 
+            onClick={handleCancelWizard} 
             className="flex items-center text-xs text-blue-600 dark:text-blue-400 hover:underline"
             disabled={!isMountedRef.current}
           >

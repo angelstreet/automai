@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useTranslations } from 'next-intl';
 
 interface DeploymentWizardStep4Props {
   schedule: string;
@@ -23,6 +24,8 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
   onNextStep,
   isStepValid
 }) => {
+  const t = useTranslations('deployment.wizard');
+  
   return (
     <div>
       <div className="flex justify-between mb-1">
@@ -31,7 +34,7 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
           onClick={onPrevStep}
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-          Previous
+          {t('previous')}
         </button>
         
         <button
@@ -44,13 +47,13 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
               : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
           }`}
         >
-          Next
+          {t('next')}
         </button>
       </div>
       
       <div className="mb-3">
         <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Deployment Schedule
+          {t('deploymentSchedule')}
         </label>
         <div className="flex items-center space-x-4 mb-2">
           <div className="flex items-center">
@@ -64,7 +67,7 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
             />
             <label htmlFor="scheduleNow" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-              Deploy now
+              {t('deployNow')}
             </label>
           </div>
           <div className="flex items-center">
@@ -78,7 +81,7 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
             />
             <label htmlFor="scheduleLater" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-              Schedule for later
+              {t('scheduleLater')}
             </label>
           </div>
         </div>
@@ -87,7 +90,7 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
           <div className="space-y-3">
             <div>
               <label htmlFor="scheduledTime" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Date and Time
+                {t('dateAndTime')}
               </label>
               <input
                 type="datetime-local"
@@ -102,7 +105,7 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
             
             <div>
               <label htmlFor="cronExpression" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Cron Expression (Optional)
+                {t('cronExpression')}
               </label>
               <input
                 type="text"
@@ -110,17 +113,17 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
                 name="cronExpression"
                 value={cronExpression || ''}
                 onChange={onInputChange}
-                placeholder="e.g. 0 0 * * *"
+                placeholder={t('cronPlaceholder')}
                 className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Format: minute hour day-of-month month day-of-week
+                {t('cronFormat')}
               </p>
             </div>
             
             <div>
               <label htmlFor="repeatCount" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Repeat Count
+                {t('repeatCount')}
               </label>
               <input
                 type="number"
@@ -132,7 +135,7 @@ const DeploymentWizardStep4: React.FC<DeploymentWizardStep4Props> = ({
                 className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                0 means run once, -1 means repeat indefinitely
+                {t('repeatCountHelp')}
               </p>
             </div>
           </div>
