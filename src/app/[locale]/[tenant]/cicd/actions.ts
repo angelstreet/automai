@@ -244,4 +244,31 @@ export async function testCICDProviderAction(provider: CICDProviderPayload): Pro
     console.error('Unexpected error testing CICD provider:', error);
     return { success: false, error: error.message || 'An unexpected error occurred' };
   }
+}
+
+/**
+ * Get CI/CD jobs for all providers or a specific provider
+ */
+export async function getCICDJobs(providerId?: string): Promise<ActionResult> {
+  try {
+    // Get the current authenticated user
+    const user = await getUser();
+    
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+    
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
+    
+    // Get jobs
+    const jobs = await cicdDb.getCICDJobs({
+      where: providerId ? { provider_id: providerId, tenant_id: user.tenant_id } : { tenant_id: user.tenant_id }
+    });
+    
+    return { success: true, data: jobs };
+  } catch (error) {
+    console.error('Error fetching CI/CD jobs:', error);
+    return { success: false, error: (error as Error).message || 'Failed to fetch CI/CD jobs' };
+  }
 } 

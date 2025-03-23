@@ -4,7 +4,8 @@ import { User } from 'lucide-react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { User as UserType } from '@/types/user';
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/sidebar';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
+import { useSidebar } from '@/context/SidebarContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
