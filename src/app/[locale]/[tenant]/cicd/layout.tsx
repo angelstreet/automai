@@ -10,5 +10,9 @@ export default function CICDLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <div className="container mx-auto py-6 px-4">
+      {children}
+    </div>
+  );
 } 

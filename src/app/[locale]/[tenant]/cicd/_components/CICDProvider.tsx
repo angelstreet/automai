@@ -40,13 +40,30 @@ import { getCICDProvidersAction, deleteCICDProviderAction, testCICDProviderActio
 import { Badge } from '@/components/shadcn/badge';
 import { CICDProvider as CICDProviderModel } from '../types';
 
-export default function CICDProvider() {
+interface CICDProviderProps {
+  removeTitle?: boolean;
+}
+
+export default function CICDProvider({ removeTitle = false }: CICDProviderProps) {
   const [providers, setProviders] = useState<CICDProviderModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState<CICDProviderModel | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Listen for the add provider event from page
+  useEffect(() => {
+    const handleAddProviderEvent = () => {
+      handleAddEditProvider();
+    };
+    
+    document.addEventListener('add-cicd-provider', handleAddProviderEvent);
+    
+    return () => {
+      document.removeEventListener('add-cicd-provider', handleAddProviderEvent);
+    };
+  }, []);
   
   // Load providers on component mount
   useEffect(() => {
@@ -202,17 +219,19 @@ export default function CICDProvider() {
   
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xl font-bold">CI/CD Providers</CardTitle>
-        <Button
-          onClick={() => handleAddEditProvider()}
-          size="sm"
-          className="h-8 gap-1"
-        >
-          <PlusCircle className="h-4 w-4" />
-          <span>Add Provider</span>
-        </Button>
-      </CardHeader>
+      {!removeTitle && (
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-xl font-bold">CI/CD Providers</CardTitle>
+          <Button
+            onClick={() => handleAddEditProvider()}
+            size="sm"
+            className="h-8 gap-1"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Add Provider</span>
+          </Button>
+        </CardHeader>
+      )}
       
       <CardContent>
         {loading ? (
