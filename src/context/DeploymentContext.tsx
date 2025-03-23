@@ -9,7 +9,8 @@ import {
   abortDeployment as abortDeploymentAction, 
   refreshDeployment as refreshDeploymentAction,
   updateDeployment,
-  deleteDeployment
+  deleteDeployment,
+  getScriptsForRepository
 } from '@/app/[locale]/[tenant]/deployment/actions';
 import { getRepositories } from '@/app/[locale]/[tenant]/repositories/actions';
 import { getHosts as getAvailableHosts } from '@/app/[locale]/[tenant]/hosts/actions';
@@ -176,12 +177,8 @@ export const DeploymentProvider: React.FC<{
           'start-loading'
         );
 
-        // Adding slight delay for debouncing
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Mock API call for now
-        // In a real app, this would be an API call to fetch deployments
-        const deployments = [] as Deployment[]; // Mock data
+        // Use the real API call instead of mock data
+        const deployments = await getDeployments();
         
         safeUpdateState(
           setState,
@@ -237,6 +234,7 @@ export const DeploymentProvider: React.FC<{
         try {
           await fetchUserData();
           await fetchDeployments();
+          await fetchRepositories();
           // Only set initialized here, not in fetchDeployments
           setInitialized(true);
           console.log('[DeploymentContext] Initialization complete');
@@ -247,7 +245,7 @@ export const DeploymentProvider: React.FC<{
       
       initializeData();
     }
-  }, [initialized, fetchUserData, fetchDeployments]);
+  }, [initialized, fetchUserData, fetchDeployments, fetchRepositories]);
   
   // Add one useful log when deployments are loaded
   useEffect(() => {
@@ -388,9 +386,8 @@ export const DeploymentProvider: React.FC<{
     const result = await protectedFetch(`fetchScripts-${repositoryId}`, async () => {
       try {
         console.log(`[DeploymentContext] Fetching scripts for repository ${repositoryId}`);
-        // This needs to be implemented with an appropriate API call
-        // For now, return empty array
-        return [];
+        // Use the API function instead of returning an empty array
+        return await getScriptsForRepository(repositoryId);
       } catch (err) {
         console.error(`[DeploymentContext] Error fetching scripts for repository ${repositoryId}:`, err);
         return [];
@@ -423,9 +420,18 @@ export const DeploymentProvider: React.FC<{
     const result = await protectedFetch(`fetchDeploymentStatus-${id}`, async () => {
       try {
         console.log(`[DeploymentContext] Fetching status for deployment ${id}`);
-        // This would normally call an API endpoint to get the status
-        // For now, we'll just return a mock status
-        return { status: 'running', progress: 50 };
+        // Use the refreshDeployment API to get real status
+        const refreshResult = await refreshDeploymentAction(id);
+        
+        if (refreshResult.success && refreshResult.deployment) {
+          return { 
+            status: refreshResult.deployment.status, 
+            progress: 0, // Default progress since it's not in the type
+            deployment: refreshResult.deployment
+          };
+        }
+        
+        return { status: 'unknown', progress: 0 };
       } catch (err) {
         console.error(`[DeploymentContext] Error fetching status for deployment ${id}:`, err);
         return null;
