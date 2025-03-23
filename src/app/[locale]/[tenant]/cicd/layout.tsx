@@ -1,13 +1,14 @@
-'use client';
+import { Metadata } from 'next';
 
-import React from 'react';
-// Layout not needed anymore - removing context provider since it's handled by AppContext
+export const metadata: Metadata = {
+  title: 'CI/CD Integration',
+  description: 'Configure CI/CD providers for automated deployments',
+};
+
 export default function CICDLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <>{children}</>
-  );
+  return children;
 } 

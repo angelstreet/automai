@@ -5,15 +5,86 @@ import {
   ActionResult, 
   CICDProviderPayload, 
   CICDProviderListResult,
-  CICDProviderActionResult
+  CICDProviderActionResult,
+  CICDProvider,
+  CICDAuthType,
+  CICDCredentials,
+  CICDProviderType
 } from '@/types/cicd';
 import { getUser } from '@/app/actions/user';
 import { logger } from '@/lib/logger';
-import { CICDProvider } from '@/app/[locale]/[tenant]/cicd/types';
 import { serverCache } from '@/lib/cache';
 import { AuthUser } from '@/types/user';
 import { getCICDProvider } from '@/lib/services/cicd';
 import cicdDb from '@/lib/supabase/db-cicd';
+
+/**
+ * Map database auth type to application auth type
+ */
+function mapAuthType(dbAuthType: 'token' | 'basic' | 'oauth'): CICDAuthType {
+  if (dbAuthType === 'basic') {
+    return 'basic_auth';
+  }
+  return dbAuthType as CICDAuthType;
+}
+
+/**
+ * Map database provider type to application provider type
+ */
+function mapProviderType(dbType: string): CICDProviderType {
+  if (dbType === 'bitbucket') {
+    return 'github'; // Map bitbucket to github for now
+  }
+  return dbType as CICDProviderType;
+}
+
+/**
+ * Map database credentials to application credentials
+ */
+function mapCredentials(dbCredentials: Record<string, string>): CICDCredentials {
+  return {
+    username: dbCredentials.username || undefined,
+    password: dbCredentials.password || undefined,
+    token: dbCredentials.token || undefined
+  };
+}
+
+/**
+ * Map database provider to application provider type
+ */
+function mapDatabaseProvider(dbProvider: {
+  id: string;
+  tenant_id: string;
+  name: string;
+  type: string;
+  url: string;
+  config: {
+    auth_type: 'token' | 'basic' | 'oauth';
+    credentials: Record<string, string>;
+    status?: string;
+  };
+  created_at?: string;
+  updated_at?: string;
+  created_by?: string;
+  updated_by?: string;
+}): CICDProvider {
+  return {
+    id: dbProvider.id,
+    tenant_id: dbProvider.tenant_id,
+    name: dbProvider.name,
+    type: mapProviderType(dbProvider.type),
+    url: dbProvider.url,
+    config: {
+      auth_type: mapAuthType(dbProvider.config.auth_type),
+      credentials: mapCredentials(dbProvider.config.credentials)
+    },
+    status: dbProvider.config.status,
+    created_at: dbProvider.created_at || new Date().toISOString(),
+    updated_at: dbProvider.updated_at || new Date().toISOString(),
+    created_by: dbProvider.created_by || 'system',
+    updated_by: dbProvider.updated_by || 'system'
+  };
+}
 
 /**
  * Get all CI/CD providers
@@ -63,17 +134,16 @@ export async function getCICDProviders(
     // Get providers using the service layer
     const result = await cicdDb.getCICDProviders({ 
       where: { 
-        tenant_id: currentUser.tenant_id,
-        deleted_at: null
-      },
-      orderBy: { created_at: 'desc' }
+        tenant_id: currentUser.tenant_id
+      }
     });
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to fetch CICD providers');
     }
 
-    const providers = result.data || [];
+    // Map database providers to application type
+    const providers = (result.data || []).map(mapDatabaseProvider);
 
     // Cache the result
     serverCache.set(cacheKey, providers);
