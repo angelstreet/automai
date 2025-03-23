@@ -1,10 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Eye, Trash2, PlayCircle } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { DeploymentRunAction } from './DeploymentRunAction';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/shadcn/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,12 +26,17 @@ import { useDeployment } from '@/context';
 
 interface DeploymentActionsProps {
   deploymentId: string;
+  deploymentName?: string;
 }
 
-export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ deploymentId }) => {
+export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ 
+  deploymentId, 
+  deploymentName = 'this deployment'
+}) => {
   const router = useRouter();
   const params = useParams();
   const { locale, tenant } = params;
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const deploymentContext = useDeployment();
   
@@ -34,41 +49,42 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ deployment
     router.push(`/${locale}/${tenant}/deployment/${deploymentId}`);
   };
   
-  const handleDelete = async (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    if (confirm('Are you sure you want to delete this deployment? This action cannot be undone.')) {
-      try {
-        const result = await deleteDeployment(deploymentId);
+    setIsDeleteDialogOpen(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    try {
+      const result = await deleteDeployment(deploymentId);
+      
+      if (result.success) {
+        toast({
+          title: 'Deployment Deleted',
+          description: 'The deployment has been successfully deleted.',
+          variant: 'default',
+        });
         
-        if (result.success) {
-          toast({
-            title: 'Deployment Deleted',
-            description: 'The deployment has been successfully deleted.',
-            variant: 'default',
-          });
-          
-          // Force a complete refresh of the page
-          router.refresh();
-          
-          // Add a small delay then navigate to the deployments list to ensure refresh
-          setTimeout(() => {
-            router.push(`/${locale}/${tenant}/deployment`);
-          }, 500);
-        } else {
-          toast({
-            title: 'Error',
-            description: result.error || 'Failed to delete the deployment',
-            variant: 'destructive',
-          });
-        }
-      } catch (error: any) {
+        // Force a complete refresh of the page
+        router.refresh();
+        
+        // Add a small delay then navigate to the deployments list to ensure refresh
+        setTimeout(() => {
+          router.push(`/${locale}/${tenant}/deployment`);
+        }, 500);
+      } else {
         toast({
           title: 'Error',
-          description: error.message || 'An unexpected error occurred',
+          description: result.error || 'Failed to delete the deployment',
           variant: 'destructive',
         });
       }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
     }
   };
   
@@ -89,10 +105,31 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ deployment
         variant="outline"
         size="sm"
         className="flex items-center text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-        onClick={handleDelete}
+        onClick={handleDeleteClick}
       >
         <Trash2 className="mr-1 h-3 w-3" /> Delete
       </Button>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="sm:max-w-[425px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Deployment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deploymentName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete} 
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }; 

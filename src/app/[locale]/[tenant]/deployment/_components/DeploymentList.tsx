@@ -473,7 +473,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                                 : '-'}
                         </td>
                         <td className="px-2 py-1 whitespace-nowrap text-sm text-right">
-                          <DeploymentActions deploymentId={deployment.id} />
+                          <DeploymentActions deploymentId={deployment.id} deploymentName={deployment.name} />
                         </td>
                       </tr>
                     ))}
