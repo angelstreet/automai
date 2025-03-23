@@ -12,6 +12,8 @@ import { logger } from '@/lib/logger';
 import { CICDProvider } from '@/app/[locale]/[tenant]/cicd/types';
 import { serverCache } from '@/lib/cache';
 import { AuthUser } from '@/types/user';
+import { getCICDProvider } from '@/lib/services/cicd';
+import cicdDb from '@/lib/supabase/db-cicd';
 
 /**
  * Get all CI/CD providers
@@ -33,18 +35,14 @@ export async function getCICDProviders(
     // Use provided user data or fetch it if not provided
     const currentUser = user || await getUser();
 
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
     console.log(`[CICDActions] User status for ${origin}:`, {
       authenticated: !!currentUser,
-      tenant: currentUser?.tenant_id || 'unknown',
-      hasRole: !!currentUser?.role
+      tenant: currentUser.tenant_id || 'unknown',
     });
-    
-    if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
-      };
-    }
 
     // Create cache key using tenant
     const cacheKey = `cicd:${currentUser.tenant_id}`;
@@ -60,52 +58,29 @@ export async function getCICDProviders(
       return { success: true, data: cached };
     }
     
-    console.log(`[CICDActions] No cache found for ${origin}, fetching from database`);
+    console.log(`[CICDActions] No cache found for ${origin}, fetching from service`);
+    
+    // Get providers using the service layer
+    const result = await cicdDb.getCICDProviders({ 
+      where: { 
+        tenant_id: currentUser.tenant_id,
+        deleted_at: null
+      },
+      orderBy: { created_at: 'desc' }
+    });
 
-    // TODO: Replace with actual database query
-    // For now, return a mock list of providers
-    const mockProviders: CICDProvider[] = [
-      {
-        id: 'github-actions',
-        name: 'GitHub Actions',
-        type: 'github',
-        description: 'GitHub Actions CI/CD provider',
-        url: 'https://github.com/features/actions',
-        icon: '/images/cicd/github-actions.svg',
-        status: 'active',
-        supportedFeatures: ['continuous-integration', 'continuous-deployment'],
-        lastSyncTime: new Date().toISOString(),
-      },
-      {
-        id: 'gitlab-ci',
-        name: 'GitLab CI/CD',
-        type: 'gitlab',
-        description: 'GitLab CI/CD provider',
-        url: 'https://docs.gitlab.com/ee/ci/',
-        icon: '/images/cicd/gitlab-ci.svg',
-        status: 'active',
-        supportedFeatures: ['continuous-integration', 'continuous-deployment', 'security-scanning'],
-        lastSyncTime: new Date().toISOString(),
-      },
-      {
-        id: 'jenkins',
-        name: 'Jenkins',
-        type: 'jenkins',
-        description: 'Jenkins CI/CD server',
-        url: 'https://www.jenkins.io/',
-        icon: '/images/cicd/jenkins.svg',
-        status: 'inactive',
-        supportedFeatures: ['continuous-integration', 'continuous-deployment', 'pipeline'],
-        lastSyncTime: null,
-      },
-    ];
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch CICD providers');
+    }
+
+    const providers = result.data || [];
 
     // Cache the result
-    serverCache.set(cacheKey, mockProviders);
+    serverCache.set(cacheKey, providers);
     
     console.log(`[CICDActions] Successfully fetched CICD providers for ${origin}`);
 
-    return { success: true, data: mockProviders };
+    return { success: true, data: providers };
   } catch (error: any) {
     console.error(`[CICDActions] Error fetching CICD providers (${origin}):`, error);
     return { 
