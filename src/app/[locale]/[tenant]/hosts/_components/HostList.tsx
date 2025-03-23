@@ -18,36 +18,7 @@ export default function HostContainer() {
   const renderCount = useRef(0);
   const isInitialized = useRef(false);
   
-  // Add logging for component mount
-  useEffect(() => {
-    renderCount.current++;
-    console.log(`[HostContainer] mounted (render #${renderCount.current})`);
-    
-    return () => {
-      console.log('[HostContainer] unmounted');
-    };
-  }, []);
-  
-  // Get user data from context
-  const userContext = useUser();
-  
-  // Log user context on each render and when it changes
-  useEffect(() => {
-    if (!userContext) return;
-    
-    console.log('[HostContainer] User context state:', {
-      hasUser: !!userContext?.user,
-      isLoading: userContext?.loading,
-      hasError: !!userContext?.error,
-      userData: userContext?.user ? {
-        id: userContext.user.id,
-        role: userContext.user.role,
-        tenant: userContext.user.tenant_id
-      } : null,
-      renderCount: renderCount.current
-    });
-  }, [userContext]);
-  
+  // Group all state declarations at the top
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
@@ -63,8 +34,19 @@ export default function HostContainer() {
     username: '',
     password: '',
   });
-
-  // Use the centralized context with proper hooks
+  
+  // Add logging for component mount
+  useEffect(() => {
+    renderCount.current++;
+    console.log(`[HostContainer] mounted (render #${renderCount.current})`);
+    
+    return () => {
+      console.log('[HostContainer] unmounted');
+    };
+  }, []);
+  
+  // Get user data from context
+  const userContext = useUser();
   const hostContext = useHost();
 
   // Add safety check for null context during initial render
@@ -87,6 +69,33 @@ export default function HostContainer() {
     testConnection,
     testAllConnections,
   } = hostContext;
+
+  // Create a memoized test connection handler
+  const handleTestConnection = useCallback(async (host: Host) => {
+    console.log('[HostList] Test connection triggered for host:', host.id);
+    
+    if (!testConnection) {
+      console.error('[HostList] testConnection not available from context');
+      return false;
+    }
+
+    try {
+      // Clear the cache before testing connection
+      const { clearHostsCache } = await import('../actions');
+      await clearHostsCache();
+      
+      const result = await testConnection(host.id);
+      console.log('[HostList] Test connection result:', result);
+      
+      // Refresh the hosts list to get updated statuses
+      await fetchHosts();
+      
+      return result.success;
+    } catch (error) {
+      console.error('[HostList] Test connection error:', error);
+      return false;
+    }
+  }, [testConnection, fetchHosts]);
 
   // Memoize user data to prevent dependency loop
   const userData = userContext?.user;
@@ -278,35 +287,13 @@ export default function HostContainer() {
           selectMode={selectMode}
           onSelect={handleSelectHost}
           onDelete={removeHost}
-          onTestConnection={(host: Host) => {
-            console.log("Test connection callback triggered from HostGrid", { 
-              hostId: host.id, 
-              testConnectionExists: typeof testConnection === 'function' 
-            });
-            if (typeof testConnection === 'function') {
-              return testConnection(host.id);
-            } else {
-              console.error("testConnection is not a function in host context:", hostContext);
-              return Promise.resolve(false);
-            }
-          }}
+          onTestConnection={handleTestConnection}
         />
       ) : (
         <HostTable
           hosts={hosts}
           onDelete={removeHost}
-          onTestConnection={(host: Host) => {
-            console.log("Test connection callback triggered from HostTable", { 
-              hostId: host.id, 
-              testConnectionExists: typeof testConnection === 'function' 
-            });
-            if (typeof testConnection === 'function') {
-              return testConnection(host.id);
-            } else {
-              console.error("testConnection is not a function in host context:", hostContext);
-              return Promise.resolve(false);
-            }
-          }}
+          onTestConnection={handleTestConnection}
         />
       )}
 

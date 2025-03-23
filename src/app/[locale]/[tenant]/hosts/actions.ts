@@ -39,7 +39,6 @@ export async function getHosts(
     console.log(`[HostsActions] User status for ${origin}:`, {
       authenticated: !!currentUser,
       tenant: currentUser?.tenant_id || 'unknown',
-      hasRole: !!currentUser?.role
     });
     
     if (!currentUser) {
@@ -300,31 +299,77 @@ export async function testHostConnection(
       };
     }
 
-    // Update updated_at to track last connection test time
-    const updatedHost = await db.host.update({
+    // Get the host details first
+    const host = await db.host.findUnique({
+      where: { id }
+    });
+
+    if (!host) {
+      return {
+        success: false,
+        error: 'Host not found'
+      };
+    }
+
+    // First update the host to testing state
+    await db.host.update({
       where: { id },
       data: {
+        status: 'testing',
         updated_at: new Date().toISOString(),
-        status: 'connected', // Set to connected on successful test
       },
     });
 
-    if (!updatedHost) {
-      return {
-        success: false,
-        error: 'Host not found or update failed',
-      };
-    }
+    // Invalidate cache to show testing state
+    serverCache.delete(`host:${id}`);
+    serverCache.delete('hosts:all');
+
+    // Add a small delay to show the testing animation
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    // Test the actual SSH connection using the service
+    const result = await testHostConnectionService({
+      type: host.type,
+      ip: host.ip,
+      port: host.port,
+      username: host.user,
+      password: host.password,
+      hostId: host.id
+    });
+
+    // Update the host status based on the test result
+    await db.host.update({
+      where: { id },
+      data: {
+        status: result.success ? 'connected' : 'failed',
+        updated_at: new Date().toISOString(),
+      },
+    });
 
     // Invalidate cache after update
     serverCache.delete(`host:${id}`);
     serverCache.delete('hosts:all');
 
-    // In a real application, you would actually test the connection here
-    // For now, we'll just simulate a successful connection
-    return { success: true, message: 'Connection successful' };
+    return result;
   } catch (error: any) {
     console.error('Error in testHostConnection:', error);
+    
+    // Update status to failed on error
+    try {
+      await db.host.update({
+        where: { id },
+        data: {
+          status: 'failed',
+          updated_at: new Date().toISOString(),
+        },
+      });
+      // Invalidate cache
+      serverCache.delete(`host:${id}`);
+      serverCache.delete('hosts:all');
+    } catch (updateError) {
+      console.error('Error updating host status to failed:', updateError);
+    }
+    
     return { success: false, error: error.message || 'Failed to test connection' };
   }
 }
@@ -491,4 +536,39 @@ export async function checkAllConnections(
     await new Promise((resolve) => setTimeout(resolve, 300));
   }
   return results;
+}
+
+/**
+ * Clear all host-related caches
+ * @param user Optional pre-fetched user data to avoid redundant auth calls
+ */
+export async function clearHostsCache(
+  user?: AuthUser | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Use provided user data or fetch it if not provided
+    const currentUser = user || await getUser();
+    if (!currentUser) {
+      return { 
+        success: false, 
+        error: 'Unauthorized - Please sign in' 
+      };
+    }
+
+    console.log('[HostsActions] Clearing hosts cache');
+    
+    // Clear the main hosts cache for this tenant
+    const tenantKey = `hosts:${currentUser.tenant_id}`;
+    serverCache.delete(tenantKey);
+    
+    // Clear filtered hosts cache for this tenant
+    const filteredKey = `hosts:${currentUser.tenant_id}:filtered`;
+    serverCache.delete(filteredKey);
+
+    console.log('[HostsActions] Hosts cache cleared successfully');
+    return { success: true };
+  } catch (error: any) {
+    console.error('[HostsActions] Error clearing hosts cache:', error);
+    return { success: false, error: error.message || 'Failed to clear hosts cache' };
+  }
 }

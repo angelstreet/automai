@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,16 +38,37 @@ import { Host } from '../types';
 interface HostCardProps {
   host: Host;
   onDelete?: (id: string) => void;
-  onTestConnection?: (host: Host) => void;
+  onTestConnection?: (host: Host) => Promise<boolean>;
 }
 
-export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
+// Export both as default and named export for backward compatibility
+export { HostCard as default, HostCard };
+
+function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   const router = useRouter();
+  const t = useTranslations('Common');
+
+  // Group all state declarations together at the top
   const [showError, setShowError] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
-  const t = useTranslations('Common');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [localStatus, setLocalStatus] = useState(host.status);
+
+  // Update localStatus when host.status changes
+  useEffect(() => {
+    setLocalStatus(host.status);
+  }, [host.status]);
+
+  // Add logging for component mount and props
+  useEffect(() => {
+    console.log('[HostCard] Mounted for host:', host.id, {
+      hasOnTestConnection: !!onTestConnection,
+      hasOnDelete: !!onDelete
+    });
+  }, [host.id, onTestConnection, onDelete]);
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
@@ -202,40 +223,67 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
     router.push(terminalPath);
   };
 
-  const handleRefreshClick = async () => {
-    if (isRefreshing || !onTestConnection || isDeleting) return;
+  const handleRefreshClick = useCallback(async () => {
+    // Don't execute if already refreshing or deleting
+    if (isRefreshing || isDeleting) {
+      console.log('[HostCard] Skipping refresh - already in progress or deleting');
+      return;
+    }
 
+    console.log('[HostCard] Starting refresh for host:', host.id);
     setIsRefreshing(true);
+    setLocalStatus('testing'); // Set local status to testing immediately
+
     try {
-      await onTestConnection(host);
+      if (!onTestConnection) {
+        throw new Error('Test connection callback not provided');
+      }
+
+      const result = await onTestConnection(host);
+      console.log('[HostCard] Refresh result:', { hostId: host.id, success: result });
+
+      // Update localStatus based on the test result
+      setLocalStatus(result ? 'connected' : 'failed');
+
+      if (result === false) {
+        setErrorMessage('Failed to connect to host. Please check your connection settings.');
+        setShowErrorDialog(true);
+      }
+    } catch (error) {
+      console.error('[HostCard] Refresh error:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'An unexpected error occurred');
+      setShowErrorDialog(true);
+      setLocalStatus('failed'); // Set status to failed on error
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [host, onTestConnection, isRefreshing, isDeleting]);
 
-  const handleDelete = async () => {
-    if (isDeleting || !onDelete) return;
-    
-    console.log('HostCard: Starting delete process for host:', host.name, 'ID:', host.id);
+  const handleDelete = useCallback(async () => {
+    if (isDeleting || isRefreshing) {
+      console.log('[HostCard] Skipping delete - already in progress or refreshing');
+      return;
+    }
+
+    if (!onDelete) {
+      console.error('[HostCard] Delete callback not provided');
+      return;
+    }
+
+    console.log('[HostCard] Starting delete for host:', host.id);
     setIsDeleting(true);
-    
+
     try {
-      // Call the onDelete handler and wait for its completion
-      console.log('HostCard: Calling onDelete callback');
       await onDelete(host.id);
-      
-      console.log('HostCard: Delete operation successful, updating UI');
-      // Only mark as deleted if the delete operation was successful
+      console.log('[HostCard] Host deleted successfully:', host.id);
       setIsDeleted(true);
     } catch (error) {
-      console.error('Error deleting host:', error);
-    } finally {
-      // Reset the deleting state after a short delay
-      setTimeout(() => {
-        setIsDeleting(false);
-      }, 500);
+      console.error('[HostCard] Delete error:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to delete host');
+      setShowErrorDialog(true);
+      setIsDeleting(false);
     }
-  };
+  }, [host, onDelete, isDeleting, isRefreshing]);
 
   // If the host is deleted, don't render anything
   if (isDeleted) {
@@ -249,7 +297,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
           <div className="flex flex-col space-y-1.5">
             <div className="flex items-center">
               <div className="w-[200px] flex items-center">
-                <div className="mr-2">{getStatusDot(host.status)}</div>
+                <div className="mr-2">{getStatusDot(localStatus)}</div>
                 <CardTitle className="text-base font-semibold truncate flex-1">
                   {host.name}
                 </CardTitle>
@@ -298,7 +346,7 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
               size="sm"
               className="w-full mt-2"
               onClick={handleTerminalClick}
-              disabled={host.status !== 'connected'}
+              disabled={localStatus !== 'connected'}
             >
               <Terminal className="h-4 w-4 mr-2" />
               {t('terminal')}
@@ -312,28 +360,17 @@ export function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
         </CardContent>
       </Card>
 
-      <Dialog open={showError} onOpenChange={setShowError}>
+      <Dialog open={showErrorDialog} onOpenChange={setShowErrorDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="flex items-center text-destructive">
-              <AlertCircle className="h-5 w-5 mr-2" />
-              {t('connectionError')}
-            </DialogTitle>
+            <DialogTitle>Connection Error</DialogTitle>
+            <DialogDescription>{errorMessage}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="text-sm">
-              <p className="font-medium mb-2">{t('errorDetails')}:</p>
-              <pre className="bg-muted p-4 rounded-lg whitespace-pre-wrap text-xs">
-                {host.errorMessage || t('noErrorDetails')}
-              </pre>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <p>
-                {t('updated_at')}:{' '}
-                {host.updated_at ? new Date(host.updated_at).toLocaleString() : t('never')}
-              </p>
-            </div>
-          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowErrorDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
