@@ -17,6 +17,8 @@ import {
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
 import { verifyFingerprint as verifyFingerprintAction, testConnection as testConnectionAction } from '../actions';
+import { useHost } from '@/context/HostContext';
+import { Host } from '../types';
 
 export interface FormData {
   name: string;
@@ -49,6 +51,7 @@ export function ConnectionForm({
   testStatus = 'idle'
 }: ConnectionFormProps) {
   const t = useTranslations('Common');
+  const hostContext = useHost();
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
@@ -68,22 +71,18 @@ export function ConnectionForm({
 
   // Synchronize testSuccess with testStatus
   useEffect(() => {
-    // If testStatus changes to success, update internal testSuccess
     if (testStatus === 'success' && !testSuccess) {
       setTestSuccess(true);
     }
     
-    // If internal testSuccess becomes true, call onTestSuccess to update parent
     if (testSuccess && testStatus !== 'success' && onTestSuccess) {
       onTestSuccess();
     }
   }, [testSuccess, testStatus, onTestSuccess]);
 
-  // Handle connection type change
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
     
-    // Update form data with the new type and default port
     const defaultPort = value === 'ssh' ? '22' : value === 'docker' ? '2375' : '9000';
     onChange({
       ...formData,
@@ -92,7 +91,6 @@ export function ConnectionForm({
     });
   };
 
-  // Handle input change for any field
   const handleInputChange = (field: string, value: string) => {
     onChange({
       ...formData,
@@ -100,7 +98,6 @@ export function ConnectionForm({
     });
   };
 
-  // Handle enter key to submit form
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -108,7 +105,7 @@ export function ConnectionForm({
     }
   };
 
-  // Test the connection using the provided function
+  // Test the connection using the action directly since we don't have a host ID yet
   const testHostConnection = async () => {
     const now = Date.now();
     if (now - lastRequestTime.current < REQUEST_THROTTLE_MS || testing) {
@@ -131,7 +128,6 @@ export function ConnectionForm({
 
       if (result.success) {
         setTestSuccess(true);
-        // Make sure we call the parent's onTestSuccess to update testStatus
         if (onTestSuccess) {
           onTestSuccess();
         }

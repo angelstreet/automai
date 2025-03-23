@@ -24,6 +24,7 @@ export default function HostContainer() {
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
   const [selectMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshingHosts, setRefreshingHosts] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -70,33 +71,6 @@ export default function HostContainer() {
     testAllConnections,
   } = hostContext;
 
-  // Create a memoized test connection handler
-  const handleTestConnection = useCallback(async (host: Host) => {
-    console.log('[HostList] Test connection triggered for host:', host.id);
-    
-    if (!testConnection) {
-      console.error('[HostList] testConnection not available from context');
-      return false;
-    }
-
-    try {
-      // Clear the cache before testing connection
-      const { clearHostsCache } = await import('../actions');
-      await clearHostsCache();
-      
-      const result = await testConnection(host.id);
-      console.log('[HostList] Test connection result:', result);
-      
-      // Refresh the hosts list to get updated statuses
-      await fetchHosts();
-      
-      return result.success;
-    } catch (error) {
-      console.error('[HostList] Test connection error:', error);
-      return false;
-    }
-  }, [testConnection, fetchHosts]);
-
   // Memoize user data to prevent dependency loop
   const userData = userContext?.user;
 
@@ -118,6 +92,56 @@ export default function HostContainer() {
     }
   }, [hosts, loading, fetchHosts]);
 
+  // Create a memoized test connection handler
+  const handleTestConnection = useCallback(async (host: Host) => {
+    console.log('[HostList] Test connection triggered for host:', host.id);
+    
+    if (!testConnection) {
+      console.error('[HostList] testConnection not available from context');
+      return false;
+    }
+
+    try {
+      // Add this host to refreshing set
+      setRefreshingHosts(prev => {
+        const next = new Set(prev);
+        next.add(host.id);
+        return next;
+      });
+      setIsRefreshing(true);
+
+      // Clear the cache before testing connection
+      const { clearHostsCache } = await import('../actions');
+      await clearHostsCache();
+      
+      // The context's testConnection function will handle the animation state
+      const result = await testConnection(host.id);
+      console.log('[HostList] Test connection result:', result);
+      
+      // Refresh the hosts list to get updated statuses
+      await fetchHosts();
+      
+      return result.success;
+    } catch (error) {
+      console.error('[HostList] Test connection error:', error);
+      return false;
+    } finally {
+      // Remove this host from refreshing set
+      setRefreshingHosts(prev => {
+        const next = new Set(prev);
+        next.delete(host.id);
+        return next;
+      });
+      // Only stop global refresh if no hosts are being refreshed
+      setIsRefreshing(prev => {
+        if (prev && refreshingHosts.size <= 1) { // <= 1 because we haven't removed the current host yet
+          return false;
+        }
+        return prev;
+      });
+    }
+  }, [testConnection, fetchHosts, refreshingHosts]);
+
   // Handle refresh all hosts - pass user data from context
   const handleRefreshAll = useCallback(async () => {
     if (isRefreshing) return;
@@ -125,6 +149,10 @@ export default function HostContainer() {
     console.log('[HostContainer] Refreshing all hosts');
     setIsRefreshing(true);
     try {
+      // Add all hosts to refreshing set
+      const hostIds = hosts.map(h => h.id);
+      setRefreshingHosts(new Set(hostIds));
+
       // Pass user data to prevent redundant auth
       if (userData) {
         await testAllConnections(userData);
@@ -132,10 +160,11 @@ export default function HostContainer() {
         await testAllConnections();
       }
     } finally {
+      setRefreshingHosts(new Set()); // Clear all refreshing hosts
       setIsRefreshing(false);
       console.log('[HostContainer] Host refresh complete');
     }
-  }, [isRefreshing, testAllConnections, userData]);
+  }, [isRefreshing, testAllConnections, userData, hosts]);
 
   // Handle add host form submission with user data
   const handleSaveHost = useCallback(async () => {
@@ -258,7 +287,7 @@ export default function HostContainer() {
             </Button>
           </div>
           <Button onClick={handleRefreshAll} variant="outline" size="sm" disabled={isRefreshing || loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing || loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${(isRefreshing || refreshingHosts.size > 0) ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button onClick={() => setShowAddHost(true)}>
