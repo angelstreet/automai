@@ -54,8 +54,8 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     fetchRepositories = () => {} 
   } = deploymentContext || {};
   
-  // Use a loading state that defaults to true if undefined
-  const isLoading = loading === undefined ? true : loading;
+  // Only show loading if explicitly true AND we have no deployments data
+  const isLoading = loading === true && deployments.length === 0;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');

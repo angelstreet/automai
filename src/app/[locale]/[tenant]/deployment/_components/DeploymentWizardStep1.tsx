@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Repository } from '../types';
 
 interface DeploymentWizardStep1Props {
@@ -8,11 +7,11 @@ interface DeploymentWizardStep1Props {
   description: string;
   repositoryId: string;
   repositories: Repository[];
-  isLoadingRepositories: boolean;
   repositoryError: string | null;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   onNextStep: () => void;
   isStepValid: () => boolean;
+  onRefreshRepositories?: () => void;
 }
 
 const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
@@ -20,11 +19,9 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
   description,
   repositoryId,
   repositories,
-  isLoadingRepositories,
-  repositoryError,
   onInputChange,
   onNextStep,
-  isStepValid
+  isStepValid,
 }) => {
   return (
     <div>
@@ -76,9 +73,11 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
         </div>
         
         <div className="mb-1">
-          <label htmlFor="repositoryId" className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Repository *
-          </label>
+          <div className="flex justify-between items-center mb-1">
+            <label htmlFor="repositoryId" className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+              Repository *
+            </label>
+          </div>
           <select
             id="repositoryId"
             name="repositoryId"
@@ -86,27 +85,12 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
             onChange={onInputChange}
             className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             required
-            disabled={isLoadingRepositories}
           >
             <option value="">Select a repository</option>
-            {isLoadingRepositories ? (
-              <option value="" disabled>Loading repositories...</option>
-            ) : repositoryError ? (
-              <option value="" disabled>Error: {repositoryError}</option>
-            ) : repositories.length === 0 ? (
-              <option value="" disabled>No repositories found</option>
-            ) : (
-              repositories.map((repo: Repository) => (
+            {repositories.map((repo: Repository) => (
                 <option key={repo.id} value={repo.id}>{repo.name}</option>
-              ))
-            )}
+            ))}
           </select>
-          {isLoadingRepositories && (
-            <div className="text-xs text-gray-500 mt-1">Loading repositories...</div>
-          )}
-          {repositoryError && (
-            <div className="text-xs text-red-500 mt-1">{repositoryError}</div>
-          )}
         </div>
       </div>
     </div>

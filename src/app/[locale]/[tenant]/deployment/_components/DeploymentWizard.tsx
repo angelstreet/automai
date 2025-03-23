@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { DeploymentData, DeploymentFormData, ScriptParameter, Repository, Host as HostType } from '../types';
 import { useRepository, useHost, useDeployment } from '@/context';
@@ -24,7 +24,9 @@ const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {
 };
 
 interface DeploymentWizardProps {
-  onComplete: () => void;
+  onCancel: () => void;
+  onDeploymentCreated?: () => void;
+  explicitRepositories?: any[];
 }
 
 const initialDeploymentData: DeploymentData = {
@@ -49,22 +51,67 @@ const initialDeploymentData: DeploymentData = {
   }
 };
 
-const DeploymentWizard: React.FC<DeploymentWizardProps> = ({ 
-  onComplete
+// Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
+const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({ 
+  onCancel,
+  onDeploymentCreated,
+  explicitRepositories = [],
 }) => {
   const [step, setStep] = useState(1);
   const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
   const [showJenkinsView, setShowJenkinsView] = useState(false);
   
+  // Use ref for mounting tracking without state updates
+  const isMountedRef = useRef(false);
+  
   // Use the repository hook from the new context system with null safety
   const repositoryContext = useRepository();
   
-  // Handle the case where repository context is still initializing (null)
-  const { 
-    repositories = [], 
-    loading: isLoadingRepositories = false, 
-    error: repositoryError = null
-  } = repositoryContext || {};
+  // Use the deployment context for repositories as well (which may have more data)
+  const deploymentContext = useDeployment();
+  
+  // Get repositories from both contexts - deployment context is the primary source
+  // but fallback to repository context if needed
+  const deploymentRepos = deploymentContext?.repositories || [];
+  const repositoryRepos = repositoryContext?.repositories || [];
+  
+  // Combine repositories from all sources, prioritizing explicit repositories
+  const allRepositories = [
+    ...explicitRepositories,
+    ...deploymentRepos, 
+    ...repositoryRepos
+  ];
+  
+  // Remove duplicates by id
+  const repoMap = new Map();
+  allRepositories.forEach(repo => {
+    if (repo && repo.id && !repoMap.has(repo.id)) {
+      repoMap.set(repo.id, repo);
+    }
+  });
+  
+  // Use the combined deduplicated repositories
+  const repositories = Array.from(repoMap.values());
+  
+  // Set mounted flag after component fully mounts - simplified
+  useEffect(() => {
+    // Simply mark as mounted without a state update
+    isMountedRef.current = true;
+    
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  
+  // Handle loading and error states
+  const isLoadingRepositories = 
+    (deploymentContext?.loading ?? false) || 
+    (repositoryContext?.loading ?? false);
+    
+  const repositoryError = 
+    deploymentContext?.error || 
+    repositoryContext?.error || 
+    null;
   
   // State for repository scripts
   const [repositoryScripts, setRepositoryScripts] = useState<any[]>([]);
@@ -81,81 +128,97 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     error: hostsError = null 
   } = hostContext || {};
   
-  // Use the deployment context from the new context system with null safety
-  const deploymentContext = useDeployment();
-  
   // Handle the case where deployment context is still initializing (null)
   const {
     createDeployment = async () => ({ 
       success: false, 
       error: 'Deployment context not initialized' 
     }),
-    fetchScriptsForRepository = async () => [] // Use the scripts function from deployment context
+    fetchScriptsForRepository = async () => [] 
   } = deploymentContext || {};
   
   // Adapt hosts for deployment
   const availableHosts = adaptHostsForDeployment(systemHosts);
 
-  // Fetch scripts when repositoryId changes
+  // Fetch scripts only when on step 2 and repository selected
   useEffect(() => {
-    const loadScripts = async () => {
-      if (!deploymentData.repositoryId) {
-        setRepositoryScripts([]);
-        return;
-      }
+    // Only fetch scripts when on step 2 and a repository is selected
+    if (step === 2 && deploymentData.repositoryId && !isLoadingScripts) {
+      const loadScripts = async () => {
+        try {
+          setIsLoadingScripts(true);
+          setScriptsError(null);
+          // Use deployment context's fetchScriptsForRepository
+          const scripts = await fetchScriptsForRepository(deploymentData.repositoryId);
+          setRepositoryScripts(scripts);
+        } catch (error) {
+          console.error('Error fetching scripts:', error);
+          setScriptsError('Failed to load scripts');
+        } finally {
+          setIsLoadingScripts(false);
+        }
+      };
       
-      try {
-        setIsLoadingScripts(true);
-        setScriptsError(null);
-        // Use deployment context's fetchScriptsForRepository instead of repository context's function
-        const scripts = await fetchScriptsForRepository(deploymentData.repositoryId);
-        setRepositoryScripts(scripts);
-      } catch (error) {
-        console.error('Error fetching scripts:', error);
-        setScriptsError('Failed to load scripts');
-      } finally {
-        setIsLoadingScripts(false);
-      }
-    };
-    
-    loadScripts();
-  }, [deploymentData.repositoryId, fetchScriptsForRepository]);
-  
-  // Add debug logging for the scripts
-  useEffect(() => {
-    console.log('Repository scripts:', repositoryScripts);
-    console.log('Scripts loading:', isLoadingScripts);
-    console.log('Scripts error:', scriptsError);
-  }, [repositoryScripts, isLoadingScripts, scriptsError]);
+      loadScripts();
+    }
+  }, [step, deploymentData.repositoryId, fetchScriptsForRepository, isLoadingScripts]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
     // Special handling for repositoryId to log selection
     if (name === 'repositoryId') {
-      console.log('Repository selected:', value);
-      console.log('Available repositories:', repositories);
-      
+      // Avoid unnecessary log noise
       if (value) {
         const selectedRepo = repositories.find((r: Repository) => r.id === value);
-        console.log('Selected repository details:', selectedRepo);
         
-        // Store the full repository object
-        setDeploymentData(prev => ({
-          ...prev,
-          repositoryId: value,
-          selectedRepository: selectedRepo || null
-        }));
-        
-        // Early return since we've already updated the state
-        return;
+        if (selectedRepo) {
+          // Store the full repository object
+          setDeploymentData(prev => ({
+            ...prev,
+            repositoryId: value,
+            selectedRepository: selectedRepo
+          }));
+          
+          // Early return since we've already updated the state
+          return;
+        }
       }
+      
+      // Handle clearing the selection or invalid selection
+      setDeploymentData(prev => ({
+        ...prev,
+        repositoryId: value,
+        selectedRepository: null
+      }));
+      
+      return;
     }
     
+    // Handle other input types
     setDeploymentData(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+
+  // Improved back button handler with better safeguards
+  const handleBackClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    // Prevent back navigation during initial render/mount
+    if (!isMountedRef.current) {
+      return;
+    }
+    
+    // Show confirmation dialog if form has been partially filled
+    if (deploymentData.name || deploymentData.repositoryId) {
+      if (window.confirm('Are you sure you want to cancel? Your changes will be lost.')) {
+        onCancel();
+      }
+    } else {
+      onCancel();
+    }
   };
 
   const handleScriptsChange = (scriptIds: string[]) => {
@@ -302,8 +365,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
     setSubmissionError(null);
     
     try {
-      console.log('Submitting form with data:', deploymentData);
-      
       const formData: DeploymentFormData = {
         name: deploymentData.name,
         description: deploymentData.description,
@@ -330,8 +391,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
           variant: "success"
         });
         
-        // Navigate to the deployment details
-        onComplete();
+        // Reset the form 
+        setDeploymentData(initialDeploymentData);
+        setStep(1);
+        
+        // Call the dedicated callback for deployment creation success
+        if (onDeploymentCreated) {
+          onDeploymentCreated();
+        }
       } else {
         setSubmissionError(result.error || 'Failed to create deployment');
         toast({
@@ -374,8 +441,9 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
       <div className="mb-1">
         <div className="flex justify-between items-center">
           <button 
-            onClick={onComplete} 
+            onClick={handleBackClick} 
             className="flex items-center text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            disabled={!isMountedRef.current}
           >
             <ArrowLeft size={12} className="mr-1" />
             Back to Deployments
@@ -453,6 +521,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
             onInputChange={handleInputChange}
             onNextStep={handleNextStep}
             isStepValid={isStepValid}
+            onRefreshRepositories={() => {
+              // Only use one method to refresh
+              if (deploymentContext?.fetchRepositories) {
+                deploymentContext.fetchRepositories();
+              } else if (repositoryContext?.fetchRepositories) {
+                repositoryContext.fetchRepositories();
+              }
+            }}
           />
         )}
         
@@ -532,6 +608,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = ({
       </form>
     </div>
   );
-};
+});
+
+DeploymentWizard.displayName = 'DeploymentWizard';
 
 export default DeploymentWizard;
