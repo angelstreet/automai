@@ -84,6 +84,8 @@ export const HostProvider: React.FC<{
   
   // Add initialization tracker
   const initialized = useRef(false);
+  // Add a data loaded tracker to prevent multiple data loads
+  const dataLoaded = useRef(false);
   
   // Fetch user data
   const refreshUserData = useCallback(async (): Promise<AuthUser | null> => {
@@ -247,7 +249,7 @@ export const HostProvider: React.FC<{
   // Initialize by fetching host data
   useEffect(() => {
     const fetchData = async () => {
-      // Check if already initialized or has persisted data
+      // Early return if already initialized and processed data
       if (initialized.current) {
         return;
       }
@@ -261,6 +263,7 @@ export const HostProvider: React.FC<{
         setState(prevState => ({
           ...prevState,
           hosts: persistedData.hostData.hosts,
+          filteredHosts: persistedData.hostData.hosts,
           loading: false
         }));
         
@@ -277,6 +280,7 @@ export const HostProvider: React.FC<{
           setState(prevState => ({ 
             ...prevState, 
             hosts: response.data, 
+            filteredHosts: response.data,
             loading: false 
           }));
         } else {
@@ -286,7 +290,7 @@ export const HostProvider: React.FC<{
         console.error('[HostContext] Error fetching hosts:', err);
         setState(prevState => ({ 
           ...prevState, 
-          error: err.message || 'Failed to fetch hosts', 
+          error: { code: 'FETCH_ERROR', message: err.message || 'Failed to fetch hosts' }, 
           loading: false 
         }));
       }
@@ -295,7 +299,7 @@ export const HostProvider: React.FC<{
     };
     
     fetchData();
-  }, []);
+  }, []); // Empty dependency array ensures it runs only once
 
   // Check a host's connection status
   const checkHostStatus = useCallback(async (hostId: string): Promise<HostConnectionStatus | null> => {

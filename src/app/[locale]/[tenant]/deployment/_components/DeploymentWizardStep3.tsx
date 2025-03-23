@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { Host } from '../types';
 import HostSelector from './HostSelector';
@@ -27,6 +27,16 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
   isStepValid
 }) => {
   const t = useTranslations('deployment.wizard');
+  
+  // Add a cleanup effect when this component mounts/unmounts
+  useEffect(() => {
+    console.log('[DeploymentWizardStep3] Component mounted');
+    
+    // Return cleanup function
+    return () => {
+      console.log('[DeploymentWizardStep3] Component unmounted');
+    };
+  }, []);
   
   return (
     <div>

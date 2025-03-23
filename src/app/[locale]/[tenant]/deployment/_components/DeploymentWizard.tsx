@@ -144,6 +144,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
 
   // Fetch scripts only when on step 2 and repository selected
   useEffect(() => {
+    console.log(`[DeploymentWizard] Current step: ${step}, repositoryId: ${deploymentData.repositoryId?.substring(0, 8)}...`);
+    
     // Only fetch scripts when on step 2 and a repository is selected
     if (step === 2 && deploymentData.repositoryId && !isLoadingScripts) {
       const loadScripts = async () => {
@@ -163,7 +165,8 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(({
       
       loadScripts();
     }
-  }, [step, deploymentData.repositoryId, fetchScriptsForRepository, isLoadingScripts]);
+  // Remove isLoadingScripts from dependency array to prevent refresh loops
+  }, [step, deploymentData.repositoryId, fetchScriptsForRepository]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

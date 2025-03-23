@@ -158,8 +158,10 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
             variant: 'default',
           });
           
-          // Refresh the list
-          fetchDeployments();
+          // Add a delay before refreshing to avoid UI flashing
+          setTimeout(() => {
+            fetchDeployments();
+          }, 1000);
         } else {
           // Show error toast if deleteDeployment returns failure
           toast({
@@ -179,8 +181,10 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
             variant: 'default',
           });
           
-          // Refresh the list
-          fetchDeployments();
+          // Add a delay before refreshing to avoid UI flashing
+          setTimeout(() => {
+            fetchDeployments();
+          }, 1000);
         } else {
           toast({
             title: 'Error',

@@ -509,11 +509,24 @@ export const DeploymentProvider: React.FC<{
 
   // Fetch scripts for a repository with protection
   const fetchScriptsForRepository = useCallback(async (repositoryId: string): Promise<any[]> => {
+    // Check if we already have cached scripts in the persistent data
+    const cachedScripts = persistedData.scriptCache?.[repositoryId];
+    if (cachedScripts) {
+      log(`[DeploymentContext] Using cached scripts for repository ${repositoryId}`);
+      return cachedScripts;
+    }
+
     const result = await protectedFetch(`fetchScripts-${repositoryId}`, async () => {
       try {
         console.log(`[DeploymentContext] Fetching scripts for repository ${repositoryId}`);
         // Use the API function instead of returning an empty array
-        return await getScriptsForRepository(repositoryId);
+        const scripts = await getScriptsForRepository(repositoryId);
+        
+        // Cache the scripts in the persisted data
+        if (!persistedData.scriptCache) persistedData.scriptCache = {};
+        persistedData.scriptCache[repositoryId] = scripts;
+        
+        return scripts;
       } catch (err) {
         console.error(`[DeploymentContext] Error fetching scripts for repository ${repositoryId}:`, err);
         return [];

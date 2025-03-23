@@ -15,6 +15,9 @@ const log = (...args: any[]) => DEBUG && console.log(...args);
 // Enable context persistence across page navigations
 const PERSIST_CONTEXTS = true;
 
+// Add a flag to track if initial contexts were loaded
+let initialContextsLoaded = false;
+
 // Global initialization tracking
 export const globalInitStatus = {
   repository: false,
@@ -36,7 +39,17 @@ export const globalInitStatus = {
 
 // Storage for data persistence between navigations - exported so it can be imported
 // in other context files directly, rather than using the global scope
-export const persistedData: Record<string, any> = {
+export const persistedData: {
+  repository?: any;
+  repositories?: any[];
+  hosts?: any[];
+  deployment?: any;
+  deployments?: any[];
+  user?: any;
+  tenant?: any;
+  cicd?: any;
+  scriptCache?: Record<string, any[]>;
+} = {
   repositoryData: null,
   deploymentData: null,
   hostData: null,
@@ -102,8 +115,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Initialize all core contexts by default
   useEffect(() => {
-    if (PERSIST_CONTEXTS) {
-      // Initialize core contexts on first render
+    // Check if we've already run the initialization using globalInitStatus
+    const allInitialized = 
+      globalInitStatus.repository && 
+      globalInitStatus.deployment && 
+      globalInitStatus.host && 
+      globalInitStatus.cicd;
+      
+    if (PERSIST_CONTEXTS && !allInitialized) {
+      // Initialize contexts only once
       initContext('repository');
       initContext('deployment');
       initContext('host');
@@ -168,6 +188,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 // Bridge component that collects all context values
 function AppContextBridge({ children }: { children: ReactNode }) {
   const { contextState } = useContext(AppContext);
+  const mountCount = useRef(0);
   
   // Get values from each context, with safety checks
   const hostContext = contextState.host ? useHostContext() : null;
@@ -180,16 +201,21 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   
   // Log detailed diagnostic info for contexts
   useEffect(() => {
-    console.log('[AppContext] Bridge component mounted', {
-      availableContexts: {
-        user: !!userContext,
-        userHasData: userContext ? !!userContext.user : false,
-        host: !!hostContext,
-        deployment: !!deploymentContext,
-        repository: !!repositoryContext,
-        cicd: !!cicdContext
-      }
-    });
+    mountCount.current++;
+    
+    if (mountCount.current === 1 || DEBUG) {
+      console.log('[AppContext] Bridge component mounted', {
+        mountCount: mountCount.current,
+        availableContexts: {
+          user: !!userContext,
+          userHasData: userContext ? !!userContext.user : false,
+          host: !!hostContext,
+          deployment: !!deploymentContext,
+          repository: !!repositoryContext,
+          cicd: !!cicdContext
+        }
+      });
+    }
     
     // Additional logging for user context issues
     if (!userContext) {

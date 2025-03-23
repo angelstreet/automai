@@ -18,6 +18,9 @@ export default function HostContainer() {
   const renderCount = useRef(0);
   const isInitialized = useRef(false);
   
+  // Add data fetching state
+  const dataFetched = useRef(false);
+  
   // Group all state declarations at the top
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -76,19 +79,25 @@ export default function HostContainer() {
 
   // Add logging to track when host data changes
   useEffect(() => {
-    console.log('[HostContainer] Hosts data updated', { 
-      hostCount: hosts?.length || 0,
-      loading,
-      error,
-      renderCount: renderCount.current
-    });
+    if (hosts?.length > 0) {
+      console.log('[HostContainer] Hosts data updated', { 
+        hostCount: hosts?.length || 0,
+        loading,
+        error,
+        renderCount: renderCount.current
+      });
+    }
   }, [hosts, loading, error]);
 
-  // Fetch hosts on initial mount
+  // Fetch hosts on initial mount, only if needed
   useEffect(() => {
-    if ((!hosts || hosts.length === 0) && !loading) {
+    if ((!hosts || hosts.length === 0) && !loading && !isInitialized.current) {
       console.log('[HostContainer] Initial mount - fetching hosts data');
+      isInitialized.current = true;
       fetchHosts && fetchHosts();
+    } else if (hosts && hosts.length > 0) {
+      // Mark as initialized if we already have hosts
+      isInitialized.current = true;
     }
   }, [hosts, loading, fetchHosts]);
 
@@ -153,18 +162,14 @@ export default function HostContainer() {
       const hostIds = hosts.map(h => h.id);
       setRefreshingHosts(new Set(hostIds));
 
-      // Pass user data to prevent redundant auth
-      if (userData) {
-        await testAllConnections(userData);
-      } else {
-        await testAllConnections();
-      }
+      // Call testAllConnections without arguments
+      await testAllConnections();
     } finally {
       setRefreshingHosts(new Set()); // Clear all refreshing hosts
       setIsRefreshing(false);
       console.log('[HostContainer] Host refresh complete');
     }
-  }, [isRefreshing, testAllConnections, userData, hosts]);
+  }, [isRefreshing, testAllConnections, hosts]);
 
   // Handle add host form submission with user data
   const handleSaveHost = useCallback(async () => {
@@ -185,10 +190,8 @@ export default function HostContainer() {
         is_windows: false
       };
       
-      // Call the server action directly
-      const result = userData 
-        ? await addHostAction(hostData, userData)
-        : await addHostAction(hostData);
+      // Call the server action directly, without user data
+      const result = await addHostAction(hostData);
       
       if (result.success) {
         // Close dialog
@@ -215,7 +218,7 @@ export default function HostContainer() {
     } finally {
       setIsSaving(false);
     }
-  }, [formData, userData, addHostAction, fetchHosts, setShowAddHost]);
+  }, [formData, addHostAction, fetchHosts, setShowAddHost]);
 
   // Handle host selection
   const handleSelectHost = useCallback((id: string) => {
@@ -254,12 +257,14 @@ export default function HostContainer() {
     }
   }, [fetchHosts]);
 
-  // Add logging for each render
-  console.log('[DEBUG] HostContainer rendering', { 
-    hostCount: hosts?.length || 0, 
-    loading, 
-    viewMode 
-  });
+  // Debug rendering - only log if state changes
+  useEffect(() => {
+    console.log('[DEBUG] HostContainer rendering', { 
+      hostCount: hosts?.length || 0, 
+      loading, 
+      viewMode
+    });
+  }, [hosts?.length, loading, viewMode]);
 
   return (
     <div className="container mx-auto py-6">
