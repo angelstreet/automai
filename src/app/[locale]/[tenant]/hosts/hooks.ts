@@ -148,6 +148,7 @@ export function useHosts() {
   // Test connection functionality
   const testHostById = useCallback(
     async (id: string) => {
+      console.log(`[${new Date().toISOString()}] testHostById called for host ${id} from HostCard`);
       try {
         console.log(`[${new Date().toISOString()}] Setting host ${id} to testing state`);
         
@@ -156,6 +157,7 @@ export function useHosts() {
           async (currentHosts: Host[] = []) => {
             const updatedHosts = currentHosts.map(host => {
               if (host.id === id) {
+                console.log(`[${new Date().toISOString()}] Found host to update: ${host.name}, current status: ${host.status}`);
                 return {
                   ...host,
                   status: 'testing' as const,

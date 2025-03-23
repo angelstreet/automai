@@ -278,13 +278,35 @@ export default function HostContainer() {
           selectMode={selectMode}
           onSelect={handleSelectHost}
           onDelete={removeHost}
-          onTestConnection={(host: Host) => testConnection(host.id)}
+          onTestConnection={(host: Host) => {
+            console.log("Test connection callback triggered from HostGrid", { 
+              hostId: host.id, 
+              testConnectionExists: typeof testConnection === 'function' 
+            });
+            if (typeof testConnection === 'function') {
+              return testConnection(host.id);
+            } else {
+              console.error("testConnection is not a function in host context:", hostContext);
+              return Promise.resolve(false);
+            }
+          }}
         />
       ) : (
         <HostTable
           hosts={hosts}
           onDelete={removeHost}
-          onTestConnection={(host: Host) => testConnection(host.id)}
+          onTestConnection={(host: Host) => {
+            console.log("Test connection callback triggered from HostTable", { 
+              hostId: host.id, 
+              testConnectionExists: typeof testConnection === 'function' 
+            });
+            if (typeof testConnection === 'function') {
+              return testConnection(host.id);
+            } else {
+              console.error("testConnection is not a function in host context:", hostContext);
+              return Promise.resolve(false);
+            }
+          }}
         />
       )}
 

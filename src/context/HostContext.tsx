@@ -392,12 +392,74 @@ export const HostProvider: React.FC<{
   // Test connection
   const testConnection = useCallback(async (id: string): Promise<{ success: boolean; error?: string; message?: string }> => {
     try {
-      log('[HostContext] Testing connection for host:', id);
+      console.log(`[${new Date().toISOString()}] [HostContext] Testing connection for host: ${id} - CALLING SERVER ACTION`);
       
-      // Mock implementation
-      return { success: true, message: 'Connection successful' };
+      // First update UI state to show testing
+      setState(prevState => ({
+        ...prevState,
+        connectionStatuses: {
+          ...prevState.connectionStatuses,
+          [id]: { status: 'testing', lastChecked: new Date().toISOString() }
+        }
+      }));
+      
+      // Add a delay to show the testing animation
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      
+      // Call the actual server action
+      const result = await testHostConnection(id);
+      console.log(`[${new Date().toISOString()}] [HostContext] Test connection result:`, result);
+      
+      // Update the UI with the result
+      setState(prevState => ({
+        ...prevState,
+        connectionStatuses: {
+          ...prevState.connectionStatuses,
+          [id]: { 
+            status: result.success ? 'connected' : 'failed', 
+            lastChecked: new Date().toISOString(),
+            message: result.message || (result.success ? 'Connected' : 'Failed')
+          }
+        },
+        hosts: prevState.hosts.map(host => 
+          host.id === id 
+            ? { ...host, status: result.success ? 'connected' : 'failed' }
+            : host
+        ),
+        filteredHosts: prevState.filteredHosts.map(host => 
+          host.id === id 
+            ? { ...host, status: result.success ? 'connected' : 'failed' }
+            : host
+        )
+      }));
+      
+      return result;
     } catch (err: any) {
-      log('[HostContext] Connection test failed:', err);
+      console.error(`[${new Date().toISOString()}] [HostContext] Connection test failed:`, err);
+      
+      // Update UI to show failure
+      setState(prevState => ({
+        ...prevState,
+        connectionStatuses: {
+          ...prevState.connectionStatuses,
+          [id]: { 
+            status: 'failed', 
+            lastChecked: new Date().toISOString(),
+            message: err.message || 'Connection test failed'
+          }
+        },
+        hosts: prevState.hosts.map(host => 
+          host.id === id 
+            ? { ...host, status: 'failed' }
+            : host
+        ),
+        filteredHosts: prevState.filteredHosts.map(host => 
+          host.id === id 
+            ? { ...host, status: 'failed' }
+            : host
+        )
+      }));
+      
       return { success: false, error: err.message };
     }
   }, []);
@@ -405,13 +467,101 @@ export const HostProvider: React.FC<{
   // Test all connections
   const testAllConnections = useCallback(async (): Promise<void> => {
     try {
-      log('[HostContext] Testing all connections');
+      console.log(`[${new Date().toISOString()}] [HostContext] Testing all connections - CALLING SERVER ACTIONS`);
       
-      // Mock implementation - do nothing
+      // Get current list of hosts
+      const currentHosts = [...state.hosts];
+      console.log(`[${new Date().toISOString()}] [HostContext] Testing ${currentHosts.length} hosts`);
+      
+      // First update all hosts to testing state in the UI
+      setState(prevState => ({
+        ...prevState,
+        connectionStatuses: {
+          ...prevState.connectionStatuses,
+          ...Object.fromEntries(
+            currentHosts.map(host => [
+              host.id, 
+              { status: 'testing', lastChecked: new Date().toISOString() }
+            ])
+          )
+        },
+        hosts: prevState.hosts.map(host => ({ ...host, status: 'testing' })),
+        filteredHosts: prevState.filteredHosts.map(host => ({ ...host, status: 'testing' }))
+      }));
+      
+      // Add a delay to show the testing animation
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      
+      // Test each host individually
+      for (const host of currentHosts) {
+        console.log(`[${new Date().toISOString()}] [HostContext] Testing host: ${host.id}`);
+        
+        try {
+          // Call the actual server action
+          const result = await testHostConnection(host.id);
+          console.log(`[${new Date().toISOString()}] [HostContext] Test result for ${host.id}:`, result);
+          
+          // Update the state for this specific host
+          setState(prevState => ({
+            ...prevState,
+            connectionStatuses: {
+              ...prevState.connectionStatuses,
+              [host.id]: { 
+                status: result.success ? 'connected' : 'failed', 
+                lastChecked: new Date().toISOString(),
+                message: result.message || (result.success ? 'Connected' : 'Failed')
+              }
+            },
+            hosts: prevState.hosts.map(h => 
+              h.id === host.id 
+                ? { ...h, status: result.success ? 'connected' : 'failed' }
+                : h
+            ),
+            filteredHosts: prevState.filteredHosts.map(h => 
+              h.id === host.id 
+                ? { ...h, status: result.success ? 'connected' : 'failed' }
+                : h
+            )
+          }));
+          
+          // Small delay between hosts
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (hostError) {
+          console.error(`[${new Date().toISOString()}] [HostContext] Error testing host ${host.id}:`, hostError);
+          
+          // Update state for the failed host
+          setState(prevState => ({
+            ...prevState,
+            connectionStatuses: {
+              ...prevState.connectionStatuses,
+              [host.id]: { 
+                status: 'failed', 
+                lastChecked: new Date().toISOString(),
+                message: hostError instanceof Error ? hostError.message : 'Test failed'
+              }
+            },
+            hosts: prevState.hosts.map(h => 
+              h.id === host.id 
+                ? { ...h, status: 'failed' }
+                : h
+            ),
+            filteredHosts: prevState.filteredHosts.map(h => 
+              h.id === host.id 
+                ? { ...h, status: 'failed' }
+                : h
+            )
+          }));
+          
+          // Small delay between hosts
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+      
+      console.log(`[${new Date().toISOString()}] [HostContext] All hosts tested`);
     } catch (err) {
-      log('[HostContext] Test all connections failed:', err);
+      console.error(`[${new Date().toISOString()}] [HostContext] Test all connections failed:`, err);
     }
-  }, []);
+  }, [state.hosts, testHostConnection]);
 
   // Additional stub functions
   const verifyHostFingerprint = useCallback(async () => ({ success: true, verified: true }), []);
