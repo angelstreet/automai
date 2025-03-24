@@ -33,7 +33,12 @@ export function NavUser({ user }: NavUserProps) {
   const isCollapsed = !open;
 
   // Display debug role indicator if active
-  const debugRole = typeof window !== 'undefined' ? window.__debugRole : null;
+  // Clear any existing debug role to ensure we use the actual user role
+  if (typeof window !== 'undefined' && window.__debugRole) {
+    console.log('DEBUG NavUser - Clearing window.__debugRole to use actual user role');
+    window.__debugRole = null;
+  }
+  const debugRole = null; // Force to null to use actual user role
   
   // DEBUG: Log user role information in NavUser
   React.useEffect(() => {

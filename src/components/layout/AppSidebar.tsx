@@ -62,12 +62,10 @@ const AppSidebar = React.memo(function AppSidebar() {
   // Initialize debug role from localStorage after mount
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedRole = localStorage.getItem('debug_role') as Role;
-      console.log('DEBUG AppSidebar - Checking localStorage for debug_role:', storedRole);
-      
-      if (storedRole) {
-        console.log('DEBUG AppSidebar - Setting debug role from localStorage:', storedRole);
-        setDebugRole(storedRole);
+      // REMOVAL: Clearing any existing debug_role in localStorage to use the actual user role
+      if (localStorage.getItem('debug_role')) {
+        console.log('DEBUG AppSidebar - Removing stored debug_role from localStorage to use actual user role');
+        localStorage.removeItem('debug_role');
       }
       
       // Also check cached user data
@@ -107,8 +105,19 @@ const AppSidebar = React.memo(function AppSidebar() {
     };
   }, []);
 
-  // Get the effective role - debug role takes precedence if set
-  const effectiveRole = debugRole || user?.role || 'viewer';
+  // FIXED: User's actual role should take precedence over debug role
+  // Only use debug role for testing if explicitly requested
+  const effectiveRole = user?.role || debugRole || 'viewer';
+  
+  // Force remove any cached debug role that might be interfering
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.__debugRole) {
+        console.log('DEBUG AppSidebar - Clearing window.__debugRole');
+        window.__debugRole = null;
+      }
+    }
+  }, []);
   
   // DEBUG: Log role information whenever it changes
   React.useEffect(() => {
