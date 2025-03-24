@@ -44,10 +44,9 @@ class ServerCache {
   private totalRequests = 0;
 
   constructor() {
-    // Setup periodic cleanup of expired entries
+    // No automatic cleanup - will be done on-demand
     if (typeof window === 'undefined') {
-      setInterval(() => this.cleanup(), 60 * 1000); // Every minute
-      log('Initialized server-side cache with cleanup interval');
+      log('Initialized server-side cache without cleanup interval');
     }
   }
 
@@ -77,7 +76,6 @@ class ServerCache {
     }
 
     this.hits++;
-    log(`HIT: ${key} (source: ${source}, age: ${this.formatAge(Date.now() - entry.created)})`);
     return entry.value as T;
   }
 
@@ -144,7 +142,9 @@ class ServerCache {
       source,
     });
 
-    log(`SET: ${key} (ttl: ${this.formatTime(ttl)}, source: ${source}, tags: ${tags.join(', ')})`);
+    if (DEBUG) {
+      log(`SET: ${key} (source: ${source})`);
+    }
   }
 
   /**
