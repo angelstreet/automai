@@ -31,7 +31,7 @@ import { useUser } from './UserContext'; // Import directly from UserContext to 
 let REPOSITORY_CONTEXT_INITIALIZED = false;
 
 // Reduce logging with a DEBUG flag
-const DEBUG = true;
+const DEBUG = false;
 const log = (...args: any[]) => DEBUG && console.log(...args);
 
 // Define interface for filter options
@@ -275,7 +275,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         // Check for user data first
         const user = state.currentUser || (await fetchUserData());
         if (!user) {
-          console.log('[RepositoryContext] No user data available');
+          log('[RepositoryContext] No user data available');
           safeUpdateState(
             setState,
             state,
@@ -289,7 +289,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           return [] as Repository[];
         }
 
-        console.log('[RepositoryContext] Fetching repositories and starred repositories');
+        log('[RepositoryContext] Fetching repositories and starred repositories');
         safeUpdateState(setState, state, { ...state, loading: true, error: null }, 'start-loading');
 
         // Use the combined action instead of separate calls
@@ -319,8 +319,8 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           starredRepositoryIds.includes(repo.id),
         );
 
-        console.log('[RepositoryContext] Repositories fetched:', sortedRepositories.length);
-        console.log('[RepositoryContext] Starred repositories:', starredRepositories.length);
+        log('[RepositoryContext] Repositories fetched:', sortedRepositories.length);
+        log('[RepositoryContext] Starred repositories:', starredRepositories.length);
 
         safeUpdateState(
           setState,
@@ -484,7 +484,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   // Add one useful log when data is loaded
   useEffect(() => {
     if (state.repositories.length > 0 && !state.loading) {
-      console.log('[RepositoryContext] Repositories loaded:', {
+      log('[RepositoryContext] Repositories loaded:', {
         count: state.repositories.length,
         filtered: state.filteredRepositories.length,
         userAvailable: !!userContext?.user,
@@ -501,7 +501,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         error: state.error,
         // Include other state you want to persist
       };
-      console.log('[RepositoryContext] Persisted repository data for cross-page navigation');
+      log('[RepositoryContext] Persisted repository data for cross-page navigation');
     }
   }, [state.repositories, state.loading, state.error]);
 
