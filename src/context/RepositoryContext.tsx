@@ -533,16 +533,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     ],
   );
 
-  // Register with the central AppContext
-  const appContext = useContext(InnerAppContext);
-  
-  useEffect(() => {
-    if (appContext) {
-      // Update the central context with this context's values
-      appContext.repository = contextValue;
-      log('[RepositoryContext] Registered with central AppContext');
-    }
-  }, [appContext, contextValue]);
+  // We're not using central context registration in the new architecture
   
   return <RepositoryContext.Provider value={contextValue}>{children}</RepositoryContext.Provider>;
 };

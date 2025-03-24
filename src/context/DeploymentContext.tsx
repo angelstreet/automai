@@ -591,16 +591,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
     }
   }, [state.deployments, state.repositories, state.loading, state.error]);
 
-  // Register with the central AppContext
-  const appContext = useContext(InnerAppContext);
-  
-  useEffect(() => {
-    if (appContext) {
-      // Update the central context with this context's values
-      appContext.deployment = contextValue;
-      log('[DeploymentContext] Registered with central AppContext');
-    }
-  }, [appContext, contextValue]);
+  // We're not using central context registration in the new architecture
   
   return <DeploymentContext.Provider value={contextValue}>{children}</DeploymentContext.Provider>;
 };
