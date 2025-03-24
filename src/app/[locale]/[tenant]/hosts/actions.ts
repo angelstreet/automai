@@ -1,6 +1,6 @@
 'use server';
 
-import db from '@/lib/supabase/db';
+import hostDb from '@/lib/supabase/db-hosts/host';
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import { logger } from '@/lib/logger';
 import { testHostConnection as testHostConnectionService } from '@/lib/services/hosts';
@@ -66,7 +66,7 @@ export async function getHosts(
         }
 
         try {
-          const data = await db.host.findMany({
+          const data = await hostDb.findMany({
             where,
             orderBy: { created_at: 'desc' },
           });
@@ -134,7 +134,7 @@ export async function getHost(
       async () => {
         console.log(`[HostsActions] Cache miss for host ${id}, fetching from database`);
 
-        const data = await db.host.findUnique({
+        const data = await hostDb.findUnique({
           where: { id },
         });
 
@@ -175,7 +175,7 @@ export async function addHost(
       };
     }
 
-    const newHost = await db.host.create({
+    const newHost = await hostDb.create({
       data,
     });
 
@@ -243,7 +243,7 @@ export async function updateHost(
       };
     }
 
-    const data = await db.host.update({
+    const data = await hostDb.update({
       where: { id },
       data: updates,
     });
@@ -317,7 +317,7 @@ export async function deleteHost(
 
     console.log('[HostsActions] Authenticated and validated host, proceeding with deletion');
 
-    await db.host.delete({
+    await hostDb.delete({
       where: { id },
     });
 
@@ -382,7 +382,7 @@ export async function testHostConnection(
     const host = hostResponse.data;
 
     // First update the host to testing state
-    await db.host.update({
+    await hostDb.update({
       where: { id },
       data: {
         status: 'testing',
@@ -414,7 +414,7 @@ export async function testHostConnection(
     });
 
     // Update the host status based on the test result
-    const updatedHost = await db.host.update({
+    const updatedHost = await hostDb.update({
       where: { id },
       data: {
         status: result.success ? 'connected' : 'failed',
@@ -451,7 +451,7 @@ export async function testHostConnection(
       const currentUser = user || (await getUser());
       if (currentUser) {
         // Update the host status to failed
-        const updatedHost = await db.host.update({
+        const updatedHost = await hostDb.update({
           where: { id },
           data: {
             status: 'failed',
@@ -509,11 +509,11 @@ export async function testAllHosts(user?: AuthUser | null): Promise<{
     const hosts = hostsResult.data || [];
     const results = [];
 
-    // Test each host sequentially
-    for (const host of hosts) {
+    // Test each host sequentially with proper animation and state changes
+    for (const hostItem of hosts) {
       // First update the host to failed state (red)
-      await db.host.update({
-        where: { id: host.id },
+      await hostDb.update({
+        where: { id: hostItem.id },
         data: {
           status: 'failed',
           updated_at: new Date().toISOString(),
@@ -524,36 +524,47 @@ export async function testAllHosts(user?: AuthUser | null): Promise<{
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Then update to testing state
-      await db.host.update({
-        where: { id: host.id },
+      await hostDb.update({
+        where: { id: hostItem.id },
         data: {
           status: 'testing',
           updated_at: new Date().toISOString(),
         },
       });
 
-      // Test the connection using the real SSH test
+      // Invalidate cache for this specific host to show animation
+      serverCache.deleteByTag(`host:${hostItem.id}`);
+      serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'host', hostItem.id)) ? 1 : 0;
+
+      // Small delay to show the testing animation
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Test the connection using the connection service
       const result = await testConnection({
-        type: host.type,
-        ip: host.ip,
-        port: host.port,
-        username: host.user,
-        password: host.password,
-        hostId: host.id,
+        type: hostItem.type,
+        ip: hostItem.ip,
+        port: hostItem.port,
+        username: hostItem.user,
+        password: hostItem.password,
+        hostId: hostItem.id,
       });
 
       // Update the host status based on the test result
-      await db.host.update({
-        where: { id: host.id },
+      await hostDb.update({
+        where: { id: hostItem.id },
         data: {
           status: result.success ? 'connected' : 'failed',
           updated_at: new Date().toISOString(),
         },
       });
 
+      // Invalidate cache again to show the final status
+      serverCache.deleteByTag(`host:${hostItem.id}`);
+      serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'host', hostItem.id)) ? 1 : 0;
+
       // Add result to array
       results.push({
-        hostId: host.id,
+        hostId: hostItem.id,
         result: {
           success: result.success,
           message: result.message,
@@ -564,8 +575,11 @@ export async function testAllHosts(user?: AuthUser | null): Promise<{
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
 
-    // Invalidate cache for all hosts
-    serverCache.delete('hosts:all');
+    // Final cache invalidation to ensure UI is updated
+    serverCache.deleteByTag('hosts-data');
+    serverCache.deleteByTag(`tenant:${currentUser.tenant_id}`);
+    const cacheResult = serverCache.delete('hosts:all') ? 1 : 0;
+    console.log(`[HostsActions] Cleared hosts cache (${cacheResult} entries)`);
 
     return {
       success: true,
@@ -627,16 +641,16 @@ export async function checkAllConnections(
   hosts: Host[],
 ): Promise<Array<{ hostId: string; result: any }>> {
   const results = [];
-  for (const host of hosts) {
+  for (const hostItem of hosts) {
     const result = await testConnection({
-      type: host.type,
-      ip: host.ip,
-      port: host.port,
-      username: host.user,
-      password: host.password,
-      hostId: host.id,
+      type: hostItem.type,
+      ip: hostItem.ip,
+      port: hostItem.port,
+      username: hostItem.user,
+      password: hostItem.password,
+      hostId: hostItem.id,
     });
-    results.push({ hostId: host.id, result });
+    results.push({ hostId: hostItem.id, result });
     // Small delay to avoid overwhelming the server
     await new Promise((resolve) => setTimeout(resolve, 300));
   }
@@ -686,8 +700,8 @@ export async function clearHostsCache(
       // Clear specific host cache
       clearedEntries += serverCache.deleteByTag(`host:${hostId}`);
       clearedEntries += serverCache.delete(
-        serverCache.tenantKey(currentUser.tenant_id, 'host', hostId),
-      );
+        serverCache.tenantKey(currentUser.tenant_id, 'host', hostId)
+      ) ? 1 : 0;
       message = `Cache cleared for host: ${hostId}`;
     } else if (userId && tenantId) {
       // Clear both user and tenant specific data
@@ -703,10 +717,10 @@ export async function clearHostsCache(
 
       // Clear all hosts cache keys for this tenant
       clearedEntries += serverCache.deletePattern(
-        serverCache.tenantKey(targetTenantId, 'hosts', ''),
+        serverCache.tenantKey(targetTenantId, 'hosts', '')
       );
       clearedEntries += serverCache.deletePattern(
-        serverCache.tenantKey(targetTenantId, 'host', ''),
+        serverCache.tenantKey(targetTenantId, 'host', '')
       );
 
       message = `Cache cleared for tenant: ${targetTenantId}`;

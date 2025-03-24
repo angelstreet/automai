@@ -196,19 +196,38 @@ export default function HostContainer() {
 
     console.log('[HostContainer] Refreshing all hosts');
     setIsRefreshing(true);
+    
+    // Don't set all hosts to refreshing at once, the server action will handle that sequentially
+    // and we'll update the UI incrementally
+    setRefreshingHosts(new Set());
+    
     try {
-      // Add all hosts to refreshing set
-      const hostIds = hosts.map((h) => h.id);
-      setRefreshingHosts(new Set(hostIds));
+      // Clear the cache before testing connections
+      const { clearHostsCache } = await import('../actions');
+      await clearHostsCache();
 
-      // Call testAllHosts without arguments
-      await testAllHosts();
+      // Call testAllHosts and let the server action handle the sequential testing
+      // The server action will update the host statuses one by one with the proper animations
+      const result = await testAllHosts();
+      
+      if (result.success) {
+        console.log('[HostContainer] All hosts tested successfully:', 
+          result.results?.length || 0, 'hosts tested');
+      } else {
+        console.error('[HostContainer] Error testing all hosts:', result.error);
+      }
+      
+      // Fetch the final host states
+      await fetchHosts();
+    } catch (error) {
+      console.error('[HostContainer] Error refreshing hosts:', error);
     } finally {
-      setRefreshingHosts(new Set()); // Clear all refreshing hosts
+      // Clear refreshing state
+      setRefreshingHosts(new Set());
       setIsRefreshing(false);
       console.log('[HostContainer] Host refresh complete');
     }
-  }, [isRefreshing, testAllHosts, hosts]);
+  }, [isRefreshing, testAllHosts, fetchHosts]);
 
   // Handle add host form submission with user data
   const handleSaveHost = useCallback(async () => {
