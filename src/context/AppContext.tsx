@@ -19,6 +19,14 @@ import { UserContextType } from '@/types/context/user';
 const DEBUG = false;
 const log = (...args: any[]) => DEBUG && console.log(...args);
 
+// For backward compatibility - empty implementation
+export const globalInitStatus = {
+  isInitialized: (contextType: string): boolean => true,
+  markInitialized: (contextType: string): void => {
+    console.log(`[AppContext] Marked ${contextType} context as initialized (no-op)`);
+  }
+};
+
 // Global references for immediate access to context values
 // This avoids the asynchronous nature of context initialization
 let globalUserContext: UserContextType | null = null;
@@ -98,6 +106,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       </UserProvider>
     </AppContext.Provider>
   );
+}
+
+// Compatibility hook for accessing all contexts at once (not recommended)
+export function useAppContext() {
+  return useContext(AppContext);
 }
 
 // Enhanced useUser hook that prioritizes immediate access through global ref

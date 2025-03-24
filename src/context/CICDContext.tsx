@@ -36,7 +36,7 @@ import {
   ERROR_MESSAGES,
   LOG_PREFIX,
 } from '@/app/[locale]/[tenant]/cicd/constants';
-import { persistedData, globalInitStatus } from './AppContext';
+import { persistedData } from './AppContext';
 
 // Reduce logging with a DEBUG flag
 const log = (...args: any[]) => DEBUG && console.log(...args);
@@ -70,9 +70,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       log(`${LOG_PREFIX} CICDProvider initialized as singleton`);
 
       // Mark context as initialized in global tracking
-      if (globalInitStatus && typeof globalInitStatus.markInitialized === 'function') {
-        globalInitStatus.markInitialized('cicd');
-      }
+      // We've removed the global initialization tracking in our simplified architecture
     }
 
     return () => {

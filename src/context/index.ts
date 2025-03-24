@@ -13,6 +13,7 @@ export { AppProvider } from './AppContext';
 
 // Re-export hooks with standardized naming for consistency
 export {
+  useAppContext, // Access to all contexts at once (use sparingly)
   useUser, // User profile and authentication
   useHost, // Host management and connection
   useDeployment, // Deployment operations and status

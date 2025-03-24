@@ -6,7 +6,7 @@ import { updateProfile as updateProfileAction } from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
 import { Role, User, AuthUser } from '@/types/user';
 import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
-import { persistedData, AppContext } from './AppContext';
+import { persistedData } from './AppContext';
 import { AppContextType } from '@/types/context/app';
 
 // Singleton flag to prevent multiple instances
