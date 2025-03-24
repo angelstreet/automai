@@ -68,9 +68,6 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } else {
       CICD_CONTEXT_INITIALIZED = true;
       log(`${LOG_PREFIX} CICDProvider initialized as singleton`);
-
-      // Mark context as initialized in global tracking
-      // We've removed the global initialization tracking in our simplified architecture
     }
 
     return () => {
