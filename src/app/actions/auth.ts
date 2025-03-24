@@ -11,15 +11,15 @@ export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl
   try {
     console.log('🔐 Starting OAuth flow for provider:', provider);
     console.log('🔐 Using redirect URL:', redirectUrl);
-    
+
     // Ensure we're using the right options
     const options = {
       redirectTo: redirectUrl,
       skipBrowserRedirect: false, // Make sure browser is redirected by Supabase
     };
-    
+
     console.log('🔐 SignInWithOAuth options:', options);
-    
+
     const result = await supabaseAuth.signInWithOAuth(provider, options);
 
     if (!result.success) {

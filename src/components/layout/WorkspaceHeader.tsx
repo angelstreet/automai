@@ -30,7 +30,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
   const [headerVisible, setHeaderVisible] = React.useState(
     Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
   );
-  
+
   // Debug log for user role
   React.useEffect(() => {
     if (userContext?.user) {

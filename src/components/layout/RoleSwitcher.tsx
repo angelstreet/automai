@@ -64,17 +64,17 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
   // Get user from context if not provided as prop
   const userContext = useUser();
   const user = propUser || userContext?.user;
-  
+
   // Debug log user role
   React.useEffect(() => {
     console.log('[RoleSwitcher] User data:', {
       propUserExists: !!propUser,
       contextUserExists: !!userContext?.user,
       userRole: user?.role || 'not set',
-      currentContextRole: userContext?.user?.role || 'not in context'
+      currentContextRole: userContext?.user?.role || 'not in context',
     });
   }, [propUser, userContext?.user, user?.role]);
-  
+
   // Initialize with stored debug role, user role, or default to 'viewer'
   const [currentRole, setCurrentRole] = React.useState<Role>(() => {
     if (typeof window !== 'undefined') {
@@ -83,7 +83,7 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
       if (storedRole && roles.some((r) => r.value === storedRole)) {
         return storedRole;
       }
-      
+
       // Otherwise use actual user role if available
       if (user?.role && roles.some((r) => r.value === user.role)) {
         return user.role;
@@ -98,7 +98,7 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
       window.__debugRole = currentRole;
     }
   }, []);
-  
+
   // Also update the role when user data changes (for example after login)
   React.useEffect(() => {
     if (user?.role && !localStorage.getItem('debug_role')) {

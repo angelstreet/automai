@@ -19,7 +19,7 @@ export async function getRepositories(
   console.log(
     `[RepoActions] getRepositories called from ${origin}${renderCount ? ` (render #${renderCount})` : ''}`,
     {
-      userProvided: !!user
+      userProvided: !!user,
     },
   );
 
@@ -37,26 +37,26 @@ export async function getRepositories(
 
     // Create a standardized cache key using the helper method
     const cacheKey = serverCache.tenantKey(currentUser.tenant_id, 'repository-list');
-    
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
       async () => {
         console.log(`[RepoActions] Cache miss for ${origin}, fetching from database`);
-        
+
         // TODO: Implement actual database query
         // For now, return empty array as placeholder
         const repositories: Repository[] = [];
-        
+
         console.log(`[RepoActions] Successfully fetched repositories for ${origin}`);
-        
+
         return { success: true, data: repositories };
       },
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
         tags: ['repository-data', `tenant:${currentUser.tenant_id}`],
-        source: `getRepositories:${origin}`
-      }
+        source: `getRepositories:${origin}`,
+      },
     );
   } catch (error: any) {
     console.error(`[RepoActions] Error in getRepositories (${origin}):`, error);

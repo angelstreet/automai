@@ -47,13 +47,14 @@ export default async function middleware(request: NextRequest) {
     if (user && !error) {
       console.log('[Middleware] User already authenticated, redirecting to dashboard');
       // User is already authenticated, redirect to dashboard
-      const locale = pathParts.length > 0 && locales.includes(pathParts[0] as any)
-        ? pathParts[0] 
-        : defaultLocale;
-      
+      const locale =
+        pathParts.length > 0 && locales.includes(pathParts[0] as any)
+          ? pathParts[0]
+          : defaultLocale;
+
       // Get tenant from path or use default
       const tenant = user.user_metadata?.tenant_name || 'trial';
-      
+
       // Redirect to dashboard
       return NextResponse.redirect(new URL(`/${locale}/${tenant}/dashboard`, request.url));
     }

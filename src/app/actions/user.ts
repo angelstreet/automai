@@ -6,7 +6,7 @@ import { serverCache } from '@/lib/cache';
 
 // Constants for cache management
 const USER_CACHE_TTL = 30 * 1000; // 30 seconds for user data
-const AUTH_ERROR_TTL = 5 * 1000;  // 5 seconds for auth errors
+const AUTH_ERROR_TTL = 5 * 1000; // 5 seconds for auth errors
 const USER_CACHE_KEY = 'current-user';
 
 /**
@@ -15,22 +15,22 @@ const USER_CACHE_KEY = 'current-user';
 export async function invalidateUserCache() {
   // Clear all user-related cache entries
   const deletedCount = serverCache.deleteByTag('user-data');
-  
+
   // Also clear any client-side cache if possible
   if (typeof window !== 'undefined') {
     localStorage.removeItem('user-data-cache');
     localStorage.removeItem('cached_user');
   }
 
-  return { 
-    success: true, 
-    message: `User cache invalidated (${deletedCount} entries cleared)` 
+  return {
+    success: true,
+    message: `User cache invalidated (${deletedCount} entries cleared)`,
   };
 }
 
 /**
  * Get the current authenticated user with enhanced server-side caching
- * 
+ *
  * @returns The authenticated user or null if not authenticated
  */
 export async function getUser(): Promise<AuthUser | null> {
@@ -42,81 +42,81 @@ export async function getUser(): Promise<AuthUser | null> {
         try {
           // Get user from auth service
           const result = await supabaseAuth.getUser();
-          
+
           if (!result.success || !result.data) {
             // Handle common auth errors
             if (result.error === 'No active session' || result.error === 'Auth session missing!') {
               return null;
             }
-            
+
             throw new Error(result.error || 'Not authenticated');
           }
-          
+
           // Verify and enhance user data
           if (result.data) {
             // Add role if missing
             if (!(result.data as any).role) {
               (result.data as any).role = result.data.user_metadata?.role || 'viewer';
             }
-            
+
             // Validate required fields
             if (!result.data.tenant_id || !result.data.tenant_name) {
               console.warn('[getUser] User data missing tenant information:', {
                 hasTenantId: !!result.data.tenant_id,
-                hasTenantName: !!result.data.tenant_name
+                hasTenantName: !!result.data.tenant_name,
               });
             }
           }
-          
+
           return result.data as AuthUser;
         } catch (error) {
           // Handle session-related errors specially
           if (
-            error instanceof Error && 
+            error instanceof Error &&
             (error.message === 'No active session' || error.message === 'Auth session missing!')
           ) {
             return null;
           }
-          
+
           // Re-throw other errors
           throw error;
         }
       },
-      { 
+      {
         ttl: USER_CACHE_TTL,
         tags: ['user-data', 'auth'],
-        source: 'getUser'
-      }
+        source: 'getUser',
+      },
     );
   } catch (error) {
     // For auth errors, use a shorter TTL
-    const isAuthError = error instanceof Error && (
-      error.message.includes('Refresh Token') || 
-      error.message.includes('session') ||
-      error.message.includes('auth')
-    );
-    
+    const isAuthError =
+      error instanceof Error &&
+      (error.message.includes('Refresh Token') ||
+        error.message.includes('session') ||
+        error.message.includes('auth'));
+
     // Don't cache refresh token errors at all
     if (error instanceof Error && error.message.includes('Refresh Token')) {
       serverCache.delete(USER_CACHE_KEY);
       return null;
     }
-    
+
     // Log the error but don't re-throw for auth errors
     console.error('Error getting current user:', error);
-    
+
     // For auth errors, return null instead of throwing
     if (isAuthError) {
       return null;
     }
-    
+
     throw new Error('Failed to get current user');
   }
 }
 
 /**
  * Update user profile
- * 
+ *
  * @param formData Form data or profile data object
  * @returns Result object with success status
  */
@@ -158,12 +158,12 @@ export async function updateProfile(formData: FormData | ProfileData) {
     // Clean up cache - delete any user-related cache entries
     // This ensures fresh data will be fetched next time
     serverCache.deleteByTag('user-data');
-    
+
     // Return success with the updated user data if available
-    return { 
+    return {
       success: true,
       data: result.data || null,
-      message: 'Profile updated successfully'
+      message: 'Profile updated successfully',
     };
   } catch (error) {
     console.error('Error updating profile:', error);

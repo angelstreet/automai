@@ -26,7 +26,9 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
   // Check for multiple instances of ThemeProvider
   useEffect(() => {
     if (THEME_CONTEXT_INITIALIZED) {
-      console.warn('[ThemeContext] Multiple instances detected. This may cause unexpected behavior.');
+      console.warn(
+        '[ThemeContext] Multiple instances detected. This may cause unexpected behavior.',
+      );
     } else {
       THEME_CONTEXT_INITIALIZED = true;
     }
@@ -80,16 +82,15 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
   };
 
   // Properly memoize the context value to prevent unnecessary re-renders
-  const contextValue = useMemo(() => ({
-    theme,
-    setTheme: handleSetTheme
-  }), [theme, handleSetTheme]);
-
-  return (
-    <ThemeContext.Provider value={contextValue}>
-      {children}
-    </ThemeContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      theme,
+      setTheme: handleSetTheme,
+    }),
+    [theme, handleSetTheme],
   );
+
+  return <ThemeContext.Provider value={contextValue}>{children}</ThemeContext.Provider>;
 }
 
 export const useTheme = () => useContext(ThemeContext);

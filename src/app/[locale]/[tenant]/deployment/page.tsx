@@ -41,7 +41,7 @@ function DeploymentPageContent() {
   useEffect(() => {
     if (deploymentContext && deploymentContext.fetchDeployments) {
       console.log('[DeploymentPage] Component mounted, checking deployment data');
-      if (!deployments || deployments.length === 0 && !loading && !isRefreshing) {
+      if (!deployments || (deployments.length === 0 && !loading && !isRefreshing)) {
         console.log('[DeploymentPage] Fetching deployments on mount');
         hasFetchedRef.current = true;
         deploymentContext.fetchDeployments();
@@ -61,7 +61,10 @@ function DeploymentPageContent() {
     document.addEventListener('toggle-deployment-view', handleToggleView);
     document.addEventListener('refresh-deployments', handleRefreshEvent);
 
-    if (window.location.hash === '#wizard' || new URLSearchParams(window.location.search).has('wizard')) {
+    if (
+      window.location.hash === '#wizard' ||
+      new URLSearchParams(window.location.search).has('wizard')
+    ) {
       console.log('[DeploymentPage] Activating wizard from URL parameter');
       setWizardActive(true);
     }

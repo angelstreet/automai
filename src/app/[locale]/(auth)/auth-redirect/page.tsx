@@ -75,11 +75,11 @@ export default function AuthRedirectPage() {
         const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
         console.log('🔐 AUTH-REDIRECT: Processing URL:', fullUrl);
         console.log('🔐 AUTH-REDIRECT: Code parameter:', code);
-        
+
         // Check if we have the pkce code verifier in session storage
         const codeVerifier = sessionStorage.getItem('supabase.auth.code_verifier');
         console.log('🔐 AUTH-REDIRECT: Code verifier present:', !!codeVerifier);
-        
+
         setLoading(true);
         const result = await exchangeCodeForSession(fullUrl);
 

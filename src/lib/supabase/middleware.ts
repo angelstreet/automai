@@ -24,19 +24,22 @@ export const createClient = (request: NextRequest) => {
 
   // Check for auth-related cookies specifically and log them
   const allCookies = request.cookies.getAll();
-  const authCookies = allCookies.filter(cookie => 
-    cookie.name.includes('supabase') || 
-    cookie.name.includes('sb-') || 
-    cookie.name.includes('_verifier') ||
-    cookie.name.includes('refresh') ||
-    cookie.name.includes('access')
+  const authCookies = allCookies.filter(
+    (cookie) =>
+      cookie.name.includes('supabase') ||
+      cookie.name.includes('sb-') ||
+      cookie.name.includes('_verifier') ||
+      cookie.name.includes('refresh') ||
+      cookie.name.includes('access'),
   );
-  
+
   if (authCookies.length > 0) {
     console.log(`[Middleware:auth-cookies] Found ${authCookies.length} auth cookies:`);
-    authCookies.forEach(cookie => {
+    authCookies.forEach((cookie) => {
       // Only log the cookie name and a hint about its value (not the full value for security)
-      console.log(`[Middleware:auth-cookie] ${cookie.name}: length=${cookie.value.length}, expires=${cookie.expires || 'session'}`);
+      console.log(
+        `[Middleware:auth-cookie] ${cookie.name}: length=${cookie.value.length}, expires=${cookie.expires || 'session'}`,
+      );
     });
   }
 
@@ -53,10 +56,10 @@ export const createClient = (request: NextRequest) => {
             value: cookie.value,
           }));
           console.log(`[Middleware:cookies] Found ${cookies.length} cookies`);
-          
+
           // Check for specific auth cookies
-          const hasAccessToken = cookies.some(c => c.name.includes('access-token'));
-          const hasRefreshToken = cookies.some(c => c.name.includes('refresh-token'));
+          const hasAccessToken = cookies.some((c) => c.name.includes('access-token'));
+          const hasRefreshToken = cookies.some((c) => c.name.includes('refresh-token'));
           if (hasAccessToken && hasRefreshToken) {
             console.log(`[Middleware:cookies] Found both access and refresh tokens`);
           } else if (hasAccessToken) {
@@ -64,29 +67,31 @@ export const createClient = (request: NextRequest) => {
           } else if (hasRefreshToken) {
             console.log(`[Middleware:cookies] Found refresh token but no access token`);
           }
-          
+
           return cookies;
         },
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
           // Set cookies both on the request (for Supabase) and response (for browser)
           console.log(`[Middleware:cookies] Setting ${cookiesToSet.length} cookies`);
           cookiesToSet.forEach(({ name, value, options }) => {
-            console.log(`[Middleware:cookie-set] Setting cookie ${name} with path=${options?.path || '/'}`);
-            
+            console.log(
+              `[Middleware:cookie-set] Setting cookie ${name} with path=${options?.path || '/'}`,
+            );
+
             // Ensure we set a path if not provided (default to root)
-            const finalOptions = { 
+            const finalOptions = {
               ...options,
               path: options?.path || '/',
               // Use longer max age for auth cookies to prevent early expiration
-              ...(name.includes('token') ? { maxAge: 60 * 60 * 24 * 7 } : {})
+              ...(name.includes('token') ? { maxAge: 60 * 60 * 24 * 7 } : {}),
             };
-            
+
             request.cookies.set({
               name,
               value,
               ...finalOptions,
             });
-            
+
             response.cookies.set({
               name,
               value,

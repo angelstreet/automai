@@ -34,7 +34,9 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
   // Check for multiple instances of SidebarProvider
   useEffect(() => {
     if (SIDEBAR_CONTEXT_INITIALIZED) {
-      console.warn('[SidebarContext] Multiple instances detected. This may cause unexpected behavior.');
+      console.warn(
+        '[SidebarContext] Multiple instances detected. This may cause unexpected behavior.',
+      );
     } else {
       SIDEBAR_CONTEXT_INITIALIZED = true;
     }
@@ -128,23 +130,18 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
   }, [open]);
 
   // Properly memoize the context value to prevent unnecessary re-renders
-  const contextValue = useMemo(() => ({
-    state,
-    open,
-    setOpen,
-    openMobile,
-    setOpenMobile,
-    isMobile,
-    toggleSidebar,
-  }), [
-    state,
-    open, 
-    setOpen,
-    openMobile,
-    setOpenMobile,
-    isMobile,
-    toggleSidebar
-  ]);
+  const contextValue = useMemo(
+    () => ({
+      state,
+      open,
+      setOpen,
+      openMobile,
+      setOpenMobile,
+      isMobile,
+      toggleSidebar,
+    }),
+    [state, open, setOpen, openMobile, setOpenMobile, isMobile, toggleSidebar],
+  );
 
   return <SidebarContext.Provider value={contextValue}>{children}</SidebarContext.Provider>;
 }

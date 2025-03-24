@@ -133,7 +133,7 @@ export default function LoginPage() {
 
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
       console.log('🔐 OAuth Login: Using redirect URL:', redirectUrl);
-      
+
       // Use the server action directly instead of going through UserContext
       const result = await signInWithOAuthAction(provider, redirectUrl);
 

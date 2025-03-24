@@ -29,7 +29,7 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
   const router = useRouter();
   const params = useParams();
   const { user: contextUser, clearCache } = useUser();
-  
+
   // Use provided user prop if available, otherwise use from context
   const user = propUser || contextUser;
   const locale = (params.locale as string) || 'en';

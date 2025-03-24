@@ -54,21 +54,21 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (CICD_CONTEXT_INITIALIZED) {
       console.error(
         `${LOG_PREFIX} Multiple CICDProvider instances detected! ` +
-        'This will cause serious performance and state problems. ' +
-        'Ensure CICDProvider is used only once at the root of your application.'
+          'This will cause serious performance and state problems. ' +
+          'Ensure CICDProvider is used only once at the root of your application.',
       );
-      
+
       // Add visible console warning in development
       if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
         console.warn(
-          '%c[CRITICAL ERROR] Multiple CICDProvider instances detected!', 
-          'color: red; font-size: 16px; font-weight: bold;'
+          '%c[CRITICAL ERROR] Multiple CICDProvider instances detected!',
+          'color: red; font-size: 16px; font-weight: bold;',
         );
       }
     } else {
       CICD_CONTEXT_INITIALIZED = true;
       log(`${LOG_PREFIX} CICDProvider initialized as singleton`);
-      
+
       // Mark context as initialized in global tracking
       if (globalInitStatus && typeof globalInitStatus.markInitialized === 'function') {
         globalInitStatus.markInitialized('cicd');
@@ -120,23 +120,23 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Get user data from UserContext instead of fetching it directly
   const userContext = useUser();
-  
+
   // Helper function to get user data from various sources
   const getUserData = useCallback((): AuthUser | null => {
     // Try to get user from state first
     if (state.currentUser) {
       return state.currentUser;
     }
-    
+
     // If not in state, try to get from user context
     if (userContext?.user) {
       return userContext.user;
     }
-    
+
     // Otherwise return null
     return null;
   }, [state.currentUser, userContext?.user]);
-  
+
   // Update currentUser in state when userContext.user changes
   useEffect(() => {
     if (userContext?.user) {
@@ -148,14 +148,14 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       );
     }
   }, [userContext?.user, safeUpdateState, state]);
-  
+
   // This function now uses the user from context instead of fetching it again
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
     return await protectedFetch('fetchUserData', async () => {
       try {
         // First try to get user from context
         let user = getUserData();
-        
+
         // If no user found and userContext exists, try to refresh user data
         if (!user && userContext?.refreshUser) {
           log(`${LOG_PREFIX} No user data found, refreshing from UserContext...`);
@@ -164,7 +164,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             user = refreshResult.data;
           }
         }
-        
+
         // Update state if user was found
         if (user) {
           safeUpdateState(
@@ -174,7 +174,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             'currentUser',
           );
         }
-        
+
         return user;
       } catch (err) {
         console.error(`${LOG_PREFIX} Error in fetchUserData:`, err);
@@ -276,159 +276,173 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 
   // Create a new CI/CD provider
-  const createProvider = useCallback(async (payload: CICDProviderPayload) => {
-    setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
+  const createProvider = useCallback(
+    async (payload: CICDProviderPayload) => {
+      setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
 
-    try {
-      // Get current user
-      const user = getUserData();
-      
-      // Pass user data to action to avoid redundant auth
-      const result = await createCICDProviderAction(payload, user);
+      try {
+        // Get current user
+        const user = getUserData();
 
-      if (result.success && result.data) {
-        // Update the local state with the new provider
+        // Pass user data to action to avoid redundant auth
+        const result = await createCICDProviderAction(payload, user);
+
+        if (result.success && result.data) {
+          // Update the local state with the new provider
+          setState((prev: CICDData) => ({
+            ...prev,
+            providers: [...prev.providers, result.data!],
+            loading: false,
+          }));
+        } else {
+          setState((prev: CICDData) => ({
+            ...prev,
+            error: result.error || ERROR_MESSAGES.CREATE_PROVIDER,
+            loading: false,
+          }));
+        }
+
+        return result;
+      } catch (err: any) {
         setState((prev: CICDData) => ({
           ...prev,
-          providers: [...prev.providers, result.data!],
+          error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
           loading: false,
         }));
-      } else {
-        setState((prev: CICDData) => ({
-          ...prev,
-          error: result.error || ERROR_MESSAGES.CREATE_PROVIDER,
-          loading: false,
-        }));
+
+        return {
+          success: false,
+          error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
+        };
       }
-
-      return result;
-    } catch (err: any) {
-      setState((prev: CICDData) => ({
-        ...prev,
-        error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
-        loading: false,
-      }));
-
-      return {
-        success: false,
-        error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
-      };
-    }
-  }, [getUserData]);
+    },
+    [getUserData],
+  );
 
   // Update an existing CI/CD provider
-  const updateProvider = useCallback(async (id: string, payload: CICDProviderPayload) => {
-    setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
+  const updateProvider = useCallback(
+    async (id: string, payload: CICDProviderPayload) => {
+      setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
 
-    try {
-      // Get current user
-      const user = getUserData();
-      
-      // Pass user data to action to avoid redundant auth
-      const result = await updateCICDProviderAction(id, payload, user);
+      try {
+        // Get current user
+        const user = getUserData();
 
-      if (result.success && result.data) {
-        // Update the provider in local state
+        // Pass user data to action to avoid redundant auth
+        const result = await updateCICDProviderAction(id, payload, user);
+
+        if (result.success && result.data) {
+          // Update the provider in local state
+          setState((prev: CICDData) => ({
+            ...prev,
+            providers: prev.providers.map((p: CICDProviderType) =>
+              p.id === id ? result.data! : p,
+            ),
+            loading: false,
+          }));
+        } else {
+          setState((prev: CICDData) => ({
+            ...prev,
+            error: result.error || ERROR_MESSAGES.UPDATE_PROVIDER,
+            loading: false,
+          }));
+        }
+
+        return result;
+      } catch (err: any) {
         setState((prev: CICDData) => ({
           ...prev,
-          providers: prev.providers.map((p: CICDProviderType) => (p.id === id ? result.data! : p)),
+          error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
           loading: false,
         }));
-      } else {
-        setState((prev: CICDData) => ({
-          ...prev,
-          error: result.error || ERROR_MESSAGES.UPDATE_PROVIDER,
-          loading: false,
-        }));
+
+        return {
+          success: false,
+          error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
+        };
       }
-
-      return result;
-    } catch (err: any) {
-      setState((prev: CICDData) => ({
-        ...prev,
-        error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
-        loading: false,
-      }));
-
-      return {
-        success: false,
-        error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
-      };
-    }
-  }, [getUserData]);
+    },
+    [getUserData],
+  );
 
   // Delete a CI/CD provider
-  const deleteProvider = useCallback(async (id: string): Promise<ActionResult> => {
-    setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
+  const deleteProvider = useCallback(
+    async (id: string): Promise<ActionResult> => {
+      setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
 
-    try {
-      // Get current user
-      const user = getUserData();
-      
-      // Pass user data to action to avoid redundant auth
-      const result = await deleteCICDProviderAction(id, user);
+      try {
+        // Get current user
+        const user = getUserData();
 
-      if (result.success) {
-        // Remove the provider from local state
+        // Pass user data to action to avoid redundant auth
+        const result = await deleteCICDProviderAction(id, user);
+
+        if (result.success) {
+          // Remove the provider from local state
+          setState((prev: CICDData) => ({
+            ...prev,
+            providers: prev.providers.filter((p: CICDProviderType) => p.id !== id),
+            loading: false,
+          }));
+        } else {
+          setState((prev: CICDData) => ({
+            ...prev,
+            error: result.error || ERROR_MESSAGES.DELETE_PROVIDER,
+            loading: false,
+          }));
+        }
+
+        return result;
+      } catch (err: any) {
         setState((prev: CICDData) => ({
           ...prev,
-          providers: prev.providers.filter((p: CICDProviderType) => p.id !== id),
+          error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
           loading: false,
         }));
-      } else {
-        setState((prev: CICDData) => ({
-          ...prev,
-          error: result.error || ERROR_MESSAGES.DELETE_PROVIDER,
-          loading: false,
-        }));
+
+        return {
+          success: false,
+          error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
+        };
       }
-
-      return result;
-    } catch (err: any) {
-      setState((prev: CICDData) => ({
-        ...prev,
-        error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
-        loading: false,
-      }));
-
-      return {
-        success: false,
-        error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
-      };
-    }
-  }, [getUserData]);
+    },
+    [getUserData],
+  );
 
   // Test a CI/CD provider connection
-  const testProvider = useCallback(async (provider: CICDProviderPayload): Promise<ActionResult> => {
-    setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
+  const testProvider = useCallback(
+    async (provider: CICDProviderPayload): Promise<ActionResult> => {
+      setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
 
-    try {
-      // Get current user
-      const user = getUserData();
-      
-      // Pass user data to action to avoid redundant auth
-      const result = await testCICDProviderAction(provider, user);
+      try {
+        // Get current user
+        const user = getUserData();
 
-      setState((prev: CICDData) => ({
-        ...prev,
-        loading: false,
-        error: result.success ? null : result.error || ERROR_MESSAGES.TEST_PROVIDER,
-      }));
+        // Pass user data to action to avoid redundant auth
+        const result = await testCICDProviderAction(provider, user);
 
-      return result;
-    } catch (err: any) {
-      setState((prev: CICDData) => ({
-        ...prev,
-        error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
-        loading: false,
-      }));
+        setState((prev: CICDData) => ({
+          ...prev,
+          loading: false,
+          error: result.success ? null : result.error || ERROR_MESSAGES.TEST_PROVIDER,
+        }));
 
-      return {
-        success: false,
-        error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
-      };
-    }
-  }, [getUserData]);
+        return result;
+      } catch (err: any) {
+        setState((prev: CICDData) => ({
+          ...prev,
+          error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
+          loading: false,
+        }));
+
+        return {
+          success: false,
+          error: err.message || ERROR_MESSAGES.UNEXPECTED_ERROR,
+        };
+      }
+    },
+    [getUserData],
+  );
 
   // Select a provider
   const selectProvider = useCallback((provider: CICDProviderType | null) => {
@@ -480,7 +494,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // Get user from context using the getUserData helper
         const currentUser = getUserData();
-        
+
         // Fetch CICD providers with user data from context
         const providersResponse = await getCICDProviders(currentUser);
 
@@ -500,11 +514,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           currentUser: currentUser || prevState.currentUser,
         }));
 
-        log(
-          `${LOG_PREFIX} Initialized with:`,
-          providersResponse.data?.length || 0,
-          'providers',
-        );
+        log(`${LOG_PREFIX} Initialized with:`, providersResponse.data?.length || 0, 'providers');
       } catch (err) {
         console.error(`${LOG_PREFIX} Error initializing CICD context:`, err);
         setState((prevState) => ({
@@ -544,62 +554,65 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [state.providers, state.jobs, state.loading, state.error]);
 
   // Create context value - use useMemo to prevent unnecessary rerenders
-  const contextValue = useMemo(() => ({
-    // State
-    ...state,
+  const contextValue = useMemo(
+    () => ({
+      // State
+      ...state,
 
-    // Actions
-    fetchProviders: async () => {
-      const result = await fetchProviders();
-      return result || { success: false, data: [], error: 'Failed to fetch providers' };
-    },
-    getProviderById,
-    createProvider,
-    updateProvider,
-    deleteProvider,
-    testProvider,
-    selectedProvider: state.selectedProvider,
-    selectedJob: state.selectedJob,
-    fetchUserData,
+      // Actions
+      fetchProviders: async () => {
+        const result = await fetchProviders();
+        return result || { success: false, data: [], error: 'Failed to fetch providers' };
+      },
+      getProviderById,
+      createProvider,
+      updateProvider,
+      deleteProvider,
+      testProvider,
+      selectedProvider: state.selectedProvider,
+      selectedJob: state.selectedJob,
+      fetchUserData,
 
-    // Implementations for required methods with proper error logging
-    fetchJobs: async () => {
-      console.error('CICD: fetchJobs not fully implemented yet');
-      return [];
-    },
-    getJobById: async (id: string) => {
-      console.error(`CICD: getJobById not fully implemented yet for job ${id}`);
-      return null;
-    },
-    triggerJob: async (jobId: string, params?: any) => {
-      console.error(`CICD: triggerJob not fully implemented yet for job ${jobId}`);
-      return { success: false, error: 'Not fully implemented yet' };
-    },
-    getBuildStatus: async (buildId: string) => {
-      console.error(`CICD: getBuildStatus not fully implemented yet for build ${buildId}`);
-      return null;
-    },
-    getBuildLogs: async (buildId: string) => {
-      console.error(`CICD: getBuildLogs not fully implemented yet for build ${buildId}`);
-      return '';
-    },
+      // Implementations for required methods with proper error logging
+      fetchJobs: async () => {
+        console.error('CICD: fetchJobs not fully implemented yet');
+        return [];
+      },
+      getJobById: async (id: string) => {
+        console.error(`CICD: getJobById not fully implemented yet for job ${id}`);
+        return null;
+      },
+      triggerJob: async (jobId: string, params?: any) => {
+        console.error(`CICD: triggerJob not fully implemented yet for job ${jobId}`);
+        return { success: false, error: 'Not fully implemented yet' };
+      },
+      getBuildStatus: async (buildId: string) => {
+        console.error(`CICD: getBuildStatus not fully implemented yet for build ${buildId}`);
+        return null;
+      },
+      getBuildLogs: async (buildId: string) => {
+        console.error(`CICD: getBuildLogs not fully implemented yet for build ${buildId}`);
+        return '';
+      },
 
-    // UI state management
-    setSelectedProvider: (provider: CICDProviderType | null) =>
-      setState((prev: CICDData) => ({ ...prev, selectedProvider: provider })),
-    setSelectedJob: (job: CICDJob | null) =>
-      setState((prev: CICDData) => ({ ...prev, selectedJob: job })),
-    refreshUserData: fetchUserData,
-  }), [
-    state,
-    fetchProviders,
-    getProviderById,
-    createProvider,
-    updateProvider,
-    deleteProvider,
-    testProvider,
-    fetchUserData
-  ]);
+      // UI state management
+      setSelectedProvider: (provider: CICDProviderType | null) =>
+        setState((prev: CICDData) => ({ ...prev, selectedProvider: provider })),
+      setSelectedJob: (job: CICDJob | null) =>
+        setState((prev: CICDData) => ({ ...prev, selectedJob: job })),
+      refreshUserData: fetchUserData,
+    }),
+    [
+      state,
+      fetchProviders,
+      getProviderById,
+      createProvider,
+      updateProvider,
+      deleteProvider,
+      testProvider,
+      fetchUserData,
+    ],
+  );
 
   return <CICDContext.Provider value={contextValue}>{children}</CICDContext.Provider>;
 };
@@ -607,7 +620,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 // Export the hook for accessing the CICD context
 export function useCICDContext() {
   const context = useContext(CICDContext);
-  
+
   if (DEBUG) {
     console.log(`${LOG_PREFIX} useCICDContext called, returning:`, {
       isNull: context === null,
@@ -629,7 +642,7 @@ export function useCICD() {
     return useCICDContext();
   } catch (error) {
     console.error(`${LOG_PREFIX} Error in useCICD hook:`, error);
-    
+
     // Return fallback object to prevent destructuring errors
     return {
       providers: [],
@@ -640,9 +653,13 @@ export function useCICD() {
       loading: false,
       error: ERROR_MESSAGES.CONTEXT_USAGE,
       currentUser: null,
-      
+
       // Actions with error fallbacks
-      fetchProviders: async () => ({ success: false, data: [], error: ERROR_MESSAGES.CONTEXT_USAGE }),
+      fetchProviders: async () => ({
+        success: false,
+        data: [],
+        error: ERROR_MESSAGES.CONTEXT_USAGE,
+      }),
       getProviderById: async () => null,
       createProvider: async () => ({ success: false, error: ERROR_MESSAGES.CONTEXT_USAGE }),
       updateProvider: async () => ({ success: false, error: ERROR_MESSAGES.CONTEXT_USAGE }),
@@ -654,7 +671,7 @@ export function useCICD() {
       getBuildStatus: async () => null,
       getBuildLogs: async () => '',
       fetchUserData: async () => null,
-      
+
       // UI state management with empty functions
       setSelectedProvider: () => {},
       setSelectedJob: () => {},

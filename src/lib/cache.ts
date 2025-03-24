@@ -18,8 +18,8 @@ type CacheEntry<T> = {
   value: T;
   expiry: number;
   created: number;
-  tags?: string[];  // Optional tags for grouping related cache entries
-  source?: string;  // Where the cached data came from (e.g., "getUser", "getRepository")
+  tags?: string[]; // Optional tags for grouping related cache entries
+  source?: string; // Where the cached data came from (e.g., "getUser", "getRepository")
 };
 
 // Cache statistics for monitoring
@@ -37,7 +37,7 @@ class ServerCache {
   private cache: Map<string, CacheEntry<any>> = new Map();
   // Default TTL 5 minutes
   private defaultTTL = 5 * 60 * 1000;
-  
+
   // Stats tracking
   private hits = 0;
   private misses = 0;
@@ -124,18 +124,18 @@ class ServerCache {
    * @param options Optional settings (TTL, tags, source)
    */
   set<T>(
-    key: string, 
-    value: T, 
-    options?: { 
-      ttl?: number; 
-      tags?: string[]; 
+    key: string,
+    value: T,
+    options?: {
+      ttl?: number;
+      tags?: string[];
       source?: string;
-    }
+    },
   ): void {
     const ttl = options?.ttl || this.defaultTTL;
     const tags = options?.tags || [];
     const source = options?.source || 'unknown';
-    
+
     this.cache.set(key, {
       value,
       expiry: Date.now() + ttl,
@@ -143,7 +143,7 @@ class ServerCache {
       tags,
       source,
     });
-    
+
     log(`SET: ${key} (ttl: ${this.formatTime(ttl)}, source: ${source}, tags: ${tags.join(', ')})`);
   }
 
@@ -167,7 +167,7 @@ class ServerCache {
     const count = this.cache.size;
     this.cache.clear();
     log(`CLEAR: Removed ${count} entries from cache`);
-    
+
     // Reset stats
     this.hits = 0;
     this.misses = 0;
@@ -180,14 +180,14 @@ class ServerCache {
   private cleanup(): void {
     const now = Date.now();
     let removedCount = 0;
-    
+
     for (const [key, entry] of this.cache.entries()) {
       if (entry.expiry < now) {
         this.cache.delete(key);
         removedCount++;
       }
     }
-    
+
     if (removedCount > 0) {
       log(`CLEANUP: Removed ${removedCount} expired entries`);
     }
@@ -201,18 +201,18 @@ class ServerCache {
   deletePattern(pattern: RegExp | string): number {
     const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern);
     let count = 0;
-    
+
     for (const key of this.cache.keys()) {
       if (regex.test(key)) {
         this.cache.delete(key);
         count++;
       }
     }
-    
+
     if (count > 0) {
       log(`DELETE_PATTERN: Removed ${count} entries matching ${pattern}`);
     }
-    
+
     return count;
   }
 
@@ -223,18 +223,18 @@ class ServerCache {
    */
   deleteByTag(tag: string): number {
     let count = 0;
-    
+
     for (const [key, entry] of this.cache.entries()) {
       if (entry.tags?.includes(tag)) {
         this.cache.delete(key);
         count++;
       }
     }
-    
+
     if (count > 0) {
       log(`DELETE_TAG: Removed ${count} entries with tag "${tag}"`);
     }
-    
+
     return count;
   }
 
@@ -263,19 +263,19 @@ class ServerCache {
   getStats(): CacheStats {
     let oldestTime: number | null = null;
     let newestTime: number | null = null;
-    
+
     for (const entry of this.cache.values()) {
       const createTime = entry.created;
-      
+
       if (oldestTime === null || createTime < oldestTime) {
         oldestTime = createTime;
       }
-      
+
       if (newestTime === null || createTime > newestTime) {
         newestTime = createTime;
       }
     }
-    
+
     return {
       size: this.cache.size,
       hits: this.hits,
@@ -295,14 +295,14 @@ class ServerCache {
    * @returns Cached or computed value
    */
   async getOrSet<T>(
-    key: string, 
-    fn: () => Promise<T>, 
-    options?: { 
-      ttl?: number; 
-      tags?: string[]; 
+    key: string,
+    fn: () => Promise<T>,
+    options?: {
+      ttl?: number;
+      tags?: string[];
       source?: string;
       forceRefresh?: boolean;
-    }
+    },
   ): Promise<T> {
     // Check if we should force a refresh
     if (!options?.forceRefresh) {
@@ -318,13 +318,13 @@ class ServerCache {
       const start = Date.now();
       const value = await fn();
       const duration = Date.now() - start;
-      
+
       this.set(key, value, {
         ttl: options?.ttl,
         tags: options?.tags,
-        source: options?.source
+        source: options?.source,
       });
-      
+
       log(`COMPUTED: ${key} in ${duration}ms (source: ${options?.source || 'unknown'})`);
       return value;
     } catch (error) {

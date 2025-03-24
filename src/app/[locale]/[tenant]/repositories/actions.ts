@@ -110,9 +110,9 @@ export async function getRepositories(
 
     // Create a cache key that includes both tenant and filter info for proper isolation
     const cacheKey = serverCache.tenantKey(
-      currentUser.tenant_id, 
+      currentUser.tenant_id,
       'repositories',
-      filter?.providerId ? `:provider:${filter.providerId}` : ':all'
+      filter?.providerId ? `:provider:${filter.providerId}` : ':all',
     );
 
     // Use enhanced getOrSet function with proper tagging
@@ -120,7 +120,7 @@ export async function getRepositories(
       cacheKey,
       async () => {
         const where: Record<string, any> = {
-          tenant_id: currentUser.tenant_id // Ensure tenant isolation
+          tenant_id: currentUser.tenant_id, // Ensure tenant isolation
         };
 
         if (filter?.providerId) {
@@ -148,8 +148,8 @@ export async function getRepositories(
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
         tags: ['repositories', `tenant:${currentUser.tenant_id}`, 'repository-data'],
-        source: 'getRepositories'
-      }
+        source: 'getRepositories',
+      },
     );
   } catch (error: any) {
     console.error('Error in getRepositories:', error);
@@ -199,7 +199,7 @@ export async function createRepository(
     // Invalidate cache after creation using pattern-based invalidation
     // This efficiently clears all related cache entries
     serverCache.deleteByTag('repository-data');
-    
+
     // Also clear tenant-specific repository cache
     serverCache.deletePattern(`tenant:${currentUser.tenant_id}:repositories`);
 
@@ -465,13 +465,13 @@ export async function createRepositoryFromUrl(
 
 /**
  * Get a repository by ID
- * 
+ *
  * @param id Repository ID
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
 export async function getRepository(
   id: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     // Get current user for tenant isolation
@@ -482,18 +482,18 @@ export async function getRepository(
         error: 'Unauthorized - Please sign in',
       };
     }
-    
+
     // Create a cache key for this specific repository
     const cacheKey = serverCache.tenantKey(currentUser.tenant_id, 'repository', id);
-    
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
       async () => {
         const data = await db.repository.findUnique({
-          where: { 
+          where: {
             id,
-            tenant_id: currentUser.tenant_id // Ensure tenant isolation
+            tenant_id: currentUser.tenant_id, // Ensure tenant isolation
           },
         });
 
@@ -501,16 +501,16 @@ export async function getRepository(
           return { success: false, error: 'Repository not found' };
         }
 
-        return { 
-          success: true, 
-          data: mapDbRepositoryToRepository(data) 
+        return {
+          success: true,
+          data: mapDbRepositoryToRepository(data),
         };
       },
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
         tags: ['repository-data', `repository:${id}`, `tenant:${currentUser.tenant_id}`],
-        source: 'getRepository'
-      }
+        source: 'getRepository',
+      },
     );
   } catch (error: any) {
     console.error('Error in getRepository:', error);
@@ -888,7 +888,7 @@ export async function getStarredRepositories(
 
     // Create a user-specific cache key for starred repositories
     const cacheKey = serverCache.userKey(currentUser.id, 'starred-repositories');
-    
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
@@ -905,8 +905,8 @@ export async function getStarredRepositories(
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
         tags: ['repository-data', 'starred-repositories', `user:${currentUser.id}`],
-        source: 'getStarredRepositories'
-      }
+        source: 'getStarredRepositories',
+      },
     );
   } catch (error: any) {
     console.error('Error in getStarredRepositories:', error);
@@ -941,7 +941,7 @@ export async function starRepositoryAction(
     // This will clear all starred repositories cache for this user
     serverCache.deletePattern(`user:${currentUser.id}:starred-repositories`);
     serverCache.deleteByTag(`user:${currentUser.id}`);
-    
+
     // Also invalidate any combined data that might include this information
     serverCache.deletePattern(`repositories-with-starred:${currentUser.id}`);
 
@@ -979,7 +979,7 @@ export async function unstarRepositoryAction(
     // This will clear all starred repositories cache for this user
     serverCache.deletePattern(`user:${currentUser.id}:starred-repositories`);
     serverCache.deleteByTag(`user:${currentUser.id}`);
-    
+
     // Also invalidate any combined data that might include this information
     serverCache.deletePattern(`repositories-with-starred:${currentUser.id}`);
 
@@ -1355,9 +1355,9 @@ export async function getRepositoriesWithStarred(
 
     // Create a cache key that combines user, tenant, and filter info
     const cacheKey = `${serverCache.userKey(
-      currentUser.id, 
+      currentUser.id,
       'repositories-with-starred',
-      filter?.providerId || 'all'
+      filter?.providerId || 'all',
     )}:${currentUser.tenant_id}`;
 
     // Use enhanced getOrSet function with proper tagging
@@ -1394,13 +1394,13 @@ export async function getRepositoriesWithStarred(
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
         tags: [
-          'repository-data', 
-          'starred-repositories', 
+          'repository-data',
+          'starred-repositories',
           `user:${currentUser.id}`,
-          `tenant:${currentUser.tenant_id}`
+          `tenant:${currentUser.tenant_id}`,
         ],
-        source: 'getRepositoriesWithStarred'
-      }
+        source: 'getRepositoriesWithStarred',
+      },
     );
   } catch (error: any) {
     console.error('Error in getRepositoriesWithStarred:', error);
@@ -1483,21 +1483,19 @@ export async function testGitRepository(
  * @param tenantId Optional tenant ID to only clear cache for a specific tenant
  * @param userId Optional user ID to only clear cache for a specific user
  */
-export async function clearRepositoriesCache(
-  options?: {
-    repositoryId?: string;
-    providerId?: string;
-    tenantId?: string;
-    userId?: string;
-  }
-): Promise<{
+export async function clearRepositoriesCache(options?: {
+  repositoryId?: string;
+  providerId?: string;
+  tenantId?: string;
+  userId?: string;
+}): Promise<{
   success: boolean;
   clearedEntries: number;
   message: string;
 }> {
   try {
     const { repositoryId, providerId, tenantId, userId } = options || {};
-    
+
     let clearedEntries = 0;
     let message = 'Cache cleared successfully';
 
@@ -1506,30 +1504,25 @@ export async function clearRepositoriesCache(
       // Clear specific repository cache using tag-based invalidation
       clearedEntries += serverCache.deleteByTag(`repository:${repositoryId}`);
       message = `Cache cleared for repository: ${repositoryId}`;
-    } 
-    else if (providerId) {
+    } else if (providerId) {
       // Clear provider-specific repositories cache
       const pattern = `provider:${providerId}`;
       clearedEntries += serverCache.deletePattern(pattern);
       message = `Cache cleared for provider: ${providerId}`;
-    }
-    else if (userId && tenantId) {
+    } else if (userId && tenantId) {
       // Clear user and tenant specific data
       clearedEntries += serverCache.deleteByTag(`user:${userId}`);
       clearedEntries += serverCache.deleteByTag(`tenant:${tenantId}`);
       message = `Cache cleared for user: ${userId} and tenant: ${tenantId}`;
-    }
-    else if (userId) {
+    } else if (userId) {
       // Clear user specific data
       clearedEntries += serverCache.deleteByTag(`user:${userId}`);
       message = `Cache cleared for user: ${userId}`;
-    }
-    else if (tenantId) {
+    } else if (tenantId) {
       // Clear tenant specific data
       clearedEntries += serverCache.deleteByTag(`tenant:${tenantId}`);
       message = `Cache cleared for tenant: ${tenantId}`;
-    }
-    else {
+    } else {
       // Clear all repository-related caches
       clearedEntries += serverCache.deleteByTag('repository-data');
       message = 'All repository cache cleared';
@@ -1538,14 +1531,14 @@ export async function clearRepositoriesCache(
     return {
       success: true,
       clearedEntries,
-      message
+      message,
     };
   } catch (error) {
     console.error('Error clearing repositories cache:', error);
     return {
       success: false,
       clearedEntries: 0,
-      message: error instanceof Error ? error.message : 'Unknown error occurred'
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }
 }

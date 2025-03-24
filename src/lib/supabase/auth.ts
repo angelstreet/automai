@@ -338,27 +338,27 @@ export const supabaseAuth = {
     }
     try {
       const supabase = await createClient();
-      
+
       // Log the code we're using and basic details
       console.log(
         '🔐 AUTH_SERVICE: Starting OAuth code exchange for code:',
         code.substring(0, 6) + '...',
       );
-      
+
       // Check for code verifier in cookies or headers
       const allCookies = await supabase.cookies.getAll();
       console.log('🔐 AUTH_SERVICE: Cookies available:', allCookies.length);
-      
-      const pkceVerifierCookie = allCookies.find(c => 
-        c.name.includes('code_verifier') || c.name.includes('pkce')
+
+      const pkceVerifierCookie = allCookies.find(
+        (c) => c.name.includes('code_verifier') || c.name.includes('pkce'),
       );
-      
+
       if (pkceVerifierCookie) {
         console.log('🔐 AUTH_SERVICE: Found PKCE verifier cookie:', pkceVerifierCookie.name);
       } else {
         console.warn('🔐 AUTH_SERVICE: No PKCE verifier cookie found - may cause errors');
       }
-      
+
       // Try exchanging the code for a session
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
@@ -368,7 +368,7 @@ export const supabaseAuth = {
         console.error('🔐 AUTH_SERVICE ERROR: Error details:', {
           message: error.message,
           code: (error as any).code,
-          status: (error as any).status
+          status: (error as any).status,
         });
         return { success: false, error: error.message };
       }

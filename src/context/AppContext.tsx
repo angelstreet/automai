@@ -98,15 +98,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (APP_CONTEXT_INITIALIZED) {
       console.error(
         '[AppContext] Multiple AppProvider instances detected! ' +
-        'This will cause serious performance and state problems. ' +
-        'Ensure AppProvider is used only once at the root of your application.'
+          'This will cause serious performance and state problems. ' +
+          'Ensure AppProvider is used only once at the root of your application.',
       );
-      
+
       // Add visible console warning in development
       if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
         console.warn(
-          '%c[CRITICAL ERROR] Multiple AppProvider instances detected!', 
-          'color: red; font-size: 16px; font-weight: bold;'
+          '%c[CRITICAL ERROR] Multiple AppProvider instances detected!',
+          'color: red; font-size: 16px; font-weight: bold;',
         );
       }
     } else {
@@ -156,9 +156,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setContextState,
           contextState,
           { ...contextState, [name]: true },
-          `contextState.${name}`
+          `contextState.${name}`,
         );
-        
+
         // Update global tracking if persistence is enabled
         if (PERSIST_CONTEXTS) {
           globalInitStatus[name] = true;
@@ -200,10 +200,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [renderCount]);
 
   // Create context value with state and init function - memoized to prevent unnecessary renders
-  const contextValue = useMemo(
-    () => ({ contextState, initContext }),
-    [contextState, initContext]
-  );
+  const contextValue = useMemo(() => ({ contextState, initContext }), [contextState, initContext]);
 
   // Render nested providers based on which are initialized
   const renderWithProviders = (node: React.ReactNode): React.ReactNode => {
@@ -279,16 +276,26 @@ function AppContextBridge({ children }: { children: ReactNode }) {
     } else if (contextState.user && userContext && !userContext.user && !userContext.loading) {
       console.warn('[AppContext] User context exists but user is null and not loading');
     }
-  }, [userContext, hostContext, deploymentContext, repositoryContext, cicdContext, contextState.user]);
+  }, [
+    userContext,
+    hostContext,
+    deploymentContext,
+    repositoryContext,
+    cicdContext,
+    contextState.user,
+  ]);
 
   // Combine contexts - memoized to prevent unnecessary renders
-  const appContextValue = useMemo(() => ({
-    host: hostContext,
-    deployment: deploymentContext,
-    repository: repositoryContext,
-    cicd: cicdContext,
-    user: userContext,
-  }), [hostContext, deploymentContext, repositoryContext, cicdContext, userContext]);
+  const appContextValue = useMemo(
+    () => ({
+      host: hostContext,
+      deployment: deploymentContext,
+      repository: repositoryContext,
+      cicd: cicdContext,
+      user: userContext,
+    }),
+    [hostContext, deploymentContext, repositoryContext, cicdContext, userContext],
+  );
 
   return <InnerAppContext.Provider value={appContextValue}>{children}</InnerAppContext.Provider>;
 }
@@ -305,7 +312,7 @@ const InnerAppContext = createContext<AppContextType>({
 // Singleton-like initialization helpers
 function useInitContext(name: ContextName) {
   const { contextState, initContext } = useContext(AppContext);
-  
+
   // Call count for debugging
   const callCount = useRef(0);
   callCount.current++;

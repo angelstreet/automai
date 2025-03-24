@@ -79,9 +79,9 @@ export const HostProvider: React.FC<{
     if (HOST_CONTEXT_INITIALIZED) {
       console.warn(
         '[HostContext] Multiple instances of HostProvider detected. ' +
-        'This can cause performance issues and unexpected behavior. ' +
-        'Ensure that HostProvider is only used once in the component tree, ' +
-        'preferably in the AppProvider.'
+          'This can cause performance issues and unexpected behavior. ' +
+          'Ensure that HostProvider is only used once in the component tree, ' +
+          'preferably in the AppProvider.',
       );
     } else {
       HOST_CONTEXT_INITIALIZED = true;
@@ -99,7 +99,7 @@ export const HostProvider: React.FC<{
 
   // Get user data from UserContext instead of fetching directly
   const userContext = useUser();
-  
+
   // Get initial host data synchronously from localStorage
   const [initialState, setInitialState] = useState<HostData>(() => {
     if (typeof window !== 'undefined') {
@@ -140,11 +140,11 @@ export const HostProvider: React.FC<{
       log('[HostContext] Updating user data from UserContext:', {
         id: userContext.user.id,
         tenant: userContext.user.tenant_name,
-        role: userContext.user.role
+        role: userContext.user.role,
       });
-      setState(prevState => ({
+      setState((prevState) => ({
         ...prevState,
-        currentUser: userContext.user
+        currentUser: userContext.user,
       }));
     }
   }, [userContext.user, state.currentUser]);
@@ -155,20 +155,20 @@ export const HostProvider: React.FC<{
     if (state.currentUser) {
       return state.currentUser;
     }
-    
+
     // Then try from UserContext
     if (userContext.user) {
       return userContext.user;
     }
-    
+
     // Finally try from props
     if (userData) {
       return userData;
     }
-    
+
     return null;
   }, [state.currentUser, userContext.user, userData]);
-  
+
   // Refresh user data (now just gets it from UserContext)
   const refreshUserData = useCallback(async (): Promise<AuthUser | null> => {
     try {
@@ -185,7 +185,7 @@ export const HostProvider: React.FC<{
         setState((prev) => ({ ...prev, currentUser: user }));
         return user;
       }
-      
+
       log('[HostContext] No user data available');
       return null;
     } catch (err) {
@@ -286,9 +286,13 @@ export const HostProvider: React.FC<{
 
         log('[HostContext] fetchHosts called', {
           hasUser: !!user,
-          userSource: user ? 
-            (user === userContext.user ? 'UserContext' : 
-             (user === state.currentUser ? 'state' : 'refreshed')) : 'none',
+          userSource: user
+            ? user === userContext.user
+              ? 'UserContext'
+              : user === state.currentUser
+                ? 'state'
+                : 'refreshed'
+            : 'none',
           renderCount: protectedRenderCount,
           componentState: 'loading',
         });
@@ -350,7 +354,15 @@ export const HostProvider: React.FC<{
     });
 
     return hosts || [];
-  }, [protectedFetch, getUserData, refreshUserData, applyFilters, safeUpdateState, state, userContext.user]);
+  }, [
+    protectedFetch,
+    getUserData,
+    refreshUserData,
+    applyFilters,
+    safeUpdateState,
+    state,
+    userContext.user,
+  ]);
 
   // Initialize by fetching host data
   useEffect(() => {
@@ -385,13 +397,13 @@ export const HostProvider: React.FC<{
       try {
         // Get user data from UserContext if available
         const user = getUserData();
-        
+
         // Call the hosts action with user data if available
         const response = await getHosts(
           undefined, // No filter for initial load
-          user      // Pass user data from UserContext if available
+          user, // Pass user data from UserContext if available
         );
-        
+
         if (response.success && response.data) {
           setState((prevState) => ({
             ...prevState,
@@ -729,62 +741,65 @@ export const HostProvider: React.FC<{
   }, [state.hosts, testHostConnection]);
 
   // Create context value with proper memoization
-  const contextValue = useMemo(() => ({
-    // State properties
-    hosts: state.hosts,
-    filteredHosts: state.filteredHosts,
-    selectedHost: state.selectedHost,
-    connectionStatuses: state.connectionStatuses,
-    hostStats: state.hostStats,
-    hostTerminals: state.hostTerminals,
-    hostCapabilities: state.hostCapabilities,
-    loadingStatus: state.loadingStatus,
-    error: state.error,
-    loading: state.loading,
-    isScanning: state.isScanning,
-    currentUser: state.currentUser,
-    filter: state.filter,
+  const contextValue = useMemo(
+    () => ({
+      // State properties
+      hosts: state.hosts,
+      filteredHosts: state.filteredHosts,
+      selectedHost: state.selectedHost,
+      connectionStatuses: state.connectionStatuses,
+      hostStats: state.hostStats,
+      hostTerminals: state.hostTerminals,
+      hostCapabilities: state.hostCapabilities,
+      loadingStatus: state.loadingStatus,
+      error: state.error,
+      loading: state.loading,
+      isScanning: state.isScanning,
+      currentUser: state.currentUser,
+      filter: state.filter,
 
-    // Action methods
-    fetchHosts,
-    getHostById,
-    addHost,
-    updateHostById: updateExistingHost,
-    removeHost,
-    testConnection,
-    testAllConnections,
-    isLoading: () => !!state.loading,
-    resetLoadingState: () =>
-      setState((prev) => ({
-        ...prev,
-        loading: false,
-        loadingStatus: { state: 'idle', operation: null, entityId: null },
-      })),
-  }), [
-    // State dependencies
-    state.hosts,
-    state.filteredHosts,
-    state.selectedHost,
-    state.connectionStatuses,
-    state.hostStats,
-    state.hostTerminals,
-    state.hostCapabilities,
-    state.loadingStatus,
-    state.error,
-    state.loading,
-    state.isScanning,
-    state.currentUser,
-    state.filter,
-    
-    // Function dependencies
-    fetchHosts,
-    getHostById,
-    addHost,
-    updateExistingHost,
-    removeHost,
-    testConnection,
-    testAllConnections
-  ]);
+      // Action methods
+      fetchHosts,
+      getHostById,
+      addHost,
+      updateHostById: updateExistingHost,
+      removeHost,
+      testConnection,
+      testAllConnections,
+      isLoading: () => !!state.loading,
+      resetLoadingState: () =>
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          loadingStatus: { state: 'idle', operation: null, entityId: null },
+        })),
+    }),
+    [
+      // State dependencies
+      state.hosts,
+      state.filteredHosts,
+      state.selectedHost,
+      state.connectionStatuses,
+      state.hostStats,
+      state.hostTerminals,
+      state.hostCapabilities,
+      state.loadingStatus,
+      state.error,
+      state.loading,
+      state.isScanning,
+      state.currentUser,
+      state.filter,
+
+      // Function dependencies
+      fetchHosts,
+      getHostById,
+      addHost,
+      updateExistingHost,
+      removeHost,
+      testConnection,
+      testAllConnections,
+    ],
+  );
 
   // Add one useful log when data is loaded
   useEffect(() => {

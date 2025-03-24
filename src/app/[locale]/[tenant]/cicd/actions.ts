@@ -35,7 +35,7 @@ export async function getCICDProviders(
 
     // Create a tenant-specific cache key
     const cacheKey = serverCache.tenantKey(user.tenant_id, 'cicd-providers');
-    
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
@@ -58,8 +58,8 @@ export async function getCICDProviders(
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
         tags: ['cicd-data', `tenant:${user.tenant_id}`],
-        source: 'getCICDProviders'
-      }
+        source: 'getCICDProviders',
+      },
     );
   } catch (error: any) {
     console.error('Unexpected error fetching CICD providers:', error);
@@ -72,7 +72,7 @@ export const getCICDProvidersAction = getCICDProviders;
 
 /**
  * Create a new CICD provider for the current tenant
- * 
+ *
  * @param payload The provider payload
  * @param user Optional user object to avoid redundant authentication
  */
@@ -114,7 +114,7 @@ export async function createCICDProviderAction(
     // Invalidate cache using tag-based invalidation
     serverCache.deleteByTag('cicd-data');
     serverCache.deleteByTag(`tenant:${user.tenant_id}`);
-    
+
     // Also clear specific cache entries
     serverCache.delete(serverCache.tenantKey(user.tenant_id, 'cicd-providers'));
 
@@ -130,7 +130,7 @@ export async function createCICDProviderAction(
 
 /**
  * Update an existing CICD provider
- * 
+ *
  * @param id The provider ID
  * @param payload The provider payload
  * @param user Optional user object to avoid redundant authentication
@@ -178,7 +178,7 @@ export async function updateCICDProviderAction(
     serverCache.deleteByTag('cicd-data');
     serverCache.deleteByTag(`tenant:${user.tenant_id}`);
     serverCache.deleteByTag(`cicd-provider:${id}`);
-    
+
     // Also clear specific cache entries
     serverCache.delete(serverCache.tenantKey(user.tenant_id, 'cicd-providers'));
     serverCache.delete(serverCache.tenantKey(user.tenant_id, 'cicd-provider', id));
@@ -195,13 +195,13 @@ export async function updateCICDProviderAction(
 
 /**
  * Delete a CICD provider
- * 
+ *
  * @param id The provider ID
  * @param user Optional user object to avoid redundant authentication
  */
 export async function deleteCICDProviderAction(
-  id: string, 
-  user?: AuthUser | null
+  id: string,
+  user?: AuthUser | null,
 ): Promise<ActionResult> {
   try {
     // Use provided user or get the current authenticated user
@@ -231,7 +231,7 @@ export async function deleteCICDProviderAction(
     serverCache.deleteByTag('cicd-data');
     serverCache.deleteByTag(`tenant:${user.tenant_id}`);
     serverCache.deleteByTag(`cicd-provider:${id}`);
-    
+
     // Also clear specific cache entries
     serverCache.delete(serverCache.tenantKey(user.tenant_id, 'cicd-providers'));
     serverCache.delete(serverCache.tenantKey(user.tenant_id, 'cicd-provider', id));
@@ -248,13 +248,13 @@ export async function deleteCICDProviderAction(
 
 /**
  * Test a CICD provider connection
- * 
+ *
  * @param provider The provider configuration
  * @param user Optional user object to avoid redundant authentication
  */
 export async function testCICDProviderAction(
-  provider: CICDProviderPayload, 
-  user?: AuthUser | null
+  provider: CICDProviderPayload,
+  user?: AuthUser | null,
 ): Promise<ActionResult> {
   try {
     // Basic validation
@@ -283,11 +283,11 @@ export async function testCICDProviderAction(
     // Create a cache key that includes connection details but excludes sensitive credentials
     // This is safe as we're only caching the connection test result, not the credentials
     const cacheKey = serverCache.userKey(
-      user.id, 
+      user.id,
       'cicd-test',
-      `${provider.type}:${provider.url}:${provider.config.auth_type || 'noauth'}`
+      `${provider.type}:${provider.url}:${provider.config.auth_type || 'noauth'}`,
     );
-    
+
     // Use a short TTL for test results since they might change if external services are updated
     return await serverCache.getOrSet(
       cacheKey,
@@ -325,8 +325,8 @@ export async function testCICDProviderAction(
       {
         ttl: 60 * 1000, // Only cache for 1 minute since it's a connection test
         tags: ['cicd-test', `user:${user.id}`],
-        source: 'testCICDProviderAction'
-      }
+        source: 'testCICDProviderAction',
+      },
     );
   } catch (error: any) {
     console.error('Unexpected error testing CICD provider:', error);
@@ -336,13 +336,13 @@ export async function testCICDProviderAction(
 
 /**
  * Get CI/CD jobs for all providers or a specific provider
- * 
+ *
  * @param providerId Optional provider ID to filter jobs
  * @param user Optional user object to avoid redundant authentication
  */
 export async function getCICDJobs(
   providerId?: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<ActionResult> {
   try {
     // Use provided user or get the current authenticated user
@@ -357,11 +357,11 @@ export async function getCICDJobs(
 
     // Create an appropriate cache key based on whether we're filtering by provider
     const cacheKey = serverCache.tenantKey(
-      user.tenant_id, 
+      user.tenant_id,
       'cicd-jobs',
-      providerId ? `:provider:${providerId}` : ':all'
+      providerId ? `:provider:${providerId}` : ':all',
     );
-    
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
@@ -381,13 +381,13 @@ export async function getCICDJobs(
       {
         ttl: 3 * 60 * 1000, // 3 minutes cache (jobs might change more frequently)
         tags: [
-          'cicd-data', 
-          'cicd-jobs', 
-          providerId ? `cicd-provider:${providerId}` : undefined, 
-          `tenant:${user.tenant_id}`
+          'cicd-data',
+          'cicd-jobs',
+          providerId ? `cicd-provider:${providerId}` : undefined,
+          `tenant:${user.tenant_id}`,
         ].filter(Boolean) as string[], // Filter out undefined values
-        source: 'getCICDJobs'
-      }
+        source: 'getCICDJobs',
+      },
     );
   } catch (error) {
     console.error('Error fetching CI/CD jobs:', error);
@@ -397,7 +397,7 @@ export async function getCICDJobs(
 
 /**
  * Clear CICD-related cache entries
- * 
+ *
  * @param options Optional parameters to target specific cache entries
  * @param user Optional user object to avoid redundant authentication
  */
@@ -407,7 +407,7 @@ export async function clearCICDCache(
     tenantId?: string;
     userId?: string;
   },
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{
   success: boolean;
   clearedEntries: number;
@@ -419,64 +419,60 @@ export async function clearCICDCache(
       const userResult = await getUser();
       if (!userResult) {
         console.error('User not authenticated');
-        return { 
-          success: false, 
+        return {
+          success: false,
           clearedEntries: 0,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
       }
       user = userResult;
     }
-    
+
     const { providerId, tenantId, userId } = options || {};
     let clearedEntries = 0;
     let message = 'Cache cleared successfully';
-    
+
     // Determine the most appropriate cache clearing strategy
     if (providerId) {
       // Clear provider-specific cache
       clearedEntries += serverCache.deleteByTag(`cicd-provider:${providerId}`);
       message = `Cache cleared for CICD provider: ${providerId}`;
-    } 
-    else if (userId && tenantId) {
+    } else if (userId && tenantId) {
       // Clear both user and tenant specific data
       clearedEntries += serverCache.deleteByTag(`user:${userId}`);
       clearedEntries += serverCache.deleteByTag(`tenant:${tenantId}`);
       clearedEntries += serverCache.deleteByTag('cicd-data');
       message = `Cache cleared for user: ${userId} and tenant: ${tenantId}`;
-    }
-    else if (tenantId || (tenantId === undefined && user)) {
+    } else if (tenantId || (tenantId === undefined && user)) {
       // Clear tenant-specific data - use current user's tenant if not specified
       const targetTenantId = tenantId || user.tenant_id;
       clearedEntries += serverCache.deleteByTag(`tenant:${targetTenantId}`);
       clearedEntries += serverCache.deleteByTag('cicd-data');
       message = `Cache cleared for tenant: ${targetTenantId}`;
-    }
-    else if (userId) {
+    } else if (userId) {
       // Clear user-specific data
       clearedEntries += serverCache.deleteByTag(`user:${userId}`);
       clearedEntries += serverCache.deleteByTag('cicd-test');
       message = `Cache cleared for user: ${userId}`;
-    }
-    else {
+    } else {
       // Clear all CICD-related cache
       clearedEntries += serverCache.deleteByTag('cicd-data');
       clearedEntries += serverCache.deleteByTag('cicd-jobs');
       clearedEntries += serverCache.deleteByTag('cicd-test');
       message = 'All CICD cache cleared';
     }
-    
+
     return {
       success: true,
       clearedEntries,
-      message
+      message,
     };
   } catch (error) {
     console.error('Error clearing CICD cache:', error);
     return {
       success: false,
       clearedEntries: 0,
-      message: error instanceof Error ? error.message : 'Unknown error clearing cache'
+      message: error instanceof Error ? error.message : 'Unknown error clearing cache',
     };
   }
 }

@@ -38,13 +38,13 @@ export async function getDeployments(user?: AuthUser | null): Promise<Deployment
 
     // Create a tenant-specific cache key
     const cacheKey = serverCache.tenantKey(user.tenant_id, 'deployments-list');
-    
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
       async () => {
         console.log('Cache miss - fetching deployments for tenant:', user!.tenant_id);
-        
+
         // Import the deployment database module
         const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
@@ -82,8 +82,8 @@ export async function getDeployments(user?: AuthUser | null): Promise<Deployment
       {
         ttl: DEPLOYMENT_CACHE_TTL * 1000, // Convert seconds to milliseconds
         tags: ['deployments', `tenant:${user.tenant_id}`],
-        source: 'getDeployments'
-      }
+        source: 'getDeployments',
+      },
     );
   } catch (error) {
     console.error('Error in getDeployments:', error);
@@ -127,24 +127,24 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
       console.error('Actions layer: Cannot fetch deployment - ID is required');
       return null;
     }
-    
+
     // Get user for tenant isolation
     const user = await getUser();
-    
+
     if (!user) {
       console.error('Actions layer: Cannot fetch deployment - user not authenticated');
       return null;
     }
-    
+
     // Create a cache key for this specific deployment
     const cacheKey = serverCache.tenantKey(user.tenant_id, 'deployment', id);
-    
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
       async () => {
         console.log(`Cache miss - fetching deployment with ID: ${id}`);
-        
+
         // Import the deployment database module
         const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
@@ -162,8 +162,8 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
       {
         ttl: DEPLOYMENT_CACHE_TTL * 1000, // Convert seconds to milliseconds
         tags: ['deployments', `deployment:${id}`, `tenant:${user.tenant_id}`],
-        source: 'getDeploymentById'
-      }
+        source: 'getDeploymentById',
+      },
     );
   } catch (error) {
     console.error(`Error fetching deployment with ID ${id}:`, error);
@@ -232,17 +232,17 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
     // Invalidate cache using tag-based approach
     serverCache.deleteByTag('deployments');
     serverCache.deleteByTag(`tenant:${user.tenant_id}`);
-    
+
     // Also clear specific cache entries
     serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployments-list'));
-    
+
     // Revalidate cache for backward compatibility
     revalidatePath('/deployment', 'page');
 
     // If successful and we have data, map to Deployment type
     if (result.data) {
       const newDeployment = mapDbDeploymentToDeployment(result.data);
-      
+
       // Also cache the new deployment to prevent an immediate fetch
       if (newDeployment.id) {
         serverCache.set(
@@ -251,11 +251,11 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
           {
             ttl: DEPLOYMENT_CACHE_TTL * 1000,
             tags: ['deployments', `deployment:${newDeployment.id}`, `tenant:${user.tenant_id}`],
-            source: 'createDeployment'
-          }
+            source: 'createDeployment',
+          },
         );
       }
-      
+
       return newDeployment;
     }
 
@@ -339,7 +339,7 @@ export async function deleteDeployment(id: string): Promise<boolean> {
       console.error('Actions layer: Cannot delete deployment - deployment ID is required');
       return false;
     }
-    
+
     // Get the user for tenant information and proper cache invalidation
     const user = await getUser();
     if (!user) {
@@ -362,7 +362,7 @@ export async function deleteDeployment(id: string): Promise<boolean> {
       console.error(`Actions layer: Deployment with ID ${id} not found`);
       return false;
     }
-    
+
     // Validate tenant (important security check)
     if (deployment.tenantId !== user.tenant_id) {
       console.error(`Actions layer: Deployment belongs to a different tenant`);
@@ -378,20 +378,20 @@ export async function deleteDeployment(id: string): Promise<boolean> {
 
     // Enhanced cache invalidation using ServerCache
     console.log(`Actions layer: Performing comprehensive cache invalidation...`);
-    
+
     // Tag-based invalidation (more precise and efficient)
     serverCache.deleteByTag('deployments');
     serverCache.deleteByTag(`deployment:${id}`);
     serverCache.deleteByTag(`tenant:${user.tenant_id}`);
-    
+
     // Key-based invalidation (explicit keys)
     serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployments-list'));
     serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployment', id));
-    
+
     // For backward compatibility with Next.js cache
     revalidatePath(`/deployment`, 'page');
     revalidatePath(`/deployment/${id}`, 'page');
-    
+
     // Next.js tag invalidation - try/catch in case the API changes
     try {
       revalidateTag('deployments');
@@ -1406,7 +1406,7 @@ export async function runDeploymentAction(
 
 /**
  * Clear deployment-related cache
- * 
+ *
  * @param options Optional parameters to target specific cache entries
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  * @returns Result object with cache clearing details
@@ -1417,7 +1417,7 @@ export async function clearDeploymentCache(
     tenantId?: string;
     userId?: string;
   },
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{
   success: boolean;
   clearedEntries: number;
@@ -1431,47 +1431,45 @@ export async function clearDeploymentCache(
         return {
           success: false,
           clearedEntries: 0,
-          message: 'User not authenticated'
+          message: 'User not authenticated',
         };
       }
     }
-    
+
     const { deploymentId, tenantId, userId } = options || {};
     let clearedEntries = 0;
     let message = 'Cache cleared successfully';
-    
+
     // Determine the most appropriate cache clearing strategy
     if (deploymentId) {
       // Clear specific deployment cache
       clearedEntries += serverCache.deleteByTag(`deployment:${deploymentId}`);
-      clearedEntries += serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployment', deploymentId));
+      clearedEntries += serverCache.delete(
+        serverCache.tenantKey(user.tenant_id, 'deployment', deploymentId),
+      );
       message = `Cache cleared for deployment: ${deploymentId}`;
-    } 
-    else if (userId && tenantId) {
+    } else if (userId && tenantId) {
       // Clear both user and tenant specific data
       clearedEntries += serverCache.deleteByTag(`user:${userId}`);
       clearedEntries += serverCache.deleteByTag(`tenant:${tenantId}`);
       clearedEntries += serverCache.deleteByTag('deployments');
       message = `Cache cleared for user: ${userId} and tenant: ${tenantId}`;
-    }
-    else if (tenantId || (tenantId === undefined && user)) {
+    } else if (tenantId || (tenantId === undefined && user)) {
       // Clear tenant-specific data (use current user's tenant if not specified)
       const targetTenantId = tenantId || user.tenant_id;
       clearedEntries += serverCache.deleteByTag(`tenant:${targetTenantId}`);
       clearedEntries += serverCache.deleteByTag('deployments');
       message = `Cache cleared for tenant: ${targetTenantId}`;
-    }
-    else if (userId) {
+    } else if (userId) {
       // Clear user-specific data
       clearedEntries += serverCache.deleteByTag(`user:${userId}`);
       message = `Cache cleared for user: ${userId}`;
-    }
-    else {
+    } else {
       // Clear all deployment-related cache
       clearedEntries += serverCache.deleteByTag('deployments');
       message = 'All deployment cache cleared';
     }
-    
+
     // Also revalidate Next.js cache for backward compatibility
     try {
       revalidateTag('deployments');
@@ -1481,18 +1479,18 @@ export async function clearDeploymentCache(
     } catch (e) {
       // Ignore errors from revalidateTag as it might change in Next.js
     }
-    
+
     return {
       success: true,
       clearedEntries,
-      message
+      message,
     };
   } catch (error) {
     console.error('Error clearing deployment cache:', error);
     return {
       success: false,
       clearedEntries: 0,
-      message: error instanceof Error ? error.message : 'Unknown error occurred'
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }
 }

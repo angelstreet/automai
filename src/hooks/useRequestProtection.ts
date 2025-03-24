@@ -14,7 +14,7 @@ const requestCache: Record<string, RequestState> = {};
 
 /**
  * Check if a cached request is still valid
- * 
+ *
  * @param key - Cache key
  * @param customTTL - Optional custom TTL in ms
  * @returns True if cache entry exists and is valid
@@ -22,38 +22,38 @@ const requestCache: Record<string, RequestState> = {};
 const isCacheValid = (key: string, customTTL?: number): boolean => {
   const ttl = customTTL || TTL;
   const entry = requestCache[key];
-  
+
   if (!entry) return false;
-  
+
   const now = Date.now();
   return now - entry.lastUpdated < ttl;
 };
 
 /**
  * Clear cache entries by pattern
- * 
+ *
  * @param pattern - String or RegExp to match against keys
  */
 export const clearRequestCache = (pattern?: string | RegExp): void => {
   if (!pattern) {
     // Clear all cache
-    Object.keys(requestCache).forEach(key => {
+    Object.keys(requestCache).forEach((key) => {
       delete requestCache[key];
     });
     console.log('[RequestCache] Cleared all cache entries');
     return;
   }
-  
+
   const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern);
   let cleared = 0;
-  
-  Object.keys(requestCache).forEach(key => {
+
+  Object.keys(requestCache).forEach((key) => {
     if (regex.test(key)) {
       delete requestCache[key];
       cleared++;
     }
   });
-  
+
   console.log(`[RequestCache] Cleared ${cleared} cache entries matching ${pattern}`);
 };
 
@@ -88,7 +88,7 @@ export function useRequestProtection(prefix = 'RequestProtection') {
         );
         return false;
       }
-      
+
       // Then check component-level cache
       if (inFlightRequests.current[requestKey]) {
         console.log(
@@ -111,21 +111,21 @@ export function useRequestProtection(prefix = 'RequestProtection') {
    */
   const protectedFetch = useCallback(
     async <T>(
-      requestKey: string, 
+      requestKey: string,
       fetchFn: () => Promise<T>,
-      options?: { 
-        ttl?: number;   // Custom TTL in ms
+      options?: {
+        ttl?: number; // Custom TTL in ms
         force?: boolean; // Force refresh even if cache exists
-      }
+      },
     ): Promise<T | null> => {
       const { ttl, force = false } = options || {};
-      
+
       // Check if valid data exists in cache and not forcing refresh
       if (!force && isCacheValid(requestKey, ttl) && requestCache[requestKey].data !== undefined) {
         console.log(`[${prefix}] Using cached data for: ${requestKey}`);
         return requestCache[requestKey].data as T;
       }
-      
+
       // Skip if already in progress
       if (!canMakeRequest(requestKey)) {
         return null;
@@ -136,21 +136,21 @@ export function useRequestProtection(prefix = 'RequestProtection') {
       requestCache[requestKey] = {
         inProgress: true,
         lastUpdated: Date.now(),
-        data: requestCache[requestKey]?.data // Keep existing data while fetching
+        data: requestCache[requestKey]?.data, // Keep existing data while fetching
       };
-      
+
       console.log(`[${prefix}] Starting request: ${requestKey} (render #${renderCount.current})`);
 
       try {
         const result = await fetchFn();
-        
+
         // Update cache with new data
         requestCache[requestKey] = {
           inProgress: false,
           lastUpdated: Date.now(),
-          data: result
+          data: result,
         };
-        
+
         return result;
       } catch (error) {
         console.error(`[${prefix}] Error in request ${requestKey}:`, error);
@@ -206,22 +206,22 @@ export function useRequestProtection(prefix = 'RequestProtection') {
       totalEntries: Object.keys(requestCache).length,
       activeRequests: 0,
       validCache: 0,
-      expiredCache: 0
+      expiredCache: 0,
     };
-    
-    Object.keys(requestCache).forEach(key => {
+
+    Object.keys(requestCache).forEach((key) => {
       const entry = requestCache[key];
       if (entry.inProgress) {
         stats.activeRequests++;
       }
-      
+
       if (now - entry.lastUpdated < TTL) {
         stats.validCache++;
       } else {
         stats.expiredCache++;
       }
     });
-    
+
     return stats;
   }, []);
 
@@ -231,6 +231,6 @@ export function useRequestProtection(prefix = 'RequestProtection') {
     safeUpdateState,
     renderCount: renderCount.current,
     getCacheStats,
-    clearCache: clearRequestCache
+    clearCache: clearRequestCache,
   };
 }
