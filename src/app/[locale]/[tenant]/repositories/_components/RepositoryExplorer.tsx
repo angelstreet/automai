@@ -122,6 +122,90 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     return <FileCode className={`h-4 w-4 ${colorClass}`} />;
   };
 
+  // Navigate through repository files
+  const handleNavigate = async (item: RepositoryFile, isFolder = false) => {
+    // Check if repository data is valid before navigating
+    if (!isValidRepository) {
+      setError('Repository data is not fully loaded yet. Please wait...');
+      console.log('[RepositoryExplorer] Cannot navigate, repository data not valid:', repository);
+      return;
+    }
+
+    if (isFolder) {
+      setCurrentPath([...currentPath, item.name]);
+      setSelectedFile(null);
+      setFileContent('');
+    } else {
+      setSelectedFile(item.path);
+      setFileContent('Loading file content...');
+
+      try {
+        // Use the providerId directly from the repository object
+        const providerId = repository.providerId;
+        
+        console.log('[RepositoryExplorer] Fetching file content with params:', { 
+          repositoryId: repository.id,
+          providerId,
+          url: repository.url,
+          path: item.path
+        });
+        
+        // Ensure all parameters are strings
+        const repoId = repository.id;
+        const repoUrl = repository.url || '';
+        const filePath = item.path || '';
+        
+        // Add default branch parameter (typically 'main' or 'master')
+        const defaultBranch = 'main';
+        
+        const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&branch=${defaultBranch}&action=file`;
+
+        const response = await fetch(apiUrl);
+        const responseText = await response.text();
+        
+        if (!response.ok) {
+          console.error('[RepositoryExplorer] Error response:', response.status, responseText);
+          let errorMessage;
+          try {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || `Error: ${response.status} ${response.statusText}`;
+          } catch (e) {
+            errorMessage = `Error: ${response.status} ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        let data;
+        try {
+          data = JSON.parse(responseText) as FileAPIResponse;
+        } catch (e) {
+          console.error('[RepositoryExplorer] Error parsing response:', e);
+          throw new Error('Invalid response format: ' + responseText.substring(0, 100) + '...');
+        }
+
+        if (data.success && data.data) {
+          // Decode base64 content if needed
+          if (data.data.encoding === 'base64' && data.data.content) {
+            try {
+              const decodedContent = atob(data.data.content);
+              setFileContent(decodedContent);
+            } catch (e) {
+              console.error('[RepositoryExplorer] Error decoding base64:', e);
+              setFileContent('Error decoding file content: ' + e.message);
+            }
+          } else {
+            setFileContent(data.data.content || 'No content available');
+          }
+        } else {
+          throw new Error(data.error || 'Invalid API response format');
+        }
+      } catch (error: any) {
+        console.error('[RepositoryExplorer] Error fetching file content:', error);
+        setFileContent(`Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- Branch name may be incorrect (trying 'main')`);
+      }
+    }
+  };
+
   // Load repository files
   useEffect(() => {
     // Skip if repository is not valid yet
@@ -154,13 +238,25 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         const repoUrl = repository.url || '';
         const safePath = pathString || '';
         
-        const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(safePath)}&action=list`;
+        // Add default branch parameter
+        const defaultBranch = 'main';
+        
+        const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(safePath)}&branch=${defaultBranch}&action=list`;
 
         const response = await fetch(apiUrl);
-
+        
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch repository files');
+          const responseText = await response.text();
+          console.error('[RepositoryExplorer] Error response:', response.status, responseText);
+          
+          let errorMessage;
+          try {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || `Error: ${response.status} ${response.statusText}`;
+          } catch (e) {
+            errorMessage = `Error: ${response.status} ${response.statusText}`;
+          }
+          throw new Error(errorMessage);
         }
 
         const data = (await response.json()) as FilesAPIResponse;
@@ -175,10 +271,10 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
 
           setFiles(sortedFiles);
         } else {
-          throw new Error('Invalid API response format');
+          throw new Error(data.error || 'Invalid API response format');
         }
       } catch (error: any) {
-        console.error('Error fetching repository files:', error);
+        console.error('[RepositoryExplorer] Error fetching repository files:', error);
         setError(error.message || 'Failed to fetch repository files');
         setFiles([]);
       } finally {
@@ -188,67 +284,6 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
 
     fetchFiles();
   }, [repository?.id, repository?.providerId, repository?.url, currentPath, isValidRepository]);
-
-  // Navigate through repository files
-  const handleNavigate = async (item: RepositoryFile, isFolder = false) => {
-    // Check if repository data is valid before navigating
-    if (!isValidRepository) {
-      setError('Repository data is not fully loaded yet. Please wait...');
-      console.log('[RepositoryExplorer] Cannot navigate, repository data not valid:', repository);
-      return;
-    }
-
-    if (isFolder) {
-      setCurrentPath([...currentPath, item.name]);
-      setSelectedFile(null);
-      setFileContent('');
-    } else {
-      setSelectedFile(item.path);
-
-      try {
-        // Use the providerId directly from the repository object
-        const providerId = repository.providerId;
-        
-        console.log('[RepositoryExplorer] Fetching file content with params:', { 
-          repositoryId: repository.id,
-          providerId,
-          url: repository.url,
-          path: item.path
-        });
-        
-        // Ensure all parameters are strings
-        const repoId = repository.id;
-        const repoUrl = repository.url || '';
-        const filePath = item.path || '';
-        
-        const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&action=file`;
-
-        const response = await fetch(apiUrl);
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch file content');
-        }
-
-        const data = (await response.json()) as FileAPIResponse;
-
-        if (data.success && data.data) {
-          // Decode base64 content if needed
-          if (data.data.encoding === 'base64' && data.data.content) {
-            const decodedContent = atob(data.data.content);
-            setFileContent(decodedContent);
-          } else {
-            setFileContent(data.data.content || 'No content available');
-          }
-        } else {
-          throw new Error('Invalid API response format');
-        }
-      } catch (error: any) {
-        console.error('Error fetching file content:', error);
-        setFileContent(`Error loading file: ${error.message}`);
-      }
-    }
-  };
 
   // Go up one directory
   const handleNavigateUp = () => {
@@ -306,13 +341,13 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     });
 
     return (
-      <div className="space-y-1">
+      <div className="space-y-0 text-xs">
         {currentPath.length > 0 && (
           <div
-            className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
+            className="flex items-center p-1.5 rounded-md hover:bg-muted cursor-pointer"
             onClick={handleNavigateUp}
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
             <span>../</span>
           </div>
         )}
@@ -320,15 +355,15 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         {sortedFiles.map((item, index) => (
           <div
             key={index}
-            className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
+            className="flex items-center py-0.5 px-1.5 rounded-md hover:bg-muted cursor-pointer"
             onClick={() => handleNavigate(item, item.type === 'dir')}
           >
             {item.type === 'dir' ? (
-              <Folder className="h-4 w-4 mr-2 text-blue-500" />
+              <Folder className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
             ) : (
-              <span className="mr-2">{getFileIcon(item.name)}</span>
+              <span className="mr-1.5">{getFileIcon(item.name)}</span>
             )}
-            <span>{item.name}</span>
+            <span className="truncate">{item.name}</span>
           </div>
         ))}
       </div>
@@ -339,11 +374,11 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   const renderBreadcrumb = () => {
     if (!isValidRepository) {
       return (
-        <Breadcrumb className="mb-4">
+        <Breadcrumb className="mb-1">
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink>
-                <Folder className="h-4 w-4 mr-1 inline" />
+                <Folder className="h-3 w-3 mr-1 inline" />
                 Loading...
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -353,11 +388,11 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     }
 
     return (
-      <Breadcrumb className="mb-4">
+      <Breadcrumb className="mb-1">
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink onClick={() => setCurrentPath([])}>
-              <Folder className="h-4 w-4 mr-1 inline" />
+              <Folder className="h-3 w-3 mr-1 inline" />
               {repository.name}
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -376,19 +411,19 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {/* GitHub-style header */}
-      <div className="flex flex-col space-y-2">
+      <div className="flex flex-col space-y-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="sm" onClick={onBack} className="h-8">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              <span className="text-sm">{t('back')}</span>
+            <Button variant="ghost" size="sm" onClick={onBack} className="h-7 text-xs">
+              <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+              <span>{t('back')}</span>
             </Button>
 
             <div className="flex items-center">
               {getProviderIcon()}
-              <span className="ml-2 font-semibold">
+              <span className="ml-2 font-semibold text-sm">
                 {isValidRepository ? `${repository.owner} / ${repository.name}` : 'Loading...'}
               </span>
               {isValidRepository && repository.isPrivate && (
@@ -403,17 +438,17 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-8">
-                    <RefreshCw className="h-4 w-4" />
+                  <Button variant="outline" size="sm" className="h-7 text-xs">
+                    <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>{t('refresh')}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
-            <Button variant="outline" size="sm" className="h-8">
-              <Star className="h-4 w-4 mr-1" />
-              <span className="text-sm">Star</span>
+            <Button variant="outline" size="sm" className="h-7 text-xs">
+              <Star className="h-3.5 w-3.5 mr-1" />
+              <span>Star</span>
             </Button>
           </div>
         </div>
@@ -421,22 +456,22 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         {/* GitHub-style tabs */}
         <div className="border-b flex items-center">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-transparent h-10 p-0">
+            <TabsList className="bg-transparent h-8 p-0">
               <TabsTrigger
                 value={EXPLORER_TABS.CODE}
                 className={cn(
-                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  'rounded-none border-b-2 border-transparent px-3 h-8 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent',
                   activeTab === EXPLORER_TABS.CODE ? 'border-primary' : 'border-transparent',
                 )}
               >
-                <Code className="h-4 w-4 mr-2" />
+                <Code className="h-3.5 w-3.5 mr-1.5" />
                 <span>Code</span>
               </TabsTrigger>
 
               <TabsTrigger
                 value={EXPLORER_TABS.ISSUES}
                 className={cn(
-                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  'rounded-none border-b-2 border-transparent px-3 h-8 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent',
                   activeTab === EXPLORER_TABS.ISSUES ? 'border-primary' : 'border-transparent',
                 )}
               >
@@ -446,7 +481,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
               <TabsTrigger
                 value={EXPLORER_TABS.PULL_REQUESTS}
                 className={cn(
-                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  'rounded-none border-b-2 border-transparent px-3 h-8 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent',
                   activeTab === EXPLORER_TABS.PULL_REQUESTS
                     ? 'border-primary'
                     : 'border-transparent',
@@ -458,22 +493,22 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
               <TabsTrigger
                 value={EXPLORER_TABS.ACTIONS}
                 className={cn(
-                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  'rounded-none border-b-2 border-transparent px-3 h-8 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent',
                   activeTab === EXPLORER_TABS.ACTIONS ? 'border-primary' : 'border-transparent',
                 )}
               >
-                <Play className="h-4 w-4 mr-2" />
+                <Play className="h-3.5 w-3.5 mr-1.5" />
                 <span>Actions</span>
               </TabsTrigger>
 
               <TabsTrigger
                 value={EXPLORER_TABS.SETTINGS}
                 className={cn(
-                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  'rounded-none border-b-2 border-transparent px-3 h-8 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent',
                   activeTab === EXPLORER_TABS.SETTINGS ? 'border-primary' : 'border-transparent',
                 )}
               >
-                <Settings className="h-4 w-4 mr-2" />
+                <Settings className="h-3.5 w-3.5 mr-1.5" />
                 <span>Settings</span>
               </TabsTrigger>
             </TabsList>
@@ -482,28 +517,28 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       </div>
 
       {/* Main content area */}
-      <div className="mt-4">
+      <div className="mt-2">
         {activeTab === EXPLORER_TABS.CODE && (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {/* GitHub-style repository stats */}
-            <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-2">
+            <div className="flex items-center space-x-4 text-xs text-muted-foreground mb-1">
               <div className="flex items-center">
-                <GitBranch className="h-4 w-4 mr-1" />
+                <GitBranch className="h-3.5 w-3.5 mr-1" />
                 <span>main</span>
               </div>
 
               <div className="flex items-center">
-                <GitFork className="h-4 w-4 mr-1" />
+                <GitFork className="h-3.5 w-3.5 mr-1" />
                 <span>0 forks</span>
               </div>
 
               <div className="flex items-center">
-                <Star className="h-4 w-4 mr-1" />
+                <Star className="h-3.5 w-3.5 mr-1" />
                 <span>0 stars</span>
               </div>
 
               <div className="flex items-center">
-                <Eye className="h-4 w-4 mr-1" />
+                <Eye className="h-3.5 w-3.5 mr-1" />
                 <span>0 watching</span>
               </div>
             </div>
@@ -513,68 +548,68 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
               <CardContent className="p-0">
                 <div className="flex flex-col">
                   {/* Branch selector and actions */}
-                  <div className="flex justify-between items-center p-3 bg-muted/50 border rounded-t-md">
+                  <div className="flex justify-between items-center p-2 bg-muted/50 border rounded-t-md">
                     <div className="flex items-center">
-                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                        <GitBranch className="h-3.5 w-3.5 mr-1" />
+                      <Button variant="outline" size="sm" className="h-6 text-xs">
+                        <GitBranch className="h-3 w-3 mr-1" />
                         <span>main</span>
-                        <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                        <ChevronDown className="h-3 w-3 ml-1" />
                       </Button>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                        <History className="h-3.5 w-3.5 mr-1" />
+                    <div className="flex items-center space-x-1">
+                      <Button variant="outline" size="sm" className="h-6 text-xs">
+                        <History className="h-3 w-3 mr-1" />
                         <span>Commits</span>
                       </Button>
 
-                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                        <Download className="h-3.5 w-3.5 mr-1" />
+                      <Button variant="outline" size="sm" className="h-6 text-xs">
+                        <Download className="h-3 w-3 mr-1" />
                         <span>Download</span>
-                        <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                        <ChevronDown className="h-3 w-3 ml-1" />
                       </Button>
 
-                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                        <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                      <Button variant="outline" size="sm" className="h-6 text-xs">
+                        <PlusCircle className="h-3 w-3 mr-1" />
                         <span>Add file</span>
-                        <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                        <ChevronDown className="h-3 w-3 ml-1" />
                       </Button>
                     </div>
                   </div>
 
                   {/* Breadcrumb navigation */}
-                  <div className="px-4 py-2 border-x">{renderBreadcrumb()}</div>
+                  <div className="px-2 py-1 border-x text-xs">{renderBreadcrumb()}</div>
 
                   {/* File explorer and content */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-0 border-x border-b rounded-b-md">
                     <div className="md:col-span-1 border-r">
-                      <ScrollArea className="h-[500px]">{renderFileList()}</ScrollArea>
+                      <ScrollArea className="h-[520px]">{renderFileList()}</ScrollArea>
                     </div>
 
                     <div className="md:col-span-3">
-                      <div className="p-2 border-b bg-muted/30">
+                      <div className="p-1.5 border-b bg-muted/30">
                         {selectedFile ? (
-                          <div className="flex items-center text-sm">
-                            <FileCode className="h-4 w-4 mr-2" />
+                          <div className="flex items-center text-xs">
+                            <FileCode className="h-3.5 w-3.5 mr-1.5" />
                             <span className="font-medium">
                               {selectedFile?.split('/').pop() || 'File'}
                             </span>
                           </div>
                         ) : (
-                          <div className="text-sm text-muted-foreground">{t('selectFile')}</div>
+                          <div className="text-xs text-muted-foreground">{t('selectFile')}</div>
                         )}
                       </div>
 
-                      <ScrollArea className="h-[465px]">
+                      <ScrollArea className="h-[520px]">
                         {selectedFile ? (
-                          <pre className="text-xs p-4 bg-muted/20 rounded-md overflow-x-auto">
+                          <pre className="text-xs leading-tight p-3 bg-muted/20 rounded-md overflow-x-auto">
                             {fileContent || t('loading')}
                           </pre>
                         ) : (
                           <div className="flex justify-center items-center h-64">
                             <div className="text-center">
-                              <FileCode className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-                              <p className="text-muted-foreground">{t('selectFile')}</p>
+                              <FileCode className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                              <p className="text-xs text-muted-foreground">{t('selectFile')}</p>
                             </div>
                           </div>
                         )}
