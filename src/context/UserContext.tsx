@@ -6,7 +6,8 @@ import { updateProfile as updateProfileAction } from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
 import { Role, User, AuthUser } from '@/types/user';
 import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
-import { persistedData, InnerAppContext } from './AppContext';
+import { persistedData, AppContext } from './AppContext';
+import { AppContextType } from '@/types/context/app';
 
 // Singleton flag to prevent multiple instances
 let USER_CONTEXT_INITIALIZED = false;
@@ -87,7 +88,13 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
   };
 };
 
-export function UserProvider({ children }: { children: React.ReactNode }) {
+export function UserProvider({ 
+  children, 
+  appContextRef 
+}: { 
+  children: React.ReactNode;
+  appContextRef: React.MutableRefObject<AppContextType>;
+}) {
   // Add explicit initialization state
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -368,17 +375,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     [user, loading, error, refreshUser, clearCache, isInitialized],
   );
 
-  // Update the InnerAppContext with this context's values
-  // This connects the individual contexts to the central AppContext
-  const appContext = useContext(InnerAppContext);
+  // Update the central AppContext via the ref for synchronous access
+  // This ensures the user context is available immediately to all consumers
+  if (appContextRef?.current) {
+    appContextRef.current.user = contextValue;
+    log('[UserContext] Updated central AppContext ref directly');
+  }
   
-  useEffect(() => {
-    if (appContext) {
-      // Update the central context with this context's values
-      appContext.user = contextValue;
-      log('[UserContext] Registered with central AppContext');
-    }
-  }, [appContext, contextValue]);
+  // Also expose user context globally for immediate access
+  if (typeof window !== 'undefined') {
+    // Store in global for immediate synchronous access
+    (window as any).__userContext = contextValue;
+    log('[UserContext] Exposed context globally for synchronous access');
+  }
   
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
 }

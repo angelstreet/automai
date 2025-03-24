@@ -36,9 +36,11 @@ export function NavUser({ user }: NavUserProps) {
 
   const handleSignOut = async () => {
     try {
-      // Clear all caches first
-      if (clearCache) {
+      // Clear all caches first - with proper null safety
+      if (clearCache && typeof clearCache === 'function') {
         await clearCache();
+      } else {
+        console.warn('NavUser: clearCache function not available from useUser context');
       }
 
       // Then sign out

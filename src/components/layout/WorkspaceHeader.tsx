@@ -31,7 +31,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
     Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
   );
 
-  // Debug log for user role
+  // Debug log for user role - always call hooks unconditionally
   React.useEffect(() => {
     if (userContext?.user) {
       console.log('[WorkspaceHeader] User data:', {
@@ -39,8 +39,10 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
         role: userContext.user.role || 'No role found',
         tenant: userContext.user.tenant_name,
       });
+    } else {
+      console.log('[WorkspaceHeader] User data not available yet, loading:', userContext?.loading);
     }
-  }, [userContext?.user]);
+  }, [userContext?.user, userContext?.loading]);
 
   const toggleHeader = React.useCallback(() => {
     const newState = !headerVisible;
@@ -80,7 +82,11 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
             {/* Right section */}
             <div className="flex items-center gap-2 px-4 h-full">
               <div className="flex-none w-36 mr-12">
-                <RoleSwitcher user={userContext?.user} />
+                {userContext?.loading ? (
+                  <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
+                ) : (
+                  <RoleSwitcher user={userContext?.user} />
+                )}
               </div>
               <Separator orientation="vertical" className="h-8 opacity-30" />
               <div className="flex-1 max-w-[32rem] min-w-[12.5rem]">
