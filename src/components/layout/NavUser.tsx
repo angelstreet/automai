@@ -37,7 +37,9 @@ export function NavUser({ user }: NavUserProps) {
   const handleSignOut = async () => {
     try {
       // Clear all caches first
-      await clearCache();
+      if (clearCache) {
+        await clearCache();
+      }
 
       // Then sign out
       const formData = new FormData();

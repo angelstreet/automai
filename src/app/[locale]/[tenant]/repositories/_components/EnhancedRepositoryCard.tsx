@@ -32,6 +32,9 @@ export function EnhancedRepositoryCard({
   // Add isClient state to handle client-side rendering safely
   const [isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
+  
+  // Get repository context (with proper null check)
+  const repositoryContext = useRepository();
 
   // Log whenever the card receives new props
   useEffect(() => {
