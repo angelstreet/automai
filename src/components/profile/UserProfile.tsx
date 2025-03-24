@@ -16,18 +16,22 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/context';
 import { signOut } from '@/app/actions/auth';
 import { cn } from '@/lib/utils';
 
 interface UserProfileProps {
   tenant?: string;
+  user?: any; // Allow passing user directly
 }
 
-export function UserProfile({ tenant: propTenant }: UserProfileProps) {
+export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileProps) {
   const router = useRouter();
   const params = useParams();
-  const { user, clearCache } = useUser();
+  const { user: contextUser, clearCache } = useUser();
+  
+  // Use provided user prop if available, otherwise use from context
+  const user = propUser || contextUser;
   const locale = (params.locale as string) || 'en';
   const [imageError, setImageError] = React.useState(false);
 

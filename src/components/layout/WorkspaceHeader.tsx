@@ -13,6 +13,7 @@ import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 import { useSidebar } from '@/context/SidebarContext';
+import { useUser } from '@/context';
 
 interface WorkspaceHeaderProps {
   className?: string;
@@ -25,6 +26,7 @@ const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
   const { open } = useSidebar();
+  const userContext = useUser();
   const isCollapsed = !open;
   const [headerVisible, setHeaderVisible] = React.useState(
     Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
@@ -78,7 +80,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <ThemeToggle />
                 <Separator orientation="vertical" className="h-8 opacity-30" />
-                <UserProfile tenant={tenant} />
+                <UserProfile tenant={tenant} user={userContext?.user} />
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <Button
                   variant="outline"

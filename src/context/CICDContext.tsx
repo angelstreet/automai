@@ -17,8 +17,8 @@ import {
   testCICDProviderAction,
   getCICDJobs,
 } from '@/app/[locale]/[tenant]/cicd/actions';
-import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
+import { useUser } from './UserContext';
 import {
   CICDProviderType,
   CICDProviderPayload,
@@ -78,26 +78,44 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Add initialization tracker
   const initialized = useRef(false);
 
-  // Fetch user data
+  // Get user data from UserContext instead of fetching it directly
+  const userContext = useUser();
+  
+  // Update currentUser in state when userContext.user changes
+  useEffect(() => {
+    if (userContext?.user) {
+      safeUpdateState(
+        setState,
+        { ...state, currentUser: state.currentUser },
+        { ...state, currentUser: userContext.user },
+        'currentUser',
+      );
+    }
+  }, [userContext?.user, safeUpdateState, state]);
+  
+  // This function now uses the user from context instead of fetching it again
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
     return await protectedFetch('fetchUserData', async () => {
       try {
-        const user = await getUser();
-
-        safeUpdateState(
-          setState,
-          { ...state, currentUser: state.currentUser },
-          { ...state, currentUser: user },
-          'currentUser',
-        );
-
+        // Use the user from context instead of calling getUser()
+        const user = userContext?.user || null;
+        
+        if (user) {
+          safeUpdateState(
+            setState,
+            { ...state, currentUser: state.currentUser },
+            { ...state, currentUser: user },
+            'currentUser',
+          );
+        }
+        
         return user;
       } catch (err) {
-        console.error('Error fetching user data:', err);
+        console.error('Error in fetchUserData:', err);
         return null;
       }
     });
-  }, [protectedFetch, safeUpdateState, state]);
+  }, [protectedFetch, safeUpdateState, state, userContext?.user]);
 
   // Fetch CI/CD providers
   const fetchProviders = useCallback(async () => {
@@ -105,13 +123,14 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
 
       try {
-        // Use cached user data when available
-        const user = state.currentUser || (await fetchUserData());
+        // Use user from context directly instead of fetching
+        const user = userContext?.user || state.currentUser;
 
         console.log(`${LOG_PREFIX} fetchProviders called`, {
           hasUser: !!user,
           renderCount: renderCount,
           componentState: 'loading',
+          userFromContext: !!userContext?.user,
         });
 
         // Pass user data to the server action to avoid redundant auth
@@ -377,8 +396,11 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
 
       try {
-        // Fetch CICD providers
-        const providersResponse = await getCICDProviders();
+        // Get user from context instead of fetching it
+        const currentUser = userContext?.user;
+        
+        // Fetch CICD providers with user data from context
+        const providersResponse = await getCICDProviders(currentUser);
 
         if (!providersResponse.success) {
           throw new Error(providersResponse.error || 'Failed to fetch CICD providers');
@@ -393,6 +415,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           providers: providersResponse.data || [],
           jobs: jobsResponse.success ? jobsResponse.data : [],
           loading: false,
+          currentUser: currentUser || prevState.currentUser,
         }));
 
         console.log(
