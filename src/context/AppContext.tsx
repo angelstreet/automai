@@ -8,6 +8,7 @@ import React, {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
 } from 'react';
 import { HostProvider, useHostContext } from './HostContext';
 import { DeploymentProvider, useDeployment as useDeploymentContext } from './DeploymentContext';
@@ -15,6 +16,7 @@ import { RepositoryProvider, useRepositoryContext } from './RepositoryContext';
 import { CICDProvider, useCICDContext } from './CICDContext';
 import { UserProvider, useUser as useUserContext } from './UserContext';
 import { AppContextType } from '@/types/context/app';
+import { useRequestProtection } from '@/hooks/useRequestProtection';
 
 // Reduce logging with a DEBUG flag
 const DEBUG = false;
@@ -22,6 +24,9 @@ const log = (...args: any[]) => DEBUG && console.log(...args);
 
 // Enable context persistence across page navigations
 const PERSIST_CONTEXTS = true;
+
+// Singleton flag to detect multiple instances
+let APP_CONTEXT_INITIALIZED = false;
 
 // Add a flag to track if initial contexts were loaded
 let initialContextsLoaded = false;
@@ -32,6 +37,7 @@ export const globalInitStatus = {
   deployment: false,
   host: false,
   cicd: false,
+  user: false,
 
   // Helper method to check if a context is initialized
   isInitialized: function (contextType) {
@@ -56,13 +62,14 @@ export const persistedData: {
   user?: any;
   tenant?: any;
   cicd?: any;
+  cicdData?: any;
   scriptCache?: Record<string, any[]>;
 } = {
   repositoryData: null,
   deploymentData: null,
   hostData: null,
   cicdData: null,
-  userData: null,
+  user: null,
 };
 
 // Create the app context
@@ -86,7 +93,40 @@ type AppContextState = Record<ContextName, boolean>;
 
 // Provider component that composes all other providers
 export function AppProvider({ children }: { children: ReactNode }) {
+  // Singleton check
+  useEffect(() => {
+    if (APP_CONTEXT_INITIALIZED) {
+      console.error(
+        '[AppContext] Multiple AppProvider instances detected! ' +
+        'This will cause serious performance and state problems. ' +
+        'Ensure AppProvider is used only once at the root of your application.'
+      );
+      
+      // Add visible console warning in development
+      if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
+        console.warn(
+          '%c[CRITICAL ERROR] Multiple AppProvider instances detected!', 
+          'color: red; font-size: 16px; font-weight: bold;'
+        );
+      }
+    } else {
+      APP_CONTEXT_INITIALIZED = true;
+      log('[AppContext] AppProvider initialized as singleton');
+    }
+
+    return () => {
+      // Only reset if this instance set it to true
+      if (APP_CONTEXT_INITIALIZED) {
+        APP_CONTEXT_INITIALIZED = false;
+        log('[AppContext] AppProvider singleton instance unmounted');
+      }
+    };
+  }, []);
+
   log('[AppContext] AppProvider initializing');
+
+  // Add request protection
+  const { protectedFetch, safeUpdateState, renderCount } = useRequestProtection('AppContext');
 
   // Manage which contexts are initialized
   const [contextState, setContextState] = useState<AppContextState>(() => {
@@ -109,19 +149,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const initContext = useCallback(
     (name: ContextName) => {
       if (!contextState[name]) {
-        log(`[AppContext] Initializing ${name} context on demand`);
+        log(`[AppContext] Initializing ${name} context on demand (render #${renderCount})`);
 
-        // Update both local state and global tracking
-        setContextState((prev) => {
-          const newState = { ...prev, [name]: true };
-          if (PERSIST_CONTEXTS) {
-            globalInitStatus[name] = true;
-          }
-          return newState;
-        });
+        // Use safe update to avoid unnecessary rerenders
+        safeUpdateState(
+          setContextState,
+          contextState,
+          { ...contextState, [name]: true },
+          `contextState.${name}`
+        );
+        
+        // Update global tracking if persistence is enabled
+        if (PERSIST_CONTEXTS) {
+          globalInitStatus[name] = true;
+        }
       }
     },
-    [contextState],
+    [contextState, safeUpdateState, renderCount],
   );
 
   // Initialize all core contexts by default
@@ -131,7 +175,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       globalInitStatus.repository &&
       globalInitStatus.deployment &&
       globalInitStatus.host &&
-      globalInitStatus.cicd;
+      globalInitStatus.cicd &&
+      globalInitStatus.user;
 
     if (PERSIST_CONTEXTS && !allInitialized) {
       // Initialize contexts only once
@@ -139,6 +184,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       initContext('deployment');
       initContext('host');
       initContext('cicd');
+      initContext('user');
 
       log('[AppContext] Pre-initializing all contexts for persistence');
     }
@@ -146,15 +192,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Log when AppProvider mounts and unmounts
   useEffect(() => {
-    log('[AppContext] AppProvider mounted, user context enabled');
+    log('[AppContext] AppProvider mounted, render #' + renderCount);
 
     return () => {
       log('[AppContext] AppProvider unmounting');
     };
-  }, []);
+  }, [renderCount]);
 
-  // Create context value with state and init function
-  const contextValue = { contextState, initContext };
+  // Create context value with state and init function - memoized to prevent unnecessary renders
+  const contextValue = useMemo(
+    () => ({ contextState, initContext }),
+    [contextState, initContext]
+  );
 
   // Render nested providers based on which are initialized
   const renderWithProviders = (node: React.ReactNode): React.ReactNode => {
@@ -206,7 +255,7 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   // Always attempt to get user context since it's fundamental
   const userContext = useUserContext();
 
-  // Log detailed diagnostic info for contexts
+  // Log diagnostic info only on first mount or in debug mode
   useEffect(() => {
     mountCount.current++;
 
@@ -224,23 +273,22 @@ function AppContextBridge({ children }: { children: ReactNode }) {
       });
     }
 
-    // Additional logging for user context issues
-    if (!userContext) {
+    // Warn about missing user context only if it's supposed to be initialized
+    if (contextState.user && !userContext) {
       console.error('[AppContext] User context is null, this will cause errors');
-    } else if (!userContext.user && !userContext.loading) {
+    } else if (contextState.user && userContext && !userContext.user && !userContext.loading) {
       console.warn('[AppContext] User context exists but user is null and not loading');
     }
-  }, [userContext, hostContext, deploymentContext, repositoryContext, cicdContext]);
+  }, [userContext, hostContext, deploymentContext, repositoryContext, cicdContext, contextState.user]);
 
-  // Combine contexts - use any to bypass type checking
-  // This is a workaround for the TypeScript errors with context interfaces
-  const appContextValue = {
+  // Combine contexts - memoized to prevent unnecessary renders
+  const appContextValue = useMemo(() => ({
     host: hostContext,
     deployment: deploymentContext,
     repository: repositoryContext,
     cicd: cicdContext,
     user: userContext,
-  } as any; // Type assertion to bypass TypeScript errors
+  }), [hostContext, deploymentContext, repositoryContext, cicdContext, userContext]);
 
   return <InnerAppContext.Provider value={appContextValue}>{children}</InnerAppContext.Provider>;
 }
@@ -257,12 +305,16 @@ const InnerAppContext = createContext<AppContextType>({
 // Singleton-like initialization helpers
 function useInitContext(name: ContextName) {
   const { contextState, initContext } = useContext(AppContext);
+  
+  // Call count for debugging
+  const callCount = useRef(0);
+  callCount.current++;
 
   // Use an effect for initializing context instead of doing it during render
   useEffect(() => {
     // Initialize this context if not already initialized
     if (!contextState[name]) {
-      log(`[AppContext] Auto-initializing ${name} context`);
+      log(`[AppContext] Auto-initializing ${name} context (call #${callCount.current})`);
       initContext(name);
     }
   }, [contextState, initContext, name]);
@@ -335,7 +387,7 @@ export function useUser() {
   // Track if we've already logged the user data for this component
   const hasLoggedUserData = useRef(false);
 
-  // Add more detailed logging for troubleshooting - only when DEBUG is true
+  // Add diagnostic logging for troubleshooting - only when DEBUG is true
   if (typeof window !== 'undefined' && DEBUG) {
     if (!context.user) {
       log('[AppContext] useUser hook returned null user context');

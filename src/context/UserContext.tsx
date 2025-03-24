@@ -5,6 +5,11 @@ import useSWR from 'swr';
 import { updateProfile as updateProfileAction } from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
 import { Role, User, AuthUser } from '@/types/user';
+import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
+import { persistedData } from './AppContext';
+
+// Singleton flag to prevent multiple instances
+let USER_CONTEXT_INITIALIZED = false;
 
 interface UserContextType {
   user: User | null;
@@ -30,6 +35,12 @@ const UserContext = createContext<UserContextType>({
 const DEBUG = false;
 const log = (...args: any[]) => DEBUG && console.log(...args);
 
+// Storage keys
+const STORAGE_KEYS = {
+  CACHED_USER: 'cached_user',
+  CACHED_USER_TIME: 'cached_user_time',
+};
+
 // Map the auth user to our User type
 const mapAuthUserToUser = (authUser: AuthUser): User => {
   log('[UserContext] Mapping auth user to user:', {
@@ -54,11 +65,13 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
   log('[UserContext] User role determined:', role);
   
   // Log detailed role resolution for debugging
-  console.log('[UserContext] Detailed role resolution:', {
-    fromAuthUser: (authUser as any).role,
-    fromMetadata: authUser?.user_metadata?.role,
-    finalRole: role
-  });
+  if (DEBUG) {
+    console.log('[UserContext] Detailed role resolution:', {
+      fromAuthUser: (authUser as any).role,
+      fromMetadata: authUser?.user_metadata?.role,
+      finalRole: role
+    });
+  }
 
   return {
     id: authUser.id,
@@ -73,15 +86,47 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
 };
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  log('[UserContext] UserProvider initializing');
+  // Check for multiple instances of UserProvider
+  useEffect(() => {
+    if (USER_CONTEXT_INITIALIZED) {
+      console.warn(
+        '[UserContext] Multiple instances of UserProvider detected. ' +
+        'This can cause performance issues and unexpected behavior. ' +
+        'Ensure that UserProvider is only used once in the component tree, ' +
+        'preferably in the AppProvider.'
+      );
+    } else {
+      USER_CONTEXT_INITIALIZED = true;
+      log('[UserContext] UserProvider initialized as singleton');
+    }
+
+    return () => {
+      // Only reset on the instance that set it to true
+      if (USER_CONTEXT_INITIALIZED) {
+        USER_CONTEXT_INITIALIZED = false;
+        log('[UserContext] UserProvider singleton instance unmounted');
+      }
+    };
+  }, []);
+
+  log('[UserContext] UserProvider rendering');
   const [error, setError] = useState<Error | null>(null);
   const initialized = useRef(false);
+
+  // Add request protection
+  const { protectedFetch, safeUpdateState, renderCount } = useRequestProtection('UserContext');
 
   // Get initial user data synchronously from localStorage
   const [initialUser, setInitialUser] = useState<User | null>(() => {
     if (typeof window !== 'undefined') {
+      // Check if we have persisted data from AppContext first
+      if (persistedData.user) {
+        log('[UserContext] Using initial user data from persistedData');
+        return persistedData.user;
+      }
+      
       try {
-        const cachedUser = localStorage.getItem('cached_user');
+        const cachedUser = localStorage.getItem(STORAGE_KEYS.CACHED_USER);
         if (cachedUser) {
           const parsedUser = JSON.parse(cachedUser);
           log('[UserContext] Using initial cached user data from localStorage');
@@ -95,94 +140,102 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return null;
   });
 
-  // Fetch user data with better SSR handling
-  const fetchUserData = async (): Promise<User | null> => {
-    log('[UserContext] fetchUserData called');
-    try {
-      // On the server, return null to avoid hydration mismatches
-      if (typeof window === 'undefined') {
-        log('[UserContext] Server-side render, returning null');
-        return null;
-      }
+  // Fetch user data with request protection and better SSR handling
+  const fetchUserData = useCallback(async (force = false): Promise<User | null> => {
+    return await protectedFetch('user.getUser', async () => {
+      log('[UserContext] fetchUserData called, force:', force);
+      try {
+        // On the server, return null to avoid hydration mismatches
+        if (typeof window === 'undefined') {
+          log('[UserContext] Server-side render, returning null');
+          return null;
+        }
 
-      // Try to get cached user from localStorage
-      if (typeof window !== 'undefined') {
-        const cachedUser = localStorage.getItem('cached_user');
-        if (cachedUser) {
-          try {
-            const parsedUser = JSON.parse(cachedUser);
-            // Check if the cached user data is fresh (less than 5 minutes old)
-            const cachedTime = localStorage.getItem('cached_user_time');
-            if (cachedTime) {
-              const timeDiff = Date.now() - parseInt(cachedTime, 10);
-              // If cache is less than 5 minutes old, use it
-              if (timeDiff < 5 * 60 * 1000) {
+        // Try to get cached user from localStorage if not forcing refresh
+        if (!force && typeof window !== 'undefined') {
+          const cachedUser = localStorage.getItem(STORAGE_KEYS.CACHED_USER);
+          if (cachedUser) {
+            try {
+              const parsedUser = JSON.parse(cachedUser);
+              // Check if the cached user data is fresh (less than 5 minutes old)
+              const cachedTime = localStorage.getItem(STORAGE_KEYS.CACHED_USER_TIME);
+              if (cachedTime) {
+                const timeDiff = Date.now() - parseInt(cachedTime, 10);
+                // If cache is less than 5 minutes old, use it
+                if (timeDiff < 5 * 60 * 1000) {
+                  log(
+                    '[UserContext] Using cached user data, age:',
+                    Math.round(timeDiff / 1000),
+                    'seconds',
+                  );
+                  return parsedUser;
+                }
                 log(
-                  '[UserContext] Using cached user data, age:',
+                  '[UserContext] Cached user data expired, age:',
                   Math.round(timeDiff / 1000),
                   'seconds',
                 );
-                return parsedUser;
               }
-              log(
-                '[UserContext] Cached user data expired, age:',
-                Math.round(timeDiff / 1000),
-                'seconds',
-              );
+            } catch (e) {
+              // Invalid JSON, ignore and continue
+              log('[UserContext] Invalid cached user data:', e);
+              localStorage.removeItem(STORAGE_KEYS.CACHED_USER);
+              localStorage.removeItem(STORAGE_KEYS.CACHED_USER_TIME);
             }
-          } catch (e) {
-            // Invalid JSON, ignore and continue
-            log('[UserContext] Invalid cached user data:', e);
-            localStorage.removeItem('cached_user');
-            localStorage.removeItem('cached_user_time');
+          } else {
+            log('[UserContext] No cached user data found');
           }
-        } else {
-          log('[UserContext] No cached user data found');
-        }
-      }
-
-      // Fetch fresh user data directly from server action
-      log('[UserContext] Fetching fresh user data from server');
-      const authUser = await getUser();
-      log('[UserContext] Server returned auth user:', authUser ? 'found' : 'not found');
-
-      if (!authUser) return null;
-
-      try {
-        // Map to our User type - will throw if tenant data is missing
-        const user = mapAuthUserToUser(authUser);
-        log('[UserContext] Successfully mapped user data:', {
-          id: user.id,
-          tenant: user.tenant_name,
-          role: user.role,
-        });
-
-        // Cache the user in localStorage
-        if (typeof window !== 'undefined') {
-          log('[UserContext] Storing user data in localStorage cache');
-          localStorage.setItem('cached_user', JSON.stringify(user));
-          localStorage.setItem('cached_user_time', Date.now().toString());
         }
 
-        return user;
+        // Fetch fresh user data directly from server action
+        log('[UserContext] Fetching fresh user data from server');
+        const authUser = await getUser();
+        log('[UserContext] Server returned auth user:', authUser ? 'found' : 'not found');
+
+        if (!authUser) return null;
+
+        try {
+          // Map to our User type - will throw if tenant data is missing
+          const user = mapAuthUserToUser(authUser);
+          log('[UserContext] Successfully mapped user data:', {
+            id: user.id,
+            tenant: user.tenant_name,
+            role: user.role,
+          });
+
+          // Cache the user in localStorage
+          if (typeof window !== 'undefined') {
+            log('[UserContext] Storing user data in localStorage cache');
+            localStorage.setItem(STORAGE_KEYS.CACHED_USER, JSON.stringify(user));
+            localStorage.setItem(STORAGE_KEYS.CACHED_USER_TIME, Date.now().toString());
+          }
+
+          // Cache in persistedData for cross-navigation
+          if (persistedData) {
+            persistedData.user = user;
+            log('[UserContext] Stored user in persistedData for cross-navigation');
+          }
+
+          return user;
+        } catch (error) {
+          log('[UserContext] User data mapping error:', error);
+          setError(error instanceof Error ? error : new Error('Invalid user data'));
+          return null;
+        }
       } catch (error) {
-        log('[UserContext] User data mapping error:', error);
-        setError(error instanceof Error ? error : new Error('Invalid user data'));
+        log('[UserContext] Error fetching user:', error);
+        setError(error instanceof Error ? error : new Error('Failed to fetch user'));
         return null;
       }
-    } catch (error) {
-      log('[UserContext] Error fetching user:', error);
-      setError(error instanceof Error ? error : new Error('Failed to fetch user'));
-      return null;
-    }
-  };
+    }, { force });
+  }, [protectedFetch]);
 
   // Use SWR for data fetching with stable SSR behavior
   const {
     data: user,
     isLoading: loading,
     mutate: mutateUser,
-  } = useSWR('user-data', fetchUserData, {
+  } = useSWR('user-data', () => fetchUserData(false), {
     fallbackData: initialUser, // Use initial data to avoid flicker
     revalidateOnFocus: false, // Don't revalidate on every tab focus
     revalidateOnReconnect: true,
@@ -199,26 +252,43 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // Function to clear all caches
   const clearCache = useCallback(async () => {
     log('[UserContext] Clearing all user caches');
+    
+    // Clear request protection cache for user keys
+    clearRequestCache(/^user\./);
+    
     // Clear localStorage
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('cached_user');
-      localStorage.removeItem('cached_user_time');
+      localStorage.removeItem(STORAGE_KEYS.CACHED_USER);
+      localStorage.removeItem(STORAGE_KEYS.CACHED_USER_TIME);
     }
-    // Clear SWR cache and set user to null
-    await mutateUser(null, false);
+    
+    // Clear persisted data
+    if (persistedData) {
+      persistedData.user = null;
+    }
+    
+    // Clear SWR cache and force revalidation
+    await mutateUser(null, true);
+    
+    return null;
   }, [mutateUser]);
 
   const refreshUser = useCallback(async () => {
     log('[UserContext] Manually refreshing user data');
     try {
-      const freshUserData = await mutateUser();
+      // Use force=true to bypass all caches
+      const freshUserData = await fetchUserData(true);
+      
+      // Update SWR cache with the fresh data
+      await mutateUser(freshUserData, false);
+      
       log('[UserContext] User refresh complete:', freshUserData ? 'success' : 'no data');
       return freshUserData || null;
     } catch (error) {
       log('[UserContext] Error refreshing user:', error);
       return user;
     }
-  }, [mutateUser, user]);
+  }, [fetchUserData, mutateUser, user]);
 
   const handleUpdateProfile = async (formData: FormData) => {
     log('[UserContext] Updating user profile');
@@ -257,6 +327,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
+  // Persist user data for cross-navigation
+  useEffect(() => {
+    if (user && persistedData) {
+      persistedData.user = user;
+      log('[UserContext] Updated persisted user data');
+    }
+  }, [user]);
+
   const contextValue = React.useMemo(
     () => ({
       user,
@@ -279,7 +357,7 @@ export function useUser() {
   // If the context is null for some reason, return a safe default object
   // This prevents destructuring errors in components
   if (!context) {
-    console.warn('[useUser] User context is null, returning fallback');
+    console.warn('[useUser] User context is null, returning fallback. This should not happen if using the centralized context system.');
     return {
       user: null,
       loading: true,
