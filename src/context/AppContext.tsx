@@ -344,6 +344,22 @@ export function useHost() {
   const _isInitialized = useInitContext('host');
   const context = useAppContext();
 
+  // Safety check for null context
+  if (!context.host) {
+    if (DEBUG) {
+      console.warn('[AppContext] Host context is null, returning fallback.');
+    }
+    return {
+      hosts: [],
+      loading: false,
+      error: null,
+      fetchHosts: async () => {},
+      createHost: async () => ({ success: false, error: 'Host context not available' }),
+      updateHost: async () => ({ success: false, error: 'Host context not available' }),
+      deleteHost: async () => ({ success: false, error: 'Host context not available' }),
+    };
+  }
+
   // During initialization, context.host will be null
   // After rerender with the provider, it will have a value
   return context.host;
@@ -354,6 +370,22 @@ export function useDeployment() {
   const _isInitialized = useInitContext('deployment');
   const context = useAppContext();
 
+  // Safety check for null context
+  if (!context.deployment) {
+    if (DEBUG) {
+      console.warn('[AppContext] Deployment context is null, returning fallback.');
+    }
+    return {
+      deployments: [],
+      loading: false,
+      error: null,
+      fetchDeployments: async () => {},
+      createDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
+      updateDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
+      deleteDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
+    };
+  }
+
   return context.deployment;
 }
 
@@ -361,6 +393,24 @@ export function useRepository() {
   // Use _ prefix to indicate intentionally unused variable
   const _isInitialized = useInitContext('repository');
   const context = useAppContext();
+
+  // Safety check for null context
+  if (!context.repository) {
+    if (DEBUG) {
+      console.warn('[AppContext] Repository context is null, returning fallback.');
+    }
+    return {
+      repositories: [],
+      starredRepositories: [],
+      filteredRepositories: [],
+      loading: false,
+      error: null,
+      fetchRepositories: async () => {},
+      createRepository: async () => ({ success: false, error: 'Repository context not available' }),
+      deleteRepository: async () => ({ success: false, error: 'Repository context not available' }),
+      toggleStarRepository: async () => ({ success: false, error: 'Repository context not available' }),
+    };
+  }
 
   return context.repository;
 }
@@ -384,6 +434,25 @@ export function useCICD() {
         loading: context.cicd.loading,
       });
     }
+  }
+
+  // Safety check for null context
+  if (!context.cicd) {
+    if (DEBUG) {
+      console.warn('[AppContext] CICD context is null, returning fallback.');
+    }
+    return {
+      providers: [],
+      jobs: [],
+      selectedProvider: null,
+      selectedJob: null,
+      loading: false,
+      error: null,
+      fetchProviders: async () => {},
+      fetchJobs: async () => {},
+      createProvider: async () => ({ success: false, error: 'CICD context not available' }),
+      deleteProvider: async () => ({ success: false, error: 'CICD context not available' }),
+    };
   }
 
   return context.cicd;
@@ -426,6 +495,23 @@ export function useUser() {
       hasLoggedUserData.current = true;
     }
   }, [context.user?.user, context.user?.loading]);
+
+  // If the context.user is null for some reason, return a safe default object
+  // This prevents destructuring errors in components
+  if (!context.user) {
+    console.warn(
+      '[AppContext] User context is null, returning fallback. This should not happen with proper provider ordering.'
+    );
+    return {
+      user: null,
+      loading: true,
+      error: null,
+      updateProfile: async () => {},
+      refreshUser: async () => null,
+      updateRole: async () => {},
+      clearCache: async () => {},
+    };
+  }
 
   return context.user;
 }
