@@ -567,7 +567,7 @@ export function useRepository() {
 // For backward compatibility
 export function useRepositoryContext() {
   console.warn(
-    'useRepositoryContext is deprecated, please use useRepository from @/context instead',
+    'useRepositoryContext is deprecated, please use useRepository instead',
   );
   return useRepository();
 }
