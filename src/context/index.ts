@@ -28,19 +28,25 @@ export { useSidebar } from './SidebarContext';
 // Export theme context hook
 export { useTheme } from './ThemeContext';
 
-// Export repository context hook
-export { useRepository } from './RepositoryContext';
+// Direct hook exports for cases where AppContext is not used
+// These use the 'Direct' suffix to avoid duplicate exports with hooks from AppContext
+export { useCICD as useCICDDirect } from './CICDContext'; 
 
-// Export deployment context hook
-export { useDeployment } from './DeploymentContext';
-
-// Export CICD context hook directly for cases where AppContext is not used
-export { useCICD } from './CICDContext'; 
-
-// Export individual context hooks directly for cases where AppContext is not used
-// These are aliased to standardized names for consistency across the codebase
+// Import individual context hooks directly from their source files
+// These are then exported with the 'Direct' suffix to avoid duplicate exports
+// while maintaining a consistent naming convention
 import { useUser as useUserDirectHook } from './UserContext';
+import { useRepository as useRepositoryDirectHook } from './RepositoryContext';
+import { useDeployment as useDeploymentDirectHook } from './DeploymentContext';
+import { useHost as useHostDirectHook } from './HostContext';
+
+// Direct hook exports with consistent naming and 'Direct' suffix
+// Use these hooks only when not using the AppProvider, as they
+// access context directly rather than through the main AppContext
 export const useUserDirect = useUserDirectHook;
+export const useRepositoryDirect = useRepositoryDirectHook;
+export const useDeploymentDirect = useDeploymentDirectHook;
+export const useHostDirect = useHostDirectHook;
 
 // For case where the root AppProvider is not used, export individual providers
 // This is not recommended for normal use, but provided for flexibility
@@ -182,4 +188,11 @@ export const cicdSelectors = {
 //
 // 4. Context values are memoized to prevent unnecessary re-renders,
 //    but be careful with objects and arrays in your component state.
+//
+// 5. Direct hooks (with 'Direct' suffix) should only be used when the
+//    AppProvider is not available in your component tree. Prefer the
+//    standard hooks (useUser, useHost, etc.) whenever possible.
+//    
+//    ❌ AVOID: const user = useUserDirect(); // Only use when AppProvider is not available
+//    ✅ PREFER: const user = useUser(); // Standard usage through AppContext
 // -------------------------------------------------
