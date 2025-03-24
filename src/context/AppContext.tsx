@@ -10,11 +10,11 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
-import { HostProvider, useHostContext } from './HostContext';
-import { DeploymentProvider, useDeployment as useDeploymentContext } from './DeploymentContext';
-import { RepositoryProvider, useRepositoryContext } from './RepositoryContext';
-import { CICDProvider, useCICDContext } from './CICDContext';
-import { UserProvider, useUser as useUserContext } from './UserContext';
+import { HostProvider, useHost } from './HostContext';
+import { DeploymentProvider, useDeployment } from './DeploymentContext';
+import { RepositoryProvider, useRepository } from './RepositoryContext';
+import { CICDProvider, useCICD } from './CICDContext';
+import { UserProvider, useUser } from './UserContext';
 import { AppContextType } from '@/types/context/app';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 
@@ -247,13 +247,13 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   const mountCount = useRef(0);
 
   // Get values from each context, with safety checks
-  const hostContext = contextState.host ? useHostContext() : null;
-  const deploymentContext = contextState.deployment ? useDeploymentContext() : null;
-  const repositoryContext = contextState.repository ? useRepositoryContext() : null;
-  const cicdContext = contextState.cicd ? useCICDContext() : null;
+  const hostContext = contextState.host ? useHost() : null;
+  const deploymentContext = contextState.deployment ? useDeployment() : null;
+  const repositoryContext = contextState.repository ? useRepository() : null;
+  const cicdContext = contextState.cicd ? useCICD() : null;
 
   // Always attempt to get user context since it's fundamental
-  const userContext = useUserContext();
+  const userContext = useUser();
 
   // Log diagnostic info only on first mount or in debug mode
   useEffect(() => {
