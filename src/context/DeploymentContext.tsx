@@ -26,7 +26,7 @@ import { getHosts as getAvailableHosts } from '@/app/[locale]/[tenant]/hosts/act
 import { AuthUser } from '@/types/user';
 import { DeploymentContextType, DeploymentData } from '@/types/context/deployment';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
-import { persistedData } from './AppContext';
+import { persistedData, InnerAppContext } from './AppContext';
 import { useUser } from '@/context'; // Import useUser from centralized context
 
 // Singleton flag to prevent multiple instances
@@ -591,6 +591,17 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
     }
   }, [state.deployments, state.repositories, state.loading, state.error]);
 
+  // Register with the central AppContext
+  const appContext = useContext(InnerAppContext);
+  
+  useEffect(() => {
+    if (appContext) {
+      // Update the central context with this context's values
+      appContext.deployment = contextValue;
+      log('[DeploymentContext] Registered with central AppContext');
+    }
+  }, [appContext, contextValue]);
+  
   return <DeploymentContext.Provider value={contextValue}>{children}</DeploymentContext.Provider>;
 };
 

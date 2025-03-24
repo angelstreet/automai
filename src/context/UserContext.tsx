@@ -6,7 +6,7 @@ import { updateProfile as updateProfileAction } from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
 import { Role, User, AuthUser } from '@/types/user';
 import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
-import { persistedData } from './AppContext';
+import { persistedData, InnerAppContext } from './AppContext';
 
 // Singleton flag to prevent multiple instances
 let USER_CONTEXT_INITIALIZED = false;
@@ -368,6 +368,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     [user, loading, error, refreshUser, clearCache, isInitialized],
   );
 
+  // Update the InnerAppContext with this context's values
+  // This connects the individual contexts to the central AppContext
+  const appContext = useContext(InnerAppContext);
+  
+  useEffect(() => {
+    if (appContext) {
+      // Update the central context with this context's values
+      appContext.user = contextValue;
+      log('[UserContext] Registered with central AppContext');
+    }
+  }, [appContext, contextValue]);
+  
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
 }
 

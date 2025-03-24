@@ -24,7 +24,7 @@ import {
 } from '@/app/[locale]/[tenant]/repositories/actions';
 import { AuthUser } from '@/types/user';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
-import { persistedData } from './AppContext';
+import { persistedData, InnerAppContext } from './AppContext';
 import { useUser } from '@/context'; // Import useUser from centralized context
 
 // Singleton flag to prevent multiple instances
@@ -533,6 +533,17 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     ],
   );
 
+  // Register with the central AppContext
+  const appContext = useContext(InnerAppContext);
+  
+  useEffect(() => {
+    if (appContext) {
+      // Update the central context with this context's values
+      appContext.repository = contextValue;
+      log('[RepositoryContext] Registered with central AppContext');
+    }
+  }, [appContext, contextValue]);
+  
   return <RepositoryContext.Provider value={contextValue}>{children}</RepositoryContext.Provider>;
 };
 

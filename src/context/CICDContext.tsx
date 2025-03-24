@@ -36,7 +36,7 @@ import {
   ERROR_MESSAGES,
   LOG_PREFIX,
 } from '@/app/[locale]/[tenant]/cicd/constants';
-import { persistedData, globalInitStatus } from './AppContext';
+import { persistedData, globalInitStatus, InnerAppContext } from './AppContext';
 
 // Reduce logging with a DEBUG flag
 const log = (...args: any[]) => DEBUG && console.log(...args);
@@ -614,6 +614,17 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ],
   );
 
+  // Register with the central AppContext
+  const appContext = useContext(InnerAppContext);
+  
+  useEffect(() => {
+    if (appContext) {
+      // Update the central context with this context's values
+      appContext.cicd = contextValue;
+      log('[CICDContext] Registered with central AppContext');
+    }
+  }, [appContext, contextValue]);
+  
   return <CICDContext.Provider value={contextValue}>{children}</CICDContext.Provider>;
 };
 
