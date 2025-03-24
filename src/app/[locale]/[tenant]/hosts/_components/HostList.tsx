@@ -10,8 +10,7 @@ import { Host } from '../types';
 import { useHost, useUser } from '@/context';
 import { 
   addHost as addHostAction, 
-  testHostConnection, 
-  testAllHosts 
+  testHostConnection 
 } from '../actions';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
@@ -36,7 +35,6 @@ export default function HostContainer() {
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
   const [selectMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshingHosts, setRefreshingHosts] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState<FormData>({
@@ -147,17 +145,7 @@ export default function HostContainer() {
       }
 
       try {
-        // Add this host to refreshing set
-        setRefreshingHosts((prev) => {
-          const next = new Set(prev);
-          next.add(host.id);
-          return next;
-        });
         setIsRefreshing(true);
-
-        // Clear the cache before testing connection
-        const { clearHostsCache } = await import('../actions');
-        await clearHostsCache();
 
         // The context's testConnection function will handle the animation state
         const result = await testHostConnection(host.id);
@@ -171,23 +159,10 @@ export default function HostContainer() {
         console.error('[HostList] Test connection error:', error);
         return false;
       } finally {
-        // Remove this host from refreshing set
-        setRefreshingHosts((prev) => {
-          const next = new Set(prev);
-          next.delete(host.id);
-          return next;
-        });
-        // Only stop global refresh if no hosts are being refreshed
-        setIsRefreshing((prev) => {
-          if (prev && refreshingHosts.size <= 1) {
-            // <= 1 because we haven't removed the current host yet
-            return false;
-          }
-          return prev;
-        });
+        setIsRefreshing(false);
       }
     },
-    [testHostConnection, fetchHosts, refreshingHosts],
+    [testHostConnection, fetchHosts],
   );
 
   // Handle refresh all hosts - pass user data from context
@@ -197,37 +172,23 @@ export default function HostContainer() {
     console.log('[HostContainer] Refreshing all hosts');
     setIsRefreshing(true);
     
-    // Don't set all hosts to refreshing at once, the server action will handle that sequentially
-    // and we'll update the UI incrementally
-    setRefreshingHosts(new Set());
-    
     try {
-      // Clear the cache before testing connections
-      const { clearHostsCache } = await import('../actions');
-      await clearHostsCache();
-
-      // Call testAllHosts and let the server action handle the sequential testing
-      // The server action will update the host statuses one by one with the proper animations
-      const result = await testAllHosts();
-      
-      if (result.success) {
-        console.log('[HostContainer] All hosts tested successfully:', 
-          result.results?.length || 0, 'hosts tested');
-      } else {
-        console.error('[HostContainer] Error testing all hosts:', result.error);
+      // Simple approach: just loop through all hosts and call the individual refresh
+      for (const host of hosts) {
+        await handleTestConnection(host);
+        // Small delay between hosts to improve visual feedback
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
       
-      // Fetch the final host states
-      await fetchHosts();
+      console.log('[HostContainer] All hosts tested successfully');
+      
     } catch (error) {
       console.error('[HostContainer] Error refreshing hosts:', error);
     } finally {
-      // Clear refreshing state
-      setRefreshingHosts(new Set());
       setIsRefreshing(false);
       console.log('[HostContainer] Host refresh complete');
     }
-  }, [isRefreshing, testAllHosts, fetchHosts]);
+  }, [isRefreshing, handleTestConnection, hosts]);
 
   // Handle add host form submission with user data
   const handleSaveHost = useCallback(async () => {
@@ -366,7 +327,7 @@ export default function HostContainer() {
             disabled={isRefreshing || loading}
           >
             <RefreshCw
-              className={`h-4 w-4 mr-2 ${isRefreshing || refreshingHosts.size > 0 ? 'animate-spin' : ''}`}
+              className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`}
             />
             Refresh
           </Button>
