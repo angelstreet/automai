@@ -122,6 +122,21 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     return <FileCode className={`h-4 w-4 ${colorClass}`} />;
   };
 
+  // Handle refresh functionality
+  const handleRefresh = () => {
+    if (selectedFile) {
+      // Re-fetch the currently selected file
+      const currentFile = files.find(f => f.path === selectedFile);
+      if (currentFile) {
+        handleNavigate(currentFile, false);
+      }
+    } else {
+      // Re-fetch the current directory
+      setFiles([]);
+      setIsLoading(true);
+    }
+  };
+
   // Navigate through repository files
   const handleNavigate = async (item: RepositoryFile, isFolder = false) => {
     // Check if repository data is valid before navigating
@@ -155,53 +170,81 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         const repoUrl = repository.url || '';
         const filePath = item.path || '';
         
-        // Add default branch parameter (typically 'main' or 'master')
-        const defaultBranch = 'main';
+        // Try with different branches in sequence
+        const branchesToTry = ['main', 'master', 'develop', 'dev'];
+        let fileContent = null;
+        let lastError = null;
         
-        const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&branch=${defaultBranch}&action=file`;
-
-        const response = await fetch(apiUrl);
-        const responseText = await response.text();
-        
-        if (!response.ok) {
-          console.error('[RepositoryExplorer] Error response:', response.status, responseText);
-          let errorMessage;
+        for (const branch of branchesToTry) {
           try {
-            const errorData = JSON.parse(responseText);
-            errorMessage = errorData.error || `Error: ${response.status} ${response.statusText}`;
-          } catch (e) {
-            errorMessage = `Error: ${response.status} ${response.statusText}`;
+            console.log(`[RepositoryExplorer] Trying branch: ${branch}`);
+            const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&branch=${branch}&action=file`;
+            
+            const response = await fetch(apiUrl);
+            const responseText = await response.text();
+            
+            if (!response.ok) {
+              console.warn(`[RepositoryExplorer] Failed with branch ${branch}:`, response.status, responseText);
+              let errorMessage;
+              try {
+                const errorData = JSON.parse(responseText);
+                errorMessage = errorData.error || `Error: ${response.status} ${response.statusText}`;
+              } catch (parseError) {
+                errorMessage = `Error: ${response.status} ${response.statusText}`;
+              }
+              lastError = new Error(errorMessage);
+              continue; // Try next branch
+            }
+            
+            // Successfully fetched content with this branch
+            let data;
+            try {
+              data = JSON.parse(responseText) as FileAPIResponse;
+            } catch (parseError) {
+              console.error('[RepositoryExplorer] Error parsing response:', parseError);
+              lastError = new Error('Invalid response format: ' + responseText.substring(0, 100) + '...');
+              continue; // Try next branch
+            }
+            
+            if (data.success && data.data) {
+              // Decode base64 content if needed
+              if (data.data.encoding === 'base64' && data.data.content) {
+                try {
+                  fileContent = atob(data.data.content);
+                  setFileContent(fileContent);
+                  console.log(`[RepositoryExplorer] Successfully loaded file with branch: ${branch}`);
+                  return; // Success, exit the function
+                } catch (decodeError) {
+                  console.error('[RepositoryExplorer] Error decoding base64:', decodeError);
+                  lastError = new Error('Error decoding file content: ' + (decodeError as Error).message);
+                  continue; // Try next branch
+                }
+              } else {
+                fileContent = data.data.content || 'No content available';
+                setFileContent(fileContent);
+                console.log(`[RepositoryExplorer] Successfully loaded file with branch: ${branch}`);
+                return; // Success, exit the function
+              }
+            } else {
+              lastError = new Error(data.error || 'Invalid API response format');
+              continue; // Try next branch
+            }
+          } catch (branchError: any) {
+            console.warn(`[RepositoryExplorer] Error with branch ${branch}:`, branchError);
+            lastError = branchError;
+            // Continue to next branch
           }
-          throw new Error(errorMessage);
         }
         
-        let data;
-        try {
-          data = JSON.parse(responseText) as FileAPIResponse;
-        } catch (e) {
-          console.error('[RepositoryExplorer] Error parsing response:', e);
-          throw new Error('Invalid response format: ' + responseText.substring(0, 100) + '...');
-        }
-
-        if (data.success && data.data) {
-          // Decode base64 content if needed
-          if (data.data.encoding === 'base64' && data.data.content) {
-            try {
-              const decodedContent = atob(data.data.content);
-              setFileContent(decodedContent);
-            } catch (e) {
-              console.error('[RepositoryExplorer] Error decoding base64:', e);
-              setFileContent('Error decoding file content: ' + e.message);
-            }
-          } else {
-            setFileContent(data.data.content || 'No content available');
-          }
+        // If we get here, all branches failed
+        if (lastError) {
+          throw lastError;
         } else {
-          throw new Error(data.error || 'Invalid API response format');
+          throw new Error('Failed to load file with any branch');
         }
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching file content:', error);
-        setFileContent(`Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- Branch name may be incorrect (trying 'main')`);
+        setFileContent(`Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- Tried branches: main, master, develop, dev`);
       }
     }
   };
@@ -253,7 +296,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
           try {
             const errorData = JSON.parse(responseText);
             errorMessage = errorData.error || `Error: ${response.status} ${response.statusText}`;
-          } catch (e) {
+          } catch (parseError) {
             errorMessage = `Error: ${response.status} ${response.statusText}`;
           }
           throw new Error(errorMessage);
@@ -438,7 +481,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-7 text-xs">
+                  <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleRefresh}>
                     <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 </TooltipTrigger>
