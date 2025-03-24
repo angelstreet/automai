@@ -25,6 +25,8 @@ const AppSidebar = React.memo(function AppSidebar() {
   const { open } = useSidebar();
   // Use state for isCollapsed to ensure hydration consistency
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  // Add transition state to prevent flickering on role changes
+  const [isTransitioning, setIsTransitioning] = React.useState(true);
 
   // Use a ref for initial render optimization to avoid double-rendering flicker
   const isInitialRender = React.useRef(true);
@@ -105,9 +107,39 @@ const AppSidebar = React.memo(function AppSidebar() {
     };
   }, []);
 
+  // Get initial role from localStorage if available
+  const cachedRole = React.useMemo(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedUserStr = localStorage.getItem('cached_user');
+        if (cachedUserStr) {
+          const cachedUser = JSON.parse(cachedUserStr);
+          return cachedUser?.role || 'viewer';
+        }
+      } catch (e) {
+        console.error('Error reading cached user role:', e);
+      }
+    }
+    return 'viewer';
+  }, []);
+
   // FIXED: User's actual role should take precedence over debug role
   // Only use debug role for testing if explicitly requested
-  const effectiveRole = user?.role || debugRole || 'viewer';
+  const effectiveRole = user?.role || debugRole || cachedRole;
+  
+  // End transition state once we have a real user or after a timeout
+  React.useEffect(() => {
+    if (user?.role) {
+      // User data loaded, end transition immediately
+      setIsTransitioning(false);
+    } else {
+      // Set a timeout to end transition after 500ms regardless
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [user?.role]);
   
   // Force remove any cached debug role that might be interfering
   React.useEffect(() => {
@@ -124,11 +156,13 @@ const AppSidebar = React.memo(function AppSidebar() {
     console.log('DEBUG AppSidebar - Role information:', {
       debugRole,
       userRole: user?.role,
+      cachedRole,
       effectiveRole,
+      isTransitioning,
       localStorage: typeof window !== 'undefined' ? localStorage.getItem('debug_role') : null,
       userInLocalStorage: typeof window !== 'undefined' ? !!localStorage.getItem('cached_user') : null,
     });
-  }, [debugRole, user?.role, effectiveRole]);
+  }, [debugRole, user?.role, effectiveRole, isTransitioning, cachedRole]);
 
   // Filter navigation groups based on role
   const filteredNavigation = React.useMemo(() => {
@@ -177,7 +211,7 @@ const AppSidebar = React.memo(function AppSidebar() {
 
   // Always ensure sidebar is visible, with fallback mechanisms
   // This guarantees the sidebar will be shown regardless of hydration state
-  const sidebarClassName = `fixed left-0 top-0 z-30 sidebar-visible ${isClient ? 'sidebar-ready' : ''}`;
+  const sidebarClassName = `fixed left-0 top-0 z-30 sidebar-visible ${isClient ? 'sidebar-ready' : ''} ${isTransitioning ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`;
 
   return (
     <Sidebar
