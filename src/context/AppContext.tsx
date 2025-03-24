@@ -249,6 +249,14 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   // Add initialization state tracking
   const [isInitialized, setIsInitialized] = useState(false);
   
+  // Always declare these hooks, regardless of initialization state
+  // React requires hooks to be called in the same order every render
+  const hostContext = contextState.host ? useHost() : null;
+  const deploymentContext = contextState.deployment ? useDeployment() : null;
+  const repositoryContext = contextState.repository ? useRepository() : null;
+  const cicdContext = contextState.cicd ? useCICD() : null;
+  const userContext = useUser(); // Always attempt to get user context
+  
   // Initialize contexts first, then allow access
   useEffect(() => {
     // Short timeout to ensure providers have time to initialize
@@ -259,20 +267,9 @@ function AppContextBridge({ children }: { children: ReactNode }) {
     
     return () => clearTimeout(timer);
   }, []);
-  
-  // Get values from each context, with safety checks - but only after initialization
-  const hostContext = isInitialized && contextState.host ? useHost() : null;
-  const deploymentContext = isInitialized && contextState.deployment ? useDeployment() : null;
-  const repositoryContext = isInitialized && contextState.repository ? useRepository() : null;
-  const cicdContext = isInitialized && contextState.cicd ? useCICD() : null;
-
-  // Always attempt to get user context since it's fundamental - but only after initialization
-  const userContext = isInitialized ? useUser() : null;
 
   // Log diagnostic info only on first mount or in debug mode
   useEffect(() => {
-    if (!isInitialized) return;
-    
     mountCount.current++;
 
     if (mountCount.current === 1 || DEBUG) {
@@ -306,13 +303,7 @@ function AppContextBridge({ children }: { children: ReactNode }) {
     contextState.user,
   ]);
 
-  // Combine contexts - memoized to prevent unnecessary renders
-  // If not initialized yet, return children directly without context values
-  if (!isInitialized) {
-    console.log('[AppContext] Bridge not yet initialized, rendering without context');
-    return <>{children}</>;
-  }
-
+  // Create the context value with memoization
   const appContextValue = useMemo(
     () => ({
       host: hostContext,
@@ -323,6 +314,12 @@ function AppContextBridge({ children }: { children: ReactNode }) {
     }),
     [hostContext, deploymentContext, repositoryContext, cicdContext, userContext],
   );
+  
+  // Render without context if not initialized
+  if (!isInitialized) {
+    console.log('[AppContext] Bridge not yet initialized, rendering without context');
+    return <>{children}</>;
+  }
 
   return <InnerAppContext.Provider value={appContextValue}>{children}</InnerAppContext.Provider>;
 }
