@@ -2,6 +2,7 @@
 
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { clearRequestCache } from '@/hooks/useRequestProtection';
 
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
@@ -246,6 +247,9 @@ export default function HostContainer() {
           password: '',
         });
 
+        // Clear the request cache before fetching new hosts
+        clearRequestCache('fetchHosts');
+        
         // Refresh the hosts list
         fetchHosts && fetchHosts();
       } else {
@@ -286,6 +290,10 @@ export default function HostContainer() {
 
         if (result.success) {
           console.log('[HostContainer] Host deleted successfully');
+          
+          // Clear the request cache before fetching new hosts
+          clearRequestCache('fetchHosts');
+          
           // Refresh hosts list after deletion
           fetchHosts && fetchHosts();
         } else {
