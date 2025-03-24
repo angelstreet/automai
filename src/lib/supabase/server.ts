@@ -1,12 +1,14 @@
 //DO NOT MODIFY
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient,CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import type { CookieOptions } from '@supabase/ssr';
 
-type CookieStore = ReturnType<typeof cookies> extends Promise<infer T> ? T : never;
+// Define CookieStore type based on the resolved return type of cookies()
+type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
 export const createClient = async (cookieStore?: CookieStore) => {
+  // If cookieStore is provided, use it; otherwise, await cookies()
   const resolvedCookieStore: CookieStore = cookieStore ?? (await cookies());
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -25,6 +27,6 @@ export const createClient = async (cookieStore?: CookieStore) => {
           }
         },
       },
-    },
+    }
   );
 };

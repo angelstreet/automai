@@ -13,7 +13,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useRepository } from '@/context';
-import { RepositoryContextType } from '@/types/context/repository';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -50,45 +49,20 @@ export default function EnhancedRepositoryPage() {
   const { toast } = useToast();
   const t = useTranslations('repositories');
 
-  // Explicitly track if we've started initial loading
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
-
-  // Use the repository context from the new context system
+  // Use the repository context - simplified destructuring
   const repositoryContext = useRepository();
-
-  // Handle the case where context is still initializing (null)
-  // IMPORTANT: Do not provide fallback values for repositories and starredRepositories
-  // Let them be undefined if not provided by the context
   const {
-    repositories,
+    repositories = [],
     loading = false,
     error = null,
-    fetchRepositories = async () => {
-      console.log('Repository context not initialized');
-      return [];
-    },
-    // Custom properties not in the official RepositoryContextType interface but used in our component
     starredRepositories = [],
-    starRepository = () => {
-      console.log('Repository context not initialized');
-    },
-    unstarRepository = () => {
-      console.log('Repository context not initialized');
-    },
-    deleteRepository = () => {
-      console.log('Repository context not initialized');
-    },
-    createRepository = () => {
-      console.log('Repository context not initialized');
-    },
-    user = null,
-    providers = [],
+    fetchRepositories
   } = repositoryContext || {};
 
-  // Combined loading state - true if either context is loading or we're in initial loading
-  const isLoading = loading || initialLoading;
-
-  // State for UI
+  // Track initialization separately
+  const [initializing, setInitializing] = useState(true);
+  
+  // Track only necessary UI state
   const [starredRepos, setStarredRepos] = useState<Set<string>>(() => {
     // Initialize from context's starredRepositories
     const initialStarred = new Set<string>();
@@ -100,47 +74,48 @@ export default function EnhancedRepositoryPage() {
     return initialStarred;
   });
   const [activeTab, setActiveTab] = useState<string>('all');
-  const [syncingRepoId, setSyncingRepoId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortBy, setSortBy] = useState<string>('lastUpdated');
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [connectDialogOpen, setConnectDialogOpen] = useState<boolean>(false);
-  const [selectedRepository, setSelectedRepository] = useState<Repository | null>(null);
   const [isExplorerView, setIsExplorerView] = useState<boolean>(false);
   const [isRefreshingAll, setIsRefreshingAll] = useState<boolean>(false);
   const [syncingRepoIds, setSyncingRepoIds] = useState<Record<string, boolean>>({});
+  const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [repositoryToDelete, setRepositoryToDelete] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(12);
 
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [repositoryToDelete, setRepositoryToDelete] = useState<string | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-
-  // Refresh repositories on mount if empty
+  // Refresh repositories on mount
   useEffect(() => {
-    // Always trigger a fetch when component mounts
-    console.log('[RepositoriesPage] Component mounted, triggering repository fetch');
-    fetchRepositories().then(() => {
-      // Only set initialLoading to false after first fetch completes
-      setInitialLoading(false);
-    });
-  }, [fetchRepositories]);
+    // Only fetch if we don't already have repositories
+    if (!repositories || repositories.length === 0) {
+      console.log('[RepositoriesPage] No repositories found, triggering fetch');
+      fetchRepositories?.();
+    } else {
+      console.log('[RepositoriesPage] Repositories already loaded:', repositories.length);
+    }
+    
+    // Set initializing to false after a short delay
+    const initTimeout = setTimeout(() => {
+      console.log('[RepositoriesPage] Initialization complete');
+      setInitializing(false);
+    }, 500);
+    
+    return () => clearTimeout(initTimeout);
+  }, []); // Empty dependency array - run only on mount
 
   // Update starredRepos when starredRepositories change in context
   useEffect(() => {
     if (starredRepositories && starredRepositories.length > 0) {
-      console.log(
-        '[RepositoriesPage] Updating starredRepos from context:',
-        starredRepositories.length,
-      );
-
       const newStarred = new Set<string>();
       starredRepositories.forEach((repo) => {
         if (repo && repo.id) newStarred.add(repo.id);
       });
-
       setStarredRepos(newStarred);
     }
   }, [starredRepositories]);
@@ -173,7 +148,7 @@ export default function EnhancedRepositoryPage() {
     // Call context method to toggle star
     try {
       // No need to await since toggleStarRepository is synchronous
-      starRepository(repository);
+      repository.toggleStarred();
     } catch (error: unknown) {
       console.error('Error updating starred status:', error);
 
@@ -364,7 +339,6 @@ export default function EnhancedRepositoryPage() {
     if (!id) return;
 
     try {
-      setSyncingRepoId(id);
       setSyncingRepoIds((prev) => ({ ...prev, [id]: true }));
 
       // Import the test repository action and repository update action
@@ -430,7 +404,6 @@ export default function EnhancedRepositoryPage() {
     } catch (error: unknown) {
       console.error('Error testing repository connection:', error);
     } finally {
-      setSyncingRepoId(null);
       setSyncingRepoIds((prev) => ({ ...prev, [id]: false }));
     }
   };
@@ -521,14 +494,10 @@ export default function EnhancedRepositoryPage() {
 
   // Safely handle potentially undefined repositories array
   const repoArray = repositories || [];
+  
   // Filter repositories
-  const filteredRepositories: Repository[] = repoArray
+  const filteredRepositories = repoArray
     .filter((repo: Repository) => {
-      // We've already checked for null/undefined in the context, but just to be safe
-      if (!repo) {
-        return false;
-      }
-
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -553,7 +522,6 @@ export default function EnhancedRepositoryPage() {
       // Filter by category
       if (filterCategory !== 'All') {
         // For now, we don't have any category filtering yet
-        // Will be implemented when repository categories are available
       }
 
       return true;
@@ -587,30 +555,15 @@ export default function EnhancedRepositoryPage() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentRepositories = filteredRepositories.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Debug filtering and pagination
-  console.log('[RepositoriesPage] Filtered repositories:', {
-    originalCount: repoArray.length,
-    filteredCount: filteredRepositories.length,
-    currentPage,
-    totalPages,
-    currentCount: currentRepositories.length,
-    filters: {
-      searchQuery,
-      activeTab,
-      filterCategory,
-      sortBy,
-    },
-  });
-
   // Handle page change
   const handlePageChange = (pageNumber: number): void => {
     setCurrentPage(pageNumber);
   };
 
-  // Render repository cards
+  // SIMPLIFIED RENDER METHOD
   const renderRepositoryCards = (): React.ReactNode => {
-    // First check if we're loading - always show skeleton loader when loading
-    if (isLoading) {
+    // Only show skeletons during initial loading state
+    if (initializing) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -627,80 +580,36 @@ export default function EnhancedRepositoryPage() {
       );
     }
 
-    // Only show empty state when we're not loading AND have confirmed there are no repositories
-    if (filteredRepositories.length === 0) {
-      // Customize the message based on which filter is active
-      let emptyStateMessage = '';
-      if (searchQuery) {
-        emptyStateMessage = t('noRepositoriesMatchingSearch', {
-          fallback: 'No repositories match your search criteria.',
-        });
-      } else if (activeTab === 'starred') {
-        emptyStateMessage = t('noStarredRepositories', {
-          fallback: "You haven't starred any repositories yet.",
-        });
-      } else if (activeTab === 'public') {
-        emptyStateMessage = t('noPublicRepositories', {
-          fallback: 'No public repositories found.',
-        });
-      } else if (activeTab === 'private') {
-        emptyStateMessage = t('noPrivateRepositories', {
-          fallback: 'No private repositories found.',
-        });
-      } else {
-        emptyStateMessage = t('noRepositoriesYet', { fallback: 'No repositories found.' });
-      }
-
-      return (
-        <div>
-          <EmptyState
-            icon={<GitBranch className="h-10 w-10" />}
-            title={t('noRepositories')}
-            description={emptyStateMessage}
-            action={
-              <Button onClick={() => setConnectDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('addRepository')}
-              </Button>
-            }
-          />
-        </div>
-      );
+    // After initialization, show repositories if we have them
+    // No repositories or filtered results
+    if (!repositories?.length || !filteredRepositories.length) {
+      return renderEmptyState();
     }
-
+    
+    // Show repository cards
     return (
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {currentRepositories && currentRepositories.length > 0 ? (
-            currentRepositories.map((repo) => (
-              <div
-                key={repo.id}
-                onClick={() => handleViewRepository(repo)}
-                className="cursor-pointer"
-              >
-                <EnhancedRepositoryCard
-                  repository={repo}
-                  onSync={handleSyncRepository}
-                  isSyncing={syncingRepoIds[repo.id] === true}
-                  onToggleStarred={handleToggleStarred}
-                  isStarred={starredRepos.has(repo.id)}
-                  onDelete={handleDeleteRepository}
-                  isDeleting={isDeleting === repo.id}
-                />
-              </div>
-            ))
-          ) : (
-            <div className="col-span-3 p-4 text-center bg-gray-50 rounded-md">
-              <p className="text-gray-500">
-                {t('noRepositoriesToDisplay', {
-                  fallback: 'No repositories available to display.',
-                })}
-              </p>
+          {currentRepositories.map((repo) => (
+            <div
+              key={repo.id}
+              onClick={() => handleViewRepository(repo)}
+              className="cursor-pointer"
+            >
+              <EnhancedRepositoryCard
+                repository={repo}
+                onSync={handleSyncRepository}
+                isSyncing={syncingRepoIds[repo.id] === true}
+                onToggleStarred={handleToggleStarred}
+                isStarred={starredRepos.has(repo.id)}
+                onDelete={handleDeleteRepository}
+                isDeleting={isDeleting === repo.id}
+              />
             </div>
-          )}
+          ))}
         </div>
 
-        {/* Pagination controls */}
+        {/* Pagination controls - fixed rendering */}
         {totalPages > 1 && (
           <div className="flex justify-center mt-6 gap-2">
             <Button
@@ -737,26 +646,74 @@ export default function EnhancedRepositoryPage() {
     );
   };
 
-  // Select repository for viewing
+  // Extract empty state to a separate function
+  const renderEmptyState = () => {
+    // Customize the message based on which filter is active
+    let emptyStateMessage = '';
+    if (searchQuery) {
+      emptyStateMessage = t('noRepositoriesMatchingSearch', {
+        fallback: 'No repositories match your search criteria.',
+      });
+    } else if (activeTab === 'starred') {
+      emptyStateMessage = t('noStarredRepositories', {
+        fallback: "You haven't starred any repositories yet.",
+      });
+    } else if (activeTab === 'public') {
+      emptyStateMessage = t('noPublicRepositories', {
+        fallback: 'No public repositories found.',
+      });
+    } else if (activeTab === 'private') {
+      emptyStateMessage = t('noPrivateRepositories', {
+        fallback: 'No private repositories found.',
+      });
+    } else {
+      emptyStateMessage = t('noRepositoriesYet', { fallback: 'No repositories found.' });
+    }
+
+    return (
+      <div>
+        <EmptyState
+          icon={<GitBranch className="h-10 w-10" />}
+          title={t('noRepositories')}
+          description={emptyStateMessage}
+          action={
+            <Button onClick={() => setConnectDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('addRepository')}
+            </Button>
+          }
+        />
+      </div>
+    );
+  };
+
+  // Handle view repository - simplify using single selectedRepo state
   const handleViewRepository = (repo: Repository): void => {
-    setSelectedRepository(repo);
+    console.log('[RepositoriesPage] Viewing repository:', {
+      id: repo.id,
+      providerId: repo.providerId,
+      name: repo.name,
+    });
+    setSelectedRepo(repo);
     setIsExplorerView(true);
   };
 
-  // Return to repositories list
+  // Handle back to list
   const handleBackToList = (): void => {
-    setSelectedRepository(null);
+    setSelectedRepo(null);
     setIsExplorerView(false);
   };
 
-  if (isExplorerView && selectedRepository) {
+  // Render repository explorer or list
+  if (isExplorerView && selectedRepo) {
     return (
       <div className="container mx-auto py-6">
-        <RepositoryExplorer repository={selectedRepository} onBack={handleBackToList} />
+        <RepositoryExplorer repository={selectedRepo} onBack={handleBackToList} />
       </div>
     );
   }
 
+  // Render main repository page
   return (
     <div className="container mx-auto py-6">
       <PageHeader title={t('repositories')} description={t('repositories_description')}>

@@ -12,14 +12,8 @@ import React, {
 } from 'react';
 import {
   Repository,
-  RepositorySyncStatus,
-  RepositoryFile,
 } from '@/app/[locale]/[tenant]/repositories/types';
 import {
-  getRepositories,
-  getRepository as getRepositoryById,
-  createRepository,
-  updateRepository,
   getRepositoriesWithStarred,
 } from '@/app/[locale]/[tenant]/repositories/actions';
 import { AuthUser } from '@/types/user';

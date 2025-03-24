@@ -70,6 +70,23 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     repository.name &&
     repository.owner;
 
+  // Add debugging - log the repository object
+  useEffect(() => {
+    if (repository) {
+      console.log('[RepositoryExplorer] Repository data received:', {
+        id: repository.id,
+        name: repository.name,
+        owner: repository.owner,
+        url: repository.url,
+        providerId: repository.providerId,
+        providerType: repository.providerType,
+        isValid: isValidRepository
+      });
+    } else {
+      console.log('[RepositoryExplorer] No repository data provided');
+    }
+  }, [repository, isValidRepository]);
+
   // Get provider icon and name
   const getProviderIcon = () => {
     switch (repository?.providerType) {
@@ -111,6 +128,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     if (!isValidRepository) {
       setIsLoading(true);
       setError('Repository data is loading...');
+      console.log('[RepositoryExplorer] Repository data is not valid yet:', repository);
       return;
     }
 
@@ -120,9 +138,25 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
 
       try {
         const pathString = currentPath.join('/');
-        const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId}&repositoryUrl=${encodeURIComponent(repository.url)}&path=${encodeURIComponent(pathString)}&action=list`;
+        
+        // Use the providerId directly from the repository object
+        const providerId = repository.providerId;
+        
+        console.log('[RepositoryExplorer] Fetching files with params:', { 
+          repositoryId: repository.id,
+          providerId,
+          url: repository.url,
+          path: pathString
+        });
+        
+        // Ensure all parameters are strings
+        const repoId = repository.id;
+        const repoUrl = repository.url || '';
+        const safePath = pathString || '';
+        
+        const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(safePath)}&action=list`;
 
-        const response = await fetch(url);
+        const response = await fetch(apiUrl);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -160,6 +194,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
     // Check if repository data is valid before navigating
     if (!isValidRepository) {
       setError('Repository data is not fully loaded yet. Please wait...');
+      console.log('[RepositoryExplorer] Cannot navigate, repository data not valid:', repository);
       return;
     }
 
@@ -171,9 +206,24 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       setSelectedFile(item.path);
 
       try {
-        const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId}&repositoryUrl=${encodeURIComponent(repository.url)}&path=${encodeURIComponent(item.path)}&action=file`;
+        // Use the providerId directly from the repository object
+        const providerId = repository.providerId;
+        
+        console.log('[RepositoryExplorer] Fetching file content with params:', { 
+          repositoryId: repository.id,
+          providerId,
+          url: repository.url,
+          path: item.path
+        });
+        
+        // Ensure all parameters are strings
+        const repoId = repository.id;
+        const repoUrl = repository.url || '';
+        const filePath = item.path || '';
+        
+        const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&action=file`;
 
-        const response = await fetch(url);
+        const response = await fetch(apiUrl);
 
         if (!response.ok) {
           const errorData = await response.json();
