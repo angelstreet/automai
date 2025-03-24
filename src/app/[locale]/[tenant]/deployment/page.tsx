@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { DeploymentWizard, DeploymentList } from './_components';
-import { useDeployment, useRepository, AppProvider } from '@/context';
+import { useDeployment, useRepository } from '@/context';
 
 function DeploymentPageContent() {
   const [wizardActive, setWizardActive] = useState(false);
@@ -139,9 +139,6 @@ function DeploymentPageContent() {
 }
 
 export default function DeploymentPage() {
-  return (
-    <AppProvider>
-      <DeploymentPageContent />
-    </AppProvider>
-  );
+  // AppProvider is now only in the root layout
+  return <DeploymentPageContent />;
 }
