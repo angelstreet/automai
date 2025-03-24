@@ -18,7 +18,7 @@ export default async function Page({ params }: { params: { locale: string } }) {
     const cookieStore = cookies();
     const supabase = await createClient(cookieStore);
     const { data } = await supabase.auth.getUser();
-    
+
     // If user is authenticated, redirect to their tenant dashboard
     if (data?.user) {
       const tenant = data.user.user_metadata?.tenant_name || 'trial';

@@ -59,27 +59,29 @@ const repository = {
 
       let query = supabase
         .from('repositories')
-        .select(`
+        .select(
+          `
           *,
           git_providers(*)
-        `)
+        `,
+        )
         .eq('git_providers.profile_id', profileId);
-      
+
       if (providerId) {
         query = query.eq('provider_id', providerId);
       }
-      
+
       const { data, error } = await query;
-      
+
       if (error) {
         return { success: false, error: error.message };
       }
-      
+
       return { success: true, data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -94,10 +96,12 @@ const repository = {
 
       const { data, error } = await supabase
         .from('repositories')
-        .select(`
+        .select(
+          `
           *,
           git_providers!inner(*)
-        `)
+        `,
+        )
         .eq('id', id)
         .eq('git_providers.profile_id', profileId)
         .single();
@@ -108,9 +112,9 @@ const repository = {
 
       return { success: true, data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -118,7 +122,10 @@ const repository = {
   /**
    * Create a new repository
    */
-  async createRepository(data: RepositoryCreateData, profileId: string): Promise<DbResponse<Repository>> {
+  async createRepository(
+    data: RepositoryCreateData,
+    profileId: string,
+  ): Promise<DbResponse<Repository>> {
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
@@ -132,9 +139,9 @@ const repository = {
         .single();
 
       if (providerError || !provider) {
-        return { 
-          success: false, 
-          error: providerError?.message || 'Git provider not found or no permission' 
+        return {
+          success: false,
+          error: providerError?.message || 'Git provider not found or no permission',
         };
       }
 
@@ -142,7 +149,7 @@ const repository = {
         .from('repositories')
         .insert({
           ...data,
-          last_synced_at: new Date().toISOString()
+          last_synced_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -153,9 +160,9 @@ const repository = {
 
       return { success: true, data: result };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -164,9 +171,9 @@ const repository = {
    * Update an existing repository
    */
   async updateRepository(
-    id: string, 
-    data: Partial<RepositoryCreateData>, 
-    profileId: string
+    id: string,
+    data: Partial<RepositoryCreateData>,
+    profileId: string,
   ): Promise<DbResponse<Repository>> {
     try {
       const cookieStore = await cookies();
@@ -175,18 +182,20 @@ const repository = {
       // Verify the repository belongs to the profile via provider (tenant isolation)
       const { data: repo, error: repoError } = await supabase
         .from('repositories')
-        .select(`
+        .select(
+          `
           id,
           git_providers!inner(profile_id)
-        `)
+        `,
+        )
         .eq('id', id)
         .eq('git_providers.profile_id', profileId)
         .single();
 
       if (repoError || !repo) {
-        return { 
-          success: false, 
-          error: repoError?.message || 'Repository not found or no permission' 
+        return {
+          success: false,
+          error: repoError?.message || 'Repository not found or no permission',
         };
       }
 
@@ -203,9 +212,9 @@ const repository = {
 
       return { success: true, data: result };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -221,25 +230,24 @@ const repository = {
       // Verify the repository belongs to the profile via provider (tenant isolation)
       const { data: repo, error: repoError } = await supabase
         .from('repositories')
-        .select(`
+        .select(
+          `
           id,
           git_providers!inner(profile_id)
-        `)
+        `,
+        )
         .eq('id', id)
         .eq('git_providers.profile_id', profileId)
         .single();
 
       if (repoError || !repo) {
-        return { 
-          success: false, 
-          error: repoError?.message || 'Repository not found or no permission' 
+        return {
+          success: false,
+          error: repoError?.message || 'Repository not found or no permission',
         };
       }
 
-      const { error } = await supabase
-        .from('repositories')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from('repositories').delete().eq('id', id);
 
       if (error) {
         return { success: false, error: error.message };
@@ -247,9 +255,9 @@ const repository = {
 
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -265,25 +273,27 @@ const repository = {
       // Verify the repository belongs to the profile via provider (tenant isolation)
       const { data: repo, error: repoError } = await supabase
         .from('repositories')
-        .select(`
+        .select(
+          `
           id,
           git_providers!inner(profile_id)
-        `)
+        `,
+        )
         .eq('id', id)
         .eq('git_providers.profile_id', profileId)
         .single();
 
       if (repoError || !repo) {
-        return { 
-          success: false, 
-          error: repoError?.message || 'Repository not found or no permission' 
+        return {
+          success: false,
+          error: repoError?.message || 'Repository not found or no permission',
         };
       }
 
       const { data: result, error } = await supabase
         .from('repositories')
         .update({
-          last_synced_at: new Date().toISOString()
+          last_synced_at: new Date().toISOString(),
         })
         .eq('id', id)
         .select()
@@ -295,59 +305,62 @@ const repository = {
 
       return { success: true, data: result };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
-  
+
   /**
    * Create a repository from a URL (quick clone)
-   * 
+   *
    * This is used when a user provides a git repository URL directly,
    * without specifying a provider. We'll detect the provider from the URL.
    */
   async createRepositoryFromUrl(
-    data: QuickCloneRepositoryData, 
-    profileId: string
+    data: QuickCloneRepositoryData,
+    profileId: string,
   ): Promise<DbResponse<Repository>> {
     try {
       const { url } = data;
-      
+
       if (!url) {
         return { success: false, error: 'Repository URL is required' };
       }
-      
+
       // Detect the provider type from the URL
       const providerType = detectProviderFromUrl(url);
       console.log('[createRepositoryFromUrl] Detected provider type:', providerType);
-      
+
       // Extract repository name and owner from URL
       const repoName = extractRepoNameFromUrl(url);
       const owner = extractOwnerFromUrl(url);
       console.log('[createRepositoryFromUrl] Extracted repo details:', { repoName, owner });
-      
+
       // Look for an existing provider of this type associated with the user
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
-      
+
       const { data: existingProviders, error: providersError } = await supabase
         .from('git_providers')
         .select('id')
         .eq('profile_id', profileId)
         .eq('type', providerType)
         .limit(1);
-      
-      console.log('[createRepositoryFromUrl] Existing providers query result:', { existingProviders, providersError });
-      
+
+      console.log('[createRepositoryFromUrl] Existing providers query result:', {
+        existingProviders,
+        providersError,
+      });
+
       if (providersError) {
         return { success: false, error: providersError.message };
       }
-      
+
       // If we don't have a provider for this type, we need to create one
       let providerId: string;
-      
+
       if (data.provider_id) {
         providerId = data.provider_id;
         console.log('[createRepositoryFromUrl] Using provided provider ID:', providerId);
@@ -356,10 +369,11 @@ const repository = {
         console.log('[createRepositoryFromUrl] Using existing provider ID:', providerId);
       } else {
         // We need to create a default provider for this type
-        let providerName = providerType === 'self-hosted' 
-          ? 'Self-Hosted Git'
-          : `Default ${providerType.charAt(0).toUpperCase() + providerType.slice(1)}`;
-          
+        let providerName =
+          providerType === 'self-hosted'
+            ? 'Self-Hosted Git'
+            : `Default ${providerType.charAt(0).toUpperCase() + providerType.slice(1)}`;
+
         // For self-hosted repositories, extract the server URL to include in the provider name
         let serverUrl = '';
         if (providerType === 'self-hosted') {
@@ -373,19 +387,19 @@ const repository = {
             }
           }
         }
-        
+
         // Map 'self-hosted' to 'gitea' for database compatibility
         // This is a workaround for the database constraint
         const dbProviderType = providerType === 'self-hosted' ? 'gitea' : providerType;
-        
+
         console.log('[createRepositoryFromUrl] Creating provider with mapped type:', {
           originalType: providerType,
           mappedType: dbProviderType,
           name: providerName,
           profile_id: profileId,
-          server_url: serverUrl || undefined
+          server_url: serverUrl || undefined,
         });
-        
+
         const { data: newProvider, error: createProviderError } = await supabase
           .from('git_providers')
           .insert({
@@ -395,23 +409,26 @@ const repository = {
             is_configured: true,
             server_url: serverUrl || undefined,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
           .select()
           .single();
-          
-        console.log('[createRepositoryFromUrl] Provider creation result:', { newProvider, createProviderError });
-        
+
+        console.log('[createRepositoryFromUrl] Provider creation result:', {
+          newProvider,
+          createProviderError,
+        });
+
         if (createProviderError || !newProvider) {
-          return { 
-            success: false, 
-            error: createProviderError?.message || 'Failed to create default provider' 
+          return {
+            success: false,
+            error: createProviderError?.message || 'Failed to create default provider',
           };
         }
-        
+
         providerId = newProvider.id;
       }
-      
+
       // Now create the repository
       const repoData: RepositoryCreateData = {
         name: repoName,
@@ -426,13 +443,13 @@ const repository = {
         updated_at: new Date().toISOString(),
         sync_status: 'IDLE',
       };
-      
+
       // Create the repository using our existing method
       return this.createRepository(repoData, profileId);
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -520,7 +537,7 @@ const repository = {
     if (!where.id || !where.profile_id) {
       throw new Error('ID and profile_id are required for updating a repository');
     }
-    
+
     const result = await this.updateRepository(where.id, data, where.profile_id);
     if (!result.success) throw new Error(result.error);
     return result.data;
@@ -530,7 +547,7 @@ const repository = {
     if (!where.id || !where.profile_id) {
       throw new Error('ID and profile_id are required for deleting a repository');
     }
-    
+
     const result = await this.deleteRepository(where.id, where.profile_id);
     if (!result.success) throw new Error(result.error);
     return { success: true };

@@ -1,36 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Clock, 
-  RefreshCw, 
-  Play, 
-  MoreHorizontal,
-  Trash
-} from 'lucide-react';
+import { Search, Clock, RefreshCw, Play, MoreHorizontal, Trash } from 'lucide-react';
 import { useDeployment } from '@/context';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
 import { deleteDeployment as deleteDeploymentAction } from '../actions';
-import { DeploymentContextType } from '@/types/context/deployment';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/shadcn/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/shadcn/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/shadcn/alert-dialog';
 import { toast } from '@/components/shadcn/use-toast';
 import { DeploymentActions } from './DeploymentActions';
 
@@ -38,24 +16,10 @@ interface DeploymentListProps {
   onViewDeployment?: (deploymentId: string) => void;
 }
 
-const DeploymentList: React.FC<DeploymentListProps> = ({ 
-  onViewDeployment 
-}) => {
-  // Get deployment context
+const DeploymentList: React.FC<DeploymentListProps> = ({ onViewDeployment }) => {
   const deploymentContext = useDeployment();
-  
-  const { 
-    deployments = [], 
-    repositories: contextRepositories = [],
-    loading,
-    error = null, 
-    fetchDeployments = () => {}, 
-    isRefreshing = false,
-    fetchRepositories = () => {} 
-  } = deploymentContext || {};
-  
-  // Modify the loading logic to consider both loading and isRefreshing
-  const isLoading = (loading === true || isRefreshing === true);
+  const { deployments = [], repositories: contextRepositories = [], loading, isRefreshing, fetchDeployments = () => {} } = deploymentContext || {};
+  const isLoading = loading || isRefreshing;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -65,267 +29,131 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
-  
-  // Track if we've already fetched repositories
+
   const hasAttemptedRepoFetchRef = React.useRef(false);
 
-  // Set hasAttemptedLoad when we've actually finished a load attempt
   useEffect(() => {
-    console.log('[DeploymentList] Loading state:', { 
-      loading, 
-      isRefreshing, 
-      deployments: deployments.length,
-      hasAttemptedLoad
-    });
-    
-    // Only mark as attempted load when we're no longer loading/refreshing
-    if (!hasAttemptedLoad && !loading && !isRefreshing) {
-      console.log('[DeploymentList] Setting hasAttemptedLoad to true');
-      setHasAttemptedLoad(true);
-    }
-  }, [loading, isRefreshing, hasAttemptedLoad, deployments.length]);
+    console.log('[DeploymentList] Loading state:', { loading, isRefreshing, deployments: deployments.length, hasAttemptedLoad });
+    if (!loading && !isRefreshing) setHasAttemptedLoad(true);
+  }, [loading, isRefreshing, deployments.length]);
 
-  // Convert context repositories to mapping if available
   useEffect(() => {
-    if (contextRepositories && contextRepositories.length > 0 && Object.keys(repositories).length === 0) {
-      console.log('[DeploymentList] Converting context repositories to mapping:', contextRepositories.length);
+    if (contextRepositories?.length > 0 && Object.keys(repositories).length === 0) {
+      console.log('[DeploymentList] Converting context repositories:', contextRepositories.length);
       const repoMap = contextRepositories.reduce((acc: Record<string, Repository>, repo: Repository) => {
         acc[repo.id] = repo;
         return acc;
-      }, {} as Record<string, Repository>);
+      }, {});
       setRepositories(repoMap);
     }
   }, [contextRepositories, repositories]);
 
-  // Fetch repositories on component mount - but only once
   useEffect(() => {
     const loadRepositories = async () => {
-      // Skip if we've already tried fetching or if we already have repositories
-      if (hasAttemptedRepoFetchRef.current || Object.keys(repositories).length > 0) {
-        return;
-      }
-      
-      // Mark that we've attempted to fetch
+      if (hasAttemptedRepoFetchRef.current || Object.keys(repositories).length > 0) return;
       hasAttemptedRepoFetchRef.current = true;
-      
-      // Use repositories from context if available
-      if (contextRepositories && contextRepositories.length > 0) {
+      if (contextRepositories?.length > 0) {
         console.log('[DeploymentList] Using repositories from context:', contextRepositories.length);
         const repoMap = contextRepositories.reduce((acc: Record<string, Repository>, repo: Repository) => {
           acc[repo.id] = repo;
           return acc;
-        }, {} as Record<string, Repository>);
+        }, {});
         setRepositories(repoMap);
-        return;
-      } else if (fetchRepositories && typeof fetchRepositories === 'function') {
-        console.log('[DeploymentList] Fetching repositories');
-        try {
-          await fetchRepositories();
-        } catch (err) {
-          console.error('[DeploymentList] Error fetching repositories:', err);
-        }
-      } else {
-        console.log('[DeploymentList] No repositories available yet, will wait for context update');
       }
     };
-
     loadRepositories();
-  }, [repositories, contextRepositories, fetchRepositories]);
+  }, [repositories, contextRepositories]);
 
-  // Handle refresh button click with debounce
   const handleRefresh = () => {
     if (isRefreshing) {
-      // Don't allow refresh while already refreshing
-      console.log('[DeploymentList] Refresh already in progress, ignoring request');
+      console.log('[DeploymentList] Refresh in progress, ignoring request');
       return;
     }
     console.log('[DeploymentList] Manually triggering refresh');
     fetchDeployments();
   };
 
-  // Handle viewing a deployment
   const handleViewDeployment = (deployment: Deployment, e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    if (onViewDeployment) {
-      onViewDeployment(deployment.id);
-    }
+    if (e) e.stopPropagation();
+    if (onViewDeployment) onViewDeployment(deployment.id);
   };
 
-  // Handle delete click
   const handleDeleteClick = (deployment: Deployment, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedDeployment(deployment);
     setIsDeleteDialogOpen(true);
   };
 
-  // Confirm deletion of a deployment
   const handleConfirmDelete = async () => {
     if (!selectedDeployment) return;
-    
     try {
-      if (deploymentContext && 'deleteDeployment' in deploymentContext && 
-          typeof deploymentContext.deleteDeployment === 'function') {
-        // Use the deleteDeployment from the context with type assertion
-        const deleteDeploymentFn = deploymentContext.deleteDeployment as (id: string) => Promise<{
-          success: boolean;
-          error?: string;
-        }>;
-        
-        // Call the function with the correct type
+      const deleteDeploymentFn = deploymentContext?.deleteDeployment;
+      if (deleteDeploymentFn && typeof deleteDeploymentFn === 'function') {
         const result = await deleteDeploymentFn(selectedDeployment.id);
-        
         if (result.success) {
-          // Always show success toast unless an error is thrown
-          toast({
-            title: 'Deployment Deleted',
-            description: 'The deployment has been successfully deleted.',
-            variant: 'default',
-          });
-          
-          // Add a delay before refreshing to avoid UI flashing
-          setTimeout(() => {
-            fetchDeployments();
-          }, 1000);
+          toast({ title: 'Deployment Deleted', description: 'Successfully deleted.', variant: 'default' });
+          setTimeout(() => fetchDeployments(), 1000);
         } else {
-          // Show error toast if deleteDeployment returns failure
-          toast({
-            title: 'Error',
-            description: result.error || 'Failed to delete the deployment',
-            variant: 'destructive',
-          });
+          toast({ title: 'Error', description: result.error || 'Failed to delete', variant: 'destructive' });
         }
       } else {
-        // Fallback to using the action directly
         const success = await deleteDeploymentAction(selectedDeployment.id);
-        
         if (success) {
-          toast({
-            title: 'Deployment Deleted',
-            description: 'The deployment has been successfully deleted.',
-            variant: 'default',
-          });
-          
-          // Add a delay before refreshing to avoid UI flashing
-          setTimeout(() => {
-            fetchDeployments();
-          }, 1000);
+          toast({ title: 'Deployment Deleted', description: 'Successfully deleted.', variant: 'default' });
+          setTimeout(() => fetchDeployments(), 1000);
         } else {
-          toast({
-            title: 'Error',
-            description: 'Failed to delete the deployment',
-            variant: 'destructive',
-          });
+          toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
         }
       }
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message || 'Unexpected error', variant: 'destructive' });
     } finally {
       setIsDeleteDialogOpen(false);
     }
   };
 
-  // Get repository name from deployment
   const getRepositoryName = (deployment: Deployment): string => {
-    if (!deployment.repositoryId) {
-      return 'Unknown';
-    }
-    
-    // First try local state
-    if (repositories[deployment.repositoryId]) {
-      return repositories[deployment.repositoryId].name;
-    }
-    
-    // Then try context directly as a fallback
-    const contextRepo = contextRepositories?.find(r => r.id === deployment.repositoryId);
-    if (contextRepo) {
-      // Update our local cache for next time
-      const newRepos = { ...repositories };
-      newRepos[deployment.repositoryId] = contextRepo;
-      setRepositories(newRepos);
-      return contextRepo.name;
-    }
-    
-    // Debug missing repos
-    console.log(`[DeploymentList] Repository not found for ID: ${deployment.repositoryId}`);
-    
-    // Fallback to the repository ID if name can't be found
-    return deployment.repositoryId;
+    if (!deployment.repositoryId) return 'Unknown';
+    const repo = repositories[deployment.repositoryId] || contextRepositories?.find(r => r.id === deployment.repositoryId);
+    return repo?.name || 'Loading...';
   };
 
-  // Filter deployments based on tab, search query, and status filter
   const getFilteredDeployments = () => {
     return deployments.filter(deployment => {
-      // Filter by tab
       if (activeTab === 'scheduled' && deployment.scheduleType !== 'scheduled') return false;
       if (activeTab === 'pending' && deployment.status !== 'pending') return false;
       if (activeTab === 'active' && deployment.status !== 'in_progress') return false;
-      if (activeTab === 'completed' && (deployment.status !== 'success' && deployment.status !== 'failed')) return false;
-
-      // Filter by search query
+      if (activeTab === 'completed' && deployment.status !== 'success' && deployment.status !== 'failed') return false;
       const repoName = getRepositoryName(deployment);
-      const matchesSearch = 
-        searchQuery === '' || 
-        deployment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        repoName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deployment.userId.toLowerCase().includes(searchQuery.toLowerCase());
-
-      // Filter by status
+      const matchesSearch = searchQuery === '' || deployment.name.toLowerCase().includes(searchQuery.toLowerCase()) || repoName.toLowerCase().includes(searchQuery.toLowerCase()) || deployment.userId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = filterStatus === 'all' || deployment.status === filterStatus;
-
       return matchesSearch && matchesStatus;
     });
   };
 
-  // Sort deployments
   const getSortedDeployments = () => {
     const filtered = getFilteredDeployments();
-    
     return [...filtered].sort((a, b) => {
-      if (sortBy === 'name') {
-        return a.name.localeCompare(b.name);
-      } else if (sortBy === 'repository') {
-        return getRepositoryName(a).localeCompare(getRepositoryName(b));
-      } else if (sortBy === 'status') {
-        return a.status.localeCompare(b.status);
-      } else {
-        // Default: sort by date (newest first)
-        const dateA = new Date(a.startedAt || a.scheduledTime || a.createdAt).getTime();
-        const dateB = new Date(b.startedAt || b.scheduledTime || b.createdAt).getTime();
-        return dateB - dateA;
-      }
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'repository') return getRepositoryName(a).localeCompare(getRepositoryName(b));
+      if (sortBy === 'status') return a.status.localeCompare(b.status);
+      const dateA = new Date(a.startedAt || a.scheduledTime || a.createdAt).getTime();
+      const dateB = new Date(b.startedAt || b.scheduledTime || b.createdAt).getTime();
+      return dateB - dateA;
     });
   };
 
   const displayDeployments = getSortedDeployments();
 
-  // Render loading skeleton rows
   const renderSkeletonRows = () => {
     return Array(5).fill(0).map((_, index) => (
       <tr key={`skeleton-${index}`} className="animate-pulse">
-        <td className="px-2 py-3 whitespace-nowrap">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-        </td>
-        <td className="px-2 py-3 whitespace-nowrap">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
-        </td>
-        <td className="px-2 py-3 whitespace-nowrap">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-        </td>
-        <td className="px-2 py-3 whitespace-nowrap">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
-        </td>
-        <td className="px-2 py-3 whitespace-nowrap">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
-        </td>
-        <td className="px-2 py-3 whitespace-nowrap">
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div>
-        </td>
+        <td className="px-2 py-3 whitespace-nowrap"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div></td>
+        <td className="px-2 py-3 whitespace-nowrap"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div></td>
+        <td className="px-2 py-3 whitespace-nowrap"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div></td>
+        <td className="px-2 py-3 whitespace-nowrap"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div></td>
+        <td className="px-2 py-3 whitespace-nowrap"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div></td>
+        <td className="px-2 py-3 whitespace-nowrap"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-12"></div></td>
       </tr>
     ));
   };
@@ -348,29 +176,15 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
               />
             </div>
             <div className="flex items-center space-x-2">
-              <label htmlFor="sortBy" className="text-sm text-gray-600 dark:text-gray-400">
-                Sort by:
-              </label>
-              <select
-                id="sortBy"
-                className="pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
+              <label htmlFor="sortBy" className="text-sm text-gray-600 dark:text-gray-400">Sort by:</label>
+              <select id="sortBy" className="pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="date">Date</option>
                 <option value="name">Name</option>
                 <option value="status">Status</option>
                 <option value="repository">Repository</option>
               </select>
-              <label htmlFor="filterStatus" className="text-sm text-gray-600 dark:text-gray-400">
-                Status:
-              </label>
-              <select
-                id="filterStatus"
-                className="pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
+              <label htmlFor="filterStatus" className="text-sm text-gray-600 dark:text-gray-400">Status:</label>
+              <select id="filterStatus" className="pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option value="all">All</option>
                 <option value="pending">Pending</option>
                 <option value="in_progress">In Progress</option>
@@ -381,228 +195,96 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
             </div>
           </div>
         </div>
-        
         <div className="p-4">
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex -mb-px">
-              <button
-                className={`mr-1 py-2 px-4 text-sm font-medium ${
-                  activeTab === 'all'
-                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-                onClick={() => setActiveTab('all')}
-              >
-                All
-              </button>
-              <button
-                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${
-                  activeTab === 'scheduled'
-                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-                onClick={() => setActiveTab('scheduled')}
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Scheduled
-              </button>
-              <button
-                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${
-                  activeTab === 'pending'
-                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-                onClick={() => setActiveTab('pending')}
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Pending
-              </button>
-              <button
-                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${
-                  activeTab === 'active'
-                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-                onClick={() => setActiveTab('active')}
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Active
-              </button>
-              <button
-                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${
-                  activeTab === 'completed'
-                    ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-                onClick={() => setActiveTab('completed')}
-              >
-                <Clock className="h-4 w-4 mr-2" />
-                Completed
-              </button>
+              <button className={`mr-1 py-2 px-4 text-sm font-medium ${activeTab === 'all' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('all')}>All</button>
+              <button className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${activeTab === 'scheduled' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('scheduled')}><Clock className="h-4 w-4 mr-2" />Scheduled</button>
+              <button className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${activeTab === 'pending' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('pending')}><Clock className="h-4 w-4 mr-2" />Pending</button>
+              <button className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${activeTab === 'active' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('active')}><Play className="h-4 w-4 mr-2" />Active</button>
+              <button className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${activeTab === 'completed' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`} onClick={() => setActiveTab('completed')}><Clock className="h-4 w-4 mr-2" />Completed</button>
             </div>
           </div>
-          
           {isLoading ? (
             <div className="overflow-x-auto">
-              <div className="relative">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Repository
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Runtime
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {renderSkeletonRows()}
-                  </tbody>
-                </table>
-              </div>
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Repository</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Runtime</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">{renderSkeletonRows()}</tbody>
+              </table>
             </div>
           ) : displayDeployments.length > 0 ? (
             <div className="overflow-x-auto">
-              <div className="relative">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Repository
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Runtime
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Actions
-                      </th>
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Repository</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Runtime</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {displayDeployments.map(deployment => (
+                    <tr key={deployment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onClick={(e) => handleViewDeployment(deployment, e)}>
+                      <td className="px-2 py-1 whitespace-nowrap"><div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div></td>
+                      <td className="px-2 py-1 whitespace-nowrap"><div className="text-sm text-gray-600 dark:text-gray-300">{getRepositoryName(deployment)}</div></td>
+                      <td className="px-2 py-1 whitespace-nowrap"><StatusBadge status={deployment.status} /></td>
+                      <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{getFormattedTime(deployment.createdAt)}</td>
+                      <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {deployment.completedAt && deployment.startedAt ? getFormattedTime(deployment.startedAt, deployment.completedAt) : deployment.startedAt ? 'Running...' : deployment.scheduledTime ? `Scheduled for ${getFormattedTime(deployment.scheduledTime)}` : '-'}
+                      </td>
+                      <td className="px-2 py-1 whitespace-nowrap text-sm text-right"><DeploymentActions deploymentId={deployment.id} deploymentName={deployment.name} /></td>
                     </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {displayDeployments.map((deployment) => (
-                      <tr 
-                        key={deployment.id} 
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer relative group"
-                        onClick={(e) => handleViewDeployment(deployment, e)}
-                      >
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-white">{deployment.name}</div>
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          <div className="text-sm text-gray-600 dark:text-gray-300">{getRepositoryName(deployment)}</div>
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap">
-                          <StatusBadge status={deployment.status} />
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {getFormattedTime(deployment.createdAt)}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {deployment.completedAt && deployment.startedAt 
-                            ? getFormattedTime(deployment.startedAt, deployment.completedAt) 
-                            : deployment.startedAt 
-                              ? 'Running...' 
-                              : deployment.scheduledTime 
-                                ? `Scheduled for ${getFormattedTime(deployment.scheduledTime)}` 
-                                : '-'}
-                        </td>
-                        <td className="px-2 py-1 whitespace-nowrap text-sm text-right">
-                          <DeploymentActions deploymentId={deployment.id} deploymentName={deployment.name} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : hasAttemptedLoad ? (
             <div className="text-center py-8">
               <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
-                {activeTab === 'scheduled' ? <Clock className="h-12 w-12" /> : 
-                 activeTab === 'pending' ? <Clock className="h-12 w-12" /> :
-                 activeTab === 'active' ? <Play className="h-12 w-12" /> :
-                 activeTab === 'completed' ? <Clock className="h-12 w-12" /> :
-                 <Clock className="h-12 w-12" />}
+                {activeTab === 'scheduled' ? <Clock className="h-12 w-12" /> : activeTab === 'pending' ? <Clock className="h-12 w-12" /> : activeTab === 'active' ? <Play className="h-12 w-12" /> : activeTab === 'completed' ? <Clock className="h-12 w-12" /> : <Clock className="h-12 w-12" />}
               </div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No deployments found</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                {searchQuery || filterStatus !== 'all' 
-                  ? 'Try changing your search or filter criteria'
-                  : 'Create your first deployment to get started'}
-              </p>
+              <p className="text-gray-500 dark:text-gray-400">{searchQuery || filterStatus !== 'all' ? 'Try changing your search or filter criteria' : 'Create your first deployment to get started'}</p>
             </div>
           ) : (
-            // Fallback loading state when neither loading nor having data
             <div className="overflow-x-auto">
-              <div className="relative">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Repository
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Runtime
-                      </th>
-                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {renderSkeletonRows()}
-                  </tbody>
-                </table>
-              </div>
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
+                  <tr>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Repository</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Runtime</th>
+                    <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">{renderSkeletonRows()}</tbody>
+              </table>
             </div>
           )}
         </div>
-        
-        {/* Delete Confirmation Dialog */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Deployment</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be undone.
-              </AlertDialogDescription>
+              <AlertDialogDescription>Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be undone.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
-                Delete
-              </AlertDialogAction>
+              <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

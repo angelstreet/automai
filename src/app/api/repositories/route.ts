@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRepositories, createRepository, createRepositoryFromUrl } from '@/app/[locale]/[tenant]/repositories/actions';
+import {
+  getRepositories,
+  createRepository,
+  createRepositoryFromUrl,
+} from '@/app/[locale]/[tenant]/repositories/actions';
 
 /**
  * GET /api/repositories
@@ -45,9 +49,9 @@ export async function POST(request: NextRequest) {
       const result = await createRepositoryFromUrl(
         body.url,
         body.isPrivate || false,
-        body.description
+        body.description,
       );
-      
+
       console.log('[POST /api/repositories] Quick clone result:', result);
 
       if (!result.success) {
@@ -62,7 +66,7 @@ export async function POST(request: NextRequest) {
       // Regular repository creation
       console.log('[POST /api/repositories] Processing regular repository creation request:', body);
       const result = await createRepository(body);
-      
+
       console.log('[POST /api/repositories] Regular repository creation result:', result);
 
       if (!result.success) {
@@ -76,9 +80,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error in POST /api/repositories:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

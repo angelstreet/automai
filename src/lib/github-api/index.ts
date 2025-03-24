@@ -57,24 +57,24 @@ export interface GitHubBranch {
 export async function getRepository(
   owner: string,
   repo: string,
-  token?: string
+  token?: string,
 ): Promise<GitHubRepository> {
   const headers: HeadersInit = {
-    'Accept': 'application/vnd.github.v3+json',
+    Accept: 'application/vnd.github.v3+json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch repository: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -91,30 +91,30 @@ export async function listFiles(
   repo: string,
   path: string = '',
   ref: string = '',
-  token?: string
+  token?: string,
 ): Promise<GitHubFile[]> {
   const headers: HeadersInit = {
-    'Accept': 'application/vnd.github.v3+json',
+    Accept: 'application/vnd.github.v3+json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   // Build URL with query parameters if ref is provided
   let url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
   if (ref) {
     url += `?ref=${ref}`;
   }
-  
+
   const response = await fetch(url, {
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to list files: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -131,30 +131,30 @@ export async function getFileContent(
   repo: string,
   path: string,
   ref: string = '',
-  token?: string
+  token?: string,
 ): Promise<GitHubFile> {
   const headers: HeadersInit = {
-    'Accept': 'application/vnd.github.v3+json',
+    Accept: 'application/vnd.github.v3+json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   // Build URL with query parameters if ref is provided
   let url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
   if (ref) {
     url += `?ref=${ref}`;
   }
-  
+
   const response = await fetch(url, {
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to get file content: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -167,24 +167,24 @@ export async function getFileContent(
 export async function listBranches(
   owner: string,
   repo: string,
-  token?: string
+  token?: string,
 ): Promise<GitHubBranch[]> {
   const headers: HeadersInit = {
-    'Accept': 'application/vnd.github.v3+json',
+    Accept: 'application/vnd.github.v3+json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, {
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to list branches: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -195,24 +195,24 @@ export async function listBranches(
 export function extractGitHubRepoInfo(url: string): { owner: string; repo: string } {
   // Remove .git suffix if present
   const cleanUrl = url.endsWith('.git') ? url.slice(0, -4) : url;
-  
+
   try {
     const urlObj = new URL(cleanUrl);
-    
+
     // For github.com
     if (urlObj.hostname === 'github.com') {
       const pathParts = urlObj.pathname.split('/').filter(Boolean);
-      
+
       if (pathParts.length < 2) {
         throw new Error('Invalid GitHub repository URL format');
       }
-      
+
       return {
         owner: pathParts[0],
         repo: pathParts[1],
       };
     }
-    
+
     throw new Error('Not a GitHub URL');
   } catch (error) {
     throw new Error('Invalid URL format');

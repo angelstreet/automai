@@ -128,7 +128,6 @@ export const sidebarData: SidebarData = {
           icon: GitBranch,
           roles: ['admin', 'developer'],
         },
-        
       ],
     },
     {
@@ -155,4 +154,4 @@ export const sidebarData: SidebarData = {
       ],
     },
   ],
-}; 
+};

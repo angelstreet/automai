@@ -20,7 +20,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/shadcn/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +73,7 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
   useEffect(() => {
     console.log('[HostCard] Mounted for host:', host.id, {
       hasOnTestConnection: !!onTestConnection,
-      hasOnDelete: !!onDelete
+      hasOnDelete: !!onDelete,
     });
   }, [host.id, onTestConnection, onDelete]);
 
@@ -120,7 +127,9 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <div className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60`} />
+                <div
+                  className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60`}
+                />
               </TooltipTrigger>
               <TooltipContent>
                 <p>{t('testing')}</p>

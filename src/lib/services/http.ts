@@ -98,7 +98,7 @@ export async function createServer(options: {
 
         // Special handling for common Next.js system paths
         if (
-          req.url?.startsWith('/_next/') 
+          req.url?.startsWith('/_next/')
           // App Router doesn't use these Pages Router special files
           // req.url === '/_document' ||
           // req.url === '/_app' ||

@@ -11,4 +11,4 @@ export interface UserContextType {
   refreshUser: () => Promise<User | null>;
   updateRole: (role: Role) => Promise<void>;
   clearCache: () => Promise<void>;
-} 
+}

@@ -12,23 +12,20 @@ interface DeploymentDetailsProps {
   onBack?: () => void;
 }
 
-const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({ 
-  deploymentId, 
-  onBack
-}) => {
+const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({ deploymentId, onBack }) => {
   // Use deployment context with null safety
   const deploymentContext = useDeployment();
-  
+
   // Handle the case where context is still initializing (null)
-  const { 
+  const {
     deployments = [],
     loading = false,
     isRefreshing = false,
     fetchDeploymentById = async () => null,
     refreshDeployment = async () => {},
-    abortDeployment = async () => ({ success: false, error: 'Deployment context not initialized' })
+    abortDeployment = async () => ({ success: false, error: 'Deployment context not initialized' }),
   } = deploymentContext || {};
-  
+
   const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedScript, setSelectedScript] = useState<DeploymentScript | null>(null);
@@ -39,19 +36,19 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
         // Don't reload while already loading
         return;
       }
-      
+
       // Try to find deployment in the existing deployments list first
-      const existingDeployment = deployments.find(d => d.id === deploymentId);
+      const existingDeployment = deployments.find((d) => d.id === deploymentId);
       if (existingDeployment) {
         setDeployment(existingDeployment);
         return;
       }
-      
+
       // If not found in existing list, fetch it individually
       const deploymentData = await fetchDeploymentById(deploymentId);
       setDeployment(deploymentData);
     };
-    
+
     loadDeployment();
   }, [deploymentId, fetchDeploymentById, deployments, loading]);
 
@@ -60,10 +57,10 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
       // Don't allow refresh while already refreshing
       return;
     }
-    
+
     try {
       const result = await refreshDeployment(deploymentId);
-      
+
       // Handle different possible result types
       if (result && typeof result === 'object') {
         if ('success' in result && result.success && result.deployment) {
@@ -78,54 +75,78 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
   // Generate deployment host objects from hostIds
   const deploymentHosts = useMemo(() => {
     if (!deployment) return [];
-    
-    return deployment.hostIds.map(hostId => ({
-      id: hostId,
-      name: `Host ${hostId.substring(0, 8)}`, // Use a truncated ID as name placeholder
-      environment: 'Production', // Placeholder
-      status: deployment.status === 'in_progress' ? 'deploying' : 
-              deployment.status === 'success' ? 'success' : 
-              deployment.status === 'failed' ? 'failed' : 'pending'
-    } as DeploymentHost));
+
+    return deployment.hostIds.map(
+      (hostId) =>
+        ({
+          id: hostId,
+          name: `Host ${hostId.substring(0, 8)}`, // Use a truncated ID as name placeholder
+          environment: 'Production', // Placeholder
+          status:
+            deployment.status === 'in_progress'
+              ? 'deploying'
+              : deployment.status === 'success'
+                ? 'success'
+                : deployment.status === 'failed'
+                  ? 'failed'
+                  : 'pending',
+        }) as DeploymentHost,
+    );
   }, [deployment]);
-  
+
   // Generate deployment script objects from scriptsPath
   const deploymentScripts = useMemo(() => {
     if (!deployment) return [];
-    
-    return deployment.scriptsPath.map((path, index) => ({
-      id: `script-${index}`,
-      repositoryId: deployment.repositoryId,
-      name: path.split('/').pop() || path, // Extract filename from path
-      path: path,
-      status: deployment.status === 'in_progress' ? 'running' : 
-              deployment.status === 'success' ? 'success' : 
-              deployment.status === 'failed' ? 'failed' : 'pending',
-      parameters: deployment.scriptsParameters[index] || ''
-    } as DeploymentScript));
+
+    return deployment.scriptsPath.map(
+      (path, index) =>
+        ({
+          id: `script-${index}`,
+          repositoryId: deployment.repositoryId,
+          name: path.split('/').pop() || path, // Extract filename from path
+          path: path,
+          status:
+            deployment.status === 'in_progress'
+              ? 'running'
+              : deployment.status === 'success'
+                ? 'success'
+                : deployment.status === 'failed'
+                  ? 'failed'
+                  : 'pending',
+          parameters: deployment.scriptsParameters[index] || '',
+        }) as DeploymentScript,
+    );
   }, [deployment]);
 
   // Generate logs if they don't exist
   const deploymentLogs = useMemo(() => {
     if (!deployment) return [];
-    
+
     // Create some placeholder logs based on the deployment status
     return [
       {
         timestamp: deployment.createdAt,
         level: 'INFO',
-        message: `Deployment ${deployment.name} created`
+        message: `Deployment ${deployment.name} created`,
       },
-      ...(deployment.startedAt ? [{
-        timestamp: deployment.startedAt,
-        level: 'INFO',
-        message: `Deployment ${deployment.name} started`
-      }] : []),
-      ...(deployment.completedAt ? [{
-        timestamp: deployment.completedAt,
-        level: deployment.status === 'success' ? 'INFO' : 'ERROR',
-        message: `Deployment ${deployment.name} ${deployment.status === 'success' ? 'completed successfully' : 'failed'}`
-      }] : [])
+      ...(deployment.startedAt
+        ? [
+            {
+              timestamp: deployment.startedAt,
+              level: 'INFO',
+              message: `Deployment ${deployment.name} started`,
+            },
+          ]
+        : []),
+      ...(deployment.completedAt
+        ? [
+            {
+              timestamp: deployment.completedAt,
+              level: deployment.status === 'success' ? 'INFO' : 'ERROR',
+              message: `Deployment ${deployment.name} ${deployment.status === 'success' ? 'completed successfully' : 'failed'}`,
+            },
+          ]
+        : []),
     ];
   }, [deployment]);
 
@@ -141,7 +162,9 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
     return (
       <div className="w-full bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
         <div className="text-center">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">Deployment not found</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+            Deployment not found
+          </h3>
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             The deployment you're looking for doesn't exist or has been deleted.
           </p>
@@ -159,7 +182,9 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
   }
 
   const handleStopDeployment = async () => {
-    if (window.confirm('Are you sure you want to stop this deployment? This action cannot be undone.')) {
+    if (
+      window.confirm('Are you sure you want to stop this deployment? This action cannot be undone.')
+    ) {
       await abortDeployment(deploymentId);
     }
   };
@@ -184,7 +209,9 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
               </button>
             )}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{deployment.name}</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                {deployment.name}
+              </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Repository ID: {deployment.repositoryId} • ID: {deployment.id}
               </p>
@@ -211,7 +238,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
           </div>
         </div>
       </div>
-      
+
       {/* Status Bar */}
       <div className="bg-gray-50 dark:bg-gray-700 px-4 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex items-center gap-4">
@@ -222,7 +249,10 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
           <div className="flex items-center">
             <span className="text-sm text-gray-500 dark:text-gray-400 mr-2">Duration:</span>
             <span className="text-sm font-medium text-gray-900 dark:text-white">
-              {calculateDuration(deployment.startedAt || deployment.createdAt, deployment.completedAt)}
+              {calculateDuration(
+                deployment.startedAt || deployment.createdAt,
+                deployment.completedAt,
+              )}
             </span>
           </div>
         </div>
@@ -233,7 +263,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
           </span>
         </div>
       </div>
-      
+
       {/* Tabs */}
       <div className="border-b border-gray-200 dark:border-gray-700">
         <div className="flex -mb-px">
@@ -282,7 +312,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
           </button>
         </div>
       </div>
-      
+
       {/* Tab Content */}
       <div className="p-4">
         {/* Overview Tab */}
@@ -291,15 +321,22 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
             {/* High-level Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Status</h4>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                  Status
+                </h4>
                 <div className="flex items-center">
                   <StatusBadge status={deployment.status} />
                 </div>
               </div>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Duration</h4>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                  Duration
+                </h4>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {calculateDuration(deployment.startedAt || deployment.createdAt, deployment.completedAt)}
+                  {calculateDuration(
+                    deployment.startedAt || deployment.createdAt,
+                    deployment.completedAt,
+                  )}
                 </p>
               </div>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -309,65 +346,103 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                 </p>
               </div>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Scripts</h4>
+                <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                  Scripts
+                </h4>
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
                   {deployment?.scriptsPath?.length || 0}
                 </p>
               </div>
             </div>
-            
+
             {/* Deployment Details */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Deployment Details</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                Deployment Details
+              </h3>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
                   <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
                     <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</div>
-                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{deployment.name}</div>
-                  </div>
-                  <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Description</div>
                     <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
-                      {deployment.description || <span className="text-gray-400 dark:text-gray-500">No description provided</span>}
+                      {deployment.name}
                     </div>
                   </div>
                   <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Repository</div>
-                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{deployment.repositoryId}</div>
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Description
+                    </div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
+                      {deployment.description || (
+                        <span className="text-gray-400 dark:text-gray-500">
+                          No description provided
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Created By</div>
-                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{deployment?.userId}</div>
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Repository
+                    </div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
+                      {deployment.repositoryId}
+                    </div>
                   </div>
                   <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Created At</div>
-                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{formatDate(deployment.createdAt)}</div>
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Created By
+                    </div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
+                      {deployment?.userId}
+                    </div>
+                  </div>
+                  <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Created At
+                    </div>
+                    <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
+                      {formatDate(deployment.createdAt)}
+                    </div>
                   </div>
                   {deployment?.scheduledTime && (
                     <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
-                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Scheduled For</div>
-                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{formatDate(deployment.scheduledTime)}</div>
+                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Scheduled For
+                      </div>
+                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
+                        {formatDate(deployment.scheduledTime)}
+                      </div>
                     </div>
                   )}
                   {deployment.startedAt && (
                     <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
-                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Started At</div>
-                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{formatDate(deployment.startedAt)}</div>
+                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Started At
+                      </div>
+                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
+                        {formatDate(deployment.startedAt)}
+                      </div>
                     </div>
                   )}
                   {deployment.completedAt && (
                     <div className="px-4 py-3 grid grid-cols-1 sm:grid-cols-3">
-                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Completed At</div>
-                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">{formatDate(deployment.completedAt)}</div>
+                      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Completed At
+                      </div>
+                      <div className="text-sm text-gray-900 dark:text-white sm:col-span-2 mt-1 sm:mt-0">
+                        {formatDate(deployment.completedAt)}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            
+
             {/* Hosts */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Hosts ({deployment?.hostIds?.length || 0})</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                Hosts ({deployment?.hostIds?.length || 0})
+              </h3>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 {!deployment?.hostIds?.length ? (
                   <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -378,13 +453,22 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                          >
                             Host ID
                           </th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                          >
                             Environment
                           </th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                          >
                             Status
                           </th>
                         </tr>
@@ -411,10 +495,12 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                 )}
               </div>
             </div>
-            
+
             {/* Scripts */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Scripts ({deployment?.scriptsPath?.length || 0})</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                Scripts ({deployment?.scriptsPath?.length || 0})
+              </h3>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 {!deployment?.scriptsPath?.length ? (
                   <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -425,13 +511,22 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                          >
                             Name
                           </th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                          >
                             Path
                           </th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                          >
                             Status
                           </th>
                           <th scope="col" className="relative px-4 py-3">
@@ -452,7 +547,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                               <StatusBadge status={script.status} />
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                              <button 
+                              <button
                                 onClick={() => handleViewScript(script)}
                                 className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                               >
@@ -469,7 +564,7 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
             </div>
           </div>
         )}
-        
+
         {/* Logs Tab */}
         {activeTab === 'logs' && (
           <div>
@@ -483,8 +578,14 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                 ) : (
                   <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 font-mono text-sm overflow-auto max-h-80">
                     {deploymentLogs.map((log, index: number) => (
-                      <div key={index} className={`py-1 ${log.level === 'ERROR' ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-300'}`}>
-                        <span className="text-gray-500 dark:text-gray-500">[{formatDate(log.timestamp)}]</span> {log.level}: {log.message}
+                      <div
+                        key={index}
+                        className={`py-1 ${log.level === 'ERROR' ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-300'}`}
+                      >
+                        <span className="text-gray-500 dark:text-gray-500">
+                          [{formatDate(log.timestamp)}]
+                        </span>{' '}
+                        {log.level}: {log.message}
                       </div>
                     ))}
                   </div>
@@ -493,15 +594,17 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
             </div>
           </div>
         )}
-        
+
         {/* Scripts Tab */}
         {activeTab === 'scripts' && (
           <div>
             {selectedScript ? (
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">{selectedScript.name}</h3>
-                  <button 
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                    {selectedScript.name}
+                  </h3>
+                  <button
                     onClick={() => setSelectedScript(null)}
                     className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
@@ -509,18 +612,24 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
                   </button>
                 </div>
                 <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300 h-96 overflow-y-auto">
-                  <pre>{selectedScript.logs ? selectedScript.logs.join('\n') : 'No script content available'}</pre>
+                  <pre>
+                    {selectedScript.logs
+                      ? selectedScript.logs.join('\n')
+                      : 'No script content available'}
+                  </pre>
                 </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {deploymentScripts.map((script: DeploymentScript) => (
-                  <div 
-                    key={script.id} 
+                  <div
+                    key={script.id}
                     className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
                     onClick={() => handleViewScript(script)}
                   >
-                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-2">{script.name}</h4>
+                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-2">
+                      {script.name}
+                    </h4>
                     <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
                       <span>Path: {script.path}</span>
                       <StatusBadge status={script.status} />
@@ -531,14 +640,16 @@ const DeploymentDetails: React.FC<DeploymentDetailsProps> = ({
             )}
           </div>
         )}
-        
+
         {/* Metrics Tab */}
         {activeTab === 'metrics' && (
           <div className="text-center py-8">
             <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
               <ChartBar className="h-12 w-12" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">Metrics coming soon</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+              Metrics coming soon
+            </h3>
             <p className="text-gray-500 dark:text-gray-400">
               Detailed metrics for deployments will be available in a future update
             </p>

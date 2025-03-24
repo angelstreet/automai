@@ -59,25 +59,25 @@ export interface HostActions {
    * @returns Promise resolving to the list of hosts
    */
   fetchHosts: () => Promise<Host[]>;
-  
+
   /**
    * Get a specific host by ID
    * @param id Host ID
    * @returns Promise resolving to the host or null
    */
   getHostById: (id: string) => Promise<Host | null>;
-  
+
   /**
    * Add a new host
    * @param hostData Host data without ID
    * @returns Promise resolving to success object with host ID or error
    */
-  addHost: (hostData: Omit<Host, 'id'>) => Promise<{ 
-    success: boolean; 
-    hostId?: string; 
-    error?: string 
+  addHost: (hostData: Omit<Host, 'id'>) => Promise<{
+    success: boolean;
+    hostId?: string;
+    error?: string;
   }>;
-  
+
   /**
    * Update an existing host
    * @param id Host ID
@@ -85,40 +85,40 @@ export interface HostActions {
    * @returns Promise resolving to success object or error
    */
   updateHostById: (
-    id: string, 
-    updates: Partial<Omit<Host, 'id'>>
-  ) => Promise<{ 
-    success: boolean; 
-    error?: string 
+    id: string,
+    updates: Partial<Omit<Host, 'id'>>,
+  ) => Promise<{
+    success: boolean;
+    error?: string;
   }>;
-  
+
   /**
    * Remove a host
    * @param id Host ID
    * @returns Promise resolving to success object or error
    */
-  removeHost: (id: string) => Promise<{ 
-    success: boolean; 
-    error?: string 
+  removeHost: (id: string) => Promise<{
+    success: boolean;
+    error?: string;
   }>;
-  
+
   /**
    * Test connection to a host
    * @param id Host ID
    * @returns Promise resolving to success object with message or error
    */
-  testConnection: (id: string) => Promise<{ 
-    success: boolean; 
-    error?: string; 
-    message?: string 
+  testConnection: (id: string) => Promise<{
+    success: boolean;
+    error?: string;
+    message?: string;
   }>;
-  
+
   /**
    * Test connection to all hosts
    * @returns Promise resolving when all connections are tested
    */
   testAllConnections: () => Promise<void>;
-  
+
   /**
    * Check if a specific operation is loading
    * @param operation Optional operation name
@@ -126,7 +126,7 @@ export interface HostActions {
    * @returns True if the operation is loading
    */
   isLoading: (operation?: string, entityId?: string) => boolean;
-  
+
   /**
    * Reset loading state to idle
    */
@@ -136,4 +136,4 @@ export interface HostActions {
 /**
  * Combined host context type
  */
-export interface HostContextType extends HostData, HostActions {} 
+export interface HostContextType extends HostData, HostActions {}

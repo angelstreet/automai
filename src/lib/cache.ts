@@ -50,13 +50,13 @@ class ServerCache {
   has(key: string): boolean {
     const entry = this.cache.get(key);
     if (!entry) return false;
-    
+
     // Check if entry has expired
     if (entry.expiry < Date.now()) {
       this.cache.delete(key);
       return false;
     }
-    
+
     return true;
   }
 
@@ -68,13 +68,13 @@ class ServerCache {
   getAge(key: string): number | undefined {
     const entry = this.cache.get(key);
     if (!entry) return undefined;
-    
+
     // Check if entry has expired
     if (entry.expiry < Date.now()) {
       this.cache.delete(key);
       return undefined;
     }
-    
+
     return Date.now() - entry.created;
   }
 
@@ -88,7 +88,7 @@ class ServerCache {
     this.cache.set(key, {
       value,
       expiry: Date.now() + ttl,
-      created: Date.now()
+      created: Date.now(),
     });
   }
 

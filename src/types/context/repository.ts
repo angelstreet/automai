@@ -24,19 +24,22 @@ export interface RepositoryActions {
   fetchRepository: (id: string) => Promise<Repository | null>;
   fetchGitProviders: () => Promise<GitProvider[]>;
   fetchGitProvider: (id: string) => Promise<GitProvider | null>;
-  createRepositoryAction: (data: Partial<Repository>) => Promise<{ 
-    success: boolean; 
-    error?: string; 
-    data?: Repository 
+  createRepositoryAction: (data: Partial<Repository>) => Promise<{
+    success: boolean;
+    error?: string;
+    data?: Repository;
   }>;
-  updateRepositoryAction: (id: string, updates: Partial<Repository>) => Promise<{ 
-    success: boolean; 
-    error?: string; 
-    data?: Repository 
+  updateRepositoryAction: (
+    id: string,
+    updates: Partial<Repository>,
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    data?: Repository;
   }>;
-  deleteRepositoryAction: (id: string) => Promise<{ 
-    success: boolean; 
-    error?: string 
+  deleteRepositoryAction: (id: string) => Promise<{
+    success: boolean;
+    error?: string;
   }>;
   setSelectedRepository: (repository: Repository | null) => void;
   fetchUserData: () => Promise<AuthUser | null>;
@@ -59,4 +62,4 @@ export const REPOSITORY_CACHE_KEYS = {
   REPOSITORY: (id: string) => `repository-${id}`,
   GIT_PROVIDERS: 'git-providers',
   GIT_PROVIDER: (id: string) => `git-provider-${id}`,
-}; 
+};

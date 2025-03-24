@@ -39,7 +39,6 @@ export type AuthUser = {
   };
 };
 
-
 // Role type used in RoleContext
 export type Role = 'admin' | 'viewer' | 'developer' | 'tester';
 

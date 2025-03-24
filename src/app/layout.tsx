@@ -64,9 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ThemeProviders defaultTheme={theme}>
           <SWRProvider>
-            <AppProvider>
-              {children}
-            </AppProvider>
+            <AppProvider>{children}</AppProvider>
           </SWRProvider>
         </ThemeProviders>
       </body>

@@ -14,8 +14,8 @@ let userCache: {
   error: string | null;
 } | null = null;
 
-// Cache expiration time (5 minutes)
-const CACHE_EXPIRATION = 5 * 60 * 1000;
+// Cache expiration time (30 seconds for development - more frequent refreshes)
+const CACHE_EXPIRATION = 30 * 1000;
 
 // Track if we've already logged a "No active session" error
 let noSessionErrorLogged = false;
@@ -24,14 +24,14 @@ let noSessionErrorLogged = false;
 export async function invalidateUserCache() {
   console.log('[SERVER-CACHE] Invalidating user cache');
   userCache = null;
-  
+
   // Also clear any client-side cache if possible
   if (typeof window !== 'undefined') {
     console.log('[CLIENT-CACHE] Clearing localStorage cache');
     localStorage.removeItem('user-data-cache');
     localStorage.removeItem('cached_user');
   }
-  
+
   return { success: true, message: 'User cache invalidated' };
 }
 
@@ -41,25 +41,50 @@ export async function invalidateUserCache() {
  */
 export async function getUser(): Promise<AuthUser | null> {
   console.log('[SERVER-ACTION] getUser called');
-  
+
   // Check if we have a valid cache
   const now = Date.now();
-  if (userCache && now - userCache.timestamp < CACHE_EXPIRATION) {
-    console.log('[SERVER-CACHE] Using cached user data, age:', Math.round((now - userCache.timestamp)/1000), 'seconds');
+  if (userCache) {
+    // Check for shortLived flag - use a shorter expiration for auth errors
+    const expirationTime = (userCache as any).shortLived ? 5000 : CACHE_EXPIRATION;
     
-    // Return cached data if available and not expired
-    if (userCache.error) {
-      // If the cached error is a session missing error, just return null
-      if (userCache.error === 'No active session' || userCache.error === 'Auth session missing!') {
-        console.log('[SERVER-CACHE] Returning null from cache (no session)');
-        return null;
+    // Only use cache if not expired
+    if (now - userCache.timestamp < expirationTime) {
+      console.log(
+        '[SERVER-CACHE] Using cached user data, age:',
+        Math.round((now - userCache.timestamp) / 1000),
+        'seconds',
+        (userCache as any).shortLived ? '(short-lived cache)' : ''
+      );
+
+      // Return cached data if available and not expired
+      if (userCache.error) {
+        // If the cached error is a session missing error, just return null
+        if (userCache.error === 'No active session' || userCache.error === 'Auth session missing!') {
+          console.log('[SERVER-CACHE] Returning null from cache (no session)');
+          return null;
+        }
+        
+        // If it's a refresh token error, invalidate cache
+        if (userCache.error.includes('Refresh Token')) {
+          console.log('[SERVER-CACHE] Previous refresh token error, invalidating cache');
+          userCache = null;
+          return null;
+        }
+        
+        console.log('[SERVER-CACHE] Cached error:', userCache.error);
+        throw new Error(userCache.error);
       }
-      console.log('[SERVER-CACHE] Cached error:', userCache.error);
-      throw new Error(userCache.error);
+    } else {
+      console.log('[SERVER-CACHE] Cache expired, fetching fresh data');
+      // Cache is expired, set to null to fetch fresh data
+      userCache = null;
     }
+  }
     
-    // Verify the cached data has required fields
-    if (userCache.data && userCache.data.tenant_id && userCache.data.tenant_name) {
+  // If we still have valid cache with data, verify the data has required fields
+  if (userCache?.data) {
+    if (userCache.data.tenant_id && userCache.data.tenant_name) {
       return userCache.data;
     } else {
       console.log('[SERVER-CACHE] Cached data missing required fields, fetching fresh data');
@@ -70,26 +95,26 @@ export async function getUser(): Promise<AuthUser | null> {
   try {
     // Enhanced logging for debugging tenant issues
     console.log('[SERVER-ACTION] Getting user data from auth service');
-    
+
     const result = await supabaseAuth.getUser();
-    
+
     if (result.success && result.data) {
       // Verify the user data has all required fields and log complete structure
-      console.log('[SERVER-ACTION] Auth service returned user data:', { 
+      console.log('[SERVER-ACTION] Auth service returned user data:', {
         id: result.data.id,
         hasTenantId: !!result.data.tenant_id,
         hasTenantName: !!result.data.tenant_name,
         email: result.data.email,
-        hasRole: !!(result.data as any).role
+        hasRole: !!(result.data as any).role,
       });
-      
+
       // Additional log to debug the exact structure
       console.log('[SERVER-ACTION] Full user data structure:', {
         ...result.data,
         // Don't log sensitive information
-        user_metadata: result.data.user_metadata ? 'exists' : 'missing'
+        user_metadata: result.data.user_metadata ? 'exists' : 'missing',
       });
-      
+
       // Add role to result.data if needed
       if (!(result.data as any).role && result.data) {
         console.log('[SERVER-ACTION] Adding role to user data');
@@ -105,7 +130,7 @@ export async function getUser(): Promise<AuthUser | null> {
       timestamp: Date.now(),
       error: result.success ? null : result.error || null,
     };
-    
+
     console.log('[SERVER-CACHE] User cache updated, success:', result.success);
 
     if (!result.success || !result.data) {
@@ -126,13 +151,39 @@ export async function getUser(): Promise<AuthUser | null> {
     noSessionErrorLogged = false;
     return result.data as AuthUser;
   } catch (error) {
-    // Update cache with error
-    userCache = {
-      data: null,
-      timestamp: Date.now(),
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    // Common auth errors should not be cached for long periods
+    // especially refresh token errors, session errors, and auth missing errors
+    const isCommonAuthError = error instanceof Error && (
+      error.message.includes('Refresh Token') || 
+      error.message.includes('session') ||
+      error.message.includes('auth')
+    );
     
+    if (isCommonAuthError) {
+      console.log('[SERVER-CACHE] Auth error, using shorter cache or no cache');
+      // Either don't cache at all, or use a very short cache time for auth errors
+      if (error.message.includes('Refresh Token')) {
+        console.log('[SERVER-CACHE] Refresh token error, not caching');
+        userCache = null;
+      } else {
+        // Very short cache (5 seconds) for other auth errors
+        userCache = {
+          data: null,
+          timestamp: Date.now(),
+          error: error instanceof Error ? error.message : 'Unknown error',
+          // Add a flag to indicate this is a short-lived cache
+          shortLived: true
+        };
+      }
+    } else {
+      // Update cache with error for non-auth errors
+      userCache = {
+        data: null,
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+
     console.log('[SERVER-CACHE] Cached error:', userCache.error);
 
     // Only log if we haven't logged this specific error before

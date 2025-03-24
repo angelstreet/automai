@@ -6,12 +6,7 @@ import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import * as React from 'react';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/shadcn/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { addHost, testConnection } from '../actions';
 import { Host } from '../types';
 
@@ -93,7 +88,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     lastRequestTime.current = now;
 
     setIsCreating(true);
-    
+
     try {
       // Ensure formData structure matches what the addHost action expects
       const hostData = {
@@ -102,14 +97,14 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
         type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port),
-        user: formData.username,  // Note: backend expects 'user' not 'username'
+        user: formData.username, // Note: backend expects 'user' not 'username'
         password: formData.password,
-        status: 'connected' as const,  // Type assertion to make TypeScript happy
+        status: 'connected' as const, // Type assertion to make TypeScript happy
         created_at: new Date(),
         updated_at: new Date(),
-        is_windows: false
+        is_windows: false,
       };
-      
+
       const result = await addHost(hostData);
 
       if (result.success && result.data) {
@@ -135,15 +130,15 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
   const handleFormChange = (newFormData: FormData) => {
     const previousFormData = formData;
     setFormData(newFormData);
-    
+
     // Only reset test status if connection-related fields change
-    const connectionFieldsChanged = 
+    const connectionFieldsChanged =
       previousFormData.ip !== newFormData.ip ||
       previousFormData.port !== newFormData.port ||
       previousFormData.username !== newFormData.username ||
       previousFormData.password !== newFormData.password ||
       previousFormData.type !== newFormData.type;
-    
+
     if (testStatus !== 'idle' && connectionFieldsChanged) {
       setTestStatus('idle');
       setTestError(null);
@@ -189,4 +184,3 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
     </Dialog>
   );
 }
-  

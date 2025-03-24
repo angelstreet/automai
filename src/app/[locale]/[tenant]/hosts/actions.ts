@@ -23,49 +23,52 @@ export async function getHosts(
   filter?: HostFilter,
   user?: AuthUser | null,
   origin: string = 'unknown',
-  renderCount?: number
+  renderCount?: number,
 ): Promise<{ success: boolean; error?: string; data?: Host[] }> {
-  console.log(`[HostsActions] getHosts called from ${origin}${renderCount ? ` (render #${renderCount})` : ''}`, { 
-    hasFilter: !!filter, 
-    userProvided: !!user,
-    filterValues: filter ? JSON.stringify(filter) : 'none',
-    cached: !!user?.tenant_id ? (serverCache.has(`hosts:${user.tenant_id}`)) : false
-  });
-  
+  console.log(
+    `[HostsActions] getHosts called from ${origin}${renderCount ? ` (render #${renderCount})` : ''}`,
+    {
+      hasFilter: !!filter,
+      userProvided: !!user,
+      filterValues: filter ? JSON.stringify(filter) : 'none',
+      cached: !!user?.tenant_id ? serverCache.has(`hosts:${user.tenant_id}`) : false,
+    },
+  );
+
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
-    
+    const currentUser = user || (await getUser());
+
     console.log(`[HostsActions] User status for ${origin}:`, {
       authenticated: !!currentUser,
       tenant: currentUser?.tenant_id || 'unknown',
     });
-    
+
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
     // Create cache key based on tenant and filter
-    const cacheKey = filter ? 
-      `hosts:${currentUser.tenant_id}:filtered:${JSON.stringify(filter)}` : 
-      `hosts:${currentUser.tenant_id}`;
-    
+    const cacheKey = filter
+      ? `hosts:${currentUser.tenant_id}:filtered:${JSON.stringify(filter)}`
+      : `hosts:${currentUser.tenant_id}`;
+
     // Check cache first
     const cached = serverCache.get<Host[]>(cacheKey);
     if (cached) {
-      console.log(`[HostsActions] Using cached hosts data for ${origin}`, { 
+      console.log(`[HostsActions] Using cached hosts data for ${origin}`, {
         count: cached.length,
         cacheKey,
-        age: serverCache.getAge(cacheKey) 
+        age: serverCache.getAge(cacheKey),
       });
       return { success: true, data: cached };
     }
-    
+
     console.log(`[HostsActions] No cache found for ${origin}, fetching from database`);
-    
+
     // Remove the tenant_id filter since it doesn't exist in the database schema
     // Instead, get all hosts and filter them in memory if needed
     const where: Record<string, any> = {};
@@ -89,7 +92,7 @@ export async function getHosts(
       }
 
       console.log(`[HostsActions] Successfully fetched ${data.length} hosts for ${origin}`);
-      
+
       // Cache the result for 5 minutes (default TTL)
       serverCache.set(cacheKey, data);
 
@@ -114,15 +117,15 @@ export async function getHosts(
  */
 export async function getHost(
   id: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
@@ -158,15 +161,15 @@ export async function getHost(
  */
 export async function addHost(
   data: Omit<Host, 'id'>,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
@@ -203,15 +206,15 @@ export const createHost = addHost;
 export async function updateHost(
   id: string,
   updates: Partial<Omit<Host, 'id'>>,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
@@ -245,32 +248,32 @@ export async function updateHost(
  */
 export async function deleteHost(
   id: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     console.log('Server action: Starting database deletion for host ID:', id);
-    
+
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
     console.log('Server action: Authenticated user, proceeding with deletion');
-    
+
     await db.host.delete({
       where: { id },
     });
-    
+
     console.log('Server action: Database deletion completed for host ID:', id);
 
     // Invalidate cache after deletion
     serverCache.delete(`host:${id}`);
     serverCache.delete('hosts:all');
-    
+
     console.log('Server action: Cache invalidated, deletion complete');
 
     return { success: true };
@@ -287,27 +290,27 @@ export async function deleteHost(
  */
 export async function testHostConnection(
   id: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
     // Get the host details first
     const host = await db.host.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!host) {
       return {
         success: false,
-        error: 'Host not found'
+        error: 'Host not found',
       };
     }
 
@@ -334,7 +337,7 @@ export async function testHostConnection(
       port: host.port,
       username: host.user,
       password: host.password,
-      hostId: host.id
+      hostId: host.id,
     });
 
     // Update the host status based on the test result
@@ -353,7 +356,7 @@ export async function testHostConnection(
     return result;
   } catch (error: any) {
     console.error('Error in testHostConnection:', error);
-    
+
     // Update status to failed on error
     try {
       await db.host.update({
@@ -369,7 +372,7 @@ export async function testHostConnection(
     } catch (updateError) {
       console.error('Error updating host status to failed:', updateError);
     }
-    
+
     return { success: false, error: error.message || 'Failed to test connection' };
   }
 }
@@ -378,20 +381,18 @@ export async function testHostConnection(
  * Test all hosts
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
-export async function testAllHosts(
-  user?: AuthUser | null
-): Promise<{
+export async function testAllHosts(user?: AuthUser | null): Promise<{
   success: boolean;
   error?: string;
   results?: Array<{ hostId: string; result: { success: boolean; message?: string } }>;
 }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
@@ -543,24 +544,24 @@ export async function checkAllConnections(
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
 export async function clearHostsCache(
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
     console.log('[HostsActions] Clearing hosts cache');
-    
+
     // Clear the main hosts cache for this tenant
     const tenantKey = `hosts:${currentUser.tenant_id}`;
     serverCache.delete(tenantKey);
-    
+
     // Clear filtered hosts cache for this tenant
     const filteredKey = `hosts:${currentUser.tenant_id}:filtered`;
     serverCache.delete(filteredKey);

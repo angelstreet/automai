@@ -23,16 +23,41 @@ async function getIntlMiddleware() {
 export default async function middleware(request: NextRequest) {
   // 1. First check if it's a public path that should bypass auth
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
-  
+
   // Check if it's a login-related path or auth callback
-  const isLoginPath = request.nextUrl.pathname.includes('/login') ||
-                     request.nextUrl.pathname.includes('/signup') ||
-                     request.nextUrl.pathname.includes('/forgot-password') ||
-                     request.nextUrl.pathname.includes('/reset-password');
+  const isLoginPath =
+    request.nextUrl.pathname.includes('/login') ||
+    request.nextUrl.pathname.includes('/signup') ||
+    request.nextUrl.pathname.includes('/forgot-password') ||
+    request.nextUrl.pathname.includes('/reset-password');
 
   // Specifically check for auth-redirect with code param
-  const isAuthCallback = request.nextUrl.pathname.includes('/auth-redirect') && 
-                        request.nextUrl.searchParams.has('code');
+  const isAuthCallback =
+    request.nextUrl.pathname.includes('/auth-redirect') && request.nextUrl.searchParams.has('code');
+
+  // Check for authentication - if already authenticated at login, redirect to dashboard
+  if (isLoginPath && !isAuthCallback) {
+    // Check if user is already authenticated
+    const { supabase, response } = createClient(request);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (user && !error) {
+      console.log('[Middleware] User already authenticated, redirecting to dashboard');
+      // User is already authenticated, redirect to dashboard
+      const locale = pathParts.length > 0 && locales.includes(pathParts[0] as any)
+        ? pathParts[0] 
+        : defaultLocale;
+      
+      // Get tenant from path or use default
+      const tenant = user.user_metadata?.tenant_name || 'trial';
+      
+      // Redirect to dashboard
+      return NextResponse.redirect(new URL(`/${locale}/${tenant}/dashboard`, request.url));
+    }
+  }
 
   // Skip auth check for login paths and initial auth callback
   if (isLoginPath || isAuthCallback) {
@@ -40,33 +65,35 @@ export default async function middleware(request: NextRequest) {
   }
 
   // 2. Check if it's a protected route that needs auth
-  const isServerAction = request.headers.get('accept')?.includes('text/x-component') ||
-                        request.headers.has('next-action');
+  const isServerAction =
+    request.headers.get('accept')?.includes('text/x-component') ||
+    request.headers.has('next-action');
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
-  const isProtectedRoute = isServerAction || isApiRoute || 
-                          (pathParts.length >= 2 && pathParts[1] === 'trial');
+  const isProtectedRoute =
+    isServerAction || isApiRoute || (pathParts.length >= 2 && pathParts[1] === 'trial');
 
   if (isProtectedRoute) {
     const { supabase, response } = createClient(request);
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
     if (!user || error) {
       // For API routes return 401
       if (isApiRoute) {
-        return new NextResponse(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { 
-            status: 401,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
+        return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
       }
-      
+
       // For other routes, redirect to login
-      const locale = pathParts.length > 0 && locales.includes(pathParts[0] as any)
-        ? pathParts[0]
-        : defaultLocale;
-        
+      const locale =
+        pathParts.length > 0 && locales.includes(pathParts[0] as any)
+          ? pathParts[0]
+          : defaultLocale;
+
       return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
     }
 
@@ -78,10 +105,12 @@ export default async function middleware(request: NextRequest) {
   const contentType = request.headers.get('content-type') || '';
   const acceptHeader = request.headers.get('accept') || '';
   const userAgent = request.headers.get('user-agent') || '';
-  
-  if (contentType.includes('text/html') || 
-      acceptHeader.includes('text/html') || 
-      contentType.includes('application/xhtml+xml')) {
+
+  if (
+    contentType.includes('text/html') ||
+    acceptHeader.includes('text/html') ||
+    contentType.includes('application/xhtml+xml')
+  ) {
     console.log('[Middleware] Detected HTML-related content type, bypassing middleware processing');
     return NextResponse.next();
   }

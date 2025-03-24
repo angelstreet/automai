@@ -29,42 +29,45 @@ interface DeploymentActionsProps {
   deploymentName?: string;
 }
 
-export const DeploymentActions: React.FC<DeploymentActionsProps> = ({ 
-  deploymentId, 
-  deploymentName = 'this deployment'
+export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
+  deploymentId,
+  deploymentName = 'this deployment',
 }) => {
   const router = useRouter();
   const params = useParams();
   const { locale, tenant } = params;
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
+
   const deploymentContext = useDeployment();
-  
-  const { 
-    deleteDeployment = async () => ({ success: false, error: 'Deployment context not initialized' }) 
+
+  const {
+    deleteDeployment = async () => ({
+      success: false,
+      error: 'Deployment context not initialized',
+    }),
   } = deploymentContext || {};
-  
+
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
     router.push(`/${locale}/${tenant}/deployment/${deploymentId}`);
   };
-  
+
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsDeleteDialogOpen(true);
   };
-  
+
   const handleConfirmDelete = async () => {
     try {
       const result = await deleteDeployment(deploymentId);
-      
+
       if (result.success) {
         toast({
           title: 'Deployment Deleted',
           description: 'The deployment has been successfully deleted.',
           variant: 'default',
         });
-        
+
         // Clear cache first to ensure we get fresh data
         try {
           if (typeof window !== 'undefined') {
@@ -74,7 +77,7 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
         } catch (e) {
           console.error('Error clearing localStorage:', e);
         }
-        
+
         // Increase timeout and simplify flow to avoid race conditions
         setTimeout(() => {
           // Refresh and navigate in sequence rather than parallel
@@ -96,7 +99,7 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
       });
     }
   };
-  
+
   return (
     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
       <Button
@@ -107,9 +110,9 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
       >
         <Eye className="mr-1 h-3 w-3" /> View
       </Button>
-      
+
       <DeploymentRunAction deploymentId={deploymentId} />
-      
+
       <Button
         variant="outline"
         size="sm"
@@ -130,8 +133,8 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete} 
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
@@ -141,4 +144,4 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
       </AlertDialog>
     </div>
   );
-}; 
+};

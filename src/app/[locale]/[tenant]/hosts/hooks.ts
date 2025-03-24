@@ -46,29 +46,33 @@ export function useHosts() {
     data: hosts = [],
     isLoading,
     mutate,
-  } = useSWR<Host[]>('hosts', async () => {
-    try {
-      const result = await getHosts();
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to fetch hosts');
+  } = useSWR<Host[]>(
+    'hosts',
+    async () => {
+      try {
+        const result = await getHosts();
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to fetch hosts');
+        }
+        // Update cache when we get new data
+        setCachedHosts(result.data || []);
+        return result.data || [];
+      } catch (error) {
+        console.error('Error fetching hosts:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch hosts',
+          variant: 'destructive',
+        });
+        return [];
       }
-      // Update cache when we get new data
-      setCachedHosts(result.data || []);
-      return result.data || [];
-    } catch (error) {
-      console.error('Error fetching hosts:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch hosts',
-        variant: 'destructive',
-      });
-      return [];
-    }
-  }, {
-    fallbackData: getCachedHosts(), // Use cached data while loading
-    revalidateOnFocus: false, // Don't revalidate on window focus
-    dedupingInterval: 5000, // Dedupe requests within 5 seconds
-  });
+    },
+    {
+      fallbackData: getCachedHosts(), // Use cached data while loading
+      revalidateOnFocus: false, // Don't revalidate on window focus
+      dedupingInterval: 5000, // Dedupe requests within 5 seconds
+    },
+  );
 
   const addHost = useCallback(
     async (hostData: Omit<Host, 'id'>) => {
@@ -122,14 +126,11 @@ export function useHosts() {
         }
 
         // Update the SWR cache to remove the deleted host
-        await mutate(
-          async (currentHosts: Host[] = []) => {
-            const updatedHosts = currentHosts.filter(host => host.id !== id);
-            setCachedHosts(updatedHosts);
-            return updatedHosts;
-          },
-          false
-        );
+        await mutate(async (currentHosts: Host[] = []) => {
+          const updatedHosts = currentHosts.filter((host) => host.id !== id);
+          setCachedHosts(updatedHosts);
+          return updatedHosts;
+        }, false);
 
         return true;
       } catch (err) {
@@ -142,7 +143,7 @@ export function useHosts() {
         return false;
       }
     },
-    [toast, mutate]
+    [toast, mutate],
   );
 
   // Test connection functionality
@@ -151,35 +152,36 @@ export function useHosts() {
       console.log(`[${new Date().toISOString()}] testHostById called for host ${id} from HostCard`);
       try {
         console.log(`[${new Date().toISOString()}] Setting host ${id} to testing state`);
-        
+
         // First update the host to testing state
-        await mutate(
-          async (currentHosts: Host[] = []) => {
-            const updatedHosts = currentHosts.map(host => {
-              if (host.id === id) {
-                console.log(`[${new Date().toISOString()}] Found host to update: ${host.name}, current status: ${host.status}`);
-                return {
-                  ...host,
-                  status: 'testing' as const,
-                };
-              }
-              return host;
-            });
-            setCachedHosts(updatedHosts);
-            return updatedHosts;
-          },
-          false
-        );
-        
+        await mutate(async (currentHosts: Host[] = []) => {
+          const updatedHosts = currentHosts.map((host) => {
+            if (host.id === id) {
+              console.log(
+                `[${new Date().toISOString()}] Found host to update: ${host.name}, current status: ${host.status}`,
+              );
+              return {
+                ...host,
+                status: 'testing' as const,
+              };
+            }
+            return host;
+          });
+          setCachedHosts(updatedHosts);
+          return updatedHosts;
+        }, false);
+
         console.log(`[${new Date().toISOString()}] Host ${id} now in testing state`);
-        
+
         // Increased delay to show the testing state animation
         await new Promise((resolve) => setTimeout(resolve, 1200));
-        
+
         // Now perform the actual connection test
         console.log(`[${new Date().toISOString()}] Starting connection test for host ${id}`);
         const result = await testHostConnectionAction(id);
-        console.log(`[${new Date().toISOString()}] Test completed for host ${id}, result: ${result.success}`);
+        console.log(
+          `[${new Date().toISOString()}] Test completed for host ${id}, result: ${result.success}`,
+        );
 
         if (!result.success) {
           toast({
@@ -187,59 +189,10 @@ export function useHosts() {
             description: result.error || 'Failed to test connection',
             variant: 'destructive',
           });
-          
-          // Update the host status in the cache
-          await mutate(
-            async (currentHosts: Host[] = []) => {
-              const updatedHosts = currentHosts.map(host => {
-                if (host.id === id) {
-                  return {
-                    ...host,
-                    status: 'failed' as const,
-                  };
-                }
-                return host;
-              });
-              setCachedHosts(updatedHosts);
-              return updatedHosts;
-            },
-            false
-          );
-          
-          return false;
-        }
 
-        // Update the host status in the cache
-        await mutate(
-          async (currentHosts: Host[] = []) => {
-            const updatedHosts = currentHosts.map(host => {
-              if (host.id === id) {
-                return {
-                  ...host,
-                  status: 'connected' as const,
-                };
-              }
-              return host;
-            });
-            setCachedHosts(updatedHosts);
-            return updatedHosts;
-          },
-          false
-        );
-        
-        return true;
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to test connection';
-        toast({
-          title: 'Error',
-          description: errorMessage,
-          variant: 'destructive',
-        });
-        
-        // Make sure to update the host status to failed in case of error
-        await mutate(
-          async (currentHosts: Host[] = []) => {
-            const updatedHosts = currentHosts.map(host => {
+          // Update the host status in the cache
+          await mutate(async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map((host) => {
               if (host.id === id) {
                 return {
                   ...host,
@@ -250,14 +203,54 @@ export function useHosts() {
             });
             setCachedHosts(updatedHosts);
             return updatedHosts;
-          },
-          false
-        );
-        
+          }, false);
+
+          return false;
+        }
+
+        // Update the host status in the cache
+        await mutate(async (currentHosts: Host[] = []) => {
+          const updatedHosts = currentHosts.map((host) => {
+            if (host.id === id) {
+              return {
+                ...host,
+                status: 'connected' as const,
+              };
+            }
+            return host;
+          });
+          setCachedHosts(updatedHosts);
+          return updatedHosts;
+        }, false);
+
+        return true;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to test connection';
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+
+        // Make sure to update the host status to failed in case of error
+        await mutate(async (currentHosts: Host[] = []) => {
+          const updatedHosts = currentHosts.map((host) => {
+            if (host.id === id) {
+              return {
+                ...host,
+                status: 'failed' as const,
+              };
+            }
+            return host;
+          });
+          setCachedHosts(updatedHosts);
+          return updatedHosts;
+        }, false);
+
         return false;
       }
     },
-    [toast, mutate]
+    [toast, mutate],
   );
 
   // Test connection with credentials
@@ -281,110 +274,102 @@ export function useHosts() {
         return { success: false, error: errorMessage };
       }
     },
-    [toast]
+    [toast],
   );
 
   // Test all connections functionality
-  const testAllConnections = useCallback(
-    async () => {
-      try {
-        // Get current hosts from cache
-        const currentHosts = [...hosts];
-        let successCount = 0;
-        
-        console.log(`[${new Date().toISOString()}] Starting test of all hosts (${currentHosts.length})`);
-        
-        // Test each host sequentially
-        for (const host of currentHosts) {
-          console.log(`[${new Date().toISOString()}] Setting host ${host.id} to testing state`);
-          
-          // First update the host to testing state
-          await mutate(
-            async (currentHosts: Host[] = []) => {
-              const updatedHosts = currentHosts.map(h => {
-                if (h.id === host.id) {
-                  return {
-                    ...h,
-                    status: 'testing' as const,
-                  };
-                }
-                return h;
-              });
-              setCachedHosts(updatedHosts);
-              return updatedHosts;
-            },
-            false
-          );
-          
-          console.log(`[${new Date().toISOString()}] Host ${host.id} now in testing state`);
-          
-          // Increased delay to show the testing state animation
-          await new Promise((resolve) => setTimeout(resolve, 1200));
-          
-          // Now perform the actual connection test
-          try {
-            console.log(`[${new Date().toISOString()}] Starting connection test for host ${host.id}`);
-            const result = await testHostConnectionAction(host.id);
-            console.log(`[${new Date().toISOString()}] Test completed for host ${host.id}, result: ${result.success}`);
-            
-            // Update the host status in the cache based on the result
-            await mutate(
-              async (currentHosts: Host[] = []) => {
-                const updatedHosts = currentHosts.map(h => {
-                  if (h.id === host.id) {
-                    return {
-                      ...h,
-                      status: result.success ? 'connected' as const : 'failed' as const,
-                    };
-                  }
-                  return h;
-                });
-                setCachedHosts(updatedHosts);
-                return updatedHosts;
-              },
-              false
-            );
-            
-            if (result.success) {
-              successCount++;
+  const testAllConnections = useCallback(async () => {
+    try {
+      // Get current hosts from cache
+      const currentHosts = [...hosts];
+      let successCount = 0;
+
+      console.log(
+        `[${new Date().toISOString()}] Starting test of all hosts (${currentHosts.length})`,
+      );
+
+      // Test each host sequentially
+      for (const host of currentHosts) {
+        console.log(`[${new Date().toISOString()}] Setting host ${host.id} to testing state`);
+
+        // First update the host to testing state
+        await mutate(async (currentHosts: Host[] = []) => {
+          const updatedHosts = currentHosts.map((h) => {
+            if (h.id === host.id) {
+              return {
+                ...h,
+                status: 'testing' as const,
+              };
             }
-            
-            // Small delay between hosts
-            await new Promise((resolve) => setTimeout(resolve, 200));
-          } catch (error) {
-            // Update the host status to failed in case of error
-            await mutate(
-              async (currentHosts: Host[] = []) => {
-                const updatedHosts = currentHosts.map(h => {
-                  if (h.id === host.id) {
-                    return {
-                      ...h,
-                      status: 'failed' as const,
-                    };
-                  }
-                  return h;
-                });
-                setCachedHosts(updatedHosts);
-                return updatedHosts;
-              },
-              false
-            );
+            return h;
+          });
+          setCachedHosts(updatedHosts);
+          return updatedHosts;
+        }, false);
+
+        console.log(`[${new Date().toISOString()}] Host ${host.id} now in testing state`);
+
+        // Increased delay to show the testing state animation
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+
+        // Now perform the actual connection test
+        try {
+          console.log(`[${new Date().toISOString()}] Starting connection test for host ${host.id}`);
+          const result = await testHostConnectionAction(host.id);
+          console.log(
+            `[${new Date().toISOString()}] Test completed for host ${host.id}, result: ${result.success}`,
+          );
+
+          // Update the host status in the cache based on the result
+          await mutate(async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map((h) => {
+              if (h.id === host.id) {
+                return {
+                  ...h,
+                  status: result.success ? ('connected' as const) : ('failed' as const),
+                };
+              }
+              return h;
+            });
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          }, false);
+
+          if (result.success) {
+            successCount++;
           }
+
+          // Small delay between hosts
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        } catch (error) {
+          // Update the host status to failed in case of error
+          await mutate(async (currentHosts: Host[] = []) => {
+            const updatedHosts = currentHosts.map((h) => {
+              if (h.id === host.id) {
+                return {
+                  ...h,
+                  status: 'failed' as const,
+                };
+              }
+              return h;
+            });
+            setCachedHosts(updatedHosts);
+            return updatedHosts;
+          }, false);
         }
-        
-        return true;
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to test all connections';
-        toast({
-          title: 'Error',
-          description: errorMessage,
-          variant: 'destructive',
-        });
-        return false;
       }
-    },
-    [hosts, toast, mutate]
-  );
+
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to test all connections';
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+      return false;
+    }
+  }, [hosts, toast, mutate]);
 
   return {
     hosts,
@@ -618,4 +603,3 @@ export function useHost(initialHostId?: string) {
     isLoaded: !loading && host !== null,
   };
 }
-

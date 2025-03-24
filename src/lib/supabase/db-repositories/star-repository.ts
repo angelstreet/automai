@@ -15,20 +15,20 @@ const starRepository = {
   async getStarredRepositories(profileId: string): Promise<DbResponse<any[]>> {
     try {
       const supabase = await createClient();
-      
+
       // Get all starred repositories for the user
       const { data: starData, error: starError } = await supabase
         .from('profile_repository_stars')
         .select('repository_id')
         .eq('profile_id', profileId);
-      
+
       if (starError) {
         return {
           success: false,
           error: starError.message,
         };
       }
-      
+
       // If no starred repositories, return empty array
       if (!starData || starData.length === 0) {
         return {
@@ -36,22 +36,22 @@ const starRepository = {
           data: [],
         };
       }
-      
+
       // Get the full repository details for each starred repository
-      const repositoryIds = starData.map(item => item.repository_id);
-      
+      const repositoryIds = starData.map((item) => item.repository_id);
+
       const { data: repositories, error: reposError } = await supabase
         .from('repositories')
         .select('*')
         .in('id', repositoryIds);
-      
+
       if (reposError) {
         return {
           success: false,
           error: reposError.message,
         };
       }
-      
+
       return {
         success: true,
         data: repositories,
@@ -64,28 +64,28 @@ const starRepository = {
       };
     }
   },
-  
+
   /**
    * Star a repository
    */
   async starRepository(repositoryId: string, profileId: string): Promise<DbResponse<any>> {
     try {
       const supabase = await createClient();
-      
+
       // Check if the repository exists
       const { data: repository, error: repoError } = await supabase
         .from('repositories')
         .select('id')
         .eq('id', repositoryId)
         .single();
-      
+
       if (repoError || !repository) {
         return {
           success: false,
           error: 'Repository not found',
         };
       }
-      
+
       // Add the repository to starred
       const { data, error } = await supabase
         .from('profile_repository_stars')
@@ -94,7 +94,7 @@ const starRepository = {
           repository_id: repositoryId,
         })
         .select();
-      
+
       if (error) {
         // Check if it's a unique constraint error (already starred)
         if (error.code === '23505') {
@@ -103,13 +103,13 @@ const starRepository = {
             data: { already_starred: true },
           };
         }
-        
+
         return {
           success: false,
           error: error.message,
         };
       }
-      
+
       return {
         success: true,
         data,
@@ -122,14 +122,14 @@ const starRepository = {
       };
     }
   },
-  
+
   /**
    * Unstar a repository
    */
   async unstarRepository(repositoryId: string, profileId: string): Promise<DbResponse<any>> {
     try {
       const supabase = await createClient();
-      
+
       // Remove the repository from starred
       const { data, error } = await supabase
         .from('profile_repository_stars')
@@ -137,14 +137,14 @@ const starRepository = {
         .eq('profile_id', profileId)
         .eq('repository_id', repositoryId)
         .select();
-      
+
       if (error) {
         return {
           success: false,
           error: error.message,
         };
       }
-      
+
       return {
         success: true,
         data,

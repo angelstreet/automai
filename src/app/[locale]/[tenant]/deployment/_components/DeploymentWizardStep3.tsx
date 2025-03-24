@@ -24,20 +24,20 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
   onHostToggle,
   onPrevStep,
   onNextStep,
-  isStepValid
+  isStepValid,
 }) => {
   const t = useTranslations('deployment.wizard');
-  
+
   // Add a cleanup effect when this component mounts/unmounts
   useEffect(() => {
     console.log('[DeploymentWizardStep3] Component mounted');
-    
+
     // Return cleanup function
     return () => {
       console.log('[DeploymentWizardStep3] Component unmounted');
     };
   }, []);
-  
+
   return (
     <div>
       <div className="flex justify-between mb-1">
@@ -48,21 +48,21 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
         >
           {t('previous')}
         </button>
-        
+
         <button
           type="button"
           onClick={onNextStep}
           disabled={!isStepValid()}
           className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-            isStepValid() 
-              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+            isStepValid()
+              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
               : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
           }`}
         >
           {t('next')}
         </button>
       </div>
-      
+
       {isLoadingHosts ? (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
@@ -73,9 +73,7 @@ const DeploymentWizardStep3: React.FC<DeploymentWizardStep3Props> = ({
           <p className="text-xs text-red-600 dark:text-red-400">
             {t('hostsError')}: {hostsError}
           </p>
-          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-            {t('tryRefreshing')}
-          </p>
+          <p className="text-xs text-red-500 dark:text-red-400 mt-1">{t('tryRefreshing')}</p>
         </div>
       ) : (
         <HostSelector

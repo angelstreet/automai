@@ -4,13 +4,13 @@
 export { AppProvider } from './AppContext';
 
 // Re-export hooks with type checks to ensure proper usage
-export { 
-  useUser, 
-  useHost, 
-  useDeployment, 
-  useRepository, 
+export {
+  useUser,
+  useHost,
+  useDeployment,
+  useRepository,
   useCICD,
-  useAppContext 
+  useAppContext,
 } from './AppContext';
 
 // Export types for context usage
@@ -25,4 +25,4 @@ export type { CICDContextType } from '@/types/context/cicd';
 // Do not import directly from HostContext, UserContext, etc.
 // Instead use the hooks exported above (useUser, useHost, etc.)
 
-// Types should be imported directly from their source files when needed 
+// Types should be imported directly from their source files when needed

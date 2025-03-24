@@ -35,9 +35,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ success: true, data: result.data });
   } catch (error) {
     console.error('Error in POST /api/repositories/[id]/sync:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 },
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

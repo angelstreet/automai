@@ -11,7 +11,7 @@ export class CICDProviderFactory {
    */
   static createProvider(config: CICDProviderConfig): CICDProvider {
     let provider: CICDProvider;
-    
+
     switch (config.type.toLowerCase()) {
       case 'jenkins':
         provider = new JenkinsProvider();
@@ -22,10 +22,10 @@ export class CICDProviderFactory {
       default:
         throw new Error(`Unsupported CI/CD provider type: ${config.type}`);
     }
-    
+
     // Initialize the provider with config
     provider.initialize(config);
-    
+
     return provider;
   }
 

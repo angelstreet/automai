@@ -17,8 +17,8 @@ function CICDPageContent() {
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="flex flex-col gap-4">
-        <PageHeader 
-          title="CI/CD Integration" 
+        <PageHeader
+          title="CI/CD Integration"
           description="Configure CI/CD providers for automated deployments"
         >
           <Button
@@ -30,7 +30,7 @@ function CICDPageContent() {
             <span>Add Provider</span>
           </Button>
         </PageHeader>
-        
+
         <CICDProvider removeTitle={true} />
       </div>
     </div>
@@ -43,4 +43,4 @@ export default function CICDPage() {
       <CICDPageContent />
     </AppProvider>
   );
-} 
+}

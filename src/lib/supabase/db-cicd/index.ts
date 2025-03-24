@@ -1,8 +1,6 @@
 // Export CICD database modules
 import cicd from './cicd';
 
-export { 
-  cicd 
-};
+export { cicd };
 
-export default cicd; 
+export default cicd;

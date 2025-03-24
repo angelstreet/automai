@@ -10,35 +10,33 @@ interface DeploymentRunActionProps {
   deploymentId: string;
 }
 
-export const DeploymentRunAction: React.FC<DeploymentRunActionProps> = ({ 
-  deploymentId 
-}) => {
+export const DeploymentRunAction: React.FC<DeploymentRunActionProps> = ({ deploymentId }) => {
   const [isRunning, setIsRunning] = useState(false);
-  
+
   // Use deployment context with null safety
   const deploymentContext = useDeployment();
-  
+
   // Handle the case where context is still initializing (null)
-  const { 
-    runDeployment = async () => ({ success: false, error: 'Deployment context not initialized' }) 
+  const {
+    runDeployment = async () => ({ success: false, error: 'Deployment context not initialized' }),
   } = deploymentContext || {};
-  
+
   const handleRun = async () => {
     setIsRunning(true);
     try {
       const result = await runDeployment(deploymentId);
-      
+
       if (result.success) {
         toast({
           title: 'Success',
           description: 'Deployment run started successfully',
-          variant: 'default'
+          variant: 'default',
         });
       } else {
         toast({
           title: 'Error',
           description: result.error || 'Failed to run deployment',
-          variant: 'destructive'
+          variant: 'destructive',
         });
       }
     } catch (error: any) {
@@ -46,15 +44,15 @@ export const DeploymentRunAction: React.FC<DeploymentRunActionProps> = ({
       toast({
         title: 'Error',
         description: 'An unexpected error occurred',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsRunning(false);
     }
   };
-  
+
   return (
-    <Button 
+    <Button
       onClick={handleRun}
       variant="outline"
       size="sm"
@@ -72,4 +70,4 @@ export const DeploymentRunAction: React.FC<DeploymentRunActionProps> = ({
       )}
     </Button>
   );
-}; 
+};

@@ -36,20 +36,20 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
     id: authUser.id,
     hasTenantId: !!authUser.tenant_id,
     hasTenantName: !!authUser.tenant_name,
-    hasUserMetadata: !!authUser.user_metadata
+    hasUserMetadata: !!authUser.user_metadata,
   });
 
   if (!authUser.tenant_id) {
     throw new Error('Missing tenant_id in user data');
   }
-  
+
   if (!authUser.tenant_name) {
     throw new Error('Missing tenant_name in user data');
   }
 
   // Try to extract role from different possible locations
   const role = (authUser as any).role || 'viewer';
-  
+
   log('[UserContext] User role determined:', role);
 
   return {
@@ -68,7 +68,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   log('[UserContext] UserProvider initializing');
   const [error, setError] = useState<Error | null>(null);
   const initialized = useRef(false);
-  
+
   // Get initial user data synchronously from localStorage
   const [initialUser, setInitialUser] = useState<User | null>(() => {
     if (typeof window !== 'undefined') {
@@ -109,10 +109,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
               const timeDiff = Date.now() - parseInt(cachedTime, 10);
               // If cache is less than 5 minutes old, use it
               if (timeDiff < 5 * 60 * 1000) {
-                log('[UserContext] Using cached user data, age:', Math.round(timeDiff/1000), 'seconds');
+                log(
+                  '[UserContext] Using cached user data, age:',
+                  Math.round(timeDiff / 1000),
+                  'seconds',
+                );
                 return parsedUser;
               }
-              log('[UserContext] Cached user data expired, age:', Math.round(timeDiff/1000), 'seconds');
+              log(
+                '[UserContext] Cached user data expired, age:',
+                Math.round(timeDiff / 1000),
+                'seconds',
+              );
             }
           } catch (e) {
             // Invalid JSON, ignore and continue
@@ -129,32 +137,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       log('[UserContext] Fetching fresh user data from server');
       const authUser = await getUser();
       log('[UserContext] Server returned auth user:', authUser ? 'found' : 'not found');
-      
+
       if (!authUser) return null;
 
       try {
         // Map to our User type - will throw if tenant data is missing
         const user = mapAuthUserToUser(authUser);
-        log('[UserContext] Successfully mapped user data:', { 
+        log('[UserContext] Successfully mapped user data:', {
           id: user.id,
           tenant: user.tenant_name,
-          role: user.role 
+          role: user.role,
         });
-        
+
         // Cache the user in localStorage
         if (typeof window !== 'undefined') {
           log('[UserContext] Storing user data in localStorage cache');
           localStorage.setItem('cached_user', JSON.stringify(user));
           localStorage.setItem('cached_user_time', Date.now().toString());
         }
-        
+
         return user;
       } catch (error) {
         log('[UserContext] User data mapping error:', error);
         setError(error instanceof Error ? error : new Error('Invalid user data'));
         return null;
       }
-
     } catch (error) {
       log('[UserContext] Error fetching user:', error);
       setError(error instanceof Error ? error : new Error('Failed to fetch user'));
@@ -167,23 +174,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     data: user,
     isLoading: loading,
     mutate: mutateUser,
-  } = useSWR(
-    'user-data',
-    fetchUserData,
-    {
-      fallbackData: initialUser, // Use initial data to avoid flicker
-      revalidateOnFocus: false,  // Don't revalidate on every tab focus
-      revalidateOnReconnect: true,
-      dedupingInterval: 60000,   // Dedupe requests for 1 minute
-      keepPreviousData: true, 
-      loadingTimeout: 3000,     // Consider slow after 3 seconds
-      revalidateIfStale: true,  // Revalidate if stale
-      refreshInterval: 300000,  // Refresh every 5 minutes
-      onSuccess: (data) => {
-        log('[UserContext] SWR cache success:', data ? 'user found' : 'no user');
-      },
+  } = useSWR('user-data', fetchUserData, {
+    fallbackData: initialUser, // Use initial data to avoid flicker
+    revalidateOnFocus: false, // Don't revalidate on every tab focus
+    revalidateOnReconnect: true,
+    dedupingInterval: 60000, // Dedupe requests for 1 minute
+    keepPreviousData: true,
+    loadingTimeout: 3000, // Consider slow after 3 seconds
+    revalidateIfStale: true, // Revalidate if stale
+    refreshInterval: 300000, // Refresh every 5 minutes
+    onSuccess: (data) => {
+      log('[UserContext] SWR cache success:', data ? 'user found' : 'no user');
     },
-  );
+  });
 
   // Function to clear all caches
   const clearCache = useCallback(async () => {
@@ -238,10 +241,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (user?.id && !initialized.current) {
       initialized.current = true;
-      console.log('[UserContext] User loaded:', { 
-        id: user.id, 
+      console.log('[UserContext] User loaded:', {
+        id: user.id,
         tenant: user.tenant_name,
-        role: user.role
+        role: user.role,
       });
     }
   }, [user]);
@@ -256,19 +259,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       updateRole: handleRoleUpdate,
       clearCache,
     }),
-    [user, loading, error, refreshUser, clearCache]
+    [user, loading, error, refreshUser, clearCache],
   );
 
-  return (
-    <UserContext.Provider value={contextValue}>
-      {children}
-    </UserContext.Provider>
-  );
+  return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
 }
 
 export function useUser() {
   const context = useContext(UserContext);
-  
+
   // If the context is null for some reason, return a safe default object
   // This prevents destructuring errors in components
   if (!context) {
@@ -283,6 +282,6 @@ export function useUser() {
       clearCache: async () => {},
     };
   }
-  
+
   return context;
 }

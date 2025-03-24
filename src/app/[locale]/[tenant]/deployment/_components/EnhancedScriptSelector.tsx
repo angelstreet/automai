@@ -24,7 +24,7 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
   onScriptIdsChange,
   onScriptParameterChange,
   isLoading = false,
-  error = null
+  error = null,
 }) => {
   const [expandedScripts, setExpandedScripts] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,7 +33,7 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
     if (event) {
       event.stopPropagation();
     }
-    
+
     const newExpanded = new Set(expandedScripts);
     if (newExpanded.has(scriptId)) {
       newExpanded.delete(scriptId);
@@ -45,11 +45,13 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
 
   const handleSelectAll = () => {
     // Create a new array with all script IDs
-    const allScriptIds = availableScripts.map(script => script.id);
-    
+    const allScriptIds = availableScripts.map((script) => script.id);
+
     // If all are already selected, deselect all
-    if (allScriptIds.length === selectedScriptIds.length && 
-        allScriptIds.every(id => selectedScriptIds.includes(id))) {
+    if (
+      allScriptIds.length === selectedScriptIds.length &&
+      allScriptIds.every((id) => selectedScriptIds.includes(id))
+    ) {
       onScriptIdsChange([]);
     } else {
       // Otherwise select all
@@ -59,21 +61,22 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
 
   const handleToggleScript = (scriptId: string) => {
     const newSelectedScripts = [...selectedScriptIds];
-    
+
     if (newSelectedScripts.includes(scriptId)) {
       const index = newSelectedScripts.indexOf(scriptId);
       newSelectedScripts.splice(index, 1);
     } else {
       newSelectedScripts.push(scriptId);
     }
-    
+
     onScriptIdsChange(newSelectedScripts);
   };
 
   // Filter scripts based on search term
-  const filteredScripts = availableScripts.filter(script => 
-    script.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    script.path.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredScripts = availableScripts.filter(
+    (script) =>
+      script.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      script.path.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (isLoading) {
@@ -85,11 +88,7 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
   }
 
   if (error) {
-    return (
-      <div className="p-4 text-red-500">
-        Error loading scripts: {error}
-      </div>
-    );
+    return <div className="p-4 text-red-500">Error loading scripts: {error}</div>;
   }
 
   if (!selectedRepository) {
@@ -132,7 +131,7 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
             </button>
           </div>
         </div>
-        
+
         <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
           <div className="max-h-[400px] overflow-y-auto">
             {filteredScripts.length === 0 ? (
@@ -143,13 +142,22 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
                 <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
                   <tr>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">
+                    <th
+                      scope="col"
+                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10"
+                    >
                       Select
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">
+                    <th
+                      scope="col"
+                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2"
+                    >
                       Script Path
                     </th>
-                    <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">
+                    <th
+                      scope="col"
+                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2"
+                    >
                       Parameters
                     </th>
                   </tr>
@@ -157,36 +165,45 @@ const EnhancedScriptSelector: React.FC<EnhancedScriptSelectorProps> = ({
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredScripts.map((script) => {
                     const isSelected = selectedScriptIds.includes(script.id);
-                    
+
                     return (
-                      <tr 
+                      <tr
                         key={script.id}
                         className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                       >
                         <td className="px-3 py-1.5 whitespace-nowrap">
-                          <div className="flex items-center" onClick={() => handleToggleScript(script.id)}>
-                            {isSelected ? 
-                              <CheckSquare className="h-4 w-4 text-blue-500 cursor-pointer" /> : 
+                          <div
+                            className="flex items-center"
+                            onClick={() => handleToggleScript(script.id)}
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="h-4 w-4 text-blue-500 cursor-pointer" />
+                            ) : (
                               <Square className="h-4 w-4 text-gray-400 cursor-pointer" />
-                            }
+                            )}
                           </div>
                         </td>
-                        <td className="px-3 py-1.5 whitespace-nowrap" onClick={() => handleToggleScript(script.id)}>
+                        <td
+                          className="px-3 py-1.5 whitespace-nowrap"
+                          onClick={() => handleToggleScript(script.id)}
+                        >
                           <div className="text-xs text-gray-900 dark:text-white truncate max-w-[300px] cursor-pointer">
                             {script.path}
                           </div>
                         </td>
                         <td className="px-3 py-1.5 whitespace-nowrap">
-                          <div className="h-7"> 
+                          <div className="h-7">
                             {isSelected ? (
                               <Input
                                 placeholder="Parameters (e.g. -d --key=value)"
                                 className="text-xs h-7 w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                                 value={scriptParameters[script.id]?.['raw'] || ''}
-                                onChange={(e) => onScriptParameterChange(script.id, 'raw', e.target.value)}
+                                onChange={(e) =>
+                                  onScriptParameterChange(script.id, 'raw', e.target.value)
+                                }
                               />
                             ) : (
-                              <div className="h-7"></div> 
+                              <div className="h-7"></div>
                             )}
                           </div>
                         </td>

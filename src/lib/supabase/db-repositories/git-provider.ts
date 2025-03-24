@@ -51,7 +51,7 @@ const gitProvider = {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -79,7 +79,7 @@ const gitProvider = {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -107,7 +107,7 @@ const gitProvider = {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -134,7 +134,7 @@ const gitProvider = {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -145,7 +145,7 @@ const gitProvider = {
   async updateGitProvider(
     id: string,
     data: Partial<GitProviderCreateData>,
-    profileId: string
+    profileId: string,
   ): Promise<DbResponse<GitProvider>> {
     try {
       const cookieStore = await cookies();
@@ -160,9 +160,9 @@ const gitProvider = {
         .single();
 
       if (fetchError || !existingProvider) {
-        return { 
-          success: false, 
-          error: fetchError?.message || 'Git provider not found or no permission'
+        return {
+          success: false,
+          error: fetchError?.message || 'Git provider not found or no permission',
         };
       }
 
@@ -182,7 +182,7 @@ const gitProvider = {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -204,9 +204,9 @@ const gitProvider = {
         .single();
 
       if (fetchError || !existingProvider) {
-        return { 
-          success: false, 
-          error: fetchError?.message || 'Git provider not found or no permission'
+        return {
+          success: false,
+          error: fetchError?.message || 'Git provider not found or no permission',
         };
       }
 
@@ -224,7 +224,7 @@ const gitProvider = {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -312,7 +312,7 @@ const gitProvider = {
     if (!where.id || !where.profile_id) {
       throw new Error('ID and profile_id are required for updating a git provider');
     }
-    
+
     const result = await this.updateGitProvider(where.id, data, where.profile_id);
     if (!result.success) throw new Error(result.error);
     return result.data;
@@ -322,7 +322,7 @@ const gitProvider = {
     if (!where.id || !where.profile_id) {
       throw new Error('ID and profile_id are required for deleting a git provider');
     }
-    
+
     const result = await this.deleteGitProvider(where.id, where.profile_id);
     if (!result.success) throw new Error(result.error);
     return { success: true };

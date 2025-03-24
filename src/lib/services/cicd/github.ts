@@ -1,4 +1,11 @@
-import { CICDBuild, CICDJob, CICDJobParameter, CICDProvider, CICDProviderConfig, CICDResponse } from './interfaces';
+import {
+  CICDBuild,
+  CICDJob,
+  CICDJobParameter,
+  CICDProvider,
+  CICDProviderConfig,
+  CICDResponse,
+} from './interfaces';
 
 /**
  * GitHub Actions CI/CD Provider Implementation
@@ -15,24 +22,26 @@ export class GitHubProvider implements CICDProvider {
    */
   initialize(config: CICDProviderConfig): void {
     this.config = config;
-    
+
     // Parse owner and repo from the URL
     // Expected format: https://github.com/{owner}/{repo}
     try {
       const url = new URL(config.url);
-      const pathParts = url.pathname.split('/').filter(part => part);
-      
+      const pathParts = url.pathname.split('/').filter((part) => part);
+
       if (pathParts.length >= 2) {
         this.owner = pathParts[0];
         this.repo = pathParts[1];
       } else {
-        throw new Error('Invalid GitHub repository URL format. Expected: https://github.com/{owner}/{repo}');
+        throw new Error(
+          'Invalid GitHub repository URL format. Expected: https://github.com/{owner}/{repo}',
+        );
       }
     } catch (error: any) {
       console.error('Error parsing GitHub URL:', error);
       throw new Error(`Invalid GitHub URL: ${error.message}`);
     }
-    
+
     // Set up authentication
     if (config.auth_type === 'token') {
       const token = config.credentials.token;
@@ -48,44 +57,47 @@ export class GitHubProvider implements CICDProvider {
   /**
    * Helper method to make authenticated requests to GitHub API
    */
-  private async githubRequest<T>(path: string, options: RequestInit = {}): Promise<CICDResponse<T>> {
+  private async githubRequest<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<CICDResponse<T>> {
     try {
       if (!this.config) {
         return {
           success: false,
-          error: 'GitHub provider not initialized'
+          error: 'GitHub provider not initialized',
         };
       }
 
       const url = `${this.baseUrl}${path}`;
-      
+
       // Add authentication headers
       const headers = {
         ...options.headers,
-        'Authorization': this.authHeader,
-        'Accept': 'application/vnd.github+json',
+        Authorization: this.authHeader,
+        Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       };
 
       const response = await fetch(url, {
         ...options,
         headers,
-        cache: 'no-store'
+        cache: 'no-store',
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         return {
           success: false,
-          error: `GitHub API error: ${response.status} - ${errorText}`
+          error: `GitHub API error: ${response.status} - ${errorText}`,
         };
       }
 
       // Handle response
       const contentType = response.headers.get('content-type');
       let data: any;
-      
+
       if (contentType?.includes('application/json')) {
         data = await response.json();
       } else {
@@ -94,13 +106,13 @@ export class GitHubProvider implements CICDProvider {
 
       return {
         success: true,
-        data: data as T
+        data: data as T,
       };
     } catch (error: any) {
       console.error('Error in GitHub API request:', error);
       return {
         success: false,
-        error: error.message || 'Failed to make GitHub API request'
+        error: error.message || 'Failed to make GitHub API request',
       };
     }
   }
@@ -111,8 +123,10 @@ export class GitHubProvider implements CICDProvider {
   async getAvailableJobs(): Promise<CICDResponse<CICDJob[]>> {
     try {
       // Get the list of workflows from GitHub API
-      const result = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}/actions/workflows`);
-      
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/workflows`,
+      );
+
       if (!result.success) {
         return result;
       }
@@ -124,18 +138,18 @@ export class GitHubProvider implements CICDProvider {
           id: workflow.id.toString(),
           name: workflow.name,
           url: workflow.html_url,
-          description: `Path: ${workflow.path}`
+          description: `Path: ${workflow.path}`,
         }));
 
       return {
         success: true,
-        data: jobs
+        data: jobs,
       };
     } catch (error: any) {
       console.error('Error getting GitHub workflows:', error);
       return {
         success: false,
-        error: error.message || 'Failed to get GitHub workflows'
+        error: error.message || 'Failed to get GitHub workflows',
       };
     }
   }
@@ -146,15 +160,19 @@ export class GitHubProvider implements CICDProvider {
   async getJobDetails(jobId: string): Promise<CICDResponse<CICDJob>> {
     try {
       // Get detailed workflow info from GitHub API
-      const result = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}/actions/workflows/${jobId}`);
-      
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/workflows/${jobId}`,
+      );
+
       if (!result.success) {
         return result;
       }
 
       // Get the workflow file content to extract input parameters
-      const contentResult = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}/contents/${result.data.path}`);
-      
+      const contentResult = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/contents/${result.data.path}`,
+      );
+
       if (!contentResult.success) {
         // Return the basic job info without parameters
         return {
@@ -164,8 +182,8 @@ export class GitHubProvider implements CICDProvider {
             name: result.data.name,
             url: result.data.html_url,
             description: `Path: ${result.data.path}`,
-            parameters: []
-          }
+            parameters: [],
+          },
         };
       }
 
@@ -178,30 +196,40 @@ export class GitHubProvider implements CICDProvider {
       // Extract input parameters from workflow file YAML
       // This is a simplistic approach; a proper YAML parser should be used in production
       const parameters: CICDJobParameter[] = [];
-      const inputMatches = [...content.matchAll(/on:\s*workflow_dispatch:\s*inputs:([\s\S]*?)(?=\n\w|$)/g)];
-      
+      const inputMatches = [
+        ...content.matchAll(/on:\s*workflow_dispatch:\s*inputs:([\s\S]*?)(?=\n\w|$)/g),
+      ];
+
       if (inputMatches.length > 0 && inputMatches[0][1]) {
         const inputsSection = inputMatches[0][1];
-        const paramMatches = [...inputsSection.matchAll(/(\w+):\s*(?:type:\s*(\w+))?(?:[\s\S]*?required:\s*(true|false))?(?:[\s\S]*?default:\s*(.+?))?(?:[\s\S]*?description:\s*(.+?))?(?=\n\s+\w+:|$)/g)];
-        
+        const paramMatches = [
+          ...inputsSection.matchAll(
+            /(\w+):\s*(?:type:\s*(\w+))?(?:[\s\S]*?required:\s*(true|false))?(?:[\s\S]*?default:\s*(.+?))?(?:[\s\S]*?description:\s*(.+?))?(?=\n\s+\w+:|$)/g,
+          ),
+        ];
+
         for (const match of paramMatches) {
           const [_, name, type, required, defaultValue, description] = match;
-          
+
           const parameter: CICDJobParameter = {
             name: name.trim(),
             type: this.mapGitHubParamType(type?.trim() || 'string'),
             description: description?.trim() || '',
             default: defaultValue?.trim() || undefined,
-            required: required?.trim() === 'true'
+            required: required?.trim() === 'true',
           };
-          
+
           // Check for choices in the input
-          const choicesMatch = inputsSection.match(new RegExp(`${name}:[\\s\\S]*?options:\\s*\\[(.+?)\\]`, 'i'));
+          const choicesMatch = inputsSection.match(
+            new RegExp(`${name}:[\\s\\S]*?options:\\s*\\[(.+?)\\]`, 'i'),
+          );
           if (choicesMatch && choicesMatch[1]) {
-            parameter.choices = choicesMatch[1].split(',').map(choice => choice.trim().replace(/^['"]|['"]$/g, ''));
+            parameter.choices = choicesMatch[1]
+              .split(',')
+              .map((choice) => choice.trim().replace(/^['"]|['"]$/g, ''));
             parameter.type = 'choice';
           }
-          
+
           parameters.push(parameter);
         }
       }
@@ -212,18 +240,18 @@ export class GitHubProvider implements CICDProvider {
         name: result.data.name,
         url: result.data.html_url,
         description: `Path: ${result.data.path}`,
-        parameters: parameters
+        parameters: parameters,
       };
 
       return {
         success: true,
-        data: job
+        data: job,
       };
     } catch (error: any) {
       console.error(`Error getting GitHub workflow details for ${jobId}:`, error);
       return {
         success: false,
-        error: error.message || `Failed to get GitHub workflow details for ${jobId}`
+        error: error.message || `Failed to get GitHub workflow details for ${jobId}`,
       };
     }
   }
@@ -233,44 +261,47 @@ export class GitHubProvider implements CICDProvider {
    */
   private mapGitHubParamType(githubType: string): 'string' | 'boolean' | 'number' | 'choice' {
     const typeMap: Record<string, 'string' | 'boolean' | 'number' | 'choice'> = {
-      'string': 'string',
-      'boolean': 'boolean',
-      'number': 'number',
-      'choice': 'choice'
+      string: 'string',
+      boolean: 'boolean',
+      number: 'number',
+      choice: 'choice',
     };
-    
+
     return typeMap[githubType.toLowerCase()] || 'string';
   }
 
   /**
    * Trigger a GitHub workflow
    */
-  async triggerJob(jobId: string, parameters?: Record<string, any>): Promise<CICDResponse<CICDBuild>> {
+  async triggerJob(
+    jobId: string,
+    parameters?: Record<string, any>,
+  ): Promise<CICDResponse<CICDBuild>> {
     try {
       const requestBody = {
         ref: 'main', // Default to main branch, but could be configurable
-        inputs: parameters || {}
+        inputs: parameters || {},
       };
-      
+
       // Trigger workflow
       const result = await this.githubRequest<any>(
         `/repos/${this.owner}/${this.repo}/actions/workflows/${jobId}/dispatches`,
-        { 
+        {
           method: 'POST',
-          body: JSON.stringify(requestBody)
-        }
+          body: JSON.stringify(requestBody),
+        },
       );
-      
+
       if (!result.success) {
         return result;
       }
-      
+
       // GitHub doesn't return build ID directly when triggering a workflow
       // We need to get the most recent run for this workflow
       const runsResult = await this.githubRequest<any>(
-        `/repos/${this.owner}/${this.repo}/actions/workflows/${jobId}/runs?per_page=1`
+        `/repos/${this.owner}/${this.repo}/actions/workflows/${jobId}/runs?per_page=1`,
       );
-      
+
       if (!runsResult.success) {
         return {
           success: true,
@@ -279,14 +310,14 @@ export class GitHubProvider implements CICDProvider {
             job_id: jobId,
             status: 'pending',
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
+            updated_at: new Date().toISOString(),
+          },
         };
       }
-      
+
       // Get the most recent run
       const run = runsResult.data.workflow_runs[0];
-      
+
       return {
         success: true,
         data: {
@@ -295,14 +326,14 @@ export class GitHubProvider implements CICDProvider {
           url: run.html_url,
           status: this.mapGitHubRunStatus(run.status),
           created_at: run.created_at,
-          updated_at: run.updated_at
-        }
+          updated_at: run.updated_at,
+        },
       };
     } catch (error: any) {
       console.error(`Error triggering GitHub workflow ${jobId}:`, error);
       return {
         success: false,
-        error: error.message || `Failed to trigger GitHub workflow ${jobId}`
+        error: error.message || `Failed to trigger GitHub workflow ${jobId}`,
       };
     }
   }
@@ -313,12 +344,14 @@ export class GitHubProvider implements CICDProvider {
   async getBuildStatus(jobId: string, buildId: string): Promise<CICDResponse<CICDBuild>> {
     try {
       // Get run info
-      const result = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}/actions/runs/${buildId}`);
-      
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/runs/${buildId}`,
+      );
+
       if (!result.success) {
         return result;
       }
-      
+
       return {
         success: true,
         data: {
@@ -327,14 +360,14 @@ export class GitHubProvider implements CICDProvider {
           url: result.data.html_url,
           status: this.mapGitHubRunStatus(result.data.status, result.data.conclusion),
           created_at: result.data.created_at,
-          updated_at: result.data.updated_at
-        }
+          updated_at: result.data.updated_at,
+        },
       };
     } catch (error: any) {
       console.error(`Error getting GitHub workflow run status for ${buildId}:`, error);
       return {
         success: false,
-        error: error.message || `Failed to get GitHub workflow run status for ${buildId}`
+        error: error.message || `Failed to get GitHub workflow run status for ${buildId}`,
       };
     }
   }
@@ -342,11 +375,18 @@ export class GitHubProvider implements CICDProvider {
   /**
    * Helper method to map GitHub run status to our status type
    */
-  private mapGitHubRunStatus(status?: string, conclusion?: string): 'pending' | 'running' | 'success' | 'failure' | 'unknown' {
+  private mapGitHubRunStatus(
+    status?: string,
+    conclusion?: string,
+  ): 'pending' | 'running' | 'success' | 'failure' | 'unknown' {
     if (status === 'completed') {
       if (conclusion === 'success') {
         return 'success';
-      } else if (conclusion === 'failure' || conclusion === 'cancelled' || conclusion === 'timed_out') {
+      } else if (
+        conclusion === 'failure' ||
+        conclusion === 'cancelled' ||
+        conclusion === 'timed_out'
+      ) {
         return 'failure';
       }
     } else if (status === 'in_progress' || status === 'queued') {
@@ -354,7 +394,7 @@ export class GitHubProvider implements CICDProvider {
     } else if (status === 'requested' || status === 'waiting') {
       return 'pending';
     }
-    
+
     return 'unknown';
   }
 
@@ -364,40 +404,42 @@ export class GitHubProvider implements CICDProvider {
   async getBuildLogs(jobId: string, buildId: string): Promise<CICDResponse<string>> {
     try {
       // Get logs URL
-      const result = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}/actions/runs/${buildId}/logs`);
-      
+      const result = await this.githubRequest<any>(
+        `/repos/${this.owner}/${this.repo}/actions/runs/${buildId}/logs`,
+      );
+
       if (!result.success) {
         return result;
       }
-      
+
       // GitHub returns a download URL for logs
       const logsUrl = result.data.logs_url;
-      
+
       // Download the logs
       const logsResponse = await fetch(logsUrl, {
         headers: {
-          'Authorization': this.authHeader
-        }
+          Authorization: this.authHeader,
+        },
       });
-      
+
       if (!logsResponse.ok) {
         return {
           success: false,
-          error: `Failed to download logs: ${logsResponse.status} ${logsResponse.statusText}`
+          error: `Failed to download logs: ${logsResponse.status} ${logsResponse.statusText}`,
         };
       }
-      
+
       const logs = await logsResponse.text();
-      
+
       return {
         success: true,
-        data: logs
+        data: logs,
       };
     } catch (error: any) {
       console.error(`Error getting GitHub workflow run logs for ${buildId}:`, error);
       return {
         success: false,
-        error: error.message || `Failed to get GitHub workflow run logs for ${buildId}`
+        error: error.message || `Failed to get GitHub workflow run logs for ${buildId}`,
       };
     }
   }
@@ -408,37 +450,37 @@ export class GitHubProvider implements CICDProvider {
   async testConnection(): Promise<CICDResponse<boolean>> {
     try {
       console.log('[GITHUB] Testing connection to GitHub server');
-      
+
       if (!this.owner || !this.repo) {
         console.error('[GITHUB] Missing repository owner or name');
         return {
           success: false,
-          error: 'Repository owner or name is missing'
+          error: 'Repository owner or name is missing',
         };
       }
-      
+
       // Test by getting repo information
       const response = await this.githubRequest<any>(`/repos/${this.owner}/${this.repo}`);
-      
+
       if (response.success) {
         console.log('[GITHUB] Connection test successful');
         return {
           success: true,
-          data: true
+          data: true,
         };
       } else {
         console.error('[GITHUB] Connection test failed:', response.error);
         return {
           success: false,
-          error: response.error || 'Failed to connect to GitHub repository'
+          error: response.error || 'Failed to connect to GitHub repository',
         };
       }
     } catch (error: any) {
       console.error('[GITHUB] Connection test failed with exception:', error);
       return {
         success: false,
-        error: error.message || 'Failed to connect to GitHub repository'
+        error: error.message || 'Failed to connect to GitHub repository',
       };
     }
   }
-} 
+}

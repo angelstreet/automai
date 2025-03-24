@@ -30,10 +30,12 @@ const pinRepository = {
 
       const { data, error } = await supabase
         .from('profile_repository_pins')
-        .select(`
+        .select(
+          `
           *,
           repositories(*)
-        `)
+        `,
+        )
         .eq('profile_id', profileId);
 
       if (error) {
@@ -42,9 +44,9 @@ const pinRepository = {
 
       return { success: true, data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -52,10 +54,7 @@ const pinRepository = {
   /**
    * Pin a repository for a profile
    */
-  async pinRepository(
-    repositoryId: string, 
-    profileId: string
-  ): Promise<DbResponse<RepositoryPin>> {
+  async pinRepository(repositoryId: string, profileId: string): Promise<DbResponse<RepositoryPin>> {
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
@@ -63,18 +62,20 @@ const pinRepository = {
       // Verify the repository belongs to the profile via provider (tenant isolation)
       const { data: repo, error: repoError } = await supabase
         .from('repositories')
-        .select(`
+        .select(
+          `
           id,
           git_providers!inner(profile_id)
-        `)
+        `,
+        )
         .eq('id', repositoryId)
         .eq('git_providers.profile_id', profileId)
         .single();
 
       if (repoError || !repo) {
-        return { 
-          success: false, 
-          error: repoError?.message || 'Repository not found or no permission' 
+        return {
+          success: false,
+          error: repoError?.message || 'Repository not found or no permission',
         };
       }
 
@@ -87,9 +88,9 @@ const pinRepository = {
         .single();
 
       if (existingPin) {
-        return { 
-          success: false, 
-          error: 'Repository is already pinned' 
+        return {
+          success: false,
+          error: 'Repository is already pinned',
         };
       }
 
@@ -108,9 +109,9 @@ const pinRepository = {
 
       return { success: true, data };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -118,21 +119,15 @@ const pinRepository = {
   /**
    * Unpin a repository for a profile
    */
-  async unpinRepository(
-    repositoryId: string, 
-    profileId: string
-  ): Promise<DbResponse<null>> {
+  async unpinRepository(repositoryId: string, profileId: string): Promise<DbResponse<null>> {
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
 
-      const { error } = await supabase
-        .from('profile_repository_pins')
-        .delete()
-        .match({
-          profile_id: profileId,
-          repository_id: repositoryId,
-        });
+      const { error } = await supabase.from('profile_repository_pins').delete().match({
+        profile_id: profileId,
+        repository_id: repositoryId,
+      });
 
       if (error) {
         return { success: false, error: error.message };
@@ -140,9 +135,9 @@ const pinRepository = {
 
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   },
@@ -157,7 +152,13 @@ const pinRepository = {
     return result.data || [];
   },
 
-  async pinRepositoryLegacy({ repositoryId, profileId }: { repositoryId: string; profileId: string }) {
+  async pinRepositoryLegacy({
+    repositoryId,
+    profileId,
+  }: {
+    repositoryId: string;
+    profileId: string;
+  }) {
     const result = await this.pinRepository(repositoryId, profileId);
     if (!result.success) {
       throw new Error(result.error);
@@ -165,7 +166,13 @@ const pinRepository = {
     return result.data;
   },
 
-  async unpinRepositoryLegacy({ repositoryId, profileId }: { repositoryId: string; profileId: string }) {
+  async unpinRepositoryLegacy({
+    repositoryId,
+    profileId,
+  }: {
+    repositoryId: string;
+    profileId: string;
+  }) {
     const result = await this.unpinRepository(repositoryId, profileId);
     if (!result.success) {
       throw new Error(result.error);

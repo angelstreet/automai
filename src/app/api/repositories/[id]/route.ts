@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRepository, updateRepository, deleteRepository } from '@/app/[locale]/[tenant]/repositories/actions';
+import {
+  getRepository,
+  updateRepository,
+  deleteRepository,
+} from '@/app/[locale]/[tenant]/repositories/actions';
 
 import { z } from 'zod';
 

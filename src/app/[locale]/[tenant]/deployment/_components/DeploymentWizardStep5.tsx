@@ -50,25 +50,21 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   const t = useTranslations('deployment.wizard');
 
   // Use the CICD context from the new context system
-  const {
-    fetchCICDProviders,
-    fetchCICDJobs,
-    fetchCICDJobDetails
-  } = useCICD();
-  
+  const { fetchCICDProviders, fetchCICDJobs, fetchCICDJobDetails } = useCICD();
+
   // State for providers, jobs, and job details
   const [providers, setProviders] = useState<CICDProvider[]>([]);
   const [isLoadingProviders, setIsLoadingProviders] = useState(false);
   const [providersError, setProvidersError] = useState<string | null>(null);
-  
+
   const [jobs, setJobs] = useState<CICDJob[]>([]);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [jobsError, setJobsError] = useState<string | null>(null);
-  
+
   const [jobDetails, setJobDetails] = useState<any>(null);
   const [isLoadingJobDetails, setIsLoadingJobDetails] = useState(false);
   const [jobDetailsError, setJobDetailsError] = useState<string | null>(null);
-  
+
   // Fetch CI/CD providers
   useEffect(() => {
     const loadProviders = async () => {
@@ -85,10 +81,10 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         setIsLoadingProviders(false);
       }
     };
-    
+
     loadProviders();
   }, [fetchCICDProviders, t]);
-  
+
   // Fetch CI/CD jobs when a provider is selected
   useEffect(() => {
     const loadJobs = async () => {
@@ -96,7 +92,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         setJobs([]);
         return;
       }
-      
+
       try {
         setIsLoadingJobs(true);
         setJobsError(null);
@@ -110,10 +106,10 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         setIsLoadingJobs(false);
       }
     };
-    
+
     loadJobs();
   }, [jenkinsConfig.providerId, fetchCICDJobs, t]);
-  
+
   // Fetch job details when a job is selected
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -121,7 +117,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         setJobDetails(null);
         return;
       }
-      
+
       try {
         setIsLoadingJobDetails(true);
         setJobDetailsError(null);
@@ -135,69 +131,69 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         setIsLoadingJobDetails(false);
       }
     };
-    
+
     loadJobDetails();
   }, [jenkinsConfig.providerId, jenkinsConfig.jobId, fetchCICDJobDetails, t]);
-  
+
   // Extract job and parameters from job details
   const job = jobDetails?.job;
   const jobParameters = jobDetails?.parameters || [];
-  
+
   // Update Jenkins config when providers change
   useEffect(() => {
     if (providers.length > 0 && jenkinsConfig.enabled) {
       // Auto-select the first Jenkins provider if it's available
-      const jenkinsProviders = providers.filter(p => p.type === 'jenkins');
+      const jenkinsProviders = providers.filter((p) => p.type === 'jenkins');
       if (jenkinsProviders.length > 0) {
         // Always use the first provider (default provider)
         const defaultProvider = jenkinsProviders[0];
-        
+
         // Only update if the provider changed or no provider is selected
         if (!jenkinsConfig.providerId || jenkinsConfig.providerId !== defaultProvider.id) {
           console.log('Auto-selecting default Jenkins provider:', defaultProvider.name);
           onJenkinsConfigChange(true, {
             ...jenkinsConfig,
             providerId: defaultProvider.id,
-            url: defaultProvider.url
+            url: defaultProvider.url,
           });
         }
       }
     }
   }, [providers, jenkinsConfig.enabled]);
-  
+
   // Handle provider selection
   const handleProviderChange = (providerId: string) => {
-    const provider = providers.find(p => p.id === providerId);
+    const provider = providers.find((p) => p.id === providerId);
     onJenkinsConfigChange(jenkinsConfig.enabled, {
       ...jenkinsConfig,
       providerId,
       url: provider?.url || '',
-      jobId: undefined // Reset job when provider changes
+      jobId: undefined, // Reset job when provider changes
     });
   };
-  
+
   // Handle job selection
   const handleJobChange = (jobId: string) => {
-    const job = jobs.find(j => j.id === jobId);
+    const job = jobs.find((j) => j.id === jobId);
     onJenkinsConfigChange(jenkinsConfig.enabled, {
       ...jenkinsConfig,
       jobId,
       jobName: job?.name || '',
-      parameters: {} // Reset parameters when job changes
+      parameters: {}, // Reset parameters when job changes
     });
   };
-  
+
   // Handle parameter change
   const handleParameterChange = (name: string, value: string) => {
     onJenkinsConfigChange(jenkinsConfig.enabled, {
       ...jenkinsConfig,
       parameters: {
         ...(jenkinsConfig.parameters || {}),
-        [name]: value
-      }
+        [name]: value,
+      },
     });
   };
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -208,7 +204,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         >
           {t('previous')}
         </button>
-        
+
         <div className="flex items-center space-x-4">
           <CustomSwitch
             checked={jenkinsConfig.enabled}
@@ -221,7 +217,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
             label={t('jenkinsIntegration')}
           />
         </div>
-        
+
         <button
           type="submit"
           disabled={isSubmitting}
@@ -229,9 +225,25 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         >
           {isSubmitting ? (
             <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               {t('creating')}
             </>
@@ -240,18 +252,20 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
           )}
         </button>
       </div>
-      
+
       <div className="space-y-4">
         {/* Show either Jenkins Pipeline Preview or Deployment Review based on toggle */}
         {jenkinsConfig.enabled ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">{t('jenkinsPipelinePreview')}</h3>
+              <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">
+                {t('jenkinsPipelinePreview')}
+              </h3>
             </div>
-            
+
             <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 p-4 overflow-auto max-h-96">
               <pre className="text-xs text-gray-300 font-mono whitespace-pre">
-{`pipeline {
+                {`pipeline {
     agent any
     
     stages {
@@ -265,11 +279,13 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
             steps {
                 script {
                     // Deploy scripts to selected hosts
-                    ${scriptIds.map((scriptId) => {
-                      const script = repositoryScripts.find(s => s.id === scriptId);
-                      const params = scriptParameters[scriptId]?.['raw'] || '';
-                      return `sh "automai-deploy ${script?.path || scriptId} ${params}"`;
-                    }).join('\n                    ')}
+                    ${scriptIds
+                      .map((scriptId) => {
+                        const script = repositoryScripts.find((s) => s.id === scriptId);
+                        const params = scriptParameters[scriptId]?.['raw'] || '';
+                        return `sh "automai-deploy ${script?.path || scriptId} ${params}"`;
+                      })
+                      .join('\n                    ')}
                 }
             }
         }
@@ -280,8 +296,10 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
           </div>
         ) : (
           <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
-            <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{t('deploymentSummary')}</h4>
-            
+            <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('deploymentSummary')}
+            </h4>
+
             <div className="space-y-4">
               {/* Scripts */}
               <div className="space-y-2 mb-4">
@@ -295,16 +313,31 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">#</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">{t('scriptPath')}</th>
-                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">{t('parameters')}</th>
+                          <th
+                            scope="col"
+                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10"
+                          >
+                            #
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2"
+                          >
+                            {t('scriptPath')}
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2"
+                          >
+                            {t('parameters')}
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {scriptIds.map((scriptId, index) => {
-                          const script = repositoryScripts.find(s => s.id === scriptId);
+                          const script = repositoryScripts.find((s) => s.id === scriptId);
                           const params = scriptParameters[scriptId]?.['raw'] || '';
-                          
+
                           return (
                             <tr key={scriptId}>
                               <td className="px-3 py-1.5 whitespace-nowrap">
@@ -332,25 +365,27 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
                   )}
                 </div>
               </div>
-              
+
               {/* Target Hosts */}
               <div>
-                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('targetHosts')}</h5>
+                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  {t('targetHosts')}
+                </h5>
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
                   {hostIds.length > 0 ? (
                     <div className="grid grid-cols-2 gap-2">
-                      {hostIds.map(id => {
-                        const host = availableHosts.find(h => h.id === id);
+                      {hostIds.map((id) => {
+                        const host = availableHosts.find((h) => h.id === id);
                         if (!host) return null;
-                        
+
                         return (
                           <div key={id} className="text-xs flex items-center">
-                            <div className={`w-2 h-2 rounded-full mr-2 ${host.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <div
+                              className={`w-2 h-2 rounded-full mr-2 ${host.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}
+                            ></div>
                             <span className="text-gray-800 dark:text-gray-200">{host.name}</span>
                             <span className="text-gray-500 ml-1">({host.ip})</span>
-                            <span 
-                              className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
-                            >
+                            <span className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
                               #{host.environment.toLowerCase()}
                             </span>
                           </div>
@@ -362,22 +397,36 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
                   )}
                 </div>
               </div>
-              
+
               {/* Schedule */}
               <div>
-                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('schedule')}</h5>
+                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  {t('schedule')}
+                </h5>
                 <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
                   <div className="text-xs text-gray-800 dark:text-gray-200">
                     {schedule === 'now' ? (
                       <span>{t('deployImmediately')}</span>
                     ) : (
                       <div className="space-y-1">
-                        <div>{t('scheduledFor')}: <span className="font-medium">{scheduledTime}</span></div>
+                        <div>
+                          {t('scheduledFor')}: <span className="font-medium">{scheduledTime}</span>
+                        </div>
                         {cronExpression && (
-                          <div>Cron: <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">{cronExpression}</code></div>
+                          <div>
+                            Cron:{' '}
+                            <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
+                              {cronExpression}
+                            </code>
+                          </div>
                         )}
                         {(repeatCount || 0) > 0 && (
-                          <div>{t('repeat')}: <span className="font-medium">{repeatCount || 0} {t('times')}</span></div>
+                          <div>
+                            {t('repeat')}:{' '}
+                            <span className="font-medium">
+                              {repeatCount || 0} {t('times')}
+                            </span>
+                          </div>
                         )}
                       </div>
                     )}

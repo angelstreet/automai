@@ -7,8 +7,8 @@ type CookieStore = ReturnType<typeof cookies> extends Promise<infer T> ? T : nev
 
 export const createClient = async (cookieStore?: any) => {
   // Use provided cookieStore or get a new one
-  const cookieManager = cookieStore || await cookies();
-  
+  const cookieManager = cookieStore || (await cookies());
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,6 +27,6 @@ export const createClient = async (cookieStore?: any) => {
           return cookieManager.getAll();
         },
       },
-    }
+    },
   );
 };

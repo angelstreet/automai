@@ -4,12 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { PlusCircle, Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/shadcn/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +31,11 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { toast } from '@/components/shadcn/use-toast';
 import { CICDProviderForm } from './';
-import { getCICDProvidersAction, deleteCICDProviderAction, testCICDProviderAction } from '../actions';
+import {
+  getCICDProvidersAction,
+  deleteCICDProviderAction,
+  testCICDProviderAction,
+} from '../actions';
 import { Badge } from '@/components/shadcn/badge';
 import { CICDProvider as CICDProviderModel } from '../types';
 
@@ -51,37 +50,40 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  
+
   // Listen for the add provider event from page
   useEffect(() => {
     const handleAddProviderEvent = () => {
       handleAddEditProvider();
     };
-    
+
     document.addEventListener('add-cicd-provider', handleAddProviderEvent);
-    
+
     return () => {
       document.removeEventListener('add-cicd-provider', handleAddProviderEvent);
     };
   }, []);
-  
+
   // Load providers on component mount
   useEffect(() => {
     loadProviders();
   }, []);
-  
+
   // Fetch providers from the backend
   const loadProviders = async () => {
     setLoading(true);
-    
+
     try {
       console.log('CICDProvider component: Calling getCICDProvidersAction');
       const result = await getCICDProvidersAction();
-      
+
       console.log('CICDProvider component: Received result:', JSON.stringify(result, null, 2));
-      
+
       if (result.success) {
-        console.log('CICDProvider component: Setting providers with data:', JSON.stringify(result.data, null, 2));
+        console.log(
+          'CICDProvider component: Setting providers with data:',
+          JSON.stringify(result.data, null, 2),
+        );
         setProviders(result.data || []);
       } else {
         console.error('CICDProvider component: Error fetching providers:', result.error);
@@ -102,7 +104,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
       setLoading(false);
     }
   };
-  
+
   // Test a provider connection
   const handleTestProvider = async (provider: CICDProviderModel) => {
     try {
@@ -114,12 +116,12 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
         url: provider.url,
         config: {
           auth_type: provider.config?.auth_type,
-          credentials: provider.config?.credentials
-        }
+          credentials: provider.config?.credentials,
+        },
       };
-      
+
       const result = await testCICDProviderAction(providerPayload);
-      
+
       if (result.success) {
         toast({
           title: 'Connection Successful',
@@ -141,7 +143,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
       });
     }
   };
-  
+
   // Open the add/edit dialog
   const handleAddEditProvider = (provider?: CICDProviderModel) => {
     if (provider) {
@@ -151,30 +153,30 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
       setSelectedProvider(null);
       setIsEditing(false);
     }
-    
+
     setIsAddEditDialogOpen(true);
   };
-  
+
   // Open the delete confirmation dialog
   const handleDeleteClick = (provider: CICDProviderModel) => {
     setSelectedProvider(provider);
     setIsDeleteDialogOpen(true);
   };
-  
+
   // Confirm deletion of a provider
   const handleConfirmDelete = async () => {
     if (!selectedProvider) return;
-    
+
     try {
       const result = await deleteCICDProviderAction(selectedProvider.id);
-      
+
       if (result.success) {
         toast({
           title: 'Provider Deleted',
           description: 'The CI/CD provider has been successfully deleted.',
           variant: 'default',
         });
-        
+
         // Refresh the list
         loadProviders();
       } else {
@@ -194,13 +196,13 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
       setIsDeleteDialogOpen(false);
     }
   };
-  
+
   // Handle dialog completion
   const handleDialogComplete = () => {
     setIsAddEditDialogOpen(false);
     loadProviders();
   };
-  
+
   // Get provider type badge color
   const getProviderBadgeColor = (type: string) => {
     switch (type) {
@@ -216,23 +218,19 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
         return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
-  
+
   return (
     <Card>
       {!removeTitle && (
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xl font-bold">CI/CD Providers</CardTitle>
-          <Button
-            onClick={() => handleAddEditProvider()}
-            size="sm"
-            className="h-8 gap-1"
-          >
+          <Button onClick={() => handleAddEditProvider()} size="sm" className="h-8 gap-1">
             <PlusCircle className="h-4 w-4" />
             <span>Add Provider</span>
           </Button>
         </CardHeader>
       )}
-      
+
       <CardContent>
         {loading ? (
           <div className="flex justify-center items-center h-32">
@@ -242,7 +240,9 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
           <div className="flex flex-col items-center justify-center h-32 space-y-2 border-2 border-dashed rounded-lg p-4">
             <AlertCircle className="h-8 w-8 text-gray-400" />
             <div className="text-center space-y-1">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No CI/CD Providers</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                No CI/CD Providers
+              </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Add a CI/CD provider to start creating deployments
               </p>
@@ -279,7 +279,8 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
                         {provider.type === 'github' && 'GitHub Actions'}
                         {provider.type === 'gitlab' && 'GitLab CI'}
                         {provider.type === 'azure_devops' && 'Azure DevOps'}
-                        {!['jenkins', 'github', 'gitlab', 'azure_devops'].includes(provider.type) && provider.type}
+                        {!['jenkins', 'github', 'gitlab', 'azure_devops'].includes(provider.type) &&
+                          provider.type}
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">{provider.url}</TableCell>
@@ -306,7 +307,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleDeleteClick(provider)}
                             className="text-red-600 dark:text-red-400"
                           >
@@ -322,7 +323,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
             </Table>
           </div>
         )}
-        
+
         {/* Add/Edit Dialog */}
         <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
           <DialogContent className="max-w-3xl">
@@ -336,19 +337,23 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
             />
           </DialogContent>
         </Dialog>
-        
+
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete CI/CD Provider</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{selectedProvider?.name}"? This action cannot be undone and will remove all access to this provider.
+                Are you sure you want to delete "{selectedProvider?.name}"? This action cannot be
+                undone and will remove all access to this provider.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700">
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                className="bg-red-600 hover:bg-red-700"
+              >
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -357,4 +362,4 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
       </CardContent>
     </Card>
   );
-} 
+}

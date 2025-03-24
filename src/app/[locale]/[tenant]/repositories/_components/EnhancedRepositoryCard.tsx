@@ -32,16 +32,16 @@ export function EnhancedRepositoryCard({
   // Add isClient state to handle client-side rendering safely
   const [isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
-  
+
   // Log whenever the card receives new props
   useEffect(() => {
     console.log(`[EnhancedRepositoryCard] Received update for repo: ${repository?.id}`, {
       name: repository?.name,
       syncStatus: repository?.syncStatus,
-      lastSyncedAt: repository?.lastSyncedAt
+      lastSyncedAt: repository?.lastSyncedAt,
     });
   }, [repository]);
-  
+
   // This effect only runs on the client after hydration is complete
   useEffect(() => {
     setIsClient(true);
@@ -50,24 +50,24 @@ export function EnhancedRepositoryCard({
   // Format the last synced date - using a more stable approach to avoid hydration issues
   const getLastSyncedText = () => {
     if (!repository?.lastSyncedAt) return t('never');
-    
+
     // Use a safer method that's less likely to cause hydration errors
     try {
-      return t('lastSynced', { 
-        date: formatDistanceToNow(new Date(repository.lastSyncedAt), { addSuffix: true }) 
+      return t('lastSynced', {
+        date: formatDistanceToNow(new Date(repository.lastSyncedAt), { addSuffix: true }),
       });
     } catch (e) {
       // Fall back to a simple format if there's an issue
       return t('lastSynced', { date: t('recently') });
     }
   };
-  
+
   // Get the text outside of render to reduce dynamic content
   const lastSyncedText = getLastSyncedText();
 
   // Get the provider icon based on the type
   const getProviderIcon = () => {
-    switch(repository?.providerType) {
+    switch (repository?.providerType) {
       case 'github':
         return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':
@@ -106,7 +106,7 @@ export function EnhancedRepositoryCard({
   };
 
   return (
-    <Card 
+    <Card
       className="overflow-hidden transition-all duration-160 hover:shadow-md"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -119,9 +119,9 @@ export function EnhancedRepositoryCard({
               {repository?.name || 'Unnamed Repository'}
             </CardTitle>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className={`h-7 w-7 p-0 ${isStarred ? 'text-yellow-500' : ''}`}
             onClick={handleStarClick}
           >
@@ -140,32 +140,33 @@ export function EnhancedRepositoryCard({
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent className="py-2 px-4">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center">
             <GitBranch className="h-3 w-3 mr-1" />
             {repository?.defaultBranch || 'main'}
           </div>
-          <Badge 
-            variant={repository?.syncStatus === 'SYNCED' ? 'default' : 'outline'} 
+          <Badge
+            variant={repository?.syncStatus === 'SYNCED' ? 'default' : 'outline'}
             className={`text-xs py-0 text-[10px] ml-auto ${SYNC_STATUS_STYLES[repository?.syncStatus || 'IDLE']}`}
           >
             {repository?.syncStatus || 'IDLE'}
           </Badge>
         </div>
         <div className="flex items-center text-[10px] text-muted-foreground mt-1">
-            <Clock className="h-3 w-3 mr-1" />
-            {lastSyncedText}
+          <Clock className="h-3 w-3 mr-1" />
+          {lastSyncedText}
         </div>
       </CardContent>
-      
-      <CardFooter className={`py-3 px-3 border-t flex justify-center transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}>
-      
+
+      <CardFooter
+        className={`py-3 px-3 border-t flex justify-center transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}
+      >
         <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-6 text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={handleDeleteClick}
             disabled={isDeleting}
@@ -174,9 +175,9 @@ export function EnhancedRepositoryCard({
             {t('deleteAction')}
           </Button>
           {repository.url && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-6"
               onClick={(e) => {
                 e.stopPropagation();
@@ -187,9 +188,9 @@ export function EnhancedRepositoryCard({
               {t('open')}
             </Button>
           )}
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-6"
             onClick={handleSyncClick}
             disabled={isSyncing}

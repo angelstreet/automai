@@ -30,10 +30,10 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
   onScriptParameterChange,
   onPrevStep,
   onNextStep,
-  isStepValid
+  isStepValid,
 }) => {
   const t = useTranslations('deployment.wizard');
-  
+
   return (
     <div>
       <div className="flex justify-between mb-1">
@@ -44,33 +44,31 @@ const DeploymentWizardStep2: React.FC<DeploymentWizardStep2Props> = ({
         >
           {t('previous')}
         </button>
-        
+
         <button
           type="button"
           onClick={onNextStep}
           disabled={!isStepValid()}
           className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-            isStepValid() 
-              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600' 
+            isStepValid()
+              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
               : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
           }`}
         >
           {t('next')}
         </button>
       </div>
-      
+
       {/* Display error if any */}
       {scriptsError && (
         <div className="mb-4 p-2 border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 rounded-md">
           <p className="text-sm text-red-600 dark:text-red-400">
             {t('scriptsError')}: {scriptsError}
           </p>
-          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-            {t('tryRefreshing')}
-          </p>
+          <p className="text-xs text-red-500 dark:text-red-400 mt-1">{t('tryRefreshing')}</p>
         </div>
       )}
-      
+
       <EnhancedScriptSelector
         selectedRepository={selectedRepository || undefined}
         availableScripts={repositoryScripts}

@@ -54,7 +54,7 @@ export const supabaseAuth = {
         console.error('Missing tenant_id in user profile');
         return { success: false, error: 'Missing tenant_id in user profile' };
       }
-      
+
       if (!profile?.tenant_name) {
         console.error('Missing tenant_name in user profile');
         return { success: false, error: 'Missing tenant_name in user profile' };
@@ -78,7 +78,7 @@ export const supabaseAuth = {
               full_name: metadata.full_name,
               preferred_username: metadata.preferred_username,
               avatar_url: metadata.avatar_url,
-              raw_user_meta_data: metadata.raw_user_meta_data
+              raw_user_meta_data: metadata.raw_user_meta_data,
             },
           },
           accessToken: access_token,
@@ -113,7 +113,7 @@ export const supabaseAuth = {
       }
 
       console.log(`Fetching profile for user ${authUser.id}`);
-      
+
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select(
@@ -127,12 +127,12 @@ export const supabaseAuth = {
         .eq('id', authUser.id)
         .single();
 
-      console.log('Profile query result:', { 
-        success: !profileError, 
-        profileData: profile, 
-        error: profileError?.message || null 
+      console.log('Profile query result:', {
+        success: !profileError,
+        profileData: profile,
+        error: profileError?.message || null,
       });
-      
+
       if (profileError) {
         console.error(`Failed to fetch profile for user ${authUser.id}:`, profileError);
         return {
@@ -140,7 +140,7 @@ export const supabaseAuth = {
           error: profileError.message,
         };
       }
-      
+
       // Get name from user metadata with fallbacks
       const name =
         authUser.user_metadata?.name ||
@@ -160,24 +160,24 @@ export const supabaseAuth = {
       // Check if tenant_id and tenant_name are properly set
       if (!profile.tenant_id) {
         console.error('Missing tenant_id in user profile - checking DB records');
-        
+
         // Debug query to check if profile record exists properly
         const { data: profileCheck, error: checkError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', authUser.id);
-          
+
         console.log('Profile record check:', {
           userId: authUser.id,
           found: !!profileCheck?.length,
           recordCount: profileCheck?.length || 0,
           fullRecord: profileCheck && profileCheck[0] ? profileCheck[0] : null,
-          error: checkError ? checkError.message : null
+          error: checkError ? checkError.message : null,
         });
-        
+
         return { success: false, error: 'Missing tenant_id in user profile' };
       }
-      
+
       if (!profile.tenant_name) {
         console.error('Missing tenant_name in user profile');
         return { success: false, error: 'Missing tenant_name in user profile' };
@@ -194,13 +194,14 @@ export const supabaseAuth = {
           role,
           tenant_id: profile.tenant_id,
           tenant_name: profile.tenant_name,
-          avatar_url: profile.avatar_url || authUser.user_metadata?.avatar_url || '/avatars/default.svg',
+          avatar_url:
+            profile.avatar_url || authUser.user_metadata?.avatar_url || '/avatars/default.svg',
           user_metadata: {
             name: authUser.user_metadata?.name,
             full_name: authUser.user_metadata?.full_name,
             preferred_username: authUser.user_metadata?.preferred_username,
             avatar_url: authUser.user_metadata?.avatar_url,
-            raw_user_meta_data: authUser.user_metadata?.raw_user_meta_data
+            raw_user_meta_data: authUser.user_metadata?.raw_user_meta_data,
           },
         },
       };
@@ -337,14 +338,38 @@ export const supabaseAuth = {
     }
     try {
       const supabase = await createClient();
+      
+      // Log the code we're using and basic details
       console.log(
         '🔐 AUTH_SERVICE: Starting OAuth code exchange for code:',
         code.substring(0, 6) + '...',
       );
+      
+      // Check for code verifier in cookies or headers
+      const allCookies = await supabase.cookies.getAll();
+      console.log('🔐 AUTH_SERVICE: Cookies available:', allCookies.length);
+      
+      const pkceVerifierCookie = allCookies.find(c => 
+        c.name.includes('code_verifier') || c.name.includes('pkce')
+      );
+      
+      if (pkceVerifierCookie) {
+        console.log('🔐 AUTH_SERVICE: Found PKCE verifier cookie:', pkceVerifierCookie.name);
+      } else {
+        console.warn('🔐 AUTH_SERVICE: No PKCE verifier cookie found - may cause errors');
+      }
+      
+      // Try exchanging the code for a session
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
         console.error('🔐 AUTH_SERVICE ERROR: Error exchanging code for session:', error);
+        // Log more details about the error
+        console.error('🔐 AUTH_SERVICE ERROR: Error details:', {
+          message: error.message,
+          code: (error as any).code,
+          status: (error as any).status
+        });
         return { success: false, error: error.message };
       }
 
@@ -377,11 +402,11 @@ export const supabaseAuth = {
         console.log('Clearing localStorage user caches');
         localStorage.removeItem('user-data-cache');
         localStorage.removeItem('cached_user');
-        
+
         // Clear any SWR cache keys related to user
         localStorage.removeItem('swr-user-data');
       }
-      
+
       // Attempt to invalidate server-side cache
       try {
         const importDynamic = new Function('modulePath', 'return import(modulePath)');

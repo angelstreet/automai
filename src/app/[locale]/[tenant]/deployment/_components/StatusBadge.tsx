@@ -39,11 +39,13 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, className = '' }) => 
   // Get config for this status, or use default
   const config = STATUS_CONFIG[status as StatusType] || {
     color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    icon: 'Clock'
+    icon: 'Clock',
   };
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${config.color} ${className}`}>
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${config.color} ${className}`}
+    >
       {getStatusIcon(config.icon)}
       <span className="truncate">
         {status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1)}

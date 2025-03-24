@@ -1,9 +1,20 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, useLayoutEffect } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useLayoutEffect,
+} from 'react';
 import Cookies from 'js-cookie';
 import { SidebarContext as SidebarContextType } from '@/types/sidebar';
-import { SIDEBAR_COOKIE_NAME, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
+import {
+  SIDEBAR_COOKIE_NAME,
+  SIDEBAR_WIDTH,
+  SIDEBAR_WIDTH_ICON,
+} from '@/components/sidebar/constants';
 
 export const SidebarContext = createContext<SidebarContextType | null>(null);
 
@@ -22,14 +33,14 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
     if (typeof window === 'undefined') {
       return defaultOpen;
     }
-    
+
     // For client, try to get the state from localStorage first, then cookie as fallback
     try {
       const storedValue = localStorage.getItem(SIDEBAR_COOKIE_NAME);
       if (storedValue !== null) {
         return storedValue !== 'false';
       }
-      
+
       const cookieValue = Cookies.get(SIDEBAR_COOKIE_NAME);
       if (cookieValue !== undefined) {
         // Also store in localStorage for future use
@@ -40,7 +51,7 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
       // In case of any localStorage errors, fall back to defaultOpen
       console.error('Error accessing localStorage', e);
     }
-    
+
     return defaultOpen;
   });
 
@@ -117,15 +128,15 @@ export const useSidebar = () => {
   if (!context) {
     throw new Error('useSidebar must be used within a SidebarProvider');
   }
-  
+
   // First render: ensure CSS variables are set immediately on mount
   useIsomorphicLayoutEffect(() => {
     if (typeof document !== 'undefined') {
       const root = document.documentElement;
-      
+
       // Immediately disable transitions to prevent initial layout shift
       root.style.setProperty('transition', 'none');
-      
+
       // Get the initial width from local storage if available
       let initialOpen = context.open;
       try {
@@ -136,21 +147,21 @@ export const useSidebar = () => {
       } catch (e) {
         // Fallback to context value if localStorage fails
       }
-      
+
       // Calculate initial offset based on the determined state
       const initialOffset = initialOpen ? SIDEBAR_WIDTH : SIDEBAR_WIDTH_ICON;
-      
+
       // Set CSS variable for sidebar width
       root.style.setProperty('--sidebar-width-offset', initialOffset);
-      
+
       // Force reflow to apply styles before any rendering
       document.body.offsetHeight;
-      
+
       // Restore transitions after a brief delay
       const timer = setTimeout(() => {
         root.style.removeProperty('transition');
       }, 50);
-      
+
       return () => clearTimeout(timer);
     }
   }, []);

@@ -20,7 +20,7 @@ const envSchema = z
     {
       message: 'Supabase credentials are required in production environment',
       path: ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'],
-    }
+    },
   );
 
 // Process environment variables

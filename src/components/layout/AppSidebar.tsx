@@ -28,10 +28,10 @@ const AppSidebar = React.memo(function AppSidebar() {
 
   // Use a ref for initial render optimization to avoid double-rendering flicker
   const isInitialRender = React.useRef(true);
-  
+
   // Determine client-side rendering without state updates that cause re-renders
   const isClient = typeof window !== 'undefined';
-  
+
   // After hydration completes, mark initial render as done
   React.useEffect(() => {
     isInitialRender.current = false;
@@ -96,7 +96,7 @@ const AppSidebar = React.memo(function AppSidebar() {
 
   // Always ensure sidebar is visible, with fallback mechanisms
   // This guarantees the sidebar will be shown regardless of hydration state
-  const sidebarClassName = `fixed left-0 top-0 z-30 sidebar-visible ${isClient ? "sidebar-ready" : ""}`;
+  const sidebarClassName = `fixed left-0 top-0 z-30 sidebar-visible ${isClient ? 'sidebar-ready' : ''}`;
 
   return (
     <Sidebar

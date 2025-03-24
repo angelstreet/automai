@@ -9,9 +9,24 @@ import { invalidateUserCache } from './user';
  */
 export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl: string) {
   try {
-    const result = await supabaseAuth.signInWithOAuth(provider, {
+    console.log('🔐 Starting OAuth flow for provider:', provider);
+    console.log('🔐 Using redirect URL:', redirectUrl);
+    
+    // Ensure we're using the right options
+    const options = {
       redirectTo: redirectUrl,
-    });
+      skipBrowserRedirect: false, // Make sure browser is redirected by Supabase
+    };
+    
+    console.log('🔐 SignInWithOAuth options:', options);
+    
+    const result = await supabaseAuth.signInWithOAuth(provider, options);
+
+    if (!result.success) {
+      console.error('🔐 OAuth initialization failed:', result.error);
+    } else {
+      console.log('🔐 OAuth URL generated:', !!result.data?.url);
+    }
 
     return {
       success: result.success,

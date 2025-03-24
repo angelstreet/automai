@@ -16,7 +16,10 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
-import { verifyFingerprint as verifyFingerprintAction, testConnection as testConnectionAction } from '../actions';
+import {
+  verifyFingerprint as verifyFingerprintAction,
+  testConnection as testConnectionAction,
+} from '../actions';
 import { useHost } from '@/context/HostContext';
 import { Host } from '../types';
 
@@ -41,14 +44,14 @@ interface ConnectionFormProps {
   testStatus?: 'idle' | 'success' | 'error';
 }
 
-export function ConnectionForm({ 
-  formData, 
+export function ConnectionForm({
+  formData,
   onChange,
   onTestSuccess,
   onSubmit,
   onCancel,
   isSaving = false,
-  testStatus = 'idle'
+  testStatus = 'idle',
 }: ConnectionFormProps) {
   const t = useTranslations('Common');
   const hostContext = useHost();
@@ -74,7 +77,7 @@ export function ConnectionForm({
     if (testStatus === 'success' && !testSuccess) {
       setTestSuccess(true);
     }
-    
+
     if (testSuccess && testStatus !== 'success' && onTestSuccess) {
       onTestSuccess();
     }
@@ -82,7 +85,7 @@ export function ConnectionForm({
 
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
-    
+
     const defaultPort = value === 'ssh' ? '22' : value === 'docker' ? '2375' : '9000';
     onChange({
       ...formData,
@@ -151,7 +154,7 @@ export function ConnectionForm({
       const result = await verifyFingerprintAction({
         host: fingerprintData.hostname,
         fingerprint: fingerprintData.fingerprint,
-        port: parseInt(formData.port)
+        port: parseInt(formData.port),
       });
 
       if (result.success) {
@@ -271,7 +274,12 @@ export function ConnectionForm({
       </div>
 
       <div className="flex justify-end space-x-3 mt-3">
-        <Button variant="outline" onClick={testHostConnection} disabled={testing} className="h-8 px-3 text-sm">
+        <Button
+          variant="outline"
+          onClick={testHostConnection}
+          disabled={testing}
+          className="h-8 px-3 text-sm"
+        >
           {testing ? (
             <>
               <Loader2 className="h-3 w-3 animate-spin mr-2" />
@@ -284,26 +292,30 @@ export function ConnectionForm({
             </>
           )}
         </Button>
-        
-        <Button 
+
+        <Button
           onClick={async (e) => {
             e.preventDefault(); // Prevent any default form behavior
-            
+
             // Check if onSubmit exists
             if (typeof onSubmit !== 'function') {
               console.error('onSubmit is not a function:', onSubmit);
               return;
             }
-            
+
             try {
               const result = await onSubmit();
             } catch (error) {
               console.error('Error executing onSubmit callback:', error);
             }
-          }} 
-          disabled={isSaving || (!testSuccess && testStatus !== 'success')} 
-          variant={(testSuccess || testStatus === 'success') ? "default" : "outline"}
-          className={(testSuccess || testStatus === 'success') ? "bg-green-600 hover:bg-green-700 h-8 px-3 text-sm" : "h-8 px-3 text-sm"}
+          }}
+          disabled={isSaving || (!testSuccess && testStatus !== 'success')}
+          variant={testSuccess || testStatus === 'success' ? 'default' : 'outline'}
+          className={
+            testSuccess || testStatus === 'success'
+              ? 'bg-green-600 hover:bg-green-700 h-8 px-3 text-sm'
+              : 'h-8 px-3 text-sm'
+          }
         >
           {isSaving ? (
             <>
@@ -337,7 +349,12 @@ export function ConnectionForm({
 
       <div className="flex justify-end space-x-2 mt-2">
         {onCancel && (
-          <Button variant="outline" onClick={onCancel} disabled={isSaving} className="h-8 px-3 text-sm">
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={isSaving}
+            className="h-8 px-3 text-sm"
+          >
             {t('cancel')}
           </Button>
         )}

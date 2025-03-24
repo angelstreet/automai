@@ -1,9 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { 
-  ArrowLeft, GitBranch, RefreshCw, FolderTree, Code, Play, 
-  Settings, Terminal, FileCode, Folder, Star, GitFork, Eye, 
-  ChevronDown, Download, History, PlusCircle, FileText
+import {
+  ArrowLeft,
+  GitBranch,
+  RefreshCw,
+  FolderTree,
+  Code,
+  Play,
+  Settings,
+  Terminal,
+  FileCode,
+  Folder,
+  Star,
+  GitFork,
+  Eye,
+  ChevronDown,
+  Download,
+  History,
+  PlusCircle,
+  FileText,
 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/shadcn/card';
@@ -13,40 +28,45 @@ import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { 
-  Breadcrumb, 
-  BreadcrumbItem, 
-  BreadcrumbLink, 
-  BreadcrumbList, 
-  BreadcrumbSeparator 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shadcn/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/shadcn/tooltip';
 import { cn } from '@/lib/utils';
 import { getRepositoryFiles, getFileContent } from '@/app/[locale]/[tenant]/repositories/actions';
 
 // File extension colors for syntax highlighting
 const FILE_EXTENSION_COLORS = {
-  js: "text-yellow-500",
-  jsx: "text-blue-400",
-  ts: "text-blue-500",
-  tsx: "text-blue-600",
-  css: "text-pink-500",
-  scss: "text-pink-600",
-  html: "text-orange-500",
-  json: "text-green-500",
-  md: "text-purple-500",
-  py: "text-green-600",
-  rb: "text-red-500",
-  go: "text-cyan-500",
-  java: "text-amber-500",
-  php: "text-indigo-500",
-  c: "text-blue-800",
-  cpp: "text-blue-700",
-  cs: "text-violet-500",
-  rs: "text-orange-600",
-  swift: "text-orange-500",
-  kt: "text-purple-600",
-  default: "text-gray-500"
+  js: 'text-yellow-500',
+  jsx: 'text-blue-400',
+  ts: 'text-blue-500',
+  tsx: 'text-blue-600',
+  css: 'text-pink-500',
+  scss: 'text-pink-600',
+  html: 'text-orange-500',
+  json: 'text-green-500',
+  md: 'text-purple-500',
+  py: 'text-green-600',
+  rb: 'text-red-500',
+  go: 'text-cyan-500',
+  java: 'text-amber-500',
+  php: 'text-indigo-500',
+  c: 'text-blue-800',
+  cpp: 'text-blue-700',
+  cs: 'text-violet-500',
+  rs: 'text-orange-600',
+  swift: 'text-orange-500',
+  kt: 'text-purple-600',
+  default: 'text-gray-500',
 };
 
 interface RepositoryDetailViewProps {
@@ -68,7 +88,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
 
   // Get provider icon and name
   const getProviderIcon = () => {
-    switch(repository.providerType) {
+    switch (repository.providerType) {
       case 'github':
         return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':
@@ -79,12 +99,14 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
         return <GitBranch className="h-5 w-5" />;
     }
   };
-  
+
   // Get file icon based on extension
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase() || 'default';
-    const colorClass = FILE_EXTENSION_COLORS[extension as keyof typeof FILE_EXTENSION_COLORS] || FILE_EXTENSION_COLORS.default;
-    
+    const colorClass =
+      FILE_EXTENSION_COLORS[extension as keyof typeof FILE_EXTENSION_COLORS] ||
+      FILE_EXTENSION_COLORS.default;
+
     return <FileCode className={`h-4 w-4 ${colorClass}`} />;
   };
 
@@ -93,11 +115,11 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
     const fetchFiles = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         const path = currentPath.join('/');
         const result = await getRepositoryFiles(repository.id, path);
-        
+
         if (result.success && Array.isArray(result.data)) {
           setFiles(result.data);
         } else {
@@ -111,7 +133,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
         setIsLoading(false);
       }
     };
-    
+
     fetchFiles();
   }, [repository.id, currentPath]);
 
@@ -123,10 +145,10 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
       setFileContent('');
     } else {
       setSelectedFile(item.path);
-      
+
       try {
         const result = await getFileContent(repository.id, item.path);
-        
+
         if (result.success && result.data) {
           setFileContent(result.data.content || '');
           setFileMetadata(result.data);
@@ -164,7 +186,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
         setIsLoading(true);
         try {
           const result = await getFileContent(repository.id, selectedFile);
-          
+
           if (result.success && result.data) {
             setFileContent(result.data.content || '');
             setFileMetadata(result.data);
@@ -178,7 +200,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
           setIsLoading(false);
         }
       };
-      
+
       fetchContent();
     } else {
       const fetchFiles = async () => {
@@ -186,7 +208,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
         try {
           const path = currentPath.join('/');
           const result = await getRepositoryFiles(repository.id, path);
-          
+
           if (result.success && Array.isArray(result.data)) {
             setFiles(result.data);
           } else {
@@ -199,7 +221,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
           setIsLoading(false);
         }
       };
-      
+
       fetchFiles();
     }
   };
@@ -216,7 +238,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
         </div>
       );
     }
-    
+
     if (error) {
       return (
         <Alert variant="destructive" className="mb-4">
@@ -224,7 +246,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
         </Alert>
       );
     }
-    
+
     if (files.length === 0) {
       return (
         <div className="flex justify-center items-center h-64">
@@ -235,18 +257,18 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
         </div>
       );
     }
-    
+
     // Sort files: folders first, then files alphabetically
     const sortedFiles = [...files].sort((a, b) => {
       if (a.type === 'folder' && b.type !== 'folder') return -1;
       if (a.type !== 'folder' && b.type === 'folder') return 1;
       return a.name.localeCompare(b.name);
     });
-    
+
     return (
       <div className="space-y-0.5">
         {currentPath.length > 0 && (
-          <div 
+          <div
             className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
             onClick={handleNavigateUp}
           >
@@ -254,9 +276,9 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
             <span>../</span>
           </div>
         )}
-        
+
         {sortedFiles.map((item, index) => (
-          <div 
+          <div
             key={index}
             className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
             onClick={() => handleNavigate(item, item.type === 'folder')}
@@ -284,7 +306,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
               {repository.name}
             </BreadcrumbLink>
           </BreadcrumbItem>
-          
+
           {currentPath.map((path, index) => (
             <BreadcrumbItem key={index}>
               <BreadcrumbSeparator>/</BreadcrumbSeparator>
@@ -308,10 +330,12 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
               <ArrowLeft className="h-4 w-4 mr-1" />
               <span className="text-sm">{t('back')}</span>
             </Button>
-            
+
             <div className="flex items-center">
               {getProviderIcon()}
-              <span className="ml-2 font-semibold">{repository.owner} / {repository.name}</span>
+              <span className="ml-2 font-semibold">
+                {repository.owner} / {repository.name}
+              </span>
               {repository.isPrivate && (
                 <Badge variant="outline" className="ml-2 text-xs">
                   {t('private')}
@@ -319,7 +343,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <TooltipProvider>
               <Tooltip>
@@ -331,65 +355,65 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
                 <TooltipContent>{t('refresh')}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            
+
             <Button variant="outline" size="sm" className="h-8">
               <Star className="h-4 w-4 mr-1" />
               <span className="text-sm">Star</span>
             </Button>
           </div>
         </div>
-        
+
         {/* GitHub-style tabs */}
         <div className="flex items-center">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-transparent h-10 p-0">
-              <TabsTrigger 
-                value="code" 
+              <TabsTrigger
+                value="code"
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'code' ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === 'code' ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <Code className="h-4 w-4 mr-2" />
                 <span>Code</span>
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value="issues" 
+
+              <TabsTrigger
+                value="issues"
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'issues' ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === 'issues' ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <span>Issues</span>
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value="prs" 
+
+              <TabsTrigger
+                value="prs"
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'prs' ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === 'prs' ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <span>Pull Requests</span>
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value="actions" 
+
+              <TabsTrigger
+                value="actions"
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'actions' ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === 'actions' ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <Play className="h-4 w-4 mr-2" />
                 <span>Actions</span>
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value="settings" 
+
+              <TabsTrigger
+                value="settings"
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === 'settings' ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === 'settings' ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -399,7 +423,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
           </Tabs>
         </div>
       </div>
-      
+
       {/* Main content area */}
       <div>
         {activeTab === 'code' && (
@@ -410,23 +434,23 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
                 <GitBranch className="h-4 w-4 mr-1" />
                 <span>main</span>
               </div>
-              
+
               <div className="flex items-center">
                 <GitFork className="h-4 w-4 mr-1" />
                 <span>0 forks</span>
               </div>
-              
+
               <div className="flex items-center">
                 <Star className="h-4 w-4 mr-1" />
                 <span>0 stars</span>
               </div>
-              
+
               <div className="flex items-center">
                 <Eye className="h-4 w-4 mr-1" />
                 <span>0 watching</span>
               </div>
             </div>
-            
+
             {/* GitHub-style file explorer */}
             <Card className="border shadow-sm">
               <CardContent className="p-0">
@@ -440,19 +464,19 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
                         <ChevronDown className="h-3.5 w-3.5 ml-1" />
                       </Button>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <Button variant="outline" size="sm" className="h-8 text-xs">
                         <History className="h-3.5 w-3.5 mr-1" />
                         <span>Commits</span>
                       </Button>
-                      
+
                       <Button variant="outline" size="sm" className="h-8 text-xs">
                         <Download className="h-3.5 w-3.5 mr-1" />
                         <span>Download</span>
                         <ChevronDown className="h-3.5 w-3.5 ml-1" />
                       </Button>
-                      
+
                       <Button variant="outline" size="sm" className="h-8 text-xs">
                         <PlusCircle className="h-3.5 w-3.5 mr-1" />
                         <span>Add file</span>
@@ -460,20 +484,16 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
                       </Button>
                     </div>
                   </div>
-                  
+
                   {/* Breadcrumb navigation */}
-                  <div className="px-4 py-2 border-b">
-                    {renderBreadcrumb()}
-                  </div>
-                  
+                  <div className="px-4 py-2 border-b">{renderBreadcrumb()}</div>
+
                   {/* File explorer and content */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-0">
                     <div className="md:col-span-1 border-r">
-                      <ScrollArea className="h-[500px]">
-                        {renderFileList()}
-                      </ScrollArea>
+                      <ScrollArea className="h-[500px]">{renderFileList()}</ScrollArea>
                     </div>
-                    
+
                     <div className="md:col-span-3">
                       <div className="flex justify-between items-center p-2 border-b bg-muted/30">
                         <div>
@@ -483,26 +503,24 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
                               <span className="font-medium">{selectedFile.split('/').pop()}</span>
                             </div>
                           ) : (
-                            <div className="text-sm text-muted-foreground">
-                              {t('selectFile')}
-                            </div>
+                            <div className="text-sm text-muted-foreground">{t('selectFile')}</div>
                           )}
                         </div>
-                        
+
                         {selectedFile && (
                           <div className="flex items-center">
-                            <Button 
-                              variant={viewMode === 'code' ? 'secondary' : 'ghost'} 
-                              size="sm" 
+                            <Button
+                              variant={viewMode === 'code' ? 'secondary' : 'ghost'}
+                              size="sm"
                               className="h-7 text-xs"
                               onClick={() => setViewMode('code')}
                             >
                               <Code className="h-3.5 w-3.5 mr-1" />
                               <span>Code</span>
                             </Button>
-                            <Button 
-                              variant={viewMode === 'preview' ? 'secondary' : 'ghost'} 
-                              size="sm" 
+                            <Button
+                              variant={viewMode === 'preview' ? 'secondary' : 'ghost'}
+                              size="sm"
                               className="h-7 text-xs"
                               onClick={() => setViewMode('preview')}
                             >
@@ -512,7 +530,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
                           </div>
                         )}
                       </div>
-                      
+
                       <ScrollArea className="h-[465px]">
                         {selectedFile ? (
                           <pre className="text-xs p-4 bg-muted/20 rounded-md overflow-x-auto">
@@ -534,7 +552,7 @@ export function RepositoryDetailView({ repository, onBack }: RepositoryDetailVie
             </Card>
           </div>
         )}
-        
+
         {activeTab !== 'code' && (
           <Alert className="mb-4">
             <AlertDescription>{t('featureNotImplemented')}</AlertDescription>

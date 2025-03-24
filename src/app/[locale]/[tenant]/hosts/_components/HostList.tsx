@@ -17,10 +17,10 @@ export default function HostContainer() {
   // Track render count for debugging
   const renderCount = useRef(0);
   const isInitialized = useRef(false);
-  
+
   // Add data fetching state
   const dataFetched = useRef(false);
-  
+
   // Group all state declarations at the top
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -38,17 +38,17 @@ export default function HostContainer() {
     username: '',
     password: '',
   });
-  
+
   // Add logging for component mount
   useEffect(() => {
     renderCount.current++;
     console.log(`[HostContainer] mounted (render #${renderCount.current})`);
-    
+
     return () => {
       console.log('[HostContainer] unmounted');
     };
   }, []);
-  
+
   // Get user data from context
   const userContext = useUser();
   const hostContext = useHost();
@@ -64,15 +64,8 @@ export default function HostContainer() {
     );
   }
 
-  const {
-    hosts,
-    loading,
-    error,
-    fetchHosts,
-    addHost,
-    testConnection,
-    testAllConnections,
-  } = hostContext;
+  const { hosts, loading, error, fetchHosts, addHost, testConnection, testAllConnections } =
+    hostContext;
 
   // Memoize user data to prevent dependency loop
   const userData = userContext?.user;
@@ -80,11 +73,11 @@ export default function HostContainer() {
   // Add logging to track when host data changes
   useEffect(() => {
     if (hosts?.length > 0) {
-      console.log('[HostContainer] Hosts data updated', { 
+      console.log('[HostContainer] Hosts data updated', {
         hostCount: hosts?.length || 0,
         loading,
         error,
-        renderCount: renderCount.current
+        renderCount: renderCount.current,
       });
     }
   }, [hosts, loading, error]);
@@ -102,64 +95,68 @@ export default function HostContainer() {
   }, [hosts, loading, fetchHosts]);
 
   // Create a memoized test connection handler
-  const handleTestConnection = useCallback(async (host: Host) => {
-    console.log('[HostList] Test connection triggered for host:', host.id);
-    
-    if (!testConnection) {
-      console.error('[HostList] testConnection not available from context');
-      return false;
-    }
+  const handleTestConnection = useCallback(
+    async (host: Host) => {
+      console.log('[HostList] Test connection triggered for host:', host.id);
 
-    try {
-      // Add this host to refreshing set
-      setRefreshingHosts(prev => {
-        const next = new Set(prev);
-        next.add(host.id);
-        return next;
-      });
-      setIsRefreshing(true);
+      if (!testConnection) {
+        console.error('[HostList] testConnection not available from context');
+        return false;
+      }
 
-      // Clear the cache before testing connection
-      const { clearHostsCache } = await import('../actions');
-      await clearHostsCache();
-      
-      // The context's testConnection function will handle the animation state
-      const result = await testConnection(host.id);
-      console.log('[HostList] Test connection result:', result);
-      
-      // Refresh the hosts list to get updated statuses
-      await fetchHosts();
-      
-      return result.success;
-    } catch (error) {
-      console.error('[HostList] Test connection error:', error);
-      return false;
-    } finally {
-      // Remove this host from refreshing set
-      setRefreshingHosts(prev => {
-        const next = new Set(prev);
-        next.delete(host.id);
-        return next;
-      });
-      // Only stop global refresh if no hosts are being refreshed
-      setIsRefreshing(prev => {
-        if (prev && refreshingHosts.size <= 1) { // <= 1 because we haven't removed the current host yet
-          return false;
-        }
-        return prev;
-      });
-    }
-  }, [testConnection, fetchHosts, refreshingHosts]);
+      try {
+        // Add this host to refreshing set
+        setRefreshingHosts((prev) => {
+          const next = new Set(prev);
+          next.add(host.id);
+          return next;
+        });
+        setIsRefreshing(true);
+
+        // Clear the cache before testing connection
+        const { clearHostsCache } = await import('../actions');
+        await clearHostsCache();
+
+        // The context's testConnection function will handle the animation state
+        const result = await testConnection(host.id);
+        console.log('[HostList] Test connection result:', result);
+
+        // Refresh the hosts list to get updated statuses
+        await fetchHosts();
+
+        return result.success;
+      } catch (error) {
+        console.error('[HostList] Test connection error:', error);
+        return false;
+      } finally {
+        // Remove this host from refreshing set
+        setRefreshingHosts((prev) => {
+          const next = new Set(prev);
+          next.delete(host.id);
+          return next;
+        });
+        // Only stop global refresh if no hosts are being refreshed
+        setIsRefreshing((prev) => {
+          if (prev && refreshingHosts.size <= 1) {
+            // <= 1 because we haven't removed the current host yet
+            return false;
+          }
+          return prev;
+        });
+      }
+    },
+    [testConnection, fetchHosts, refreshingHosts],
+  );
 
   // Handle refresh all hosts - pass user data from context
   const handleRefreshAll = useCallback(async () => {
     if (isRefreshing) return;
-    
+
     console.log('[HostContainer] Refreshing all hosts');
     setIsRefreshing(true);
     try {
       // Add all hosts to refreshing set
-      const hostIds = hosts.map(h => h.id);
+      const hostIds = hosts.map((h) => h.id);
       setRefreshingHosts(new Set(hostIds));
 
       // Call testAllConnections without arguments
@@ -187,16 +184,16 @@ export default function HostContainer() {
         status: 'connected' as const,
         created_at: new Date(),
         updated_at: new Date(),
-        is_windows: false
+        is_windows: false,
       };
-      
+
       // Call the server action directly, without user data
       const result = await addHostAction(hostData);
-      
+
       if (result.success) {
         // Close dialog
         setShowAddHost(false);
-        
+
         // Reset form
         setFormData({
           name: '',
@@ -207,7 +204,7 @@ export default function HostContainer() {
           username: '',
           password: '',
         });
-        
+
         // Refresh the hosts list
         fetchHosts && fetchHosts();
       } else {
@@ -235,34 +232,37 @@ export default function HostContainer() {
   }, []);
 
   // Implement a proper removeHost function that calls the server action directly
-  const removeHost = useCallback(async (id: string) => {
-    try {
-      console.log('[HostContainer] Attempting to delete host ID:', id);
-      
-      // Import the deleteHost action
-      const { deleteHost } = await import('../actions');
-      
-      // Call the server action directly instead of the context function
-      const result = await deleteHost(id);
-      
-      if (result.success) {
-        console.log('[HostContainer] Host deleted successfully');
-        // Refresh hosts list after deletion
-        fetchHosts && fetchHosts();
-      } else {
-        console.error('[HostContainer] Failed to delete host:', result.error);
+  const removeHost = useCallback(
+    async (id: string) => {
+      try {
+        console.log('[HostContainer] Attempting to delete host ID:', id);
+
+        // Import the deleteHost action
+        const { deleteHost } = await import('../actions');
+
+        // Call the server action directly instead of the context function
+        const result = await deleteHost(id);
+
+        if (result.success) {
+          console.log('[HostContainer] Host deleted successfully');
+          // Refresh hosts list after deletion
+          fetchHosts && fetchHosts();
+        } else {
+          console.error('[HostContainer] Failed to delete host:', result.error);
+        }
+      } catch (error) {
+        console.error('[HostContainer] Error deleting host:', error);
       }
-    } catch (error) {
-      console.error('[HostContainer] Error deleting host:', error);
-    }
-  }, [fetchHosts]);
+    },
+    [fetchHosts],
+  );
 
   // Debug rendering - only log if state changes
   useEffect(() => {
-    console.log('[DEBUG] HostContainer rendering', { 
-      hostCount: hosts?.length || 0, 
-      loading, 
-      viewMode
+    console.log('[DEBUG] HostContainer rendering', {
+      hostCount: hosts?.length || 0,
+      loading,
+      viewMode,
     });
   }, [hosts?.length, loading, viewMode]);
 
@@ -291,8 +291,15 @@ export default function HostContainer() {
               <List className="h-4 w-4" />
             </Button>
           </div>
-          <Button onClick={handleRefreshAll} variant="outline" size="sm" disabled={isRefreshing || loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${(isRefreshing || refreshingHosts.size > 0) ? 'animate-spin' : ''}`} />
+          <Button
+            onClick={handleRefreshAll}
+            variant="outline"
+            size="sm"
+            disabled={isRefreshing || loading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${isRefreshing || refreshingHosts.size > 0 ? 'animate-spin' : ''}`}
+            />
             Refresh
           </Button>
           <Button onClick={() => setShowAddHost(true)}>
@@ -324,11 +331,7 @@ export default function HostContainer() {
           onTestConnection={handleTestConnection}
         />
       ) : (
-        <HostTable
-          hosts={hosts}
-          onDelete={removeHost}
-          onTestConnection={handleTestConnection}
-        />
+        <HostTable hosts={hosts} onDelete={removeHost} onTestConnection={handleTestConnection} />
       )}
 
       <Dialog open={showAddHost} onOpenChange={setShowAddHost}>
@@ -336,9 +339,9 @@ export default function HostContainer() {
           <DialogHeader>
             <DialogTitle>Add New Host</DialogTitle>
           </DialogHeader>
-          <ConnectionForm 
-            formData={formData} 
-            onChange={setFormData} 
+          <ConnectionForm
+            formData={formData}
+            onChange={setFormData}
             onSubmit={handleSaveHost}
             isSaving={isSaving}
           />

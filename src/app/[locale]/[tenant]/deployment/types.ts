@@ -1,6 +1,6 @@
 // Types for the deployment feature
 
-export type DeploymentStatus = 
+export type DeploymentStatus =
   | 'pending'
   | 'scheduled'
   | 'in_progress'
@@ -133,14 +133,14 @@ export interface CICDJob {
 export interface DeploymentFormData {
   name: string;
   description: string;
-  repository: string;  // Changed from repositoryId to match the current implementation
+  repository: string; // Changed from repositoryId to match the current implementation
   selectedScripts: string[];
   selectedHosts: string[];
   schedule: 'now' | 'later';
   scheduledTime: string;
   cronExpression?: string;
   repeatCount?: number;
-  environmentVars: Array<{key: string, value: string}>;
+  environmentVars: Array<{ key: string; value: string }>;
   parameters?: Record<string, any>;
   notifications: {
     email: boolean;
@@ -153,11 +153,14 @@ export interface DeploymentFormData {
     parameters?: Record<string, any>;
   };
   // Maps script IDs to their file paths for better script resolution
-  scriptMapping?: Record<string, {
-    path: string;
-    name: string;
-    type: string;
-  }>;
+  scriptMapping?: Record<
+    string,
+    {
+      path: string;
+      name: string;
+      type: string;
+    }
+  >;
 }
 
 // Add to deployment data
@@ -174,7 +177,7 @@ export interface DeploymentData {
   hostIds: string[];
   cronExpression?: string;
   repeatCount?: number;
-  environmentVars: Array<{key: string, value: string}>;
+  environmentVars: Array<{ key: string; value: string }>;
   notifications: {
     email: boolean;
     slack: boolean;

@@ -8,17 +8,19 @@
  */
 export function generateJenkinsPipelineXml(
   deploymentName: string,
-  repositoryId: string, 
+  repositoryId: string,
   scriptPaths: string[],
   scriptParameters: string[],
-  hostIds: string[]
+  hostIds: string[],
 ): string {
   // Format script commands with parameters
-  const scriptCommands = scriptPaths.map((path, index) => {
-    const param = scriptParameters[index] || '';
-    return `                sh "python ${path} ${param}"`;
-  }).join('\n');
-  
+  const scriptCommands = scriptPaths
+    .map((path, index) => {
+      const param = scriptParameters[index] || '';
+      return `                sh "python ${path} ${param}"`;
+    })
+    .join('\n');
+
   // Create pipeline XML with repository checkout and script execution
   return `<?xml version='1.0' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job@2.40">
@@ -69,4 +71,4 @@ ${scriptCommands}
   </definition>
   <triggers/>
 </flow-definition>`;
-} 
+}

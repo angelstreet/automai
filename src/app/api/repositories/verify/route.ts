@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { detectProviderFromUrl, extractOwnerFromUrl, extractRepoNameFromUrl, isValidGitUrl } from '@/lib/supabase/db-repositories/utils';
+import {
+  detectProviderFromUrl,
+  extractOwnerFromUrl,
+  extractRepoNameFromUrl,
+  isValidGitUrl,
+} from '@/lib/supabase/db-repositories/utils';
 
 /**
  * Verify if a repository exists by checking the provider's API
@@ -26,11 +31,11 @@ export async function POST(request: Request) {
 
     // Detect the provider type from the URL
     const providerType = detectProviderFromUrl(url);
-    
+
     // Extract repository name and owner from URL
     const repoName = extractRepoNameFromUrl(url);
     const owner = extractOwnerFromUrl(url);
-    
+
     if (!repoName || !owner) {
       return NextResponse.json(
         { exists: false, error: 'Unable to extract repository details from URL' },
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
         // Check GitHub API
         const response = await fetch(`https://api.github.com/repos/${owner}/${repoName}`);
         exists = response.status === 200;
-        
+
         if (!exists) {
           const errorData = await response.json();
           error = errorData.message || 'Repository not found on GitHub';
@@ -57,7 +62,7 @@ export async function POST(request: Request) {
         const encodedPath = encodeURIComponent(`${owner}/${repoName}`);
         const response = await fetch(`https://gitlab.com/api/v4/projects/${encodedPath}`);
         exists = response.status === 200;
-        
+
         if (!exists) {
           const errorData = await response.json();
           error = errorData.message || 'Repository not found on GitLab';

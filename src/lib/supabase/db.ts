@@ -249,7 +249,7 @@ const db = {
   gitProvider,
   repository,
   host,
-  deployment
+  deployment,
 };
 
 export default db;

@@ -78,7 +78,10 @@ export interface CICDActions {
   fetchProviders: () => Promise<ActionResult<CICDProviderType[]>>;
   getProviderById: (id: string) => Promise<CICDProviderType | null>;
   createProvider: (payload: CICDProviderPayload) => Promise<ActionResult<CICDProviderType>>;
-  updateProvider: (id: string, payload: CICDProviderPayload) => Promise<ActionResult<CICDProviderType>>;
+  updateProvider: (
+    id: string,
+    payload: CICDProviderPayload,
+  ) => Promise<ActionResult<CICDProviderType>>;
   deleteProvider: (id: string) => Promise<ActionResult>;
   testProvider: (provider: CICDProviderPayload) => Promise<ActionResult>;
   fetchJobs: () => Promise<CICDJob[]>;
@@ -93,4 +96,4 @@ export interface CICDActions {
 }
 
 // Combined context type that includes both state and actions
-export interface CICDContextType extends CICDData, CICDActions {} 
+export interface CICDContextType extends CICDData, CICDActions {}

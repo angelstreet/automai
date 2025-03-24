@@ -21,7 +21,7 @@ import {
   User as UserIcon,
   Building2,
   Factory,
-  Code2
+  Code2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';

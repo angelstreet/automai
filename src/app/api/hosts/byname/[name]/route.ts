@@ -46,10 +46,7 @@ export async function GET(request: NextRequest, context: { params: { name: strin
 
     if (!host) {
       console.log(`Host not found with name: ${name}`);
-      return NextResponse.json(
-        { success: false, error: 'Host not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Host not found' }, { status: 404 });
     }
 
     console.log(`Host found: ${host.name} (${host.id})`);

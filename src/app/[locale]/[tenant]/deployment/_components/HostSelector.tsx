@@ -13,55 +13,56 @@ interface HostSelectorProps {
 /**
  * Component for selecting target hosts with environment tags
  */
-const HostSelector: React.FC<HostSelectorProps> = ({ 
-  availableHosts, 
-  selectedHosts, 
-  onHostToggle 
+const HostSelector: React.FC<HostSelectorProps> = ({
+  availableHosts,
+  selectedHosts,
+  onHostToggle,
 }) => {
   const [selectedEnvironments, setSelectedEnvironments] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Get unique environments
-  const environments = [...new Set(availableHosts.map(host => host.environment))];
-  
+  const environments = [...new Set(availableHosts.map((host) => host.environment))];
+
   // Toggle environment selection
   const toggleEnvironment = (environment: string, e: React.MouseEvent) => {
     // Simple click handler without preventDefault to avoid issues
-    setSelectedEnvironments(prev => {
+    setSelectedEnvironments((prev) => {
       if (prev.includes(environment)) {
-        return prev.filter(env => env !== environment);
+        return prev.filter((env) => env !== environment);
       } else {
         return [...prev, environment];
       }
     });
   };
-  
+
   // Toggle filter visibility
   const toggleFilters = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setShowFilters(!showFilters);
   };
-  
+
   // Filter hosts by selected environments
-  const filteredHosts = selectedEnvironments.length > 0
-    ? availableHosts.filter(host => selectedEnvironments.includes(host.environment))
-    : availableHosts;
-  
+  const filteredHosts =
+    selectedEnvironments.length > 0
+      ? availableHosts.filter((host) => selectedEnvironments.includes(host.environment))
+      : availableHosts;
+
   // Select all hosts
   const selectAll = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const hostsToSelect = filteredHosts.filter(host => !selectedHosts.includes(host.id));
-    hostsToSelect.forEach(host => onHostToggle(host.id));
+    const hostsToSelect = filteredHosts.filter((host) => !selectedHosts.includes(host.id));
+    hostsToSelect.forEach((host) => onHostToggle(host.id));
   };
-  
+
   // Unselect all hosts
   const unselectAll = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const hostsToUnselect = filteredHosts.filter(host => selectedHosts.includes(host.id));
-    hostsToUnselect.forEach(host => onHostToggle(host.id));
+    const hostsToUnselect = filteredHosts.filter((host) => selectedHosts.includes(host.id));
+    hostsToUnselect.forEach((host) => onHostToggle(host.id));
   };
 
   return (
@@ -73,7 +74,7 @@ const HostSelector: React.FC<HostSelectorProps> = ({
             {selectedHosts.length} of {availableHosts.length} hosts selected
           </span>
         </div>
-        
+
         <div className="flex space-x-2">
           <button
             type="button"
@@ -99,14 +100,14 @@ const HostSelector: React.FC<HostSelectorProps> = ({
           </button>
         </div>
       </div>
-      
+
       {showFilters && (
         <div className="mb-2 p-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800">
           <div className="text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
             Filter by environment:
           </div>
           <div className="flex flex-wrap gap-1">
-            {environments.map(env => (
+            {environments.map((env) => (
               <button
                 key={env}
                 onClick={() => toggleEnvironment(env, {} as React.MouseEvent)}
@@ -117,8 +118,8 @@ const HostSelector: React.FC<HostSelectorProps> = ({
                     : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                 }`}
               >
-                {selectedEnvironments.includes(env) && <Check size={10} className="inline mr-1" />}
-                #{env.toLowerCase()}
+                {selectedEnvironments.includes(env) && <Check size={10} className="inline mr-1" />}#
+                {env.toLowerCase()}
               </button>
             ))}
           </div>
@@ -133,7 +134,10 @@ const HostSelector: React.FC<HostSelectorProps> = ({
         <div className="border border-gray-200 dark:border-gray-700 rounded-md overflow-hidden">
           <div className="max-h-60 overflow-y-auto">
             {filteredHosts.map((host) => (
-              <div key={host.id} className="flex items-center p-2 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <div
+                key={host.id}
+                className="flex items-center p-2 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
                 <div className="flex items-center flex-1">
                   <input
                     type="checkbox"
@@ -142,16 +146,13 @@ const HostSelector: React.FC<HostSelectorProps> = ({
                     onChange={() => onHostToggle(host.id)}
                     className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
                   />
-                  <label 
-                    htmlFor={`host-${host.id}`} 
-                    className="flex-1 cursor-pointer"
-                  >
+                  <label htmlFor={`host-${host.id}`} className="flex-1 cursor-pointer">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <span className="font-medium text-sm text-gray-900 dark:text-white">
                           {host.name}
                         </span>
-                        <span 
+                        <span
                           className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                           title={`Environment: ${host.environment}`}
                         >

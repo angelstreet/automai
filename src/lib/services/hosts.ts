@@ -212,7 +212,7 @@ export async function testHostConnection(data: {
   console.log(`Host: ${data.ip}:${data.port || '(default port)'} (${data.type})`);
   console.log(`Host ID: ${data.hostId || 'New host (not in database)'}`);
   console.log('============================================\n');
-  
+
   logger.info('Testing host connection', { ip: data.ip });
 
   let result: ConnectionTestResult & { is_windows?: boolean } = {
@@ -379,25 +379,25 @@ export async function testHostConnection(data: {
       `[Windows Detection] Final result for ${data.ip}: is_windows=${detectedWindows}, success=${result.success}`,
     );
     console.log(`Test connection result at ${new Date().toISOString()}: ${JSON.stringify(result)}`);
-    
+
     console.log('\n====== SERVER-SIDE HOST CONNECTION TEST COMPLETED ======');
     console.log(`Result: ${result.success ? 'SUCCESS' : 'FAILED'}`);
     console.log(`Message: ${result.message || 'No message'}`);
     console.log(`Time: ${new Date().toISOString()}`);
     console.log('============================================\n');
-    
+
     return result;
   } catch (error) {
     // Handle other errors
     result.success = false;
     result.message = error instanceof Error ? error.message : String(error);
-    
+
     console.log('\n====== SERVER-SIDE HOST CONNECTION TEST ERROR ======');
     console.log(`Host: ${data.ip}:${data.port || '(default port)'}`);
     console.log(`Error: ${result.message}`);
     console.log(`Time: ${new Date().toISOString()}`);
     console.log('============================================\n');
-    
+
     logger.error('Connection test failed', {
       error: result.message,
       ip: data.ip,

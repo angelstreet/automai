@@ -2,10 +2,10 @@
 
 import db from '@/lib/supabase/db';
 import { repository as dbRepositoryOld, gitProvider } from '@/lib/supabase';
-import { 
-  GitProvider, 
-  Repository, 
-  GitProviderType, 
+import {
+  GitProvider,
+  Repository,
+  GitProviderType,
   RepositorySyncStatus,
   TestConnectionInput,
   GitProviderCreateInput,
@@ -13,7 +13,7 @@ import {
   RepositoryFilter,
   testConnectionSchema,
   gitProviderCreateSchema,
-  testRepositorySchema
+  testRepositorySchema,
 } from '@/app/[locale]/[tenant]/repositories/types';
 import { getUser } from '@/app/actions/user';
 import { serverCache } from '@/lib/cache';
@@ -44,12 +44,12 @@ function mapDbRepositoryToRepository(dbRepo: any): Repository {
 
   // Set sync status with a special case for synced repositories
   let syncStatus: RepositorySyncStatus = (dbRepo.sync_status || 'IDLE') as RepositorySyncStatus;
-  
+
   // Special case for repositories that just had their timestamp updated
   if (dbRepo.last_synced_at && (!dbRepo.sync_status || dbRepo.sync_status === 'SYNCING')) {
     syncStatus = 'SYNCED';
   }
-  
+
   return {
     id: String(dbRepo.id || ''),
     providerId: String(dbRepo.provider_id || ''),
@@ -61,8 +61,12 @@ function mapDbRepositoryToRepository(dbRepo: any): Repository {
     url: dbRepo.url ? String(dbRepo.url) : undefined,
     description: dbRepo.description ? String(dbRepo.description) : undefined,
     syncStatus: syncStatus,
-    createdAt: dbRepo.created_at ? new Date(dbRepo.created_at).toISOString() : new Date().toISOString(),
-    updated_at: dbRepo.updated_at ? new Date(dbRepo.updated_at).toISOString() : new Date().toISOString(),
+    createdAt: dbRepo.created_at
+      ? new Date(dbRepo.created_at).toISOString()
+      : new Date().toISOString(),
+    updated_at: dbRepo.updated_at
+      ? new Date(dbRepo.updated_at).toISOString()
+      : new Date().toISOString(),
     lastSyncedAt: dbRepo.last_synced_at ? new Date(dbRepo.last_synced_at).toISOString() : undefined,
     // Optional fields
     language: dbRepo.language || undefined,
@@ -79,7 +83,7 @@ function mapDbGitProviderToGitProvider(dbProvider: DbGitProvider): GitProvider {
     status: 'connected', // Default status
     serverUrl: dbProvider.server_url,
     createdAt: dbProvider.created_at,
-    updatedAt: dbProvider.updated_at
+    updatedAt: dbProvider.updated_at,
   };
 }
 
@@ -92,27 +96,27 @@ function mapDbGitProviderToGitProvider(dbProvider: DbGitProvider): GitProvider {
  */
 export async function getRepositories(
   filter?: RepositoryFilter,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository[] }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
     // Create a cache key based on the filter
     const cacheKey = `repositories:${filter?.providerId || 'all'}`;
-    
+
     // Try to get from cache first
     const cachedData = serverCache.get<Repository[]>(cacheKey);
     if (cachedData) {
       return { success: true, data: cachedData };
     }
-    
+
     const where: Record<string, any> = {};
 
     if (filter?.providerId) {
@@ -137,7 +141,7 @@ export async function getRepositories(
 
     // Transform to the correct Repository type
     const data: Repository[] = repositories.map((repo) => mapDbRepositoryToRepository(repo));
-    
+
     // Cache the result for 5 minutes (default TTL)
     serverCache.set(cacheKey, data);
 
@@ -155,15 +159,15 @@ export async function getRepositories(
  */
 export async function createRepository(
   data: Partial<Repository>,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
@@ -199,30 +203,30 @@ export async function createRepository(
  */
 export async function updateRepository(
   id: string,
-  updates: Record<string, any>
+  updates: Record<string, any>,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     console.log(`[updateRepository] Starting update for repo ${id}`);
-    
+
     // Always get fresh user data from the server - don't rely on user from client
     const currentUserResult = await getUser();
     if (!currentUserResult) {
       console.log('[updateRepository] Failed - user not authenticated');
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
-    
+
     const currentUser = currentUserResult;
-    
+
     console.log(`[updateRepository] User authenticated, profile_id: ${currentUser.id}`);
     console.log(`[updateRepository] Using direct snake_case column names:`, updates);
-    
+
     // IMPORTANT: The db.repository.update call requires BOTH id AND profile_id in the where clause
-    console.log(`[updateRepository] Calling db.repository.update with:`, { 
+    console.log(`[updateRepository] Calling db.repository.update with:`, {
       where: { id, profile_id: currentUser.id },
-      data: updates
+      data: updates,
     });
 
     try {
@@ -241,42 +245,42 @@ export async function updateRepository(
 
       // Map to our Repository type
       const repository: Repository = mapDbRepositoryToRepository(updated);
-      
+
       // Invalidate cache after update
       serverCache.delete(`repositories:${repository.providerId}`);
       serverCache.delete('repositories:all');
       serverCache.delete(`repository:${id}`);
-      
+
       console.log(`[updateRepository] Success - updated repo ${id}, invalidated cache`);
 
       return { success: true, data: repository };
     } catch (dbError: any) {
       console.error('[updateRepository] Database layer error:', dbError);
-      
+
       // Try a different approach if the first one failed
       console.log('[updateRepository] Attempting direct Supabase update as fallback...');
-      
+
       try {
         // Attempt to call the core db function directly with both parameters
         // Add updated_at to transformedData since it's required in this fallback call
         updates.updated_at = new Date().toISOString();
-        
+
         // Ensure last_synced_at has a default value for the fallback method
         if (updates.last_synced_at === undefined) {
           updates.last_synced_at = new Date().toISOString();
         }
-        
+
         const result = await db.repository.updateRepository(id, updates, currentUser.id);
-        
+
         if (result.success && result.data) {
           console.log('[updateRepository] Fallback succeeded:', result);
-          
+
           // Invalidate cache after update
           serverCache.delete('repositories:all');
-          
-          return { 
-            success: true, 
-            data: mapDbRepositoryToRepository(result.data)
+
+          return {
+            success: true,
+            data: mapDbRepositoryToRepository(result.data),
           };
         } else {
           console.error('[updateRepository] Fallback update failed:', result.error);
@@ -300,15 +304,15 @@ export async function updateRepository(
  */
 export async function deleteRepository(
   id: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
@@ -344,15 +348,15 @@ export async function deleteRepository(
  */
 export async function syncRepository(
   id: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
@@ -396,45 +400,48 @@ export async function syncRepository(
 export async function createRepositoryFromUrl(
   url: string,
   isPrivate: boolean = false,
-  description?: string
+  description?: string,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     console.log('[actions.createRepositoryFromUrl] Starting with URL:', url);
-    
+
     const user = await getUser();
     if (!user) {
       console.log('[actions.createRepositoryFromUrl] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
-    
+
     console.log('[actions.createRepositoryFromUrl] User ID:', user.id);
-    
+
     // Call the DB layer function
-    console.log('[actions.createRepositoryFromUrl] Calling repository.createRepositoryFromUrl with:', {
-      url,
-      is_private: isPrivate,
-      description,
-      profileId: user.id
-    });
-    
+    console.log(
+      '[actions.createRepositoryFromUrl] Calling repository.createRepositoryFromUrl with:',
+      {
+        url,
+        is_private: isPrivate,
+        description,
+        profileId: user.id,
+      },
+    );
+
     const result = await dbRepositoryOld.createRepositoryFromUrl(
       {
         url,
         is_private: isPrivate,
-        description
+        description,
       },
-      user.id
+      user.id,
     );
-    
+
     console.log('[actions.createRepositoryFromUrl] Result from DB layer:', result);
-    
+
     if (!result.success) {
       return { success: false, error: result.error };
     }
-    
+
     // Transform the repository to match the UI's expected format
     const repoData: Repository = mapDbRepositoryToRepository(result.data);
-    
+
     return { success: true, data: repoData };
   } catch (error: any) {
     console.error('Error in createRepositoryFromUrl:', error);
@@ -473,7 +480,7 @@ export async function testGitProviderConnection(
     console.log('[testGitProviderConnection] Starting with data:', {
       type: data.type,
       serverUrl: data.serverUrl || 'undefined',
-      hasToken: data.token ? 'YES' : 'NO'
+      hasToken: data.token ? 'YES' : 'NO',
     });
 
     // Validate input data
@@ -490,7 +497,7 @@ export async function testGitProviderConnection(
         : validatedData.type === 'github'
           ? 'https://api.github.com'
           : 'https://gitlab.com/api/v4';
-    
+
     console.log('[testGitProviderConnection] Using baseUrl:', baseUrl);
 
     console.log('[testGitProviderConnection] Making request to:', `${baseUrl}/api/v1/user`);
@@ -563,7 +570,7 @@ export async function getGitProviders(): Promise<{
     }
 
     // Map DB results to interface type
-    const providers = dbProviders.map(provider => mapDbGitProviderToGitProvider(provider));
+    const providers = dbProviders.map((provider) => mapDbGitProviderToGitProvider(provider));
 
     return { success: true, data: providers };
   } catch (error: any) {
@@ -820,18 +827,18 @@ export async function createGitProvider(
  * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
 export async function getStarredRepositories(
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: any[] }> {
   try {
     console.log('[actions.getStarredRepositories] Starting');
-    
+
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
       console.log('[actions.getStarredRepositories] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
-    
+
     // Check cache
     const cacheKey = `starred-repos:${currentUser.id}`;
     const cached = serverCache.get<any[]>(cacheKey);
@@ -839,19 +846,19 @@ export async function getStarredRepositories(
       console.log('[actions.getStarredRepositories] Using cached starred repositories data');
       return { success: true, data: cached };
     }
-    
+
     console.log('[actions.getStarredRepositories] User ID:', currentUser.id);
-    
+
     // Call the DB layer function
     const result = await starRepository.getStarredRepositories(currentUser.id);
-    
+
     if (!result.success) {
       return { success: false, error: result.error };
     }
-    
+
     // Cache the result
     serverCache.set(cacheKey, result.data || [], 60 * 5); // 5 minute cache
-    
+
     return { success: true, data: result.data || [] };
   } catch (error: any) {
     console.error('Error in getStarredRepositories:', error);
@@ -866,30 +873,30 @@ export async function getStarredRepositories(
  */
 export async function starRepositoryAction(
   repositoryId: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
     console.log('[actions.starRepositoryAction] Starting with repository ID:', repositoryId);
-    
+
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
       console.log('[actions.starRepositoryAction] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
-    
+
     console.log('[actions.starRepositoryAction] User ID:', currentUser.id);
-    
+
     // Call the DB layer function
     const result = await starRepository.starRepository(repositoryId, currentUser.id);
-    
+
     if (!result.success) {
       return { success: false, error: result.error };
     }
-    
+
     // Invalidate cache
     serverCache.delete(`starred-repos:${currentUser.id}`);
-    
+
     return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Error in starRepositoryAction:', error);
@@ -904,30 +911,30 @@ export async function starRepositoryAction(
  */
 export async function unstarRepositoryAction(
   repositoryId: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
     console.log('[actions.unstarRepositoryAction] Starting with repository ID:', repositoryId);
-    
+
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
       console.log('[actions.unstarRepositoryAction] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
-    
+
     console.log('[actions.unstarRepositoryAction] User ID:', currentUser.id);
-    
+
     // Call the DB layer function
     const result = await starRepository.unstarRepository(repositoryId, currentUser.id);
-    
+
     if (!result.success) {
       return { success: false, error: result.error };
     }
-    
+
     // Invalidate cache
     serverCache.delete(`starred-repos:${currentUser.id}`);
-    
+
     return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Error in unstarRepositoryAction:', error);
@@ -944,18 +951,23 @@ export async function unstarRepositoryAction(
 export async function getRepositoryFiles(
   repositoryId: string,
   path: string = '',
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: any[] }> {
   try {
-    console.log('[actions.getRepositoryFiles] Starting with repository ID:', repositoryId, 'path:', path);
-    
+    console.log(
+      '[actions.getRepositoryFiles] Starting with repository ID:',
+      repositoryId,
+      'path:',
+      path,
+    );
+
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
       console.log('[actions.getRepositoryFiles] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
-    
+
     // Check cache
     const cacheKey = `repo-files:${repositoryId}:${path}`;
     const cached = serverCache.get<any[]>(cacheKey);
@@ -963,49 +975,51 @@ export async function getRepositoryFiles(
       console.log('[actions.getRepositoryFiles] Using cached files data');
       return { success: true, data: cached };
     }
-    
+
     // Create Supabase client
-    const supabase = await import('@/lib/supabase/server').then(m => m.createClient());
-    
+    const supabase = await import('@/lib/supabase/server').then((m) => m.createClient());
+
     // Get the repository details
     const { data: repository, error: repoError } = await supabase
       .from('repositories')
       .select('*')
       .eq('id', repositoryId)
       .single();
-    
+
     if (repoError || !repository) {
       return { success: false, error: 'Repository not found' };
     }
-    
+
     // Get the provider details
     const { data: provider, error: providerError } = await supabase
       .from('git_providers')
       .select('*')
       .eq('id', repository.provider_id)
       .single();
-    
+
     if (providerError || !provider) {
       return { success: false, error: 'Git provider not found' };
     }
-    
+
     let files = [];
-    
+
     // Handle different Git providers
-    if (provider.type === 'github' || 
-        (provider.type === undefined && repository.owner === 'angelstreet')) {
+    if (
+      provider.type === 'github' ||
+      (provider.type === undefined && repository.owner === 'angelstreet')
+    ) {
       // Use GitHub API
       const githubToken = process.env.GITHUB_TOKEN;
-      
+
       if (!githubToken) {
         return { success: false, error: 'GitHub token is not configured' };
       }
-      
+
       const { Octokit } = await import('@octokit/rest');
       const octokit = new Octokit({
         auth: githubToken,
       });
-      
+
       try {
         // If path is empty, we're at the root of the repository
         const response = await octokit.repos.getContent({
@@ -1013,10 +1027,10 @@ export async function getRepositoryFiles(
           repo: repository.name,
           path: path || '',
         });
-        
+
         // GitHub API returns either an array (directory) or a single object (file)
         const contents = Array.isArray(response.data) ? response.data : [response.data];
-        
+
         files = contents.map((item: any) => ({
           name: item.name,
           path: item.path,
@@ -1066,10 +1080,10 @@ export async function getRepositoryFiles(
         },
       ];
     }
-    
+
     // Cache the result - 5 minute cache
     serverCache.set(cacheKey, files, 60 * 5);
-    
+
     return { success: true, data: files };
   } catch (error: any) {
     console.error('Error in getRepositoryFiles:', error);
@@ -1086,22 +1100,27 @@ export async function getRepositoryFiles(
 export async function getFileContent(
   repositoryId: string,
   path: string,
-  user?: AuthUser | null
+  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
-    console.log('[actions.getFileContent] Starting with repository ID:', repositoryId, 'path:', path);
-    
+    console.log(
+      '[actions.getFileContent] Starting with repository ID:',
+      repositoryId,
+      'path:',
+      path,
+    );
+
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
       console.log('[actions.getFileContent] No authenticated user found');
       return { success: false, error: 'Unauthorized' };
     }
-    
+
     if (!path) {
       return { success: false, error: 'File path is required' };
     }
-    
+
     // Check cache
     const cacheKey = `repo-file-content:${repositoryId}:${path}`;
     const cached = serverCache.get<any>(cacheKey);
@@ -1109,32 +1128,32 @@ export async function getFileContent(
       console.log('[actions.getFileContent] Using cached file content');
       return { success: true, data: cached };
     }
-    
+
     // Create Supabase client
-    const supabase = await import('@/lib/supabase/server').then(m => m.createClient());
-    
+    const supabase = await import('@/lib/supabase/server').then((m) => m.createClient());
+
     // Get the repository details
     const { data: repository, error: repoError } = await supabase
       .from('repositories')
       .select('*')
       .eq('id', repositoryId)
       .single();
-    
+
     if (repoError || !repository) {
       return { success: false, error: 'Repository not found' };
     }
-    
+
     // Get the provider details
     const { data: provider, error: providerError } = await supabase
       .from('git_providers')
       .select('*')
       .eq('id', repository.provider_id)
       .single();
-    
+
     if (providerError || !provider) {
       return { success: false, error: 'Git provider not found' };
     }
-    
+
     let fileContent = '';
     let fileMetadata: {
       path: string;
@@ -1144,24 +1163,26 @@ export async function getFileContent(
       sha?: string;
     } = {
       path: path,
-      lastModified: new Date().toISOString()
+      lastModified: new Date().toISOString(),
     };
-    
+
     // Handle different Git providers
-    if (provider.provider_type === 'github' || 
-        (provider.provider_type === undefined && repository.owner === 'angelstreet')) {
+    if (
+      provider.provider_type === 'github' ||
+      (provider.provider_type === undefined && repository.owner === 'angelstreet')
+    ) {
       // Use GitHub API
       const githubToken = process.env.GITHUB_TOKEN;
-      
+
       if (!githubToken) {
         return { success: false, error: 'GitHub token is not configured' };
       }
-      
+
       const { Octokit } = await import('@octokit/rest');
       const octokit = new Octokit({
         auth: githubToken,
       });
-      
+
       try {
         // Get file content from GitHub
         const response = await octokit.repos.getContent({
@@ -1169,24 +1190,24 @@ export async function getFileContent(
           repo: repository.name,
           path: path,
         });
-        
+
         // GitHub API returns file content in base64
         if ('content' in response.data && !Array.isArray(response.data)) {
           const content = response.data.content;
           const encoding = response.data.encoding;
-          
+
           if (encoding === 'base64') {
             fileContent = Buffer.from(content, 'base64').toString('utf-8');
           } else {
             fileContent = content;
           }
-          
+
           fileMetadata = {
             path: response.data.path,
             lastModified: new Date().toISOString(), // Use current date as fallback
             size: response.data.size,
             url: response.data.html_url || undefined,
-            sha: response.data.sha
+            sha: response.data.sha,
           };
         } else {
           return { success: false, error: 'Path does not point to a file' };
@@ -1211,12 +1232,12 @@ export async function getFileContent(
           main: 'index.js',
           scripts: {
             start: 'node index.js',
-            test: 'jest'
+            test: 'jest',
           },
           dependencies: {
             react: '^18.2.0',
-            'next': '^13.4.0'
-          }
+            next: '^13.4.0',
+          },
         };
         fileContent = JSON.stringify(jsonContent, null, 2);
       } else if (path.endsWith('.js') || path.endsWith('.ts') || path.endsWith('.tsx')) {
@@ -1242,15 +1263,15 @@ export default Component;`;
         fileContent = `This is a sample content for ${path.split('/').pop()} in the ${repository.name} repository.`;
       }
     }
-    
-    const result = { 
+
+    const result = {
       content: fileContent,
-      ...fileMetadata
+      ...fileMetadata,
     };
-    
+
     // Cache the result - 10 minute cache
     serverCache.set(cacheKey, result, 60 * 10);
-    
+
     return { success: true, data: result };
   } catch (error: any) {
     console.error('Error in getFileContent:', error);
@@ -1265,71 +1286,75 @@ export default Component;`;
  */
 export async function getRepositoriesWithStarred(
   filter?: RepositoryFilter,
-  user?: AuthUser | null
-): Promise<{ 
-  success: boolean; 
-  error?: string; 
-  data?: { 
-    repositories: Repository[]; 
-    starredRepositoryIds: string[] 
-  } 
+  user?: AuthUser | null,
+): Promise<{
+  success: boolean;
+  error?: string;
+  data?: {
+    repositories: Repository[];
+    starredRepositoryIds: string[];
+  };
 }> {
   try {
     console.log('[actions.getRepositoriesWithStarred] Starting');
-    
+
     // Use provided user data or fetch it if not provided
-    const currentUser = user || await getUser();
+    const currentUser = user || (await getUser());
     if (!currentUser) {
-      return { 
-        success: false, 
-        error: 'Unauthorized - Please sign in' 
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
       };
     }
 
     // Create a cache key that includes both repositories and starred status
     const cacheKey = `repositories-with-starred:${currentUser.id}:${filter?.providerId || 'all'}`;
-    
+
     // Try to get from cache first
-    const cachedData = serverCache.get<{ repositories: Repository[]; starredRepositoryIds: string[] }>(cacheKey);
+    const cachedData = serverCache.get<{
+      repositories: Repository[];
+      starredRepositoryIds: string[];
+    }>(cacheKey);
     if (cachedData) {
       console.log('[actions.getRepositoriesWithStarred] Using cached data');
       return { success: true, data: cachedData };
     }
-    
+
     // Fetch repositories
     const reposResult = await getRepositories(filter, currentUser);
-    
+
     if (!reposResult.success || !reposResult.data) {
       return {
         success: false,
         error: reposResult.error || 'Failed to fetch repositories',
       };
     }
-    
+
     // Fetch starred repositories
     const starredResult = await getStarredRepositories(currentUser);
-    
+
     // Extract just the IDs from starred repositories for efficiency
-    const starredRepositoryIds = starredResult.success && starredResult.data 
-      ? starredResult.data.map((repo: any) => repo.repository_id || repo.id)
-      : [];
-    
+    const starredRepositoryIds =
+      starredResult.success && starredResult.data
+        ? starredResult.data.map((repo: any) => repo.repository_id || repo.id)
+        : [];
+
     // Combine the data
     const combinedData = {
       repositories: reposResult.data,
-      starredRepositoryIds
+      starredRepositoryIds,
     };
-    
+
     // Cache the combined result
     serverCache.set(cacheKey, combinedData, 60 * 5); // 5 minute cache
-    
+
     console.log('[actions.getRepositoriesWithStarred] Successfully fetched data');
     return { success: true, data: combinedData };
   } catch (error: any) {
     console.error('Error in getRepositoriesWithStarred:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to fetch repository data' 
+    return {
+      success: false,
+      error: error.message || 'Failed to fetch repository data',
     };
   }
 }
@@ -1346,7 +1371,7 @@ export async function testGitRepository(
   try {
     console.log('[testGitRepository] Starting with data:', {
       url: data.url,
-      hasToken: data.token ? 'YES' : 'NO'
+      hasToken: data.token ? 'YES' : 'NO',
     });
 
     // Validate input data
@@ -1406,11 +1431,13 @@ export async function testGitRepository(
  */
 export async function clearRepositoriesCache(
   repositoryId?: string,
-  providerId?: string
+  providerId?: string,
 ): Promise<void> {
   try {
-    console.log(`[actions] Clearing repositories cache${repositoryId ? ` for repository ${repositoryId}` : ''}${providerId ? ` for provider ${providerId}` : ''}`);
-    
+    console.log(
+      `[actions] Clearing repositories cache${repositoryId ? ` for repository ${repositoryId}` : ''}${providerId ? ` for provider ${providerId}` : ''}`,
+    );
+
     if (repositoryId) {
       // Clear specific repository cache
       serverCache.delete(`repository:${repositoryId}`);

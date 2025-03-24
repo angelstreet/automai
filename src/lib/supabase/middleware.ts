@@ -11,14 +11,34 @@ import { locales, defaultLocale } from '@/config';
  */
 export const createClient = (request: NextRequest) => {
   // Log request details
-  console.log(`[Middleware:createClient] URL: ${request.nextUrl.pathname}${request.nextUrl.search}, Method: ${request.method}`);
-  
+  console.log(
+    `[Middleware:createClient] URL: ${request.nextUrl.pathname}${request.nextUrl.search}, Method: ${request.method}`,
+  );
+
   // Create response to manipulate cookies
   const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
+
+  // Check for auth-related cookies specifically and log them
+  const allCookies = request.cookies.getAll();
+  const authCookies = allCookies.filter(cookie => 
+    cookie.name.includes('supabase') || 
+    cookie.name.includes('sb-') || 
+    cookie.name.includes('_verifier') ||
+    cookie.name.includes('refresh') ||
+    cookie.name.includes('access')
+  );
+  
+  if (authCookies.length > 0) {
+    console.log(`[Middleware:auth-cookies] Found ${authCookies.length} auth cookies:`);
+    authCookies.forEach(cookie => {
+      // Only log the cookie name and a hint about its value (not the full value for security)
+      console.log(`[Middleware:auth-cookie] ${cookie.name}: length=${cookie.value.length}, expires=${cookie.expires || 'session'}`);
+    });
+  }
 
   // Create client with cookie handlers for middleware
   const supabase = createServerClient(
@@ -33,21 +53,44 @@ export const createClient = (request: NextRequest) => {
             value: cookie.value,
           }));
           console.log(`[Middleware:cookies] Found ${cookies.length} cookies`);
+          
+          // Check for specific auth cookies
+          const hasAccessToken = cookies.some(c => c.name.includes('access-token'));
+          const hasRefreshToken = cookies.some(c => c.name.includes('refresh-token'));
+          if (hasAccessToken && hasRefreshToken) {
+            console.log(`[Middleware:cookies] Found both access and refresh tokens`);
+          } else if (hasAccessToken) {
+            console.log(`[Middleware:cookies] Found access token but no refresh token`);
+          } else if (hasRefreshToken) {
+            console.log(`[Middleware:cookies] Found refresh token but no access token`);
+          }
+          
           return cookies;
         },
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
           // Set cookies both on the request (for Supabase) and response (for browser)
           console.log(`[Middleware:cookies] Setting ${cookiesToSet.length} cookies`);
           cookiesToSet.forEach(({ name, value, options }) => {
+            console.log(`[Middleware:cookie-set] Setting cookie ${name} with path=${options?.path || '/'}`);
+            
+            // Ensure we set a path if not provided (default to root)
+            const finalOptions = { 
+              ...options,
+              path: options?.path || '/',
+              // Use longer max age for auth cookies to prevent early expiration
+              ...(name.includes('token') ? { maxAge: 60 * 60 * 24 * 7 } : {})
+            };
+            
             request.cookies.set({
               name,
               value,
-              ...options,
+              ...finalOptions,
             });
+            
             response.cookies.set({
               name,
               value,
-              ...options,
+              ...finalOptions,
             });
           });
         },
@@ -87,9 +130,11 @@ function clearAuthCookies(response: NextResponse): NextResponse {
  * - Redirects to login if no authenticated user is found
  */
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
-  console.log(`[Middleware:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`);
+  console.log(
+    `[Middleware:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`,
+  );
   const startTime = Date.now();
-  
+
   // Create the Supabase client
   const { supabase, response } = createClient(request);
 
@@ -109,10 +154,12 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   // Check if this is a data fetching request (POST to a page route)
   // These should not be redirected to prevent redirect loops
-  const isDataFetchRequest = request.method === 'POST' && 
-    !request.nextUrl.pathname.startsWith('/api/');
+  const isDataFetchRequest =
+    request.method === 'POST' && !request.nextUrl.pathname.startsWith('/api/');
 
-  console.log(`[Middleware:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`);
+  console.log(
+    `[Middleware:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`,
+  );
 
   // If no user is found or there's an error, redirect to login ONLY for GET requests
   // Allow data fetching POST requests to proceed even without authentication
@@ -130,11 +177,15 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       .some((c) => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
 
     if (hasAuthCookies) {
-      console.log('[Middleware:cookies] Auth cookies present but failed to authenticate - possible cookie issue');
+      console.log(
+        '[Middleware:cookies] Auth cookies present but failed to authenticate - possible cookie issue',
+      );
       // For debugging: if auth cookies exist but auth failed, we'll still let the request through
       // This helps diagnose issues where cookies exist but aren't being properly parsed
       // In production, you'd want to remove this and always redirect to login
-      console.log('[Middleware:cookies] Allowing request to proceed despite auth failure due to cookie presence');
+      console.log(
+        '[Middleware:cookies] Allowing request to proceed despite auth failure due to cookie presence',
+      );
       return response;
     }
 

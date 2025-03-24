@@ -20,25 +20,25 @@ export interface DeploymentActions {
   // Core deployment actions
   fetchDeployments: (forceFresh?: boolean) => Promise<void>;
   fetchDeploymentById: (id: string) => Promise<Deployment | null>;
-  createDeployment: (formData: DeploymentFormData) => Promise<{ 
-    success: boolean; 
-    deploymentId?: string; 
-    error?: string 
+  createDeployment: (formData: DeploymentFormData) => Promise<{
+    success: boolean;
+    deploymentId?: string;
+    error?: string;
   }>;
-  abortDeployment: (id: string) => Promise<{ 
-    success: boolean; 
-    error?: string 
+  abortDeployment: (id: string) => Promise<{
+    success: boolean;
+    error?: string;
   }>;
-  refreshDeployment: (id: string) => Promise<{ 
-    success: boolean; 
-    deployment?: Deployment; 
-    error?: string 
+  refreshDeployment: (id: string) => Promise<{
+    success: boolean;
+    deployment?: Deployment;
+    error?: string;
   }>;
   deleteDeployment: (id: string) => Promise<{
     success: boolean;
-    error?: string
+    error?: string;
   }>;
-  
+
   // Supporting data fetching
   fetchScriptsForRepository: (repositoryId: string) => Promise<any[]>;
   fetchAvailableHosts: () => Promise<any[]>;
@@ -49,7 +49,7 @@ export interface DeploymentActions {
     cicd?: any;
     error?: string;
   }>;
-  
+
   // User management
   refreshUserData: () => Promise<AuthUser | null>;
 }
@@ -67,5 +67,5 @@ export const DEPLOYMENT_CACHE_KEYS = {
   DEPLOYMENT_DETAILS: (id: string) => `deployment-${id}`,
   SCRIPTS: (repositoryId: string) => `scripts-${repositoryId}`,
   HOSTS: 'hosts',
-  DEPLOYMENT_STATUS: (id: string) => `deployment-status-${id}`
-}; 
+  DEPLOYMENT_STATUS: (id: string) => `deployment-status-${id}`,
+};

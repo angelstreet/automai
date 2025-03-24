@@ -77,4 +77,4 @@ export interface CICDBuild {
   start_time: string;
   end_time?: string;
   logs?: string;
-} 
+}

@@ -57,22 +57,22 @@ export async function getRepository(
   serverUrl: string,
   owner: string,
   repo: string,
-  token?: string
+  token?: string,
 ): Promise<GiteaRepository> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   const response = await fetch(`${serverUrl}/api/v1/repos/${owner}/${repo}`, { headers });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch repository: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -91,28 +91,28 @@ export async function listFiles(
   repo: string,
   path: string = '',
   ref: string = '',
-  token?: string
+  token?: string,
 ): Promise<GiteaFile[]> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   // Build URL with query parameters if ref is provided
   let url = `${serverUrl}/api/v1/repos/${owner}/${repo}/contents/${path}`;
   if (ref) {
     url += `?ref=${ref}`;
   }
-  
+
   const response = await fetch(url, { headers });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to list files: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -131,28 +131,28 @@ export async function getFileContent(
   repo: string,
   path: string,
   ref: string = '',
-  token?: string
+  token?: string,
 ): Promise<GiteaFile> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   // Build URL with query parameters if ref is provided
   let url = `${serverUrl}/api/v1/repos/${owner}/${repo}/contents/${path}`;
   if (ref) {
     url += `?ref=${ref}`;
   }
-  
+
   const response = await fetch(url, { headers });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to get file content: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -167,22 +167,22 @@ export async function listBranches(
   serverUrl: string,
   owner: string,
   repo: string,
-  token?: string
+  token?: string,
 ): Promise<GiteaBranch[]> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `token ${token}`;
   }
-  
+
   const response = await fetch(`${serverUrl}/api/v1/repos/${owner}/${repo}/branches`, { headers });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to list branches: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -193,15 +193,15 @@ export async function listBranches(
 export function extractGiteaRepoInfo(url: string): { owner: string; repo: string } {
   // Remove .git suffix if present
   const cleanUrl = url.endsWith('.git') ? url.slice(0, -4) : url;
-  
+
   try {
     const urlObj = new URL(cleanUrl);
     const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    
+
     if (pathParts.length < 2) {
       throw new Error('Invalid Gitea repository URL format');
     }
-    
+
     return {
       owner: pathParts[0],
       repo: pathParts[1],

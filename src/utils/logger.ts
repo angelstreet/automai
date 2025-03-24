@@ -18,4 +18,4 @@ export function log(message: string, error?: any): void {
       console.info(message, error ? error : '');
     }
   }
-} 
+}

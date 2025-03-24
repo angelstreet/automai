@@ -31,7 +31,7 @@ export interface Host {
   created_at: Date;
   updated_at: Date;
   is_windows: Boolean;
-  
+
   // Additional fields used in components
   os_type?: string;
   errorMessage?: string;
@@ -59,4 +59,4 @@ export interface HostAnalytics {
   disk: number;
   uptime: string;
   lastUpdated: string;
-} 
+}

@@ -52,22 +52,22 @@ export interface CICDProviderConfig {
 export interface CICDProvider {
   // Initialize the provider with configuration
   initialize(config: CICDProviderConfig): void;
-  
+
   // Test connection to the provider
   testConnection(): Promise<CICDResponse<boolean>>;
-  
+
   // Get available jobs
   getAvailableJobs(): Promise<CICDResponse<CICDJob[]>>;
-  
+
   // Get job details
   getJobDetails(jobId: string): Promise<CICDResponse<CICDJob>>;
-  
+
   // Trigger a build for a job
   triggerJob(jobId: string, parameters?: Record<string, any>): Promise<CICDResponse<CICDBuild>>;
-  
+
   // Get build status
   getBuildStatus(jobId: string, buildId: string): Promise<CICDResponse<CICDBuild>>;
-  
+
   // Get build logs
   getBuildLogs(jobId: string, buildId: string): Promise<CICDResponse<string>>;
 }

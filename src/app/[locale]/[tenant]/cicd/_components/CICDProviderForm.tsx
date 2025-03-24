@@ -20,8 +20,17 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { toast } from '@/components/shadcn/use-toast';
-import { createCICDProviderAction, updateCICDProviderAction, testCICDProviderAction } from '../actions';
-import { CICDProvider, CICDProviderPayload, CICDProviderType, CICDAuthType } from '@/types/context/cicd';
+import {
+  createCICDProviderAction,
+  updateCICDProviderAction,
+  testCICDProviderAction,
+} from '../actions';
+import {
+  CICDProvider,
+  CICDProviderPayload,
+  CICDProviderType,
+  CICDAuthType,
+} from '@/types/context/cicd';
 
 interface CICDProviderFormProps {
   providerId?: string;
@@ -39,10 +48,10 @@ interface FormValues {
   token: string;
 }
 
-const CICDProviderForm: React.FC<CICDProviderFormProps> = ({ 
-  providerId, 
+const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
+  providerId,
   provider,
-  onComplete 
+  onComplete,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -89,7 +98,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   // Handle selection changes
   const handleSelectChange = (field: string, value: string) => {
     form.setValue(field as keyof FormValues, value as any);
-    
+
     // Reset credential fields when auth type changes
     if (field === 'auth_type') {
       form.setValue('username', '');
@@ -102,11 +111,11 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestMessage(null);
-    
+
     try {
       // Get values from the form
       const values = form.getValues();
-      
+
       // Prepare credentials based on auth type
       const credentials: any = {};
       if (values.auth_type === 'token') {
@@ -115,7 +124,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         credentials.username = values.username;
         credentials.password = values.password;
       }
-      
+
       // Create provider data object
       const providerData: CICDProviderPayload = {
         id: providerId,
@@ -123,27 +132,27 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         type: values.type,
         url: values.url,
         auth_type: values.auth_type,
-        credentials
+        credentials,
       };
-      
+
       // Test the connection
       const result = await testCICDProviderAction(providerData);
-      
+
       if (result.success) {
         setTestMessage({
           success: true,
-          message: 'Connection successful! The provider is correctly configured.'
+          message: 'Connection successful! The provider is correctly configured.',
         });
       } else {
         setTestMessage({
           success: false,
-          message: result.error || 'Failed to connect to the CI/CD provider.'
+          message: result.error || 'Failed to connect to the CI/CD provider.',
         });
       }
     } catch (error: any) {
       setTestMessage({
         success: false,
-        message: error.message || 'An unexpected error occurred while testing the connection.'
+        message: error.message || 'An unexpected error occurred while testing the connection.',
       });
     } finally {
       setIsTesting(false);
@@ -153,26 +162,26 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   // Form submission handler
   const handleSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
-    
+
     try {
       // Prepare credentials based on auth type
       let credentials: any = {};
-      
-      switch(data.auth_type) {
+
+      switch (data.auth_type) {
         case 'basic_auth':
           credentials = {
             username: data.username,
-            password: data.password
+            password: data.password,
           };
           break;
         case 'token':
           credentials = {
-            token: data.token
+            token: data.token,
           };
           break;
         // Add other auth types as needed
       }
-      
+
       // Prepare provider payload
       const providerPayload: CICDProviderPayload = {
         id: providerId,
@@ -181,24 +190,24 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
         url: data.url,
         config: {
           auth_type: data.auth_type,
-          credentials
-        }
+          credentials,
+        },
       };
-      
+
       // Create or update the provider
-      const action = providerId 
+      const action = providerId
         ? () => updateCICDProviderAction(providerId, providerPayload)
         : () => createCICDProviderAction(providerPayload);
-      
+
       const result = await action();
-      
+
       if (result.success) {
         toast({
           title: providerId ? 'Provider Updated' : 'Provider Created',
           description: `The ${data.name} provider has been successfully ${providerId ? 'updated' : 'created'}.`,
           variant: 'success',
         });
-        
+
         // Close the dialog and refresh the list
         onComplete();
       } else {
@@ -229,7 +238,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
       <h2 className="text-xl font-semibold mb-4">
         {isEditMode ? 'Edit CI/CD Provider' : 'Add New CI/CD Provider'}
       </h2>
-      
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           {/* Provider Type */}
@@ -260,7 +269,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
               </FormItem>
             )}
           />
-          
+
           {/* Provider Name */}
           <FormField
             control={form.control}
@@ -276,7 +285,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
               </FormItem>
             )}
           />
-          
+
           {/* Provider URL */}
           <FormField
             control={form.control}
@@ -286,22 +295,22 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
               <FormItem>
                 <FormLabel>URL</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     placeholder={
-                      form.getValues('type') === 'jenkins' 
-                      ? 'http://jenkins.example.com:8080' 
-                      : form.getValues('type') === 'github'
-                      ? 'https://github.com/username/repo'
-                      : 'Enter provider URL'
-                    } 
-                    {...field} 
+                      form.getValues('type') === 'jenkins'
+                        ? 'http://jenkins.example.com:8080'
+                        : form.getValues('type') === 'github'
+                          ? 'https://github.com/username/repo'
+                          : 'Enter provider URL'
+                    }
+                    {...field}
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          
+
           {/* Authentication Type */}
           <FormField
             control={form.control}
@@ -330,11 +339,11 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
               </FormItem>
             )}
           />
-          
+
           {/* Authentication Credentials */}
           <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-md space-y-4">
             <h3 className="font-medium">Credentials</h3>
-            
+
             {form.watch('auth_type') === 'token' && (
               <FormField
                 control={form.control}
@@ -344,9 +353,9 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                   <FormItem>
                     <FormLabel>API Token</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="password" 
-                        placeholder="Enter API token" 
+                      <Input
+                        type="password"
+                        placeholder="Enter API token"
                         onChange={(e) => handleCredentialChange('token', e.target.value)}
                         value={field.value}
                       />
@@ -356,7 +365,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                 )}
               />
             )}
-            
+
             {form.watch('auth_type') === 'basic_auth' && (
               <>
                 <FormField
@@ -367,8 +376,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Enter username" 
+                        <Input
+                          placeholder="Enter username"
                           onChange={(e) => handleCredentialChange('username', e.target.value)}
                           value={field.value}
                         />
@@ -377,7 +386,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="password"
@@ -386,9 +395,9 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="password" 
-                          placeholder="Enter password" 
+                        <Input
+                          type="password"
+                          placeholder="Enter password"
                           onChange={(e) => handleCredentialChange('password', e.target.value)}
                           value={field.value}
                         />
@@ -399,21 +408,23 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                 />
               </>
             )}
-            
+
             {form.watch('auth_type') === 'oauth' && (
               <div className="text-sm text-gray-500">
                 OAuth configuration requires additional setup. Please contact your administrator.
               </div>
             )}
           </div>
-          
+
           {/* Test Connection Status */}
           {testMessage && (
-            <div className={`p-3 rounded-md ${testMessage.success ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100' : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100'}`}>
+            <div
+              className={`p-3 rounded-md ${testMessage.success ? 'bg-green-50 text-green-700 dark:bg-green-900 dark:text-green-100' : 'bg-red-50 text-red-700 dark:bg-red-900 dark:text-red-100'}`}
+            >
               {testMessage.message}
             </div>
           )}
-          
+
           {/* Form Actions */}
           <div className="flex justify-between space-x-4 pt-4">
             <div>
@@ -426,20 +437,13 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                 {isTesting ? 'Testing...' : 'Test Connection'}
               </Button>
             </div>
-            
+
             <div className="flex space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-              >
+              <Button type="button" variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-              >
+
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : isEditMode ? 'Update Provider' : 'Create Provider'}
               </Button>
             </div>
@@ -450,4 +454,4 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
   );
 };
 
-export default CICDProviderForm; 
+export default CICDProviderForm;

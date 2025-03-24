@@ -1,13 +1,25 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
-import { Repository, RepositorySyncStatus, RepositoryFile } from '@/app/[locale]/[tenant]/repositories/types';
-import { 
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  ReactNode,
+  useRef,
+} from 'react';
+import {
+  Repository,
+  RepositorySyncStatus,
+  RepositoryFile,
+} from '@/app/[locale]/[tenant]/repositories/types';
+import {
   getRepositories,
   getRepository as getRepositoryById,
   createRepository,
   updateRepository,
-  getRepositoriesWithStarred
+  getRepositoriesWithStarred,
 } from '@/app/[locale]/[tenant]/repositories/actions';
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
@@ -31,7 +43,7 @@ interface RepositoryData {
   starredRepositories: Repository[];
   loading: boolean;
   error: string | null;
-  connectionStatuses: {[key: string]: boolean};
+  connectionStatuses: { [key: string]: boolean };
   currentUser: AuthUser | null;
   filter: {
     query: string;
@@ -48,7 +60,7 @@ interface RepositoryContextType {
   starredRepositories: Repository[];
   loading: boolean;
   error: string | null;
-  connectionStatuses: {[key: string]: boolean};
+  connectionStatuses: { [key: string]: boolean };
   refreshRepositories: () => Promise<void>;
   filterRepositories: (options: RepositoryFilterOptions) => void;
   toggleStarRepository: (repository: Repository) => void;
@@ -69,7 +81,7 @@ const initialRepositoryData: RepositoryData = {
     type: 'all',
     sortBy: 'name',
     sortDir: 'asc',
-  }
+  },
 };
 
 // Create the context
@@ -78,16 +90,16 @@ export const RepositoryContext = createContext<RepositoryContextType | null>(nul
 // Provider component
 export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   log('[RepositoryContext] RepositoryProvider initializing');
-  
+
   // First, in the useState initializers, check for persisted data:
   const [repositories, setRepositories] = useState<Repository[]>(
-    persistedData?.repositoryData?.repositories || []
+    persistedData?.repositoryData?.repositories || [],
   );
 
   const [loading, setLoading] = useState<boolean>(
-    persistedData?.repositoryData?.loading !== undefined 
-      ? persistedData.repositoryData.loading 
-      : true
+    persistedData?.repositoryData?.loading !== undefined
+      ? persistedData.repositoryData.loading
+      : true,
   );
 
   // Get initial repository data synchronously from localStorage
@@ -118,17 +130,18 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         status: 'all',
         type: 'all',
         sortBy: 'created_at',
-        sortDir: 'desc'
-      }
+        sortDir: 'desc',
+      },
     };
   });
-  
+
   // Add request protection
-  const { protectedFetch, safeUpdateState, renderCount } = useRequestProtection('RepositoryContext');
-  
+  const { protectedFetch, safeUpdateState, renderCount } =
+    useRequestProtection('RepositoryContext');
+
   // Add initialization tracker
   const initialized = useRef(false);
-  
+
   // Add repository caching to localStorage
   useEffect(() => {
     if (state.repositories.length > 0) {
@@ -145,31 +158,31 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   // Fetch user data - use server action directly
   const fetchUserData = useCallback(async () => {
     log('[RepositoryContext] Fetching user data...');
-    
+
     try {
       return await protectedFetch('fetchUserData', async () => {
         // Just get user data from the server action
         const userData = await getUser();
         if (userData) {
-          log('[RepositoryContext] User data fetched successfully:', { 
-            id: userData.id, 
-            tenant: userData.tenant_name
+          log('[RepositoryContext] User data fetched successfully:', {
+            id: userData.id,
+            tenant: userData.tenant_name,
           });
         } else {
           log('[RepositoryContext] No user data returned from server');
         }
-        
+
         // Update state with user data
         safeUpdateState(
           setState,
           state,
           {
             ...state,
-            currentUser: userData || null
+            currentUser: userData || null,
           },
-          'user-data-updated'
+          'user-data-updated',
         );
-        
+
         return userData;
       });
     } catch (error) {
@@ -177,66 +190,61 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       return null;
     }
   }, [protectedFetch, safeUpdateState, state]);
-  
+
   // Fetch repositories safely with better null handling
   const fetchRepositories = useCallback(async (): Promise<Repository[]> => {
     const result = await protectedFetch('fetchRepositories', async () => {
       try {
         // Check for user data first
-        const user = state.currentUser || await fetchUserData();
+        const user = state.currentUser || (await fetchUserData());
         if (!user) {
           console.log('[RepositoryContext] No user data available');
           safeUpdateState(
             setState,
             state,
-            { 
+            {
               ...initialRepositoryData,
               loading: false,
-              error: 'No user data available'
+              error: 'No user data available',
             },
-            'no-user-data'
+            'no-user-data',
           );
           return [] as Repository[];
         }
-        
+
         console.log('[RepositoryContext] Fetching repositories and starred repositories');
-        safeUpdateState(
-          setState,
-          state,
-          { ...state, loading: true, error: null },
-          'start-loading'
-        );
-        
+        safeUpdateState(setState, state, { ...state, loading: true, error: null }, 'start-loading');
+
         // Use the combined action instead of separate calls
         const response = await getRepositoriesWithStarred();
-        
+
         // Extract data from the combined response
         if (!response.success || !response.data) {
           throw new Error(response.error || 'Failed to fetch repositories');
         }
-        
+
         const { repositories, starredRepositoryIds } = response.data;
-        
+
         // Set connection status for each repository
-        const connectionStatuses: {[key: string]: boolean} = {};
+        const connectionStatuses: { [key: string]: boolean } = {};
         repositories.forEach((repo: Repository) => {
           // Use a type assertion for isConnected since it might not be in the type
           connectionStatuses[repo.id] = (repo as any).isConnected || false;
         });
-        
+
         // Sort by creation date (newest first)
         const sortedRepositories = [...repositories].sort((a, b) => {
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
-        
+
         // Convert starred repository IDs to full Repository objects
-        const starredRepositories = sortedRepositories.filter(repo => 
-          starredRepositoryIds.includes(repo.id)
+        const starredRepositories = sortedRepositories.filter((repo) =>
+          starredRepositoryIds.includes(repo.id),
         );
-        
+
         console.log('[RepositoryContext] Repositories fetched:', sortedRepositories.length);
         console.log('[RepositoryContext] Starred repositories:', starredRepositories.length);
-        
+
         safeUpdateState(
           setState,
           state,
@@ -247,110 +255,119 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
             starredRepositories: starredRepositories,
             connectionStatuses,
             loading: false,
-            error: null
+            error: null,
           },
-          'repositories-fetched'
+          'repositories-fetched',
         );
-        
+
         return sortedRepositories;
       } catch (err: any) {
         console.error('[RepositoryContext] Error fetching repositories:', err);
         safeUpdateState(
           setState,
           state,
-          { 
-            ...state, 
-            loading: false, 
-            error: err.message || 'Failed to fetch repositories' 
+          {
+            ...state,
+            loading: false,
+            error: err.message || 'Failed to fetch repositories',
           },
-          'fetch-error'
+          'fetch-error',
         );
         return [] as Repository[];
       }
     });
-    
-    return result || [] as Repository[];
+
+    return result || ([] as Repository[]);
   }, [fetchUserData, state, protectedFetch, safeUpdateState]);
-  
+
   // Filter repositories - fix URL optional check
-  const filterRepositories = useCallback((options: RepositoryFilterOptions) => {
-    const { searchTerm, filterConnected } = options;
-    
-    let filtered = state.repositories;
-    
-    // Filter by search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(repo => 
-        repo.name.toLowerCase().includes(term) || 
-        (repo.url && repo.url.toLowerCase().includes(term))
+  const filterRepositories = useCallback(
+    (options: RepositoryFilterOptions) => {
+      const { searchTerm, filterConnected } = options;
+
+      let filtered = state.repositories;
+
+      // Filter by search term
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filtered = filtered.filter(
+          (repo) =>
+            repo.name.toLowerCase().includes(term) ||
+            (repo.url && repo.url.toLowerCase().includes(term)),
+        );
+      }
+
+      // Filter by connection status
+      if (filterConnected) {
+        filtered = filtered.filter((repo) => state.connectionStatuses[repo.id]);
+      }
+
+      safeUpdateState(
+        setState,
+        { ...state, filteredRepositories: state.filteredRepositories },
+        { ...state, filteredRepositories: filtered },
+        'filter-applied',
       );
-    }
-    
-    // Filter by connection status
-    if (filterConnected) {
-      filtered = filtered.filter(repo => state.connectionStatuses[repo.id]);
-    }
-    
-    safeUpdateState(
-      setState,
-      { ...state, filteredRepositories: state.filteredRepositories },
-      { ...state, filteredRepositories: filtered },
-      'filter-applied'
-    );
-  }, [state, safeUpdateState]);
-  
+    },
+    [state, safeUpdateState],
+  );
+
   // Toggle star status for a repository
-  const toggleStarRepository = useCallback((repository: Repository) => {
-    const isStarred = state.starredRepositories.some(r => r.id === repository.id);
-    
-    const newStarredRepositories = isStarred
-      ? state.starredRepositories.filter(r => r.id !== repository.id)
-      : [...state.starredRepositories, repository];
-    
-    safeUpdateState(
-      setState,
-      { ...state, starredRepositories: state.starredRepositories },
-      { ...state, starredRepositories: newStarredRepositories },
-      'star-toggled'
-    );
-  }, [state, safeUpdateState]);
+  const toggleStarRepository = useCallback(
+    (repository: Repository) => {
+      const isStarred = state.starredRepositories.some((r) => r.id === repository.id);
+
+      const newStarredRepositories = isStarred
+        ? state.starredRepositories.filter((r) => r.id !== repository.id)
+        : [...state.starredRepositories, repository];
+
+      safeUpdateState(
+        setState,
+        { ...state, starredRepositories: state.starredRepositories },
+        { ...state, starredRepositories: newStarredRepositories },
+        'star-toggled',
+      );
+    },
+    [state, safeUpdateState],
+  );
 
   // Initialize by fetching user data and repositories
   useEffect(() => {
     log('[RepositoryContext] Initializing RepositoryContext...');
-    
+
     const initialize = async () => {
       // Prevent double initialization
       if (initialized.current) {
         log('[RepositoryContext] Already initialized, skipping');
         return;
       }
-      
+
       initialized.current = true;
-      
+
       // First check if we have persisted data with repositories
       if (persistedData?.repositoryData?.repositories?.length > 0) {
-        log('[RepositoryContext] Using persisted repository data:', 
-          persistedData.repositoryData.repositories.length);
-          
+        log(
+          '[RepositoryContext] Using persisted repository data:',
+          persistedData.repositoryData.repositories.length,
+        );
+
         // Skip fetching if we already have data
         return;
       }
-      
+
       // Check for cached local storage data
-      const hasCachedData = typeof window !== 'undefined' && 
-        localStorage.getItem('cached_repository') !== null;
-        
+      const hasCachedData =
+        typeof window !== 'undefined' && localStorage.getItem('cached_repository') !== null;
+
       if (hasCachedData) {
         log('[RepositoryContext] Using cached repository data from localStorage');
         // We'll still fetch to refresh in background, but won't block UI
       }
-      
+
       // Only fetch if we don't have data or need to refresh in background
       await fetchUserData();
       await fetchRepositories();
-      
+
       // Cache repository data in localStorage after successful fetch
       if (state.repositories.length > 0) {
         try {
@@ -362,9 +379,9 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         }
       }
     };
-    
+
     initialize();
-    
+
     return () => {
       log('[RepositoryContext] RepositoryContext unmounting...');
       // Don't reset initialized flag when component unmounts
@@ -374,9 +391,9 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   // Add one useful log when data is loaded
   useEffect(() => {
     if (state.repositories.length > 0 && !state.loading) {
-      console.log('[RepositoryContext] Repositories loaded:', { 
+      console.log('[RepositoryContext] Repositories loaded:', {
         count: state.repositories.length,
-        filtered: state.filteredRepositories.length
+        filtered: state.filteredRepositories.length,
       });
     }
   }, [state.repositories.length, state.filteredRepositories.length, state.loading]);
@@ -397,16 +414,14 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   // Create context value
   const contextValue: RepositoryContextType = {
     ...state,
-    refreshRepositories: async () => { await fetchRepositories(); },
+    refreshRepositories: async () => {
+      await fetchRepositories();
+    },
     filterRepositories,
-    toggleStarRepository
+    toggleStarRepository,
   };
-  
-  return (
-    <RepositoryContext.Provider value={contextValue}>
-      {children}
-    </RepositoryContext.Provider>
-  );
+
+  return <RepositoryContext.Provider value={contextValue}>{children}</RepositoryContext.Provider>;
 };
 
 // Hook to use the context
@@ -416,4 +431,4 @@ export function useRepositoryContext() {
     throw new Error('useRepositoryContext must be used within a RepositoryProvider');
   }
   return context;
-} 
+}

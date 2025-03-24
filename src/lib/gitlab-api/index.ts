@@ -74,27 +74,27 @@ export interface GitLabBranch {
 export async function getRepository(
   serverUrl: string = 'https://gitlab.com',
   projectId: string,
-  token?: string
+  token?: string,
 ): Promise<GitLabRepository> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   // URL encode the projectId for paths with namespaces
   const encodedProjectId = encodeURIComponent(projectId);
-  
+
   const response = await fetch(`${serverUrl}/api/v4/projects/${encodedProjectId}`, {
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch repository: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -111,42 +111,42 @@ export async function listFiles(
   projectId: string,
   path: string = '',
   ref: string = '',
-  token?: string
+  token?: string,
 ): Promise<GitLabFile[]> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   // URL encode the projectId for paths with namespaces
   const encodedProjectId = encodeURIComponent(projectId);
-  
+
   let url = `${serverUrl}/api/v4/projects/${encodedProjectId}/repository/tree`;
   const params = new URLSearchParams();
-  
+
   if (path) {
     params.append('path', path);
   }
-  
+
   if (ref) {
     params.append('ref', ref);
   }
-  
+
   if (params.toString()) {
     url += `?${params.toString()}`;
   }
-  
+
   const response = await fetch(url, {
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to list files: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -163,34 +163,34 @@ export async function getFileContent(
   projectId: string,
   filePath: string,
   ref: string = '',
-  token?: string
+  token?: string,
 ): Promise<GitLabFileContent> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   // URL encode the projectId and filePath
   const encodedProjectId = encodeURIComponent(projectId);
   const encodedFilePath = encodeURIComponent(filePath);
-  
+
   let url = `${serverUrl}/api/v4/projects/${encodedProjectId}/repository/files/${encodedFilePath}`;
-  
+
   if (ref) {
     url += `?ref=${encodeURIComponent(ref)}`;
   }
-  
+
   const response = await fetch(url, {
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to get file content: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -203,27 +203,30 @@ export async function getFileContent(
 export async function listBranches(
   serverUrl: string = 'https://gitlab.com',
   projectId: string,
-  token?: string
+  token?: string,
 ): Promise<GitLabBranch[]> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  
+
   // URL encode the projectId for paths with namespaces
   const encodedProjectId = encodeURIComponent(projectId);
-  
-  const response = await fetch(`${serverUrl}/api/v4/projects/${encodedProjectId}/repository/branches`, {
-    headers,
-  });
-  
+
+  const response = await fetch(
+    `${serverUrl}/api/v4/projects/${encodedProjectId}/repository/branches`,
+    {
+      headers,
+    },
+  );
+
   if (!response.ok) {
     throw new Error(`Failed to list branches: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -234,17 +237,17 @@ export async function listBranches(
 export function extractGitLabProjectId(url: string): string {
   // Remove .git suffix if present
   const cleanUrl = url.endsWith('.git') ? url.slice(0, -4) : url;
-  
+
   try {
     const urlObj = new URL(cleanUrl);
-    
+
     // For gitlab.com or self-hosted GitLab
     const pathParts = urlObj.pathname.split('/').filter(Boolean);
-    
+
     if (pathParts.length < 2) {
       throw new Error('Invalid GitLab repository URL format');
     }
-    
+
     // For most GitLab URLs, the format is /username/repo or /group/subgroup/repo
     return pathParts.join('/');
   } catch (error) {

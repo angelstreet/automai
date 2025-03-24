@@ -1,16 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { 
-  ArrowLeft, GitBranch, RefreshCw, FolderTree, Code, Play, 
-  Settings, Terminal, FileCode, Folder, Star, GitFork, Eye, 
-  ChevronRight, ChevronDown, Download, History, PlusCircle
+import {
+  ArrowLeft,
+  GitBranch,
+  RefreshCw,
+  FolderTree,
+  Code,
+  Play,
+  Settings,
+  Terminal,
+  FileCode,
+  Folder,
+  Star,
+  GitFork,
+  Eye,
+  ChevronRight,
+  ChevronDown,
+  Download,
+  History,
+  PlusCircle,
 } from 'lucide-react';
 import { useRepository } from '@/context';
 
-import {
-  Card,
-  CardContent,
-} from '@/components/shadcn/card';
+import { Card, CardContent } from '@/components/shadcn/card';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { Badge } from '@/components/shadcn/badge';
@@ -18,20 +30,25 @@ import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
 import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../constants';
-import { 
-  RepositoryExplorerProps, 
-  RepositoryFile, 
-  FilesAPIResponse, 
-  FileAPIResponse 
+import {
+  RepositoryExplorerProps,
+  RepositoryFile,
+  FilesAPIResponse,
+  FileAPIResponse,
 } from '../types';
-import { 
-  Breadcrumb, 
-  BreadcrumbItem, 
-  BreadcrumbLink, 
-  BreadcrumbList, 
-  BreadcrumbSeparator 
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/shadcn/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/shadcn/tooltip';
 import { cn } from '@/lib/utils';
 
 export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerProps) {
@@ -43,18 +60,19 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   const [files, setFiles] = useState<RepositoryFile[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(EXPLORER_TABS.CODE);
-  
+
   // Validate repository has required properties
-  const isValidRepository = repository && 
-    repository.id && 
-    repository.providerId && 
+  const isValidRepository =
+    repository &&
+    repository.id &&
+    repository.providerId &&
     repository.url &&
     repository.name &&
     repository.owner;
 
   // Get provider icon and name
   const getProviderIcon = () => {
-    switch(repository?.providerType) {
+    switch (repository?.providerType) {
       case 'github':
         return <GitHubIcon className="h-5 w-5" />;
       case 'gitlab':
@@ -65,9 +83,9 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         return <GitBranch className="h-5 w-5" />;
     }
   };
-  
+
   const getProviderName = () => {
-    switch(repository?.providerType) {
+    switch (repository?.providerType) {
       case 'github':
         return 'GitHub';
       case 'gitlab':
@@ -83,7 +101,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase() || 'default';
     const colorClass = FILE_EXTENSION_COLORS[extension] || FILE_EXTENSION_COLORS.default;
-    
+
     return <FileCode className={`h-4 w-4 ${colorClass}`} />;
   };
 
@@ -95,24 +113,24 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       setError('Repository data is loading...');
       return;
     }
-    
+
     const fetchFiles = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         const pathString = currentPath.join('/');
         const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId}&repositoryUrl=${encodeURIComponent(repository.url)}&path=${encodeURIComponent(pathString)}&action=list`;
-        
+
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to fetch repository files');
         }
-        
-        const data = await response.json() as FilesAPIResponse;
-        
+
+        const data = (await response.json()) as FilesAPIResponse;
+
         if (data.success && data.data) {
           // Sort files: directories first, then files, both alphabetically
           const sortedFiles = [...data.data].sort((a, b) => {
@@ -120,7 +138,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             if (a.type !== 'dir' && b.type === 'dir') return 1;
             return a.name.localeCompare(b.name);
           });
-          
+
           setFiles(sortedFiles);
         } else {
           throw new Error('Invalid API response format');
@@ -133,7 +151,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         setIsLoading(false);
       }
     };
-    
+
     fetchFiles();
   }, [repository?.id, repository?.providerId, repository?.url, currentPath, isValidRepository]);
 
@@ -144,26 +162,26 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       setError('Repository data is not fully loaded yet. Please wait...');
       return;
     }
-    
+
     if (isFolder) {
       setCurrentPath([...currentPath, item.name]);
       setSelectedFile(null);
       setFileContent('');
     } else {
       setSelectedFile(item.path);
-      
+
       try {
         const url = `/api/repositories/explore?repositoryId=${repository.id}&providerId=${repository.providerId}&repositoryUrl=${encodeURIComponent(repository.url)}&path=${encodeURIComponent(item.path)}&action=file`;
-        
+
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || 'Failed to fetch file content');
         }
-        
-        const data = await response.json() as FileAPIResponse;
-        
+
+        const data = (await response.json()) as FileAPIResponse;
+
         if (data.success && data.data) {
           // Decode base64 content if needed
           if (data.data.encoding === 'base64' && data.data.content) {
@@ -210,7 +228,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         </div>
       );
     }
-    
+
     if (error) {
       return (
         <Alert variant="destructive" className="mb-4">
@@ -218,7 +236,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         </Alert>
       );
     }
-    
+
     if (files.length === 0) {
       return (
         <div className="flex justify-center items-center h-64">
@@ -229,18 +247,18 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         </div>
       );
     }
-    
+
     // Sort files: folders first, then files alphabetically
     const sortedFiles = [...files].sort((a, b) => {
       if (a.type === 'dir' && b.type !== 'dir') return -1;
       if (a.type !== 'dir' && b.type === 'dir') return 1;
       return a.name.localeCompare(b.name);
     });
-    
+
     return (
       <div className="space-y-1">
         {currentPath.length > 0 && (
-          <div 
+          <div
             className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
             onClick={handleNavigateUp}
           >
@@ -248,9 +266,9 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             <span>../</span>
           </div>
         )}
-        
+
         {sortedFiles.map((item, index) => (
-          <div 
+          <div
             key={index}
             className="flex items-center p-2 rounded-md hover:bg-muted cursor-pointer"
             onClick={() => handleNavigate(item, item.type === 'dir')}
@@ -283,7 +301,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         </Breadcrumb>
       );
     }
-    
+
     return (
       <Breadcrumb className="mb-4">
         <BreadcrumbList>
@@ -293,7 +311,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
               {repository.name}
             </BreadcrumbLink>
           </BreadcrumbItem>
-          
+
           {currentPath.map((path, index) => (
             <BreadcrumbItem key={index}>
               <BreadcrumbSeparator>/</BreadcrumbSeparator>
@@ -317,7 +335,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
               <ArrowLeft className="h-4 w-4 mr-1" />
               <span className="text-sm">{t('back')}</span>
             </Button>
-            
+
             <div className="flex items-center">
               {getProviderIcon()}
               <span className="ml-2 font-semibold">
@@ -330,7 +348,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
               )}
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <TooltipProvider>
               <Tooltip>
@@ -342,65 +360,67 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
                 <TooltipContent>{t('refresh')}</TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            
+
             <Button variant="outline" size="sm" className="h-8">
               <Star className="h-4 w-4 mr-1" />
               <span className="text-sm">Star</span>
             </Button>
           </div>
         </div>
-        
+
         {/* GitHub-style tabs */}
         <div className="border-b flex items-center">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-transparent h-10 p-0">
-              <TabsTrigger 
-                value={EXPLORER_TABS.CODE} 
+              <TabsTrigger
+                value={EXPLORER_TABS.CODE}
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === EXPLORER_TABS.CODE ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === EXPLORER_TABS.CODE ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <Code className="h-4 w-4 mr-2" />
                 <span>Code</span>
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value={EXPLORER_TABS.ISSUES} 
+
+              <TabsTrigger
+                value={EXPLORER_TABS.ISSUES}
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === EXPLORER_TABS.ISSUES ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === EXPLORER_TABS.ISSUES ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <span>Issues</span>
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value={EXPLORER_TABS.PULL_REQUESTS} 
+
+              <TabsTrigger
+                value={EXPLORER_TABS.PULL_REQUESTS}
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === EXPLORER_TABS.PULL_REQUESTS ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === EXPLORER_TABS.PULL_REQUESTS
+                    ? 'border-primary'
+                    : 'border-transparent',
                 )}
               >
                 <span>Pull Requests</span>
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value={EXPLORER_TABS.ACTIONS} 
+
+              <TabsTrigger
+                value={EXPLORER_TABS.ACTIONS}
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === EXPLORER_TABS.ACTIONS ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === EXPLORER_TABS.ACTIONS ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <Play className="h-4 w-4 mr-2" />
                 <span>Actions</span>
               </TabsTrigger>
-              
-              <TabsTrigger 
-                value={EXPLORER_TABS.SETTINGS} 
+
+              <TabsTrigger
+                value={EXPLORER_TABS.SETTINGS}
                 className={cn(
-                  "rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent",
-                  activeTab === EXPLORER_TABS.SETTINGS ? "border-primary" : "border-transparent"
+                  'rounded-none border-b-2 border-transparent px-4 h-10 data-[state=active]:border-primary data-[state=active]:bg-transparent',
+                  activeTab === EXPLORER_TABS.SETTINGS ? 'border-primary' : 'border-transparent',
                 )}
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -410,7 +430,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
           </Tabs>
         </div>
       </div>
-      
+
       {/* Main content area */}
       <div className="mt-4">
         {activeTab === EXPLORER_TABS.CODE && (
@@ -421,23 +441,23 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
                 <GitBranch className="h-4 w-4 mr-1" />
                 <span>main</span>
               </div>
-              
+
               <div className="flex items-center">
                 <GitFork className="h-4 w-4 mr-1" />
                 <span>0 forks</span>
               </div>
-              
+
               <div className="flex items-center">
                 <Star className="h-4 w-4 mr-1" />
                 <span>0 stars</span>
               </div>
-              
+
               <div className="flex items-center">
                 <Eye className="h-4 w-4 mr-1" />
                 <span>0 watching</span>
               </div>
             </div>
-            
+
             {/* GitHub-style file explorer */}
             <Card className="border-none shadow-none">
               <CardContent className="p-0">
@@ -451,19 +471,19 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
                         <ChevronDown className="h-3.5 w-3.5 ml-1" />
                       </Button>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <Button variant="outline" size="sm" className="h-8 text-xs">
                         <History className="h-3.5 w-3.5 mr-1" />
                         <span>Commits</span>
                       </Button>
-                      
+
                       <Button variant="outline" size="sm" className="h-8 text-xs">
                         <Download className="h-3.5 w-3.5 mr-1" />
                         <span>Download</span>
                         <ChevronDown className="h-3.5 w-3.5 ml-1" />
                       </Button>
-                      
+
                       <Button variant="outline" size="sm" className="h-8 text-xs">
                         <PlusCircle className="h-3.5 w-3.5 mr-1" />
                         <span>Add file</span>
@@ -471,34 +491,30 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
                       </Button>
                     </div>
                   </div>
-                  
+
                   {/* Breadcrumb navigation */}
-                  <div className="px-4 py-2 border-x">
-                    {renderBreadcrumb()}
-                  </div>
-                  
+                  <div className="px-4 py-2 border-x">{renderBreadcrumb()}</div>
+
                   {/* File explorer and content */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-0 border-x border-b rounded-b-md">
                     <div className="md:col-span-1 border-r">
-                      <ScrollArea className="h-[500px]">
-                        {renderFileList()}
-                      </ScrollArea>
+                      <ScrollArea className="h-[500px]">{renderFileList()}</ScrollArea>
                     </div>
-                    
+
                     <div className="md:col-span-3">
                       <div className="p-2 border-b bg-muted/30">
                         {selectedFile ? (
                           <div className="flex items-center text-sm">
                             <FileCode className="h-4 w-4 mr-2" />
-                            <span className="font-medium">{selectedFile?.split('/').pop() || 'File'}</span>
+                            <span className="font-medium">
+                              {selectedFile?.split('/').pop() || 'File'}
+                            </span>
                           </div>
                         ) : (
-                          <div className="text-sm text-muted-foreground">
-                            {t('selectFile')}
-                          </div>
+                          <div className="text-sm text-muted-foreground">{t('selectFile')}</div>
                         )}
                       </div>
-                      
+
                       <ScrollArea className="h-[465px]">
                         {selectedFile ? (
                           <pre className="text-xs p-4 bg-muted/20 rounded-md overflow-x-auto">
@@ -520,7 +536,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             </Card>
           </div>
         )}
-        
+
         {activeTab !== EXPLORER_TABS.CODE && (
           <Alert className="mb-4">
             <AlertDescription>{t('featureNotImplemented')}</AlertDescription>
