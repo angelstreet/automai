@@ -10,6 +10,7 @@ import {
   Host as HostType,
 } from '../types';
 import { useRepository, useHost, useDeployment } from '@/context';
+import { DeploymentContextType } from '@/types/context/deployment';
 import { Host as SystemHost } from '../../hosts/types';
 import { toast } from '@/components/shadcn/use-toast';
 import DeploymentWizardStep1 from './DeploymentWizardStep1';
@@ -74,9 +75,23 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
     // Use the deployment context for repositories as well (which may have more data)
     const deploymentContext = useDeployment();
 
+    // Handle the case where deployment context is still initializing (null)
+    const deploymentContextValue = deploymentContext as DeploymentContextType;
+    const {
+      createDeployment = async () => ({
+        success: false,
+        error: 'Deployment context not initialized',
+      }),
+      fetchScriptsForRepository = deploymentContextValue?.fetchScriptsForRepository || 
+        (async (repositoryId: string) => {
+          console.warn('Deployment context not initialized, cannot fetch scripts');
+          return [];
+        }),
+    } = deploymentContextValue || {};
+
     // Get repositories from both contexts - deployment context is the primary source
     // but fallback to repository context if needed
-    const deploymentRepos = deploymentContext?.repositories || [];
+    const deploymentRepos = deploymentContextValue?.repositories || [];
     const repositoryRepos = repositoryContext?.repositories || [];
 
     // Combine repositories from all sources, prioritizing explicit repositories
@@ -123,15 +138,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
       loading: isLoadingHosts = false,
       error: hostsError = null,
     } = hostContext || {};
-
-    // Handle the case where deployment context is still initializing (null)
-    const {
-      createDeployment = async () => ({
-        success: false,
-        error: 'Deployment context not initialized',
-      }),
-      fetchScriptsForRepository = async () => [],
-    } = deploymentContext || {};
 
     // Adapt hosts for deployment
     const availableHosts = adaptHostsForDeployment(systemHosts);
@@ -549,11 +555,9 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
               onNextStep={handleNextStep}
               isStepValid={isStepValid}
               onRefreshRepositories={() => {
-                // Only use one method to refresh
-                if (deploymentContext?.fetchRepositories) {
-                  deploymentContext.fetchRepositories();
-                } else if (repositoryContext?.fetchRepositories) {
-                  repositoryContext.fetchRepositories();
+                // Only use deployment context refresh if available
+                if (deploymentContextValue?.fetchDeployments) {
+                  deploymentContextValue.fetchDeployments();
                 }
               }}
             />

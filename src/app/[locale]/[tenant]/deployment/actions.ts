@@ -530,35 +530,6 @@ export async function refreshDeployment(id: string): Promise<{
 }
 
 /**
- * Get scripts available for a repository
- * @param repositoryId Repository ID
- * @returns Array of scripts
- */
-export async function getScriptsForRepository(repositoryId: string): Promise<any[]> {
-  try {
-    // TODO: Implement actual API call to fetch scripts from database
-    return [];
-  } catch (error) {
-    console.error(`Error fetching scripts for repository ${repositoryId}:`, error);
-    throw new Error('Failed to fetch scripts');
-  }
-}
-
-/**
- * Get available hosts for deployment
- * @returns Array of hosts
- */
-export async function getAvailableHosts(): Promise<any[]> {
-  try {
-    // TODO: Implement actual API call to fetch hosts from database
-    return [];
-  } catch (error) {
-    console.error('Error fetching available hosts:', error);
-    throw new Error('Failed to fetch hosts');
-  }
-}
-
-/**
  * Get deployment status including CI/CD status
  * @param id Deployment ID
  * @returns Object with success status and optional status data
@@ -572,43 +543,6 @@ export async function getDeploymentStatus(
   } catch (error) {
     console.error(`Error fetching status for deployment ${id}:`, error);
     return { success: false, error: 'Failed to fetch deployment status' };
-  }
-}
-
-/**
- * Get repositories for the current user
- * @param user Optional user data to avoid redundant auth calls
- * @returns List of repositories
- */
-export async function getRepositories(user?: AuthUser | null): Promise<Repository[]> {
-  try {
-    // Get the current user if not provided
-    const userData = user || (await getUser());
-
-    if (!userData) {
-      console.error('Failed to get user data for repositories');
-      return [];
-    }
-
-    // Get repositories from the database
-    const { success, data, error } = await repository.getRepositories(userData.id);
-
-    if (!success || error || !data) {
-      console.error(`Error fetching repositories: ${error}`);
-      return [];
-    }
-
-    // Map the database repositories to the Repository type
-    return data.map((repo: DbRepository) => ({
-      id: repo.id,
-      name: repo.name,
-      owner:
-        repo.full_name && repo.full_name.includes('/') ? repo.full_name.split('/')[0] : 'Unknown',
-      url: repo.url,
-    }));
-  } catch (error) {
-    console.error('Error in getRepositories:', error);
-    return [];
   }
 }
 
@@ -1578,5 +1512,108 @@ export async function testJenkinsAPI(): Promise<ServerActionResult<any>> {
   } catch (error: any) {
     console.error('Actions layer: Error testing Jenkins API:', error);
     return { success: false, error: error.message || 'Error testing Jenkins API' };
+  }
+}
+
+/**
+ * Get scripts for a specific repository
+ * @param repositoryId Repository ID
+ * @returns Array of scripts
+ */
+export async function getScriptsForRepository(repositoryId: string): Promise<any[]> {
+  try {
+    console.log(`[Actions] Getting scripts for repository ${repositoryId}`);
+    
+    // Get user for tenant isolation
+    const user = await getUser();
+    if (!user) {
+      console.error('[Actions] Cannot fetch scripts - user not authenticated');
+      return [];
+    }
+
+    // Get the repository details first
+    const { repository } = await import('@/lib/supabase/db-repositories');
+    const repoResult = await repository.getRepository(repositoryId, user.profile_id);
+    
+    if (!repoResult.success || !repoResult.data) {
+      console.error(`[Actions] Repository ${repositoryId} not found`);
+      return [];
+    }
+
+    const repo = repoResult.data;
+
+    // Get the git provider details
+    const { gitProvider } = await import('@/lib/supabase/db-repositories');
+    const providerResult = await gitProvider.getGitProviderById(repo.provider_id);
+
+    if (!providerResult.success || !providerResult.data) {
+      console.error(`[Actions] Provider not found for repository ${repositoryId}`);
+      return [];
+    }
+
+    const provider = providerResult.data;
+
+    // Get the appropriate git API based on provider type
+    let contents: any[] = [];
+    let rootContents: any[] = [];
+
+    switch (provider.type) {
+      case 'github': {
+        const { listFiles } = await import('@/lib/github-api');
+        try {
+          contents = await listFiles(repo.owner, repo.name, 'scripts', undefined, provider.access_token);
+        } catch (e) {
+          console.log('[Actions] No scripts directory found, checking root');
+        }
+        rootContents = await listFiles(repo.owner, repo.name, '', undefined, provider.access_token);
+        break;
+      }
+      case 'gitlab': {
+        const { listFiles } = await import('@/lib/gitlab-api');
+        try {
+          contents = await listFiles(repo.owner, repo.name, 'scripts', undefined, provider.access_token);
+        } catch (e) {
+          console.log('[Actions] No scripts directory found, checking root');
+        }
+        rootContents = await listFiles(repo.owner, repo.name, '', undefined, provider.access_token);
+        break;
+      }
+      case 'gitea': {
+        const { listFiles } = await import('@/lib/gitea-api');
+        try {
+          contents = await listFiles(repo.owner, repo.name, 'scripts', undefined, provider.access_token);
+        } catch (e) {
+          console.log('[Actions] No scripts directory found, checking root');
+        }
+        rootContents = await listFiles(repo.owner, repo.name, '', undefined, provider.access_token);
+        break;
+      }
+      default:
+        console.error(`[Actions] Unsupported provider type: ${provider.type}`);
+        return [];
+    }
+
+    // Filter for script files and combine both directories
+    const scriptFiles = [...contents, ...rootContents].filter(file => 
+      file.type === 'file' && (
+        file.path.endsWith('.sh') || 
+        file.path.endsWith('.py') || 
+        file.path.endsWith('.js')
+      )
+    );
+
+    // Map to script objects
+    return scriptFiles.map(file => ({
+      id: `${repositoryId}-${file.path}`,
+      name: file.path.split('/').pop() || file.path,
+      path: file.path,
+      type: file.path.endsWith('.py') ? 'python' : 
+            file.path.endsWith('.js') ? 'javascript' : 'shell',
+      parameters: []
+    }));
+
+  } catch (error) {
+    console.error('[Actions] Error getting scripts for repository:', error);
+    return [];
   }
 }
