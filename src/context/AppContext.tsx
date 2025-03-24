@@ -206,7 +206,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const renderWithProviders = (node: React.ReactNode): React.ReactNode => {
     let result = node;
 
-    // Wrap with each provider that's initialized, innermost first
+    // Wrap with each provider that's initialized
+    // CORRECTED ORDER: Initialize UserProvider first (innermost),
+    // then other providers in dependency order - user comes first since others depend on it
+
+    // Always include UserProvider since it's fundamental
+    if (contextState.user) {
+      result = <UserProvider>{result}</UserProvider>;
+    }
+
+    if (contextState.host) {
+      result = <HostProvider>{result}</HostProvider>;
+    }
+    
     if (contextState.cicd) {
       result = <CICDProvider>{result}</CICDProvider>;
     }
@@ -217,15 +229,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (contextState.deployment) {
       result = <DeploymentProvider>{result}</DeploymentProvider>;
-    }
-
-    if (contextState.host) {
-      result = <HostProvider>{result}</HostProvider>;
-    }
-
-    // Always include UserProvider since it's fundamental
-    if (contextState.user) {
-      result = <UserProvider>{result}</UserProvider>;
     }
 
     return result;
