@@ -166,9 +166,9 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     `[Middleware:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`,
   );
 
-  // If no user is found or there's an error, redirect to login ONLY for GET requests
-  // Allow data fetching POST requests to proceed even without authentication
-  if ((error || !data.user) && !isDataFetchRequest) {
+  // Only redirect for specific auth errors, not network errors
+  const isAuthError = error && (error.status === 401 || error.message?.includes('Invalid JWT'));
+  if ((!data.user || isAuthError) && !isDataFetchRequest) {
     console.log('[Middleware:redirect] No authenticated user found. Redirecting to login page.');
     // Reduce logging to essential information only
     if (error) {

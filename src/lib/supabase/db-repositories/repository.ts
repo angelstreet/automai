@@ -54,6 +54,7 @@ const repository = {
    */
   async getRepositories(profileId: string, providerId?: string): Promise<DbResponse<Repository[]>> {
     try {
+      console.log('[DB] getRepositories: Starting query for profile:', profileId);
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
 
@@ -68,17 +69,25 @@ const repository = {
         .eq('git_providers.profile_id', profileId);
 
       if (providerId) {
+        console.log('[DB] Filtering by provider:', providerId);
         query = query.eq('provider_id', providerId);
       }
 
       const { data, error } = await query;
-
+      
       if (error) {
+        console.error('[DB] Error fetching repositories:', error);
         return { success: false, error: error.message };
       }
 
+      console.log('[DB] Successfully fetched repositories:', {
+        count: data?.length || 0,
+        hasProvider: data?.[0]?.git_providers !== undefined
+      });
+
       return { success: true, data };
     } catch (error) {
+      console.error('[DB] Unexpected error in getRepositories:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -91,6 +100,7 @@ const repository = {
    */
   async getRepository(id: string, profileId: string): Promise<DbResponse<Repository>> {
     try {
+      console.log('[DB] getRepository: Fetching repository:', id, 'for profile:', profileId);
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
 
@@ -107,11 +117,18 @@ const repository = {
         .single();
 
       if (error) {
+        console.error('[DB] Error fetching repository:', error);
         return { success: false, error: error.message };
       }
 
+      console.log('[DB] Successfully fetched repository:', {
+        id: data?.id,
+        hasProvider: data?.git_providers !== undefined
+      });
+
       return { success: true, data };
     } catch (error) {
+      console.error('[DB] Unexpected error in getRepository:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

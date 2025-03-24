@@ -188,6 +188,56 @@ const gitProvider = {
   },
 
   /**
+   * Refresh a git provider (mark as recently synced)
+   */
+  async refreshGitProvider(
+    id: string,
+    profileId: string,
+  ): Promise<DbResponse<GitProvider>> {
+    try {
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+
+      // Check if the provider belongs to the profile (tenant isolation)
+      const { data: existingProvider, error: fetchError } = await supabase
+        .from('git_providers')
+        .select('id')
+        .eq('id', id)
+        .eq('profile_id', profileId)
+        .single();
+
+      if (fetchError || !existingProvider) {
+        return {
+          success: false,
+          error: fetchError?.message || 'Git provider not found or no permission',
+        };
+      }
+
+      // Mark the provider as refreshed by updating its timestamp
+      const { data: result, error } = await supabase
+        .from('git_providers')
+        .update({
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('profile_id', profileId)
+        .select()
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: result };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  },
+
+  /**
    * Delete a git provider
    */
   async deleteGitProvider(id: string, profileId: string): Promise<DbResponse<null>> {
@@ -327,6 +377,136 @@ const gitProvider = {
     if (!result.success) throw new Error(result.error);
     return { success: true };
   },
+
+  /**
+   * Handle OAuth callback for git providers
+   */
+  async handleOAuthCallback(
+    code: string, 
+    providerId: string,
+    userId: string
+  ): Promise<DbResponse<GitProvider>> {
+    try {
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+
+      // Check if the provider belongs to the user (tenant isolation)
+      const { data: provider, error: fetchError } = await supabase
+        .from('git_providers')
+        .select('*')
+        .eq('id', providerId)
+        .eq('profile_id', userId)
+        .single();
+
+      if (fetchError || !provider) {
+        return {
+          success: false,
+          error: fetchError?.message || 'Git provider not found or no permission',
+        };
+      }
+
+      // Exchange code for token
+      // This would typically involve making a request to the git provider's API
+      // For now, we'll just update the provider with a dummy token
+      const dummyToken = `dummy-token-${code}`;
+
+      // Update the provider with the token
+      const { data: updatedProvider, error } = await supabase
+        .from('git_providers')
+        .update({
+          access_token: dummyToken,
+          is_configured: true,
+        })
+        .eq('id', providerId)
+        .eq('profile_id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, data: updatedProvider };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  },
+
+  /**
+   * Create a git provider with input validation and OAuth URL generation
+   */
+  async createGitProviderWithSchema(
+    data: {
+      type: string;
+      displayName: string;
+      serverUrl?: string;
+      token?: string;
+    },
+    userId: string
+  ): Promise<DbResponse<{provider: GitProvider; authUrl?: string}>> {
+    try {
+      const cookieStore = await cookies();
+      const supabase = await createClient(cookieStore);
+
+      // Create provider with the validated data
+      const { data: provider, error } = await supabase
+        .from('git_providers')
+        .insert({
+          type: data.type,
+          name: data.displayName,
+          server_url: data.serverUrl,
+          access_token: data.token || '',
+          profile_id: userId,
+          is_configured: !!data.token,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // If token is provided, we're done
+      if (data.token) {
+        return { success: true, data: { provider } };
+      }
+
+      // Otherwise, generate OAuth URL
+      let authUrl;
+      const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/git-providers/callback`;
+      const state = Buffer.from(
+        JSON.stringify({
+          providerId: provider.id,
+          redirectUri: '/repositories',
+        }),
+      ).toString('base64');
+
+      if (data.type === 'github') {
+        authUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=repo`;
+      } else if (data.type === 'gitlab') {
+        authUrl = `https://gitlab.com/oauth/authorize?client_id=${process.env.GITLAB_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&response_type=code&scope=api`;
+      } else {
+        // For Gitea, we'd need to implement a similar flow
+        return { success: false, error: 'OAuth not implemented for Gitea yet' };
+      }
+
+      return {
+        success: true,
+        data: {
+          provider,
+          authUrl,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  },
 };
 
 // Export individual functions for direct imports
@@ -336,6 +516,9 @@ export const getGitProviderById = gitProvider.getGitProviderById;
 export const createGitProvider = gitProvider.createGitProvider;
 export const updateGitProvider = gitProvider.updateGitProvider;
 export const deleteGitProvider = gitProvider.deleteGitProvider;
+export const refreshGitProvider = gitProvider.refreshGitProvider;
+export const handleOAuthCallback = gitProvider.handleOAuthCallback;
+export const createGitProviderWithSchema = gitProvider.createGitProviderWithSchema;
 
 // Export the entire object as default
 export default gitProvider;

@@ -18,7 +18,7 @@ const starRepository = {
 
       // Get all starred repositories for the user
       const { data: starData, error: starError } = await supabase
-        .from('profile_repository_stars')
+        .from('profile_repository_pins')
         .select('repository_id')
         .eq('profile_id', profileId);
 
@@ -88,7 +88,7 @@ const starRepository = {
 
       // Add the repository to starred
       const { data, error } = await supabase
-        .from('profile_repository_stars')
+        .from('profile_repository_pins')
         .insert({
           profile_id: profileId,
           repository_id: repositoryId,
@@ -132,7 +132,7 @@ const starRepository = {
 
       // Remove the repository from starred
       const { data, error } = await supabase
-        .from('profile_repository_stars')
+        .from('profile_repository_pins')
         .delete()
         .eq('profile_id', profileId)
         .eq('repository_id', repositoryId)

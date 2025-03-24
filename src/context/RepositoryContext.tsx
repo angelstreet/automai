@@ -270,12 +270,15 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Fetch repositories safely with better null handling
   const fetchRepositories = useCallback(async (): Promise<Repository[]> => {
+    console.log('[RepositoryContext] Starting fetchRepositories...');
     const result = await protectedFetch('fetchRepositories', async () => {
       try {
         // Check for user data first
         const user = state.currentUser || (await fetchUserData());
+        console.log('[RepositoryContext] User data:', user ? { id: user.id, tenant: user.tenant_name } : 'No user');
+        
         if (!user) {
-          log('[RepositoryContext] No user data available');
+          console.log('[RepositoryContext] No user data available');
           safeUpdateState(
             setState,
             state,
@@ -289,11 +292,17 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           return [] as Repository[];
         }
 
-        log('[RepositoryContext] Fetching repositories and starred repositories');
+        console.log('[RepositoryContext] Fetching repositories and starred repositories');
         safeUpdateState(setState, state, { ...state, loading: true, error: null }, 'start-loading');
 
         // Use the combined action instead of separate calls
         const response = await getRepositoriesWithStarred();
+        console.log('[RepositoryContext] getRepositoriesWithStarred response:', {
+          success: response.success,
+          error: response.error,
+          repoCount: response.data?.repositories?.length || 0,
+          starredCount: response.data?.starredRepositoryIds?.length || 0
+        });
 
         // Extract data from the combined response
         if (!response.success || !response.data) {
@@ -305,7 +314,6 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         // Set connection status for each repository
         const connectionStatuses: { [key: string]: boolean } = {};
         repositories.forEach((repo: Repository) => {
-          // Use a type assertion for isConnected since it might not be in the type
           connectionStatuses[repo.id] = (repo as any).isConnected || false;
         });
 
@@ -319,8 +327,11 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           starredRepositoryIds.includes(repo.id),
         );
 
-        log('[RepositoryContext] Repositories fetched:', sortedRepositories.length);
-        log('[RepositoryContext] Starred repositories:', starredRepositories.length);
+        console.log('[RepositoryContext] Final repository counts:', {
+          total: sortedRepositories.length,
+          starred: starredRepositories.length,
+          connected: Object.values(connectionStatuses).filter(Boolean).length
+        });
 
         safeUpdateState(
           setState,

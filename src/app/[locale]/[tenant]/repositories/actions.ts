@@ -1,7 +1,5 @@
 'use server';
 
-import db from '@/lib/supabase/db';
-import { repository as dbRepositoryOld, gitProvider } from '@/lib/supabase';
 import {
   GitProvider,
   Repository,
@@ -18,7 +16,7 @@ import {
 import { getUser } from '@/app/actions/user';
 import { serverCache } from '@/lib/cache';
 import { AuthUser } from '@/types/user';
-import { starRepository } from '@/lib/supabase/db-repositories';
+import { starRepository, repository, files, gitProvider } from '@/lib/supabase/db-repositories';
 import { GitProvider as DbGitProvider } from '@/lib/supabase/db-repositories/git-provider';
 
 /**
@@ -99,8 +97,14 @@ export async function getRepositories(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository[] }> {
   try {
+    console.log('[Server] getRepositories: Starting...');
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
+    console.log('[Server] User context for repositories:', currentUser ? {
+      id: currentUser.id,
+      tenant: currentUser.tenant_id
+    } : 'No user');
+
     if (!currentUser) {
       return {
         success: false,
@@ -115,35 +119,45 @@ export async function getRepositories(
       filter?.providerId ? `:provider:${filter.providerId}` : ':all',
     );
 
+    console.log('[Server] Using cache key:', cacheKey);
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
       async () => {
-        const where: Record<string, any> = {
-          tenant_id: currentUser.tenant_id, // Ensure tenant isolation
-        };
+        console.log('[Server] Cache miss - fetching repositories from database');
+        
+        // IMPORTANT: Use profile_id instead of tenant_id since that's what exists in the database
+        // The repositories are linked to git_providers which have a profile_id field
+        try {
+          // Call the database layer directly with the user's ID (which should match profile_id)
+          const result = await repository.getRepositories(currentUser.id, filter?.providerId);
+          console.log('[Server] DB query result:', {
+            success: result.success,
+            count: result.data?.length || 0,
+            error: result.error
+          });
 
-        if (filter?.providerId) {
-          where.provider_id = filter.providerId;
-        }
+          if (!result.success || !result.data) {
+            return {
+              success: false,
+              error: result.error || 'Failed to fetch repositories from database',
+            };
+          }
 
-        const result = await db.repository.findMany({
-          where,
-          orderBy: { created_at: 'desc' },
-        });
+          // Transform raw DB results to the Repository type
+          const repositories = result.data;
+          const data: Repository[] = repositories.map((repo) => mapDbRepositoryToRepository(repo));
+          console.log('[Server] Mapped repositories count:', data.length);
 
-        if (!result) {
-          return {
-            success: false,
-            error: 'Failed to fetch repositories',
+          return { success: true, data };
+        } catch (error: any) {
+          console.error('[Server] Database error in getRepositories:', error);
+          return { 
+            success: false, 
+            error: error.message || 'Database error fetching repositories'
           };
         }
-
-        // Transform raw DB results to the Repository type
-        const repositories = result as unknown as any[];
-        const data: Repository[] = repositories.map((repo) => mapDbRepositoryToRepository(repo));
-
-        return { success: true, data };
       },
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
@@ -152,7 +166,7 @@ export async function getRepositories(
       },
     );
   } catch (error: any) {
-    console.error('Error in getRepositories:', error);
+    console.error('[Server] Error in getRepositories:', error);
     return { success: false, error: error.message || 'Failed to fetch repositories' };
   }
 }
@@ -167,6 +181,7 @@ export async function createRepository(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
+    console.log('[Server] createRepository: Starting...');
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
@@ -176,25 +191,34 @@ export async function createRepository(
       };
     }
 
-    // Ensure tenant_id is included in the data
-    const preparedData = {
-      ...data,
-      tenant_id: currentUser.tenant_id,
+    // Prepare data for the repository module with the correct structure
+    const repositoryData = {
+      name: data.name || '',
+      description: data.description || null,
+      provider_id: data.providerId || '',
+      provider_type: data.providerType || 'github',
+      url: data.url || '',
+      default_branch: data.defaultBranch || 'main',
+      is_private: data.isPrivate || false,
+      owner: data.owner || null
     };
 
-    const newRepo = await db.repository.create({
-      data: preparedData,
-    });
+    // Only log non-sensitive data
+    console.log('[Server] Calling repository.createRepository with data:', repositoryData);
 
-    if (!newRepo) {
+    // Call the repository module with proper types
+    const result = await repository.createRepository(repositoryData, currentUser.id);
+
+    if (!result.success || !result.data) {
+      console.error('[Server] Failed to create repository:', result.error);
       return {
         success: false,
-        error: 'Failed to create repository',
+        error: result.error || 'Failed to create repository',
       };
     }
 
     // Map to our Repository type
-    const repository: Repository = mapDbRepositoryToRepository(newRepo);
+    const mappedRepository: Repository = mapDbRepositoryToRepository(result.data);
 
     // Invalidate cache after creation using pattern-based invalidation
     // This efficiently clears all related cache entries
@@ -203,9 +227,9 @@ export async function createRepository(
     // Also clear tenant-specific repository cache
     serverCache.deletePattern(`tenant:${currentUser.tenant_id}:repositories`);
 
-    return { success: true, data: repository };
+    return { success: true, data: mappedRepository };
   } catch (error: any) {
-    console.error('Error in createRepository:', error);
+    console.error('[Server] Error in createRepository:', error);
     return { success: false, error: error.message || 'Failed to create repository' };
   }
 }
@@ -220,12 +244,12 @@ export async function updateRepository(
   updates: Record<string, any>,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
-    console.log(`[updateRepository] Starting update for repo ${id}`);
+    console.log(`[Server] updateRepository: Starting update for repo ${id}`);
 
     // Always get fresh user data from the server - don't rely on user from client
     const currentUserResult = await getUser();
     if (!currentUserResult) {
-      console.log('[updateRepository] Failed - user not authenticated');
+      console.log('[Server] updateRepository: Failed - user not authenticated');
       return {
         success: false,
         error: 'Unauthorized - Please sign in',
@@ -233,80 +257,33 @@ export async function updateRepository(
     }
 
     const currentUser = currentUserResult;
+    console.log(`[Server] updateRepository: User authenticated, profile_id: ${currentUser.id}`);
+    console.log(`[Server] updateRepository: Using direct snake_case column names:`, updates);
 
-    console.log(`[updateRepository] User authenticated, profile_id: ${currentUser.id}`);
-    console.log(`[updateRepository] Using direct snake_case column names:`, updates);
-
-    // IMPORTANT: The db.repository.update call requires BOTH id AND profile_id in the where clause
-    console.log(`[updateRepository] Calling db.repository.update with:`, {
-      where: { id, profile_id: currentUser.id },
-      data: updates,
-    });
-
-    try {
-      const updated = await db.repository.update({
-        where: { id, profile_id: currentUser.id },
-        data: updates,
-      });
-
-      if (!updated) {
-        console.log(`[updateRepository] Failed - repository not found or update failed`);
-        return {
-          success: false,
-          error: 'Repository not found or update failed',
-        };
-      }
-
-      // Map to our Repository type
-      const repository: Repository = mapDbRepositoryToRepository(updated);
-
-      // Invalidate cache after update
-      serverCache.delete(`repositories:${repository.providerId}`);
-      serverCache.delete('repositories:all');
-      serverCache.delete(`repository:${id}`);
-
-      console.log(`[updateRepository] Success - updated repo ${id}, invalidated cache`);
-
-      return { success: true, data: repository };
-    } catch (dbError: any) {
-      console.error('[updateRepository] Database layer error:', dbError);
-
-      // Try a different approach if the first one failed
-      console.log('[updateRepository] Attempting direct Supabase update as fallback...');
-
-      try {
-        // Attempt to call the core db function directly with both parameters
-        // Add updated_at to transformedData since it's required in this fallback call
-        updates.updated_at = new Date().toISOString();
-
-        // Ensure last_synced_at has a default value for the fallback method
-        if (updates.last_synced_at === undefined) {
-          updates.last_synced_at = new Date().toISOString();
-        }
-
-        const result = await db.repository.updateRepository(id, updates, currentUser.id);
-
-        if (result.success && result.data) {
-          console.log('[updateRepository] Fallback succeeded:', result);
-
-          // Invalidate cache after update
-          serverCache.delete('repositories:all');
-
-          return {
-            success: true,
-            data: mapDbRepositoryToRepository(result.data),
-          };
-        } else {
-          console.error('[updateRepository] Fallback update failed:', result.error);
-          return { success: false, error: result.error || 'Update failed' };
-        }
-      } catch (fallbackError: any) {
-        console.error('[updateRepository] Fallback attempt failed:', fallbackError);
-        return { success: false, error: fallbackError.message || 'Failed to update repository' };
-      }
+    // Call the repository module instead of direct db access
+    const result = await repository.updateRepository(id, updates, currentUser.id);
+    
+    if (!result.success || !result.data) {
+      console.log(`[Server] updateRepository: Failed - ${result.error}`);
+      return {
+        success: false,
+        error: result.error || 'Repository not found or update failed',
+      };
     }
+
+    // Map to our Repository type
+    const mappedRepository: Repository = mapDbRepositoryToRepository(result.data);
+
+    // Invalidate cache after update
+    serverCache.delete(`repositories:${mappedRepository.providerId}`);
+    serverCache.delete('repositories:all');
+    serverCache.delete(`repository:${id}`);
+
+    console.log(`[Server] updateRepository: Success - updated repo ${id}, invalidated cache`);
+
+    return { success: true, data: mappedRepository };
   } catch (error: any) {
-    console.error('Error in updateRepository:', error);
+    console.error('[Server] Error in updateRepository:', error);
     return { success: false, error: error.message || 'Failed to update repository' };
   }
 }
@@ -321,6 +298,7 @@ export async function deleteRepository(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log(`[Server] deleteRepository: Starting for repo ${id}`);
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
@@ -331,26 +309,33 @@ export async function deleteRepository(
     }
 
     // First get the repository to invalidate cache properly
-    const repo = await db.repository.findUnique({
-      where: { id },
-    });
-
-    if (!repo) {
+    const getRepoResult = await repository.getRepository(id, currentUser.id);
+    
+    if (!getRepoResult.success || !getRepoResult.data) {
       return { success: false, error: 'Repository not found' };
     }
+    
+    // Store the provider ID for cache invalidation
+    const providerId = getRepoResult.data.provider_id;
 
-    await db.repository.delete({
-      where: { id },
-    });
+    // Call the repository module to delete
+    const result = await repository.deleteRepository(id, currentUser.id);
+    
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: result.error || 'Failed to delete repository'
+      };
+    }
 
     // Invalidate cache after deletion
-    serverCache.delete(`repositories:${repo.provider_id}`);
+    serverCache.delete(`repositories:${providerId}`);
     serverCache.delete('repositories:all');
     serverCache.delete(`repository:${id}`);
 
     return { success: true };
   } catch (error: any) {
-    console.error('Error in deleteRepository:', error);
+    console.error('[Server] Error in deleteRepository:', error);
     return { success: false, error: error.message || 'Failed to delete repository' };
   }
 }
@@ -365,6 +350,7 @@ export async function syncRepository(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
+    console.log(`[Server] syncRepository: Starting for repo ${id}`);
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
@@ -377,32 +363,32 @@ export async function syncRepository(
     // In a real application, this would trigger a sync with the remote repository
     // For now, we'll just update the last_synced_at timestamp
 
-    const updated = await db.repository.update({
-      where: { id },
-      data: {
-        last_synced_at: new Date().toISOString(),
-        sync_status: 'SYNCED',
-      },
-    });
+    // Call the repository module to update
+    const updates = {
+      last_synced_at: new Date().toISOString(),
+      sync_status: 'SYNCED',
+    };
+    
+    const result = await repository.updateRepository(id, updates, currentUser.id);
 
-    if (!updated) {
+    if (!result.success || !result.data) {
       return {
         success: false,
-        error: 'Repository not found or sync failed',
+        error: result.error || 'Repository not found or sync failed',
       };
     }
 
     // Map to our Repository type
-    const repository: Repository = mapDbRepositoryToRepository(updated);
+    const mappedRepository: Repository = mapDbRepositoryToRepository(result.data);
 
     // Invalidate cache after sync
-    serverCache.delete(`repositories:${repository.providerId}`);
+    serverCache.delete(`repositories:${mappedRepository.providerId}`);
     serverCache.delete('repositories:all');
     serverCache.delete(`repository:${id}`);
 
-    return { success: true, data: repository };
+    return { success: true, data: mappedRepository };
   } catch (error: any) {
-    console.error('Error in syncRepository:', error);
+    console.error('[Server] Error in syncRepository:', error);
     return { success: false, error: error.message || 'Failed to sync repository' };
   }
 }
@@ -427,7 +413,14 @@ export async function createRepositoryFromUrl(
 
     console.log('[actions.createRepositoryFromUrl] User ID:', user.id);
 
-    // Call the DB layer function
+    // Prepare data for quick clone
+    const quickCloneData = {
+      url,
+      is_private: isPrivate,
+      description,
+    };
+
+    // Call the repository module
     console.log(
       '[actions.createRepositoryFromUrl] Calling repository.createRepositoryFromUrl with:',
       {
@@ -438,14 +431,8 @@ export async function createRepositoryFromUrl(
       },
     );
 
-    const result = await dbRepositoryOld.createRepositoryFromUrl(
-      {
-        url,
-        is_private: isPrivate,
-        description,
-      },
-      user.id,
-    );
+    // Use the repository module's createRepositoryFromUrl method
+    const result = await repository.createRepositoryFromUrl(quickCloneData, user.id);
 
     console.log('[actions.createRepositoryFromUrl] Result from DB layer:', result);
 
@@ -474,6 +461,7 @@ export async function getRepository(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
+    console.log(`[Server] getRepository: Starting for repository ${id}`);
     // Get current user for tenant isolation
     const currentUser = user || (await getUser());
     if (!currentUser) {
@@ -490,20 +478,18 @@ export async function getRepository(
     return await serverCache.getOrSet(
       cacheKey,
       async () => {
-        const data = await db.repository.findUnique({
-          where: {
-            id,
-            tenant_id: currentUser.tenant_id, // Ensure tenant isolation
-          },
-        });
-
-        if (!data) {
+        console.log(`[Server] Cache miss - fetching repository ${id} from database`);
+        
+        // Call the repository module instead of direct db access
+        const result = await repository.getRepository(id, currentUser.id);
+        
+        if (!result.success || !result.data) {
           return { success: false, error: 'Repository not found' };
         }
 
         return {
           success: true,
-          data: mapDbRepositoryToRepository(data),
+          data: mapDbRepositoryToRepository(result.data),
         };
       },
       {
@@ -602,25 +588,25 @@ export async function getGitProviders(): Promise<{
   data?: GitProvider[];
 }> {
   try {
+    console.log(`[Server] getGitProviders: Starting...`);
     const user = await getUser();
     if (!user) {
       return { success: false, error: 'Unauthorized', data: [] };
     }
 
-    const dbProviders = await db.gitProvider.findMany({
-      where: { user_id: user.id },
-      orderBy: { created_at: 'desc' },
-    });
-
-    if (!dbProviders) {
+    // Call the gitProvider module instead of direct db access
+    const result = await gitProvider.getGitProviders(user.id);
+    
+    if (!result.success || !result.data) {
+      console.error(`[Server] Failed to fetch git providers:`, result.error);
       return {
         success: false,
-        error: 'Failed to fetch git providers',
+        error: result.error || 'Failed to fetch git providers',
       };
     }
 
     // Map DB results to interface type
-    const providers = dbProviders.map((provider) => mapDbGitProviderToGitProvider(provider));
+    const providers = result.data.map((provider) => mapDbGitProviderToGitProvider(provider));
 
     return { success: true, data: providers };
   } catch (error: any) {
@@ -636,24 +622,22 @@ export async function getGitProvider(
   id: string,
 ): Promise<{ success: boolean; error?: string; data?: GitProvider }> {
   try {
+    console.log(`[Server] getGitProvider: Starting for provider ${id}`);
     const user = await getUser();
     if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    const dbProvider = await db.gitProvider.findUnique({
-      where: {
-        id,
-        user_id: user.id,
-      },
-    });
-
-    if (!dbProvider) {
+    // Call the gitProvider module instead of direct db access
+    const result = await gitProvider.getGitProvider(id, user.id);
+    
+    if (!result.success || !result.data) {
+      console.error(`[Server] Git provider not found:`, result.error);
       return { success: false, error: 'Git provider not found' };
     }
 
     // Map DB result to interface type
-    const provider = mapDbGitProviderToGitProvider(dbProvider);
+    const provider = mapDbGitProviderToGitProvider(result.data);
 
     return { success: true, data: provider };
   } catch (error: any) {
@@ -667,41 +651,54 @@ export async function getGitProvider(
  */
 export async function deleteGitProvider(id: string): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log(`[Server] deleteGitProvider: Starting for provider ${id}`);
     const user = await getUser();
     if (!user) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    try {
-      await db.gitProvider.delete({
-        where: {
-          id,
-          user_id: user.id,
-        },
-      });
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error deleting git provider:', error);
-      return { success: false, error: error.message };
+    // Call the gitProvider module instead of direct db access
+    const result = await gitProvider.deleteGitProvider(id, user.id);
+    
+    if (!result.success) {
+      console.error(`[Server] Failed to delete git provider:`, result.error);
+      return { success: false, error: result.error };
     }
+
+    return { success: true };
   } catch (error: any) {
     console.error('Error in deleteGitProvider:', error);
     return { success: false, error: error.message || 'Failed to delete git provider' };
   }
 }
 
-export async function addGitProvider(provider: Omit<GitProvider, 'id'>): Promise<GitProvider> {
+export async function addGitProvider(provider: {
+  name: string;
+  type: 'github' | 'gitlab' | 'gitea' | 'self-hosted';
+  access_token?: string;
+  profile_id: string;
+  server_url?: string;
+}): Promise<GitProvider> {
   try {
-    const result = await db.gitProvider.create({
-      data: provider,
-    });
-
-    if (!result) {
-      throw new Error('Failed to create git provider');
+    console.log(`[Server] addGitProvider: Starting...`);
+    
+    // Map to DB schema
+    const gitProviderData = {
+      name: provider.name,
+      type: provider.type,
+      access_token: provider.access_token || '',
+      profile_id: provider.profile_id
+    };
+    
+    // Call the gitProvider module instead of direct db access
+    const result = await gitProvider.createGitProvider(gitProviderData);
+    
+    if (!result.success || !result.data) {
+      console.error(`[Server] Failed to create git provider:`, result.error);
+      throw new Error(result.error || 'Failed to create git provider');
     }
 
-    return mapDbGitProviderToGitProvider(result);
+    return mapDbGitProviderToGitProvider(result.data);
   } catch (error) {
     console.error('Error in addGitProvider:', error);
     throw error;
@@ -710,19 +707,37 @@ export async function addGitProvider(provider: Omit<GitProvider, 'id'>): Promise
 
 export async function updateGitProvider(
   id: string,
-  updates: Partial<GitProvider>,
+  updates: Partial<{
+    name: string;
+    type: string;
+    access_token: string;
+    server_url?: string;
+  }>,
 ): Promise<GitProvider> {
   try {
-    const result = await db.gitProvider.update({
-      where: { id },
-      data: updates,
-    });
-
-    if (!result) {
-      throw new Error('Failed to update git provider');
+    console.log(`[Server] updateGitProvider: Starting for provider ${id}`);
+    const user = await getUser();
+    
+    if (!user) {
+      throw new Error('Unauthorized');
+    }
+    
+    // Map updates to DB schema
+    const gitProviderUpdates = {
+      ...updates,
+      // Ensure no profile_id override for security
+      profile_id: undefined
+    };
+    
+    // Call the gitProvider module instead of direct db access
+    const result = await gitProvider.updateGitProvider(id, gitProviderUpdates, user.id);
+    
+    if (!result.success || !result.data) {
+      console.error(`[Server] Failed to update git provider:`, result.error);
+      throw new Error(result.error || 'Failed to update git provider');
     }
 
-    return mapDbGitProviderToGitProvider(result);
+    return mapDbGitProviderToGitProvider(result.data);
   } catch (error) {
     console.error('Error in updateGitProvider:', error);
     throw error;
@@ -731,16 +746,22 @@ export async function updateGitProvider(
 
 export async function refreshGitProvider(id: string): Promise<GitProvider> {
   try {
-    const result = await db.gitProvider.update({
-      where: { id },
-      data: { last_synced: new Date().toISOString() },
-    });
-
-    if (!result) {
-      throw new Error('Failed to refresh git provider');
+    console.log(`[Server] refreshGitProvider: Starting for provider ${id}`);
+    const user = await getUser();
+    
+    if (!user) {
+      throw new Error('Unauthorized');
+    }
+    
+    // Call the gitProvider.refreshGitProvider method instead of updateGitProvider
+    const result = await gitProvider.refreshGitProvider(id, user.id);
+    
+    if (!result.success || !result.data) {
+      console.error(`[Server] Failed to refresh git provider:`, result.error);
+      throw new Error(result.error || 'Failed to refresh git provider');
     }
 
-    return mapDbGitProviderToGitProvider(result);
+    return mapDbGitProviderToGitProvider(result.data);
   } catch (error) {
     console.error('Error in refreshGitProvider:', error);
     throw error;
@@ -770,28 +791,13 @@ export async function handleOAuthCallback(
 
     const { providerId, redirectUri } = stateData;
 
-    // Get the provider
-    const provider = await db.gitProvider.findUnique({
-      where: {
-        id: providerId,
-        user_id: user.id,
-      },
-    });
-
-    if (!provider) {
-      return { success: false, error: 'Provider not found' };
+    // Call the gitProvider module instead of direct db access
+    const result = await gitProvider.handleOAuthCallback(code, providerId, user.id);
+    
+    if (!result.success) {
+      console.error('[Server] Failed to handle OAuth callback:', result.error);
+      return { success: false, error: result.error || 'Failed to handle OAuth callback' };
     }
-
-    // Exchange code for token
-    // This would typically involve making a request to the git provider's API
-    // For now, we'll just update the provider with a dummy token
-    await db.gitProvider.update({
-      where: { id: providerId },
-      data: {
-        token: `dummy-token-${code}`,
-        is_configured: true,
-      },
-    });
 
     return {
       success: true,
@@ -818,48 +824,24 @@ export async function createGitProvider(
     // Validate input data
     const validatedData = gitProviderCreateSchema.parse(data);
 
-    // Create provider in database
-    const provider = await db.gitProvider.create({
-      data: {
+    // Call the gitProvider module instead of direct db access
+    const result = await gitProvider.createGitProviderWithSchema(
+      {
         type: validatedData.type,
-        display_name: validatedData.displayName,
-        server_url: validatedData.serverUrl,
+        displayName: validatedData.displayName,
+        serverUrl: validatedData.serverUrl,
         token: validatedData.token,
-        user_id: user.id,
-        is_configured: !!validatedData.token,
       },
-    });
-
-    if (!provider) {
-      return {
-        success: false,
-        error: 'Failed to create git provider',
-      };
+      user.id
+    );
+    
+    if (!result.success || !result.data) {
+      console.error('[Server] Failed to create git provider:', result.error);
+      return { success: false, error: result.error };
     }
 
-    // If token is provided, we're done
-    if (validatedData.token) {
-      return { success: true, data: provider };
-    }
-
-    // Otherwise, generate OAuth URL
-    let authUrl;
-    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/git-providers/callback`;
-    const state = Buffer.from(
-      JSON.stringify({
-        providerId: provider.id,
-        redirectUri: '/repositories',
-      }),
-    ).toString('base64');
-
-    if (validatedData.type === 'github') {
-      authUrl = `https://github.com/login/oauth/authorize?client_id=${process.env.GITHUB_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=repo`;
-    } else if (validatedData.type === 'gitlab') {
-      authUrl = `https://gitlab.com/oauth/authorize?client_id=${process.env.GITLAB_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&response_type=code&scope=api`;
-    } else {
-      // For Gitea, we'd need to implement a similar flow
-      return { success: false, error: 'OAuth not implemented for Gitea yet' };
-    }
+    // Extract provider and authUrl from the result
+    const { provider, authUrl } = result.data;
 
     return {
       success: true,
@@ -880,36 +862,44 @@ export async function getStarredRepositories(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: any[] }> {
   try {
+    console.log('[Server] getStarredRepositories: Starting...');
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
+    
     if (!currentUser) {
-      return { success: false, error: 'Unauthorized - Please sign in' };
+      return {
+        success: false,
+        error: 'Unauthorized - Please sign in',
+      };
     }
 
-    // Create a user-specific cache key for starred repositories
+    // Create a cache key for starred repositories
     const cacheKey = serverCache.userKey(currentUser.id, 'starred-repositories');
 
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
       async () => {
-        // Call the DB layer function
+        console.log('[Server] Cache miss - fetching starred repositories');
+        // Call the starRepository module to get starred repositories
         const result = await starRepository.getStarredRepositories(currentUser.id);
-
+        
         if (!result.success) {
-          return { success: false, error: result.error };
+          console.error('[Server] Error fetching starred repositories:', result.error);
+          // Return empty array on error for graceful degradation
+          return { success: true, data: [] };
         }
-
-        return { success: true, data: result.data || [] };
+        
+        return result;
       },
       {
         ttl: 5 * 60 * 1000, // 5 minutes cache
-        tags: ['repository-data', 'starred-repositories', `user:${currentUser.id}`],
+        tags: ['starred-repositories', `user:${currentUser.id}`],
         source: 'getStarredRepositories',
       },
     );
   } catch (error: any) {
-    console.error('Error in getStarredRepositories:', error);
+    console.error('[Server] Error in getStarredRepositories:', error);
     return { success: false, error: error.message || 'Failed to fetch starred repositories' };
   }
 }
@@ -1024,115 +1014,17 @@ export async function getRepositoryFiles(
       return { success: true, data: cached };
     }
 
-    // Create Supabase client
-    const supabase = await import('@/lib/supabase/server').then((m) => m.createClient());
+    // Call the files DB module instead of direct access
+    const result = await files.getRepositoryFiles(repositoryId, path, currentUser.id);
 
-    // Get the repository details
-    const { data: repository, error: repoError } = await supabase
-      .from('repositories')
-      .select('*')
-      .eq('id', repositoryId)
-      .single();
-
-    if (repoError || !repository) {
-      return { success: false, error: 'Repository not found' };
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || 'Failed to fetch repository files' };
     }
-
-    // Get the provider details
-    const { data: provider, error: providerError } = await supabase
-      .from('git_providers')
-      .select('*')
-      .eq('id', repository.provider_id)
-      .single();
-
-    if (providerError || !provider) {
-      return { success: false, error: 'Git provider not found' };
-    }
-
-    let files = [];
-
-    // Handle different Git providers
-    if (
-      provider.type === 'github' ||
-      (provider.type === undefined && repository.owner === 'angelstreet')
-    ) {
-      // Use GitHub API
-      const githubToken = process.env.GITHUB_TOKEN;
-
-      if (!githubToken) {
-        return { success: false, error: 'GitHub token is not configured' };
-      }
-
-      const { Octokit } = await import('@octokit/rest');
-      const octokit = new Octokit({
-        auth: githubToken,
-      });
-
-      try {
-        // If path is empty, we're at the root of the repository
-        const response = await octokit.repos.getContent({
-          owner: repository.owner,
-          repo: repository.name,
-          path: path || '',
-        });
-
-        // GitHub API returns either an array (directory) or a single object (file)
-        const contents = Array.isArray(response.data) ? response.data : [response.data];
-
-        files = contents.map((item: any) => ({
-          name: item.name,
-          path: item.path,
-          type: item.type === 'dir' ? 'folder' : 'file',
-          size: item.size,
-          lastModified: new Date().toISOString(),
-          url: item.html_url || undefined,
-          download_url: item.download_url,
-        }));
-      } catch (error: any) {
-        console.error('Error fetching GitHub repository contents:', error);
-        return { success: false, error: error.message || 'Failed to fetch repository contents' };
-      }
-    } else if (provider.type === 'gitlab') {
-      return { success: false, error: 'GitLab API integration not implemented yet' };
-    } else if (provider.type === 'gitea') {
-      return { success: false, error: 'Gitea API integration not implemented yet' };
-    } else {
-      // Fallback to mock data for unsupported providers
-      files = [
-        {
-          name: 'README.md',
-          path: path ? `${path}/README.md` : 'README.md',
-          type: 'file',
-          size: 1024,
-          lastModified: new Date().toISOString(),
-        },
-        {
-          name: 'src',
-          path: path ? `${path}/src` : 'src',
-          type: 'folder',
-          lastModified: new Date().toISOString(),
-        },
-        {
-          name: 'package.json',
-          path: path ? `${path}/package.json` : 'package.json',
-          type: 'file',
-          size: 512,
-          lastModified: new Date().toISOString(),
-        },
-        {
-          name: 'tsconfig.json',
-          path: path ? `${path}/tsconfig.json` : 'tsconfig.json',
-          type: 'file',
-          size: 256,
-          lastModified: new Date().toISOString(),
-        },
-      ];
-    }
-
+    
     // Cache the result - 5 minute cache
-    serverCache.set(cacheKey, files, 60 * 5);
+    serverCache.set(cacheKey, result.data, { ttl: 60 * 5 * 1000 });
 
-    return { success: true, data: files };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Error in getRepositoryFiles:', error);
     return { success: false, error: error.message || 'Failed to fetch repository files' };
@@ -1177,150 +1069,17 @@ export async function getFileContent(
       return { success: true, data: cached };
     }
 
-    // Create Supabase client
-    const supabase = await import('@/lib/supabase/server').then((m) => m.createClient());
+    // Call the files DB module instead of direct access
+    const result = await files.getFileContent(repositoryId, path, currentUser.id);
 
-    // Get the repository details
-    const { data: repository, error: repoError } = await supabase
-      .from('repositories')
-      .select('*')
-      .eq('id', repositoryId)
-      .single();
-
-    if (repoError || !repository) {
-      return { success: false, error: 'Repository not found' };
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || 'Failed to fetch file content' };
     }
-
-    // Get the provider details
-    const { data: provider, error: providerError } = await supabase
-      .from('git_providers')
-      .select('*')
-      .eq('id', repository.provider_id)
-      .single();
-
-    if (providerError || !provider) {
-      return { success: false, error: 'Git provider not found' };
-    }
-
-    let fileContent = '';
-    let fileMetadata: {
-      path: string;
-      lastModified: string;
-      size?: number;
-      url?: string;
-      sha?: string;
-    } = {
-      path: path,
-      lastModified: new Date().toISOString(),
-    };
-
-    // Handle different Git providers
-    if (
-      provider.provider_type === 'github' ||
-      (provider.provider_type === undefined && repository.owner === 'angelstreet')
-    ) {
-      // Use GitHub API
-      const githubToken = process.env.GITHUB_TOKEN;
-
-      if (!githubToken) {
-        return { success: false, error: 'GitHub token is not configured' };
-      }
-
-      const { Octokit } = await import('@octokit/rest');
-      const octokit = new Octokit({
-        auth: githubToken,
-      });
-
-      try {
-        // Get file content from GitHub
-        const response = await octokit.repos.getContent({
-          owner: repository.owner,
-          repo: repository.name,
-          path: path,
-        });
-
-        // GitHub API returns file content in base64
-        if ('content' in response.data && !Array.isArray(response.data)) {
-          const content = response.data.content;
-          const encoding = response.data.encoding;
-
-          if (encoding === 'base64') {
-            fileContent = Buffer.from(content, 'base64').toString('utf-8');
-          } else {
-            fileContent = content;
-          }
-
-          fileMetadata = {
-            path: response.data.path,
-            lastModified: new Date().toISOString(), // Use current date as fallback
-            size: response.data.size,
-            url: response.data.html_url || undefined,
-            sha: response.data.sha,
-          };
-        } else {
-          return { success: false, error: 'Path does not point to a file' };
-        }
-      } catch (error: any) {
-        console.error('Error fetching file content from GitHub:', error);
-        return { success: false, error: error.message || 'Failed to fetch file content' };
-      }
-    } else if (provider.provider_type === 'gitlab') {
-      return { success: false, error: 'GitLab API integration not implemented yet' };
-    } else if (provider.provider_type === 'gitea') {
-      return { success: false, error: 'Gitea API integration not implemented yet' };
-    } else {
-      // Fallback to mock content based on file extension
-      if (path.endsWith('.md')) {
-        fileContent = `# ${repository.name}\n\nThis is a sample README file for the ${repository.name} repository.\n\n## Overview\n\nThis repository contains code for the project.\n\n## Getting Started\n\n1. Clone the repository\n2. Install dependencies\n3. Run the project`;
-      } else if (path.endsWith('.json')) {
-        const jsonContent = {
-          name: repository.name,
-          version: '1.0.0',
-          description: 'Sample repository',
-          main: 'index.js',
-          scripts: {
-            start: 'node index.js',
-            test: 'jest',
-          },
-          dependencies: {
-            react: '^18.2.0',
-            next: '^13.4.0',
-          },
-        };
-        fileContent = JSON.stringify(jsonContent, null, 2);
-      } else if (path.endsWith('.js') || path.endsWith('.ts') || path.endsWith('.tsx')) {
-        fileContent = `/**
- * ${path.split('/').pop()}
- * 
- * This is a sample file for demonstration purposes.
- */
-
-import React from 'react';
-
-function Component() {
-  return (
-    <div>
-      <h1>Hello from ${repository.name}</h1>
-      <p>This is a sample component</p>
-    </div>
-  );
-}
-
-export default Component;`;
-      } else {
-        fileContent = `This is a sample content for ${path.split('/').pop()} in the ${repository.name} repository.`;
-      }
-    }
-
-    const result = {
-      content: fileContent,
-      ...fileMetadata,
-    };
 
     // Cache the result - 10 minute cache
-    serverCache.set(cacheKey, result, 60 * 10);
+    serverCache.set(cacheKey, result.data, { ttl: 60 * 10 * 1000 });
 
-    return { success: true, data: result };
+    return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Error in getFileContent:', error);
     return { success: false, error: error.message || 'Failed to fetch file content' };
@@ -1344,8 +1103,14 @@ export async function getRepositoriesWithStarred(
   };
 }> {
   try {
+    console.log('[Server] getRepositoriesWithStarred: Starting...');
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
+    console.log('[Server] User context:', currentUser ? {
+      id: currentUser.id,
+      tenant: currentUser.tenant_id
+    } : 'No user');
+
     if (!currentUser) {
       return {
         success: false,
@@ -1360,12 +1125,20 @@ export async function getRepositoriesWithStarred(
       filter?.providerId || 'all',
     )}:${currentUser.tenant_id}`;
 
+    console.log('[Server] Using cache key:', cacheKey);
+
     // Use enhanced getOrSet function with proper tagging
     return await serverCache.getOrSet(
       cacheKey,
       async () => {
+        console.log('[Server] Cache miss - fetching fresh data');
         // Fetch repositories
         const reposResult = await getRepositories(filter, currentUser);
+        console.log('[Server] Repository fetch result:', {
+          success: reposResult.success,
+          count: reposResult.data?.length || 0,
+          error: reposResult.error
+        });
 
         if (!reposResult.success || !reposResult.data) {
           return {
@@ -1376,6 +1149,11 @@ export async function getRepositoriesWithStarred(
 
         // Fetch starred repositories
         const starredResult = await getStarredRepositories(currentUser);
+        console.log('[Server] Starred repositories result:', {
+          success: starredResult.success,
+          count: starredResult.data?.length || 0,
+          error: starredResult.error
+        });
 
         // Extract just the IDs from starred repositories for efficiency
         const starredRepositoryIds =
@@ -1388,6 +1166,11 @@ export async function getRepositoriesWithStarred(
           repositories: reposResult.data,
           starredRepositoryIds,
         };
+
+        console.log('[Server] Returning combined data:', {
+          repositories: combinedData.repositories.length,
+          starred: combinedData.starredRepositoryIds.length
+        });
 
         return { success: true, data: combinedData };
       },
@@ -1403,7 +1186,7 @@ export async function getRepositoriesWithStarred(
       },
     );
   } catch (error: any) {
-    console.error('Error in getRepositoriesWithStarred:', error);
+    console.error('[Server] Error in getRepositoriesWithStarred:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch repository data',
