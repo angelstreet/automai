@@ -295,8 +295,8 @@ async function createWindow() {
           ...details.responseHeaders,
           'Content-Security-Policy': [
             isDev
-              ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* data: devtools://*;"
-              : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';",
+              ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:* data: devtools://*; frame-ancestors 'self' https://monospace.corp.google.com https://localhost.corp.google.com:10443;"
+              : "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'self';",
           ],
         },
       });

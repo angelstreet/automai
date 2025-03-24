@@ -82,10 +82,14 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
             {/* Right section */}
             <div className="flex items-center gap-2 px-4 h-full">
               <div className="flex-none w-36 mr-12">
-                {userContext?.loading ? (
-                  <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
+                {/* Force a complete component remount when user role changes by using key */}
+                {userContext?.user ? (
+                  <RoleSwitcher 
+                    key={`role-switcher-${userContext.user.role || 'default'}`} 
+                    user={userContext.user} 
+                  />
                 ) : (
-                  <RoleSwitcher user={userContext?.user} />
+                  <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
                 )}
               </div>
               <Separator orientation="vertical" className="h-8 opacity-30" />

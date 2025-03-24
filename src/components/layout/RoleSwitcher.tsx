@@ -61,74 +61,62 @@ if (typeof window !== 'undefined') {
 }
 
 function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps) {
-  // Get user from context if not provided as prop
-  const userContext = useUser();
-  const user = propUser || userContext?.user;
+  // IMPORTANT: Always prioritize prop user role if it exists
+  // Only use debug role from localStorage if prop user doesn't have a role
+  let activeRole: Role = 'viewer';
   
-  // Initialize with stored debug role, user role, or default to 'viewer'
-  // IMPORTANT: Always declare all state hooks before any useEffect hooks
-  const [currentRole, setCurrentRole] = React.useState<Role>(() => {
+  // First check if we have a valid prop user role - this has highest priority
+  if (propUser?.role && roles.some(r => r.value === propUser.role)) {
+    activeRole = propUser.role;
+    console.log('[RoleSwitcher] Using prop user role:', propUser.role);
+  } 
+  // Only if no prop user role, check localStorage
+  else if (typeof window !== 'undefined') {
+    const storedRole = localStorage.getItem('debug_role') as Role;
+    if (storedRole && roles.some(r => r.value === storedRole)) {
+      activeRole = storedRole;
+      console.log('[RoleSwitcher] Using stored debug role:', storedRole);
+    }
+  }
+  
+  // Track local changes with state
+  const [currentRole, setCurrentRole] = React.useState<Role>(activeRole);
+  
+  // Make sure currentRole updates when prop changes
+  React.useEffect(() => {
+    if (propUser?.role && roles.some(r => r.value === propUser.role)) {
+      setCurrentRole(propUser.role);
+    }
+  }, [propUser?.role]);
+
+  // Update global debug role when changing role
+  const handleRoleChange = (newRole: Role) => {
+    console.log('[RoleSwitcher] Changing role to:', newRole);
+    setCurrentRole(newRole);
+    
+    // Update global state
     if (typeof window !== 'undefined') {
-      // Check localStorage first for debug role override
-      const storedRole = localStorage.getItem('debug_role') as Role;
-      if (storedRole && roles.some((r) => r.value === storedRole)) {
-        return storedRole;
-      }
-
-      // Otherwise use actual user role if available
-      if (user?.role && roles.some((r) => r.value === user.role)) {
-        return user.role;
-      }
+      // Store the debug role in localStorage for persistence
+      localStorage.setItem('debug_role', newRole);
+      
+      // Update the global debug role
+      window.__debugRole = newRole;
+      
+      // Dispatch event for other components to listen
+      const event = new CustomEvent('debug-role-change', { detail: { role: newRole } });
+      window.dispatchEvent(event);
     }
-    return 'viewer';
-  });
-
-  // Debug log user role - IMPORTANT: Always declare hooks in the same order
-  React.useEffect(() => {
-    console.log('[RoleSwitcher] User data:', {
-      propUserExists: !!propUser,
-      contextUserExists: !!userContext?.user,
-      userRole: user?.role || 'not set',
-      currentContextRole: userContext?.user?.role || 'not in context',
-      isContextInitialized: userContext?.isInitialized,
-      currentRole
-    });
-  }, [propUser, userContext?.user, user?.role, userContext?.isInitialized, currentRole]);
+  };
   
-  // Update global debug role on initialization and when user role changes
-  React.useEffect(() => {
-    if (typeof window !== 'undefined' && currentRole) {
-      window.__debugRole = currentRole;
-    }
-  }, [currentRole]);
-
-  // Also update the role when user data changes (for example after login)
-  React.useEffect(() => {
-    if (user?.role && !localStorage.getItem('debug_role')) {
-      // Only update if there's no manual debug role override
-      setCurrentRole(user.role);
-    }
-  }, [user?.role]);
-  
-  // Early return with fallback when context isn't available or initialized
-  // IMPORTANT: All hooks must be called before any early returns
-  if (!propUser && (!userContext || !userContext.isInitialized)) {
-    // Return loading skeleton or minimal UI
+  // If no user provided, return loading state
+  if (!propUser) {
     return <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>;
   }
-
+  
   return (
     <Select
       value={currentRole}
-      onValueChange={(value: Role) => {
-        // Set local state
-        setCurrentRole(value);
-
-        // Use the global dispatcher to update everywhere
-        if (typeof window !== 'undefined') {
-          window.__dispatchRoleChange(value);
-        }
-      }}
+      onValueChange={handleRoleChange}
     >
       <SelectTrigger className={cn('w-[180px]', className)}>
         <SelectValue placeholder="Select a role">

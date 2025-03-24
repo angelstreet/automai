@@ -31,6 +31,17 @@ const AppSidebar = React.memo(function AppSidebar() {
 
   // Determine client-side rendering without state updates that cause re-renders
   const isClient = typeof window !== 'undefined';
+  
+  // DEBUG: Log user context and role information on mount
+  React.useEffect(() => {
+    console.log('DEBUG AppSidebar - Mounted with user context:', {
+      user: user ? 'exists' : 'null',
+      userRole: user?.role || 'no role',
+      userContextLoading: userContext?.loading,
+      userContextInitialized: userContext?.isInitialized,
+      userObject: user,
+    });
+  }, []);
 
   // After hydration completes, mark initial render as done
   React.useEffect(() => {

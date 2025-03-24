@@ -9,6 +9,7 @@ const nextConfig = {
   experimental: {
     allowedDevOrigins: ['*.cloudworkstations.dev'],
   },
+  assetPrefix: process.env.ASSET_PREFIX || '',
   images: {
     remotePatterns: [
       {

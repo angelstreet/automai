@@ -135,8 +135,8 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static files
-    '/((?!_next/static|_next/image|avatars|favicon.ico).*)',
+    // Match all paths except static files and fonts
+    '/((?!_next/static|_next/image|_next/media|avatars|favicon.ico).*)',
     // Match all locale routes
     '/(fr|en)/:path*',
     // Match API routes
