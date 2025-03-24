@@ -12,9 +12,7 @@
 export { AppProvider } from './AppContext';
 
 // Re-export hooks with standardized naming for consistency
-// These hooks come from AppContext which routes to the appropriate context
 export {
-  useAppContext, // Access to all contexts at once (use sparingly)
   useUser, // User profile and authentication
   useHost, // Host management and connection
   useDeployment, // Deployment operations and status
@@ -28,25 +26,7 @@ export { useSidebar } from './SidebarContext';
 // Export theme context hook
 export { useTheme } from './ThemeContext';
 
-// Direct hook exports for cases where AppContext is not used
-// These use the 'Direct' suffix to avoid duplicate exports with hooks from AppContext
-export { useCICD as useCICDDirect } from './CICDContext';
-
-// Import individual context hooks directly from their source files
-// These are then exported with the 'Direct' suffix to avoid duplicate exports
-// while maintaining a consistent naming convention
-import { useUser as useUserDirectHook } from './UserContext';
-import { useRepository as useRepositoryDirectHook } from './RepositoryContext';
-import { useDeployment as useDeploymentDirectHook } from './DeploymentContext';
-import { useHost as useHostDirectHook } from './HostContext';
-
-// Direct hook exports with consistent naming and 'Direct' suffix
-// Use these hooks only when not using the AppProvider, as they
-// access context directly rather than through the main AppContext
-export const useUserDirect = useUserDirectHook;
-export const useRepositoryDirect = useRepositoryDirectHook;
-export const useDeploymentDirect = useDeploymentDirectHook;
-export const useHostDirect = useHostDirectHook;
+// We're not using the Direct suffix pattern in our simplified architecture
 
 // For case where the root AppProvider is not used, export individual providers
 // This is not recommended for normal use, but provided for flexibility
@@ -170,7 +150,7 @@ export const cicdSelectors = {
 
 // IMPORTANT USAGE NOTES:
 // -------------------------------------------------
-// 1. All individual context files are managed through AppContext
+// 1. All contexts should be accessed through the hooks exported from this file
 //    Do not import directly from HostContext, UserContext, etc.
 //    Instead use the hooks exported from this file.
 //
@@ -178,18 +158,15 @@ export const cicdSelectors = {
 //    const userContext = useUser();
 //    const hostContext = useHost();
 //
-//    ❌ AVOID: const { user, host } = useAppContext(); // Causes more re-renders
-//
 // 3. Use selectors for performance-critical components:
 //    const userTenant = useUser((ctx) => ctx.user?.tenant_name);
 //
 // 4. Context values are memoized to prevent unnecessary re-renders,
 //    but be careful with objects and arrays in your component state.
 //
-// 5. Direct hooks (with 'Direct' suffix) should only be used when the
-//    AppProvider is not available in your component tree. Prefer the
-//    standard hooks (useUser, useHost, etc.) whenever possible.
-//
-//    ❌ AVOID: const user = useUserDirect(); // Only use when AppProvider is not available
-//    ✅ PREFER: const user = useUser(); // Standard usage through AppContext
+// 5. Always handle potential null/undefined context values:
+//    const { user } = useUser();
+//    if (!user) {
+//      return <LoadingState />;
+//    }
 // -------------------------------------------------
