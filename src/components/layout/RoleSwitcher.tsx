@@ -8,7 +8,7 @@ import {
 } from '@/components/shadcn/select';
 import { cn } from '@/lib/utils';
 import { Role } from '@/types/user';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/context';
 
 // Define roles based on the Role type definition
 const roles: { value: Role; label: string }[] = [
@@ -28,6 +28,7 @@ declare global {
 
 interface RoleSwitcherProps {
   className?: string;
+  user?: any; // Allow passing user directly
 }
 
 // Create a global variable to store the current debug role
@@ -59,25 +60,52 @@ if (typeof window !== 'undefined') {
   }
 }
 
-function RoleSwitcherComponent({ className }: RoleSwitcherProps) {
+function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps) {
+  // Get user from context if not provided as prop
+  const userContext = useUser();
+  const user = propUser || userContext?.user;
+  
+  // Debug log user role
+  React.useEffect(() => {
+    console.log('[RoleSwitcher] User data:', {
+      propUserExists: !!propUser,
+      contextUserExists: !!userContext?.user,
+      userRole: user?.role || 'not set',
+      currentContextRole: userContext?.user?.role || 'not in context'
+    });
+  }, [propUser, userContext?.user, user?.role]);
+  
   // Initialize with stored debug role, user role, or default to 'viewer'
   const [currentRole, setCurrentRole] = React.useState<Role>(() => {
     if (typeof window !== 'undefined') {
-      // Check localStorage first
+      // Check localStorage first for debug role override
       const storedRole = localStorage.getItem('debug_role') as Role;
       if (storedRole && roles.some((r) => r.value === storedRole)) {
         return storedRole;
+      }
+      
+      // Otherwise use actual user role if available
+      if (user?.role && roles.some((r) => r.value === user.role)) {
+        return user.role;
       }
     }
     return 'viewer';
   });
 
-  // Update global debug role on initialization
+  // Update global debug role on initialization and when user role changes
   React.useEffect(() => {
     if (typeof window !== 'undefined' && currentRole) {
       window.__debugRole = currentRole;
     }
   }, []);
+  
+  // Also update the role when user data changes (for example after login)
+  React.useEffect(() => {
+    if (user?.role && !localStorage.getItem('debug_role')) {
+      // Only update if there's no manual debug role override
+      setCurrentRole(user.role);
+    }
+  }, [user?.role]);
 
   return (
     <Select

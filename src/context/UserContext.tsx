@@ -48,9 +48,17 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
   }
 
   // Try to extract role from different possible locations
-  const role = (authUser as any).role || 'viewer';
+  // Use the role from profile data, with fallbacks to user_metadata or default to viewer
+  const role = (authUser as any).role || authUser?.user_metadata?.role || 'viewer';
 
   log('[UserContext] User role determined:', role);
+  
+  // Log detailed role resolution for debugging
+  console.log('[UserContext] Detailed role resolution:', {
+    fromAuthUser: (authUser as any).role,
+    fromMetadata: authUser?.user_metadata?.role,
+    finalRole: role
+  });
 
   return {
     id: authUser.id,

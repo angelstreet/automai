@@ -31,6 +31,17 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
   const [headerVisible, setHeaderVisible] = React.useState(
     Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
   );
+  
+  // Debug log for user role
+  React.useEffect(() => {
+    if (userContext?.user) {
+      console.log('[WorkspaceHeader] User data:', {
+        id: userContext.user.id,
+        role: userContext.user.role || 'No role found',
+        tenant: userContext.user.tenant_name,
+      });
+    }
+  }, [userContext?.user]);
 
   const toggleHeader = React.useCallback(() => {
     const newState = !headerVisible;
@@ -70,7 +81,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
             {/* Right section */}
             <div className="flex items-center gap-2 px-4 h-full">
               <div className="flex-none w-36 mr-12">
-                <RoleSwitcher />
+                <RoleSwitcher user={userContext?.user} />
               </div>
               <Separator orientation="vertical" className="h-8 opacity-30" />
               <div className="flex-1 max-w-[32rem] min-w-[12.5rem]">
