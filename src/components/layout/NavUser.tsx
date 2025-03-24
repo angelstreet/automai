@@ -32,23 +32,23 @@ export function NavUser({ user }: NavUserProps) {
   const { clearCache } = useUser();
   const isCollapsed = !open;
 
-  // Display debug role indicator if active
-  // Clear any existing debug role to ensure we use the actual user role
+  // Display actual user role (previously was for debug role)
+  // We keep any window.__debugRole value but show the actual user role
   if (typeof window !== 'undefined' && window.__debugRole) {
-    console.log('DEBUG NavUser - Clearing window.__debugRole to use actual user role');
-    window.__debugRole = null;
+    console.log('DEBUG NavUser - Found window.__debugRole:', window.__debugRole);
   }
-  const debugRole = null; // Force to null to use actual user role
+  // Use the actual user role for display
+  const displayRole = user.role;
   
   // DEBUG: Log user role information in NavUser
   React.useEffect(() => {
     console.log('DEBUG NavUser - Role information:', {
       currentUser: user,
       userRole: user?.role,
-      debugRole,
+      displayRole,
       windowDebugRole: typeof window !== 'undefined' ? window.__debugRole : null
     });
-  }, [user, debugRole]);
+  }, [user, displayRole]);
 
   const handleSignOut = async () => {
     try {
@@ -100,9 +100,7 @@ export function NavUser({ user }: NavUserProps) {
               {!isCollapsed && (
                 <div className="grid flex-1 text-left text-xs leading-tight ml-2 max-w-[100px]">
                   <span className="font-semibold truncate">{user.name}</span>
-                  {debugRole && (
-                    <span className="text-[10px] opacity-70 truncate">Role: {debugRole}</span>
-                  )}
+                  <span className="text-[10px] opacity-70 truncate">Role: {displayRole}</span>
                 </div>
               )}
             </SidebarMenuButton>
