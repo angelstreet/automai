@@ -65,24 +65,8 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
   const userContext = useUser();
   const user = propUser || userContext?.user;
   
-  // Early return with fallback when context isn't available or initialized
-  if (!propUser && (!userContext || !userContext.isInitialized)) {
-    // Return loading skeleton or minimal UI
-    return <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>;
-  }
-
-  // Debug log user role
-  React.useEffect(() => {
-    console.log('[RoleSwitcher] User data:', {
-      propUserExists: !!propUser,
-      contextUserExists: !!userContext?.user,
-      userRole: user?.role || 'not set',
-      currentContextRole: userContext?.user?.role || 'not in context',
-      isContextInitialized: userContext?.isInitialized
-    });
-  }, [propUser, userContext?.user, user?.role, userContext?.isInitialized]);
-
   // Initialize with stored debug role, user role, or default to 'viewer'
+  // IMPORTANT: Always declare all state hooks before any useEffect hooks
   const [currentRole, setCurrentRole] = React.useState<Role>(() => {
     if (typeof window !== 'undefined') {
       // Check localStorage first for debug role override
@@ -99,12 +83,24 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
     return 'viewer';
   });
 
+  // Debug log user role - IMPORTANT: Always declare hooks in the same order
+  React.useEffect(() => {
+    console.log('[RoleSwitcher] User data:', {
+      propUserExists: !!propUser,
+      contextUserExists: !!userContext?.user,
+      userRole: user?.role || 'not set',
+      currentContextRole: userContext?.user?.role || 'not in context',
+      isContextInitialized: userContext?.isInitialized,
+      currentRole
+    });
+  }, [propUser, userContext?.user, user?.role, userContext?.isInitialized, currentRole]);
+  
   // Update global debug role on initialization and when user role changes
   React.useEffect(() => {
     if (typeof window !== 'undefined' && currentRole) {
       window.__debugRole = currentRole;
     }
-  }, []);
+  }, [currentRole]);
 
   // Also update the role when user data changes (for example after login)
   React.useEffect(() => {
@@ -113,6 +109,13 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
       setCurrentRole(user.role);
     }
   }, [user?.role]);
+  
+  // Early return with fallback when context isn't available or initialized
+  // IMPORTANT: All hooks must be called before any early returns
+  if (!propUser && (!userContext || !userContext.isInitialized)) {
+    // Return loading skeleton or minimal UI
+    return <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>;
+  }
 
   return (
     <Select
