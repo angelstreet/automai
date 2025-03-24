@@ -11,7 +11,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useSidebar } from '@/components/sidebar';
-import { User } from '@/types/user';
 import {
   ChevronDown,
   ChevronUp,
@@ -25,7 +24,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
-import { useUser } from '@/context';
 import { cn } from '@/lib/utils';
 
 // Define team type for consistency
@@ -61,7 +59,6 @@ const defaultTeams: Team[] = [
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
   const { open } = useSidebar();
-  const { user } = useUser();
   const isCollapsed = !open;
 
   // Simply use the teams passed as props or the default teams
