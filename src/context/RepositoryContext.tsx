@@ -8,6 +8,7 @@ import React, {
   useEffect,
   ReactNode,
   useRef,
+  useMemo,
 } from 'react';
 import {
   Repository,
@@ -21,10 +22,13 @@ import {
   updateRepository,
   getRepositoriesWithStarred,
 } from '@/app/[locale]/[tenant]/repositories/actions';
-import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 import { persistedData } from './AppContext';
+import { useUser } from '@/context'; // Import useUser from centralized context
+
+// Singleton flag to prevent multiple instances
+let REPOSITORY_CONTEXT_INITIALIZED = false;
 
 // Reduce logging with a DEBUG flag
 const DEBUG = true;
@@ -91,6 +95,32 @@ export const RepositoryContext = createContext<RepositoryContextType | null>(nul
 export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   log('[RepositoryContext] RepositoryProvider initializing');
 
+  // Check for multiple instances of RepositoryProvider
+  useEffect(() => {
+    if (REPOSITORY_CONTEXT_INITIALIZED) {
+      console.warn(
+        '[RepositoryContext] Multiple instances of RepositoryProvider detected. ' +
+        'This can cause performance issues and unexpected behavior. ' +
+        'Ensure that RepositoryProvider is only used once in the component tree, ' +
+        'preferably in the AppProvider.'
+      );
+    } else {
+      REPOSITORY_CONTEXT_INITIALIZED = true;
+      log('[RepositoryContext] RepositoryProvider initialized as singleton');
+    }
+
+    return () => {
+      // Only reset on the instance that set it to true
+      if (REPOSITORY_CONTEXT_INITIALIZED) {
+        REPOSITORY_CONTEXT_INITIALIZED = false;
+        log('[RepositoryContext] RepositoryProvider singleton instance unmounted');
+      }
+    };
+  }, []);
+
+  // Get user data from UserContext instead of fetching directly
+  const userContext = useUser();
+
   // First, in the useState initializers, check for persisted data:
   const [repositories, setRepositories] = useState<Repository[]>(
     persistedData?.repositoryData?.repositories || [],
@@ -141,6 +171,21 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Add initialization tracker
   const initialized = useRef(false);
+  
+  // Update local state with user data from UserContext
+  useEffect(() => {
+    if (userContext.user && userContext.user !== state.currentUser) {
+      log('[RepositoryContext] Updating user data from UserContext:', {
+        id: userContext.user.id,
+        tenant: userContext.user.tenant_name,
+        role: userContext.user.role
+      });
+      setState(prevState => ({
+        ...prevState,
+        currentUser: userContext.user
+      }));
+    }
+  }, [userContext.user, state.currentUser]);
 
   // Add repository caching to localStorage
   useEffect(() => {
@@ -155,41 +200,72 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [state.repositories.length]);
 
-  // Fetch user data - use server action directly
-  const fetchUserData = useCallback(async () => {
-    log('[RepositoryContext] Fetching user data...');
+  // Get user data from UserContext or state
+  const getUserData = useCallback((): AuthUser | null => {
+    // First try to get from state
+    if (state.currentUser) {
+      return state.currentUser;
+    }
+    
+    // Then try from UserContext
+    if (userContext.user) {
+      return userContext.user;
+    }
+    
+    return null;
+  }, [state.currentUser, userContext.user]);
+  
+  // Refresh user data (now just gets it from UserContext)
+  const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
+    log('[RepositoryContext] Getting user data...');
 
     try {
-      return await protectedFetch('fetchUserData', async () => {
-        // Just get user data from the server action
-        const userData = await getUser();
-        if (userData) {
-          log('[RepositoryContext] User data fetched successfully:', {
-            id: userData.id,
-            tenant: userData.tenant_name,
+      // First check if we already have user data
+      const user = getUserData();
+      if (user) {
+        log('[RepositoryContext] Using existing user data:', {
+          id: user.id,
+          tenant: user.tenant_name,
+          source: user === userContext.user ? 'UserContext' : 'state'
+        });
+        return user;
+      }
+      
+      // If we don't have user data and UserContext has a refresh method, use it
+      if (!user && userContext.refreshUser) {
+        log('[RepositoryContext] Refreshing user data from UserContext');
+        // Try to refresh it from UserContext
+        await userContext.refreshUser();
+        
+        // Now check if it's available
+        if (userContext.user) {
+          log('[RepositoryContext] User data refreshed successfully:', {
+            id: userContext.user.id,
+            tenant: userContext.user.tenant_name,
           });
-        } else {
-          log('[RepositoryContext] No user data returned from server');
+          
+          // Update state with user data
+          safeUpdateState(
+            setState,
+            state,
+            {
+              ...state,
+              currentUser: userContext.user,
+            },
+            'user-data-updated',
+          );
+          
+          return userContext.user;
         }
+      }
 
-        // Update state with user data
-        safeUpdateState(
-          setState,
-          state,
-          {
-            ...state,
-            currentUser: userData || null,
-          },
-          'user-data-updated',
-        );
-
-        return userData;
-      });
+      log('[RepositoryContext] No user data available');
+      return null;
     } catch (error) {
-      log('[RepositoryContext] Error fetching user data:', error);
+      log('[RepositoryContext] Error getting user data:', error);
       return null;
     }
-  }, [protectedFetch, safeUpdateState, state]);
+  }, [getUserData, userContext, protectedFetch, safeUpdateState, state]);
 
   // Fetch repositories safely with better null handling
   const fetchRepositories = useCallback(async (): Promise<Repository[]> => {
@@ -364,8 +440,24 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         // We'll still fetch to refresh in background, but won't block UI
       }
 
-      // Only fetch if we don't have data or need to refresh in background
-      await fetchUserData();
+      // Use user data from UserContext if available
+      log('[RepositoryContext] Checking for user data...');
+      if (!state.currentUser && userContext.user) {
+        log('[RepositoryContext] User data already available in UserContext:', {
+          id: userContext.user.id,
+          tenant: userContext.user.tenant_name
+        });
+        // Update our state with the user from UserContext
+        setState(prevState => ({
+          ...prevState,
+          currentUser: userContext.user
+        }));
+      } else if (!state.currentUser) {
+        // If no user data in state or UserContext, try to fetch it
+        await fetchUserData();
+      }
+      
+      // Now fetch repositories
       await fetchRepositories();
 
       // Cache repository data in localStorage after successful fetch
@@ -386,7 +478,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       log('[RepositoryContext] RepositoryContext unmounting...');
       // Don't reset initialized flag when component unmounts
     };
-  }, []); // Empty dependency array to run only once
+  }, [fetchUserData, fetchRepositories, state, userContext.user]);
 
   // Add one useful log when data is loaded
   useEffect(() => {
@@ -411,24 +503,60 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [state.repositories, state.loading, state.error]);
 
-  // Create context value
-  const contextValue: RepositoryContextType = {
-    ...state,
+  // Create context value with proper memoization
+  const contextValue = useMemo(() => ({
+    repositories: state.repositories,
+    filteredRepositories: state.filteredRepositories,
+    starredRepositories: state.starredRepositories,
+    loading: state.loading,
+    error: state.error,
+    connectionStatuses: state.connectionStatuses,
     refreshRepositories: async () => {
       await fetchRepositories();
     },
     filterRepositories,
     toggleStarRepository,
-  };
+  }), [
+    state.repositories,
+    state.filteredRepositories,
+    state.starredRepositories,
+    state.loading,
+    state.error,
+    state.connectionStatuses,
+    fetchRepositories,
+    filterRepositories,
+    toggleStarRepository
+  ]);
 
   return <RepositoryContext.Provider value={contextValue}>{children}</RepositoryContext.Provider>;
 };
 
 // Hook to use the context
-export function useRepositoryContext() {
+export function useRepository() {
   const context = useContext(RepositoryContext);
-  if (context === undefined) {
-    throw new Error('useRepositoryContext must be used within a RepositoryProvider');
+  
+  // If the context is null for some reason, return a safe default object
+  // This prevents destructuring errors in components
+  if (!context) {
+    console.warn('[useRepository] Repository context is null, returning fallback. This should not happen if using the centralized context system.');
+    return {
+      repositories: [],
+      filteredRepositories: [],
+      starredRepositories: [],
+      loading: true,
+      error: null,
+      connectionStatuses: {},
+      refreshRepositories: async () => {},
+      filterRepositories: () => {},
+      toggleStarRepository: () => {},
+    };
   }
+  
   return context;
+}
+
+// For backward compatibility
+export function useRepositoryContext() {
+  console.warn('useRepositoryContext is deprecated, please use useRepository from @/context instead');
+  return useRepository();
 }

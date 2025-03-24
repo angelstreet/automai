@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { PanelLeft } from 'lucide-react';
-import { useSidebar } from '@/context/SidebarContext';
+import { useSidebar } from '@/context';
 import { cn } from '@/lib/utils';
 
 import { Button } from '@/components/shadcn/button';

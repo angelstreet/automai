@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useSidebar } from '@/context/SidebarContext';
+import { useSidebar } from '@/components/sidebar';
 import { User } from '@/types/user';
 import {
   ChevronDown,
@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/context';
 import { cn } from '@/lib/utils';
 
 // Define team type for consistency

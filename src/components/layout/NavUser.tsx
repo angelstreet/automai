@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { User as UserType } from '@/types/user';
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
-import { useSidebar } from '@/context/SidebarContext';
+import { useSidebar } from '@/components/sidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,7 @@ import {
 } from '@/components/shadcn/dropdown-menu';
 import { signOut } from '@/app/actions/auth';
 import { cn } from '@/lib/utils';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/context';
 
 interface NavUserProps {
   user: UserType;

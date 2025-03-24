@@ -7,6 +7,7 @@ import {
   useEffect,
   useCallback,
   useLayoutEffect,
+  useMemo,
 } from 'react';
 import Cookies from 'js-cookie';
 import { SidebarContext as SidebarContextType } from '@/types/sidebar';
@@ -15,6 +16,9 @@ import {
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_ICON,
 } from '@/components/sidebar/constants';
+
+// Singleton flag to prevent multiple instances
+let SIDEBAR_CONTEXT_INITIALIZED = false;
 
 export const SidebarContext = createContext<SidebarContextType | null>(null);
 
@@ -27,6 +31,21 @@ interface SidebarProviderProps {
 }
 
 export function SidebarProvider({ children, defaultOpen = true }: SidebarProviderProps) {
+  // Check for multiple instances of SidebarProvider
+  useEffect(() => {
+    if (SIDEBAR_CONTEXT_INITIALIZED) {
+      console.warn('[SidebarContext] Multiple instances detected. This may cause unexpected behavior.');
+    } else {
+      SIDEBAR_CONTEXT_INITIALIZED = true;
+    }
+    return () => {
+      // Only reset if this instance set it to true
+      if (SIDEBAR_CONTEXT_INITIALIZED) {
+        SIDEBAR_CONTEXT_INITIALIZED = false;
+      }
+    };
+  }, []);
+
   // Use a function for initial state that's consistent between server and client
   const [open, setOpen] = useState(() => {
     // For SSR, always use defaultOpen as fallback
@@ -108,8 +127,8 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
     }
   }, [open]);
 
-  // Memoize the context value to prevent unnecessary re-renders
-  const contextValue = {
+  // Properly memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
     state,
     open,
     setOpen,
@@ -117,7 +136,15 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
     setOpenMobile,
     isMobile,
     toggleSidebar,
-  };
+  }), [
+    state,
+    open, 
+    setOpen,
+    openMobile,
+    setOpenMobile,
+    isMobile,
+    toggleSidebar
+  ]);
 
   return <SidebarContext.Provider value={contextValue}>{children}</SidebarContext.Provider>;
 }

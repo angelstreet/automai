@@ -4,8 +4,7 @@ import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import { FontProvider } from '@/context/FontContext';
 // Role context is now part of UserContext - no need to import
 import { SearchProvider } from '@/context/SearchContext';
-import { SidebarProvider } from '@/context/SidebarContext';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { SidebarProvider, ThemeProvider } from '@/context';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 // UserProvider is no longer needed with server-side auth
 

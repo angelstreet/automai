@@ -31,7 +31,6 @@ export async function getHosts(
       hasFilter: !!filter,
       userProvided: !!user,
       filterValues: filter ? JSON.stringify(filter) : 'none',
-      cached: !!user?.tenant_id ? serverCache.has(`hosts:${user.tenant_id}`) : false,
     },
   );
 
@@ -39,71 +38,63 @@ export async function getHosts(
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
 
-    console.log(`[HostsActions] User status for ${origin}:`, {
-      authenticated: !!currentUser,
-      tenant: currentUser?.tenant_id || 'unknown',
-    });
-
     if (!currentUser) {
+      console.log(`[HostsActions] User not authenticated for ${origin}`);
       return {
         success: false,
         error: 'Unauthorized - Please sign in',
       };
     }
 
-    // Create cache key based on tenant and filter
-    const cacheKey = filter
-      ? `hosts:${currentUser.tenant_id}:filtered:${JSON.stringify(filter)}`
-      : `hosts:${currentUser.tenant_id}`;
+    // Create a standardized cache key using the helper method
+    const cacheKey = serverCache.tenantKey(
+      currentUser.tenant_id, 
+      'hosts', 
+      filter ? `:filtered:${JSON.stringify(filter)}` : ':all'
+    );
+    
+    // Use enhanced getOrSet function with proper tagging
+    return await serverCache.getOrSet(
+      cacheKey,
+      async () => {
+        console.log(`[HostsActions] Cache miss for ${origin}, fetching from database`);
+        
+        // Set up query filters
+        const where: Record<string, any> = {};
+        if (filter?.status) {
+          where.status = filter.status;
+        }
 
-    // Check cache first
-    const cached = serverCache.get<Host[]>(cacheKey);
-    if (cached) {
-      console.log(`[HostsActions] Using cached hosts data for ${origin}`, {
-        count: cached.length,
-        cacheKey,
-        age: serverCache.getAge(cacheKey),
-      });
-      return { success: true, data: cached };
-    }
+        try {
+          const data = await db.host.findMany({
+            where,
+            orderBy: { created_at: 'desc' },
+          });
 
-    console.log(`[HostsActions] No cache found for ${origin}, fetching from database`);
+          if (!data) {
+            console.log(`[HostsActions] No hosts found in database for ${origin}`);
+            return {
+              success: false,
+              error: 'Failed to fetch hosts',
+            };
+          }
 
-    // Remove the tenant_id filter since it doesn't exist in the database schema
-    // Instead, get all hosts and filter them in memory if needed
-    const where: Record<string, any> = {};
-
-    if (filter?.status) {
-      where.status = filter.status;
-    }
-
-    try {
-      const data = await db.host.findMany({
-        where,
-        orderBy: { created_at: 'desc' },
-      });
-
-      if (!data) {
-        console.log(`[HostsActions] No hosts found in database for ${origin}`);
-        return {
-          success: false,
-          error: 'Failed to fetch hosts',
-        };
+          console.log(`[HostsActions] Successfully fetched ${data.length} hosts for ${origin}`);
+          return { success: true, data };
+        } catch (error: any) {
+          console.error(`Error querying hosts:`, error);
+          return {
+            success: false,
+            error: 'Database query failed: ' + error.message,
+          };
+        }
+      },
+      {
+        ttl: 5 * 60 * 1000, // 5 minutes cache
+        tags: ['hosts-data', `tenant:${currentUser.tenant_id}`],
+        source: `getHosts:${origin}`
       }
-
-      console.log(`[HostsActions] Successfully fetched ${data.length} hosts for ${origin}`);
-
-      // Cache the result for 5 minutes (default TTL)
-      serverCache.set(cacheKey, data);
-
-      return { success: true, data };
-    } catch (error: any) {
-      console.error(`Error querying hosts:`, error);
-      return {
-        success: false,
-        error: 'Database query failed: ' + error.message,
-      };
-    }
+    );
   } catch (error: any) {
     console.error(`[HostsActions] Error in getHosts (${origin}):`, error);
     return { success: false, error: error.message || 'Failed to fetch hosts' };
@@ -120,6 +111,11 @@ export async function getHost(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
+    if (!id) {
+      console.error('[HostsActions] No host ID provided');
+      return { success: false, error: 'Host ID is required' };
+    }
+    
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
@@ -129,25 +125,31 @@ export async function getHost(
       };
     }
 
-    // Check cache first
-    const cacheKey = `host:${id}`;
-    const cached = serverCache.get<Host>(cacheKey);
-    if (cached) {
-      return { success: true, data: cached };
-    }
+    // Create a standardized cache key using the helper method
+    const cacheKey = serverCache.tenantKey(currentUser.tenant_id, 'host', id);
+    
+    // Use enhanced getOrSet function with proper tagging
+    return await serverCache.getOrSet(
+      cacheKey,
+      async () => {
+        console.log(`[HostsActions] Cache miss for host ${id}, fetching from database`);
+        
+        const data = await db.host.findUnique({
+          where: { id },
+        });
 
-    const data = await db.host.findUnique({
-      where: { id },
-    });
+        if (!data) {
+          return { success: false, error: 'Host not found' };
+        }
 
-    if (!data) {
-      return { success: false, error: 'Host not found' };
-    }
-
-    // Cache the result
-    serverCache.set(cacheKey, data);
-
-    return { success: true, data };
+        return { success: true, data };
+      },
+      {
+        ttl: 5 * 60 * 1000, // 5 minutes cache
+        tags: ['hosts-data', `host:${id}`, `tenant:${currentUser.tenant_id}`],
+        source: 'getHost'
+      }
+    );
   } catch (error: any) {
     console.error('Error in getHost:', error);
     return { success: false, error: error.message || 'Failed to fetch host' };
@@ -184,8 +186,26 @@ export async function addHost(
       };
     }
 
-    // Invalidate cache after creation
-    serverCache.delete('hosts:all');
+    // Invalidate cache using tag-based invalidation
+    serverCache.deleteByTag('hosts-data');
+    serverCache.deleteByTag(`tenant:${currentUser.tenant_id}`);
+    
+    // Also clear specific cache entries
+    serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'hosts', ':all'));
+    
+    // If the new host has an ID, cache it to prevent an immediate fetch
+    if (newHost.id) {
+      const hostCacheKey = serverCache.tenantKey(currentUser.tenant_id, 'host', newHost.id);
+      serverCache.set(
+        hostCacheKey, 
+        { success: true, data: newHost },
+        { 
+          ttl: 5 * 60 * 1000,
+          tags: ['hosts-data', `host:${newHost.id}`, `tenant:${currentUser.tenant_id}`],
+          source: 'addHost'
+        }
+      );
+    }
 
     return { success: true, data: newHost };
   } catch (error: any) {
@@ -209,6 +229,11 @@ export async function updateHost(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
+    if (!id) {
+      console.error('[HostsActions] No host ID provided for update');
+      return { success: false, error: 'Host ID is required' };
+    }
+    
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
@@ -230,9 +255,26 @@ export async function updateHost(
       };
     }
 
-    // Invalidate cache after update
-    serverCache.delete(`host:${id}`);
-    serverCache.delete('hosts:all');
+    // Invalidate cache using tag-based invalidation
+    serverCache.deleteByTag('hosts-data');
+    serverCache.deleteByTag(`host:${id}`);
+    serverCache.deleteByTag(`tenant:${currentUser.tenant_id}`);
+    
+    // Also clear specific cache entries
+    serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'hosts', ':all'));
+    serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'host', id));
+    
+    // Update the cache with the latest data
+    const hostCacheKey = serverCache.tenantKey(currentUser.tenant_id, 'host', id);
+    serverCache.set(
+      hostCacheKey, 
+      { success: true, data },
+      { 
+        ttl: 5 * 60 * 1000,
+        tags: ['hosts-data', `host:${id}`, `tenant:${currentUser.tenant_id}`],
+        source: 'updateHost'
+      }
+    );
 
     return { success: true, data };
   } catch (error: any) {
@@ -251,8 +293,13 @@ export async function deleteHost(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log('Server action: Starting database deletion for host ID:', id);
+    console.log('[HostsActions] Starting database deletion for host ID:', id);
 
+    if (!id) {
+      console.error('[HostsActions] No host ID provided for deletion');
+      return { success: false, error: 'Host ID is required' };
+    }
+    
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
@@ -262,19 +309,34 @@ export async function deleteHost(
       };
     }
 
-    console.log('Server action: Authenticated user, proceeding with deletion');
+    // Get the host first to verify it exists and belongs to the right tenant
+    const hostResult = await getHost(id, currentUser);
+    if (!hostResult.success || !hostResult.data) {
+      return { success: false, error: 'Host not found' };
+    }
+
+    console.log('[HostsActions] Authenticated and validated host, proceeding with deletion');
 
     await db.host.delete({
       where: { id },
     });
 
-    console.log('Server action: Database deletion completed for host ID:', id);
+    console.log('[HostsActions] Database deletion completed for host ID:', id);
 
-    // Invalidate cache after deletion
-    serverCache.delete(`host:${id}`);
-    serverCache.delete('hosts:all');
+    // Comprehensive cache invalidation
+    // Tag-based invalidation (more precise and efficient)
+    serverCache.deleteByTag('hosts-data');
+    serverCache.deleteByTag(`host:${id}`);
+    serverCache.deleteByTag(`tenant:${currentUser.tenant_id}`);
+    
+    // Key-based invalidation (explicit keys)
+    serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'hosts', ':all'));
+    serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'host', id));
+    
+    // Also clear any filtered hosts caches
+    serverCache.deletePattern(`tenant:${currentUser.tenant_id}:hosts:filtered:`);
 
-    console.log('Server action: Cache invalidated, deletion complete');
+    console.log('[HostsActions] Cache invalidated, deletion complete');
 
     return { success: true };
   } catch (error: any) {
@@ -293,6 +355,11 @@ export async function testHostConnection(
   user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
+    if (!id) {
+      console.error('[HostsActions] No host ID provided for connection test');
+      return { success: false, error: 'Host ID is required' };
+    }
+    
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
@@ -302,17 +369,17 @@ export async function testHostConnection(
       };
     }
 
-    // Get the host details first
-    const host = await db.host.findUnique({
-      where: { id },
-    });
-
-    if (!host) {
+    // Get the host details first using our cached getHost function
+    const hostResponse = await getHost(id, currentUser);
+    
+    if (!hostResponse.success || !hostResponse.data) {
       return {
         success: false,
         error: 'Host not found',
       };
     }
+    
+    const host = hostResponse.data;
 
     // First update the host to testing state
     await db.host.update({
@@ -323,9 +390,15 @@ export async function testHostConnection(
       },
     });
 
-    // Invalidate cache to show testing state
-    serverCache.delete(`host:${id}`);
-    serverCache.delete('hosts:all');
+    // Invalidate cache to show testing state immediately
+    // Tag-based invalidation for efficient cache updates
+    serverCache.deleteByTag('hosts-data');
+    serverCache.deleteByTag(`host:${id}`);
+    serverCache.deleteByTag(`tenant:${currentUser.tenant_id}`);
+    
+    // Also clear specific cache entries
+    serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'hosts', ':all'));
+    serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'host', id));
 
     // Add a small delay to show the testing animation
     await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -341,7 +414,7 @@ export async function testHostConnection(
     });
 
     // Update the host status based on the test result
-    await db.host.update({
+    const updatedHost = await db.host.update({
       where: { id },
       data: {
         status: result.success ? 'connected' : 'failed',
@@ -349,9 +422,25 @@ export async function testHostConnection(
       },
     });
 
-    // Invalidate cache after update
-    serverCache.delete(`host:${id}`);
-    serverCache.delete('hosts:all');
+    // Update the cache with the new status
+    // Tag-based cache invalidation
+    serverCache.deleteByTag('hosts-data');
+    serverCache.deleteByTag(`host:${id}`);
+    serverCache.deleteByTag(`tenant:${currentUser.tenant_id}`);
+    
+    // Update the host cache with the latest data
+    if (updatedHost) {
+      const hostCacheKey = serverCache.tenantKey(currentUser.tenant_id, 'host', id);
+      serverCache.set(
+        hostCacheKey, 
+        { success: true, data: updatedHost },
+        { 
+          ttl: 5 * 60 * 1000,
+          tags: ['hosts-data', `host:${id}`, `tenant:${currentUser.tenant_id}`],
+          source: 'testHostConnection'
+        }
+      );
+    }
 
     return result;
   } catch (error: any) {
@@ -359,16 +448,31 @@ export async function testHostConnection(
 
     // Update status to failed on error
     try {
-      await db.host.update({
-        where: { id },
-        data: {
-          status: 'failed',
-          updated_at: new Date().toISOString(),
-        },
-      });
-      // Invalidate cache
-      serverCache.delete(`host:${id}`);
-      serverCache.delete('hosts:all');
+      const currentUser = user || (await getUser());
+      if (currentUser) {
+        // Update the host status to failed
+        const updatedHost = await db.host.update({
+          where: { id },
+          data: {
+            status: 'failed',
+            updated_at: new Date().toISOString(),
+          },
+        });
+        
+        // Update cache with failed status
+        if (updatedHost) {
+          const hostCacheKey = serverCache.tenantKey(currentUser.tenant_id, 'host', id);
+          serverCache.set(
+            hostCacheKey, 
+            { success: true, data: updatedHost },
+            { 
+              ttl: 5 * 60 * 1000,
+              tags: ['hosts-data', `host:${id}`, `tenant:${currentUser.tenant_id}`],
+              source: 'testHostConnection:error'
+            }
+          );
+        }
+      }
     } catch (updateError) {
       console.error('Error updating host status to failed:', updateError);
     }
@@ -541,35 +645,97 @@ export async function checkAllConnections(
 
 /**
  * Clear all host-related caches
+ * 
+ * @param options Optional parameters to target specific cache entries
  * @param user Optional pre-fetched user data to avoid redundant auth calls
+ * @returns Result object with cache clearing details
  */
 export async function clearHostsCache(
+  options?: {
+    hostId?: string;
+    tenantId?: string;
+    userId?: string;
+  },
   user?: AuthUser | null,
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{
+  success: boolean;
+  clearedEntries: number;
+  message: string;
+  error?: string;
+}> {
   try {
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
     if (!currentUser) {
       return {
         success: false,
+        clearedEntries: 0,
+        message: 'User not authenticated',
         error: 'Unauthorized - Please sign in',
       };
     }
 
     console.log('[HostsActions] Clearing hosts cache');
-
-    // Clear the main hosts cache for this tenant
-    const tenantKey = `hosts:${currentUser.tenant_id}`;
-    serverCache.delete(tenantKey);
-
-    // Clear filtered hosts cache for this tenant
-    const filteredKey = `hosts:${currentUser.tenant_id}:filtered`;
-    serverCache.delete(filteredKey);
-
-    console.log('[HostsActions] Hosts cache cleared successfully');
-    return { success: true };
+    
+    const { hostId, tenantId, userId } = options || {};
+    let clearedEntries = 0;
+    let message = 'Cache cleared successfully';
+    
+    // Determine the most appropriate cache clearing strategy
+    if (hostId) {
+      // Clear specific host cache
+      clearedEntries += serverCache.deleteByTag(`host:${hostId}`);
+      clearedEntries += serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'host', hostId));
+      message = `Cache cleared for host: ${hostId}`;
+    } 
+    else if (userId && tenantId) {
+      // Clear both user and tenant specific data
+      clearedEntries += serverCache.deleteByTag(`user:${userId}`);
+      clearedEntries += serverCache.deleteByTag(`tenant:${tenantId}`);
+      clearedEntries += serverCache.deleteByTag('hosts-data');
+      message = `Cache cleared for user: ${userId} and tenant: ${tenantId}`;
+    }
+    else if (tenantId || (tenantId === undefined && currentUser)) {
+      // Clear tenant-specific data (use current user's tenant if not specified)
+      const targetTenantId = tenantId || currentUser.tenant_id;
+      clearedEntries += serverCache.deleteByTag(`tenant:${targetTenantId}`);
+      clearedEntries += serverCache.deleteByTag('hosts-data');
+      
+      // Clear all hosts cache keys for this tenant
+      clearedEntries += serverCache.deletePattern(
+        serverCache.tenantKey(targetTenantId, 'hosts', '')
+      );
+      clearedEntries += serverCache.deletePattern(
+        serverCache.tenantKey(targetTenantId, 'host', '')
+      );
+      
+      message = `Cache cleared for tenant: ${targetTenantId}`;
+    }
+    else if (userId) {
+      // Clear user-specific data
+      clearedEntries += serverCache.deleteByTag(`user:${userId}`);
+      message = `Cache cleared for user: ${userId}`;
+    }
+    else {
+      // Clear all hosts-related cache
+      clearedEntries += serverCache.deleteByTag('hosts-data');
+      message = 'All hosts cache cleared';
+    }
+    
+    console.log(`[HostsActions] Hosts cache cleared successfully: ${clearedEntries} entries removed`);
+    
+    return {
+      success: true,
+      clearedEntries,
+      message
+    };
   } catch (error: any) {
     console.error('[HostsActions] Error clearing hosts cache:', error);
-    return { success: false, error: error.message || 'Failed to clear hosts cache' };
+    return {
+      success: false,
+      clearedEntries: 0,
+      message: 'Failed to clear hosts cache',
+      error: error.message || 'An unexpected error occurred'
+    };
   }
 }

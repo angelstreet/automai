@@ -20,7 +20,7 @@ import {
   verifyFingerprint as verifyFingerprintAction,
   testConnection as testConnectionAction,
 } from '../actions';
-import { useHost } from '@/context/HostContext';
+import { useHost } from '@/context';
 import { Host } from '../types';
 
 export interface FormData {

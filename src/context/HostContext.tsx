@@ -8,6 +8,7 @@ import React, {
   useEffect,
   ReactNode,
   useRef,
+  useMemo,
 } from 'react';
 import {
   Host,
@@ -23,11 +24,14 @@ import {
   deleteHost,
   testHostConnection,
 } from '@/app/[locale]/[tenant]/hosts/actions';
-import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
 import { HostContextType, HostData, HostActions } from '@/types/context/host';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 import { persistedData } from './AppContext';
+import { useUser } from '@/context'; // Import useUser from centralized context
+
+// Singleton flag to prevent multiple instances
+let HOST_CONTEXT_INITIALIZED = false;
 
 // Reduce logging with a DEBUG flag
 const DEBUG = false;
@@ -70,6 +74,32 @@ export const HostProvider: React.FC<{
 }> = ({ children, userData }) => {
   log('[HostContext] HostProvider initializing');
 
+  // Check for multiple instances of HostProvider
+  useEffect(() => {
+    if (HOST_CONTEXT_INITIALIZED) {
+      console.warn(
+        '[HostContext] Multiple instances of HostProvider detected. ' +
+        'This can cause performance issues and unexpected behavior. ' +
+        'Ensure that HostProvider is only used once in the component tree, ' +
+        'preferably in the AppProvider.'
+      );
+    } else {
+      HOST_CONTEXT_INITIALIZED = true;
+      log('[HostContext] HostProvider initialized as singleton');
+    }
+
+    return () => {
+      // Only reset on the instance that set it to true
+      if (HOST_CONTEXT_INITIALIZED) {
+        HOST_CONTEXT_INITIALIZED = false;
+        log('[HostContext] HostProvider singleton instance unmounted');
+      }
+    };
+  }, []);
+
+  // Get user data from UserContext instead of fetching directly
+  const userContext = useUser();
+  
   // Get initial host data synchronously from localStorage
   const [initialState, setInitialState] = useState<HostData>(() => {
     if (typeof window !== 'undefined') {
@@ -104,17 +134,65 @@ export const HostProvider: React.FC<{
   // Add a data loaded tracker to prevent multiple data loads
   const dataLoaded = useRef(false);
 
-  // Fetch user data
+  // Update local state with user data from UserContext
+  useEffect(() => {
+    if (userContext.user && userContext.user !== state.currentUser) {
+      log('[HostContext] Updating user data from UserContext:', {
+        id: userContext.user.id,
+        tenant: userContext.user.tenant_name,
+        role: userContext.user.role
+      });
+      setState(prevState => ({
+        ...prevState,
+        currentUser: userContext.user
+      }));
+    }
+  }, [userContext.user, state.currentUser]);
+
+  // Get user data from UserContext or fall back to provided userData
+  const getUserData = useCallback((): AuthUser | null => {
+    // First try to get from state
+    if (state.currentUser) {
+      return state.currentUser;
+    }
+    
+    // Then try from UserContext
+    if (userContext.user) {
+      return userContext.user;
+    }
+    
+    // Finally try from props
+    if (userData) {
+      return userData;
+    }
+    
+    return null;
+  }, [state.currentUser, userContext.user, userData]);
+  
+  // Refresh user data (now just gets it from UserContext)
   const refreshUserData = useCallback(async (): Promise<AuthUser | null> => {
     try {
-      const user = await getUser();
-      setState((prev) => ({ ...prev, currentUser: user }));
-      return user;
+      const user = getUserData();
+      if (!user && userContext.refreshUser) {
+        // If we don't have user data, try to refresh it from UserContext
+        await userContext.refreshUser();
+        // Now check if it's available
+        if (userContext.user) {
+          setState((prev) => ({ ...prev, currentUser: userContext.user }));
+          return userContext.user;
+        }
+      } else if (user) {
+        setState((prev) => ({ ...prev, currentUser: user }));
+        return user;
+      }
+      
+      log('[HostContext] No user data available');
+      return null;
     } catch (err) {
-      log('[HostContext] Error fetching user data:', err);
+      log('[HostContext] Error getting user data:', err);
       return null;
     }
-  }, []);
+  }, [getUserData, userContext]);
 
   // Apply filters to hosts
   const applyFilters = useCallback(
@@ -203,11 +281,14 @@ export const HostProvider: React.FC<{
       }));
 
       try {
-        // Use cached user data when available
-        const user = state.currentUser || (await refreshUserData());
+        // Get user data from UserContext first
+        const user = getUserData() || (await refreshUserData());
 
         log('[HostContext] fetchHosts called', {
           hasUser: !!user,
+          userSource: user ? 
+            (user === userContext.user ? 'UserContext' : 
+             (user === state.currentUser ? 'state' : 'refreshed')) : 'none',
           renderCount: protectedRenderCount,
           componentState: 'loading',
         });
@@ -269,7 +350,7 @@ export const HostProvider: React.FC<{
     });
 
     return hosts || [];
-  }, [protectedFetch, refreshUserData, applyFilters, safeUpdateState, state]);
+  }, [protectedFetch, getUserData, refreshUserData, applyFilters, safeUpdateState, state, userContext.user]);
 
   // Initialize by fetching host data
   useEffect(() => {
@@ -302,7 +383,15 @@ export const HostProvider: React.FC<{
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
 
       try {
-        const response = await getHosts();
+        // Get user data from UserContext if available
+        const user = getUserData();
+        
+        // Call the hosts action with user data if available
+        const response = await getHosts(
+          undefined, // No filter for initial load
+          user      // Pass user data from UserContext if available
+        );
+        
         if (response.success && response.data) {
           setState((prevState) => ({
             ...prevState,
@@ -326,7 +415,7 @@ export const HostProvider: React.FC<{
     };
 
     fetchData();
-  }, []); // Empty dependency array ensures it runs only once
+  }, [getUserData]); // Include getUserData in dependencies
 
   // Check a host's connection status
   const checkHostStatus = useCallback(
@@ -639,8 +728,8 @@ export const HostProvider: React.FC<{
     }
   }, [state.hosts, testHostConnection]);
 
-  // Create context value
-  const contextValue = {
+  // Create context value with proper memoization
+  const contextValue = useMemo(() => ({
     // State properties
     hosts: state.hosts,
     filteredHosts: state.filteredHosts,
@@ -671,7 +760,31 @@ export const HostProvider: React.FC<{
         loading: false,
         loadingStatus: { state: 'idle', operation: null, entityId: null },
       })),
-  } as HostContextType;
+  }), [
+    // State dependencies
+    state.hosts,
+    state.filteredHosts,
+    state.selectedHost,
+    state.connectionStatuses,
+    state.hostStats,
+    state.hostTerminals,
+    state.hostCapabilities,
+    state.loadingStatus,
+    state.error,
+    state.loading,
+    state.isScanning,
+    state.currentUser,
+    state.filter,
+    
+    // Function dependencies
+    fetchHosts,
+    getHostById,
+    addHost,
+    updateExistingHost,
+    removeHost,
+    testConnection,
+    testAllConnections
+  ]);
 
   // Add one useful log when data is loaded
   useEffect(() => {

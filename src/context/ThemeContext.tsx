@@ -1,10 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
-interface ThemeContextType {
+// Singleton flag to prevent multiple instances
+let THEME_CONTEXT_INITIALIZED = false;
+
+export interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
 }
@@ -20,6 +23,21 @@ interface ThemeProviderProps {
 }
 
 export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProviderProps) {
+  // Check for multiple instances of ThemeProvider
+  useEffect(() => {
+    if (THEME_CONTEXT_INITIALIZED) {
+      console.warn('[ThemeContext] Multiple instances detected. This may cause unexpected behavior.');
+    } else {
+      THEME_CONTEXT_INITIALIZED = true;
+    }
+    return () => {
+      // Only reset if this instance set it to true
+      if (THEME_CONTEXT_INITIALIZED) {
+        THEME_CONTEXT_INITIALIZED = false;
+      }
+    };
+  }, []);
+
   const [theme, setTheme] = useState<Theme>(defaultTheme);
 
   useEffect(() => {
@@ -61,8 +79,14 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: ThemeProvid
     document.cookie = `theme=${newTheme}; path=/; max-age=31536000`;
   };
 
+  // Properly memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    theme,
+    setTheme: handleSetTheme
+  }), [theme, handleSetTheme]);
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: handleSetTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

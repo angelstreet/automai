@@ -12,8 +12,7 @@ import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
-import { useSidebar } from '@/context/SidebarContext';
-import { useUser } from '@/context';
+import { useSidebar, useUser } from '@/context';
 
 interface WorkspaceHeaderProps {
   className?: string;

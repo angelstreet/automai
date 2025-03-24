@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { Moon, Sun, Laptop } from 'lucide-react';
 import { useTheme as useNextThemes } from 'next-themes';
-import { useTheme as useCustomTheme } from '@/context/ThemeContext';
+import { useTheme as useCustomTheme } from '@/context';
 
 import { Button } from '@/components/shadcn/button';
 import {
