@@ -112,11 +112,12 @@ export function UserProvider({
       log('[UserContext] UserProvider initialized as singleton');
     }
 
-    // Mark as initialized after a brief delay to ensure all state is set up
+    // Set initialized immediately when user data is available
+    // We'll also track this in a separate effect based on user data
     const timer = setTimeout(() => {
       setIsInitialized(true);
-      log('[UserContext] UserProvider fully initialized');
-    }, 0);
+      log('[UserContext] UserProvider initialized via timeout');
+    }, 100);
 
     return () => {
       // Only reset on the instance that set it to true
@@ -131,7 +132,6 @@ export function UserProvider({
   log('[UserContext] UserProvider rendering');
   const [error, setError] = useState<Error | null>(null);
   const initialized = useRef(false);
-
   // Add request protection
   const { protectedFetch, safeUpdateState, renderCount } = useRequestProtection('UserContext');
 
@@ -393,6 +393,12 @@ export function UserProvider({
 }
 
 export function useUser() {
+  // Try to get the global version first if in browser
+  if (typeof window !== 'undefined' && (window as any).__userContext) {
+    return (window as any).__userContext;
+  }
+  
+  // Otherwise use React context
   const context = useContext(UserContext);
 
   // If the context is null for some reason, return a safe default object
@@ -411,6 +417,11 @@ export function useUser() {
       clearCache: async () => {},
       isInitialized: false,
     };
+  }
+
+  // Cache for future synchronous access
+  if (typeof window !== 'undefined') {
+    (window as any).__userContext = context;
   }
 
   return context;

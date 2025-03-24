@@ -26,7 +26,7 @@ import { getHosts as getAvailableHosts } from '@/app/[locale]/[tenant]/hosts/act
 import { AuthUser } from '@/types/user';
 import { DeploymentContextType, DeploymentData } from '@/types/context/deployment';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
-import { persistedData, InnerAppContext } from './AppContext';
+import { persistedData } from './AppContext';
 import { useUser } from '@/context'; // Import useUser from centralized context
 
 // Singleton flag to prevent multiple instances

@@ -58,17 +58,21 @@ const defaultTeams: Team[] = [
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
+  // Always declare all hooks at the top level before any conditional logic
   const { open } = useSidebar();
+  const [activeTeam, setActiveTeam] = React.useState<Team>(() => teams?.[0] || defaultTeams[0]);
+  
+  // Add effect for any side effects (even if empty for now)
+  React.useEffect(() => {
+    // Ensure all hooks are called in the same order every render
+  }, []);
+  
+  // Derive values from state - after all hooks are called
   const isCollapsed = !open;
-
-  // Simply use the teams passed as props or the default teams
   const teamsToDisplay = teams || defaultTeams;
-
-  // Set active team
-  const [activeTeam, setActiveTeam] = React.useState<Team>(teamsToDisplay[0]);
   const Icon = activeTeam.logo;
 
-  // Show different UI based on sidebar state
+  // Show different UI based on sidebar state - AFTER all hooks
   if (isCollapsed) {
     return (
       <div className="flex items-center justify-center p-1.5">

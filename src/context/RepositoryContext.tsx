@@ -24,7 +24,7 @@ import {
 } from '@/app/[locale]/[tenant]/repositories/actions';
 import { AuthUser } from '@/types/user';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
-import { persistedData, InnerAppContext } from './AppContext';
+import { persistedData } from './AppContext';
 import { useUser } from '@/context'; // Import useUser from centralized context
 
 // Singleton flag to prevent multiple instances

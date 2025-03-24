@@ -86,7 +86,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={appContextRef.current}>
       <UserProvider appContextRef={appContextRef}>
-        <HostProvider>
+        <HostProvider userData={null}>
           <RepositoryProvider>
             <DeploymentProvider>
               <CICDProvider>

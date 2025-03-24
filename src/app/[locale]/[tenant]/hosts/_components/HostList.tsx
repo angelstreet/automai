@@ -21,7 +21,11 @@ export default function HostContainer() {
   // Add data fetching state
   const dataFetched = useRef(false);
 
-  // Group all state declarations at the top
+  // Get contexts first - all hooks must be called in the same order every render
+  const userContext = useUser();
+  const hostContext = useHost();
+  
+  // Group all state declarations after context hooks
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
@@ -48,10 +52,6 @@ export default function HostContainer() {
       console.log('[HostContainer] unmounted');
     };
   }, []);
-
-  // Get user data from context
-  const userContext = useUser();
-  const hostContext = useHost();
 
   // Add safety check for null context during initial render
   if (!hostContext) {

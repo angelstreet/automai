@@ -27,7 +27,7 @@ import {
 import { AuthUser } from '@/types/user';
 import { HostContextType, HostData, HostActions } from '@/types/context/host';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
-import { persistedData, InnerAppContext } from './AppContext';
+import { persistedData, AppContext } from './AppContext';
 import { useUser } from '@/context'; // Import useUser from centralized context
 
 // Singleton flag to prevent multiple instances
@@ -831,16 +831,8 @@ export const HostProvider: React.FC<{
     }
   }, [state.hosts, state.loading, state.error]);
 
-  // Register with the central AppContext
-  const appContext = useContext(InnerAppContext);
-  
-  useEffect(() => {
-    if (appContext) {
-      // Update the central context with this context's values
-      appContext.host = contextValue;
-      log('[HostContext] Registered with central AppContext');
-    }
-  }, [appContext, contextValue]);
+  // We're removing the central context registration since we're
+  // using a different approach in our new architecture
   
   return <HostContext.Provider value={contextValue}>{children}</HostContext.Provider>;
 };

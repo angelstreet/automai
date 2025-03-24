@@ -53,8 +53,12 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
 
   const handleSignOut = async () => {
     try {
-      // Clear all caches first
-      await clearCache();
+      // Clear all caches first - with proper null check
+      if (clearCache && typeof clearCache === 'function') {
+        await clearCache();
+      } else {
+        console.warn('UserProfile: clearCache function not available');
+      }
 
       // Then sign out
       const formData = new FormData();
