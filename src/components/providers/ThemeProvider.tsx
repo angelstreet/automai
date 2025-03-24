@@ -26,11 +26,9 @@ export function ThemeProviders({ children, defaultTheme = 'system' }: ThemeProvi
     >
       <ThemeProvider defaultTheme={defaultTheme}>
         <FontProvider>
-          <SidebarProvider>
-            <TooltipProvider>
-              <SearchProvider>{children}</SearchProvider>
-            </TooltipProvider>
-          </SidebarProvider>
+          <TooltipProvider>
+            <SearchProvider>{children}</SearchProvider>
+          </TooltipProvider>
         </FontProvider>
       </ThemeProvider>
     </NextThemesProvider>

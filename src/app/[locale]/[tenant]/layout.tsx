@@ -24,8 +24,8 @@ export default function TenantLayout({
   console.log('[TenantLayout] Rendering tenant layout, tenant:', tenant);
 
   return (
-    <SidebarProvider>
-      {/* AppProvider is already provided in the root layout */}
+    <>
+      {/* SidebarProvider is now at the root layout */}
       <TooltipProvider>
         <ToasterProvider />
         <div className="relative flex min-h-screen w-full">
@@ -45,6 +45,6 @@ export default function TenantLayout({
           </div>
         </div>
       </TooltipProvider>
-    </SidebarProvider>
+    </>
   );
 }

@@ -245,23 +245,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
 function AppContextBridge({ children }: { children: ReactNode }) {
   const { contextState } = useContext(AppContext);
   const mountCount = useRef(0);
+  
+  // Add initialization state tracking
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Initialize contexts first, then allow access
+  useEffect(() => {
+    // Short timeout to ensure providers have time to initialize
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+      console.log('[AppContext] Bridge initialization complete, contexts should be available');
+    }, 0);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Get values from each context, with safety checks - but only after initialization
+  const hostContext = isInitialized && contextState.host ? useHost() : null;
+  const deploymentContext = isInitialized && contextState.deployment ? useDeployment() : null;
+  const repositoryContext = isInitialized && contextState.repository ? useRepository() : null;
+  const cicdContext = isInitialized && contextState.cicd ? useCICD() : null;
 
-  // Get values from each context, with safety checks
-  const hostContext = contextState.host ? useHost() : null;
-  const deploymentContext = contextState.deployment ? useDeployment() : null;
-  const repositoryContext = contextState.repository ? useRepository() : null;
-  const cicdContext = contextState.cicd ? useCICD() : null;
-
-  // Always attempt to get user context since it's fundamental
-  const userContext = useUser();
+  // Always attempt to get user context since it's fundamental - but only after initialization
+  const userContext = isInitialized ? useUser() : null;
 
   // Log diagnostic info only on first mount or in debug mode
   useEffect(() => {
+    if (!isInitialized) return;
+    
     mountCount.current++;
 
     if (mountCount.current === 1 || DEBUG) {
       console.log('[AppContext] Bridge component mounted', {
         mountCount: mountCount.current,
+        isInitialized,
         availableContexts: {
           user: !!userContext,
           userHasData: userContext ? !!userContext.user : false,
@@ -280,6 +297,7 @@ function AppContextBridge({ children }: { children: ReactNode }) {
       console.warn('[AppContext] User context exists but user is null and not loading');
     }
   }, [
+    isInitialized,
     userContext,
     hostContext,
     deploymentContext,
@@ -289,6 +307,12 @@ function AppContextBridge({ children }: { children: ReactNode }) {
   ]);
 
   // Combine contexts - memoized to prevent unnecessary renders
+  // If not initialized yet, return children directly without context values
+  if (!isInitialized) {
+    console.log('[AppContext] Bridge not yet initialized, rendering without context');
+    return <>{children}</>;
+  }
+
   const appContextValue = useMemo(
     () => ({
       host: hostContext,
@@ -510,6 +534,7 @@ export function useUser() {
       refreshUser: async () => null,
       updateRole: async () => {},
       clearCache: async () => {},
+      isInitialized: false,
     };
   }
 

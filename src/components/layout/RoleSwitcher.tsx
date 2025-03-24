@@ -64,6 +64,12 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
   // Get user from context if not provided as prop
   const userContext = useUser();
   const user = propUser || userContext?.user;
+  
+  // Early return with fallback when context isn't available or initialized
+  if (!propUser && (!userContext || !userContext.isInitialized)) {
+    // Return loading skeleton or minimal UI
+    return <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>;
+  }
 
   // Debug log user role
   React.useEffect(() => {
@@ -72,8 +78,9 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
       contextUserExists: !!userContext?.user,
       userRole: user?.role || 'not set',
       currentContextRole: userContext?.user?.role || 'not in context',
+      isContextInitialized: userContext?.isInitialized
     });
-  }, [propUser, userContext?.user, user?.role]);
+  }, [propUser, userContext?.user, user?.role, userContext?.isInitialized]);
 
   // Initialize with stored debug role, user role, or default to 'viewer'
   const [currentRole, setCurrentRole] = React.useState<Role>(() => {

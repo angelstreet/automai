@@ -19,6 +19,7 @@ interface UserContextType {
   refreshUser: () => Promise<User | null>;
   updateRole: (role: Role) => Promise<void>;
   clearCache: () => Promise<void>;
+  isInitialized: boolean; // Added to track initialization state
 }
 
 const UserContext = createContext<UserContextType>({
@@ -29,6 +30,7 @@ const UserContext = createContext<UserContextType>({
   refreshUser: async () => null,
   updateRole: async () => {},
   clearCache: async () => {},
+  isInitialized: false,
 });
 
 // Reduce logging with a DEBUG flag
@@ -86,6 +88,9 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
 };
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+  // Add explicit initialization state
+  const [isInitialized, setIsInitialized] = useState(false);
+
   // Check for multiple instances of UserProvider
   useEffect(() => {
     if (USER_CONTEXT_INITIALIZED) {
@@ -100,12 +105,19 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       log('[UserContext] UserProvider initialized as singleton');
     }
 
+    // Mark as initialized after a brief delay to ensure all state is set up
+    const timer = setTimeout(() => {
+      setIsInitialized(true);
+      log('[UserContext] UserProvider fully initialized');
+    }, 0);
+
     return () => {
       // Only reset on the instance that set it to true
       if (USER_CONTEXT_INITIALIZED) {
         USER_CONTEXT_INITIALIZED = false;
         log('[UserContext] UserProvider singleton instance unmounted');
       }
+      clearTimeout(timer);
     };
   }, []);
 
@@ -351,8 +363,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       refreshUser,
       updateRole: handleRoleUpdate,
       clearCache,
+      isInitialized,
     }),
-    [user, loading, error, refreshUser, clearCache],
+    [user, loading, error, refreshUser, clearCache, isInitialized],
   );
 
   return <UserContext.Provider value={contextValue}>{children}</UserContext.Provider>;
@@ -375,6 +388,7 @@ export function useUser() {
       refreshUser: async () => null,
       updateRole: async () => {},
       clearCache: async () => {},
+      isInitialized: false,
     };
   }
 

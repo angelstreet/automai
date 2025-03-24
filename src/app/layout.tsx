@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
 import { ThemeProviders, SWRProvider } from '@/components/providers';
 import { cookies } from 'next/headers';
-import { AppProvider } from '@/context';
+import { AppProvider, SidebarProvider } from '@/context';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -64,7 +64,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ThemeProviders defaultTheme={theme}>
           <SWRProvider>
-            <AppProvider>{children}</AppProvider>
+            <SidebarProvider>
+              <AppProvider>{children}</AppProvider>
+            </SidebarProvider>
           </SWRProvider>
         </ThemeProviders>
       </body>
