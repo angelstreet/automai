@@ -6,6 +6,9 @@ const withNextIntl = createNextIntlPlugin();
 const nextConfig = {
   reactStrictMode: true,
   trailingSlash: false,
+  experimental: {
+    allowedDevOrigins: ['*.cloudworkstations.dev'],
+  },
   images: {
     remotePatterns: [
       {
