@@ -4,190 +4,389 @@
 
 AutomAI uses a centralized context architecture for state management across the application. This architecture provides a consistent pattern for managing state, actions, and side effects while enabling components to access data from multiple domains when needed.
 
-> **Important Migration Note**: The application has been fully migrated to this centralized context architecture. All feature-specific contexts and hooks (previously located in `/src/app/[locale]/[tenant]/*/context.tsx` and `/src/app/[locale]/[tenant]/*/hooks.ts`) have been removed in favor of this centralized system.
+> **Important Implementation Note**: The application uses a singleton-like pattern with the root AppProvider to ensure there is only ONE instance of each context in the component tree. Multiple AppProvider instances in the tree can cause duplicate API calls and state inconsistencies.
 
 ## Architecture Principles
 
-1. **Single Source of Truth**: All application state is managed through the context system
-2. **Separation of Concerns**: Each domain has its own context with clear responsibilities
-3. **Composability**: The root AppContext composes all domain contexts
-4. **Consistent Patterns**: All contexts follow the same implementation pattern
-5. **Minimal Provider Nesting**: The AppProvider handles all context composition
+1. **Single Source of Truth**: All application state is managed through the centralized context system
+2. **Three-Layer Architecture**: Follows the core app architecture (DB → Server Actions → Client Hooks)
+3. **Separation of Concerns**: Each domain has its own context with clear responsibilities
+4. **On-Demand Initialization**: Contexts are initialized only when needed to improve performance
+5. **Cross-Context Communication**: Domains can access user data and other contexts when needed
+6. **Singleton Pattern**: Only one instance of each context exists in the application
 
 ## Directory Structure
 
 ```
 src/
   ├── context/
-  │   ├── index.ts                   // Main export file
-  │   ├── AppContext.tsx             // Root context
-  │   ├── host/
-  │   │   ├── index.ts               // Export file 
-  │   │   ├── HostContext.tsx        // Host context implementation
-  │   ├── deployment/
-  │   │   ├── index.ts
-  │   │   ├── DeploymentContext.tsx
-  │   ├── repository/
-  │   │   ├── index.ts
-  │   │   ├── RepositoryContext.tsx
-  │   └── cicd/
-  │       ├── index.ts
-  │       └── CICDContext.tsx
+  │   ├── index.ts                   // Main export file with centralized hooks
+  │   ├── AppContext.tsx             // Root context composition and initialization
+  │   ├── UserContext.tsx            // User authentication and profile context
+  │   ├── SidebarContext.tsx         // Sidebar UI state management
+  │   ├── CICDContext.tsx            // CI/CD integration context
+  │   ├── DeploymentContext.tsx      // Deployment management context
+  │   ├── HostContext.tsx            // Host management context
+  │   └── RepositoryContext.tsx      // Repository management context
   └── types/
       └── context/
-          ├── index.ts               // Export all context types
+          ├── constants.ts           // Shared constants
           ├── app.ts                 // Root context types
+          ├── user.ts                // User context types
           ├── host.ts                // Host context types
           ├── deployment.ts          // Deployment context types
           ├── repository.ts          // Repository context types
           └── cicd.ts                // CICD context types
 ```
 
-## Type Structure
+## Context Initialization and Singleton Pattern
 
-Each context has a consistent type pattern:
+The application uses a demand-based initialization pattern to manage contexts efficiently:
 
-1. **Data Interface**: Contains all state properties
 ```typescript
-export interface HostData {
-  hosts: Host[];
-  loading: boolean;
-  error: string | null;
-  currentUser: AuthUser | null;
-}
-```
+// In AppContext.tsx
+export function AppProvider({ children }: { children: ReactNode }) {
+  // Track which contexts are initialized
+  const [contextState, setContextState] = useState<AppContextState>({
+    host: false,
+    deployment: false,
+    repository: false,
+    cicd: false,
+    user: true, // User context is always initialized
+  });
 
-2. **Actions Interface**: Contains all action methods
-```typescript
-export interface HostActions {
-  fetchHosts: () => Promise<Host[]>;
-  getHostById: (id: string) => Promise<Host | null>;
-  addHost: (data: HostData) => Promise<Host | null>;
-  updateHost: (id: string, data: Partial<Host>) => Promise<Host | null>;
-  deleteHost: (id: string) => Promise<boolean>;
-  // ... other actions
-}
-```
-
-3. **Combined Context Type**: Extends both data and actions interfaces
-```typescript
-export interface HostContextType extends HostData, HostActions {}
-```
-
-## Context Implementation Pattern
-
-Each context follows the same implementation pattern:
-
-1. **State Management**: Uses React's `useState` hook for state
-2. **Action Implementation**: Implements actions using `useCallback` for performance
-3. **Server Integration**: Calls server actions from the appropriate domain
-4. **Initialization**: Uses `useEffect` for initial data loading
-5. **Context Value**: Combines state and actions into a single context value
-
-Example:
-```typescript
-export const HostProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [state, setState] = useState<HostData>(initialHostData);
-  
-  // Implement actions as callbacks
-  const fetchHosts = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true }));
-    try {
-      const hosts = await getHostsAction();
-      setState(prev => ({ ...prev, hosts, loading: false }));
-      return hosts;
-    } catch (err) {
-      setState(prev => ({ 
-        ...prev, 
-        error: 'Failed to fetch hosts', 
-        loading: false 
-      }));
-      return [];
+  // Initialize context on demand
+  const initContext = useCallback((name: ContextName) => {
+    if (!contextState[name]) {
+      setContextState(prev => ({ ...prev, [name]: true }));
     }
-  }, []);
-  
-  // Other actions...
-  
-  // Create context value
-  const contextValue: HostContextType = {
-    // State
-    ...state,
+  }, [contextState]);
+
+  // Render providers based on initialization state
+  const renderWithProviders = (node: React.ReactNode): React.ReactNode => {
+    let result = node;
     
-    // Actions
-    fetchHosts,
-    // Other actions...
+    // Wrap with initialized providers
+    if (contextState.cicd) result = <CICDProvider>{result}</CICDProvider>;
+    if (contextState.repository) result = <RepositoryProvider>{result}</RepositoryProvider>;
+    if (contextState.deployment) result = <DeploymentProvider>{result}</DeploymentProvider>;
+    if (contextState.host) result = <HostProvider>{result}</HostProvider>;
+    if (contextState.user) result = <UserProvider>{result}</UserProvider>;
+    
+    return result;
   };
-  
+
   return (
-    <HostContext.Provider value={contextValue}>
-      {children}
-    </HostContext.Provider>
+    <AppContext.Provider value={{ contextState, initContext }}>
+      {renderWithProviders(<AppContextBridge>{children}</AppContextBridge>)}
+    </AppContext.Provider>
   );
+}
+```
+
+## Cross-Context Communication
+
+Contexts can access user data and other domain data through the centralized system:
+
+```typescript
+// In CICDContext.tsx
+export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  // Get user data from UserContext
+  const userContext = useUser();
+  
+  // Update current user when user context changes
+  useEffect(() => {
+    if (userContext?.user) {
+      setState(prev => ({
+        ...prev,
+        currentUser: userContext.user
+      }));
+    }
+  }, [userContext?.user]);
+  
+  // Use user data for API calls
+  const fetchProviders = useCallback(async () => {
+    setState(prev => ({ ...prev, loading: true }));
+    
+    try {
+      // Get user data from context instead of fetching again
+      const user = userContext?.user || state.currentUser;
+      
+      // Pass user to server action
+      const result = await getCICDProviders(user);
+      
+      if (result.success) {
+        setState(prev => ({
+          ...prev,
+          providers: result.data || [],
+          loading: false
+        }));
+      }
+      
+      return result;
+    } catch (error) {
+      // Error handling...
+    }
+  }, [userContext?.user, state.currentUser]);
+
+  // Rest of context implementation...
 };
 ```
 
-## Root AppContext
+## Context Access and Hooks
 
-The AppContext composes all other contexts and provides a single entry point for accessing any context:
+The centralized system provides hooks for accessing all contexts:
 
 ```typescript
-export function AppProvider({ children }: { children: ReactNode }) {
-  return (
-    <HostProvider>
-      <DeploymentProvider>
-        <RepositoryProvider>
-          <CICDProvider>
-            <AppContextBridge>
-              {children}
-            </AppContextBridge>
-          </CICDProvider>
-        </RepositoryProvider>
-      </DeploymentProvider>
-    </HostProvider>
-  );
+// In context/index.ts
+export { useUser } from './AppContext';
+export { useHost } from './AppContext';
+export { useDeployment } from './AppContext'; 
+export { useRepository } from './AppContext';
+export { useCICD } from './AppContext';
+```
+
+These hooks initialize contexts on-demand and ensure consistent access:
+
+```typescript
+// In AppContext.tsx
+export function useHost() {
+  // Initialize the host context if not already initialized
+  const _isInitialized = useInitContext('host');
+  const context = useAppContext();
+  
+  return context.host;
 }
 ```
 
 ## Usage in Components
 
-Components access context data and actions through convenience hooks:
+Components should always import hooks from the centralized location:
 
 ```typescript
-import { useHost, useDeployment } from '@/context';
+import { useHost, useRepository, useUser } from '@/context';
 
-function MyComponent() {
-  // Access host context
-  const { hosts, loading, fetchHosts } = useHost();
+function HostsPage() {
+  // Access multiple contexts as needed
+  const { hosts, loading, addHost } = useHost();
+  const { repositories } = useRepository();
+  const { user } = useUser();
   
-  // Access deployment context
-  const { deployments, createDeployment } = useDeployment();
-  
-  // Use data and actions in component
-  // ...
+  // Use data and actions from different contexts
+  const handleAddHost = async (hostData) => {
+    const newHost = await addHost({
+      ...hostData,
+      repositoryIds: selectedRepositories.map(r => r.id),
+      createdBy: user.id
+    });
+  };
 }
 ```
 
-## Benefits
+## Request Protection and Optimization
 
-1. **Consistency**: All contexts follow the same pattern and organization
-2. **Maintainability**: Smaller, focused files with clear separation of concerns
-3. **Performance**: Reduced provider nesting and more efficient context updates
-4. **Developer Experience**: Easier to find and use context functions
-5. **Type Safety**: Better type definitions and IDE support
+The application includes request protection to prevent duplicate API calls:
 
-## Guidelines
+```typescript
+// In useRequestProtection hook
+export function useRequestProtection(componentName = 'Component') {
+  const [pendingRequests, setPendingRequests] = useState<Record<string, boolean>>({});
+  const renderCount = useRef<number>(0);
+  
+  // Increment render count on each render
+  useEffect(() => {
+    renderCount.current += 1;
+  });
+  
+  // Protect async operations from duplicate calls
+  const protectedFetch = useCallback(async (requestKey: string, fetchFn: () => Promise<any>) => {
+    if (pendingRequests[requestKey]) {
+      console.log(`[${componentName}] Skipping duplicate request: ${requestKey}`);
+      return null;
+    }
+    
+    setPendingRequests(prev => ({ ...prev, [requestKey]: true }));
+    
+    try {
+      return await fetchFn();
+    } finally {
+      setPendingRequests(prev => ({ ...prev, [requestKey]: false }));
+    }
+  }, [pendingRequests, componentName]);
+  
+  // Other utility functions...
+  
+  return { protectedFetch, renderCount };
+}
+```
 
-1. **Keep Contexts Focused**: Each context should manage a specific domain
-2. **Avoid Component-Specific State**: Use context for shared state, local state for component-specific concerns
-3. **Use Actions for State Changes**: All state changes should go through context actions
-4. **Minimize Dependencies**: Avoid circular dependencies between contexts
-5. **Test Context Providers**: Write tests for context providers and their actions
-6. **Always Use Centralized Context**: Do not create feature-specific contexts or hooks
+## Optimizing Component Rerenders
 
-## Troubleshooting
+Context providers optimize rerenders with careful state updates:
 
-1. **Context Undefined Error**: Make sure the component is wrapped in the appropriate provider
-2. **State Updates Not Reflected**: Check if dependencies are properly set in useCallback hooks
-3. **Type Errors**: Ensure the context value includes all properties from the context type
-4. **Performance Issues**: Use memoization and careful dependency management 
-5. **Missing Context Access**: Always import from `@/context`, never from feature-specific files 
+```typescript
+// In safeUpdateState utility
+const safeUpdateState = useCallback(
+  (
+    updateFn: (newState: any) => void,
+    oldValue: any,
+    newValue: any,
+    debugKey?: string,
+  ) => {
+    // Only update if values are different
+    if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+      updateFn(newValue);
+      if (DEBUG) console.log(`[${componentName}] Updated state:`, debugKey || 'state');
+      return true;
+    }
+    return false;
+  },
+  [componentName],
+);
+```
+
+## Cross-Page Data Persistence
+
+For improved user experience, the context system supports cross-page data persistence:
+
+```typescript
+// In AppContext.tsx
+export const persistedData: {
+  repository?: any;
+  repositories?: any[];
+  hosts?: any[];
+  deployment?: any;
+  deployments?: any[];
+  user?: any;
+  cicd?: any;
+} = {};
+
+// In context components
+// Persist data for cross-page navigation
+useEffect(() => {
+  if (typeof persistedData !== 'undefined') {
+    persistedData.cicdData = {
+      providers: state.providers,
+      jobs: state.jobs,
+      loading: state.loading,
+    };
+  }
+}, [state.providers, state.jobs, state.loading]);
+```
+
+## Common Pitfalls and Troubleshooting
+
+### 1. Multiple AppProvider Instances
+
+**Problem**: Having multiple `AppProvider` instances in the component tree causes duplicate API calls and state inconsistencies.
+
+**Solution**: Ensure `AppProvider` is only used once at the root level:
+
+```tsx
+// In src/app/layout.tsx
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <ThemeProviders>
+          <SWRProvider>
+            <AppProvider>{children}</AppProvider>
+          </SWRProvider>
+        </ThemeProviders>
+      </body>
+    </html>
+  );
+}
+```
+
+**Avoid this mistake**:
+```tsx
+// Don't add AppProvider in feature layouts or pages!
+export default function FeaturePage() {
+  return (
+    <AppProvider> {/* WRONG! Duplicate provider */}
+      <PageContent />
+    </AppProvider>
+  );
+}
+```
+
+### 2. Incorrect Import Paths
+
+**Problem**: Importing from feature-specific contexts instead of the centralized location.
+
+**Solution**: Always import from `@/context` to get the singleton instance:
+
+```tsx
+// CORRECT
+import { useHost, useUser } from '@/context';
+
+// WRONG 
+import { useHost } from '@/context/HostContext';
+import { useUser } from '@/context/UserContext';
+```
+
+### 3. Using React.use() in Client Components
+
+**Problem**: Using `React.use()` with promises in client components causes runtime errors.
+
+**Solution**: 
+- Server Components: Can use `React.use()` to unwrap promises
+- Client Components: Use hooks like `useParams()` that already return resolved values
+
+### 4. Redundant API Calls
+
+**Problem**: Components trigger the same API call multiple times.
+
+**Solution**: Use the request protection utilities and context state:
+
+```tsx
+const fetchHosts = useCallback(async () => {
+  return await protectedFetch('fetchHosts', async () => {
+    // Check if we already have hosts and they're not stale
+    if (state.hosts.length > 0 && !state.stale) {
+      return state.hosts;
+    }
+    
+    // Otherwise make the API call
+    const result = await getHostsAction();
+    // Update state...
+    return result.data;
+  });
+}, [state.hosts, state.stale, protectedFetch]);
+```
+
+### 5. Missing User Data in Components
+
+**Problem**: Components display incorrect role or user information.
+
+**Solution**: 
+- Pass user data to components that need it
+- Update imports to use the centralized context
+- Add debugging logs to track user data flow
+
+```tsx
+// In WorkspaceHeader.tsx
+export function WorkspaceHeader() {
+  const userContext = useUser();
+  
+  // Pass user data to child components
+  return (
+    <header>
+      <RoleSwitcher user={userContext?.user} />
+      <UserProfile user={userContext?.user} />
+    </header>
+  );
+}
+```
+
+## Best Practices
+
+1. **Single AppProvider**: Only use AppProvider once at the root layout level
+2. **Centralized Imports**: Always import from `@/context` rather than specific context files
+3. **Context Optimization**: Use memoization and careful dependency management
+4. **User Data Sharing**: Pass user data from context to components that need it
+5. **Request Protection**: Use the request protection utilities to prevent duplicate calls
+6. **Debug Logging**: Add targeted DEBUG flags to trace state and API calls when needed
+7. **Cross-Context Access**: Use the context bridge to access data from multiple domains
+8. **State Update Batching**: Group related state updates to reduce rerenders
