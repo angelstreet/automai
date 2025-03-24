@@ -136,7 +136,7 @@ export const HostProvider: React.FC<{
 
   // Update local state with user data from UserContext
   useEffect(() => {
-    if (userContext.user && userContext.user !== state.currentUser) {
+    if (userContext?.user && userContext.user !== state.currentUser) {
       log('[HostContext] Updating user data from UserContext:', {
         id: userContext.user.id,
         tenant: userContext.user.tenant_name,
@@ -147,7 +147,7 @@ export const HostProvider: React.FC<{
         currentUser: userContext.user,
       }));
     }
-  }, [userContext.user, state.currentUser]);
+  }, [userContext?.user, state.currentUser]);
 
   // Get user data from UserContext or fall back to provided userData
   const getUserData = useCallback((): AuthUser | null => {
@@ -156,8 +156,8 @@ export const HostProvider: React.FC<{
       return state.currentUser;
     }
 
-    // Then try from UserContext
-    if (userContext.user) {
+    // Then try from UserContext - add null check
+    if (userContext?.user) {
       return userContext.user;
     }
 
@@ -167,17 +167,17 @@ export const HostProvider: React.FC<{
     }
 
     return null;
-  }, [state.currentUser, userContext.user, userData]);
+  }, [state.currentUser, userContext?.user, userData]);
 
   // Refresh user data (now just gets it from UserContext)
   const refreshUserData = useCallback(async (): Promise<AuthUser | null> => {
     try {
       const user = getUserData();
-      if (!user && userContext.refreshUser) {
+      if (!user && userContext?.refreshUser) {
         // If we don't have user data, try to refresh it from UserContext
         await userContext.refreshUser();
         // Now check if it's available
-        if (userContext.user) {
+        if (userContext?.user) {
           setState((prev) => ({ ...prev, currentUser: userContext.user }));
           return userContext.user;
         }

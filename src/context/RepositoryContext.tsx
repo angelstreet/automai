@@ -174,7 +174,8 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Update local state with user data from UserContext
   useEffect(() => {
-    if (userContext.user && userContext.user !== state.currentUser) {
+    // Add null check for userContext
+    if (userContext?.user && userContext.user !== state.currentUser) {
       log('[RepositoryContext] Updating user data from UserContext:', {
         id: userContext.user.id,
         tenant: userContext.user.tenant_name,
@@ -185,7 +186,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         currentUser: userContext.user,
       }));
     }
-  }, [userContext.user, state.currentUser]);
+  }, [userContext?.user, state.currentUser]);
 
   // Add repository caching to localStorage
   useEffect(() => {
@@ -207,13 +208,13 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       return state.currentUser;
     }
 
-    // Then try from UserContext
-    if (userContext.user) {
+    // Then try from UserContext - add null check
+    if (userContext?.user) {
       return userContext.user;
     }
 
     return null;
-  }, [state.currentUser, userContext.user]);
+  }, [state.currentUser, userContext?.user]);
 
   // Refresh user data (now just gets it from UserContext)
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
@@ -226,19 +227,19 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         log('[RepositoryContext] Using existing user data:', {
           id: user.id,
           tenant: user.tenant_name,
-          source: user === userContext.user ? 'UserContext' : 'state',
+          source: userContext?.user && user === userContext.user ? 'UserContext' : 'state',
         });
         return user;
       }
 
       // If we don't have user data and UserContext has a refresh method, use it
-      if (!user && userContext.refreshUser) {
+      if (!user && userContext?.refreshUser) {
         log('[RepositoryContext] Refreshing user data from UserContext');
         // Try to refresh it from UserContext
         await userContext.refreshUser();
 
         // Now check if it's available
-        if (userContext.user) {
+        if (userContext?.user) {
           log('[RepositoryContext] User data refreshed successfully:', {
             id: userContext.user.id,
             tenant: userContext.user.tenant_name,
@@ -442,7 +443,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
 
       // Use user data from UserContext if available
       log('[RepositoryContext] Checking for user data...');
-      if (!state.currentUser && userContext.user) {
+      if (!state.currentUser && userContext?.user) {
         log('[RepositoryContext] User data already available in UserContext:', {
           id: userContext.user.id,
           tenant: userContext.user.tenant_name,
@@ -478,7 +479,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       log('[RepositoryContext] RepositoryContext unmounting...');
       // Don't reset initialized flag when component unmounts
     };
-  }, [fetchUserData, fetchRepositories, state, userContext.user]);
+  }, [fetchUserData, fetchRepositories, state, userContext?.user]);
 
   // Add one useful log when data is loaded
   useEffect(() => {
@@ -486,9 +487,10 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       console.log('[RepositoryContext] Repositories loaded:', {
         count: state.repositories.length,
         filtered: state.filteredRepositories.length,
+        userAvailable: !!userContext?.user,
       });
     }
-  }, [state.repositories.length, state.filteredRepositories.length, state.loading]);
+  }, [state.repositories.length, state.filteredRepositories.length, state.loading, userContext?.user]);
 
   // Persist repository data for cross-page navigation
   useEffect(() => {

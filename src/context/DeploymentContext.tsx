@@ -115,7 +115,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
 
   // Update local state with user data from UserContext
   useEffect(() => {
-    if (userContext.user && userContext.user !== state.currentUser) {
+    if (userContext?.user && userContext.user !== state.currentUser) {
       log('[DeploymentContext] Updating user data from UserContext:', {
         id: userContext.user.id,
         tenant: userContext.user.tenant_name,
@@ -126,7 +126,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
         currentUser: userContext.user,
       }));
     }
-  }, [userContext.user, state.currentUser]);
+  }, [userContext?.user, state.currentUser]);
 
   useEffect(() => {
     if (state.deployments.length > 0) {
@@ -147,8 +147,8 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
       return state.currentUser;
     }
 
-    // Then try from UserContext
-    if (userContext.user) {
+    // Then try from UserContext - add null check
+    if (userContext?.user) {
       return userContext.user;
     }
 
@@ -158,7 +158,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
     }
 
     return null;
-  }, [state.currentUser, userContext.user, userData]);
+  }, [state.currentUser, userContext?.user, userData]);
 
   // Refresh user data (now just gets it from UserContext)
   const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
@@ -172,7 +172,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
           id: user.id,
           tenant: user.tenant_name,
           source:
-            user === userContext.user
+            userContext?.user && user === userContext.user
               ? 'UserContext'
               : user === state.currentUser
                 ? 'state'
