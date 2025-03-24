@@ -7,6 +7,7 @@ import { useDeployment, useRepository } from '@/context';
 
 function DeploymentPageContent() {
   const [wizardActive, setWizardActive] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const deploymentContext = useDeployment();
   const repositoryContext = useRepository();
 
@@ -44,10 +45,53 @@ function DeploymentPageContent() {
       if (!deployments || (deployments.length === 0 && !loading && !isRefreshing)) {
         console.log('[DeploymentPage] Fetching deployments on mount');
         hasFetchedRef.current = true;
-        deploymentContext.fetchDeployments();
+        // Fix: Handle the case where fetchDeployments doesn't return a Promise
+        try {
+          const result = deploymentContext.fetchDeployments();
+          if (result && typeof result.finally === 'function') {
+            result.finally(() => {
+              setIsInitialLoading(false);
+            });
+          } else {
+            // If not a Promise, set loading to false immediately
+            setIsInitialLoading(false);
+          }
+        } catch (error) {
+          console.error('[DeploymentPage] Error fetching deployments:', error);
+          setIsInitialLoading(false);
+        }
       }
     }
   }, [deploymentContext, deployments, loading, isRefreshing]);
+
+  // Set initial loading state based on data presence
+  useEffect(() => {
+    // If we have deployments data immediately, don't show loading
+    if (deployments && deployments.length > 0) {
+      setIsInitialLoading(false);
+    }
+    
+    // Set a timeout to stop loading after max 1 second
+    const timeoutId = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 1000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, []); // Run only once on mount
+
+  // Update loading state when data changes
+  useEffect(() => {
+    if (deployments?.length > 0) {
+      console.log('[DeploymentPage] Deployments data updated', {
+        deploymentCount: deployments?.length || 0,
+        loading,
+      });
+      // When deployments data arrives, immediately stop loading
+      setIsInitialLoading(false);
+    }
+  }, [deployments?.length, loading]);
 
   useEffect(() => {
     console.log('[DeploymentPage] Setting up event listeners');
@@ -90,8 +134,14 @@ function DeploymentPageContent() {
 
   console.log('[DeploymentPage] Rendering with:', { wizardActive, isDataReady });
 
-  if (!isInitialized) {
-    return <div>Loading deployments...</div>;
+  // Show loading animation when not initialized or during initial loading
+  if ((!isInitialized || isInitialLoading) && (!deployments || deployments.length === 0)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="h-12 w-12 animate-spin mb-4 border-t-2 border-b-2 border-primary rounded-full"></div>
+        <p className="text-lg font-medium text-muted-foreground">Loading deployments...</p>
+      </div>
+    );
   }
 
   return (
@@ -131,6 +181,21 @@ function DeploymentPageContent() {
             }}
             explicitRepositories={repositories}
           />
+        ) : deployments && deployments.length === 0 && !loading ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-lg border border-dashed">
+            <div className="mb-4 p-4 rounded-full bg-muted/30">
+              <Plus className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="mb-2 text-lg font-medium">No deployments found</p>
+            <p className="text-muted-foreground mb-4">Create your first deployment to get started</p>
+            <button
+              className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setWizardActive(true)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              New Deployment
+            </button>
+          </div>
         ) : (
           <DeploymentList
             onViewDeployment={(id) => console.log('[DeploymentPage] View deployment:', id)}
