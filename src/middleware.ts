@@ -71,7 +71,7 @@ export default async function middleware(request: NextRequest) {
     request.headers.has('next-action');
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
   const isProtectedRoute =
-    isServerAction || isApiRoute || (pathParts.length >= 2 && pathParts[1] === 'trial');
+    isServerAction || isApiRoute || (pathParts.length >= 2);
 
   if (isProtectedRoute) {
     const { supabase, response } = createClient(request);
