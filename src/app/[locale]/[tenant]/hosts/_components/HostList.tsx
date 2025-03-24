@@ -7,7 +7,11 @@ import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '../types';
 import { useHost, useUser } from '@/context';
-import { addHost as addHostAction } from '../actions';
+import { 
+  addHost as addHostAction, 
+  testHostConnection, 
+  testAllHosts 
+} from '../actions';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 import { HostGrid } from './HostGrid';
@@ -33,6 +37,7 @@ export default function HostContainer() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshingHosts, setRefreshingHosts] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -64,11 +69,24 @@ export default function HostContainer() {
     );
   }
 
-  const { hosts, loading, error, fetchHosts, addHost, testConnection, testAllConnections } =
-    hostContext;
+  // Extract methods from context with safe fallbacks
+  const { 
+    hosts = [], 
+    loading = false, 
+    error = null, 
+    fetchHosts = async () => {}
+  } = hostContext;
 
   // Memoize user data to prevent dependency loop
   const userData = userContext?.user;
+
+  // Set initial loading state based on persisted data
+  useEffect(() => {
+    // If we have hosts data immediately, don't show loading at all
+    if (hosts.length > 0) {
+      setIsInitialLoading(false);
+    }
+  }, []); // Run only once on mount
 
   // Add logging to track when host data changes
   useEffect(() => {
@@ -79,27 +97,50 @@ export default function HostContainer() {
         error,
         renderCount: renderCount.current,
       });
+      // When hosts data arrives, immediately stop loading
+      setIsInitialLoading(false);
     }
   }, [hosts, loading, error]);
-
+  
   // Fetch hosts on initial mount, only if needed
   useEffect(() => {
-    if ((!hosts || hosts.length === 0) && !loading && !isInitialized.current) {
+    if (!isInitialized.current) {
       console.log('[HostContainer] Initial mount - fetching hosts data');
       isInitialized.current = true;
-      fetchHosts && fetchHosts();
-    } else if (hosts && hosts.length > 0) {
-      // Mark as initialized if we already have hosts
-      isInitialized.current = true;
+      
+      // If we already have hosts from context, don't trigger loading state
+      if (hosts.length > 0) {
+        setIsInitialLoading(false);
+        return;
+      }
+      
+      // Only show loading if we don't have hosts yet
+      setIsInitialLoading(true);
+      
+      // Set a timeout to stop loading after max 1 second
+      const timeoutId = setTimeout(() => {
+        setIsInitialLoading(false);
+      }, 1000);
+      
+      if (fetchHosts) {
+        fetchHosts().finally(() => {
+          clearTimeout(timeoutId);
+          setIsInitialLoading(false);
+        });
+      }
+      
+      return () => {
+        clearTimeout(timeoutId);
+      };
     }
-  }, [hosts, loading, fetchHosts]);
+  }, [fetchHosts, hosts.length]);
 
   // Create a memoized test connection handler
   const handleTestConnection = useCallback(
     async (host: Host) => {
       console.log('[HostList] Test connection triggered for host:', host.id);
 
-      if (!testConnection) {
+      if (!testHostConnection) {
         console.error('[HostList] testConnection not available from context');
         return false;
       }
@@ -118,13 +159,13 @@ export default function HostContainer() {
         await clearHostsCache();
 
         // The context's testConnection function will handle the animation state
-        const result = await testConnection(host.id);
+        const result = await testHostConnection(host.id);
         console.log('[HostList] Test connection result:', result);
 
         // Refresh the hosts list to get updated statuses
         await fetchHosts();
 
-        return result.success;
+        return result;
       } catch (error) {
         console.error('[HostList] Test connection error:', error);
         return false;
@@ -145,7 +186,7 @@ export default function HostContainer() {
         });
       }
     },
-    [testConnection, fetchHosts, refreshingHosts],
+    [testHostConnection, fetchHosts, refreshingHosts],
   );
 
   // Handle refresh all hosts - pass user data from context
@@ -159,14 +200,14 @@ export default function HostContainer() {
       const hostIds = hosts.map((h) => h.id);
       setRefreshingHosts(new Set(hostIds));
 
-      // Call testAllConnections without arguments
-      await testAllConnections();
+      // Call testAllHosts without arguments
+      await testAllHosts();
     } finally {
       setRefreshingHosts(new Set()); // Clear all refreshing hosts
       setIsRefreshing(false);
       console.log('[HostContainer] Host refresh complete');
     }
-  }, [isRefreshing, testAllConnections, hosts]);
+  }, [isRefreshing, testAllHosts, hosts]);
 
   // Handle add host form submission with user data
   const handleSaveHost = useCallback(async () => {
@@ -215,7 +256,7 @@ export default function HostContainer() {
     } finally {
       setIsSaving(false);
     }
-  }, [formData, addHostAction, fetchHosts, setShowAddHost]);
+  }, [formData, fetchHosts]);
 
   // Handle host selection
   const handleSelectHost = useCallback((id: string) => {
@@ -309,16 +350,21 @@ export default function HostContainer() {
         </div>
       </div>
 
-      {loading && hosts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10">
-          <div className="h-8 w-8 animate-spin mb-4"></div>
-          <p className="text-muted-foreground">Loading hosts...</p>
+      {/* Show loading only if we have no hosts and are in loading state */}
+      {(isInitialLoading || loading) && hosts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <div className="h-12 w-12 animate-spin mb-4 border-t-2 border-b-2 border-primary rounded-full"></div>
+          <p className="text-lg font-medium text-muted-foreground">Loading hosts...</p>
         </div>
-      ) : !loading && hosts.length === 0 ? (
-        <div className="text-center py-10">
-          <p className="text-muted-foreground">No hosts found</p>
-          <Button onClick={() => setShowAddHost(true)} className="mt-4">
-            Add your first host
+      ) : hosts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-lg border border-dashed">
+          <div className="mb-4 p-4 rounded-full bg-muted/30">
+            <Plus className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <p className="mb-2 text-lg font-medium">No hosts found</p>
+          <p className="text-muted-foreground mb-4">Add your first host to get started</p>
+          <Button onClick={() => setShowAddHost(true)} className="mt-2">
+            Add Host
           </Button>
         </div>
       ) : viewMode === 'grid' ? (
