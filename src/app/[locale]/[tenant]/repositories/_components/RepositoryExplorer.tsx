@@ -551,29 +551,6 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       <div className="mt-2">
         {activeTab === EXPLORER_TABS.CODE && (
           <div className="space-y-1">
-            {/* GitHub-style repository stats */}
-            <div className="flex items-center space-x-4 text-xs text-muted-foreground mb-1">
-              <div className="flex items-center">
-                <GitBranch className="h-3.5 w-3.5 mr-1" />
-                <span>main</span>
-              </div>
-
-              <div className="flex items-center">
-                <GitFork className="h-3.5 w-3.5 mr-1" />
-                <span>0 forks</span>
-              </div>
-
-              <div className="flex items-center">
-                <Star className="h-3.5 w-3.5 mr-1" />
-                <span>0 stars</span>
-              </div>
-
-              <div className="flex items-center">
-                <Eye className="h-3.5 w-3.5 mr-1" />
-                <span>0 watching</span>
-              </div>
-            </div>
-
             {/* GitHub-style file explorer */}
             <Card className="border-none shadow-none">
               <CardContent className="p-0">
