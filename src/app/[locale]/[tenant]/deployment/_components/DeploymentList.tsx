@@ -54,8 +54,8 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     fetchRepositories = () => {} 
   } = deploymentContext || {};
   
-  // Only show loading if explicitly true AND we have no deployments data
-  const isLoading = loading === true && deployments.length === 0;
+  // Modify the loading logic to consider both loading and isRefreshing
+  const isLoading = (loading === true || isRefreshing === true) && deployments.length === 0;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -66,12 +66,16 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
 
-  // Set hasAttemptedLoad when data loads or loading completes
+  // Set hasAttemptedLoad when we've actually finished a load attempt
   useEffect(() => {
-    if (!hasAttemptedLoad && (deployments.length > 0 || !isLoading)) {
+    console.log('[DeploymentList] Loading state:', { loading, isRefreshing, deployments: deployments.length });
+    
+    // Only mark as attempted load when we're no longer loading/refreshing
+    if (!hasAttemptedLoad && !loading && !isRefreshing) {
+      console.log('[DeploymentList] Setting hasAttemptedLoad to true');
       setHasAttemptedLoad(true);
     }
-  }, [deployments.length, isLoading, hasAttemptedLoad]);
+  }, [loading, isRefreshing, hasAttemptedLoad]);
 
   // Convert context repositories to mapping if available
   useEffect(() => {

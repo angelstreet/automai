@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { DeploymentWizard, DeploymentList } from './_components';
-import { useDeployment, useRepository } from '@/context';
+import { useDeployment, useRepository, AppProvider } from '@/context';
 
-const DeploymentPage = () => {
+// Wrap the main content in a component that assumes context is available
+function DeploymentPageContent() {
   // Simple state for wizard visibility
   const [wizardActive, setWizardActive] = useState(false);
   
@@ -23,21 +24,45 @@ const DeploymentPage = () => {
   // Are repositories loaded?
   const isDataReady = repositories.length > 0;
   
+  // Track if we've already triggered a fetch
+  const hasFetchedRef = useRef(false);
+  
   // Debug logs
   console.log('[DeploymentPage] Debug status:', {
     repositoriesCount: repositories.length,
     deploymentLoading: deploymentContext?.loading,
     repositoryLoading: repositoryContext?.loading,
+    deployments: deploymentContext?.deployments?.length || 0,
     isDataReady: isDataReady,
-    wizardActive: wizardActive
+    wizardActive: wizardActive,
+    hasFetched: hasFetchedRef.current
   });
   
   // Handle refreshing deployments
   const handleRefresh = () => {
     if (deploymentContext?.fetchDeployments) {
+      console.log('[DeploymentPage] Manually refreshing deployments');
       deploymentContext.fetchDeployments();
+    } else {
+      console.warn('[DeploymentPage] fetchDeployments is not available in context');
     }
   };
+
+  // Ensure we fetch deployments exactly once on initial load if needed
+  useEffect(() => {
+    // Only proceed if we haven't already triggered a fetch and context is available
+    if (!hasFetchedRef.current && 
+        deploymentContext && 
+        deploymentContext.fetchDeployments && 
+        (!deploymentContext.deployments || deploymentContext.deployments.length === 0) && 
+        !deploymentContext.loading && 
+        !deploymentContext.isRefreshing) {
+      
+      console.log('[DeploymentPage] Auto-fetching deployments on mount (first time only)');
+      hasFetchedRef.current = true;
+      deploymentContext.fetchDeployments();
+    }
+  }, [deploymentContext]); // Only depend on deploymentContext's existence, not its properties
 
   // Setup event listeners once on mount
   useEffect(() => {
@@ -141,6 +166,13 @@ const DeploymentPage = () => {
       </div>
     </div>
   );
-};
+}
 
-export default DeploymentPage;
+// Export the wrapped component with AppProvider
+export default function DeploymentPage() {
+  return (
+    <AppProvider>
+      <DeploymentPageContent />
+    </AppProvider>
+  );
+}
