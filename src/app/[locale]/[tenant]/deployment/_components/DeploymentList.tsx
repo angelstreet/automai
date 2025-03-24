@@ -55,7 +55,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   } = deploymentContext || {};
   
   // Modify the loading logic to consider both loading and isRefreshing
-  const isLoading = (loading === true || isRefreshing === true) && deployments.length === 0;
+  const isLoading = (loading === true || isRefreshing === true);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -65,21 +65,30 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
+  
+  // Track if we've already fetched repositories
+  const hasAttemptedRepoFetchRef = React.useRef(false);
 
   // Set hasAttemptedLoad when we've actually finished a load attempt
   useEffect(() => {
-    console.log('[DeploymentList] Loading state:', { loading, isRefreshing, deployments: deployments.length });
+    console.log('[DeploymentList] Loading state:', { 
+      loading, 
+      isRefreshing, 
+      deployments: deployments.length,
+      hasAttemptedLoad
+    });
     
     // Only mark as attempted load when we're no longer loading/refreshing
     if (!hasAttemptedLoad && !loading && !isRefreshing) {
       console.log('[DeploymentList] Setting hasAttemptedLoad to true');
       setHasAttemptedLoad(true);
     }
-  }, [loading, isRefreshing, hasAttemptedLoad]);
+  }, [loading, isRefreshing, hasAttemptedLoad, deployments.length]);
 
   // Convert context repositories to mapping if available
   useEffect(() => {
     if (contextRepositories && contextRepositories.length > 0 && Object.keys(repositories).length === 0) {
+      console.log('[DeploymentList] Converting context repositories to mapping:', contextRepositories.length);
       const repoMap = contextRepositories.reduce((acc: Record<string, Repository>, repo: Repository) => {
         acc[repo.id] = repo;
         return acc;
@@ -88,36 +97,49 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
     }
   }, [contextRepositories, repositories]);
 
-  // Fetch repositories on component mount
+  // Fetch repositories on component mount - but only once
   useEffect(() => {
     const loadRepositories = async () => {
-      // Skip fetching repositories if we already have them loaded
-      if (Object.keys(repositories).length > 0) {
+      // Skip if we've already tried fetching or if we already have repositories
+      if (hasAttemptedRepoFetchRef.current || Object.keys(repositories).length > 0) {
         return;
       }
       
+      // Mark that we've attempted to fetch
+      hasAttemptedRepoFetchRef.current = true;
+      
       // Use repositories from context if available
       if (contextRepositories && contextRepositories.length > 0) {
+        console.log('[DeploymentList] Using repositories from context:', contextRepositories.length);
         const repoMap = contextRepositories.reduce((acc: Record<string, Repository>, repo: Repository) => {
           acc[repo.id] = repo;
           return acc;
         }, {} as Record<string, Repository>);
         setRepositories(repoMap);
         return;
+      } else if (fetchRepositories && typeof fetchRepositories === 'function') {
+        console.log('[DeploymentList] Fetching repositories');
+        try {
+          await fetchRepositories();
+        } catch (err) {
+          console.error('[DeploymentList] Error fetching repositories:', err);
+        }
+      } else {
+        console.log('[DeploymentList] No repositories available yet, will wait for context update');
       }
-      
-      console.log('[DeploymentList] No repositories available yet, will wait for context update');
     };
 
     loadRepositories();
-  }, [repositories, contextRepositories]);
+  }, [repositories, contextRepositories, fetchRepositories]);
 
   // Handle refresh button click with debounce
   const handleRefresh = () => {
     if (isRefreshing) {
       // Don't allow refresh while already refreshing
+      console.log('[DeploymentList] Refresh already in progress, ignoring request');
       return;
     }
+    console.log('[DeploymentList] Manually triggering refresh');
     fetchDeployments();
   };
 
@@ -452,23 +474,7 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                 </table>
               </div>
             </div>
-          ) : hasAttemptedLoad && displayDeployments.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
-                {activeTab === 'scheduled' ? <Clock className="h-12 w-12" /> : 
-                 activeTab === 'pending' ? <Clock className="h-12 w-12" /> :
-                 activeTab === 'active' ? <Play className="h-12 w-12" /> :
-                 activeTab === 'completed' ? <Clock className="h-12 w-12" /> :
-                 <Clock className="h-12 w-12" />}
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No deployments found</h3>
-              <p className="text-gray-500 dark:text-gray-400">
-                {searchQuery || filterStatus !== 'all' 
-                  ? 'Try changing your search or filter criteria'
-                  : 'Create your first deployment to get started'}
-              </p>
-            </div>
-          ) : (
+          ) : displayDeployments.length > 0 ? (
             <div className="overflow-x-auto">
               <div className="relative">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -527,6 +533,55 @@ const DeploymentList: React.FC<DeploymentListProps> = ({
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : hasAttemptedLoad ? (
+            <div className="text-center py-8">
+              <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
+                {activeTab === 'scheduled' ? <Clock className="h-12 w-12" /> : 
+                 activeTab === 'pending' ? <Clock className="h-12 w-12" /> :
+                 activeTab === 'active' ? <Play className="h-12 w-12" /> :
+                 activeTab === 'completed' ? <Clock className="h-12 w-12" /> :
+                 <Clock className="h-12 w-12" />}
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No deployments found</h3>
+              <p className="text-gray-500 dark:text-gray-400">
+                {searchQuery || filterStatus !== 'all' 
+                  ? 'Try changing your search or filter criteria'
+                  : 'Create your first deployment to get started'}
+              </p>
+            </div>
+          ) : (
+            // Fallback loading state when neither loading nor having data
+            <div className="overflow-x-auto">
+              <div className="relative">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
+                    <tr>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Repository
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Runtime
+                      </th>
+                      <th scope="col" className="px-2 py-1 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {renderSkeletonRows()}
                   </tbody>
                 </table>
               </div>
