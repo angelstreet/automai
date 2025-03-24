@@ -63,8 +63,28 @@ const AppSidebar = React.memo(function AppSidebar() {
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedRole = localStorage.getItem('debug_role') as Role;
+      console.log('DEBUG AppSidebar - Checking localStorage for debug_role:', storedRole);
+      
       if (storedRole) {
+        console.log('DEBUG AppSidebar - Setting debug role from localStorage:', storedRole);
         setDebugRole(storedRole);
+      }
+      
+      // Also check cached user data
+      try {
+        const cachedUserStr = localStorage.getItem('cached_user');
+        if (cachedUserStr) {
+          const cachedUser = JSON.parse(cachedUserStr);
+          console.log('DEBUG AppSidebar - Cached user data:', {
+            hasData: !!cachedUser,
+            cachedRole: cachedUser?.role,
+            timestamp: localStorage.getItem('cached_user_time')
+          });
+        } else {
+          console.log('DEBUG AppSidebar - No cached user data found in localStorage');
+        }
+      } catch (err) {
+        console.error('DEBUG AppSidebar - Error parsing cached user:', err);
       }
     }
   }, []);
@@ -89,20 +109,61 @@ const AppSidebar = React.memo(function AppSidebar() {
 
   // Get the effective role - debug role takes precedence if set
   const effectiveRole = debugRole || user?.role || 'viewer';
+  
+  // DEBUG: Log role information whenever it changes
+  React.useEffect(() => {
+    console.log('DEBUG AppSidebar - Role information:', {
+      debugRole,
+      userRole: user?.role,
+      effectiveRole,
+      localStorage: typeof window !== 'undefined' ? localStorage.getItem('debug_role') : null,
+      userInLocalStorage: typeof window !== 'undefined' ? !!localStorage.getItem('cached_user') : null,
+    });
+  }, [debugRole, user?.role, effectiveRole]);
 
   // Filter navigation groups based on role
   const filteredNavigation = React.useMemo(() => {
-    return sidebarData.navGroups
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((item) => {
+    // DEBUG: Log navigation filtering
+    console.log('DEBUG AppSidebar - Filtering navigation with role:', effectiveRole);
+    
+    const result = sidebarData.navGroups
+      .map((group) => {
+        // Filter items based on role
+        const filteredItems = group.items.filter((item) => {
           // If no roles specified, show to everyone
-          if (!item.roles || item.roles.length === 0) return true;
+          if (!item.roles || item.roles.length === 0) {
+            return true;
+          }
           // Otherwise check if user's role is in the allowed roles
-          return item.roles.includes(effectiveRole);
-        }),
-      }))
+          const hasAccess = item.roles.includes(effectiveRole);
+          
+          // DEBUG: Log item filtering for admin section
+          if (group.title === 'Admin') {
+            console.log(`DEBUG AppSidebar - Admin item "${item.title}" access:`, {
+              hasAccess,
+              itemRoles: item.roles,
+              userRole: effectiveRole
+            });
+          }
+          
+          return hasAccess;
+        });
+        
+        return {
+          ...group,
+          items: filteredItems
+        };
+      })
       .filter((group) => group.items.length > 0); // Remove empty groups
+    
+    // DEBUG: Log filtered navigation results
+    console.log('DEBUG AppSidebar - Filtered navigation result:', {
+      totalGroups: result.length,
+      groups: result.map(g => g.title),
+      hasAdminGroup: result.some(g => g.title === 'Admin')
+    });
+    
+    return result;
   }, [effectiveRole]);
 
   // Always ensure sidebar is visible, with fallback mechanisms

@@ -166,10 +166,12 @@ export function UserProvider({
         'user.getUser',
         async () => {
           log('[UserContext] fetchUserData called, force:', force);
+          console.log('DEBUG UserContext - Fetching user data, force:', force);
           try {
             // On the server, return null to avoid hydration mismatches
             if (typeof window === 'undefined') {
               log('[UserContext] Server-side render, returning null');
+              console.log('DEBUG UserContext - Server-side render, returning null');
               return null;
             }
 
@@ -190,6 +192,11 @@ export function UserProvider({
                         Math.round(timeDiff / 1000),
                         'seconds',
                       );
+                      console.log('DEBUG UserContext - Using cached user data:', {
+                        age: Math.round(timeDiff / 1000) + ' seconds',
+                        role: parsedUser?.role,
+                        tenantId: parsedUser?.tenant_id
+                      });
                       return parsedUser;
                     }
                     log(
@@ -211,8 +218,15 @@ export function UserProvider({
 
             // Fetch fresh user data directly from server action
             log('[UserContext] Fetching fresh user data from server');
+            console.log('DEBUG UserContext - Fetching fresh user data from server');
             const authUser = await getUser();
             log('[UserContext] Server returned auth user:', authUser ? 'found' : 'not found');
+            console.log('DEBUG UserContext - Server returned auth user:', authUser ? {
+              id: authUser.id,
+              email: authUser.email,
+              role: (authUser as any).role || authUser?.user_metadata?.role || 'not found',
+              tenant: authUser.tenant_name
+            } : 'not found');
 
             if (!authUser) return null;
 
@@ -224,12 +238,37 @@ export function UserProvider({
                 tenant: user.tenant_name,
                 role: user.role,
               });
+              
+              console.log('DEBUG UserContext - Successfully mapped user data:', {
+                id: user.id,
+                tenant: user.tenant_name,
+                role: user.role,
+                authUserRole: (authUser as any).role,
+                authUserMetadataRole: authUser?.user_metadata?.role,
+                timestamp: new Date().toISOString()
+              });
 
               // Cache the user in localStorage
               if (typeof window !== 'undefined') {
                 log('[UserContext] Storing user data in localStorage cache');
+                console.log('DEBUG UserContext - Storing user data in localStorage cache', {
+                  role: user.role,
+                  tenant: user.tenant_name,
+                  timestamp: new Date().toISOString()
+                });
                 localStorage.setItem(STORAGE_KEYS.CACHED_USER, JSON.stringify(user));
                 localStorage.setItem(STORAGE_KEYS.CACHED_USER_TIME, Date.now().toString());
+                
+                // Double check storage
+                try {
+                  const storedUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.CACHED_USER) || '{}');
+                  console.log('DEBUG UserContext - Verified stored user data:', {
+                    role: storedUser.role,
+                    storedCorrectly: storedUser.role === user.role
+                  });
+                } catch (e) {
+                  console.error('DEBUG UserContext - Error verifying stored user:', e);
+                }
               }
 
               // Cache in persistedData for cross-navigation
@@ -395,11 +434,21 @@ export function UserProvider({
 export function useUser() {
   // Try to get the global version first if in browser
   if (typeof window !== 'undefined' && (window as any).__userContext) {
+    console.log('DEBUG useUser - Using global user context from window:', {
+      hasUser: !!(window as any).__userContext?.user,
+      userRole: (window as any).__userContext?.user?.role || 'no role'
+    });
     return (window as any).__userContext;
   }
   
   // Otherwise use React context
   const context = useContext(UserContext);
+  
+  console.log('DEBUG useUser - Using React context:', {
+    hasUser: !!context?.user,
+    userRole: context?.user?.role || 'no role',
+    isLoading: context?.loading
+  });
 
   // If the context is null for some reason, return a safe default object
   // This prevents destructuring errors in components

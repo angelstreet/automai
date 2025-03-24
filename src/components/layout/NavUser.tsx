@@ -33,6 +33,16 @@ export function NavUser({ user }: NavUserProps) {
 
   // Display debug role indicator if active
   const debugRole = typeof window !== 'undefined' ? window.__debugRole : null;
+  
+  // DEBUG: Log user role information in NavUser
+  React.useEffect(() => {
+    console.log('DEBUG NavUser - Role information:', {
+      currentUser: user,
+      userRole: user?.role,
+      debugRole,
+      windowDebugRole: typeof window !== 'undefined' ? window.__debugRole : null
+    });
+  }, [user, debugRole]);
 
   const handleSignOut = async () => {
     try {
