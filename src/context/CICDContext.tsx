@@ -19,7 +19,7 @@ import {
   getCICDJobs,
 } from '@/app/[locale]/[tenant]/cicd/actions';
 import { AuthUser } from '@/types/user';
-import { useUser } from './UserContext';
+import { useUser } from './UserContext'; // Direct import to avoid circular dependency
 import {
   CICDProviderType,
   CICDProviderPayload,

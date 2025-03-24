@@ -25,7 +25,7 @@ import {
 import { AuthUser } from '@/types/user';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 import { persistedData } from './AppContext';
-import { useUser } from '@/context'; // Import useUser from centralized context
+import { useUser } from './UserContext'; // Import directly from UserContext to avoid circular dependency
 
 // Singleton flag to prevent multiple instances
 let REPOSITORY_CONTEXT_INITIALIZED = false;
