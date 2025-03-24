@@ -2,15 +2,17 @@
 
 ## Overview
 
-This document outlines the plan to optimize our context system architecture to resolve excessive re-rendering, redundant data fetching, and improve overall application performance.
+This document outlines a comprehensive plan to optimize our Next.js application's context system to resolve redundant API calls, prevent excessive re-rendering, and improve overall application performance. The focus is on implementing a true singleton pattern for context providers, ensuring data is fetched only once and properly shared across components.
 
 ## Current Architecture Issues
 
-1. **Multiple isolated contexts** with individual initialization
-2. **Global mutable state** (`persistedData`) shared across contexts
-3. **Excessive Bridge re-rendering** due to unoptimized dependency arrays
-4. **Redundant data fetching** and initialization checks
-5. **Inefficient persistence** with direct localStorage access
+1. **Redundant API calls** - The same data (especially user data) is fetched multiple times across different pages
+2. **Inconsistent context access patterns** - Direct imports from specific context files instead of the centralized entry point
+3. **Missing cross-context communication** - Contexts don't effectively share data, causing duplicate fetching
+4. **Non-singleton context instances** - Multiple instances of the same context provider in the component tree
+5. **Inefficient state management** - Excessive re-renders due to unoptimized context values and dependency arrays
+6. **Inadequate request protection** - No mechanism to prevent duplicate API calls for the same data
+7. **Complex persistence logic** - Direct localStorage access with inefficient serialization
 
 ## Migration Phases
 
