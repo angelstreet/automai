@@ -54,9 +54,6 @@ const initialDeploymentData: DeploymentData = {
     email: false,
     slack: false,
   },
-  jenkinsConfig: {
-    enabled: false,
-  },
 };
 
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
@@ -337,16 +334,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
       }
     };
 
-    const handleJenkinsConfigChange = (config: any) => {
-      setDeploymentData((prev) => ({
-        ...prev,
-        jenkinsConfig: {
-          ...(prev.jenkinsConfig || {}),
-          ...config,
-        },
-      }));
-    };
-
     const handleAddEnvVar = () => {
       setDeploymentData((prev) => ({
         ...prev,
@@ -416,7 +403,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           environmentVars: deploymentData.environmentVars.filter((env) => env.key && env.value),
           parameters: deploymentData.scriptParameters, // Changed from scriptParameters to parameters
           notifications: deploymentData.notifications,
-          jenkinsConfig: deploymentData.jenkinsConfig,
           scriptMapping: scriptMapping // Add script mapping for better script resolution
         };
 
@@ -646,11 +632,9 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
             />
           )}
 
-          {/* Step 5: Review with Jenkins Integration */}
+          {/* Step 5: Review */}
           {step === 5 && (
             <DeploymentWizardStep5
-              showJenkinsView={showJenkinsView}
-              setShowJenkinsView={setShowJenkinsView}
               scriptIds={deploymentData.scriptIds}
               scriptParameters={deploymentData.scriptParameters}
               hostIds={deploymentData.hostIds}
@@ -660,16 +644,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
               repeatCount={deploymentData.repeatCount || 0}
               repositoryScripts={repositoryScripts}
               availableHosts={availableHosts}
-              jenkinsConfig={deploymentData.jenkinsConfig || { enabled: false }}
-              onJenkinsConfigChange={(enabled, config) => {
-                setDeploymentData((prev) => ({
-                  ...prev,
-                  jenkinsConfig: {
-                    ...config,
-                    enabled,
-                  },
-                }));
-              }}
               onPrevStep={handlePrevStep}
               isSubmitting={isCreating}
             />

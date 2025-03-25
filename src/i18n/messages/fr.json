@@ -350,6 +350,7 @@
       "createDeployment": "Créer le déploiement",
       "jenkinsIntegration": "Intégration Jenkins",
       "jenkinsPipelinePreview": "Aperçu du Pipeline Jenkins",
+      "pipelinePreview": "Aperçu du Pipeline",
       "deploymentSummary": "Résumé du déploiement",
       "selectedScripts": "Scripts sélectionnés",
       "scriptPath": "Chemin du script",

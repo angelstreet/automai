@@ -365,6 +365,7 @@
       "createDeployment": "Create Deployment",
       "jenkinsIntegration": "Jenkins Integration",
       "jenkinsPipelinePreview": "Jenkins Pipeline Preview",
+      "pipelinePreview": "Pipeline Preview",
       "deploymentSummary": "Deployment Summary",
       "selectedScripts": "Selected Scripts",
       "scriptPath": "Script Path",
