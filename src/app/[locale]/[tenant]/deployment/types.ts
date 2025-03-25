@@ -131,30 +131,23 @@ export interface CICDJob {
 
 export interface DeploymentFormData {
   name: string;
-  description: string;
+  description?: string;
   repository: string;
-  selectedScripts: string[];
-  selectedHosts: string[];
-  schedule: 'now' | 'later';
-  scheduledTime: string;
+  selectedScripts?: string[];
+  selectedHosts?: string[];
+  schedule: 'now' | 'later' | 'cron';
+  schedule_type?: 'now' | 'later' | 'cron';
+  scheduledTime?: string;
   cronExpression?: string;
   repeatCount?: number;
-  environmentVars: Array<{ key: string; value: string }>;
-  parameters?: Record<string, any>;
-  notifications: {
+  environmentVars?: Array<{ key: string; value: string }>;
+  parameters?: Array<{ script_path: string; raw: string }>;
+  notifications?: {
     email: boolean;
     slack: boolean;
   };
-  provider_id: string;
-  // Maps script IDs to their file paths for better script resolution
-  scriptMapping?: Record<
-    string,
-    {
-      path: string;
-      name: string;
-      type: string;
-    }
-  >;
+  provider_id?: string;
+  scriptMapping?: Record<string, { path: string; name: string; type: string }>;
 }
 
 // Add to deployment data

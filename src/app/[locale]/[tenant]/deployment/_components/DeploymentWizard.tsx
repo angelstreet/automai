@@ -455,7 +455,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
             scriptMapping[scriptId] = {
               path: script.path,
               name: script.name,
-              type: script.type || 'shell' // Default to shell if type is not specified
+              type: script.type || 'shell'
             };
           }
         });
@@ -471,6 +471,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           }),
           selectedHosts: deploymentData.hostIds,
           schedule: deploymentData.schedule,
+          schedule_type: deploymentData.schedule,
           scheduledTime: deploymentData.scheduledTime || '',
           cronExpression: deploymentData.cronExpression || '',
           repeatCount: deploymentData.repeatCount || 0,
@@ -485,7 +486,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           }),
           notifications: deploymentData.notifications,
           scriptMapping: scriptMapping,
-          provider_id: cicdProviders.length > 0 ? cicdProviders[0].id : '' // Use the first CICD provider's ID
+          provider_id: cicdProviders.length > 0 ? cicdProviders[0].id : ''
         };
 
         console.log('[DeploymentWizard] Submitting deployment with data:', formData);
@@ -728,6 +729,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
               availableHosts={availableHosts}
               onPrevStep={handlePrevStep}
               isSubmitting={isCreating}
+              selectedRepository={deploymentData.selectedRepository}
             />
           )}
         </form>

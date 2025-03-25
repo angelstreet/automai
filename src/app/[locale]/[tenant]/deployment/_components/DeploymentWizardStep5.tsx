@@ -18,6 +18,7 @@ interface DeploymentWizardStep5Props {
   availableHosts: HostType[];
   onPrevStep: () => void;
   isSubmitting?: boolean;
+  selectedRepository: any;
 }
 
 const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
@@ -32,12 +33,105 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   availableHosts,
   onPrevStep,
   isSubmitting = false,
+  selectedRepository,
 }) => {
   const t = useTranslations('deployment.wizard');
   const cicdContext = useCICD();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProviderId, setSelectedProviderId] = useState<string>();
   const [toggleView, setToggleView] = useState(false);
+  const [pipelinePreview, setPipelinePreview] = useState<string>('');
+
+  // Generate pipeline preview
+  const generatePipelinePreview = () => {
+    if (!selectedRepository?.url) {
+      console.warn('No repository URL available for pipeline preview');
+      return;
+    }
+
+    // Generate parameters section
+    const parameters = scriptIds.map((scriptId) => {
+      const script = repositoryScripts.find(s => s.id === scriptId);
+      const params = scriptParameters[scriptId]?.['raw'] || '';
+      return `        string(name: '${script?.path || scriptId}_params', defaultValue: '${params}', description: 'Parameters for ${script?.path || scriptId}')`;
+    }).join('\n');
+
+    // Generate triggers section based on schedule
+    let triggers = '';
+    if (schedule === 'cron' && cronExpression) {
+      triggers = `
+    triggers {
+        cron('${cronExpression}')
+    }`;
+    }
+
+    // Generate script execution steps
+    const scriptSteps = scriptIds.map((scriptId) => {
+      const script = repositoryScripts.find(s => s.id === scriptId);
+      return `                    // Execute ${script?.path || scriptId}
+                    withEnv(['HOSTS=${hostIds.join(',')}']) {
+                        sh """
+                            automai-deploy \\
+                                ${script?.path || scriptId} \\
+                                \${params.${script?.path || scriptId}_params}
+                        """
+                    }`;
+    }).join('\n\n');
+
+    const pipeline = `pipeline {
+    agent any
+    
+    parameters {
+${parameters}
+    }${triggers}
+    
+    options {
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                // Clean workspace before checkout
+                cleanWs()
+                // Checkout specific repository
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: '${selectedRepository.url}'
+                    ]]
+                ])
+            }
+        }
+        
+        stage('Deploy Scripts') {
+            steps {
+                script {
+${scriptSteps}
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo 'Deployment completed successfully'
+        }
+        failure {
+            echo 'Deployment failed'
+        }
+    }
+}`;
+
+    setPipelinePreview(pipeline);
+  };
+
+  // Update pipeline preview when relevant props change
+  useEffect(() => {
+    generatePipelinePreview();
+  }, [scriptIds, scriptParameters, hostIds, schedule, cronExpression, selectedRepository?.url]);
 
   // Auto-select first provider on mount
   useEffect(() => {
@@ -125,30 +219,7 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
             
             <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 p-4 overflow-auto max-h-96">
               <pre className="text-xs text-gray-300 font-mono whitespace-pre">
-{`pipeline {
-    agent any
-    
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-        
-        stage('Deploy Scripts') {
-            steps {
-                script {
-                    // Deploy scripts to selected hosts
-                    ${scriptIds.map((scriptId) => {
-                      const script = repositoryScripts.find(s => s.id === scriptId);
-                      const params = scriptParameters[scriptId]?.['raw'] || '';
-                      return `sh "automai-deploy ${script?.path || scriptId} ${params}"`;
-                    }).join('\n                    ')}
-                }
-            }
-        }
-    }
-}`}
+                {pipelinePreview}
               </pre>
             </div>
           </div>

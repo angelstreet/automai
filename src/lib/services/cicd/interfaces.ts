@@ -72,8 +72,48 @@ export interface CICDProvider {
   getBuildLogs(jobId: string, buildId: string): Promise<CICDResponse<string>>;
 
   // Create a new job
-  createJob(jobName: string, jobXml: string, folderPath?: string): Promise<CICDResponse<string>>;
+  createJob(jobName: string, pipelineConfig: CICDPipelineConfig, folderPath?: string): Promise<CICDResponse<string>>;
 
   // Delete a job
   deleteJob(jobId: string, folderPath?: string): Promise<CICDResponse<boolean>>;
+}
+
+/**
+ * Generic CI/CD Pipeline Configuration
+ */
+export interface CICDPipelineConfig {
+  name: string;
+  description?: string;
+  repository: {
+    id: string;
+    // Add other repository-specific fields as needed
+  };
+  stages: CICDStage[];
+  parameters?: CICDParameter[];
+  triggers?: CICDTrigger[];
+}
+
+export interface CICDStage {
+  name: string;
+  steps: CICDStep[];
+}
+
+export interface CICDStep {
+  type: string;
+  command?: string;
+  script?: string;
+  parameters?: Record<string, any>;
+}
+
+export interface CICDParameter {
+  name: string;
+  type: 'string' | 'text' | 'boolean' | 'choice';
+  description?: string;
+  defaultValue?: any;
+  choices?: string[];
+}
+
+export interface CICDTrigger {
+  type: 'webhook' | 'schedule' | 'manual';
+  config?: Record<string, any>;
 }

@@ -10,6 +10,7 @@ import { unstable_cache } from 'next/cache';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { serverCache } from '@/lib/cache';
+import { CICDPipelineConfig, CICDParameter } from '@/lib/services/cicd/interfaces';
 
 // Generic server action result type
 type ServerActionResult<T> = {
@@ -272,19 +273,43 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       };
     }
 
-    // Generate Jenkins job XML
-    const { generateJenkinsPipelineXml } = await import('@/lib/services/cicd/xml-generators');
-    const jobXml = generateJenkinsPipelineXml(
-      formData.name,
-      formData.repository,
-      formData.selectedScripts || [],
-      rawParameters,
-      formData.selectedHosts || []
-    );
+    // Create the pipeline configuration
+    const pipelineConfig: CICDPipelineConfig = {
+      name: formData.name,
+      description: formData.description || formData.name,
+      repository: {
+        id: formData.repository
+      },
+      stages: [
+        {
+          name: 'Deploy Scripts',
+          steps: formData.selectedScripts?.map((scriptPath, index) => ({
+            type: scriptPath.endsWith('.py') ? 'script' : 'command',
+            script: scriptPath,
+            command: scriptPath,
+            parameters: formData.parameters?.[index]?.raw ? {
+              args: formData.parameters[index].raw
+            } : undefined
+          })) || []
+        }
+      ],
+      parameters: formData.parameters?.map((param: { script_path: string; raw: string }) => ({
+        name: param.script_path,
+        type: 'text' as const,
+        description: `Parameters for script: ${param.script_path}`,
+        defaultValue: param.raw || ''
+      })) || [],
+      triggers: formData.schedule_type === 'cron' ? [{
+        type: 'schedule' as const,
+        config: {
+          schedule: formData.cronExpression
+        }
+      }] : []
+    };
 
     // Create the actual Jenkins job
     const jobName = `deployment-${Date.now()}`;
-    const createJobResult = await provider.data.createJob(jobName, jobXml);
+    const createJobResult = await provider.data.createJob(jobName, pipelineConfig);
 
     if (!createJobResult.success) {
       console.error('❌ [CICD_JOB] Failed to create Jenkins job:', createJobResult.error);

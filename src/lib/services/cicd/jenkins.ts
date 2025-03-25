@@ -5,6 +5,8 @@ import {
   CICDProvider,
   CICDProviderConfig,
   CICDResponse,
+  CICDPipelineConfig,
+  CICDParameter,
 } from './interfaces';
 
 /**
@@ -553,64 +555,155 @@ export class JenkinsProvider implements CICDProvider {
   }
 
   /**
+   * Generate Jenkins pipeline script from generic CI/CD config
+   */
+  private generatePipelineScript(config: CICDPipelineConfig): string {
+    // Generate the pipeline parameters section
+    const parameters = config.parameters?.length 
+      ? `parameters {\n${config.parameters.map(param => {
+          switch (param.type) {
+            case 'string':
+              return `        string(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')`
+            case 'text':
+              return `        text(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')`
+            case 'boolean':
+              return `        booleanParam(name: '${param.name}', defaultValue: ${param.defaultValue || false}, description: '${param.description || ''}')`
+            case 'choice':
+              return `        choice(name: '${param.name}', choices: ${JSON.stringify(param.choices || [])}, description: '${param.description || ''}')`
+            default:
+              return ''
+          }
+        }).join('\n')}\n    }`
+      : '';
+
+    // Generate the pipeline triggers section
+    const triggers = config.triggers?.length
+      ? `triggers {\n${config.triggers.map(trigger => {
+          switch (trigger.type) {
+            case 'webhook':
+              return '        githubPush()'
+            case 'schedule':
+              return `        cron('${trigger.config?.schedule || ''}')`
+            default:
+              return ''
+          }
+        }).filter(Boolean).join('\n')}\n    }`
+      : '';
+
+    // Generate the pipeline stages
+    const stages = config.stages.map(stage => `
+        stage('${stage.name}') {
+            steps {
+                script {
+                    ${stage.steps.map(step => {
+                      if (step.type === 'command') {
+                        return `sh "${step.command}"`;
+                      } else if (step.type === 'script') {
+                        const params = step.parameters ? Object.entries(step.parameters).map(([k,v]) => `${k}=${v}`).join(' ') : '';
+                        return `sh "python ${step.script} ${params}"`;
+                      }
+                      return '';
+                    }).join('\n                    ')}
+                }
+            }
+        }`).join('\n');
+
+    // Generate the complete pipeline
+    return `pipeline {
+    agent any
+    
+    ${parameters ? parameters + '\n' : ''}
+    ${triggers ? triggers + '\n' : ''}
+    options {
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+${stages}
+    }
+    
+    post {
+        success {
+            echo 'Pipeline completed successfully'
+        }
+        failure {
+            echo 'Pipeline failed'
+        }
+    }
+}`;
+  }
+
+  /**
    * Create a new Jenkins job
    */
   async createJob(
     jobName: string,
-    jobXml: string,
+    pipelineConfig: CICDPipelineConfig,
     folderPath?: string,
   ): Promise<CICDResponse<string>> {
     try {
+      // Generate Jenkins pipeline script
+      const pipelineScript = this.generatePipelineScript(pipelineConfig);
+
       // Construct the API endpoint - handle folder path if specified
       let endpoint = '/createItem?name=' + encodeURIComponent(jobName);
 
       // If folder path is specified, modify the endpoint to create in that folder
       if (folderPath) {
-        // Format: /job/folder/job/subfolder/createItem?name=jobName
         const folderSegments = folderPath.split('/').filter(Boolean);
         endpoint =
           folderSegments.map((segment) => `/job/${encodeURIComponent(segment)}`).join('') +
           endpoint;
       }
 
-      console.log(`[JENKINS] Creating new job at endpoint: ${endpoint}`);
-      console.log(`[JENKINS] Authorization header present: ${!!this.authHeader}`);
-      console.log(`[JENKINS] Token auth configured: ${this.config?.auth_type === 'token'}`);
+      console.log(`[JENKINS] Creating new pipeline job at endpoint: ${endpoint}`);
 
-      // For debugging purposes, log auth details (without revealing sensitive information)
-      if (this.config?.auth_type === 'token') {
-        console.log(
-          `[JENKINS] Token auth username: ${this.config.credentials.username || 'admin'}`,
-        );
-        console.log(`[JENKINS] Token present: ${!!this.config.credentials.token}`);
-      }
+      // Create the pipeline job configuration
+      const jobConfig = {
+        name: jobName,
+        description: pipelineConfig.description || pipelineConfig.name,
+        script: pipelineScript,
+      };
 
-      // Make POST request to Jenkins API with XML content
+      // Make POST request to Jenkins API to create the pipeline job
       const result = await this.jenkinsRequest<any>(endpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/xml',
+          'Content-Type': 'application/json',
         },
-        body: jobXml,
+        body: JSON.stringify({
+          name: jobConfig.name,
+          description: jobConfig.description,
+          mode: 'NORMAL',
+          definition: {
+            script: jobConfig.script,
+            sandbox: true,
+          },
+        }),
       });
 
       if (!result.success) {
-        console.error(`[JENKINS] Failed to create job: ${result.error}`);
+        console.error(`[JENKINS] Failed to create pipeline job: ${result.error}`);
         return result;
       }
 
-      console.log(`[JENKINS] Job created successfully: ${jobName}`);
+      console.log(`[JENKINS] Pipeline job created successfully: ${jobName}`);
 
-      // Return the job name as confirmation
       return {
         success: true,
         data: jobName,
       };
     } catch (error: any) {
-      console.error(`[JENKINS] Error creating job ${jobName}:`, error);
+      console.error(`[JENKINS] Error creating pipeline job ${jobName}:`, error);
       return {
         success: false,
-        error: error.message || `Failed to create Jenkins job ${jobName}`,
+        error: error.message || `Failed to create Jenkins pipeline job ${jobName}`,
       };
     }
   }
