@@ -285,8 +285,26 @@ export const HostProvider: React.FC<{
       }
 
       // First check if we have persisted data
+      if (persistedData?.hosts?.length > 0) {
+        log('[HostContext] Using persistedData hosts:', persistedData.hosts.length);
+
+        // Update state with persisted data
+        setState((prevState) => ({
+          ...prevState,
+          hosts: persistedData.hosts,
+          filteredHosts: persistedData.hosts,
+          loading: false,
+        }));
+
+        initialized.current = true;
+        // Still fetch in background to refresh data
+        fetchHosts();
+        return;
+      }
+
+      // Check legacy persistedData format
       if (persistedData?.hostData?.hosts?.length > 0) {
-        log('[HostContext] Using persisted host data:', persistedData.hostData.hosts.length);
+        log('[HostContext] Using legacy persisted host data:', persistedData.hostData.hosts.length);
 
         // Update state with persisted data
         setState((prevState) => ({
@@ -297,6 +315,8 @@ export const HostProvider: React.FC<{
         }));
 
         initialized.current = true;
+        // Still fetch in background to refresh data
+        fetchHosts();
         return;
       }
 
@@ -330,7 +350,7 @@ export const HostProvider: React.FC<{
     };
 
     fetchData();
-  }, []); 
+  }, [fetchHosts]); 
 
   // Rest of the implementation (remaining functions)...
   // Add other methods like getHostById, addHost, etc.
@@ -392,15 +412,11 @@ export const HostProvider: React.FC<{
 
   // Persist host data for cross-page navigation
   useEffect(() => {
-    if (typeof persistedData !== 'undefined') {
-      persistedData.hostData = {
-        hosts: state.hosts,
-        loading: state.loading,
-        error: state.error,
-      };
+    if (typeof persistedData !== 'undefined' && state.hosts.length > 0) {
+      persistedData.hosts = state.hosts;
       log('[HostContext] Persisted host data for cross-page navigation');
     }
-  }, [state.hosts, state.loading, state.error]);
+  }, [state.hosts]);
   
   return <HostContext.Provider value={contextValue}>{children}</HostContext.Provider>;
 };

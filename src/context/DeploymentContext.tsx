@@ -216,10 +216,34 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: any 
   const debouncedFetchDeployments = useDebounce(fetchDeployments, 300);
 
   useEffect(() => {
-    if (!state.isInitialized) {
-      console.log('[DeploymentContext] Initializing data');
+    const initializeDeployments = async () => {
+      // Early return if already initialized
+      if (state.isInitialized) {
+        return;
+      }
+
+      // First check if we have persisted data
+      if (persistedData?.deployments?.length > 0) {
+        console.log('[DeploymentContext] Using persistedData deployments:', persistedData.deployments.length);
+
+        // Update state with persisted data
+        setState((prevState) => ({
+          ...prevState,
+          deployments: persistedData.deployments,
+          loading: false,
+          isInitialized: true
+        }));
+
+        // Still fetch in background to refresh data
+        setTimeout(() => debouncedFetchDeployments(), 100);
+        return;
+      }
+
+      console.log('[DeploymentContext] Initializing data (no cached data)');
       debouncedFetchDeployments();
-    }
+    };
+
+    initializeDeployments();
   }, [debouncedFetchDeployments, state.isInitialized]);
 
   useEffect(() => {
@@ -462,16 +486,17 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: any 
 
   // Persist deployment data for cross-page navigation
   useEffect(() => {
-    if (typeof persistedData !== 'undefined') {
-      persistedData.deploymentData = {
-        deployments: state.deployments,
-        repositories: state.repositories,
-        loading: state.loading,
-        error: state.error,
-      };
+    if (typeof persistedData !== 'undefined' && (state.deployments.length > 0 || state.repositories.length > 0)) {
+      persistedData.deployments = state.deployments;
+      
+      // Only update repositories if they're not already set elsewhere
+      if (state.repositories.length > 0 && (!persistedData.repositories || persistedData.repositories.length === 0)) {
+        persistedData.repositories = state.repositories;
+      }
+      
       console.log('[DeploymentContext] Persisted deployment data');
     }
-  }, [state.deployments, state.repositories, state.loading, state.error]);
+  }, [state.deployments, state.repositories]);
   
   return <DeploymentContext.Provider value={contextValue}>{children}</DeploymentContext.Provider>;
 };

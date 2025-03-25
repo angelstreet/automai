@@ -11,7 +11,6 @@ import React, {
 } from 'react';
 import { UserProvider, useUser as useDirectUserContext } from './UserContext';
 import { AppContextType } from '@/types/context/app';
-import { UserContextType } from '@/types/context/user';
 
 // Debug mode
 const DEBUG = false;
@@ -27,6 +26,7 @@ export const persistedData: {
   starredRepositories?: any[];
   hosts?: any[];
   deployments?: any[];
+  cicd?: any[];
   [key: string]: any;
 } = {
   user: null,

@@ -376,10 +376,32 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      // First check if we have persisted data
+      // First check if we have persisted data from persistedData
+      if (persistedData?.cicd?.providers?.length > 0) {
+        log(
+          `${LOG_PREFIX} Using persistedData CICD data:`,
+          persistedData.cicd.providers.length,
+          'providers',
+        );
+
+        // Update state with persisted data
+        setState((prevState) => ({
+          ...prevState,
+          providers: persistedData.cicd.providers,
+          jobs: persistedData.cicd.jobs || [],
+          loading: false,
+        }));
+
+        initialized.current = true;
+        // Still fetch in background to refresh data
+        fetchProviders();
+        return;
+      }
+
+      // Check legacy persistedData format
       if (persistedData?.cicdData?.providers?.length > 0) {
         log(
-          `${LOG_PREFIX} Using persisted CICD data:`,
+          `${LOG_PREFIX} Using legacy persisted CICD data:`,
           persistedData.cicdData.providers.length,
           'providers',
         );
@@ -393,6 +415,8 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }));
 
         initialized.current = true;
+        // Still fetch in background to refresh data
+        fetchProviders();
         return;
       }
 
@@ -432,7 +456,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     initializeCICD();
-  }, [state.currentUser]); 
+  }, [state.currentUser, fetchProviders]); 
 
   // Add one useful log when providers are loaded
   useEffect(() => {
@@ -445,8 +469,8 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Persist CICD data for cross-page navigation
   useEffect(() => {
-    if (typeof persistedData !== 'undefined') {
-      persistedData.cicdData = {
+    if (typeof persistedData !== 'undefined' && state.providers.length > 0) {
+      persistedData.cicd = {
         providers: state.providers,
         jobs: state.jobs,
         loading: state.loading,
