@@ -166,7 +166,7 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         };
       }
     });
-  }, [protectedFetch, safeUpdateState, state]);
+  }, [protectedFetch, safeUpdateState, state.currentUser]);
 
   // Get provider by ID
   const getProviderById = useCallback(
