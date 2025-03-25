@@ -66,6 +66,7 @@ export default function AuthRedirectPage() {
       try {
         // If there's an error in the URL, show it
         if (errorParam) {
+          console.error('🔐 AUTH-REDIRECT: Error in URL params:', errorParam, errorDescription);
           setAuthError(new Error(errorDescription || errorParam));
           setIsProcessing(false);
           return;
@@ -73,28 +74,55 @@ export default function AuthRedirectPage() {
 
         // Get the full URL for the auth callback
         const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
-        console.log('🔐 AUTH-REDIRECT: Processing URL:', fullUrl);
+        console.log('🔐 AUTH-REDIRECT: Full URL for auth callback:', fullUrl);
+        console.log('🔐 AUTH-REDIRECT: Code value:', code?.substring(0, 6) + '...');
         
         setLoading(true);
-        const result = await exchangeCodeForSession(fullUrl);
+        
+        console.log('🔐 AUTH-REDIRECT: Exchanging code for session...');
+        
+        try {
+          const result = await exchangeCodeForSession(fullUrl);
+          
+          console.log('🔐 AUTH-REDIRECT: Exchange result:', {
+            success: result.success,
+            hasError: !!result.error,
+            hasRedirectUrl: !!result.redirectUrl
+          });
 
-        if (!result.success) {
-          console.error('🔐 AUTH-REDIRECT: Auth failed:', result.error);
-          setAuthError(new Error(result.error || 'Authentication failed'));
+          if (!result.success) {
+            console.error('🔐 AUTH-REDIRECT: Auth failed:', JSON.stringify(result.error));
+            setAuthError(new Error(`Auth failed: ${result.error || 'Authentication failed'}`));
+            setIsProcessing(false);
+            return;
+          }
+
+          // After successful auth, refresh user data
+          console.log('🔐 AUTH-REDIRECT: Auth successful, refreshing user data');
+          await refreshUser();
+          console.log('🔐 AUTH-REDIRECT: User data refreshed');
+
+          // Handle redirect using Next.js router
+          if (result.redirectUrl) {
+            console.log('🔐 AUTH-REDIRECT: Redirecting to', result.redirectUrl);
+            setHasRedirected(true);
+            router.push(result.redirectUrl);
+          } else {
+            // Fallback redirect if no specific URL is provided
+            console.log('🔐 AUTH-REDIRECT: No redirect URL, using fallback');
+            setHasRedirected(true);
+            router.push(`/${locale}/trial/dashboard`);
+          }
+        } catch (exchangeError: unknown) {
+          console.error('🔐 AUTH-REDIRECT: Error exchanging code for session:', exchangeError);
+          const errorMessage = exchangeError instanceof Error 
+            ? exchangeError.message 
+            : 'Unknown error';
+          setAuthError(new Error(`Error exchanging code: ${errorMessage}`));
           setIsProcessing(false);
-          return;
-        }
-
-        // After successful auth, refresh user data
-        await refreshUser();
-
-        // Handle redirect using Next.js router
-        if (result.redirectUrl) {
-          setHasRedirected(true);
-          router.push(result.redirectUrl);
         }
       } catch (err) {
-        console.error('Error in auth process:', err);
+        console.error('🔐 AUTH-REDIRECT: Error in auth process:', err);
         setAuthError(err instanceof Error ? err : new Error('Authentication failed'));
         setIsProcessing(false);
       }

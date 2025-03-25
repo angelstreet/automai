@@ -265,6 +265,15 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   // Fetch repositories safely with better null handling
   const fetchRepositories = useCallback(async (): Promise<Repository[]> => {
     console.log('[RepositoryContext] Starting fetchRepositories...');
+    
+    // Check for authentication before even trying 
+    const isAuthenticated = !!userContext?.user;
+    if (!isAuthenticated) {
+      console.log('[RepositoryContext] Not authenticated, skipping repository fetch');
+      // Return empty array without error
+      return [] as Repository[];
+    }
+    
     const result = await protectedFetch('fetchRepositories', async () => {
       try {
         // Check for user data first
@@ -272,14 +281,14 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
         console.log('[RepositoryContext] User data:', user ? { id: user.id, tenant: user.tenant_name } : 'No user');
         
         if (!user) {
-          console.log('[RepositoryContext] No user data available');
+          console.log('[RepositoryContext] No user data available, returning empty repository list');
           safeUpdateState(
             setState,
             state,
             {
               ...initialRepositoryData,
               loading: false,
-              error: 'No user data available',
+              error: null, // Don't set error for unauthenticated state
             },
             'no-user-data',
           );
@@ -360,7 +369,7 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     });
 
     return result || ([] as Repository[]);
-  }, [fetchUserData, state, protectedFetch, safeUpdateState]);
+  }, [fetchUserData, state, protectedFetch, safeUpdateState, userContext?.user]);
 
   // Filter repositories - fix URL optional check
   const filterRepositories = useCallback(
@@ -421,6 +430,14 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       // Prevent double initialization
       if (initialized.current) {
         log('[RepositoryContext] Already initialized, skipping');
+        return;
+      }
+
+      // Check for authentication first
+      const isAuthenticated = !!userContext?.user;
+      if (!isAuthenticated) {
+        log('[RepositoryContext] User not authenticated, skipping initialization');
+        // Don't mark as initialized so we can try again if user authenticates
         return;
       }
 

@@ -95,6 +95,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider value={appContextRef.current}>
       <UserProvider appContextRef={appContextRef} onAuthChange={handleAuthUpdate}>
         {isAuthenticated === true ? (
+          // Only render data-fetching providers when authenticated
           <HostProvider userData={null}>
             <RepositoryProvider>
               <DeploymentProvider>
@@ -106,6 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           </HostProvider>
         ) : (
           // When not authenticated or still checking, only render children without other contexts
+          // They will use the fallback values from the individual useXXX hooks
           children
         )}
       </UserProvider>
@@ -161,6 +163,23 @@ export function useUser() {
 
 // Simplified hooks with better fallbacks for other contexts
 export function useHost() {
+  // First check authentication status
+  const userContext = useContext(UserContext);
+  const isAuthenticated = !!userContext?.user;
+  
+  // If not authenticated, return a completely inactive version
+  if (!isAuthenticated) {
+    return {
+      hosts: [],
+      loading: false,
+      error: null,
+      fetchHosts: async () => {},
+      createHost: async () => ({ success: false, error: 'Not authenticated' }),
+      updateHost: async () => ({ success: false, error: 'Not authenticated' }),
+      deleteHost: async () => ({ success: false, error: 'Not authenticated' }),
+    };
+  }
+
   // Try direct context first
   try {
     const directContext = useDirectHostContext();
@@ -186,6 +205,27 @@ export function useHost() {
 }
 
 export function useRepository() {
+  // First check authentication status
+  const userContext = useContext(UserContext);
+  const isAuthenticated = !!userContext?.user;
+  
+  // If not authenticated, return a completely inactive version
+  if (!isAuthenticated) {
+    return {
+      repositories: [],
+      starredRepositories: [],
+      filteredRepositories: [],
+      loading: false,
+      error: null,
+      refreshRepositories: async () => {},
+      filterRepositories: () => {},
+      toggleStarRepository: () => {},
+      fetchRepositories: async () => [],
+      createRepository: async () => ({ success: false, error: 'Not authenticated' }),
+      deleteRepository: async () => ({ success: false, error: 'Not authenticated' }),
+    };
+  }
+
   // Try direct context first
   try {
     const directContext = useDirectRepositoryContext();
@@ -213,6 +253,23 @@ export function useRepository() {
 }
 
 export function useDeployment() {
+  // First check authentication status
+  const userContext = useContext(UserContext);
+  const isAuthenticated = !!userContext?.user;
+  
+  // If not authenticated, return a completely inactive version
+  if (!isAuthenticated) {
+    return {
+      deployments: [],
+      loading: false,
+      error: null,
+      fetchDeployments: async () => {},
+      createDeployment: async () => ({ success: false, error: 'Not authenticated' }),
+      updateDeployment: async () => ({ success: false, error: 'Not authenticated' }),
+      deleteDeployment: async () => ({ success: false, error: 'Not authenticated' }),
+    };
+  }
+
   // Try direct context first
   try {
     const directContext = useDirectDeploymentContext();
@@ -238,6 +295,26 @@ export function useDeployment() {
 }
 
 export function useCICD() {
+  // First check authentication status
+  const userContext = useContext(UserContext);
+  const isAuthenticated = !!userContext?.user;
+  
+  // If not authenticated, return a completely inactive version
+  if (!isAuthenticated) {
+    return {
+      providers: [],
+      jobs: [],
+      selectedProvider: null,
+      selectedJob: null,
+      loading: false,
+      error: null,
+      fetchProviders: async () => {},
+      fetchJobs: async () => {},
+      createProvider: async () => ({ success: false, error: 'Not authenticated' }),
+      deleteProvider: async () => ({ success: false, error: 'Not authenticated' }),
+    };
+  }
+
   // Try direct context first
   try {
     const directContext = useDirectCICDContext();
