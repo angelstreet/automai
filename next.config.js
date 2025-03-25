@@ -7,7 +7,10 @@ const nextConfig = {
   reactStrictMode: true,
   trailingSlash: false,
   experimental: {
-    allowedDevOrigins: ['*.cloudworkstations.dev'],
+    allowedDevOrigins: [
+      '*.cloudworkstations.dev', 
+      '3000-idx-automaigit-1741768452810.cluster-4ezwrnmkojawstf2k7vqy36oe6.cloudworkstations.dev'
+    ],
   },
   assetPrefix: process.env.ASSET_PREFIX || '',
   images: {
