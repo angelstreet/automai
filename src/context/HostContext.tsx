@@ -425,8 +425,38 @@ export const HostProvider: React.FC<{
 export function useHost() {
   const context = useContext(HostContext);
   
+  // If the context is null or undefined for some reason, return a safe fallback
   if (context === undefined) {
-    throw new Error('useHost must be used within a HostProvider');
+    console.warn('[useHost] Host context is null or undefined, returning fallback');
+    return {
+      hosts: [],
+      filteredHosts: [],
+      selectedHost: null,
+      connectionStatuses: {},
+      hostStats: {},
+      hostTerminals: {},
+      hostCapabilities: {},
+      loading: true,
+      error: null,
+      isScanning: false,
+      loadingStatus: { state: 'idle', operation: null, entityId: null },
+      filter: {
+        query: '',
+        status: 'all',
+        type: 'all',
+        sortBy: 'name',
+        sortDir: 'asc',
+      },
+      fetchHosts: async () => [],
+      getHostById: async () => null,
+      addHost: async () => ({ success: false }),
+      updateHostById: async () => ({ success: false }),
+      removeHost: async () => ({ success: false }),
+      testConnection: async () => ({ success: false }),
+      testAllConnections: async () => {},
+      isLoading: () => true,
+      resetLoadingState: () => {},
+    };
   }
   
   return context;

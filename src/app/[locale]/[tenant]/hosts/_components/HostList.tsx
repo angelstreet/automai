@@ -29,6 +29,16 @@ export default function HostContainer() {
   const userContext = useUser();
   const hostContext = useHost();
   
+  // Add better logging to diagnose context issues
+  useEffect(() => {
+    console.log('[HostContainer] Initial context check:', {
+      hasUserContext: !!userContext,
+      hasHostContext: !!hostContext,
+      isHostContextLoading: hostContext?.loading,
+      hostCount: hostContext?.hosts?.length || 0
+    });
+  }, [userContext, hostContext]);
+  
   // Group all state declarations after context hooks
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
