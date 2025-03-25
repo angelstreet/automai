@@ -2,13 +2,11 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Host as HostType, ScriptParameter, CICDProvider, CICDJob } from '../types';
+import { Host as HostType } from '../types';
 import CustomSwitch from './CustomSwitch';
 import { useCICD } from '@/context';
 
 interface DeploymentWizardStep5Props {
-  showJenkinsView: boolean;
-  setShowJenkinsView: (checked: boolean) => void;
   scriptIds: string[];
   scriptParameters: Record<string, any>;
   hostIds: string[];
@@ -18,21 +16,11 @@ interface DeploymentWizardStep5Props {
   repeatCount: number;
   repositoryScripts: any[];
   availableHosts: HostType[];
-  jenkinsConfig: {
-    enabled: boolean;
-    providerId?: string;
-    jobId?: string;
-    parameters?: Record<string, any>;
-    [key: string]: any;
-  };
-  onJenkinsConfigChange: (enabled: boolean, config: any) => void;
   onPrevStep: () => void;
   isSubmitting?: boolean;
 }
 
 const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
-  showJenkinsView,
-  setShowJenkinsView,
   scriptIds,
   scriptParameters,
   hostIds,
@@ -42,160 +30,38 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
   repeatCount,
   repositoryScripts,
   availableHosts,
-  jenkinsConfig,
-  onJenkinsConfigChange,
   onPrevStep,
   isSubmitting = false,
 }) => {
   const t = useTranslations('deployment.wizard');
-
-  // Use the CICD context from the new context system
   const cicdContext = useCICD();
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>();
+  const [toggleView, setToggleView] = useState(false);
 
-  // State for providers, jobs, and job details
-  const [providers, setProviders] = useState<CICDProvider[]>([]);
-  const [isLoadingProviders, setIsLoadingProviders] = useState(false);
-  const [providersError, setProvidersError] = useState<string | null>(null);
-
-  const [jobs, setJobs] = useState<CICDJob[]>([]);
-  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
-  const [jobsError, setJobsError] = useState<string | null>(null);
-
-  const [jobDetails, setJobDetails] = useState<any>(null);
-  const [isLoadingJobDetails, setIsLoadingJobDetails] = useState(false);
-  const [jobDetailsError, setJobDetailsError] = useState<string | null>(null);
-
-  // Fetch CI/CD providers
+  // Auto-select first provider on mount
   useEffect(() => {
-    // Only fetch if Jenkins integration is enabled
-    if (!jenkinsConfig.enabled) return;
-    
-    const loadProviders = async () => {
+    const selectFirstProvider = async () => {
+      if (!cicdContext) return;
+      
       try {
-        setIsLoadingProviders(true);
-        setProvidersError(null);
+        setIsLoading(true);
         const result = await cicdContext.fetchProviders();
-        setProviders(result.data || []);
-        if (result.error) setProvidersError(result.error);
-      } catch (err: any) {
-        setProvidersError(err.message || t('failedFetchProviders'));
-        console.error('Error fetching CI/CD providers:', err);
-      } finally {
-        setIsLoadingProviders(false);
-      }
-    };
-
-    loadProviders();
-  }, [cicdContext, t, jenkinsConfig.enabled]);
-
-  // Fetch CI/CD jobs when a provider is selected
-  useEffect(() => {
-    // Skip if Jenkins integration is disabled
-    if (!jenkinsConfig.enabled || !jenkinsConfig.providerId) {
-      setJobs([]);
-      return;
-    }
-
-    const loadJobs = async () => {
-      try {
-        setIsLoadingJobs(true);
-        setJobsError(null);
-        const jobsResult = await cicdContext.fetchJobs(jenkinsConfig.providerId);
-        setJobs(jobsResult || []);
-      } catch (err: any) {
-        setJobsError(err.message || t('failedFetchJobs'));
-        console.error('Error fetching CI/CD jobs:', err);
-      } finally {
-        setIsLoadingJobs(false);
-      }
-    };
-
-    loadJobs();
-  }, [jenkinsConfig.providerId, cicdContext, t, jenkinsConfig.enabled]);
-
-  // Fetch job details when a job is selected
-  useEffect(() => {
-    // Skip if Jenkins integration is disabled
-    if (!jenkinsConfig.enabled || !jenkinsConfig.providerId || !jenkinsConfig.jobId) {
-      setJobDetails(null);
-      return;
-    }
-    
-    const loadJobDetails = async () => {
-      try {
-        setIsLoadingJobDetails(true);
-        setJobDetailsError(null);
-        const job = await cicdContext.getJobById(jenkinsConfig.jobId);
-        setJobDetails(job || null);
-      } catch (err: any) {
-        setJobDetailsError(err.message || t('failedFetchJobDetails'));
-        console.error('Error fetching job details:', err);
-      } finally {
-        setIsLoadingJobDetails(false);
-      }
-    };
-
-    loadJobDetails();
-  }, [jenkinsConfig.providerId, jenkinsConfig.jobId, cicdContext, t, jenkinsConfig.enabled]);
-
-  // Extract job and parameters from job details
-  const job = jobDetails?.job;
-  const jobParameters = jobDetails?.parameters || [];
-
-  // Update Jenkins config when providers change
-  useEffect(() => {
-    if (providers.length > 0 && jenkinsConfig.enabled) {
-      // Auto-select the first Jenkins provider if it's available
-      const jenkinsProviders = providers.filter((p) => p.type === 'jenkins');
-      if (jenkinsProviders.length > 0) {
-        // Always use the first provider (default provider)
-        const defaultProvider = jenkinsProviders[0];
-
-        // Only update if the provider changed or no provider is selected
-        if (!jenkinsConfig.providerId || jenkinsConfig.providerId !== defaultProvider.id) {
-          console.log('Auto-selecting default Jenkins provider:', defaultProvider.name);
-          onJenkinsConfigChange(true, {
-            ...jenkinsConfig,
-            providerId: defaultProvider.id,
-            url: defaultProvider.url,
-          });
+        const providers = result.data || [];
+        
+        if (providers.length > 0) {
+          const firstProvider = providers[0];
+          setSelectedProviderId(firstProvider.id);
         }
+      } catch (err) {
+        console.error('Error fetching providers:', err);
+      } finally {
+        setIsLoading(false);
       }
-    }
-  }, [providers, jenkinsConfig.enabled]);
+    };
 
-  // Handle provider selection
-  const handleProviderChange = (providerId: string) => {
-    const provider = providers.find((p) => p.id === providerId);
-    onJenkinsConfigChange(jenkinsConfig.enabled, {
-      ...jenkinsConfig,
-      providerId,
-      url: provider?.url || '',
-      jobId: undefined, // Reset job when provider changes
-    });
-  };
-
-  // Handle job selection
-  const handleJobChange = (jobId: string) => {
-    const job = jobs.find((j) => j.id === jobId);
-    onJenkinsConfigChange(jenkinsConfig.enabled, {
-      ...jenkinsConfig,
-      jobId,
-      jobName: job?.name || '',
-      parameters: {}, // Reset parameters when job changes
-    });
-  };
-
-  // Handle parameter change
-  const handleParameterChange = (name: string, value: string) => {
-    onJenkinsConfigChange(jenkinsConfig.enabled, {
-      ...jenkinsConfig,
-      parameters: {
-        ...(jenkinsConfig.parameters || {}),
-        [name]: value,
-      },
-    });
-  };
+    selectFirstProvider();
+  }, [cicdContext]);
 
   return (
     <div>
@@ -210,20 +76,14 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
 
         <div className="flex items-center space-x-4">
           <CustomSwitch
-            checked={jenkinsConfig.enabled}
-            onCheckedChange={(checked: boolean) => {
-              onJenkinsConfigChange(checked, jenkinsConfig);
-              if (checked) {
-                setShowJenkinsView(true);
-              }
-            }}
-            label={t('jenkinsIntegration')}
+            checked={toggleView}
+            onCheckedChange={setToggleView}
           />
         </div>
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isLoading}
           className="px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
@@ -257,11 +117,10 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
       </div>
 
       <div className="space-y-4">
-        {/* Show either Jenkins Pipeline Preview or Deployment Review based on toggle */}
-        {jenkinsConfig.enabled ? (
+        {toggleView ? (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">{t('jenkinsPipelinePreview')}</h3>
+              <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">{t('pipelinePreview')}</h3>
             </div>
             
             <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 p-4 overflow-auto max-h-96">
@@ -300,9 +159,6 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
             <div className="space-y-4">
               {/* Scripts */}
               <div className="space-y-2 mb-4">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t('selectedScripts')} ({scriptIds.length})
-                </h3>
                 <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                   {scriptIds.length === 0 ? (
                     <p className="text-sm text-gray-500 dark:text-gray-400 p-3">{t('noScriptsSelected')}</p>
