@@ -1435,12 +1435,15 @@ export async function clearDeploymentCache(
 export async function testJenkinsAPI(): Promise<ServerActionResult<any>> {
   try {
     // Get authenticated user
-    const user = await getAuthenticatedUser();
+    const user = await getUser();
     if (!user) {
       return { success: false, error: 'Unauthorized access' };
     }
 
     console.log('Actions layer: Testing Jenkins API with authenticated user', user.id);
+
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
 
     // Get all Jenkins providers for the tenant
     const providers = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
