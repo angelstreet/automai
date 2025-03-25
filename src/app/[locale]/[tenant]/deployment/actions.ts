@@ -176,7 +176,11 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
  * @param formData Deployment form data
  * @returns Newly created deployment or null if failed
  */
-export async function createDeployment(formData: DeploymentFormData): Promise<Deployment | null> {
+export async function createDeployment(formData: DeploymentFormData): Promise<{
+  success: boolean;
+  deploymentId?: string;
+  error?: string;
+}> {
   try {
     console.log('🚀 [DEPLOYMENT_CREATE] Starting deployment creation process');
     
@@ -184,7 +188,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
     const user = await getUser();
     if (!user || !user.tenant_id) {
       console.error('❌ [DEPLOYMENT_CREATE] No authenticated user found');
-      return null;
+      return { success: false, error: 'User not authenticated' };
     }
     
     const cookieStore = await cookies();
@@ -197,7 +201,6 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
         provider_id: formData.provider_id,
         external_id: `deployment-${Date.now()}`,
         name: `${formData.name} Job`,
-        path: formData.selectedScripts.join(','),
         description: formData.description || 'Deployment job',
         parameters: [] // Empty array for now, we'll update later if needed
       }
@@ -205,7 +208,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
 
     if (!cicdResult.success) {
       console.error('❌ [CICD_JOB] Failed to create CICD job:', cicdResult.error);
-      return null;
+      return { success: false, error: `Failed to create CICD job: ${cicdResult.error}` };
     }
     console.log('📊 [CICD_JOB] CICD job creation result:', JSON.stringify(cicdResult, null, 2));
 
@@ -215,7 +218,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
       description: formData.description || '',
       repository_id: formData.repository,
       scripts_path: formData.selectedScripts || [],
-      scripts_parameters: formData.parameters || [],
+      scripts_parameters: Array.isArray(formData.parameters) ? formData.parameters : [],
       host_ids: formData.selectedHosts || [],
       status: 'pending' as DeploymentStatus,
       user_id: user.id,
@@ -233,7 +236,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
 
     if (!result || (result && 'success' in result && !result.success)) {
       console.error('❌ [DEPLOYMENT_CREATE] Failed to create deployment:', result?.error);
-      return null;
+      return { success: false, error: result?.error || 'Failed to create deployment' };
     }
     console.log('📊 [DEPLOYMENT_CREATE] Deployment creation result:', JSON.stringify(result, null, 2));
 
@@ -272,13 +275,16 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
         );
       }
 
-      return newDeployment;
+      return { 
+        success: true, 
+        deploymentId: newDeployment.id 
+      };
     }
 
-    return null;
+    return { success: false, error: 'Failed to create deployment - no data returned' };
   } catch (error: any) {
     console.error('❌ [DEPLOYMENT_CREATE] Error creating deployment:', error);
-    return null;
+    return { success: false, error: error.message || 'Failed to create deployment' };
   }
 }
 
@@ -1237,7 +1243,6 @@ export async function syncCICDJobsAction(
           provider_id: providerId,
           external_id: job.id,
           name: job.name,
-          path: job.url,
           description: job.description,
           parameters: job.parameters,
         };

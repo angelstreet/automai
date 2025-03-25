@@ -31,7 +31,6 @@ interface CICDJob {
   provider_id: string;
   external_id: string;
   name: string;
-  path?: string;
   description?: string;
   parameters?: any[];
   created_at?: string;
@@ -321,7 +320,6 @@ async function createCICDJob(
         provider_id: data.provider_id,
         external_id: data.external_id,
         name: data.name,
-        path: data.path,
         description: data.description,
         parameters: data.parameters,
       })

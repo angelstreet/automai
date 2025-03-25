@@ -465,14 +465,24 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           name: deploymentData.name,
           description: deploymentData.description,
           repository: deploymentData.repositoryId,
-          selectedScripts: deploymentData.scriptIds,
+          selectedScripts: deploymentData.scriptIds.map(scriptId => {
+            const script = repositoryScripts.find(s => s.id === scriptId);
+            return script ? script.path : scriptId;
+          }),
           selectedHosts: deploymentData.hostIds,
           schedule: deploymentData.schedule,
           scheduledTime: deploymentData.scheduledTime || '',
           cronExpression: deploymentData.cronExpression || '',
           repeatCount: deploymentData.repeatCount || 0,
           environmentVars: deploymentData.environmentVars.filter((env) => env.key && env.value),
-          parameters: deploymentData.scriptParameters,
+          parameters: deploymentData.scriptIds.map(scriptId => {
+            const script = repositoryScripts.find(s => s.id === scriptId);
+            const params = deploymentData.scriptParameters[scriptId] || {};
+            return {
+              script_path: script ? script.path : scriptId,
+              raw: params.raw || ''
+            };
+          }),
           notifications: deploymentData.notifications,
           scriptMapping: scriptMapping,
           provider_id: cicdProviders.length > 0 ? cicdProviders[0].id : '' // Use the first CICD provider's ID

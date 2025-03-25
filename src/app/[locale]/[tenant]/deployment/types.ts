@@ -126,7 +126,6 @@ export interface CICDJob {
     choices?: string[];
   }>;
   tenant_id: string;
-  url?: string;
   created_at: string;
 }
 
