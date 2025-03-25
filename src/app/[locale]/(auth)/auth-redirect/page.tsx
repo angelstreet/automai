@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { exchangeCodeForSession } from '@/app/actions/auth';
 import { useUser } from '@/context/UserContext';
+import { User } from '@/types/user';
 
 // Add error boundary component
 function ErrorFallback({ error, locale }: { error: Error; locale: string }) {
@@ -60,6 +61,39 @@ export default function AuthRedirectPage() {
     if (hasRedirected || !code) {
       setIsProcessing(false);
       return;
+    }
+
+    // Check if this code was already processed (NextJS dev mode double rendering fix)
+    if (typeof window !== 'undefined') {
+      const processedCodes = localStorage.getItem('processed_auth_codes');
+      const codesSet = processedCodes ? new Set(JSON.parse(processedCodes)) : new Set();
+      
+      if (codesSet.has(code)) {
+        console.log('🔐 AUTH REDIRECT: Skipping duplicate code processing');
+        setIsProcessing(false);
+        // Check if user is already authenticated and redirect if needed
+        refreshUser().then((user: User | null) => {
+          if (user) {
+            const tenantName = user.tenant_name || 'trial';
+            router.push(`/${locale}/${tenantName}/dashboard`);
+          }
+        });
+        return;
+      }
+      
+      // Add code to processed set
+      codesSet.add(code);
+      localStorage.setItem('processed_auth_codes', JSON.stringify([...codesSet]));
+      
+      // Set cleanup to avoid memory leaks (codes expire quickly anyway)
+      setTimeout(() => {
+        const oldCodes = localStorage.getItem('processed_auth_codes');
+        if (oldCodes) {
+          const codesSet = new Set(JSON.parse(oldCodes));
+          codesSet.delete(code);
+          localStorage.setItem('processed_auth_codes', JSON.stringify([...codesSet]));
+        }
+      }, 60000); // Clear after 1 minute
     }
 
     async function processAuth() {
