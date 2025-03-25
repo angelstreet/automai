@@ -9,9 +9,6 @@ import { invalidateUserCache } from './user';
  */
 export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl: string) {
   try {
-    console.log('🔐 Starting OAuth flow for provider:', provider);
-    console.log('🔐 Using redirect URL:', redirectUrl);
-
     const result = await supabaseAuth.signInWithOAuth(provider, {
       redirectTo: redirectUrl,
     });

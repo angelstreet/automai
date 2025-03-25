@@ -41,13 +41,6 @@ export default function LoginPage() {
       isLoading: loading,
     });
 
-    // Force a refresh of the user object if we have auth cookies but no user object
-    if (hasSbAccessToken && hasSbRefreshToken && !user && !loading) {
-      console.log('🔒 LOGIN PAGE: Auth cookies present but no user object, forcing refresh');
-      window.location.reload();
-      return;
-    }
-
     if (user && !loading) {
       // tenant_name is directly on the user object (not in user_metadata)
       const tenantName = user.tenant_name || 'trial';
@@ -89,7 +82,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     // Prevent multiple submissions
-    if (isSubmitting || isAuthenticating) {
+    if (isSubmitting || loading || isAuthenticating) {
       return;
     }
 
@@ -127,31 +120,25 @@ export default function LoginPage() {
       setError('');
 
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
-      console.log('🔐 OAuth Login: Using redirect URL:', redirectUrl);
-
       // Use the server action directly instead of going through UserContext
       const result = await signInWithOAuthAction(provider, redirectUrl);
 
       if (result.success && result.data?.url) {
-        console.log('🔐 OAuth Login: Redirecting to URL');
         // Redirect to OAuth provider
         window.location.href = result.data.url;
       } else {
         // If no URL is returned, something went wrong
-        console.error('🔐 OAuth Login: Failed to get URL:', result.error);
         setError(result.error || 'Failed to initiate login');
         setIsAuthenticating(false);
       }
     } catch (err: any) {
-      console.error('🔐 OAuth Login: Error in login flow:', err);
       setError(err.message || 'An error occurred');
       setIsAuthenticating(false);
     }
   };
 
-  // Determine if buttons should be disabled - ONLY when we are actively submitting or authenticating
-  // Do NOT include the loading state from useUser() here
-  const isButtonDisabled = isSubmitting || isAuthenticating;
+  // Determine if buttons should be disabled
+  const isButtonDisabled = isSubmitting || loading || isAuthenticating;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">

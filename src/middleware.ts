@@ -1,5 +1,6 @@
 // src/middleware.ts
 import { NextRequest, NextResponse } from 'next/server';
+
 import { updateSession, createClient } from '@/lib/supabase/middleware';
 
 import { locales, defaultLocale, pathnames } from './config';
@@ -21,122 +22,136 @@ async function getIntlMiddleware() {
 }
 
 export default async function middleware(request: NextRequest) {
-  // 1. First check if it's a public path that should bypass auth
+  // 1. First, normalize URL case (lowercase)
   const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);
+  const originalPath = request.nextUrl.pathname;
+  const lowercasePath = originalPath.toLowerCase();
 
-  // Check if it's a login-related path or auth callback
-  const isLoginPath =
-    request.nextUrl.pathname.includes('/login') ||
-    request.nextUrl.pathname.includes('/signup') ||
-    request.nextUrl.pathname.includes('/forgot-password') ||
-    request.nextUrl.pathname.includes('/reset-password');
-
-  // Specifically check for auth-redirect with code param
-  const isAuthCallback =
-    request.nextUrl.pathname.includes('/auth-redirect') && request.nextUrl.searchParams.has('code');
-
-  // Check for authentication - if already authenticated at login, redirect to dashboard
-  if (isLoginPath && !isAuthCallback) {
-    // Check if user is already authenticated
-    const { supabase, response } = createClient(request);
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
-
-    if (user && !error) {
-      console.log('[Middleware] User already authenticated, redirecting to dashboard');
-      // User is already authenticated, redirect to dashboard
-      const locale =
-        pathParts.length > 0 && locales.includes(pathParts[0] as any)
-          ? pathParts[0]
-          : defaultLocale;
-
-      // Get tenant from path or use default
-      const tenant = user.user_metadata?.tenant_name || 'trial';
-
-      // Redirect to dashboard
-      return NextResponse.redirect(new URL(`/${locale}/${tenant}/dashboard`, request.url));
-    }
+  // Skip case normalization for locale root paths to prevent redirect loops
+  const isLocaleRootPath = pathParts.length === 1 && locales.includes(pathParts[0] as any);
+  if (!isLocaleRootPath && lowercasePath !== originalPath) {
+    console.log('Normalizing URL case:', originalPath, 'to', lowercasePath);
+    return NextResponse.redirect(new URL(lowercasePath, request.url));
   }
 
-  // Skip auth check for login paths and initial auth callback
-  if (isLoginPath || isAuthCallback) {
+  // 2. Skip auth for WebSockets, API routes, and RSC requests
+  if (
+    request.headers.get('upgrade')?.includes('websocket') ||
+    request.nextUrl.pathname.startsWith('/api/') ||
+    request.nextUrl.search.includes('_rsc=')
+  ) {
     return NextResponse.next();
   }
 
-  // 2. Check if it's a protected route that needs auth
-  const isServerAction =
-    request.headers.get('accept')?.includes('text/x-component') ||
-    request.headers.has('next-action');
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
-  const isProtectedRoute =
-    isServerAction || isApiRoute || (pathParts.length >= 2);
+  // 3. Define public paths that bypass auth checks
+  const publicPaths = [
+    '/',
+    '/signup',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
+    '/auth-redirect',
+    '/test-auth',
+    '/error',
+    '/_next',
+    '/favicon.ico',
+  ];
 
-  if (isProtectedRoute) {
+  // Define auth-only paths that should redirect to dashboard if already authenticated
+  const authOnlyPaths = [
+    '/login',
+    '/signup',
+    '/forgot-password',
+    '/reset-password',
+    '/auth-redirect',
+  ];
+
+  // Add locale-based paths to public and auth-only paths
+  locales.forEach((locale) => {
+    // Public paths with locale (pages anyone can access)
+    publicPaths.push(`/${locale}`);
+    publicPaths.push(`/${locale}/`);
+
+    // Auth-only paths with locale (pages that should redirect to dashboard if authenticated)
+    authOnlyPaths.push(`/${locale}/login`);
+    authOnlyPaths.push(`/${locale}/signup`);
+    authOnlyPaths.push(`/${locale}/forgot-password`);
+    authOnlyPaths.push(`/${locale}/reset-password`);
+    authOnlyPaths.push(`/${locale}/auth-redirect`);
+  });
+
+  // Check if it's a public path
+  const isPublicPath =
+    publicPaths.some((path) => request.nextUrl.pathname === path) ||
+    request.nextUrl.pathname === '/';
+
+  // Check if it's an auth-only path (like login)
+  const isAuthOnlyPath =
+    authOnlyPaths.some((path) => request.nextUrl.pathname === path) ||
+    (pathParts.length >= 2 &&
+      locales.includes(pathParts[0] as any) &&
+      ['login', 'signup', 'forgot-password', 'reset-password', 'auth-redirect'].includes(
+        pathParts[1],
+      ));
+
+  // For auth-only paths like login, we need to check if the user is already authenticated
+  // If they are, redirect them to dashboard
+  if (isAuthOnlyPath) {
+    // Import from supabase/middleware.ts
     const { supabase, response } = createClient(request);
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+    try {
+      const { data } = await supabase.auth.getUser();
 
-    if (!user || error) {
-      // For API routes return 401
-      if (isApiRoute) {
-        return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-        });
+      if (data?.user) {
+        // User is already logged in, redirect to dashboard
+        const locale =
+          pathParts.length > 0 && locales.includes(pathParts[0] as any)
+            ? pathParts[0]
+            : defaultLocale;
+
+        // Get tenant from user metadata or default to 'trial'
+        const tenantName = data.user.user_metadata?.tenant_name || 'trial';
+
+        // Redirect to tenant-specific dashboard
+        return NextResponse.redirect(new URL(`/${locale}/${tenantName}/dashboard`, request.url));
       }
 
-      // For other routes, redirect to login
-      const locale =
-        pathParts.length > 0 && locales.includes(pathParts[0] as any)
-          ? pathParts[0]
-          : defaultLocale;
-
-      return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+      // User not logged in, continue to login page
+      return NextResponse.next();
+    } catch (error) {
+      console.error('Error checking authentication for auth-only path:', error);
+      return NextResponse.next();
     }
-
-    // If authenticated, continue
-    return response;
   }
 
-  // 3. Only now check for HTML content type bypass
-  const contentType = request.headers.get('content-type') || '';
-  const acceptHeader = request.headers.get('accept') || '';
-  const userAgent = request.headers.get('user-agent') || '';
-
-  if (
-    contentType.includes('text/html') ||
-    acceptHeader.includes('text/html') ||
-    contentType.includes('application/xhtml+xml')
-  ) {
-    console.log('[Middleware] Detected HTML-related content type, bypassing middleware processing');
+  // For regular public paths, just continue without auth check
+  if (isPublicPath) {
     return NextResponse.next();
   }
 
   // 4. For all other paths, use Supabase's updateSession
-  try {
-    const response = await updateSession(request);
+  // This will handle session validation and token refresh
+  const response = await updateSession(request);
 
-    if (response.headers.has('location')) {
-      console.log('Redirecting to:', response.headers.get('location'));
-      return response;
-    }
-
-    const intl = await getIntlMiddleware();
-    return intl(response);
-  } catch (error) {
-    console.error('[Middleware] Error in updateSession:', error);
-    return NextResponse.next();
+  // If the response is a redirect (unauthenticated), return it directly
+  if (response.headers.has('location')) {
+    console.log('Redirecting to:', response.headers.get('location'));
+    return response;
   }
+
+  // Access user session info from cookies if needed for debugging (non-invasive)
+  // We don't actually extract the data here to avoid breaking anything
+  console.log('Middleware: Processing authenticated request');
+
+  // 5. Apply internationalization middleware for non-redirect responses
+  const intl = await getIntlMiddleware();
+  return intl(response);
 }
 
 export const config = {
   matcher: [
-    // Match all paths except static files and fonts
-    '/((?!_next/static|_next/image|_next/media|avatars|favicon.ico).*)',
+    // Match all paths except static files
+    '/((?!_next/static|_next/image|avatars|favicon.ico).*)',
     // Match all locale routes
     '/(fr|en)/:path*',
     // Match API routes

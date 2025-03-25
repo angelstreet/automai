@@ -49,19 +49,6 @@ export const supabaseAuth = {
         return { success: false, error: 'No role found in profiles table' };
       }
 
-      // Check if tenant information is properly set
-      if (!profile?.tenant_id) {
-        console.error('Missing tenant_id in user profile');
-        return { success: false, error: 'Missing tenant_id in user profile' };
-      }
-
-      if (!profile?.tenant_name) {
-        console.error('Missing tenant_name in user profile');
-        return { success: false, error: 'Missing tenant_name in user profile' };
-      }
-
-      // Create a clean user object with data only from the profiles table
-      // and user metadata for non-sensitive information
       return {
         success: true,
         data: {
@@ -71,15 +58,9 @@ export const supabaseAuth = {
             name,
             image: profile?.avatar_url || metadata.avatar_url || null,
             role,
-            tenant_id: profile.tenant_id,
-            tenant_name: profile.tenant_name,
-            user_metadata: {
-              name: metadata.name,
-              full_name: metadata.full_name,
-              preferred_username: metadata.preferred_username,
-              avatar_url: metadata.avatar_url,
-              raw_user_meta_data: metadata.raw_user_meta_data,
-            },
+            tenant_id: profile?.tenant_id || metadata.tenant_id || 'unknown',
+            tenant_name: profile?.tenant_name || metadata.tenant_name || 'trial',
+            user_metadata: metadata,
           },
           accessToken: access_token,
           expires: expires_at ? new Date(expires_at * 1000).toISOString() : '',
@@ -112,8 +93,6 @@ export const supabaseAuth = {
         };
       }
 
-      console.log(`Fetching profile for user ${authUser.id}`);
-
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select(
@@ -127,14 +106,7 @@ export const supabaseAuth = {
         .eq('id', authUser.id)
         .single();
 
-      console.log('Profile query result:', {
-        success: !profileError,
-        profileData: profile,
-        error: profileError?.message || null,
-      });
-
       if (profileError) {
-        console.error(`Failed to fetch profile for user ${authUser.id}:`, profileError);
         return {
           success: false,
           error: profileError.message,
@@ -157,34 +129,6 @@ export const supabaseAuth = {
         return { success: false, error: 'No role found in profiles table' };
       }
 
-      // Check if tenant_id and tenant_name are properly set
-      if (!profile.tenant_id) {
-        console.error('Missing tenant_id in user profile - checking DB records');
-
-        // Debug query to check if profile record exists properly
-        const { data: profileCheck, error: checkError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id);
-
-        console.log('Profile record check:', {
-          userId: authUser.id,
-          found: !!profileCheck?.length,
-          recordCount: profileCheck?.length || 0,
-          fullRecord: profileCheck && profileCheck[0] ? profileCheck[0] : null,
-          error: checkError ? checkError.message : null,
-        });
-
-        return { success: false, error: 'Missing tenant_id in user profile' };
-      }
-
-      if (!profile.tenant_name) {
-        console.error('Missing tenant_name in user profile');
-        return { success: false, error: 'Missing tenant_name in user profile' };
-      }
-
-      // Create a clean user object with data only from the profiles table
-      // and user metadata for non-sensitive information
       return {
         success: true,
         data: {
@@ -192,17 +136,11 @@ export const supabaseAuth = {
           email: authUser.email || '',
           name,
           role,
-          tenant_id: profile.tenant_id,
-          tenant_name: profile.tenant_name,
+          tenant_id: profile.tenant_id || 'default',
+          tenant_name: profile.tenant_name || 'trial',
           avatar_url:
-            profile.avatar_url || authUser.user_metadata?.avatar_url || '/avatars/default.svg',
-          user_metadata: {
-            name: authUser.user_metadata?.name,
-            full_name: authUser.user_metadata?.full_name,
-            preferred_username: authUser.user_metadata?.preferred_username,
-            avatar_url: authUser.user_metadata?.avatar_url,
-            raw_user_meta_data: authUser.user_metadata?.raw_user_meta_data,
-          },
+            authUser.user_metadata?.avatar_url || profile.avatar_url || '/avatars/default.svg',
+          user_metadata: authUser.user_metadata,
         },
       };
     } catch (error) {
@@ -342,8 +280,6 @@ export const supabaseAuth = {
         '🔐 AUTH_SERVICE: Starting OAuth code exchange for code:',
         code.substring(0, 6) + '...',
       );
-      
-      // Direct code exchange without any URL parsing or cookie access
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
@@ -371,30 +307,12 @@ export const supabaseAuth = {
       return { success: false, error: 'Supabase auth not available' };
     }
     try {
-      console.log('Signing out user and clearing all caches');
       const supabase = await createClient();
       const { error } = await supabase.auth.signOut();
 
-      // Clear ALL user data caches
+      // Clear user data cache from localStorage
       if (typeof window !== 'undefined') {
-        console.log('Clearing localStorage user caches');
         localStorage.removeItem('user-data-cache');
-        localStorage.removeItem('cached_user');
-
-        // Clear any SWR cache keys related to user
-        localStorage.removeItem('swr-user-data');
-      }
-
-      // Attempt to invalidate server-side cache
-      try {
-        const importDynamic = new Function('modulePath', 'return import(modulePath)');
-        const userActions = await importDynamic('@/app/actions/user');
-        if (userActions.invalidateUserCache) {
-          console.log('Invalidating server-side user cache');
-          await userActions.invalidateUserCache();
-        }
-      } catch (e) {
-        console.warn('Could not invalidate server-side cache:', e);
       }
 
       if (error) {
@@ -497,12 +415,7 @@ export const supabaseAuth = {
 };
 
 // Export simplified direct access
-// Renamed for clarity to specify this gets a Supabase authentication session
-export const getSupabaseSession = () => supabaseAuth.getSession();
-
-// Keep old function for backward compatibility but mark as deprecated
-/** @deprecated Use getSupabaseSession instead for clarity */
-export const getSession = () => getSupabaseSession();
+export const getSession = () => supabaseAuth.getSession();
 export const getUser = () => supabaseAuth.getUser();
 export const isAuthenticated = () => supabaseAuth.isAuthenticated();
 export const signInWithPassword = (email: string, password: string) =>
