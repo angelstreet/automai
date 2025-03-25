@@ -13,7 +13,11 @@ export { CoreProvider, createContextProvider } from './AppContext';
 
 // Export specialized context providers
 export { 
-  FullContextProvider
+  FullContextProvider,
+  HostContextProvider,
+  RepositoryContextProvider,
+  DeploymentContextProvider,
+  CICDContextProvider
 } from './AppContext';
 
 // Export SWR-based providers 
