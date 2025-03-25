@@ -16,11 +16,11 @@ export {
   FullContextProvider
 } from './AppContext';
 
-// Export our new SWR-based providers
-export { HostProvider } from './NewHostContext';
-export { RepositoryProvider } from './NewRepositoryContext';
-export { DeploymentProvider } from './NewDeploymentContext';
-export { CICDProvider } from './NewCICDContext';
+// Export SWR-based providers 
+export { HostProvider } from './HostContext';
+export { RepositoryProvider } from './RepositoryContext';
+export { DeploymentProvider } from './DeploymentContext';
+export { CICDProvider } from './CICDContext';
 
 // Re-export hooks with standardized naming for consistency
 export {
@@ -28,11 +28,11 @@ export {
   useUser, // User profile and authentication
 } from './AppContext';
 
-// Export the new SWR-based hooks
-export { useHost } from './NewHostContext';
-export { useRepository } from './NewRepositoryContext';
-export { useDeployment } from './NewDeploymentContext';
-export { useCICD } from './NewCICDContext';
+// Export SWR-based hooks
+export { useHost } from './HostContext';
+export { useRepository } from './RepositoryContext';
+export { useDeployment } from './DeploymentContext';
+export { useCICD } from './CICDContext';
 
 // Export sidebar context hook
 export { useSidebar } from './SidebarContext';
