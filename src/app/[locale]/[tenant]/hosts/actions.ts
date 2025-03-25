@@ -401,7 +401,7 @@ export async function testHostConnection(
     serverCache.delete(serverCache.tenantKey(currentUser.tenant_id, 'host', id));
 
     // Add a small delay to show the testing animation
-    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Test the actual SSH connection using the service
     const result = await testHostConnectionService({
