@@ -9,7 +9,8 @@ import { useDeployment, useRepository, createContextProvider } from '@/context';
 // since this page requires both
 const DeploymentPageProvider = createContextProvider({
   deployment: true, 
-  repository: true
+  repository: true,
+  host: true,
 });
 
 function DeploymentPageContent() {
