@@ -433,27 +433,40 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
       setSubmissionError(null);
 
       try {
+        // Create scriptMapping from repositoryScripts array
+        const scriptMapping: Record<string, {path: string; name: string; type: string}> = {};
+        
+        // Populate scriptMapping for each selected script
+        deploymentData.scriptIds.forEach(scriptId => {
+          const script = repositoryScripts.find((s: any) => s.id === scriptId);
+          if (script) {
+            scriptMapping[scriptId] = {
+              path: script.path,
+              name: script.name,
+              type: script.type || 'shell' // Default to shell if type is not specified
+            };
+          }
+        });
+        
+        // Map to the expected format according to DeploymentFormData interface
         const formData: DeploymentFormData = {
           name: deploymentData.name,
           description: deploymentData.description,
-          repositoryId: deploymentData.repositoryId,
-          scriptIds: deploymentData.scriptIds,
-          scriptParameters: deploymentData.scriptParameters,
-          hostIds: deploymentData.hostIds,
+          repository: deploymentData.repositoryId, // Changed from repositoryId to repository
+          selectedScripts: deploymentData.scriptIds, // Changed from scriptIds to selectedScripts
+          selectedHosts: deploymentData.hostIds, // Changed from hostIds to selectedHosts
           schedule: deploymentData.schedule,
-          ...(deploymentData.schedule === 'scheduled' && {
-            scheduledTime: deploymentData.scheduledTime,
-          }),
-          ...(deploymentData.schedule === 'cron' && {
-            cronExpression: deploymentData.cronExpression,
-          }),
-          ...(deploymentData.schedule === 'recurring' && {
-            repeatCount: deploymentData.repeatCount,
-          }),
+          scheduledTime: deploymentData.scheduledTime || '',
+          cronExpression: deploymentData.cronExpression || '',
+          repeatCount: deploymentData.repeatCount || 0,
           environmentVars: deploymentData.environmentVars.filter((env) => env.key && env.value),
+          parameters: deploymentData.scriptParameters, // Changed from scriptParameters to parameters
           notifications: deploymentData.notifications,
           jenkinsConfig: deploymentData.jenkinsConfig,
+          scriptMapping: scriptMapping // Add script mapping for better script resolution
         };
+
+        console.log('[DeploymentWizard] Submitting deployment with data:', formData);
 
         // Submit using the context's create deployment function
         const result = await createDeployment(formData);

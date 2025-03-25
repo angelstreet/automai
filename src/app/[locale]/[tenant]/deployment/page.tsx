@@ -5,12 +5,12 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { DeploymentWizard, DeploymentList } from './_components';
 import { useDeployment, useRepository, createContextProvider } from '@/context';
 
-// Create a specialized provider that includes both deployment and repository contexts
-// since this page requires both
+// Create a specialized provider that includes all required contexts
 const DeploymentPageProvider = createContextProvider({
   deployment: true, 
   repository: true,
   host: true,
+  cicd: true 
 });
 
 function DeploymentPageContent() {
