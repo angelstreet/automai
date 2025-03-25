@@ -78,6 +78,20 @@ export default function LoginPage() {
     }
   }, []);
 
+  // Add safety timeout to reset temporary states if they get stuck
+  React.useEffect(() => {
+    // If authentication states persist for more than 5 seconds, reset them
+    const safetyTimeout = setTimeout(() => {
+      if (isSubmitting || isAuthenticating) {
+        console.log('🔒 LOGIN PAGE: Safety timeout triggered - resetting temporary states');
+        setIsSubmitting(false);
+        setIsAuthenticating(false);
+      }
+    }, 5000);
+
+    return () => clearTimeout(safetyTimeout);
+  }, [isSubmitting, isAuthenticating]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -137,8 +151,8 @@ export default function LoginPage() {
     }
   };
 
-  // Determine if buttons should be disabled
-  const isButtonDisabled = isSubmitting || loading || isAuthenticating;
+  // Determine if buttons should be disabled - simplify by removing redundant loading state
+  const isButtonDisabled = isSubmitting || isAuthenticating;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
