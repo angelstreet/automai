@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { updateSession, createClient } from '@/lib/supabase/middleware';
 
-import { locales, defaultLocale, pathnames } from './config';
+import { locales, defaultLocale } from './config';
 
 // Lazy load the internationalization middleware
 let intlMiddleware: any = null;
@@ -14,7 +14,6 @@ async function getIntlMiddleware() {
     intlMiddleware = createIntlMiddleware({
       locales,
       defaultLocale,
-      pathnames,
       localePrefix: 'always',
     });
   }

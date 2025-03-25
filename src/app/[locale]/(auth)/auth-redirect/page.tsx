@@ -85,6 +85,9 @@ export default function AuthRedirectPage() {
         // After successful auth, refresh user data
         await refreshUser();
 
+        // Add delay to ensure session is stable
+        await new Promise(resolve => setTimeout(resolve, 1200));
+
         // Handle redirect using Next.js router
         if (result.redirectUrl) {
           setHasRedirected(true);
