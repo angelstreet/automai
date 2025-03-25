@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
-import { SidebarProvider } from '@/components/sidebar';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { ToasterProvider } from '@/components/shadcn/toaster';
 // Context providers are now handled by the root layout

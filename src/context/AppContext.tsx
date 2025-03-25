@@ -169,11 +169,26 @@ export function useAppContext() {
 
 // Enhanced hooks that use the central AppContext and check authentication
 export function useUser() {
+  // Try to get the global version first if in browser
+  if (typeof window !== 'undefined' && (window as any).__userContext) {
+    return (window as any).__userContext;
+  }
+  
   // Get user from AppContext
   const appContext = useContext(AppContext);
   
   if (appContext?.user) {
     return appContext.user;
+  }
+
+  // Get from direct context as a fallback
+  try {
+    const directContext = useDirectUserContext();
+    if (directContext) {
+      return directContext;
+    }
+  } catch (e) {
+    // Ignore context errors
   }
 
   // Return a safe fallback with correct type

@@ -28,6 +28,12 @@ const AppSidebar = React.memo(function AppSidebar() {
   // Add transition state to prevent flickering on role changes
   const [isTransitioning, setIsTransitioning] = React.useState(true);
 
+  // Check if user context is fully initialized
+  const isContextReady = React.useMemo(() => 
+    userContext?.isInitialized === true || userContext?.user !== null, 
+    [userContext?.isInitialized, userContext?.user]
+  );
+
   // Use a ref for initial render optimization to avoid double-rendering flicker
   const isInitialRender = React.useRef(true);
 
@@ -55,11 +61,8 @@ const AppSidebar = React.memo(function AppSidebar() {
     setIsCollapsed(!open);
   }, [open]);
 
-  // State to track the debug role
-  const [debugRole, setDebugRole] = React.useState<Role | null>(() => {
-    // Only access localStorage on the client
-    return null;
-  });
+  // State to track the debug role - always initialize with null for SSR consistency
+  const [debugRole, setDebugRole] = React.useState<Role | null>(null);
 
   // Initialize debug role from localStorage after mount
   React.useEffect(() => {
@@ -107,25 +110,45 @@ const AppSidebar = React.memo(function AppSidebar() {
     };
   }, []);
 
-  // Get initial role from localStorage if available
-  const cachedRole = React.useMemo(() => {
+  // Initialize with server-safe default value
+  const [cachedRole, setCachedRole] = React.useState('viewer');
+  
+  // Get role from localStorage only on client after mount
+  React.useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
         const cachedUserStr = localStorage.getItem('cached_user');
         if (cachedUserStr) {
           const cachedUser = JSON.parse(cachedUserStr);
-          return cachedUser?.role || 'viewer';
+          setCachedRole(cachedUser?.role || 'viewer');
         }
       } catch (e) {
         console.error('Error reading cached user role:', e);
       }
     }
-    return 'viewer';
   }, []);
 
   // FIXED: User's actual role should take precedence over debug role
   // Only use debug role for testing if explicitly requested
-  const effectiveRole = user?.role || debugRole || cachedRole;
+  const effectiveRole = React.useMemo(() => {
+    // First priority: Use actual user role if available
+    if (user?.role) {
+      return user.role;
+    }
+    
+    // Second priority: Use debug role if explicitly set
+    if (debugRole) {
+      return debugRole;
+    }
+    
+    // Third priority: Use cached role from localStorage
+    if (cachedRole) {
+      return cachedRole;
+    }
+    
+    // Final fallback: Default to viewer
+    return 'viewer';
+  }, [user?.role, debugRole, cachedRole]);
   
   // End transition state once we have a real user or after a timeout
   React.useEffect(() => {
@@ -151,25 +174,32 @@ const AppSidebar = React.memo(function AppSidebar() {
     }
   }, []);
   
-  // DEBUG: Log role information whenever it changes
+  // DEBUG: Log role information whenever it changes - but only on client
   React.useEffect(() => {
-    console.log('DEBUG AppSidebar - Role information:', {
-      debugRole,
-      userRole: user?.role,
-      cachedRole,
-      effectiveRole,
-      isTransitioning,
-      localStorage: typeof window !== 'undefined' ? localStorage.getItem('debug_role') : null,
-      userInLocalStorage: typeof window !== 'undefined' ? !!localStorage.getItem('cached_user') : null,
-    });
+    if (typeof window !== 'undefined') {
+      console.log('DEBUG AppSidebar - Role information:', {
+        debugRole,
+        userRole: user?.role,
+        cachedRole,
+        effectiveRole,
+        isTransitioning,
+        localStorage: localStorage.getItem('debug_role'),
+        userInLocalStorage: !!localStorage.getItem('cached_user'),
+      });
+    }
   }, [debugRole, user?.role, effectiveRole, isTransitioning, cachedRole]);
 
   // Filter navigation groups based on role
   const filteredNavigation = React.useMemo(() => {
-    // DEBUG: Log navigation filtering
-    console.log('DEBUG AppSidebar - Filtering navigation with role:', effectiveRole);
+    // Create a stable version of sidebar data that won't change during SSR/CSR
+    const stableSidebarData = sidebarData.navGroups;
     
-    const result = sidebarData.navGroups
+    // For debugging on client only
+    if (typeof window !== 'undefined') {
+      console.log('DEBUG AppSidebar - Filtering navigation with role:', effectiveRole);
+    }
+    
+    const result = stableSidebarData
       .map((group) => {
         // Filter items based on role
         const filteredItems = group.items.filter((item) => {
@@ -180,8 +210,8 @@ const AppSidebar = React.memo(function AppSidebar() {
           // Otherwise check if user's role is in the allowed roles
           const hasAccess = item.roles.includes(effectiveRole);
           
-          // DEBUG: Log item filtering for admin section
-          if (group.title === 'Admin') {
+          // DEBUG: Log item filtering for admin section - client only
+          if (typeof window !== 'undefined' && group.title === 'Admin') {
             console.log(`DEBUG AppSidebar - Admin item "${item.title}" access:`, {
               hasAccess,
               itemRoles: item.roles,
@@ -199,19 +229,29 @@ const AppSidebar = React.memo(function AppSidebar() {
       })
       .filter((group) => group.items.length > 0); // Remove empty groups
     
-    // DEBUG: Log filtered navigation results
-    console.log('DEBUG AppSidebar - Filtered navigation result:', {
-      totalGroups: result.length,
-      groups: result.map(g => g.title),
-      hasAdminGroup: result.some(g => g.title === 'Admin')
-    });
+    // DEBUG: Log filtered navigation results - client only
+    if (typeof window !== 'undefined') {
+      console.log('DEBUG AppSidebar - Filtered navigation result:', {
+        totalGroups: result.length,
+        groups: result.map(g => g.title),
+        hasAdminGroup: result.some(g => g.title === 'Admin')
+      });
+    }
     
     return result;
   }, [effectiveRole]);
 
+  // Add a state to prevent visible content until hydration is complete
+  const [isHydrated, setIsHydrated] = React.useState(false);
+  
+  // Update hydration state after initial render
+  React.useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   // Always ensure sidebar is visible, with fallback mechanisms
   // This guarantees the sidebar will be shown regardless of hydration state
-  const sidebarClassName = `fixed left-0 top-0 z-30 sidebar-visible ${isClient ? 'sidebar-ready' : ''} ${isTransitioning ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'}`;
+  const sidebarClassName = `fixed left-0 top-0 z-30 sidebar-visible ${isClient ? 'sidebar-ready' : ''} ${isTransitioning || !isHydrated ? 'opacity-0' : 'opacity-100 transition-opacity duration-300'} ${!isContextReady ? 'context-initializing' : ''}`;
 
   return (
     <Sidebar
