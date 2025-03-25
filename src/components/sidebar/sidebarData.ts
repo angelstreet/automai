@@ -88,12 +88,6 @@ export const sidebarData: SidebarData = {
           roles: ['admin', 'developer', 'tester'],
         },
         {
-          title: 'Runs',
-          href: '/tests',
-          icon: Rocket,
-          roles: ['admin', 'developer', 'tester'],
-        },
-        {
           title: 'Reports',
           href: '/reports',
           icon: BarChart3,
@@ -109,12 +103,6 @@ export const sidebarData: SidebarData = {
           href: '/cicd',
           icon: GitBranch,
           roles: ['admin', 'developer'],
-        },
-        {
-          title: 'Devices',
-          href: '/devices',
-          icon: Monitor,
-          roles: ['admin', 'developer', 'tester'],
         },
         {
           title: 'Hosts',
