@@ -302,10 +302,12 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       initialized.current = true;
 
       // First check if we have persisted data with repositories
-      if (persistedData?.repositories?.length > 0) {
+      if (persistedData?.repositories?.items?.length > 0) {
+        const repoData = persistedData.repositories;
+        
         log(
           '[RepositoryContext] Using persisted repository data:',
-          persistedData.repositories.length,
+          repoData.items.length,
         );
         
         // Set repositories from persistedData
@@ -314,9 +316,10 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
           state,
           {
             ...state,
-            repositories: persistedData.repositories,
-            filteredRepositories: persistedData.repositories,
-            starredRepositories: persistedData.starredRepositories || [],
+            repositories: repoData.items,
+            filteredRepositories: repoData.items,
+            starredRepositories: repoData.starred || [],
+            connectionStatuses: repoData.connectionStatuses || {},
             loading: false
           },
           'loaded-from-persisted-data'
@@ -358,11 +361,15 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   // Update persistedData when repositories change
   useEffect(() => {
     if (state.repositories.length > 0) {
-      persistedData.repositories = state.repositories;
-      persistedData.starredRepositories = state.starredRepositories;
+      // Store repositories with starred info embedded
+      persistedData.repositories = {
+        items: state.repositories,
+        starred: state.starredRepositories,
+        connectionStatuses: state.connectionStatuses
+      };
       log('[RepositoryContext] Updated persistedData with repositories');
     }
-  }, [state.repositories, state.starredRepositories]);
+  }, [state.repositories, state.starredRepositories, state.connectionStatuses]);
 
   // Create context value with proper memoization
   const contextValue = useMemo(
