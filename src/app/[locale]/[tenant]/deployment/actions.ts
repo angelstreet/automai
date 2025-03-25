@@ -178,23 +178,29 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
  */
 export async function createDeployment(formData: DeploymentFormData): Promise<Deployment | null> {
   try {
-    console.log(
-      'Actions layer: Creating deployment with form data:',
-      JSON.stringify(formData, null, 2),
-    );
+    console.log('🚀 [DEPLOYMENT_CREATE] Starting deployment creation process');
+    console.log('📝 [DEPLOYMENT_CREATE] Form data:', JSON.stringify(formData, null, 2));
 
     // Get the current user
     const user = await getUser();
-
-    if (!user) {
-      console.error('Actions layer: Cannot create deployment - user not authenticated');
-      return null;
-    }
-
-    // Get cookie store
     const cookieStore = await cookies();
 
-    // Prepare deployment data
+    // 1. Create CICD job with provider reference
+    console.log('🔄 [CICD_JOB] Starting CICD job creation');
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
+    const cicdResult = await cicdDb.createCICDJob({
+      provider_id: formData.provider_id, // Use provider_id from form data
+      tenant_id: user.tenant_id,
+      status: 'pending'
+    });
+
+    if (!cicdResult.success) {
+      console.error('❌ [CICD_JOB] Failed to create CICD job:', cicdResult.error);
+      return null;
+    }
+    console.log('📊 [CICD_JOB] CICD job creation result:', JSON.stringify(cicdResult, null, 2));
+
+    // 2. Create deployment with CICD job reference
     const deploymentData = {
       name: formData.name,
       description: formData.description || '',
@@ -212,38 +218,37 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
       environment_vars: formData.environmentVars || [],
     };
 
-    console.log(
-      'Actions layer: Prepared deployment data:',
-      JSON.stringify(deploymentData, null, 2),
-    );
-
-    // Import the deployment database module
+    console.log('📦 [DEPLOYMENT_CREATE] Creating deployment with data:', JSON.stringify(deploymentData, null, 2));
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    const result = await deploymentDb.create({ data: deploymentData }, cookieStore);
 
-    // Create the deployment in the database
-    const result = await deploymentDb.create(deploymentData, cookieStore);
-    console.log('Actions layer: Create deployment result:', JSON.stringify(result, null, 2));
-
-    // Handle the result
     if (!result || (result && 'success' in result && !result.success)) {
+      console.error('❌ [DEPLOYMENT_CREATE] Failed to create deployment:', result?.error);
       return null;
     }
+    console.log('📊 [DEPLOYMENT_CREATE] Deployment creation result:', JSON.stringify(result, null, 2));
 
-    // Invalidate cache using tag-based approach
-    serverCache.deleteByTag('deployments');
-    serverCache.deleteByTag(`tenant:${user.tenant_id}`);
+    // 3. Create mapping between deployment and CICD job
+    if (result.data?.id && cicdResult.data?.id) {
+      console.log('🔗 [MAPPING] Creating deployment-CICD mapping...');
+      const mappingResult = await cicdDb.createDeploymentCICDMapping({
+        deployment_id: result.data.id,
+        cicd_job_id: cicdResult.data.id,
+        tenant_id: user.tenant_id
+      });
+      console.log('📊 [MAPPING] Mapping creation result:', JSON.stringify(mappingResult, null, 2));
+    }
 
-    // Also clear specific cache entries
-    serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployments-list'));
-
-    // Revalidate cache for backward compatibility
-    revalidatePath('/deployment', 'page');
-
-    // If successful and we have data, map to Deployment type
+    // Cache management
     if (result.data) {
-      const newDeployment = mapDbDeploymentToDeployment(result.data);
+      serverCache.deleteByTag('deployments');
+      serverCache.deleteByTag(`tenant:${user.tenant_id}`);
+      serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployments-list'));
+      revalidatePath('/deployment', 'page');
 
-      // Also cache the new deployment to prevent an immediate fetch
+      const newDeployment = mapDbDeploymentToDeployment(result.data);
+      console.log('✅ [DEPLOYMENT_CREATE] Successfully created deployment:', newDeployment.id);
+
       if (newDeployment.id) {
         serverCache.set(
           serverCache.tenantKey(user.tenant_id, 'deployment', newDeployment.id),
@@ -261,7 +266,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
 
     return null;
   } catch (error: any) {
-    console.error('Error creating deployment:', error);
+    console.error('❌ [DEPLOYMENT_CREATE] Error creating deployment:', error);
     return null;
   }
 }

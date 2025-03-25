@@ -393,17 +393,18 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
         const formData: DeploymentFormData = {
           name: deploymentData.name,
           description: deploymentData.description,
-          repository: deploymentData.repositoryId, // Changed from repositoryId to repository
-          selectedScripts: deploymentData.scriptIds, // Changed from scriptIds to selectedScripts
-          selectedHosts: deploymentData.hostIds, // Changed from hostIds to selectedHosts
+          repository: deploymentData.repositoryId,
+          selectedScripts: deploymentData.scriptIds,
+          selectedHosts: deploymentData.hostIds,
           schedule: deploymentData.schedule,
           scheduledTime: deploymentData.scheduledTime || '',
           cronExpression: deploymentData.cronExpression || '',
           repeatCount: deploymentData.repeatCount || 0,
           environmentVars: deploymentData.environmentVars.filter((env) => env.key && env.value),
-          parameters: deploymentData.scriptParameters, // Changed from scriptParameters to parameters
+          parameters: deploymentData.scriptParameters,
           notifications: deploymentData.notifications,
-          scriptMapping: scriptMapping // Add script mapping for better script resolution
+          scriptMapping: scriptMapping,
+          provider_id: cicdContext.providers[0]?.id // Use the first CICD provider's ID
         };
 
         console.log('[DeploymentWizard] Submitting deployment with data:', formData);

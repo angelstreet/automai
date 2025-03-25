@@ -133,7 +133,7 @@ export interface CICDJob {
 export interface DeploymentFormData {
   name: string;
   description: string;
-  repository: string; // Changed from repositoryId to match the current implementation
+  repository: string;
   selectedScripts: string[];
   selectedHosts: string[];
   schedule: 'now' | 'later';
@@ -146,12 +146,7 @@ export interface DeploymentFormData {
     email: boolean;
     slack: boolean;
   };
-  jenkinsConfig?: {
-    enabled: boolean;
-    providerId?: string;
-    jobId?: string;
-    parameters?: Record<string, any>;
-  };
+  provider_id: string;
   // Maps script IDs to their file paths for better script resolution
   scriptMapping?: Record<
     string,
