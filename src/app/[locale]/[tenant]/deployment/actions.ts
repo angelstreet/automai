@@ -179,20 +179,29 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
 export async function createDeployment(formData: DeploymentFormData): Promise<Deployment | null> {
   try {
     console.log('🚀 [DEPLOYMENT_CREATE] Starting deployment creation process');
-    console.log('📝 [DEPLOYMENT_CREATE] Form data:', JSON.stringify(formData, null, 2));
-
-    // Get the current user
+    
+    // Ensure we have a valid user
     const user = await getUser();
+    if (!user || !user.tenant_id) {
+      console.error('❌ [DEPLOYMENT_CREATE] No authenticated user found');
+      return null;
+    }
+    
     const cookieStore = await cookies();
 
     // 1. Create CICD job with provider reference
     console.log('🔄 [CICD_JOB] Starting CICD job creation');
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
     const cicdResult = await cicdDb.createCICDJob({
-      provider_id: formData.provider_id, // Use provider_id from form data
-      tenant_id: user.tenant_id,
-      status: 'pending'
-    });
+      data: {
+        provider_id: formData.provider_id,
+        external_id: `deployment-${Date.now()}`,
+        name: `${formData.name} Job`,
+        path: formData.selectedScripts.join(','),
+        description: formData.description || 'Deployment job',
+        parameters: [] // Empty array for now, we'll update later if needed
+      }
+    }, cookieStore);
 
     if (!cicdResult.success) {
       console.error('❌ [CICD_JOB] Failed to create CICD job:', cicdResult.error);
@@ -229,14 +238,16 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
     console.log('📊 [DEPLOYMENT_CREATE] Deployment creation result:', JSON.stringify(result, null, 2));
 
     // 3. Create mapping between deployment and CICD job
-    if (result.data?.id && cicdResult.data?.id) {
+    if (result.data?.id && cicdResult.id) {
       console.log('🔗 [MAPPING] Creating deployment-CICD mapping...');
       const mappingResult = await cicdDb.createDeploymentCICDMapping({
         deployment_id: result.data.id,
-        cicd_job_id: cicdResult.data.id,
-        tenant_id: user.tenant_id
-      });
+        job_id: cicdResult.id,
+        parameters: formData.parameters || {}
+      }, cookieStore);
       console.log('📊 [MAPPING] Mapping creation result:', JSON.stringify(mappingResult, null, 2));
+    } else {
+      console.warn('⚠️ [MAPPING] Missing IDs for mapping, deployment_id:', result?.data?.id, 'job_id:', cicdResult?.id);
     }
 
     // Cache management
@@ -759,6 +770,9 @@ export async function updateDeploymentCICDStatus(
       console.error('Actions layer: Cannot update status - user not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
+    
+    // Get cookie store
+    const cookieStore = await cookies();
 
     // Get the deployment
     const deployment = await getDeploymentById(deploymentId);
@@ -773,17 +787,18 @@ export async function updateDeploymentCICDStatus(
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
     // Get the CI/CD mapping
-    const mappingResult = await cicdDb.getDeploymentCICDMapping({
-      deployment_id: deploymentId,
-      tenant_id: user.tenant_id,
-    });
+    const mappingResult = await cicdDb.getDeploymentCICDMappings({
+      where: {
+        deployment_id: deploymentId
+      }
+    }, cookieStore);
 
-    if (!mappingResult.success || !mappingResult.data) {
+    if (!mappingResult.success || !mappingResult.data || mappingResult.data.length === 0) {
       console.error(`Actions layer: No CI/CD mapping found for deployment ${deploymentId}`);
       return { success: false, error: 'No CI/CD mapping found' };
     }
 
-    const mapping = mappingResult.data;
+    const mapping = mappingResult.data[0]; // Get the first mapping
 
     // Import the CI/CD service
     const { getCICDProvider } = await import('@/lib/services/cicd');
@@ -799,7 +814,7 @@ export async function updateDeploymentCICDStatus(
     const provider = providerResult.data;
 
     // Get the build status
-    const buildResult = await provider.getBuildStatus(mapping.job_id, mapping.build_id);
+    const buildResult = await provider.getBuildStatus(mapping.cicd_job_id, mapping.build_id);
 
     if (!buildResult.success) {
       console.error(`Actions layer: Failed to get build status: ${buildResult.error}`);
@@ -829,16 +844,16 @@ export async function updateDeploymentCICDStatus(
     }
 
     // Update the deployment status
-    await deploymentDb.update({
-      where: { id: deploymentId },
-      data: { status: deploymentStatus },
-    });
+    await deploymentDb.update(deploymentId, { 
+      status: deploymentStatus as string 
+    }, cookieStore);
 
     // Update the CI/CD mapping status
-    await cicdDb.updateDeploymentCICDMapping({
-      where: { id: mapping.id },
-      data: { status: buildStatus },
-    });
+    await cicdDb.updateDeploymentCICDMapping(
+      mapping.id, 
+      { status: buildStatus }, 
+      cookieStore
+    );
 
     console.log(`Actions layer: Updated deployment status to ${deploymentStatus}`);
 
@@ -1296,8 +1311,8 @@ export async function runDeploymentAction(
         const provider = providerResult.data;
 
         // Trigger the job
-        console.log(`Actions layer: Triggering Jenkins job ${mapping.job_id}`);
-        const result = await provider.triggerJob(mapping.job_id, mapping.parameters);
+        console.log(`Actions layer: Triggering Jenkins job ${mapping.cicd_job_id}`);
+        const result = await provider.triggerJob(mapping.cicd_job_id, mapping.parameters);
 
         if (!result.success) {
           console.error(`Actions layer: Failed to trigger Jenkins job: ${result.error}`);

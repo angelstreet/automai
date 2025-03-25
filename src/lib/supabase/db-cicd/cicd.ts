@@ -524,7 +524,6 @@ async function deleteCICDJob(
 async function createDeploymentCICDMapping(
   data: {
     deployment_id: string;
-    provider_id: string;
     job_id: string;
     parameters?: any;
     build_number?: number;
@@ -543,8 +542,7 @@ async function createDeploymentCICDMapping(
       .from('deployment_cicd_mappings')
       .insert({
         deployment_id: data.deployment_id,
-        provider_id: data.provider_id,
-        job_id: data.job_id,
+        cicd_job_id: data.job_id,
         parameters: data.parameters || {},
         build_number: data.build_number,
         build_url: data.build_url,
