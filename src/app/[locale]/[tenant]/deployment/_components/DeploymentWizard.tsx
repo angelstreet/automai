@@ -9,9 +9,10 @@ import {
   Repository,
   Host as HostType,
 } from '../types';
-import { useRepository, useHost, useDeployment } from '@/context';
+import { useRepository, useHost, useDeployment, useCICD } from '@/context';
 import { DeploymentContextType } from '@/types/context/deployment';
 import { Host as SystemHost } from '../../hosts/types';
+import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
 import { toast } from '@/components/shadcn/use-toast';
 import DeploymentWizardStep1 from './DeploymentWizardStep1';
 import DeploymentWizardStep2 from './DeploymentWizardStep2';
@@ -56,6 +57,12 @@ const initialDeploymentData: DeploymentData = {
   },
 };
 
+// Declare a type for selected repository that includes providerId and url
+interface EnhancedRepository extends Repository {
+  providerId?: string;
+  url?: string;
+}
+
 // Wrap DeploymentWizard in React.memo to prevent unnecessary re-renders
 const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
   ({ onCancel, onDeploymentCreated, explicitRepositories = [], isReady = true }) => {
@@ -71,6 +78,35 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
     // Use the deployment context for repositories as well (which may have more data)
     const deploymentContext = useDeployment();
+
+    // Use the CICD context
+    const cicdContext = useCICD();
+
+    // Track CICD providers
+    const [cicdProviders, setCicdProviders] = useState<any[]>([]);
+    const [loadingProviders, setLoadingProviders] = useState(false);
+
+    // Fetch CICD providers on mount
+    useEffect(() => {
+      const fetchProviders = async () => {
+        if (!cicdContext) return;
+        
+        try {
+          setLoadingProviders(true);
+          const result = await cicdContext.fetchProviders();
+          if (result.success && result.data) {
+            setCicdProviders(result.data);
+            console.log('[DeploymentWizard] Loaded CICD providers:', result.data);
+          }
+        } catch (error) {
+          console.error('[DeploymentWizard] Error fetching CICD providers:', error);
+        } finally {
+          setLoadingProviders(false);
+        }
+      };
+      
+      fetchProviders();
+    }, [cicdContext]);
 
     // Handle the case where deployment context is still initializing (null)
     const deploymentContextValue = deploymentContext as DeploymentContextType;
@@ -128,8 +164,15 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
     const {
       hosts: systemHosts = [],
       loading: isLoadingHosts = false,
-      error: hostsError = null,
+      error: hostContextError = null,
     } = hostContext || {};
+
+    // Convert hostsError to string for component compatibility
+    const hostsError = hostContextError 
+      ? (typeof hostContextError === 'string' 
+          ? hostContextError 
+          : JSON.stringify(hostContextError))
+      : null;
 
     // Adapt hosts for deployment
     const availableHosts = adaptHostsForDeployment(systemHosts);
@@ -148,8 +191,20 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
             setScriptsError(null);
             
             // Get repository information from the selected repository
-            const selectedRepo = deploymentData.selectedRepository;
-            if (!selectedRepo || !selectedRepo.providerId) {
+            const selectedRepo = deploymentData.selectedRepository as (Repository & { 
+              providerId?: string; 
+              url?: string;
+              provider_id?: string;
+            });
+            
+            if (!selectedRepo) {
+              throw new Error("No repository selected");
+            }
+            
+            // Use either providerId or provider_id from the repository
+            const providerId = selectedRepo.providerId || selectedRepo.provider_id;
+            
+            if (!providerId) {
               throw new Error("Missing provider ID for the selected repository");
             }
             
@@ -159,7 +214,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
             
             console.log(`[DeploymentWizard] Loading scripts for repository: ${selectedRepo.name}`, {
               id: selectedRepo.id,
-              providerId: selectedRepo.providerId,
+              providerId,
               url: selectedRepo.url
             });
             
@@ -171,7 +226,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
             for (const branch of branchesToTry) {
               try {
                 // Get all files recursively with branch fallback, like RepositoryExplorer does
-                const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${selectedRepo.providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${branch}&action=list&recursive=true`;
+                const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${branch}&action=list&recursive=true`;
                 console.log(`[DeploymentWizard] Trying to fetch scripts with branch: ${branch}`);
                 
                 const response = await fetch(apiUrl);
@@ -187,14 +242,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
                 
                 if (data.success && data.data) {
                   // Filter for script files (.sh, .py)
-                  const filteredFiles = data.data.filter((file) => 
+                  const filteredFiles = data.data.filter((file: any) => 
                     file.type === 'file' && 
                     (file.name.endsWith('.sh') || file.name.endsWith('.py'))
                   );
                   
                   if (filteredFiles.length > 0) {
                     // Transform to script format
-                    const scripts = filteredFiles.map((file, index) => ({
+                    const scripts = filteredFiles.map((file: any, index: number) => ({
                       id: `script-${index}`,
                       name: file.name,
                       path: file.path,
@@ -247,14 +302,14 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
       if (name === 'repositoryId') {
         // Avoid unnecessary log noise
         if (value) {
-          const selectedRepo = repositories.find((r: Repository) => r.id === value);
+          const selectedRepo = repositories.find((r) => r.id === value) as RepositoryInterface;
 
           if (selectedRepo) {
             // Store the full repository object
             setDeploymentData((prev) => ({
               ...prev,
               repositoryId: value,
-              selectedRepository: selectedRepo,
+              selectedRepository: selectedRepo as any, // Cast to any to avoid type conflicts
             }));
 
             // Early return since we've already updated the state
@@ -374,6 +429,11 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
       setSubmissionError(null);
 
       try {
+        // Check if CICD context is available
+        if (!cicdContext) {
+          throw new Error('CI/CD context not initialized');
+        }
+
         // Create scriptMapping from repositoryScripts array
         const scriptMapping: Record<string, { path: string; name: string; type: string }> = {};
         
@@ -404,7 +464,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           parameters: deploymentData.scriptParameters,
           notifications: deploymentData.notifications,
           scriptMapping: scriptMapping,
-          provider_id: cicdContext.providers[0]?.id // Use the first CICD provider's ID
+          provider_id: cicdProviders.length > 0 ? cicdProviders[0].id : '' // Use the first CICD provider's ID
         };
 
         console.log('[DeploymentWizard] Submitting deployment with data:', formData);
