@@ -23,11 +23,9 @@ import {
 } from '@/app/[locale]/[tenant]/deployment/actions';
 import { getRepositories } from '@/app/[locale]/[tenant]/repositories/actions';
 import { getHosts as getAvailableHosts } from '@/app/[locale]/[tenant]/hosts/actions';
-import { AuthUser } from '@/types/user';
 import { DeploymentContextType, DeploymentData } from '@/types/context/deployment';
 import { useRequestProtection } from '@/hooks/useRequestProtection';
 import { persistedData } from './AppContext';
-import { useUser } from './UserContext'; // Import directly from UserContext to avoid circular dependency
 
 // Singleton flag to prevent multiple instances
 let DEPLOYMENT_CONTEXT_INITIALIZED = false;
@@ -61,35 +59,26 @@ const initialState: DeploymentData = {
 
 const DeploymentContext = createContext<DeploymentContextType | undefined>(undefined);
 
-export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: AuthUser | null }> = ({
+export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: any | null }> = ({
   children,
   userData,
 }) => {
   // Check for multiple instances of DeploymentProvider
   useEffect(() => {
     if (DEPLOYMENT_CONTEXT_INITIALIZED) {
-      console.warn(
-        '[DeploymentContext] Multiple instances of DeploymentProvider detected. ' +
-          'This can cause performance issues and unexpected behavior. ' +
-          'Ensure that DeploymentProvider is only used once in the component tree, ' +
-          'preferably in the AppProvider.',
-      );
+      console.warn('[DeploymentContext] Multiple instances of DeploymentProvider detected');
     } else {
       DEPLOYMENT_CONTEXT_INITIALIZED = true;
       log('[DeploymentContext] DeploymentProvider initialized as singleton');
     }
 
     return () => {
-      // Only reset on the instance that set it to true
       if (DEPLOYMENT_CONTEXT_INITIALIZED) {
         DEPLOYMENT_CONTEXT_INITIALIZED = false;
         log('[DeploymentContext] DeploymentProvider singleton instance unmounted');
       }
     };
   }, []);
-
-  // Get user data from UserContext instead of fetching directly
-  const userContext = useUser();
 
   const [state, setState] = useState<DeploymentData>(() => {
     if (typeof window !== 'undefined') {
@@ -113,20 +102,15 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
   const { protectedFetch, safeUpdateState } = useRequestProtection('DeploymentContext');
   const lastFetchTimeRef = useRef<number>(0);
 
-  // Update local state with user data from UserContext
+  // Update local state with user data from props if provided
   useEffect(() => {
-    if (userContext?.user && userContext.user !== state.currentUser) {
-      log('[DeploymentContext] Updating user data from UserContext:', {
-        id: userContext.user.id,
-        tenant: userContext.user.tenant_name,
-        role: userContext.user.role,
-      });
+    if (userData && userData !== state.currentUser) {
       setState((prevState) => ({
         ...prevState,
-        currentUser: userContext.user,
+        currentUser: userData,
       }));
     }
-  }, [userContext?.user, state.currentUser]);
+  }, [userData, state.currentUser]);
 
   useEffect(() => {
     if (state.deployments.length > 0) {
@@ -139,87 +123,6 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
       }
     }
   }, [state.deployments.length]);
-
-  // Get user data from UserContext or props
-  const getUserData = useCallback((): AuthUser | null => {
-    // First try to get from state
-    if (state.currentUser) {
-      return state.currentUser;
-    }
-
-    // Then try from UserContext - add null check
-    if (userContext?.user) {
-      return userContext.user;
-    }
-
-    // Finally try from props
-    if (userData) {
-      return userData;
-    }
-
-    return null;
-  }, [state.currentUser, userContext?.user, userData]);
-
-  // Refresh user data (now just gets it from UserContext)
-  const fetchUserData = useCallback(async (): Promise<AuthUser | null> => {
-    log('[DeploymentContext] Getting user data...');
-
-    try {
-      // First check if we already have user data
-      const user = getUserData();
-      if (user) {
-        log('[DeploymentContext] Using existing user data:', {
-          id: user.id,
-          tenant: user.tenant_name,
-          source:
-            userContext?.user && user === userContext.user
-              ? 'UserContext'
-              : user === state.currentUser
-                ? 'state'
-                : 'props',
-        });
-
-        // Update state if needed
-        if (user !== state.currentUser) {
-          setState((prevState) => ({
-            ...prevState,
-            currentUser: user,
-          }));
-        }
-
-        return user;
-      }
-
-      // If we don't have user data and UserContext has a refresh method, use it
-      if (!user && userContext.refreshUser) {
-        log('[DeploymentContext] Refreshing user data from UserContext');
-        // Try to refresh it from UserContext
-        await userContext.refreshUser();
-
-        // Now check if it's available
-        if (userContext.user) {
-          log('[DeploymentContext] User data refreshed successfully:', {
-            id: userContext.user.id,
-            tenant: userContext.user.tenant_name,
-          });
-
-          // Update state with user data
-          setState((prevState) => ({
-            ...prevState,
-            currentUser: userContext.user,
-          }));
-
-          return userContext.user;
-        }
-      }
-
-      log('[DeploymentContext] No user data available');
-      return null;
-    } catch (error) {
-      log('[DeploymentContext] Error getting user data:', error);
-      return null;
-    }
-  }, [getUserData, userContext, state.currentUser, setState]);
 
   const fetchRepositories = useCallback(async () => {
     console.log('[DeploymentContext] Fetching repositories');
@@ -311,26 +214,6 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
   );
 
   const debouncedFetchDeployments = useDebounce(fetchDeployments, 300);
-
-  const refreshUserData = useCallback(async () => {
-    await protectedFetch('refreshUserData', async () => {
-      try {
-        // Get user from UserContext or state
-        const user = getUserData();
-        if (!user || !user.id) {
-          log('[DeploymentContext] No user data available for refresh');
-          return null;
-        }
-
-        log('[DeploymentContext] Refreshing deployments for user:', user.id);
-        const result = await fetchDeployments();
-        return result;
-      } catch (error) {
-        console.error('[DeploymentContext] Error refreshing user data:', error);
-        return null;
-      }
-    });
-  }, [getUserData, fetchDeployments, protectedFetch]);
 
   useEffect(() => {
     if (!state.isInitialized) {
@@ -541,7 +424,6 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
       currentUser: state.currentUser,
       isInitialized: state.isInitialized,
       refreshUserData: async () => {
-        await refreshUserData();
         return state.currentUser;
       },
       fetchDeployments: debouncedFetchDeployments,
@@ -564,7 +446,6 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
       state.isRefreshing,
       state.currentUser,
       state.isInitialized,
-      refreshUserData,
       debouncedFetchDeployments,
       fetchDeploymentById,
       createDeployment,
@@ -579,6 +460,7 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
     ],
   );
 
+  // Persist deployment data for cross-page navigation
   useEffect(() => {
     if (typeof persistedData !== 'undefined') {
       persistedData.deploymentData = {
@@ -590,21 +472,16 @@ export const DeploymentProvider: React.FC<{ children: ReactNode; userData?: Auth
       console.log('[DeploymentContext] Persisted deployment data');
     }
   }, [state.deployments, state.repositories, state.loading, state.error]);
-
-  // We're not using central context registration in the new architecture
   
   return <DeploymentContext.Provider value={contextValue}>{children}</DeploymentContext.Provider>;
 };
 
 export function useDeployment() {
   const context = useContext(DeploymentContext);
-
+  
   // If the context is null for some reason, return a safe default object
-  // This prevents destructuring errors in components
   if (!context) {
-    console.warn(
-      '[useDeployment] Deployment context is null, returning fallback. This should not happen if using the centralized context system.',
-    );
+    console.warn('[useDeployment] Deployment context is null, returning fallback');
     return {
       deployments: [],
       repositories: [],
@@ -627,6 +504,6 @@ export function useDeployment() {
       fetchDeploymentStatus: async () => ({ status: 'unknown', progress: 0 }),
     };
   }
-
+  
   return context;
 }

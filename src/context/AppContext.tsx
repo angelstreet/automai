@@ -7,22 +7,19 @@ import React, {
   useRef,
   useEffect,
   useState,
+  useMemo,
 } from 'react';
-import { HostProvider, useHost as useDirectHostContext } from './HostContext';
-import { DeploymentProvider, useDeployment as useDirectDeploymentContext } from './DeploymentContext';
-import { RepositoryProvider, useRepository as useDirectRepositoryContext } from './RepositoryContext';
-import { CICDProvider, useCICD as useDirectCICDContext } from './CICDContext';
-import { UserProvider, useUser as useDirectUserContext } from './UserContext';
+import { HostProvider } from './HostContext';
+import { DeploymentProvider } from './DeploymentContext';
+import { RepositoryProvider } from './RepositoryContext';
+import { CICDProvider } from './CICDContext';
+import { UserProvider } from './UserContext';
 import { AppContextType } from '@/types/context/app';
 import { UserContextType } from '@/types/context/user';
 
 // Debug mode
 const DEBUG = false;
 const log = (...args: any[]) => DEBUG && console.log(...args);
-
-// Global references for immediate access to context values
-// This avoids the asynchronous nature of context initialization
-let globalUserContext: UserContextType | null = null;
 
 // Singleton flag to detect multiple instances
 let APP_CONTEXT_INITIALIZED = false;
@@ -60,6 +57,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   // Track authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   // Singleton check
   useEffect(() => {
@@ -88,11 +86,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleAuthUpdate = (authState: boolean) => {
     setIsAuthenticated(authState);
     log('[AppContext] Authentication state updated:', authState);
+    
+    // Mark as initialized after auth state is determined
+    if (!isInitialized) {
+      setIsInitialized(true);
+    }
   };
 
-  // Render only UserProvider initially, and only add other providers if authenticated
+  // Create a memoized value for the app context
+  const contextValue = useMemo(() => appContextRef.current, []);
+
+  // Render providers based on authentication state
   return (
-    <AppContext.Provider value={appContextRef.current}>
+    <AppContext.Provider value={contextValue}>
       <UserProvider appContextRef={appContextRef} onAuthChange={handleAuthUpdate}>
         {isAuthenticated === true ? (
           // Only render data-fetching providers when authenticated
@@ -107,7 +113,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           </HostProvider>
         ) : (
           // When not authenticated or still checking, only render children without other contexts
-          // They will use the fallback values from the individual useXXX hooks
           children
         )}
       </UserProvider>
@@ -115,40 +120,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Compatibility hook for accessing all contexts at once (not recommended)
+// Unified hook for accessing the app context
 export function useAppContext() {
   return useContext(AppContext);
 }
 
-// Enhanced useUser hook that prioritizes immediate access through global ref
+// Enhanced hooks that use the central AppContext and check authentication
 export function useUser() {
-  // First try the global reference for immediate access
-  if (globalUserContext) {
-    return globalUserContext;
-  }
-
-  // Then try direct context
-  try {
-    const directContext = useDirectUserContext();
-    if (directContext) {
-      // Cache for future synchronous access
-      globalUserContext = directContext;
-      return directContext;
-    }
-  } catch (e) {
-    // Ignore errors from direct context
-  }
-
-  // Finally, try app context
+  // Get user from AppContext
   const appContext = useContext(AppContext);
+  
   if (appContext?.user) {
-    // Cache for future synchronous access
-    globalUserContext = appContext.user;
     return appContext.user;
   }
 
-  // Return a safe fallback as last resort
-  log('[AppContext] All useUser fallbacks failed, returning default');
+  // Return a safe fallback with correct type
   return {
     user: null,
     loading: true,
@@ -161,14 +147,13 @@ export function useUser() {
   };
 }
 
-// Simplified hooks with better fallbacks for other contexts
 export function useHost() {
-  // First check authentication status
-  const userContext = useContext(UserContext);
-  const isAuthenticated = !!userContext?.user;
+  // First check authentication via AppContext
+  const appContext = useContext(AppContext);
+  const isAuthenticated = !!appContext?.user?.user;
   
-  // If not authenticated, return a completely inactive version
   if (!isAuthenticated) {
+    // Return inactive version when not authenticated
     return {
       hosts: [],
       loading: false,
@@ -180,17 +165,9 @@ export function useHost() {
     };
   }
 
-  // Try direct context first
-  try {
-    const directContext = useDirectHostContext();
-    if (directContext) return directContext;
-  } catch (e) {
-    // Ignore errors from direct context
+  if (appContext?.host) {
+    return appContext.host;
   }
-
-  // Then try app context
-  const appContext = useContext(AppContext);
-  if (appContext?.host) return appContext.host;
 
   // Safe fallback
   return {
@@ -205,12 +182,12 @@ export function useHost() {
 }
 
 export function useRepository() {
-  // First check authentication status
-  const userContext = useContext(UserContext);
-  const isAuthenticated = !!userContext?.user;
+  // First check authentication via AppContext
+  const appContext = useContext(AppContext);
+  const isAuthenticated = !!appContext?.user?.user;
   
-  // If not authenticated, return a completely inactive version
   if (!isAuthenticated) {
+    // Return inactive version when not authenticated
     return {
       repositories: [],
       starredRepositories: [],
@@ -220,23 +197,12 @@ export function useRepository() {
       refreshRepositories: async () => {},
       filterRepositories: () => {},
       toggleStarRepository: () => {},
-      fetchRepositories: async () => [],
-      createRepository: async () => ({ success: false, error: 'Not authenticated' }),
-      deleteRepository: async () => ({ success: false, error: 'Not authenticated' }),
     };
   }
 
-  // Try direct context first
-  try {
-    const directContext = useDirectRepositoryContext();
-    if (directContext) return directContext;
-  } catch (e) {
-    // Ignore errors from direct context
+  if (appContext?.repository) {
+    return appContext.repository;
   }
-
-  // Then try app context
-  const appContext = useContext(AppContext);
-  if (appContext?.repository) return appContext.repository;
 
   // Safe fallback
   return {
@@ -245,62 +211,63 @@ export function useRepository() {
     filteredRepositories: [],
     loading: true,
     error: null,
-    fetchRepositories: async () => {},
-    createRepository: async () => ({ success: false, error: 'Repository context not available' }),
-    deleteRepository: async () => ({ success: false, error: 'Repository context not available' }),
-    toggleStarRepository: async () => ({ success: false, error: 'Repository context not available' }),
+    refreshRepositories: async () => {},
+    filterRepositories: () => {},
+    toggleStarRepository: () => {},
   };
 }
 
 export function useDeployment() {
-  // First check authentication status
-  const userContext = useContext(UserContext);
-  const isAuthenticated = !!userContext?.user;
+  // First check authentication via AppContext
+  const appContext = useContext(AppContext);
+  const isAuthenticated = !!appContext?.user?.user;
   
-  // If not authenticated, return a completely inactive version
   if (!isAuthenticated) {
+    // Return inactive version when not authenticated
     return {
       deployments: [],
+      repositories: [],
       loading: false,
       error: null,
+      isRefreshing: false,
       fetchDeployments: async () => {},
+      fetchDeploymentById: async () => null,
       createDeployment: async () => ({ success: false, error: 'Not authenticated' }),
+      abortDeployment: async () => ({ success: false, error: 'Not authenticated' }),
+      refreshDeployment: async () => ({ success: false, error: 'Not authenticated' }),
       updateDeployment: async () => ({ success: false, error: 'Not authenticated' }),
       deleteDeployment: async () => ({ success: false, error: 'Not authenticated' }),
     };
   }
 
-  // Try direct context first
-  try {
-    const directContext = useDirectDeploymentContext();
-    if (directContext) return directContext;
-  } catch (e) {
-    // Ignore errors from direct context
+  if (appContext?.deployment) {
+    return appContext.deployment;
   }
-
-  // Then try app context
-  const appContext = useContext(AppContext);
-  if (appContext?.deployment) return appContext.deployment;
 
   // Safe fallback
   return {
     deployments: [],
+    repositories: [],
     loading: true,
     error: null,
+    isRefreshing: false,
     fetchDeployments: async () => {},
+    fetchDeploymentById: async () => null,
     createDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
+    abortDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
+    refreshDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
     updateDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
     deleteDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
   };
 }
 
 export function useCICD() {
-  // First check authentication status
-  const userContext = useContext(UserContext);
-  const isAuthenticated = !!userContext?.user;
+  // First check authentication via AppContext
+  const appContext = useContext(AppContext);
+  const isAuthenticated = !!appContext?.user?.user;
   
-  // If not authenticated, return a completely inactive version
   if (!isAuthenticated) {
+    // Return inactive version when not authenticated
     return {
       providers: [],
       jobs: [],
@@ -308,24 +275,27 @@ export function useCICD() {
       selectedJob: null,
       loading: false,
       error: null,
-      fetchProviders: async () => {},
-      fetchJobs: async () => {},
+      fetchProviders: async () => ({ success: false, data: [], error: 'Not authenticated' }),
+      getProviderById: async () => null,
       createProvider: async () => ({ success: false, error: 'Not authenticated' }),
+      updateProvider: async () => ({ success: false, error: 'Not authenticated' }),
       deleteProvider: async () => ({ success: false, error: 'Not authenticated' }),
+      testProvider: async () => ({ success: false, error: 'Not authenticated' }),
+      fetchJobs: async () => [],
+      getJobById: async () => null,
+      triggerJob: async () => ({ success: false, error: 'Not authenticated' }),
+      getBuildStatus: async () => null,
+      getBuildLogs: async () => '',
+      fetchUserData: async () => null,
+      setSelectedProvider: () => {},
+      setSelectedJob: () => {},
+      refreshUserData: async () => null,
     };
   }
 
-  // Try direct context first
-  try {
-    const directContext = useDirectCICDContext();
-    if (directContext) return directContext;
-  } catch (e) {
-    // Ignore errors from direct context
+  if (appContext?.cicd) {
+    return appContext.cicd;
   }
-
-  // Then try app context
-  const appContext = useContext(AppContext);
-  if (appContext?.cicd) return appContext.cicd;
 
   // Safe fallback
   return {
@@ -335,9 +305,20 @@ export function useCICD() {
     selectedJob: null,
     loading: true,
     error: null,
-    fetchProviders: async () => {},
-    fetchJobs: async () => {},
+    fetchProviders: async () => ({ success: false, data: [], error: 'CICD context not available' }),
+    getProviderById: async () => null,
     createProvider: async () => ({ success: false, error: 'CICD context not available' }),
+    updateProvider: async () => ({ success: false, error: 'CICD context not available' }),
     deleteProvider: async () => ({ success: false, error: 'CICD context not available' }),
+    testProvider: async () => ({ success: false, error: 'CICD context not available' }),
+    fetchJobs: async () => [],
+    getJobById: async () => null,
+    triggerJob: async () => ({ success: false, error: 'CICD context not available' }),
+    getBuildStatus: async () => null,
+    getBuildLogs: async () => '',
+    fetchUserData: async () => null,
+    setSelectedProvider: () => {},
+    setSelectedJob: () => {},
+    refreshUserData: async () => null,
   };
 }
