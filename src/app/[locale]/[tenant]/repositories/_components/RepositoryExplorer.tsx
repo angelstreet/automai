@@ -8,23 +8,18 @@ import {
   Code,
   Play,
   Settings,
-  Terminal,
   FileCode,
   Folder,
   Star,
-  GitFork,
-  Eye,
-  ChevronRight,
   ChevronDown,
   Download,
   History,
   PlusCircle,
 } from 'lucide-react';
-import { useRepository } from '@/context';
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Button } from '@/components/shadcn/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { Badge } from '@/components/shadcn/badge';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';

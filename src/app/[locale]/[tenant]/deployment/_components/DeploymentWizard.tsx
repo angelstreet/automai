@@ -82,11 +82,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
         success: false,
         error: 'Deployment context not initialized',
       }),
-      fetchScriptsForRepository = deploymentContextValue?.fetchScriptsForRepository || 
-        (async (repositoryId: string) => {
-          console.warn('Deployment context not initialized, cannot fetch scripts');
-          return [];
-        }),
     } = deploymentContextValue || {};
 
     // Get repositories from both contexts - deployment context is the primary source
@@ -145,7 +140,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
     // Fetch scripts only when on step 2 and repository selected
     useEffect(() => {
       console.log(
-        `[DeploymentWizard] Current step: ${step}, repositoryId: ${deploymentData.repositoryId?.substring(0, 8)}...`,
+        `[DeploymentWizard] Current step: ${step}, repositoryId: ${deploymentData.repositoryId?.substring(0, 8) || 'none'}...`,
       );
 
       // Only fetch scripts when on step 2 and a repository is selected
@@ -154,12 +149,89 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           try {
             setIsLoadingScripts(true);
             setScriptsError(null);
-            // Use deployment context's fetchScriptsForRepository
-            const scripts = await fetchScriptsForRepository(deploymentData.repositoryId);
-            setRepositoryScripts(scripts);
+            
+            // Get repository information from the selected repository
+            const selectedRepo = deploymentData.selectedRepository;
+            if (!selectedRepo || !selectedRepo.providerId) {
+              throw new Error("Missing provider ID for the selected repository");
+            }
+            
+            if (!selectedRepo.url) {
+              throw new Error("Missing repository URL");
+            }
+            
+            console.log(`[DeploymentWizard] Loading scripts for repository: ${selectedRepo.name}`, {
+              id: selectedRepo.id,
+              providerId: selectedRepo.providerId,
+              url: selectedRepo.url
+            });
+            
+            // Try multiple branch names since we don't know the default branch
+            const branchesToTry = ['master', 'main', 'develop', 'dev'];
+            let scriptFiles = null;
+            let lastError = null;
+            
+            for (const branch of branchesToTry) {
+              try {
+                // Get all files recursively with branch fallback, like RepositoryExplorer does
+                const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${selectedRepo.providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${branch}&action=list&recursive=true`;
+                console.log(`[DeploymentWizard] Trying to fetch scripts with branch: ${branch}`);
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                  const errorText = await response.text();
+                  console.log(`[DeploymentWizard] Failed with branch ${branch}:`, errorText);
+                  lastError = new Error(`Error with branch ${branch}: ${response.status} ${response.statusText}`);
+                  continue;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                  // Filter for script files (.sh, .py)
+                  const filteredFiles = data.data.filter((file) => 
+                    file.type === 'file' && 
+                    (file.name.endsWith('.sh') || file.name.endsWith('.py'))
+                  );
+                  
+                  if (filteredFiles.length > 0) {
+                    // Transform to script format
+                    const scripts = filteredFiles.map((file, index) => ({
+                      id: `script-${index}`,
+                      name: file.name,
+                      path: file.path,
+                      description: `${file.path} (${file.size} bytes)`,
+                      parameters: [],
+                      type: file.name.endsWith('.py') ? 'python' : 'shell'
+                    }));
+                    
+                    console.log(`[DeploymentWizard] Successfully found ${scripts.length} script files with branch: ${branch}`);
+                    setRepositoryScripts(scripts);
+                    scriptFiles = scripts;
+                    break;
+                  } else {
+                    console.log(`[DeploymentWizard] No script files found with branch: ${branch}`);
+                  }
+                }
+              } catch (branchError) {
+                console.error(`[DeploymentWizard] Error with branch ${branch}:`, branchError);
+                lastError = branchError;
+              }
+            }
+            
+            if (!scriptFiles) {
+              if (lastError) {
+                throw lastError;
+              } else {
+                setRepositoryScripts([]);
+                console.log('[DeploymentWizard] No script files found in any branch');
+              }
+            }
           } catch (error) {
-            console.error('Error fetching scripts:', error);
-            setScriptsError('Failed to load scripts');
+            console.error('[DeploymentWizard] Error fetching scripts:', error);
+            setScriptsError(error instanceof Error ? error.message : 'Failed to load scripts');
+            setRepositoryScripts([]);
           } finally {
             setIsLoadingScripts(false);
           }
@@ -167,8 +239,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
         loadScripts();
       }
-      // Remove isLoadingScripts from dependency array to prevent refresh loops
-    }, [step, deploymentData.repositoryId, fetchScriptsForRepository]);
+    }, [step, deploymentData.repositoryId, deploymentData.selectedRepository]);
 
     const handleInputChange = (
       e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,

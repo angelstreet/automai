@@ -3,46 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import {
-  GitBranch,
   Plus,
-  RefreshCw,
-  Search,
-  Filter,
-  Star,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 
 import { Button } from '@/components/shadcn/button';
-import { Input } from '@/components/shadcn/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/shadcn/select';
+import { Card, CardContent,} from '@/components/shadcn/card';
 import { useToast } from '@/components/shadcn/use-toast';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/shadcn/dialog';
 
-import { EnhancedRepositoryCard } from './_components/EnhancedRepositoryCard';
 import { RepositoryExplorer } from './_components/RepositoryExplorer';
-import { EnhancedConnectRepositoryDialog } from './_components/EnhancedConnectRepositoryDialog';
 
 import { PageHeader } from '@/components/layout/PageHeader';
-import { EmptyState } from '@/components/layout/EmptyState';
 
 import { Repository, ConnectRepositoryValues } from './types';
-import { REPOSITORY_CATEGORIES } from './constants';
 
 import {
   RepositoryList,
