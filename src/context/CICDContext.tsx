@@ -186,6 +186,21 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // Use getUserData helper to get user from various sources
         const user = getUserData();
+        
+        // Check if the user is authenticated
+        if (!user) {
+          log(`${LOG_PREFIX} No authenticated user for fetchProviders, skipping`);
+          setState((prev: CICDData) => ({ 
+            ...prev, 
+            loading: false, 
+            error: 'User not authenticated' 
+          }));
+          return {
+            success: false,
+            data: [],
+            error: 'User not authenticated'
+          };
+        }
 
         log(`${LOG_PREFIX} fetchProviders called`, {
           hasUser: !!user,
@@ -489,6 +504,19 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // Get user from context using the getUserData helper
         const currentUser = getUserData();
+
+        // Check if the user is authenticated before proceeding
+        if (!currentUser) {
+          // No authenticated user, don't attempt to fetch providers
+          log(`${LOG_PREFIX} No authenticated user found, skipping initialization`);
+          setState((prevState) => ({
+            ...prevState,
+            loading: false,
+            error: null
+          }));
+          initialized.current = true;
+          return;
+        }
 
         // Fetch CICD providers with user data from context
         const providersResponse = await getCICDProviders(currentUser);

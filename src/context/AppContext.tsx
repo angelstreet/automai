@@ -6,6 +6,7 @@ import React, {
   ReactNode,
   useRef,
   useEffect,
+  useState,
 } from 'react';
 import { HostProvider, useHost as useDirectHostContext } from './HostContext';
 import { DeploymentProvider, useDeployment as useDirectDeploymentContext } from './DeploymentContext';
@@ -56,6 +57,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     cicd: null,
     user: null,
   });
+  
+  // Track authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   // Singleton check
   useEffect(() => {
@@ -80,21 +84,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   log('[AppContext] AppProvider initializing');
 
-  // Simple direct provider nesting with clear initialization order
-  // UserProvider is innermost (first) since other contexts depend on it
-  // Pass the ref for direct updates during provider initialization
+  // Update authentication state when user context changes
+  const handleAuthUpdate = (authState: boolean) => {
+    setIsAuthenticated(authState);
+    log('[AppContext] Authentication state updated:', authState);
+  };
+
+  // Render only UserProvider initially, and only add other providers if authenticated
   return (
     <AppContext.Provider value={appContextRef.current}>
-      <UserProvider appContextRef={appContextRef}>
-        <HostProvider userData={null}>
-          <RepositoryProvider>
-            <DeploymentProvider>
-              <CICDProvider>
-                {children}
-              </CICDProvider>
-            </DeploymentProvider>
-          </RepositoryProvider>
-        </HostProvider>
+      <UserProvider appContextRef={appContextRef} onAuthChange={handleAuthUpdate}>
+        {isAuthenticated === true ? (
+          <HostProvider userData={null}>
+            <RepositoryProvider>
+              <DeploymentProvider>
+                <CICDProvider>
+                  {children}
+                </CICDProvider>
+              </DeploymentProvider>
+            </RepositoryProvider>
+          </HostProvider>
+        ) : (
+          // When not authenticated or still checking, only render children without other contexts
+          children
+        )}
       </UserProvider>
     </AppContext.Provider>
   );

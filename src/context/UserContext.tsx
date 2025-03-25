@@ -90,10 +90,12 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
 
 export function UserProvider({ 
   children, 
-  appContextRef 
+  appContextRef,
+  onAuthChange
 }: { 
   children: React.ReactNode;
   appContextRef: React.MutableRefObject<AppContextType>;
+  onAuthChange?: (isAuthenticated: boolean) => void;
 }) {
   // Add explicit initialization state
   const [isInitialized, setIsInitialized] = useState(false);
@@ -399,6 +401,16 @@ export function UserProvider({
       log('[UserContext] Updated persisted user data');
     }
   }, [user]);
+
+  // Notify AppContext about authentication state changes
+  useEffect(() => {
+    // If onAuthChange callback is provided, call it with current auth state
+    if (onAuthChange) {
+      const isAuthenticated = !!user;
+      log('[UserContext] Notifying AppContext about auth state:', isAuthenticated);
+      onAuthChange(isAuthenticated);
+    }
+  }, [user, onAuthChange]);
 
   const contextValue = React.useMemo(
     () => ({
