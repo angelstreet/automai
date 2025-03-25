@@ -228,7 +228,7 @@ export default function LoginPage() {
           )}
 
           <Button type="submit" className="w-full" disabled={isButtonDisabled}>
-            {isSubmitting || loading ? t('signingIn') : t('signIn')}
+            {isSubmitting ? t('signingIn') : t('signIn')}
           </Button>
 
           <div className="relative my-4">

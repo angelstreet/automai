@@ -55,6 +55,9 @@ export default async function middleware(request: NextRequest) {
     '/error',
     '/_next',
     '/favicon.ico',
+    '/features',
+    '/pricing',
+    '/docs',
   ];
 
   // Define auth-only paths that should redirect to dashboard if already authenticated
@@ -71,6 +74,9 @@ export default async function middleware(request: NextRequest) {
     // Public paths with locale (pages anyone can access)
     publicPaths.push(`/${locale}`);
     publicPaths.push(`/${locale}/`);
+    publicPaths.push(`/${locale}/features`);
+    publicPaths.push(`/${locale}/pricing`);
+    publicPaths.push(`/${locale}/docs`);
 
     // Auth-only paths with locale (pages that should redirect to dashboard if authenticated)
     authOnlyPaths.push(`/${locale}/login`);
