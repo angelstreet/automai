@@ -522,10 +522,11 @@ export async function deleteDeployment(id: string): Promise<boolean> {
     const cookieStore = await cookies();
     console.log(`Actions layer: Cookie store obtained`);
 
-    // Import the deployment database module
-    console.log(`Actions layer: Importing database module...`);
+    // Import the required database modules
+    console.log(`Actions layer: Importing database modules...`);
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-    console.log(`Actions layer: Database module imported successfully`);
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
+    console.log(`Actions layer: Database modules imported successfully`);
 
     // Get the deployment first (for tenant validation and to have its data for cache key generation)
     const deployment = await getDeploymentById(id);
@@ -540,8 +541,51 @@ export async function deleteDeployment(id: string): Promise<boolean> {
       return false;
     }
 
-    // Delete the deployment from the database
-    console.log(`Actions layer: Calling database delete function for ID: ${id}`);
+    // 1. Get the CICD mapping first to get job information
+    console.log(`Actions layer: Getting CICD mapping for deployment ${id}`);
+    const mappingResult = await cicdDb.getDeploymentCICDMappings({
+      where: { deployment_id: id }
+    }, cookieStore);
+
+    if (mappingResult.success && mappingResult.data && mappingResult.data.length > 0) {
+      const mapping = mappingResult.data[0];
+      
+      // 2. Delete the job from Jenkins if it exists
+      if (mapping.provider_id) {
+        console.log(`Actions layer: Deleting Jenkins job for deployment ${id}`);
+        const { getCICDProvider } = await import('@/lib/services/cicd');
+        const providerResult = await getCICDProvider(mapping.provider_id, user.tenant_id);
+
+        if (providerResult.success && providerResult.data) {
+          const provider = providerResult.data;
+          // Get the CICD job to get its external_id (Jenkins job name)
+          const jobResult = await cicdDb.getCICDJob({
+            where: { id: mapping.job_id }
+          }, cookieStore);
+
+          if (jobResult.success && jobResult.data) {
+            // Delete the job from Jenkins
+            await provider.deleteJob(jobResult.data.external_id);
+            console.log(`Actions layer: Deleted Jenkins job ${jobResult.data.external_id}`);
+          }
+        }
+      }
+
+      // 3. Delete the CICD job from database
+      if (mapping.job_id) {
+        console.log(`Actions layer: Deleting CICD job record ${mapping.job_id}`);
+        await cicdDb.deleteCICDJob({
+          where: { id: mapping.job_id }
+        }, cookieStore);
+      }
+
+      // 4. Delete the mapping
+      console.log(`Actions layer: Deleting CICD mapping ${mapping.id}`);
+      await cicdDb.deleteDeploymentCICDMapping(mapping.id, cookieStore);
+    }
+
+    // 5. Delete the deployment from the database
+    console.log(`Actions layer: Deleting deployment record ${id}`);
     const result = await deploymentDb.delete(id, cookieStore);
 
     // Log detailed result for debugging
