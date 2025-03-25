@@ -107,13 +107,11 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // First, in the useState initializers, check for persisted data:
   const [repositories, setRepositories] = useState<Repository[]>(
-    persistedData?.repositoryData?.repositories || [],
+    persistedData?.repositories || [],
   );
 
   const [loading, setLoading] = useState<boolean>(
-    persistedData?.repositoryData?.loading !== undefined
-      ? persistedData.repositoryData.loading
-      : true,
+    persistedData?.repositories?.length > 0 ? false : true,
   );
 
   // Get initial repository data synchronously from localStorage
@@ -154,13 +152,17 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
   }, [state.repositories.length]);
 
   // Fetch repositories safely
-  const fetchRepositories = useCallback(async (): Promise<Repository[]> => {
+  const fetchRepositories = useCallback(async (showLoading = true): Promise<Repository[]> => {
     console.log('[RepositoryContext] Starting fetchRepositories...');
     
     const result = await protectedFetch('fetchRepositories', async () => {
       try {
         console.log('[RepositoryContext] Fetching repositories and starred repositories');
-        safeUpdateState(setState, state, { ...state, loading: true, error: null }, 'start-loading');
+        
+        // Only show loading state when requested (not for background refresh)
+        if (showLoading) {
+          safeUpdateState(setState, state, { ...state, loading: true, error: null }, 'start-loading');
+        }
 
         // Use the combined action
         const response = await getRepositoriesWithStarred();
@@ -300,11 +302,28 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
       initialized.current = true;
 
       // First check if we have persisted data with repositories
-      if (persistedData?.repositoryData?.repositories?.length > 0) {
+      if (persistedData?.repositories?.length > 0) {
         log(
           '[RepositoryContext] Using persisted repository data:',
-          persistedData.repositoryData.repositories.length,
+          persistedData.repositories.length,
         );
+        
+        // Set repositories from persistedData
+        safeUpdateState(
+          setState,
+          state,
+          {
+            ...state,
+            repositories: persistedData.repositories,
+            filteredRepositories: persistedData.repositories,
+            starredRepositories: persistedData.starredRepositories || [],
+            loading: false
+          },
+          'loaded-from-persisted-data'
+        );
+        
+        // Still fetch in background to refresh data
+        fetchRepositories();
         return;
       }
 
@@ -334,17 +353,16 @@ export const RepositoryProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [state.repositories.length, state.filteredRepositories.length, state.loading]);
 
-  // Persist repository data for cross-page navigation
+  // Remove the old persistedData update since we have a dedicated effect now
+
+  // Update persistedData when repositories change
   useEffect(() => {
-    if (typeof persistedData !== 'undefined') {
-      persistedData.repositoryData = {
-        repositories: state.repositories,
-        loading: state.loading,
-        error: state.error,
-      };
-      log('[RepositoryContext] Persisted repository data for cross-page navigation');
+    if (state.repositories.length > 0) {
+      persistedData.repositories = state.repositories;
+      persistedData.starredRepositories = state.starredRepositories;
+      log('[RepositoryContext] Updated persistedData with repositories');
     }
-  }, [state.repositories, state.loading, state.error]);
+  }, [state.repositories, state.starredRepositories]);
 
   // Create context value with proper memoization
   const contextValue = useMemo(

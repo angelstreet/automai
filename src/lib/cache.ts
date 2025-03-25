@@ -13,6 +13,14 @@ const log = (...args: any[]) => {
   }
 };
 
+// Create a "global" singleton cache that persists between requests
+declare global {
+  var _globalCache: Map<string, any> | undefined;
+}
+
+// Use the global cache if it exists, or create a new one
+global._globalCache = global._globalCache || new Map();
+
 // Cache entry with metadata
 type CacheEntry<T> = {
   value: T;
@@ -34,9 +42,9 @@ type CacheStats = {
 };
 
 class ServerCache {
-  private cache: Map<string, CacheEntry<any>> = new Map();
-  // Default TTL 5 minutes
-  private defaultTTL = 5 * 60 * 1000;
+  private cache: Map<string, CacheEntry<any>>;
+  // Increased default TTL to 15 minutes
+  private defaultTTL = 15 * 60 * 1000;
 
   // Stats tracking
   private hits = 0;
@@ -44,9 +52,12 @@ class ServerCache {
   private totalRequests = 0;
 
   constructor() {
+    // Use the global cache instance instead of creating a new one each time
+    this.cache = global._globalCache || new Map();
+    
     // No automatic cleanup - will be done on-demand
     if (typeof window === 'undefined') {
-      log('Initialized server-side cache without cleanup interval');
+      log('Initialized server-side cache with global persistence');
     }
   }
 

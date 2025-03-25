@@ -24,6 +24,7 @@ let APP_CONTEXT_INITIALIZED = false;
 export const persistedData: {
   user?: any;
   repositories?: any[];
+  starredRepositories?: any[];
   hosts?: any[];
   deployments?: any[];
   [key: string]: any;
