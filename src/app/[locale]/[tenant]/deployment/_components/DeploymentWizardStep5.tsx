@@ -256,206 +256,152 @@ const DeploymentWizardStep5: React.FC<DeploymentWizardStep5Props> = ({
         </button>
       </div>
 
-      {/* Conditional rendering based on Jenkins integration being enabled */}
-      {jenkinsConfig.enabled ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-          <h3 className="text-lg font-medium mb-4">{t('jenkinsIntegration')}</h3>
-          
-          {/* Show loading state when fetching providers */}
-          {isLoadingProviders ? (
-            <div className="text-center py-4">
-              <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-              <p>{t('loadingProviders')}</p>
-            </div>
-          ) : providers.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">
-              <p>{providersError || t('noProvidersFound')}</p>
-            </div>
-          ) : (
-            <>
-              {/* Jenkins provider selection */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-1">{t('selectProvider')}</label>
-                <select
-                  value={jenkinsConfig.providerId || ''}
-                  onChange={(e) => handleProviderChange(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 p-2 dark:bg-gray-700 dark:border-gray-600"
-                  disabled={isLoadingProviders}
-                >
-                  <option value="">{t('selectProvider')}</option>
-                  {providers.map((provider) => (
-                    <option key={provider.id} value={provider.id}>
-                      {provider.name} ({provider.url})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Only show job selection if provider is selected */}
-              {jenkinsConfig.providerId && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">{t('selectJob')}</label>
-                  {isLoadingJobs ? (
-                    <div className="text-center py-2">
-                      <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-1"></div>
-                      <p className="text-sm">{t('loadingJobs')}</p>
-                    </div>
-                  ) : jobs.length === 0 ? (
-                    <div className="text-center py-2 text-gray-500 text-sm">
-                      <p>{jobsError || t('noJobsFound')}</p>
-                    </div>
-                  ) : (
-                    <select
-                      value={jenkinsConfig.jobId || ''}
-                      onChange={(e) => handleJobChange(e.target.value)}
-                      className="w-full rounded-md border border-gray-300 p-2 dark:bg-gray-700 dark:border-gray-600"
-                    >
-                      <option value="">{t('selectJob')}</option>
-                      {jobs.map((job) => (
-                        <option key={job.id} value={job.id}>
-                          {job.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              )}
-
-              {/* Job parameters */}
-              {jenkinsConfig.jobId && jobDetails && (
-                <div className="mb-4">
-                  <h4 className="text-md font-medium mb-2">{t('jobParameters')}</h4>
-                  {isLoadingJobDetails ? (
-                    <div className="text-center py-2">
-                      <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-1"></div>
-                      <p className="text-sm">{t('loadingJobDetails')}</p>
-                    </div>
-                  ) : jobDetailsError ? (
-                    <div className="text-center py-2 text-gray-500 text-sm">
-                      <p>{jobDetailsError}</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {/* Render parameters based on their type */}
-                      {jobParameters.map((param) => (
-                        <div key={param.name} className="mb-2">
-                          <label className="block text-sm font-medium mb-1">
-                            {param.name}
-                            {param.required && <span className="text-red-500">*</span>}
-                          </label>
-                          {param.description && (
-                            <p className="text-xs text-gray-500 mb-1">{param.description}</p>
-                          )}
-
-                          {param.type === 'choice' ? (
-                            <select
-                              value={
-                                (jenkinsConfig.parameters && jenkinsConfig.parameters[param.name]) ||
-                                param.default ||
-                                ''
-                              }
-                              onChange={(e) => handleParameterChange(param.name, e.target.value)}
-                              className="w-full rounded-md border border-gray-300 p-2 dark:bg-gray-700 dark:border-gray-600"
-                            >
-                              {param.choices?.map((choice) => (
-                                <option key={choice} value={choice}>
-                                  {choice}
-                                </option>
-                              ))}
-                            </select>
-                          ) : param.type === 'boolean' ? (
-                            <input
-                              type="checkbox"
-                              checked={
-                                (jenkinsConfig.parameters && jenkinsConfig.parameters[param.name]) ||
-                                param.default ||
-                                false
-                              }
-                              onChange={(e) =>
-                                handleParameterChange(param.name, e.target.checked)
-                              }
-                              className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:border-gray-600"
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              value={
-                                (jenkinsConfig.parameters && jenkinsConfig.parameters[param.name]) ||
-                                param.default ||
-                                ''
-                              }
-                              onChange={(e) => handleParameterChange(param.name, e.target.value)}
-                              className="w-full rounded-md border border-gray-300 p-2 dark:bg-gray-700 dark:border-gray-600"
-                              placeholder={param.description || param.name}
-                            />
-                          )}
-                        </div>
-                      ))}
-
-                      {jobParameters.length === 0 && (
-                        <p className="text-sm text-gray-500">{t('noJobParameters')}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      ) : (
-        // When Jenkins integration is disabled, show a simple message about the deployment
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-          <h3 className="text-lg font-medium mb-4">{t('deploymentSummary')}</h3>
-          <p className="mb-4">{t('deploymentSummaryMessage')}</p>
-          
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <h4 className="font-medium text-sm mb-2">{t('scripts')}</h4>
-              <ul className="list-disc list-inside text-sm">
-                {scriptIds.map((scriptId) => {
-                  const script = repositoryScripts.find((s) => s.id === scriptId);
-                  return (
-                    <li key={scriptId} className="mb-1">
-                      {script ? script.name : scriptId}
-                    </li>
-                  );
-                })}
-              </ul>
+      <div className="space-y-4">
+        {/* Show either Jenkins Pipeline Preview or Deployment Review based on toggle */}
+        {jenkinsConfig.enabled ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-base font-medium text-gray-700 dark:text-gray-300">{t('jenkinsPipelinePreview')}</h3>
             </div>
             
-            <div>
-              <h4 className="font-medium text-sm mb-2">{t('hosts')}</h4>
-              <ul className="list-disc list-inside text-sm">
-                {hostIds.map((hostId) => {
-                  const host = availableHosts.find((h) => h.id === hostId);
-                  return (
-                    <li key={hostId} className="mb-1">
-                      {host ? host.name : hostId}
-                    </li>
-                  );
-                })}
-              </ul>
+            <div className="bg-gray-900 rounded-md shadow-sm border border-gray-700 p-4 overflow-auto max-h-96">
+              <pre className="text-xs text-gray-300 font-mono whitespace-pre">
+{`pipeline {
+    agent any
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Deploy Scripts') {
+            steps {
+                script {
+                    // Deploy scripts to selected hosts
+                    ${scriptIds.map((scriptId) => {
+                      const script = repositoryScripts.find(s => s.id === scriptId);
+                      const params = scriptParameters[scriptId]?.['raw'] || '';
+                      return `sh "automai-deploy ${script?.path || scriptId} ${params}"`;
+                    }).join('\n                    ')}
+                }
+            }
+        }
+    }
+}`}
+              </pre>
             </div>
           </div>
-          
-          <div className="mb-4">
-            <h4 className="font-medium text-sm mb-2">{t('schedule')}</h4>
-            <p className="text-sm">
-              {schedule === 'now'
-                ? t('immediateExecution')
-                : schedule === 'once'
-                ? `${t('scheduledOnce')}: ${scheduledTime}`
-                : `${t('scheduledCron')}: ${cronExpression} (${t('repeat')}: ${repeatCount || t('indefinitely')})`}
-            </p>
+        ) : (
+          <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
+            <h4 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">{t('deploymentSummary')}</h4>
+            
+            <div className="space-y-4">
+              {/* Scripts */}
+              <div className="space-y-2 mb-4">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('selectedScripts')} ({scriptIds.length})
+                </h3>
+                <div className="bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  {scriptIds.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 p-3">{t('noScriptsSelected')}</p>
+                  ) : (
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">#</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">{t('scriptPath')}</th>
+                          <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/2">{t('parameters')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {scriptIds.map((scriptId, index) => {
+                          const script = repositoryScripts.find(s => s.id === scriptId);
+                          const params = scriptParameters[scriptId]?.['raw'] || '';
+                          
+                          return (
+                            <tr key={scriptId}>
+                              <td className="px-3 py-1.5 whitespace-nowrap">
+                                <div className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-1.5 py-0.5 rounded text-center text-xs">
+                                  {index + 1}
+                                </div>
+                              </td>
+                              <td className="px-3 py-1.5 whitespace-nowrap">
+                                <span className="text-xs text-gray-800 dark:text-gray-200 font-mono">
+                                  {script?.path || scriptId}
+                                </span>
+                              </td>
+                              <td className="px-3 py-1.5 whitespace-nowrap">
+                                {params && (
+                                  <span className="text-xs text-gray-600 dark:text-gray-400 font-mono">
+                                    {params}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+              
+              {/* Target Hosts */}
+              <div>
+                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('targetHosts')}</h5>
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
+                  {hostIds.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {hostIds.map(id => {
+                        const host = availableHosts.find(h => h.id === id);
+                        if (!host) return null;
+                        
+                        return (
+                          <div key={id} className="text-xs flex items-center">
+                            <div className={`w-2 h-2 rounded-full mr-2 ${host.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <span className="text-gray-800 dark:text-gray-200">{host.name}</span>
+                            <span className="text-gray-500 ml-1">({host.ip})</span>
+                            <span 
+                              className="ml-2 px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                            >
+                              #{host.environment.toLowerCase()}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500">{t('noHostsSelected')}</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Schedule */}
+              <div>
+                <h5 className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{t('schedule')}</h5>
+                <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-2">
+                  <div className="text-xs text-gray-800 dark:text-gray-200">
+                    {schedule === 'now' ? (
+                      <span>{t('deployImmediately')}</span>
+                    ) : (
+                      <div className="space-y-1">
+                        <div>{t('scheduledFor')}: <span className="font-medium">{scheduledTime}</span></div>
+                        {cronExpression && (
+                          <div>{t('cron')}: <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">{cronExpression}</code></div>
+                        )}
+                        {(repeatCount || 0) > 0 && (
+                          <div>{t('repeat')}: <span className="font-medium">{repeatCount || 0} {t('times')}</span></div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Deployment summary and submission button */}
-      <div className="flex justify-between">
-        <div>
-          {/* Any additional information or warnings can go here */}
-        </div>
+        )}
       </div>
     </div>
   );

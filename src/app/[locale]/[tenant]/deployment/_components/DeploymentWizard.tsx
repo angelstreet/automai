@@ -290,56 +290,10 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
     };
 
     const handleScriptsChange = (scriptIds: string[]) => {
-      setDeploymentData((prev) => {
-        // Calculate which scripts were removed
-        const removedScriptIds = prev.scriptIds.filter((id) => !scriptIds.includes(id));
-
-        // Update script parameters - remove parameters for scripts that are no longer selected
-        const newScriptParameters = { ...prev.scriptParameters };
-        removedScriptIds.forEach((scriptId) => {
-          if (newScriptParameters[scriptId]) {
-            delete newScriptParameters[scriptId];
-          }
-        });
-
-        return {
-          ...prev,
-          scriptIds: scriptIds,
-          scriptParameters: newScriptParameters,
-        };
-      });
-    };
-
-    const handleBatchScriptsChange = (scriptIds: string[], isSelected: boolean) => {
-      setDeploymentData((prev) => {
-        let newScriptIds: string[];
-
-        if (isSelected) {
-          // Add all scripts that aren't already selected
-          newScriptIds = [...new Set([...prev.scriptIds, ...scriptIds])];
-        } else {
-          // Remove all specified scripts
-          newScriptIds = prev.scriptIds.filter((id) => !scriptIds.includes(id));
-        }
-
-        // Update script parameters
-        const newScriptParameters = { ...prev.scriptParameters };
-
-        // If scripts are deselected, remove their parameters
-        if (!isSelected) {
-          scriptIds.forEach((scriptId) => {
-            if (newScriptParameters[scriptId]) {
-              delete newScriptParameters[scriptId];
-            }
-          });
-        }
-
-        return {
-          ...prev,
-          scriptIds: newScriptIds,
-          scriptParameters: newScriptParameters,
-        };
-      });
+      setDeploymentData((prev) => ({
+        ...prev,
+        scriptIds,
+      }));
     };
 
     const handleScriptParameterChange = (scriptId: string, paramId: string, value: string) => {
@@ -434,7 +388,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
       try {
         // Create scriptMapping from repositoryScripts array
-        const scriptMapping: Record<string, {path: string; name: string; type: string}> = {};
+        const scriptMapping: Record<string, { path: string; name: string; type: string }> = {};
         
         // Populate scriptMapping for each selected script
         deploymentData.scriptIds.forEach(scriptId => {
