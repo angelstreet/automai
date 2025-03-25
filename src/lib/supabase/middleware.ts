@@ -78,10 +78,15 @@ export const createClient = (request: NextRequest) => {
               `[Middleware:cookie-set] Setting cookie ${name} with path=${options?.path || '/'}`,
             );
 
-            // Ensure we set a path if not provided (default to root)
+            // Enhanced cookie options for production
             const finalOptions = {
               ...options,
-              path: options?.path || '/',
+              path: '/',
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'lax' as const,
+              domain: process.env.NODE_ENV === 'production' 
+                ? '.vercel.app'  // This will work for all vercel.app subdomains
+                : undefined,
               // Use longer max age for auth cookies to prevent early expiration
               ...(name.includes('token') ? { maxAge: 60 * 60 * 24 * 7 } : {}),
             };

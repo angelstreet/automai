@@ -76,21 +76,33 @@ export default function AuthRedirectPage() {
         console.log('🔐 AUTH-REDIRECT: Processing URL:', fullUrl);
         console.log('🔐 AUTH-REDIRECT: Code parameter:', code);
 
-        // Check if we have the pkce code verifier in session storage
+        // Enhanced PKCE code verifier handling
         const codeVerifier = sessionStorage.getItem('supabase.auth.code_verifier');
         console.log('🔐 AUTH-REDIRECT: Code verifier present:', !!codeVerifier);
+
+        // If no code verifier is found, try to recover from localStorage as fallback
+        if (!codeVerifier) {
+          const fallbackVerifier = localStorage.getItem('supabase.auth.code_verifier');
+          if (fallbackVerifier) {
+            console.log('🔐 AUTH-REDIRECT: Recovered code verifier from localStorage');
+            sessionStorage.setItem('supabase.auth.code_verifier', fallbackVerifier);
+          }
+        }
 
         setLoading(true);
         const result = await exchangeCodeForSession(fullUrl);
 
         if (!result.success) {
+          console.error('🔐 AUTH-REDIRECT: Auth failed:', result.error);
           setAuthError(new Error(result.error || 'Authentication failed'));
           setIsProcessing(false);
           return;
         }
 
-        // After successful auth, refresh user data
+        // After successful auth, refresh user data and clean up storage
         await refreshUser();
+        sessionStorage.removeItem('supabase.auth.code_verifier');
+        localStorage.removeItem('supabase.auth.code_verifier');
 
         // Handle redirect using Next.js router
         if (result.redirectUrl) {
