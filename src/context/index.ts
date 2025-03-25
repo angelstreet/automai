@@ -1,4 +1,4 @@
-// Main context exports - providing a unified access point for all contexts
+// New context exports using SWR-based contexts
 // -------------------------------------------------
 // IMPORTANT: This is the ONLY file that should be imported
 // when accessing context in components.
@@ -13,22 +13,26 @@ export { CoreProvider, createContextProvider } from './AppContext';
 
 // Export specialized context providers
 export { 
-  HostContextProvider,
-  RepositoryContextProvider,
-  DeploymentContextProvider,
-  CICDContextProvider,
   FullContextProvider
 } from './AppContext';
+
+// Export our new SWR-based providers
+export { HostProvider } from './NewHostContext';
+export { RepositoryProvider } from './NewRepositoryContext';
+export { DeploymentProvider } from './NewDeploymentContext';
+export { CICDProvider } from './NewCICDContext';
 
 // Re-export hooks with standardized naming for consistency
 export {
   useAppContext, // Access to all contexts at once (use sparingly)
   useUser, // User profile and authentication
-  useHost, // Host management and connection
-  useDeployment, // Deployment operations and status
-  useRepository, // Code repository management
-  useCICD, // CI/CD pipeline management
 } from './AppContext';
+
+// Export the new SWR-based hooks
+export { useHost } from './NewHostContext';
+export { useRepository } from './NewRepositoryContext';
+export { useDeployment } from './NewDeploymentContext';
+export { useCICD } from './NewCICDContext';
 
 // Export sidebar context hook
 export { useSidebar } from './SidebarContext';
@@ -36,15 +40,8 @@ export { useSidebar } from './SidebarContext';
 // Export theme context hook
 export { useTheme } from './ThemeContext';
 
-// We're not using the Direct suffix pattern in our simplified architecture
-
-// For case where the root AppProvider is not used, export individual providers
-// This is not recommended for normal use, but provided for flexibility
+// Export other providers
 export { UserProvider } from './UserContext';
-export { HostProvider } from './HostContext';
-export { DeploymentProvider } from './DeploymentContext';
-export { RepositoryProvider } from './RepositoryContext';
-export { CICDProvider } from './CICDContext';
 export { SidebarProvider } from './SidebarContext';
 export { ThemeProvider } from './ThemeContext';
 
@@ -54,7 +51,7 @@ export type { UserContextType } from '@/types/context/user';
 export type { HostContextType } from '@/types/context/host';
 export type { DeploymentContextType } from '@/types/context/deployment';
 export type { RepositoryContextType } from '@/types/context/repository';
-export type { CICDContextType } from '@/types/context/cicd';
+export type { CICDContextType } from '@/app/[locale]/[tenant]/cicd/types';
 export type { SidebarContext as SidebarContextType } from '@/types/sidebar';
 export type { ThemeContextType } from './ThemeContext';
 

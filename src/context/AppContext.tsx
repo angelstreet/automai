@@ -19,17 +19,12 @@ const log = (...args: any[]) => DEBUG && console.log(...args);
 // Singleton flag to detect multiple instances
 let APP_CONTEXT_INITIALIZED = false;
 
-// Enable context persistence across page navigations
-export const persistedData: {
-  user?: any;
-  repositories?: any[];
-  hosts?: any[];
-  deployments?: any[];
-  cicd?: any[];
-  [key: string]: any;
-} = {
-  user: null,
-};
+/**
+ * DEPRECATED: This context persistence approach has been replaced with SWR
+ * This will be removed in a future release
+ */
+// The persistedData object has been deprecated in favor of SWR's built-in caching
+export const persistedData = {};
 
 // Create the app context to hold all context references
 export const AppContext = createContext<AppContextType>({
@@ -169,11 +164,6 @@ export function useAppContext() {
 
 // Enhanced hooks that use the central AppContext and check authentication
 export function useUser() {
-  // Try to get the global version first if in browser
-  if (typeof window !== 'undefined' && (window as any).__userContext) {
-    return (window as any).__userContext;
-  }
-  
   // Get user from AppContext
   const appContext = useContext(AppContext);
   
