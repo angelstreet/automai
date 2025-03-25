@@ -500,14 +500,79 @@ export const CICDProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       selectedJob: state.selectedJob,
       fetchUserData: async () => state.currentUser,
 
-      // Implementations for required methods with proper error logging
-      fetchJobs: async () => {
-        console.error('CICD: fetchJobs not fully implemented yet');
-        return [];
+      // Jobs actions
+      fetchJobs: async (providerId?: string) => {
+        try {
+          setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
+          
+          // Make the API call to get jobs
+          const result = await getCICDJobs(providerId || '', state.currentUser);
+          
+          if (result.success) {
+            setState((prev: CICDData) => ({
+              ...prev,
+              jobs: result.data || [],
+              loading: false,
+            }));
+            
+            return result.data || [];
+          } else {
+            setState((prev: CICDData) => ({
+              ...prev,
+              error: result.error || 'Failed to fetch jobs',
+              loading: false,
+            }));
+            
+            return [];
+          }
+        } catch (err: any) {
+          console.error(`Error fetching jobs:`, err);
+          setState((prev: CICDData) => ({
+            ...prev,
+            error: err.message || 'Unexpected error',
+            loading: false,
+          }));
+          
+          return [];
+        }
       },
       getJobById: async (id: string) => {
-        console.error(`CICD: getJobById not fully implemented yet for job ${id}`);
-        return null;
+        try {
+          setState((prev: CICDData) => ({ ...prev, loading: true, error: null }));
+          console.log(`${LOG_PREFIX} Getting job details for ${id}`);
+          
+          // First check if we already have the job in state
+          const cachedJob = state.jobs.find((job) => job.id === id);
+          
+          if (cachedJob) {
+            console.log(`${LOG_PREFIX} Job found in cache: ${cachedJob.name}`);
+            return cachedJob;
+          }
+
+          // If not in cache, fetch jobs first
+          const jobs = await contextValue.fetchJobs();
+          const job = jobs.find((job) => job.id === id);
+          
+          if (job) {
+            console.log(`${LOG_PREFIX} Job found: ${job.name}`);
+            return job;
+          }
+          
+          console.log(`${LOG_PREFIX} Job not found: ${id}`);
+          return null;
+        } catch (err: any) {
+          console.error(`${LOG_PREFIX} Error getting job ${id}:`, err);
+          
+          setState((prev: CICDData) => ({
+            ...prev,
+            error: err.message || ERROR_MESSAGES.FETCH_JOB_DETAILS,
+            loading: false,
+          }));
+          
+          return null;
+        } finally {
+          setState((prev: CICDData) => ({ ...prev, loading: false }));
+        }
       },
       triggerJob: async (jobId: string, params?: any) => {
         console.error(`CICD: triggerJob not fully implemented yet for job ${jobId}`);
@@ -567,9 +632,9 @@ export function useCICD() {
   try {
     return useCICDContext();
   } catch (error) {
-    console.error(`${LOG_PREFIX} Error in useCICD hook:`, error);
+    console.error(`Error in useCICD hook:`, error);
 
-    // Return fallback object to prevent destructuring errors
+    // Return minimal fallback object
     return {
       providers: [],
       jobs: [],
@@ -577,28 +642,20 @@ export function useCICD() {
       selectedProvider: null,
       selectedJob: null,
       loading: false,
-      error: ERROR_MESSAGES.CONTEXT_USAGE,
+      error: 'CICD context not available',
       currentUser: null,
-
-      // Actions with error fallbacks
-      fetchProviders: async () => ({
-        success: false,
-        data: [],
-        error: ERROR_MESSAGES.CONTEXT_USAGE,
-      }),
+      fetchProviders: async () => ({ success: false, data: [], error: 'CICD context not available' }),
       getProviderById: async () => null,
-      createProvider: async () => ({ success: false, error: ERROR_MESSAGES.CONTEXT_USAGE }),
-      updateProvider: async () => ({ success: false, error: ERROR_MESSAGES.CONTEXT_USAGE }),
-      deleteProvider: async () => ({ success: false, error: ERROR_MESSAGES.CONTEXT_USAGE }),
-      testProvider: async () => ({ success: false, error: ERROR_MESSAGES.CONTEXT_USAGE }),
+      createProvider: async () => ({ success: false, error: 'CICD context not available' }),
+      updateProvider: async () => ({ success: false, error: 'CICD context not available' }),
+      deleteProvider: async () => ({ success: false, error: 'CICD context not available' }),
+      testProvider: async () => ({ success: false, error: 'CICD context not available' }),
       fetchJobs: async () => [],
       getJobById: async () => null,
-      triggerJob: async () => ({ success: false, error: ERROR_MESSAGES.CONTEXT_USAGE }),
+      triggerJob: async () => ({ success: false, error: 'CICD context not available' }),
       getBuildStatus: async () => null,
       getBuildLogs: async () => '',
       fetchUserData: async () => null,
-
-      // UI state management with empty functions
       setSelectedProvider: () => {},
       setSelectedJob: () => {},
       refreshUserData: async () => null,

@@ -35,6 +35,9 @@ export const ERROR_MESSAGES = {
   UPDATE_PROVIDER: 'Failed to update CI/CD provider',
   DELETE_PROVIDER: 'Failed to delete CI/CD provider',
   TEST_PROVIDER: 'Provider test failed',
+  FETCH_JOBS: 'Failed to fetch CI/CD jobs',
+  FETCH_JOB_DETAILS: 'Failed to fetch job details',
+  TRIGGER_JOB: 'Failed to trigger job',
   UNEXPECTED_ERROR: 'An unexpected error occurred',
   CONTEXT_USAGE: 'useCICDContext must be used within a CICDProvider',
 };
