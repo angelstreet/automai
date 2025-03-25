@@ -94,12 +94,18 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
         try {
           setLoadingProviders(true);
           const result = await cicdContext.fetchProviders();
-          if (result.success && result.data) {
+          
+          // Check if result exists before accessing properties
+          if (result && result.success && result.data) {
             setCicdProviders(result.data);
             console.log('[DeploymentWizard] Loaded CICD providers:', result.data);
+          } else {
+            console.warn('[DeploymentWizard] Failed to load CICD providers:', result?.error || 'Unknown error');
+            setCicdProviders([]); // Set empty array as fallback
           }
         } catch (error) {
           console.error('[DeploymentWizard] Error fetching CICD providers:', error);
+          setCicdProviders([]); // Set empty array as fallback
         } finally {
           setLoadingProviders(false);
         }
@@ -432,6 +438,11 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
         // Check if CICD context is available
         if (!cicdContext) {
           throw new Error('CI/CD context not initialized');
+        }
+
+        // Check if we have providers
+        if (!cicdProviders || cicdProviders.length === 0) {
+          throw new Error('No CI/CD providers available');
         }
 
         // Create scriptMapping from repositoryScripts array

@@ -243,7 +243,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<De
       const mappingResult = await cicdDb.createDeploymentCICDMapping({
         deployment_id: result.data.id,
         job_id: cicdResult.id,
-        parameters: formData.parameters || {}
+        parameters: Array.isArray(formData.parameters) ? formData.parameters : []
       }, cookieStore);
       console.log('📊 [MAPPING] Mapping creation result:', JSON.stringify(mappingResult, null, 2));
     } else {
