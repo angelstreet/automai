@@ -273,7 +273,8 @@ export const HostProvider: React.FC<{
     protectedFetch,
     applyFilters,
     safeUpdateState,
-    state,
+    state.filter.status,
+    state.currentUser,
   ]);
 
   // Initialize by fetching host data
@@ -350,7 +351,13 @@ export const HostProvider: React.FC<{
     };
 
     fetchData();
-  }, [fetchHosts]); 
+  }, [
+    protectedFetch,
+    applyFilters,
+    safeUpdateState,
+    state.filter.status,
+    state.currentUser,
+  ]);
 
   // Rest of the implementation (remaining functions)...
   // Add other methods like getHostById, addHost, etc.
