@@ -77,16 +77,40 @@ export default function AuthRedirectPage() {
         console.log('🔐 AUTH-REDIRECT: Code parameter:', code);
 
         // Enhanced PKCE code verifier handling
-        const codeVerifier = sessionStorage.getItem('supabase.auth.code_verifier');
-        console.log('🔐 AUTH-REDIRECT: Code verifier present:', !!codeVerifier);
+        let codeVerifier = sessionStorage.getItem('supabase.auth.code_verifier');
+        console.log('🔐 AUTH-REDIRECT: Initial code verifier present:', !!codeVerifier);
 
-        // If no code verifier is found, try to recover from localStorage as fallback
+        // Try multiple storage locations for code verifier
         if (!codeVerifier) {
-          const fallbackVerifier = localStorage.getItem('supabase.auth.code_verifier');
-          if (fallbackVerifier) {
+          // Try localStorage
+          codeVerifier = localStorage.getItem('supabase.auth.code_verifier');
+          if (codeVerifier) {
             console.log('🔐 AUTH-REDIRECT: Recovered code verifier from localStorage');
-            sessionStorage.setItem('supabase.auth.code_verifier', fallbackVerifier);
+            sessionStorage.setItem('supabase.auth.code_verifier', codeVerifier);
+          } else {
+            // Try other known storage keys
+            const alternateKeys = [
+              'sb-auth-code-verifier',
+              'pkce-verifier',
+              'code-verifier'
+            ];
+            
+            for (const key of alternateKeys) {
+              codeVerifier = sessionStorage.getItem(key) || localStorage.getItem(key);
+              if (codeVerifier) {
+                console.log(`🔐 AUTH-REDIRECT: Recovered code verifier from alternate key: ${key}`);
+                sessionStorage.setItem('supabase.auth.code_verifier', codeVerifier);
+                break;
+              }
+            }
           }
+        }
+
+        if (!codeVerifier) {
+          console.error('🔐 AUTH-REDIRECT: No code verifier found in any storage location');
+          setAuthError(new Error('Authentication failed - Missing PKCE code verifier'));
+          setIsProcessing(false);
+          return;
         }
 
         setLoading(true);
@@ -99,10 +123,21 @@ export default function AuthRedirectPage() {
           return;
         }
 
-        // After successful auth, refresh user data and clean up storage
+        // After successful auth, refresh user data and clean up
         await refreshUser();
-        sessionStorage.removeItem('supabase.auth.code_verifier');
-        localStorage.removeItem('supabase.auth.code_verifier');
+        
+        // Clean up storage
+        const cleanupKeys = [
+          'supabase.auth.code_verifier',
+          'sb-auth-code-verifier',
+          'pkce-verifier',
+          'code-verifier'
+        ];
+        
+        cleanupKeys.forEach(key => {
+          sessionStorage.removeItem(key);
+          localStorage.removeItem(key);
+        });
 
         // Handle redirect using Next.js router
         if (result.redirectUrl) {

@@ -10,9 +10,13 @@ import { locales, defaultLocale } from '@/config';
  * - Allows updating cookies in the response
  */
 export const createClient = (request: NextRequest) => {
-  // Log request details
+  // Log request details with enhanced debugging
   console.log(
-    `[Middleware:createClient] URL: ${request.nextUrl.pathname}${request.nextUrl.search}, Method: ${request.method}`,
+    `[Middleware:createClient] 
+    URL: ${request.nextUrl.pathname}${request.nextUrl.search}
+    Method: ${request.method}
+    Host: ${request.headers.get('host')}
+    Referer: ${request.headers.get('referer')}`,
   );
 
   // Create response to manipulate cookies
@@ -43,66 +47,53 @@ export const createClient = (request: NextRequest) => {
     });
   }
 
-  // Create client with cookie handlers for middleware
+  // Enhanced cookie handling
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          // Simply map the cookies to the expected format
-          const cookies = request.cookies.getAll().map((cookie) => ({
-            name: cookie.name,
-            value: cookie.value,
-          }));
-          console.log(`[Middleware:cookies] Found ${cookies.length} cookies`);
-
-          // Check for specific auth cookies
-          const hasAccessToken = cookies.some((c) => c.name.includes('access-token'));
-          const hasRefreshToken = cookies.some((c) => c.name.includes('refresh-token'));
-          if (hasAccessToken && hasRefreshToken) {
-            console.log(`[Middleware:cookies] Found both access and refresh tokens`);
-          } else if (hasAccessToken) {
-            console.log(`[Middleware:cookies] Found access token but no refresh token`);
-          } else if (hasRefreshToken) {
-            console.log(`[Middleware:cookies] Found refresh token but no access token`);
+          try {
+            return request.cookies.getAll().map((cookie) => ({
+              name: cookie.name,
+              value: cookie.value,
+            }));
+          } catch (error) {
+            console.error('[Middleware:cookies] Error getting cookies:', error);
+            return [];
           }
-
-          return cookies;
         },
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
-          // Set cookies both on the request (for Supabase) and response (for browser)
-          console.log(`[Middleware:cookies] Setting ${cookiesToSet.length} cookies`);
-          cookiesToSet.forEach(({ name, value, options }) => {
-            console.log(
-              `[Middleware:cookie-set] Setting cookie ${name} with path=${options?.path || '/'}`,
-            );
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Enhanced cookie options for both development and production
+              const finalOptions = {
+                ...options,
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax' as const,
+                domain: process.env.NODE_ENV === 'production' 
+                  ? '.vercel.app'
+                  : undefined,
+                maxAge: name.includes('token') ? 60 * 60 * 24 * 7 : undefined,
+              };
 
-            // Enhanced cookie options for production
-            const finalOptions = {
-              ...options,
-              path: '/',
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'lax' as const,
-              domain: process.env.NODE_ENV === 'production' 
-                ? '.vercel.app'  // This will work for all vercel.app subdomains
-                : undefined,
-              // Use longer max age for auth cookies to prevent early expiration
-              ...(name.includes('token') ? { maxAge: 60 * 60 * 24 * 7 } : {}),
-            };
+              request.cookies.set({
+                name,
+                value,
+                ...finalOptions,
+              });
 
-            request.cookies.set({
-              name,
-              value,
-              ...finalOptions,
+              response.cookies.set({
+                name,
+                value,
+                ...finalOptions,
+              });
             });
-
-            response.cookies.set({
-              name,
-              value,
-              ...finalOptions,
-            });
-          });
+          } catch (error) {
+            console.error('[Middleware:cookies] Error setting cookies:', error);
+          }
         },
       },
     },
