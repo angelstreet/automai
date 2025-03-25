@@ -74,45 +74,7 @@ export default function AuthRedirectPage() {
         // Get the full URL for the auth callback
         const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
         console.log('🔐 AUTH-REDIRECT: Processing URL:', fullUrl);
-        console.log('🔐 AUTH-REDIRECT: Code parameter:', code);
-
-        // Enhanced PKCE code verifier handling
-        let codeVerifier = sessionStorage.getItem('supabase.auth.code_verifier');
-        console.log('🔐 AUTH-REDIRECT: Initial code verifier present:', !!codeVerifier);
-
-        // Try multiple storage locations for code verifier
-        if (!codeVerifier) {
-          // Try localStorage
-          codeVerifier = localStorage.getItem('supabase.auth.code_verifier');
-          if (codeVerifier) {
-            console.log('🔐 AUTH-REDIRECT: Recovered code verifier from localStorage');
-            sessionStorage.setItem('supabase.auth.code_verifier', codeVerifier);
-          } else {
-            // Try other known storage keys
-            const alternateKeys = [
-              'sb-auth-code-verifier',
-              'pkce-verifier',
-              'code-verifier'
-            ];
-            
-            for (const key of alternateKeys) {
-              codeVerifier = sessionStorage.getItem(key) || localStorage.getItem(key);
-              if (codeVerifier) {
-                console.log(`🔐 AUTH-REDIRECT: Recovered code verifier from alternate key: ${key}`);
-                sessionStorage.setItem('supabase.auth.code_verifier', codeVerifier);
-                break;
-              }
-            }
-          }
-        }
-
-        if (!codeVerifier) {
-          console.error('🔐 AUTH-REDIRECT: No code verifier found in any storage location');
-          setAuthError(new Error('Authentication failed - Missing PKCE code verifier'));
-          setIsProcessing(false);
-          return;
-        }
-
+        
         setLoading(true);
         const result = await exchangeCodeForSession(fullUrl);
 
@@ -123,21 +85,8 @@ export default function AuthRedirectPage() {
           return;
         }
 
-        // After successful auth, refresh user data and clean up
+        // After successful auth, refresh user data
         await refreshUser();
-        
-        // Clean up storage
-        const cleanupKeys = [
-          'supabase.auth.code_verifier',
-          'sb-auth-code-verifier',
-          'pkce-verifier',
-          'code-verifier'
-        ];
-        
-        cleanupKeys.forEach(key => {
-          sessionStorage.removeItem(key);
-          localStorage.removeItem(key);
-        });
 
         // Handle redirect using Next.js router
         if (result.redirectUrl) {

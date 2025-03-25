@@ -89,7 +89,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     // Prevent multiple submissions
-    if (isSubmitting || loading || isAuthenticating) {
+    if (isSubmitting || isAuthenticating) {
       return;
     }
 
@@ -126,11 +126,6 @@ export default function LoginPage() {
       setIsAuthenticating(true);
       setError('');
 
-      // Store the current URL for handling redirects
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('auth_redirect_from', window.location.href);
-      }
-
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
       console.log('🔐 OAuth Login: Using redirect URL:', redirectUrl);
 
@@ -139,11 +134,8 @@ export default function LoginPage() {
 
       if (result.success && result.data?.url) {
         console.log('🔐 OAuth Login: Redirecting to URL');
-        // Make sure all cookies are properly saved before redirecting
-        setTimeout(() => {
-          // Redirect to OAuth provider
-          window.location.href = result.data.url;
-        }, 100);
+        // Redirect to OAuth provider
+        window.location.href = result.data.url;
       } else {
         // If no URL is returned, something went wrong
         console.error('🔐 OAuth Login: Failed to get URL:', result.error);
@@ -157,8 +149,9 @@ export default function LoginPage() {
     }
   };
 
-  // Determine if buttons should be disabled
-  const isButtonDisabled = isSubmitting || loading || isAuthenticating;
+  // Determine if buttons should be disabled - ONLY when we are actively submitting or authenticating
+  // Do NOT include the loading state from useUser() here
+  const isButtonDisabled = isSubmitting || isAuthenticating;
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
