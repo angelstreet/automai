@@ -3,7 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
 import { DeploymentWizard, DeploymentList } from './_components';
-import { useDeployment, useRepository } from '@/context';
+import { useDeployment, useRepository, createContextProvider } from '@/context';
+
+// Create a specialized provider that includes both deployment and repository contexts
+// since this page requires both
+const DeploymentPageProvider = createContextProvider({
+  deployment: true, 
+  repository: true
+});
 
 function DeploymentPageContent() {
   const [wizardActive, setWizardActive] = useState(false);
@@ -207,6 +214,9 @@ function DeploymentPageContent() {
 }
 
 export default function DeploymentPage() {
-  // AppProvider is now only in the root layout
-  return <DeploymentPageContent />;
+  return (
+    <DeploymentPageProvider>
+      <DeploymentPageContent />
+    </DeploymentPageProvider>
+  );
 }

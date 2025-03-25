@@ -9,7 +9,16 @@
 // -------------------------------------------------
 
 // Export the root provider that composes all other providers
-export { AppProvider } from './AppContext';
+export { CoreProvider, createContextProvider } from './AppContext';
+
+// Export specialized context providers
+export { 
+  HostContextProvider,
+  RepositoryContextProvider,
+  DeploymentContextProvider,
+  CICDContextProvider,
+  FullContextProvider
+} from './AppContext';
 
 // Re-export hooks with standardized naming for consistency
 export {

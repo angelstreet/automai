@@ -9,11 +9,7 @@ import React, {
   useState,
   useMemo,
 } from 'react';
-import { HostProvider } from './HostContext';
-import { DeploymentProvider } from './DeploymentContext';
-import { RepositoryProvider } from './RepositoryContext';
-import { CICDProvider } from './CICDContext';
-import { UserProvider } from './UserContext';
+import { UserProvider, useUser as useDirectUserContext } from './UserContext';
 import { AppContextType } from '@/types/context/app';
 import { UserContextType } from '@/types/context/user';
 
@@ -44,8 +40,8 @@ export const AppContext = createContext<AppContextType>({
   user: null,
 });
 
-// Provider component that composes all other providers
-export function AppProvider({ children }: { children: ReactNode }) {
+// The minimal core provider - only includes UserProvider
+export function CoreProvider({ children }: { children: ReactNode }) {
   // Create a mutable ref for direct context updates
   const appContextRef = useRef<AppContextType>({
     host: null,
@@ -57,15 +53,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   
   // Track authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   // Singleton check
   useEffect(() => {
     if (APP_CONTEXT_INITIALIZED) {
       console.error(
         '[AppContext] Multiple AppProvider instances detected! ' +
-          'This will cause serious performance and state problems. ' +
-          'Ensure AppProvider is used only once at the root of your application.',
+          'This will cause serious performance and state problems.'
       );
     } else {
       APP_CONTEXT_INITIALIZED = true;
@@ -80,45 +74,93 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  log('[AppContext] AppProvider initializing');
+  log('[AppContext] CoreProvider initializing');
 
   // Update authentication state when user context changes
   const handleAuthUpdate = (authState: boolean) => {
     setIsAuthenticated(authState);
     log('[AppContext] Authentication state updated:', authState);
-    
-    // Mark as initialized after auth state is determined
-    if (!isInitialized) {
-      setIsInitialized(true);
-    }
   };
 
   // Create a memoized value for the app context
   const contextValue = useMemo(() => appContextRef.current, []);
 
-  // Render providers based on authentication state
+  // Only provide the user context by default
   return (
     <AppContext.Provider value={contextValue}>
       <UserProvider appContextRef={appContextRef} onAuthChange={handleAuthUpdate}>
-        {isAuthenticated === true ? (
-          // Only render data-fetching providers when authenticated
-          <HostProvider userData={null}>
-            <RepositoryProvider>
-              <DeploymentProvider>
-                <CICDProvider>
-                  {children}
-                </CICDProvider>
-              </DeploymentProvider>
-            </RepositoryProvider>
-          </HostProvider>
-        ) : (
-          // When not authenticated or still checking, only render children without other contexts
-          children
-        )}
+        {children}
       </UserProvider>
     </AppContext.Provider>
   );
 }
+
+// Import these lazily where needed
+export const lazyImports = {
+  HostProvider: React.lazy(() => import('./HostContext').then(mod => ({ default: mod.HostProvider }))),
+  RepositoryProvider: React.lazy(() => import('./RepositoryContext').then(mod => ({ default: mod.RepositoryProvider }))),
+  DeploymentProvider: React.lazy(() => import('./DeploymentContext').then(mod => ({ default: mod.DeploymentProvider }))),
+  CICDProvider: React.lazy(() => import('./CICDContext').then(mod => ({ default: mod.CICDProvider }))),
+};
+
+// Context requirement flags
+export interface ContextRequirements {
+  host?: boolean;
+  repository?: boolean;
+  deployment?: boolean;
+  cicd?: boolean;
+}
+
+// Create specialized providers for different page requirements
+export function createContextProvider(requirements: ContextRequirements) {
+  return function CustomContextProvider({ children }: { children: ReactNode }) {
+    const { user } = useAppContext();
+    const isAuthenticated = !!user?.user;
+    
+    // Only render required contexts when authenticated
+    let content = <>{children}</>;
+    
+    if (isAuthenticated) {
+      // Wrap the content with only the required providers
+      if (requirements.cicd) {
+        const CICDProvider = lazyImports.CICDProvider;
+        content = <React.Suspense fallback={<div>Loading CICD...</div>}>
+          <CICDProvider>{content}</CICDProvider>
+        </React.Suspense>;
+      }
+      
+      if (requirements.deployment) {
+        const DeploymentProvider = lazyImports.DeploymentProvider;
+        content = <React.Suspense fallback={<div>Loading Deployment...</div>}>
+          <DeploymentProvider>{content}</DeploymentProvider>
+        </React.Suspense>;
+      }
+      
+      if (requirements.repository) {
+        const RepositoryProvider = lazyImports.RepositoryProvider;
+        content = <React.Suspense fallback={<div>Loading Repository...</div>}>
+          <RepositoryProvider>{content}</RepositoryProvider>
+        </React.Suspense>;
+      }
+      
+      if (requirements.host) {
+        const HostProvider = lazyImports.HostProvider;
+        content = <React.Suspense fallback={<div>Loading Host...</div>}>
+          <HostProvider userData={null}>{content}</HostProvider>
+        </React.Suspense>;
+      }
+    }
+    
+    return content;
+  };
+}
+
+// Pre-built context providers for common scenarios
+export const HostContextProvider = createContextProvider({ host: true });
+export const RepositoryContextProvider = createContextProvider({ repository: true });
+export const DeploymentContextProvider = createContextProvider({ deployment: true, repository: true });
+export const CICDContextProvider = createContextProvider({ cicd: true });
+export const FullContextProvider = createContextProvider({ host: true, repository: true, deployment: true, cicd: true });
 
 // Unified hook for accessing the app context
 export function useAppContext() {
@@ -147,178 +189,8 @@ export function useUser() {
   };
 }
 
-export function useHost() {
-  // First check authentication via AppContext
-  const appContext = useContext(AppContext);
-  const isAuthenticated = !!appContext?.user?.user;
-  
-  if (!isAuthenticated) {
-    // Return inactive version when not authenticated
-    return {
-      hosts: [],
-      loading: false,
-      error: null,
-      fetchHosts: async () => {},
-      createHost: async () => ({ success: false, error: 'Not authenticated' }),
-      updateHost: async () => ({ success: false, error: 'Not authenticated' }),
-      deleteHost: async () => ({ success: false, error: 'Not authenticated' }),
-    };
-  }
-
-  if (appContext?.host) {
-    return appContext.host;
-  }
-
-  // Safe fallback
-  return {
-    hosts: [],
-    loading: true,
-    error: null,
-    fetchHosts: async () => {},
-    createHost: async () => ({ success: false, error: 'Host context not available' }),
-    updateHost: async () => ({ success: false, error: 'Host context not available' }),
-    deleteHost: async () => ({ success: false, error: 'Host context not available' }),
-  };
-}
-
-export function useRepository() {
-  // First check authentication via AppContext
-  const appContext = useContext(AppContext);
-  const isAuthenticated = !!appContext?.user?.user;
-  
-  if (!isAuthenticated) {
-    // Return inactive version when not authenticated
-    return {
-      repositories: [],
-      starredRepositories: [],
-      filteredRepositories: [],
-      loading: false,
-      error: null,
-      refreshRepositories: async () => {},
-      filterRepositories: () => {},
-      toggleStarRepository: () => {},
-    };
-  }
-
-  if (appContext?.repository) {
-    return appContext.repository;
-  }
-
-  // Safe fallback
-  return {
-    repositories: [],
-    starredRepositories: [],
-    filteredRepositories: [],
-    loading: true,
-    error: null,
-    refreshRepositories: async () => {},
-    filterRepositories: () => {},
-    toggleStarRepository: () => {},
-  };
-}
-
-export function useDeployment() {
-  // First check authentication via AppContext
-  const appContext = useContext(AppContext);
-  const isAuthenticated = !!appContext?.user?.user;
-  
-  if (!isAuthenticated) {
-    // Return inactive version when not authenticated
-    return {
-      deployments: [],
-      repositories: [],
-      loading: false,
-      error: null,
-      isRefreshing: false,
-      fetchDeployments: async () => {},
-      fetchDeploymentById: async () => null,
-      createDeployment: async () => ({ success: false, error: 'Not authenticated' }),
-      abortDeployment: async () => ({ success: false, error: 'Not authenticated' }),
-      refreshDeployment: async () => ({ success: false, error: 'Not authenticated' }),
-      updateDeployment: async () => ({ success: false, error: 'Not authenticated' }),
-      deleteDeployment: async () => ({ success: false, error: 'Not authenticated' }),
-    };
-  }
-
-  if (appContext?.deployment) {
-    return appContext.deployment;
-  }
-
-  // Safe fallback
-  return {
-    deployments: [],
-    repositories: [],
-    loading: true,
-    error: null,
-    isRefreshing: false,
-    fetchDeployments: async () => {},
-    fetchDeploymentById: async () => null,
-    createDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
-    abortDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
-    refreshDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
-    updateDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
-    deleteDeployment: async () => ({ success: false, error: 'Deployment context not available' }),
-  };
-}
-
-export function useCICD() {
-  // First check authentication via AppContext
-  const appContext = useContext(AppContext);
-  const isAuthenticated = !!appContext?.user?.user;
-  
-  if (!isAuthenticated) {
-    // Return inactive version when not authenticated
-    return {
-      providers: [],
-      jobs: [],
-      selectedProvider: null,
-      selectedJob: null,
-      loading: false,
-      error: null,
-      fetchProviders: async () => ({ success: false, data: [], error: 'Not authenticated' }),
-      getProviderById: async () => null,
-      createProvider: async () => ({ success: false, error: 'Not authenticated' }),
-      updateProvider: async () => ({ success: false, error: 'Not authenticated' }),
-      deleteProvider: async () => ({ success: false, error: 'Not authenticated' }),
-      testProvider: async () => ({ success: false, error: 'Not authenticated' }),
-      fetchJobs: async () => [],
-      getJobById: async () => null,
-      triggerJob: async () => ({ success: false, error: 'Not authenticated' }),
-      getBuildStatus: async () => null,
-      getBuildLogs: async () => '',
-      fetchUserData: async () => null,
-      setSelectedProvider: () => {},
-      setSelectedJob: () => {},
-      refreshUserData: async () => null,
-    };
-  }
-
-  if (appContext?.cicd) {
-    return appContext.cicd;
-  }
-
-  // Safe fallback
-  return {
-    providers: [],
-    jobs: [],
-    selectedProvider: null,
-    selectedJob: null,
-    loading: true,
-    error: null,
-    fetchProviders: async () => ({ success: false, data: [], error: 'CICD context not available' }),
-    getProviderById: async () => null,
-    createProvider: async () => ({ success: false, error: 'CICD context not available' }),
-    updateProvider: async () => ({ success: false, error: 'CICD context not available' }),
-    deleteProvider: async () => ({ success: false, error: 'CICD context not available' }),
-    testProvider: async () => ({ success: false, error: 'CICD context not available' }),
-    fetchJobs: async () => [],
-    getJobById: async () => null,
-    triggerJob: async () => ({ success: false, error: 'CICD context not available' }),
-    getBuildStatus: async () => null,
-    getBuildLogs: async () => '',
-    fetchUserData: async () => null,
-    setSelectedProvider: () => {},
-    setSelectedJob: () => {},
-    refreshUserData: async () => null,
-  };
-}
+// The other hooks are imported and used only when the relevant context is available
+export { useHost } from './HostContext';
+export { useRepository } from './RepositoryContext';
+export { useDeployment } from './DeploymentContext';
+export { useCICD } from './CICDContext';

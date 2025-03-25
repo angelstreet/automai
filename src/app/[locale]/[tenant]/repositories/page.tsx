@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { useRepository } from '@/context';
 
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -51,18 +50,23 @@ import {
   RepositoryDialogs,
 } from './_components';
 
-export default function EnhancedRepositoryPage() {
+// Import the repository context provider and hook
+import { RepositoryContextProvider, useRepository } from '@/context';
+
+// Create separate component for the page content (inside the provider)
+function RepositoryPageContent() {
   const { toast } = useToast();
   const t = useTranslations('repositories');
 
-  // Use the repository context - simplified destructuring
+  // Use the repository context
   const repositoryContext = useRepository();
   const {
     repositories = [],
     loading = false,
     error = null,
     starredRepositories = [],
-    fetchRepositories
+    fetchRepositories,
+    toggleStarRepository
   } = repositoryContext || {};
 
   // Track initialization separately
@@ -113,7 +117,7 @@ export default function EnhancedRepositoryPage() {
     }, 500);
     
     return () => clearTimeout(initTimeout);
-  }, []); // Empty dependency array - run only on mount
+  }, []); 
 
   // Update starredRepos when starredRepositories change in context
   useEffect(() => {
@@ -160,11 +164,11 @@ export default function EnhancedRepositoryPage() {
 
     // Call context method to toggle star
     try {
-      // Use the repository's toggleStarred method if available
-      if (typeof repository.toggleStarred === 'function') {
-        await repository.toggleStarred();
+      // Call the toggleStarRepository method from context
+      if (toggleStarRepository) {
+        toggleStarRepository(repository);
       } else {
-        console.error('Repository does not have toggleStarred method');
+        console.error('Repository context does not have toggleStarRepository method');
       }
     } catch (error: unknown) {
       console.error('Error updating starred status:', error);
@@ -464,5 +468,14 @@ export default function EnhancedRepositoryPage() {
         isDeleting={isDeleting}
       />
     </div>
+  );
+}
+
+// Main exported page component that wraps the content with the provider
+export default function EnhancedRepositoryPage() {
+  return (
+    <RepositoryContextProvider>
+      <RepositoryPageContent />
+    </RepositoryContextProvider>
   );
 }

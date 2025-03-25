@@ -2,12 +2,10 @@
 
 import { PageHeader } from '@/components/layout/PageHeader';
 import { CICDProvider } from './_components';
-// AppProvider is now only in the root layout
-import { useCICD } from '@/context';
+import { useCICD, CICDContextProvider } from '@/context';
 import { Button } from '@/components/shadcn/button';
 import { PlusCircle } from 'lucide-react';
 import { useState } from 'react';
-import { Metadata } from 'next';
 
 function CICDPageContent() {
   // Get CICD context
@@ -38,6 +36,10 @@ function CICDPageContent() {
 }
 
 export default function CICDPage() {
-  // AppProvider is now only in the root layout
-  return <CICDPageContent />;
+  // Wrap page with just the CICD context provider
+  return (
+    <CICDContextProvider>
+      <CICDPageContent />
+    </CICDContextProvider>
+  );
 }
