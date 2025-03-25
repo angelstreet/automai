@@ -193,22 +193,171 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
     
     const cookieStore = await cookies();
 
+    // Extract raw parameters from formData
+    const rawParameters = formData.selectedScripts?.map((scriptPath, index) => {
+      const scriptParam = formData.parameters?.find(p => p.script_path === scriptPath);
+      return scriptParam?.raw || '';
+    }) || [];
+
     // 1. Create CICD job with provider reference
     console.log('🔄 [CICD_JOB] Starting CICD job creation');
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
+    
+    // Get the provider first to validate it exists and is configured
+    const providerResult = await cicdDb.getCICDProvider({ 
+      where: { id: formData.provider_id }
+    }, cookieStore);
+
+    if (!providerResult.success || !providerResult.data) {
+      console.error('❌ [CICD_JOB] Provider not found or not configured:', providerResult.error);
+      // Create deployment with failed status
+      const failedDeploymentData = {
+        name: formData.name,
+        description: formData.description || '',
+        repository_id: formData.repository,
+        scripts_path: formData.selectedScripts || [],
+        scripts_parameters: rawParameters,
+        host_ids: formData.selectedHosts || [],
+        status: 'failed' as DeploymentStatus,
+        user_id: user.id,
+        tenant_id: user.tenant_id,
+        schedule_type: formData.schedule || 'now',
+        scheduled_time: formData.scheduledTime || null,
+        cron_expression: formData.cronExpression || null,
+        repeat_count: formData.repeatCount || 0,
+        environment_vars: formData.environmentVars || [],
+      };
+
+      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
+
+      return { 
+        success: false, 
+        error: `Failed to create CICD job: ${providerResult.error || 'Provider not found'}`,
+        deploymentId: failedResult?.data?.id
+      };
+    }
+
+    // Initialize the Jenkins provider
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+    const provider = await getCICDProvider(formData.provider_id, user.tenant_id);
+
+    if (!provider.success || !provider.data) {
+      console.error('❌ [CICD_JOB] Failed to initialize provider:', provider.error);
+      // Create deployment with failed status
+      const failedDeploymentData = {
+        name: formData.name,
+        description: formData.description || '',
+        repository_id: formData.repository,
+        scripts_path: formData.selectedScripts || [],
+        scripts_parameters: rawParameters,
+        host_ids: formData.selectedHosts || [],
+        status: 'failed' as DeploymentStatus,
+        user_id: user.id,
+        tenant_id: user.tenant_id,
+        schedule_type: formData.schedule || 'now',
+        scheduled_time: formData.scheduledTime || null,
+        cron_expression: formData.cronExpression || null,
+        repeat_count: formData.repeatCount || 0,
+        environment_vars: formData.environmentVars || [],
+      };
+
+      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
+
+      return { 
+        success: false, 
+        error: `Failed to initialize provider: ${provider.error}`,
+        deploymentId: failedResult?.data?.id
+      };
+    }
+
+    // Generate Jenkins job XML
+    const { generateJenkinsPipelineXml } = await import('@/lib/services/cicd/xml-generators');
+    const jobXml = generateJenkinsPipelineXml(
+      formData.name,
+      formData.repository,
+      formData.selectedScripts || [],
+      rawParameters,
+      formData.selectedHosts || []
+    );
+
+    // Create the actual Jenkins job
+    const jobName = `deployment-${Date.now()}`;
+    const createJobResult = await provider.data.createJob(jobName, jobXml);
+
+    if (!createJobResult.success) {
+      console.error('❌ [CICD_JOB] Failed to create Jenkins job:', createJobResult.error);
+      // Create deployment with failed status
+      const failedDeploymentData = {
+        name: formData.name,
+        description: formData.description || '',
+        repository_id: formData.repository,
+        scripts_path: formData.selectedScripts || [],
+        scripts_parameters: rawParameters,
+        host_ids: formData.selectedHosts || [],
+        status: 'failed' as DeploymentStatus,
+        user_id: user.id,
+        tenant_id: user.tenant_id,
+        schedule_type: formData.schedule || 'now',
+        scheduled_time: formData.scheduledTime || null,
+        cron_expression: formData.cronExpression || null,
+        repeat_count: formData.repeatCount || 0,
+        environment_vars: formData.environmentVars || [],
+      };
+
+      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
+
+      return { 
+        success: false, 
+        error: `Failed to create Jenkins job: ${createJobResult.error}`,
+        deploymentId: failedResult?.data?.id
+      };
+    }
+
+    // Create CICD job record in database
     const cicdResult = await cicdDb.createCICDJob({
       data: {
         provider_id: formData.provider_id,
-        external_id: `deployment-${Date.now()}`,
+        external_id: jobName,
         name: `${formData.name} Job`,
         description: formData.description || 'Deployment job',
-        parameters: [] // Empty array for now, we'll update later if needed
+        parameters: rawParameters
       }
     }, cookieStore);
 
     if (!cicdResult.success) {
-      console.error('❌ [CICD_JOB] Failed to create CICD job:', cicdResult.error);
-      return { success: false, error: `Failed to create CICD job: ${cicdResult.error}` };
+      console.error('❌ [CICD_JOB] Failed to create CICD job record:', cicdResult.error);
+      // Try to clean up the Jenkins job since we couldn't record it
+      await provider.data.deleteJob(jobName);
+      
+      // Create deployment with failed status
+      const failedDeploymentData = {
+        name: formData.name,
+        description: formData.description || '',
+        repository_id: formData.repository,
+        scripts_path: formData.selectedScripts || [],
+        scripts_parameters: rawParameters,
+        host_ids: formData.selectedHosts || [],
+        status: 'failed' as DeploymentStatus,
+        user_id: user.id,
+        tenant_id: user.tenant_id,
+        schedule_type: formData.schedule || 'now',
+        scheduled_time: formData.scheduledTime || null,
+        cron_expression: formData.cronExpression || null,
+        repeat_count: formData.repeatCount || 0,
+        environment_vars: formData.environmentVars || [],
+      };
+
+      const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+      const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
+
+      return { 
+        success: false, 
+        error: `Failed to create CICD job record: ${cicdResult.error}`,
+        deploymentId: failedResult?.data?.id
+      };
     }
     console.log('📊 [CICD_JOB] CICD job creation result:', JSON.stringify(cicdResult, null, 2));
 
@@ -218,7 +367,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       description: formData.description || '',
       repository_id: formData.repository,
       scripts_path: formData.selectedScripts || [],
-      scripts_parameters: Array.isArray(formData.parameters) ? formData.parameters : [],
+      scripts_parameters: rawParameters,
       host_ids: formData.selectedHosts || [],
       status: 'pending' as DeploymentStatus,
       user_id: user.id,
@@ -246,7 +395,7 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       const mappingResult = await cicdDb.createDeploymentCICDMapping({
         deployment_id: result.data.id,
         job_id: cicdResult.id,
-        parameters: Array.isArray(formData.parameters) ? formData.parameters : []
+        parameters: rawParameters
       }, cookieStore);
       console.log('📊 [MAPPING] Mapping creation result:', JSON.stringify(mappingResult, null, 2));
     } else {

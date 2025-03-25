@@ -16,8 +16,8 @@ export function generateJenkinsPipelineXml(
   // Format script commands with parameters
   const scriptCommands = scriptPaths
     .map((path, index) => {
-      const param = scriptParameters[index] || '';
-      return `                sh "python ${path} ${param}"`;
+      const paramString = scriptParameters[index] || '';
+      return `                sh "python ${path} ${paramString}"`;
     })
     .join('\n');
 
@@ -60,7 +60,7 @@ pipeline {
             steps {
                 script {
                     // Deploy scripts to selected hosts
-${scriptCommands}
+                    ${scriptCommands}
                 }
             }
         }
@@ -70,5 +70,6 @@ ${scriptCommands}
     <sandbox>true</sandbox>
   </definition>
   <triggers/>
+  <disabled>false</disabled>
 </flow-definition>`;
 }
