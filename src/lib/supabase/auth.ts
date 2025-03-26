@@ -249,23 +249,8 @@ export const supabaseAuth = {
         return { success: false, error: error.message };
       }
 
-      // If signup successful, create a profile
-      if (data.user) {
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: data.user.id,
-          email: data.user.email,
-          name: options.data.name,
-          role: 'viewer',
-          tenant_name: 'trial',
-          tenant_id: 'default',
-        });
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          // Don't fail the signup if profile creation fails
-          // The profile can be created later
-        }
-      }
+      // Let Supabase handle profile creation via triggers
+      // No manual profile creation needed
 
       return { success: true, data };
     } catch (error) {
