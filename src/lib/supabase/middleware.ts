@@ -84,7 +84,8 @@ export const createClient = (request: NextRequest) => {
                 path: '/',
                 secure: isCloudWorkstation || process.env.NODE_ENV === 'production',
                 sameSite: isCloudWorkstation ? 'none' as const : 'lax' as const,
-                domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined,
+                // Don't set domain - let the browser determine it based on the current host
+                domain: undefined,
                 maxAge: name.includes('token') ? 60 * 60 * 24 * 7 : undefined,
               };
               
