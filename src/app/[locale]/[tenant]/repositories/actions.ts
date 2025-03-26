@@ -100,10 +100,15 @@ export async function getRepositories(
     console.log('[Server] getRepositories: Starting...');
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
-    console.log('[Server] User context for repositories:', currentUser ? {
-      id: currentUser.id,
-      tenant: currentUser.tenant_id
-    } : 'No user');
+    console.log(
+      '[Server] User context for repositories:',
+      currentUser
+        ? {
+            id: currentUser.id,
+            tenant: currentUser.tenant_id,
+          }
+        : 'No user',
+    );
 
     if (!currentUser) {
       return {
@@ -126,7 +131,7 @@ export async function getRepositories(
       cacheKey,
       async () => {
         console.log('[Server] Cache miss - fetching repositories from database');
-        
+
         // IMPORTANT: Use profile_id instead of tenant_id since that's what exists in the database
         // The repositories are linked to git_providers which have a profile_id field
         try {
@@ -135,7 +140,7 @@ export async function getRepositories(
           console.log('[Server] DB query result:', {
             success: result.success,
             count: result.data?.length || 0,
-            error: result.error
+            error: result.error,
           });
 
           if (!result.success || !result.data) {
@@ -153,9 +158,9 @@ export async function getRepositories(
           return { success: true, data };
         } catch (error: any) {
           console.error('[Server] Database error in getRepositories:', error);
-          return { 
-            success: false, 
-            error: error.message || 'Database error fetching repositories'
+          return {
+            success: false,
+            error: error.message || 'Database error fetching repositories',
           };
         }
       },
@@ -200,7 +205,7 @@ export async function createRepository(
       url: data.url || '',
       default_branch: data.defaultBranch || 'main',
       is_private: data.isPrivate || false,
-      owner: data.owner || null
+      owner: data.owner || null,
     };
 
     // Only log non-sensitive data
@@ -262,7 +267,7 @@ export async function updateRepository(
 
     // Call the repository module instead of direct db access
     const result = await repository.updateRepository(id, updates, currentUser.id);
-    
+
     if (!result.success || !result.data) {
       console.log(`[Server] updateRepository: Failed - ${result.error}`);
       return {
@@ -310,21 +315,21 @@ export async function deleteRepository(
 
     // First get the repository to invalidate cache properly
     const getRepoResult = await repository.getRepository(id, currentUser.id);
-    
+
     if (!getRepoResult.success || !getRepoResult.data) {
       return { success: false, error: 'Repository not found' };
     }
-    
+
     // Store the provider ID for cache invalidation
     const providerId = getRepoResult.data.provider_id;
 
     // Call the repository module to delete
     const result = await repository.deleteRepository(id, currentUser.id);
-    
+
     if (!result.success) {
-      return { 
-        success: false, 
-        error: result.error || 'Failed to delete repository'
+      return {
+        success: false,
+        error: result.error || 'Failed to delete repository',
       };
     }
 
@@ -368,7 +373,7 @@ export async function syncRepository(
       last_synced_at: new Date().toISOString(),
       sync_status: 'SYNCED',
     };
-    
+
     const result = await repository.updateRepository(id, updates, currentUser.id);
 
     if (!result.success || !result.data) {
@@ -479,10 +484,10 @@ export async function getRepository(
       cacheKey,
       async () => {
         console.log(`[Server] Cache miss - fetching repository ${id} from database`);
-        
+
         // Call the repository module instead of direct db access
         const result = await repository.getRepository(id, currentUser.id);
-        
+
         if (!result.success || !result.data) {
           return { success: false, error: 'Repository not found' };
         }
@@ -596,7 +601,7 @@ export async function getGitProviders(): Promise<{
 
     // Call the gitProvider module instead of direct db access
     const result = await gitProvider.getGitProviders(user.id);
-    
+
     if (!result.success || !result.data) {
       console.error(`[Server] Failed to fetch git providers:`, result.error);
       return {
@@ -630,7 +635,7 @@ export async function getGitProvider(
 
     // Call the gitProvider module instead of direct db access
     const result = await gitProvider.getGitProvider(id, user.id);
-    
+
     if (!result.success || !result.data) {
       console.error(`[Server] Git provider not found:`, result.error);
       return { success: false, error: 'Git provider not found' };
@@ -659,7 +664,7 @@ export async function deleteGitProvider(id: string): Promise<{ success: boolean;
 
     // Call the gitProvider module instead of direct db access
     const result = await gitProvider.deleteGitProvider(id, user.id);
-    
+
     if (!result.success) {
       console.error(`[Server] Failed to delete git provider:`, result.error);
       return { success: false, error: result.error };
@@ -681,18 +686,18 @@ export async function addGitProvider(provider: {
 }): Promise<GitProvider> {
   try {
     console.log(`[Server] addGitProvider: Starting...`);
-    
+
     // Map to DB schema
     const gitProviderData = {
       name: provider.name,
       type: provider.type,
       access_token: provider.access_token || '',
-      profile_id: provider.profile_id
+      profile_id: provider.profile_id,
     };
-    
+
     // Call the gitProvider module instead of direct db access
     const result = await gitProvider.createGitProvider(gitProviderData);
-    
+
     if (!result.success || !result.data) {
       console.error(`[Server] Failed to create git provider:`, result.error);
       throw new Error(result.error || 'Failed to create git provider');
@@ -717,21 +722,21 @@ export async function updateGitProvider(
   try {
     console.log(`[Server] updateGitProvider: Starting for provider ${id}`);
     const user = await getUser();
-    
+
     if (!user) {
       throw new Error('Unauthorized');
     }
-    
+
     // Map updates to DB schema
     const gitProviderUpdates = {
       ...updates,
       // Ensure no profile_id override for security
-      profile_id: undefined
+      profile_id: undefined,
     };
-    
+
     // Call the gitProvider module instead of direct db access
     const result = await gitProvider.updateGitProvider(id, gitProviderUpdates, user.id);
-    
+
     if (!result.success || !result.data) {
       console.error(`[Server] Failed to update git provider:`, result.error);
       throw new Error(result.error || 'Failed to update git provider');
@@ -748,14 +753,14 @@ export async function refreshGitProvider(id: string): Promise<GitProvider> {
   try {
     console.log(`[Server] refreshGitProvider: Starting for provider ${id}`);
     const user = await getUser();
-    
+
     if (!user) {
       throw new Error('Unauthorized');
     }
-    
+
     // Call the gitProvider.refreshGitProvider method instead of updateGitProvider
     const result = await gitProvider.refreshGitProvider(id, user.id);
-    
+
     if (!result.success || !result.data) {
       console.error(`[Server] Failed to refresh git provider:`, result.error);
       throw new Error(result.error || 'Failed to refresh git provider');
@@ -793,7 +798,7 @@ export async function handleOAuthCallback(
 
     // Call the gitProvider module instead of direct db access
     const result = await gitProvider.handleOAuthCallback(code, providerId, user.id);
-    
+
     if (!result.success) {
       console.error('[Server] Failed to handle OAuth callback:', result.error);
       return { success: false, error: result.error || 'Failed to handle OAuth callback' };
@@ -832,9 +837,9 @@ export async function createGitProvider(
         serverUrl: validatedData.serverUrl,
         token: validatedData.token,
       },
-      user.id
+      user.id,
     );
-    
+
     if (!result.success || !result.data) {
       console.error('[Server] Failed to create git provider:', result.error);
       return { success: false, error: result.error };
@@ -865,7 +870,7 @@ export async function getStarredRepositories(
     console.log('[Server] getStarredRepositories: Starting...');
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
-    
+
     if (!currentUser) {
       return {
         success: false,
@@ -883,13 +888,13 @@ export async function getStarredRepositories(
         console.log('[Server] Cache miss - fetching starred repositories');
         // Call the starRepository module to get starred repositories
         const result = await starRepository.getStarredRepositories(currentUser.id);
-        
+
         if (!result.success) {
           console.error('[Server] Error fetching starred repositories:', result.error);
           // Return empty array on error for graceful degradation
           return { success: true, data: [] };
         }
-        
+
         return result;
       },
       {
@@ -1020,7 +1025,7 @@ export async function getRepositoryFiles(
     if (!result.success || !result.data) {
       return { success: false, error: result.error || 'Failed to fetch repository files' };
     }
-    
+
     // Cache the result - 5 minute cache
     serverCache.set(cacheKey, result.data, { ttl: 60 * 5 * 1000 });
 
@@ -1106,10 +1111,15 @@ export async function getRepositoriesWithStarred(
     console.log('[Server] getRepositoriesWithStarred: Starting...');
     // Use provided user data or fetch it if not provided
     const currentUser = user || (await getUser());
-    console.log('[Server] User context:', currentUser ? {
-      id: currentUser.id,
-      tenant: currentUser.tenant_id
-    } : 'No user');
+    console.log(
+      '[Server] User context:',
+      currentUser
+        ? {
+            id: currentUser.id,
+            tenant: currentUser.tenant_id,
+          }
+        : 'No user',
+    );
 
     if (!currentUser) {
       return {
@@ -1137,7 +1147,7 @@ export async function getRepositoriesWithStarred(
         console.log('[Server] Repository fetch result:', {
           success: reposResult.success,
           count: reposResult.data?.length || 0,
-          error: reposResult.error
+          error: reposResult.error,
         });
 
         if (!reposResult.success || !reposResult.data) {
@@ -1152,7 +1162,7 @@ export async function getRepositoriesWithStarred(
         console.log('[Server] Starred repositories result:', {
           success: starredResult.success,
           count: starredResult.data?.length || 0,
-          error: starredResult.error
+          error: starredResult.error,
         });
 
         // Extract just the IDs from starred repositories for efficiency
@@ -1169,7 +1179,7 @@ export async function getRepositoriesWithStarred(
 
         console.log('[Server] Returning combined data:', {
           repositories: combinedData.repositories.length,
-          starred: combinedData.starredRepositoryIds.length
+          starred: combinedData.starredRepositoryIds.length,
         });
 
         return { success: true, data: combinedData };

@@ -39,14 +39,14 @@ export function NavUser({ user }: NavUserProps) {
   }
   // Use the actual user role for display
   const displayRole = user.role;
-  
+
   // DEBUG: Log user role information in NavUser
   React.useEffect(() => {
     console.log('DEBUG NavUser - Role information:', {
       currentUser: user,
       userRole: user?.role,
       displayRole,
-      windowDebugRole: typeof window !== 'undefined' ? window.__debugRole : null
+      windowDebugRole: typeof window !== 'undefined' ? window.__debugRole : null,
     });
   }, [user, displayRole]);
 

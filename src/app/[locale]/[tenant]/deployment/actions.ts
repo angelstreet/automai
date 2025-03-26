@@ -184,30 +184,34 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
 }> {
   try {
     console.log('🚀 [DEPLOYMENT_CREATE] Starting deployment creation process');
-    
+
     // Ensure we have a valid user
     const user = await getUser();
     if (!user || !user.tenant_id) {
       console.error('❌ [DEPLOYMENT_CREATE] No authenticated user found');
       return { success: false, error: 'User not authenticated' };
     }
-    
+
     const cookieStore = await cookies();
 
     // Extract raw parameters from formData
-    const rawParameters = formData.selectedScripts?.map((scriptPath, index) => {
-      const scriptParam = formData.parameters?.find(p => p.script_path === scriptPath);
-      return scriptParam?.raw || '';
-    }) || [];
+    const rawParameters =
+      formData.selectedScripts?.map((scriptPath, index) => {
+        const scriptParam = formData.parameters?.find((p) => p.script_path === scriptPath);
+        return scriptParam?.raw || '';
+      }) || [];
 
     // 1. Create CICD job with provider reference
     console.log('🔄 [CICD_JOB] Starting CICD job creation');
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
-    
+
     // Get the provider first to validate it exists and is configured
-    const providerResult = await cicdDb.getCICDProvider({ 
-      where: { id: formData.provider_id }
-    }, cookieStore);
+    const providerResult = await cicdDb.getCICDProvider(
+      {
+        where: { id: formData.provider_id },
+      },
+      cookieStore,
+    );
 
     if (!providerResult.success || !providerResult.data) {
       console.error('❌ [CICD_JOB] Provider not found or not configured:', providerResult.error);
@@ -232,10 +236,10 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
       const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
 
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `Failed to create CICD job: ${providerResult.error || 'Provider not found'}`,
-        deploymentId: failedResult?.data?.id
+        deploymentId: failedResult?.data?.id,
       };
     }
 
@@ -266,10 +270,10 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
       const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
 
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `Failed to initialize provider: ${provider.error}`,
-        deploymentId: failedResult?.data?.id
+        deploymentId: failedResult?.data?.id,
       };
     }
 
@@ -278,33 +282,42 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       name: formData.name,
       description: formData.description || formData.name,
       repository: {
-        id: formData.repository
+        id: formData.repository,
       },
       stages: [
         {
           name: 'Deploy Scripts',
-          steps: formData.selectedScripts?.map((scriptPath, index) => ({
-            type: scriptPath.endsWith('.py') ? 'script' : 'command',
-            script: scriptPath,
-            command: scriptPath,
-            parameters: formData.parameters?.[index]?.raw ? {
-              args: formData.parameters[index].raw
-            } : undefined
-          })) || []
-        }
+          steps:
+            formData.selectedScripts?.map((scriptPath, index) => ({
+              type: scriptPath.endsWith('.py') ? 'script' : 'command',
+              script: scriptPath,
+              command: scriptPath,
+              parameters: formData.parameters?.[index]?.raw
+                ? {
+                    args: formData.parameters[index].raw,
+                  }
+                : undefined,
+            })) || [],
+        },
       ],
-      parameters: formData.parameters?.map((param: { script_path: string; raw: string }) => ({
-        name: param.script_path,
-        type: 'text' as const,
-        description: `Parameters for script: ${param.script_path}`,
-        defaultValue: param.raw || ''
-      })) || [],
-      triggers: formData.schedule_type === 'cron' ? [{
-        type: 'schedule' as const,
-        config: {
-          schedule: formData.cronExpression
-        }
-      }] : []
+      parameters:
+        formData.parameters?.map((param: { script_path: string; raw: string }) => ({
+          name: param.script_path,
+          type: 'text' as const,
+          description: `Parameters for script: ${param.script_path}`,
+          defaultValue: param.raw || '',
+        })) || [],
+      triggers:
+        formData.schedule_type === 'cron'
+          ? [
+              {
+                type: 'schedule' as const,
+                config: {
+                  schedule: formData.cronExpression,
+                },
+              },
+            ]
+          : [],
     };
 
     // Create the actual Jenkins job
@@ -334,29 +347,32 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
       const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
 
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `Failed to create Jenkins job: ${createJobResult.error}`,
-        deploymentId: failedResult?.data?.id
+        deploymentId: failedResult?.data?.id,
       };
     }
 
     // Create CICD job record in database
-    const cicdResult = await cicdDb.createCICDJob({
-      data: {
-        provider_id: formData.provider_id,
-        external_id: jobName,
-        name: `${formData.name} Job`,
-        description: formData.description || 'Deployment job',
-        parameters: rawParameters
-      }
-    }, cookieStore);
+    const cicdResult = await cicdDb.createCICDJob(
+      {
+        data: {
+          provider_id: formData.provider_id,
+          external_id: jobName,
+          name: `${formData.name} Job`,
+          description: formData.description || 'Deployment job',
+          parameters: rawParameters,
+        },
+      },
+      cookieStore,
+    );
 
     if (!cicdResult.success) {
       console.error('❌ [CICD_JOB] Failed to create CICD job record:', cicdResult.error);
       // Try to clean up the Jenkins job since we couldn't record it
       await provider.data.deleteJob(jobName);
-      
+
       // Create deployment with failed status
       const failedDeploymentData = {
         name: formData.name,
@@ -378,10 +394,10 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
       const failedResult = await deploymentDb.create({ data: failedDeploymentData }, cookieStore);
 
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `Failed to create CICD job record: ${cicdResult.error}`,
-        deploymentId: failedResult?.data?.id
+        deploymentId: failedResult?.data?.id,
       };
     }
     console.log('📊 [CICD_JOB] CICD job creation result:', JSON.stringify(cicdResult, null, 2));
@@ -404,7 +420,10 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       environment_vars: formData.environmentVars || [],
     };
 
-    console.log('📦 [DEPLOYMENT_CREATE] Creating deployment with data:', JSON.stringify(deploymentData, null, 2));
+    console.log(
+      '📦 [DEPLOYMENT_CREATE] Creating deployment with data:',
+      JSON.stringify(deploymentData, null, 2),
+    );
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
     const result = await deploymentDb.create({ data: deploymentData }, cookieStore);
 
@@ -412,19 +431,30 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       console.error('❌ [DEPLOYMENT_CREATE] Failed to create deployment:', result?.error);
       return { success: false, error: result?.error || 'Failed to create deployment' };
     }
-    console.log('📊 [DEPLOYMENT_CREATE] Deployment creation result:', JSON.stringify(result, null, 2));
+    console.log(
+      '📊 [DEPLOYMENT_CREATE] Deployment creation result:',
+      JSON.stringify(result, null, 2),
+    );
 
     // 3. Create mapping between deployment and CICD job
     if (result.data?.id && cicdResult.id) {
       console.log('🔗 [MAPPING] Creating deployment-CICD mapping...');
-      const mappingResult = await cicdDb.createDeploymentCICDMapping({
-        deployment_id: result.data.id,
-        job_id: cicdResult.id,
-        parameters: rawParameters
-      }, cookieStore);
+      const mappingResult = await cicdDb.createDeploymentCICDMapping(
+        {
+          deployment_id: result.data.id,
+          job_id: cicdResult.id,
+          parameters: rawParameters,
+        },
+        cookieStore,
+      );
       console.log('📊 [MAPPING] Mapping creation result:', JSON.stringify(mappingResult, null, 2));
     } else {
-      console.warn('⚠️ [MAPPING] Missing IDs for mapping, deployment_id:', result?.data?.id, 'job_id:', cicdResult?.id);
+      console.warn(
+        '⚠️ [MAPPING] Missing IDs for mapping, deployment_id:',
+        result?.data?.id,
+        'job_id:',
+        cicdResult?.id,
+      );
     }
 
     // Cache management
@@ -449,9 +479,9 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
         );
       }
 
-      return { 
-        success: true, 
-        deploymentId: newDeployment.id 
+      return {
+        success: true,
+        deploymentId: newDeployment.id,
       };
     }
 
@@ -568,13 +598,16 @@ export async function deleteDeployment(id: string): Promise<boolean> {
 
     // 1. Get the CICD mapping first to get job information
     console.log(`Actions layer: Getting CICD mapping for deployment ${id}`);
-    const mappingResult = await cicdDb.getDeploymentCICDMappings({
-      where: { deployment_id: id }
-    }, cookieStore);
+    const mappingResult = await cicdDb.getDeploymentCICDMappings(
+      {
+        where: { deployment_id: id },
+      },
+      cookieStore,
+    );
 
     if (mappingResult.success && mappingResult.data && mappingResult.data.length > 0) {
       const mapping = mappingResult.data[0];
-      
+
       // 2. Delete the job from Jenkins if it exists
       if (mapping.provider_id) {
         console.log(`Actions layer: Deleting Jenkins job for deployment ${id}`);
@@ -584,9 +617,12 @@ export async function deleteDeployment(id: string): Promise<boolean> {
         if (providerResult.success && providerResult.data) {
           const provider = providerResult.data;
           // Get the CICD job to get its external_id (Jenkins job name)
-          const jobResult = await cicdDb.getCICDJob({
-            where: { id: mapping.job_id }
-          }, cookieStore);
+          const jobResult = await cicdDb.getCICDJob(
+            {
+              where: { id: mapping.job_id },
+            },
+            cookieStore,
+          );
 
           if (jobResult.success && jobResult.data) {
             // Delete the job from Jenkins
@@ -599,9 +635,12 @@ export async function deleteDeployment(id: string): Promise<boolean> {
       // 3. Delete the CICD job from database
       if (mapping.job_id) {
         console.log(`Actions layer: Deleting CICD job record ${mapping.job_id}`);
-        await cicdDb.deleteCICDJob({
-          where: { id: mapping.job_id }
-        }, cookieStore);
+        await cicdDb.deleteCICDJob(
+          {
+            where: { id: mapping.job_id },
+          },
+          cookieStore,
+        );
       }
 
       // 4. Delete the mapping
@@ -994,7 +1033,7 @@ export async function updateDeploymentCICDStatus(
       console.error('Actions layer: Cannot update status - user not authenticated');
       return { success: false, error: 'User not authenticated' };
     }
-    
+
     // Get cookie store
     const cookieStore = await cookies();
 
@@ -1011,11 +1050,14 @@ export async function updateDeploymentCICDStatus(
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
     // Get the CI/CD mapping
-    const mappingResult = await cicdDb.getDeploymentCICDMappings({
-      where: {
-        deployment_id: deploymentId
-      }
-    }, cookieStore);
+    const mappingResult = await cicdDb.getDeploymentCICDMappings(
+      {
+        where: {
+          deployment_id: deploymentId,
+        },
+      },
+      cookieStore,
+    );
 
     if (!mappingResult.success || !mappingResult.data || mappingResult.data.length === 0) {
       console.error(`Actions layer: No CI/CD mapping found for deployment ${deploymentId}`);
@@ -1068,16 +1110,16 @@ export async function updateDeploymentCICDStatus(
     }
 
     // Update the deployment status
-    await deploymentDb.update(deploymentId, { 
-      status: deploymentStatus as string 
-    }, cookieStore);
+    await deploymentDb.update(
+      deploymentId,
+      {
+        status: deploymentStatus as string,
+      },
+      cookieStore,
+    );
 
     // Update the CI/CD mapping status
-    await cicdDb.updateDeploymentCICDMapping(
-      mapping.id, 
-      { status: buildStatus }, 
-      cookieStore
-    );
+    await cicdDb.updateDeploymentCICDMapping(mapping.id, { status: buildStatus }, cookieStore);
 
     console.log(`Actions layer: Updated deployment status to ${deploymentStatus}`);
 
@@ -1769,7 +1811,7 @@ export async function testJenkinsAPI(): Promise<ServerActionResult<any>> {
 export async function getScriptsForRepository(repositoryId: string): Promise<any[]> {
   try {
     console.log(`[Actions] Getting scripts for repository ${repositoryId}`);
-    
+
     // Get user for tenant isolation
     const user = await getUser();
     if (!user) {
@@ -1780,7 +1822,7 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
     // Get the repository details first
     const { repository } = await import('@/lib/supabase/db-repositories');
     const repoResult = await repository.getRepository(repositoryId, user.profile_id);
-    
+
     if (!repoResult.success || !repoResult.data) {
       console.error(`[Actions] Repository ${repositoryId} not found`);
       return [];
@@ -1807,7 +1849,13 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
       case 'github': {
         const { listFiles } = await import('@/lib/github-api');
         try {
-          contents = await listFiles(repo.owner, repo.name, 'scripts', undefined, provider.access_token);
+          contents = await listFiles(
+            repo.owner,
+            repo.name,
+            'scripts',
+            undefined,
+            provider.access_token,
+          );
         } catch (e) {
           console.log('[Actions] No scripts directory found, checking root');
         }
@@ -1817,7 +1865,13 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
       case 'gitlab': {
         const { listFiles } = await import('@/lib/gitlab-api');
         try {
-          contents = await listFiles(repo.owner, repo.name, 'scripts', undefined, provider.access_token);
+          contents = await listFiles(
+            repo.owner,
+            repo.name,
+            'scripts',
+            undefined,
+            provider.access_token,
+          );
         } catch (e) {
           console.log('[Actions] No scripts directory found, checking root');
         }
@@ -1827,7 +1881,13 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
       case 'gitea': {
         const { listFiles } = await import('@/lib/gitea-api');
         try {
-          contents = await listFiles(repo.owner, repo.name, 'scripts', undefined, provider.access_token);
+          contents = await listFiles(
+            repo.owner,
+            repo.name,
+            'scripts',
+            undefined,
+            provider.access_token,
+          );
         } catch (e) {
           console.log('[Actions] No scripts directory found, checking root');
         }
@@ -1840,24 +1900,24 @@ export async function getScriptsForRepository(repositoryId: string): Promise<any
     }
 
     // Filter for script files and combine both directories
-    const scriptFiles = [...contents, ...rootContents].filter(file => 
-      file.type === 'file' && (
-        file.path.endsWith('.sh') || 
-        file.path.endsWith('.py') || 
-        file.path.endsWith('.js')
-      )
+    const scriptFiles = [...contents, ...rootContents].filter(
+      (file) =>
+        file.type === 'file' &&
+        (file.path.endsWith('.sh') || file.path.endsWith('.py') || file.path.endsWith('.js')),
     );
 
     // Map to script objects
-    return scriptFiles.map(file => ({
+    return scriptFiles.map((file) => ({
       id: `${repositoryId}-${file.path}`,
       name: file.path.split('/').pop() || file.path,
       path: file.path,
-      type: file.path.endsWith('.py') ? 'python' : 
-            file.path.endsWith('.js') ? 'javascript' : 'shell',
-      parameters: []
+      type: file.path.endsWith('.py')
+        ? 'python'
+        : file.path.endsWith('.js')
+          ? 'javascript'
+          : 'shell',
+      parameters: [],
     }));
-
   } catch (error) {
     console.error('[Actions] Error getting scripts for repository:', error);
     return [];

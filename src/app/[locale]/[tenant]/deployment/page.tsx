@@ -7,10 +7,10 @@ import { useDeployment, useRepository, createContextProvider } from '@/context';
 
 // Create a specialized provider that includes all required contexts
 const DeploymentPageProvider = createContextProvider({
-  deployment: true, 
+  deployment: true,
   repository: true,
   host: true,
-  cicd: true 
+  cicd: true,
 });
 
 function DeploymentPageContent() {
@@ -78,12 +78,12 @@ function DeploymentPageContent() {
     if (deployments && deployments.length > 0) {
       setIsInitialLoading(false);
     }
-    
+
     // Set a timeout to stop loading after max 1 second
     const timeoutId = setTimeout(() => {
       setIsInitialLoading(false);
     }, 1000);
-    
+
     return () => {
       clearTimeout(timeoutId);
     };
@@ -195,7 +195,9 @@ function DeploymentPageContent() {
               <Plus className="h-8 w-8 text-muted-foreground" />
             </div>
             <p className="mb-2 text-lg font-medium">No deployments found</p>
-            <p className="text-muted-foreground mb-4">Create your first deployment to get started</p>
+            <p className="text-muted-foreground mb-4">
+              Create your first deployment to get started
+            </p>
             <button
               className="inline-flex items-center px-3 py-1.5 border border-transparent rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
               onClick={() => setWizardActive(true)}

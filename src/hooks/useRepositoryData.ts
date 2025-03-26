@@ -3,12 +3,12 @@
  */
 import useSWR, { mutate } from 'swr';
 import { actionFetcher } from '@/lib/fetcher';
-import { 
+import {
   getRepositoriesWithStarred,
   getRepository,
   starRepositoryAction,
   unstarRepositoryAction,
-  clearRepositoriesCache
+  clearRepositoriesCache,
 } from '@/app/[locale]/[tenant]/repositories/actions';
 import type { Repository } from '@/app/[locale]/[tenant]/repositories/types';
 
@@ -16,14 +16,10 @@ import type { Repository } from '@/app/[locale]/[tenant]/repositories/types';
  * Hook for fetching all repositories with starred info
  */
 export function useRepositoriesWithStarred() {
-  return useSWR(
-    'repositories-with-starred',
-    () => actionFetcher(getRepositoriesWithStarred),
-    {
-      dedupingInterval: 15 * 60 * 1000, // 15 minutes
-      revalidateOnFocus: false
-    }
-  );
+  return useSWR('repositories-with-starred', () => actionFetcher(getRepositoriesWithStarred), {
+    dedupingInterval: 15 * 60 * 1000, // 15 minutes
+    revalidateOnFocus: false,
+  });
 }
 
 /**
@@ -32,21 +28,18 @@ export function useRepositoriesWithStarred() {
 export function useRepositoryById(id: string | null) {
   return useSWR(
     id ? `repository-${id}` : null,
-    () => id ? actionFetcher(getRepository, id) : null,
+    () => (id ? actionFetcher(getRepository, id) : null),
     {
       dedupingInterval: 60 * 1000, // 1 minute
-      revalidateOnFocus: false
-    }
+      revalidateOnFocus: false,
+    },
   );
 }
 
 /**
  * Toggle star status for a repository
  */
-export async function toggleStar(
-  repository: Repository,
-  isStarred: boolean
-) {
+export async function toggleStar(repository: Repository, isStarred: boolean) {
   try {
     // Call the appropriate action
     if (isStarred) {
@@ -54,7 +47,7 @@ export async function toggleStar(
     } else {
       await starRepositoryAction(repository.id);
     }
-    
+
     // Revalidate data
     await mutate('repositories-with-starred');
     return true;

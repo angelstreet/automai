@@ -36,7 +36,7 @@ const files = {
   async getRepositoryFiles(
     repositoryId: string,
     path: string = '',
-    profileId: string
+    profileId: string,
   ): Promise<DbResponse<RepositoryFile[]>> {
     try {
       console.log('[DB] getRepositoryFiles: Starting for repo', repositoryId, 'path:', path);
@@ -108,9 +108,9 @@ const files = {
           }));
         } catch (error: any) {
           console.error('[DB] Error fetching GitHub repository contents:', error);
-          return { 
-            success: false, 
-            error: error.message || 'Failed to fetch repository contents' 
+          return {
+            success: false,
+            error: error.message || 'Failed to fetch repository contents',
           };
         }
       } else if (provider.type === 'gitlab') {
@@ -153,9 +153,9 @@ const files = {
       return { success: true, data: files };
     } catch (error: any) {
       console.error('[DB] Error in getRepositoryFiles:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch repository files' 
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch repository files',
       };
     }
   },
@@ -166,7 +166,7 @@ const files = {
   async getFileContent(
     repositoryId: string,
     path: string,
-    profileId: string
+    profileId: string,
   ): Promise<DbResponse<FileContent>> {
     try {
       console.log('[DB] getFileContent: Starting for repo', repositoryId, 'path:', path);
@@ -259,9 +259,9 @@ const files = {
           }
         } catch (error: any) {
           console.error('[DB] Error fetching file content from GitHub:', error);
-          return { 
-            success: false, 
-            error: error.message || 'Failed to fetch file content' 
+          return {
+            success: false,
+            error: error.message || 'Failed to fetch file content',
           };
         }
       } else if (provider.provider_type === 'gitlab') {
@@ -320,12 +320,12 @@ export default Component;`;
       return { success: true, data: result };
     } catch (error: any) {
       console.error('[DB] Error in getFileContent:', error);
-      return { 
-        success: false, 
-        error: error.message || 'Failed to fetch file content' 
+      return {
+        success: false,
+        error: error.message || 'Failed to fetch file content',
       };
     }
   },
 };
 
-export default files; 
+export default files;

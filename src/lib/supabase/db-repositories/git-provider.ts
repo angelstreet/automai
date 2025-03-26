@@ -190,10 +190,7 @@ const gitProvider = {
   /**
    * Refresh a git provider (mark as recently synced)
    */
-  async refreshGitProvider(
-    id: string,
-    profileId: string,
-  ): Promise<DbResponse<GitProvider>> {
+  async refreshGitProvider(id: string, profileId: string): Promise<DbResponse<GitProvider>> {
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
@@ -217,7 +214,7 @@ const gitProvider = {
       const { data: result, error } = await supabase
         .from('git_providers')
         .update({
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .eq('profile_id', profileId)
@@ -382,9 +379,9 @@ const gitProvider = {
    * Handle OAuth callback for git providers
    */
   async handleOAuthCallback(
-    code: string, 
+    code: string,
     providerId: string,
-    userId: string
+    userId: string,
   ): Promise<DbResponse<GitProvider>> {
     try {
       const cookieStore = await cookies();
@@ -445,8 +442,8 @@ const gitProvider = {
       serverUrl?: string;
       token?: string;
     },
-    userId: string
-  ): Promise<DbResponse<{provider: GitProvider; authUrl?: string}>> {
+    userId: string,
+  ): Promise<DbResponse<{ provider: GitProvider; authUrl?: string }>> {
     try {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);

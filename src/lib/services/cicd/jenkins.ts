@@ -559,54 +559,69 @@ export class JenkinsProvider implements CICDProvider {
    */
   private generatePipelineScript(config: CICDPipelineConfig): string {
     // Generate the pipeline parameters section
-    const parameters = config.parameters?.length 
-      ? `parameters {\n${config.parameters.map(param => {
-          switch (param.type) {
-            case 'string':
-              return `        string(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')`
-            case 'text':
-              return `        text(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')`
-            case 'boolean':
-              return `        booleanParam(name: '${param.name}', defaultValue: ${param.defaultValue || false}, description: '${param.description || ''}')`
-            case 'choice':
-              return `        choice(name: '${param.name}', choices: ${JSON.stringify(param.choices || [])}, description: '${param.description || ''}')`
-            default:
-              return ''
-          }
-        }).join('\n')}\n    }`
+    const parameters = config.parameters?.length
+      ? `parameters {\n${config.parameters
+          .map((param) => {
+            switch (param.type) {
+              case 'string':
+                return `        string(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')`;
+              case 'text':
+                return `        text(name: '${param.name}', defaultValue: '${param.defaultValue || ''}', description: '${param.description || ''}')`;
+              case 'boolean':
+                return `        booleanParam(name: '${param.name}', defaultValue: ${param.defaultValue || false}, description: '${param.description || ''}')`;
+              case 'choice':
+                return `        choice(name: '${param.name}', choices: ${JSON.stringify(param.choices || [])}, description: '${param.description || ''}')`;
+              default:
+                return '';
+            }
+          })
+          .join('\n')}\n    }`
       : '';
 
     // Generate the pipeline triggers section
     const triggers = config.triggers?.length
-      ? `triggers {\n${config.triggers.map(trigger => {
-          switch (trigger.type) {
-            case 'webhook':
-              return '        githubPush()'
-            case 'schedule':
-              return `        cron('${trigger.config?.schedule || ''}')`
-            default:
-              return ''
-          }
-        }).filter(Boolean).join('\n')}\n    }`
+      ? `triggers {\n${config.triggers
+          .map((trigger) => {
+            switch (trigger.type) {
+              case 'webhook':
+                return '        githubPush()';
+              case 'schedule':
+                return `        cron('${trigger.config?.schedule || ''}')`;
+              default:
+                return '';
+            }
+          })
+          .filter(Boolean)
+          .join('\n')}\n    }`
       : '';
 
     // Generate the pipeline stages
-    const stages = config.stages.map(stage => `
+    const stages = config.stages
+      .map(
+        (stage) => `
         stage('${stage.name}') {
             steps {
                 script {
-                    ${stage.steps.map(step => {
-                      if (step.type === 'command') {
-                        return `sh "${step.command}"`;
-                      } else if (step.type === 'script') {
-                        const params = step.parameters ? Object.entries(step.parameters).map(([k,v]) => `${k}=${v}`).join(' ') : '';
-                        return `sh "python ${step.script} ${params}"`;
-                      }
-                      return '';
-                    }).join('\n                    ')}
+                    ${stage.steps
+                      .map((step) => {
+                        if (step.type === 'command') {
+                          return `sh "${step.command}"`;
+                        } else if (step.type === 'script') {
+                          const params = step.parameters
+                            ? Object.entries(step.parameters)
+                                .map(([k, v]) => `${k}=${v}`)
+                                .join(' ')
+                            : '';
+                          return `sh "python ${step.script} ${params}"`;
+                        }
+                        return '';
+                      })
+                      .join('\n                    ')}
                 }
             }
-        }`).join('\n');
+        }`,
+      )
+      .join('\n');
 
     // Generate the complete pipeline
     return `pipeline {

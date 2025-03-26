@@ -3,11 +3,11 @@
  */
 import useSWR, { mutate } from 'swr';
 import { actionFetcher } from '@/lib/fetcher';
-import { 
+import {
   getHosts,
   getHost,
   testHostConnection,
-  clearHostsCache
+  clearHostsCache,
 } from '@/app/[locale]/[tenant]/hosts/actions';
 import type { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import type { HostFilter } from '@/app/[locale]/[tenant]/hosts/actions';
@@ -21,8 +21,8 @@ export function useHosts(filter?: HostFilter) {
     () => actionFetcher(getHosts, filter),
     {
       dedupingInterval: 15 * 60 * 1000, // 15 minutes
-      revalidateOnFocus: false
-    }
+      revalidateOnFocus: false,
+    },
   );
 }
 
@@ -30,14 +30,10 @@ export function useHosts(filter?: HostFilter) {
  * Hook for fetching a single host
  */
 export function useHostById(id: string | null) {
-  return useSWR(
-    id ? `host-${id}` : null,
-    () => id ? actionFetcher(getHost, id) : null,
-    {
-      dedupingInterval: 60 * 1000, // 1 minute
-      revalidateOnFocus: false
-    }
-  );
+  return useSWR(id ? `host-${id}` : null, () => (id ? actionFetcher(getHost, id) : null), {
+    dedupingInterval: 60 * 1000, // 1 minute
+    revalidateOnFocus: false,
+  });
 }
 
 /**
@@ -46,12 +42,12 @@ export function useHostById(id: string | null) {
 export function useHostConnectionStatus(id: string | null) {
   return useSWR(
     id ? `host-connection-${id}` : null,
-    () => id ? actionFetcher(testHostConnection, id) : null,
+    () => (id ? actionFetcher(testHostConnection, id) : null),
     {
       dedupingInterval: 30 * 1000, // 30 seconds
       revalidateOnFocus: false,
       refreshInterval: 60 * 1000, // Refresh every minute
-    }
+    },
   );
 }
 
@@ -62,12 +58,12 @@ export async function testConnection(hostId: string) {
   try {
     // Call the host connection test action
     const result = await testHostConnection(hostId);
-    
+
     // Revalidate host data after connection test
     await mutate(`host-${hostId}`);
     await mutate('hosts');
     await mutate(`host-connection-${hostId}`);
-    
+
     return result;
   } catch (error) {
     console.error('Error testing connection:', error);
@@ -85,13 +81,13 @@ export async function refreshHosts(options?: {
 }) {
   try {
     await clearHostsCache(options);
-    
+
     // Revalidate specific data or all host data
     if (options?.hostId) {
       await mutate(`host-${options.hostId}`);
       await mutate(`host-connection-${options.hostId}`);
     }
-    
+
     // Always revalidate the main hosts list
     await mutate('hosts');
     return true;

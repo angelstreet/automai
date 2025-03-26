@@ -12,7 +12,7 @@ function RepositoryList() {
     loading,
     error,
     refreshRepositories,
-    toggleStarRepository
+    toggleStarRepository,
   } = useRepository();
 
   if (loading) return <div>Loading repositories...</div>;
@@ -25,21 +25,21 @@ function RepositoryList() {
         <h2>All Repositories ({repositories.length})</h2>
         <button onClick={() => refreshRepositories()}>Refresh</button>
         <ul>
-          {repositories.map(repo => (
+          {repositories.map((repo) => (
             <li key={repo.id}>
               {repo.name}
               <button onClick={() => toggleStarRepository(repo)}>
-                {starredRepositories.some(r => r.id === repo.id) ? '★' : '☆'}
+                {starredRepositories.some((r) => r.id === repo.id) ? '★' : '☆'}
               </button>
             </li>
           ))}
         </ul>
       </div>
-      
+
       <div>
         <h2>Starred Repositories ({starredRepositories.length})</h2>
         <ul>
-          {starredRepositories.map(repo => (
+          {starredRepositories.map((repo) => (
             <li key={repo.id}>
               {repo.name}
               <button onClick={() => toggleStarRepository(repo)}>★</button>

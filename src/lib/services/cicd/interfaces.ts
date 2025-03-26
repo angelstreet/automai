@@ -72,7 +72,11 @@ export interface CICDProvider {
   getBuildLogs(jobId: string, buildId: string): Promise<CICDResponse<string>>;
 
   // Create a new job
-  createJob(jobName: string, pipelineConfig: CICDPipelineConfig, folderPath?: string): Promise<CICDResponse<string>>;
+  createJob(
+    jobName: string,
+    pipelineConfig: CICDPipelineConfig,
+    folderPath?: string,
+  ): Promise<CICDResponse<string>>;
 
   // Delete a job
   deleteJob(jobId: string, folderPath?: string): Promise<CICDResponse<boolean>>;

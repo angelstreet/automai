@@ -222,22 +222,54 @@ export const supabaseAuth = {
   async signUp(
     email: string,
     password: string,
-    options?: { redirectTo?: string; data?: Record<string, any> },
-  ): Promise<AuthResult> {
+    options: { redirectTo: string; data: { name: string } },
+  ): Promise<AuthResult<any>> {
     if (!isUsingSupabase()) {
       return { success: false, error: 'Supabase auth not available' };
     }
     try {
       const supabase = await createClient();
-      const { data, error } = await supabase.auth.signUp({ email, password, options });
+      console.log('Attempting to sign up user:', { email, options });
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: options.redirectTo,
+          data: {
+            name: options.data.name,
+            tenant_name: 'trial', // Default tenant for new users
+            role: 'viewer', // Default role for new users
+          },
+        },
+      });
 
       if (error) {
-        console.error('Error signing up:', error);
+        console.error('Error during signup:', error);
         return { success: false, error: error.message };
       }
+
+      // If signup successful, create a profile
+      if (data.user) {
+        const { error: profileError } = await supabase.from('profiles').insert({
+          id: data.user.id,
+          email: data.user.email,
+          name: options.data.name,
+          role: 'viewer',
+          tenant_name: 'trial',
+          tenant_id: 'default',
+        });
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          // Don't fail the signup if profile creation fails
+          // The profile can be created later
+        }
+      }
+
       return { success: true, data };
     } catch (error) {
-      console.error('Error signing up:', error);
+      console.error('Error in signUp:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to sign up',

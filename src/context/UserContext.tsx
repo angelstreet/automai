@@ -1,6 +1,14 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, useState, useEffect, useRef, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
 import useSWR from 'swr';
 import { updateProfile as updateProfileAction } from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
@@ -8,9 +16,9 @@ import { Role, User, AuthUser } from '@/types/user';
 import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
 import { persistedData } from './AppContext';
 import { AppContextType } from '@/types/context/app';
-import { 
+import {
   signUp as signUpAction,
-  signInWithOAuth as signInWithOAuthAction 
+  signInWithOAuth as signInWithOAuthAction,
 } from '@/app/actions/auth';
 
 // Singleton flag to prevent multiple instances
@@ -77,11 +85,11 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
   };
 };
 
-export function UserProvider({ 
-  children, 
+export function UserProvider({
+  children,
   appContextRef,
-  onAuthChange
-}: { 
+  onAuthChange,
+}: {
   children: React.ReactNode;
   appContextRef: React.MutableRefObject<AppContextType>;
   onAuthChange?: (isAuthenticated: boolean) => void;
@@ -111,7 +119,7 @@ export function UserProvider({
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const initialized = useRef(false);
-  
+
   // Add request protection
   const { protectedFetch, safeUpdateState } = useRequestProtection('UserContext');
 
@@ -146,7 +154,7 @@ export function UserProvider({
         'user.getUser',
         async () => {
           log('[UserContext] fetchUserData called, force:', force);
-          
+
           try {
             // On the server, return null to avoid hydration mismatches
             if (typeof window === 'undefined') {
@@ -184,7 +192,7 @@ export function UserProvider({
             try {
               // Map to our User type - will throw if tenant data is missing
               const user = mapAuthUserToUser(authUser);
-              
+
               // Cache the user in localStorage
               if (typeof window !== 'undefined') {
                 localStorage.setItem(STORAGE_KEYS.CACHED_USER, JSON.stringify(user));
@@ -321,33 +329,39 @@ export function UserProvider({
     }
   }, [user, onAuthChange]);
 
-  const signUp = useCallback(async (email: string, password: string, name: string, redirectUrl: string) => {
-    try {
-      const result = await signUpAction(email, password, name, redirectUrl);
-      if (result.success) {
-        // Refresh user data after successful signup
-        await refreshUser();
-        return result;
+  const signUp = useCallback(
+    async (email: string, password: string, name: string, redirectUrl: string) => {
+      try {
+        const result = await signUpAction(email, password, name, redirectUrl);
+        if (result.success) {
+          // Refresh user data after successful signup
+          await refreshUser();
+          return result;
+        }
+        throw new Error(result.error || 'Failed to sign up');
+      } catch (error: any) {
+        setError(error);
+        throw error;
       }
-      throw new Error(result.error || 'Failed to sign up');
-    } catch (error: any) {
-      setError(error);
-      throw error;
-    }
-  }, [refreshUser]);
+    },
+    [refreshUser],
+  );
 
-  const signInWithOAuth = useCallback(async (provider: 'google' | 'github', redirectUrl: string) => {
-    try {
-      const result = await signInWithOAuthAction(provider, redirectUrl);
-      if (result.success) {
-        return result;
+  const signInWithOAuth = useCallback(
+    async (provider: 'google' | 'github', redirectUrl: string) => {
+      try {
+        const result = await signInWithOAuthAction(provider, redirectUrl);
+        if (result.success) {
+          return result;
+        }
+        throw new Error(result.error || 'Failed to sign in with OAuth');
+      } catch (error: any) {
+        setError(error);
+        throw error;
       }
-      throw new Error(result.error || 'Failed to sign in with OAuth');
-    } catch (error: any) {
-      setError(error);
-      throw error;
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Update the value object to include the new functions
   const value = useMemo(
@@ -370,12 +384,12 @@ export function UserProvider({
   if (appContextRef?.current) {
     appContextRef.current.user = value;
   }
-  
+
   // Also expose user context globally for immediate access
   if (typeof window !== 'undefined') {
     (window as any).__userContext = value;
   }
-  
+
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 
@@ -384,10 +398,10 @@ export function useUser() {
   if (typeof window !== 'undefined' && (window as any).__userContext) {
     return (window as any).__userContext;
   }
-  
+
   // Otherwise use React context
   const context = useContext(UserContext);
-  
+
   // If the context is null for some reason, return a safe default object
   if (!context) {
     console.warn('[useUser] User context is null, returning fallback.');

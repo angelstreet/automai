@@ -3,7 +3,6 @@ import { Features } from './(marketing)/_components/Features';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 
 export default async function Page() {
-
   return (
     <div className="relative min-h-screen flex flex-col">
       <SiteHeader />

@@ -8,10 +8,7 @@ import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '../types';
 import { useHost, useUser } from '@/context';
-import { 
-  addHost as addHostAction, 
-  testHostConnection 
-} from '../actions';
+import { addHost as addHostAction, testHostConnection } from '../actions';
 
 import { ConnectionForm, FormData } from './ConnectionForm';
 import { HostGrid } from './HostGrid';
@@ -28,17 +25,17 @@ export default function HostContainer() {
   // Get contexts first - all hooks must be called in the same order every render
   const userContext = useUser();
   const hostContext = useHost();
-  
+
   // Add better logging to diagnose context issues
   useEffect(() => {
     console.log('[HostContainer] Initial context check:', {
       hasUserContext: !!userContext,
       hasHostContext: !!hostContext,
       isHostContextLoading: hostContext?.loading,
-      hostCount: hostContext?.hosts?.length || 0
+      hostCount: hostContext?.hosts?.length || 0,
     });
   }, [userContext, hostContext]);
-  
+
   // Group all state declarations after context hooks
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -79,12 +76,7 @@ export default function HostContainer() {
   }
 
   // Extract methods from context with safe fallbacks
-  const { 
-    hosts = [], 
-    loading = false, 
-    error = null, 
-    fetchHosts = async () => {}
-  } = hostContext;
+  const { hosts = [], loading = false, error = null, fetchHosts = async () => {} } = hostContext;
 
   // Memoize user data to prevent dependency loop
   const userData = userContext?.user;
@@ -110,34 +102,34 @@ export default function HostContainer() {
       setIsInitialLoading(false);
     }
   }, [hosts, loading, error]);
-  
+
   // Fetch hosts on initial mount, only if needed
   useEffect(() => {
     if (!isInitialized.current) {
       console.log('[HostContainer] Initial mount - fetching hosts data');
       isInitialized.current = true;
-      
+
       // If we already have hosts from context, don't trigger loading state
       if (hosts.length > 0) {
         setIsInitialLoading(false);
         return;
       }
-      
+
       // Only show loading if we don't have hosts yet
       setIsInitialLoading(true);
-      
+
       // Set a timeout to stop loading after max 1 second
       const timeoutId = setTimeout(() => {
         setIsInitialLoading(false);
       }, 1000);
-      
+
       if (fetchHosts) {
         fetchHosts().finally(() => {
           clearTimeout(timeoutId);
           setIsInitialLoading(false);
         });
       }
-      
+
       return () => {
         clearTimeout(timeoutId);
       };
@@ -181,17 +173,16 @@ export default function HostContainer() {
 
     console.log('[HostContainer] Refreshing all hosts');
     setIsRefreshing(true);
-    
+
     try {
       // Simple approach: just loop through all hosts and call the individual refresh
       for (const host of hosts) {
         await handleTestConnection(host);
         // Small delay between hosts to improve visual feedback
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
-      
+
       console.log('[HostContainer] All hosts tested successfully');
-      
     } catch (error) {
       console.error('[HostContainer] Error refreshing hosts:', error);
     } finally {
@@ -239,7 +230,7 @@ export default function HostContainer() {
 
         // Clear the request cache before fetching new hosts
         clearRequestCache('fetchHosts');
-        
+
         // Refresh the hosts list
         fetchHosts && fetchHosts();
       } else {
@@ -280,10 +271,10 @@ export default function HostContainer() {
 
         if (result.success) {
           console.log('[HostContainer] Host deleted successfully');
-          
+
           // Clear the request cache before fetching new hosts
           clearRequestCache('fetchHosts');
-          
+
           // Refresh hosts list after deletion
           fetchHosts && fetchHosts();
         } else {
@@ -336,9 +327,7 @@ export default function HostContainer() {
             size="sm"
             disabled={isRefreshing || loading}
           >
-            <RefreshCw
-              className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`}
-            />
+            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button onClick={() => setShowAddHost(true)}>

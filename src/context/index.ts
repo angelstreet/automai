@@ -12,15 +12,15 @@
 export { CoreProvider, createContextProvider } from './AppContext';
 
 // Export specialized context providers
-export { 
+export {
   FullContextProvider,
   HostContextProvider,
   RepositoryContextProvider,
   DeploymentContextProvider,
-  CICDContextProvider
+  CICDContextProvider,
 } from './AppContext';
 
-// Export SWR-based providers 
+// Export SWR-based providers
 export { HostProvider } from './HostContext';
 export { RepositoryProvider } from './RepositoryContext';
 export { DeploymentProvider } from './DeploymentContext';

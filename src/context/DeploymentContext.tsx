@@ -1,13 +1,6 @@
 'use client';
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  ReactNode,
-  useMemo,
-} from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
 import {
   useDeployments,
   useDeploymentById,
@@ -18,7 +11,7 @@ import {
   removeDeployment,
   abortRunningDeployment,
   refreshDeploymentStatus,
-  refreshDeploymentData
+  refreshDeploymentData,
 } from '@/hooks/useDeploymentData';
 import type { Deployment, DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
 
@@ -62,127 +55,142 @@ const DeploymentContext = createContext<DeploymentContextType | undefined>(undef
 // Provider component
 export function DeploymentProvider({ children }: { children: ReactNode }) {
   // Use SWR hooks
-  const { data: deploymentsData, error: deploymentsError, mutate: mutateDeployments, isValidating: isRefreshingDeployments } = useDeployments();
+  const {
+    data: deploymentsData,
+    error: deploymentsError,
+    mutate: mutateDeployments,
+    isValidating: isRefreshingDeployments,
+  } = useDeployments();
   const { data: repositoriesData, error: repositoriesError } = useRepositoriesForDeployment();
-  
+
   // Local state for tracking initialization
   const [isInitialized, setIsInitialized] = useState(false);
-  
+
   // Derived values from SWR data
   const deployments = useMemo(() => deploymentsData || [], [deploymentsData]);
   const repositories = useMemo(() => repositoriesData?.data || [], [repositoriesData]);
-  const loading = useMemo(() => 
-    (deploymentsData === undefined && !deploymentsError) ||
-    (repositoriesData === undefined && !repositoriesError),
-    [deploymentsData, deploymentsError, repositoriesData, repositoriesError]
+  const loading = useMemo(
+    () =>
+      (deploymentsData === undefined && !deploymentsError) ||
+      (repositoriesData === undefined && !repositoriesError),
+    [deploymentsData, deploymentsError, repositoriesData, repositoriesError],
   );
-  const error = useMemo(() => 
-    deploymentsError ? String(deploymentsError) :
-    repositoriesError ? String(repositoriesError) : null,
-    [deploymentsError, repositoriesError]
+  const error = useMemo(
+    () =>
+      deploymentsError
+        ? String(deploymentsError)
+        : repositoriesError
+          ? String(repositoriesError)
+          : null,
+    [deploymentsError, repositoriesError],
   );
-  
+
   // Methods
-  const fetchDeployments = useCallback(async (forceFresh: boolean = false) => {
-    if (forceFresh) {
-      await refreshDeploymentData();
-    }
-    await mutateDeployments();
-    setIsInitialized(true);
-  }, [mutateDeployments]);
-  
-  const fetchDeploymentById = useCallback(async (id: string) => {
-    // First check if it's already in our deployments array
-    const cachedDeployment = deployments.find(d => d.id === id);
-    if (cachedDeployment) {
-      return cachedDeployment;
-    }
-    
-    // If not, fetch it directly
-    const { data } = await useDeploymentById(id);
-    return data || null;
-  }, [deployments]);
-  
+  const fetchDeployments = useCallback(
+    async (forceFresh: boolean = false) => {
+      if (forceFresh) {
+        await refreshDeploymentData();
+      }
+      await mutateDeployments();
+      setIsInitialized(true);
+    },
+    [mutateDeployments],
+  );
+
+  const fetchDeploymentById = useCallback(
+    async (id: string) => {
+      // First check if it's already in our deployments array
+      const cachedDeployment = deployments.find((d) => d.id === id);
+      if (cachedDeployment) {
+        return cachedDeployment;
+      }
+
+      // If not, fetch it directly
+      const { data } = await useDeploymentById(id);
+      return data || null;
+    },
+    [deployments],
+  );
+
   const createDeployment = useCallback(async (formData: DeploymentFormData) => {
     const result = await createNewDeployment(formData);
     return result;
   }, []);
-  
+
   const abortDeployment = useCallback(async (id: string) => {
     const result = await abortRunningDeployment(id);
     return result;
   }, []);
-  
+
   const refreshDeployment = useCallback(async (id: string) => {
     const result = await refreshDeploymentStatus(id);
     return result;
   }, []);
-  
+
   const deleteDeployment = useCallback(async (id: string) => {
     const result = await removeDeployment(id);
     return result;
   }, []);
-  
+
   const fetchScriptsForRepository = useCallback(async (repositoryId: string) => {
     const { data } = await useRepositoryScripts(repositoryId);
     return data || [];
   }, []);
-  
+
   const fetchAvailableHosts = useCallback(async () => {
     const { data } = await useAvailableHosts();
     return data || [];
   }, []);
-  
+
   const fetchRepositories = useCallback(async () => {
     return repositories;
   }, [repositories]);
-  
+
   // Create context value with memoization
-  const contextValue = useMemo(() => ({
-    deployments,
-    repositories,
-    loading,
-    error,
-    isRefreshing: isRefreshingDeployments,
-    isInitialized,
-    fetchDeployments,
-    fetchDeploymentById,
-    createDeployment,
-    abortDeployment,
-    refreshDeployment,
-    deleteDeployment,
-    fetchScriptsForRepository,
-    fetchAvailableHosts,
-    fetchRepositories,
-  }), [
-    deployments,
-    repositories,
-    loading,
-    error,
-    isRefreshingDeployments,
-    isInitialized,
-    fetchDeployments,
-    fetchDeploymentById,
-    createDeployment,
-    abortDeployment,
-    refreshDeployment,
-    deleteDeployment,
-    fetchScriptsForRepository,
-    fetchAvailableHosts,
-    fetchRepositories,
-  ]);
-  
-  return (
-    <DeploymentContext.Provider value={contextValue}>
-      {children}
-    </DeploymentContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      deployments,
+      repositories,
+      loading,
+      error,
+      isRefreshing: isRefreshingDeployments,
+      isInitialized,
+      fetchDeployments,
+      fetchDeploymentById,
+      createDeployment,
+      abortDeployment,
+      refreshDeployment,
+      deleteDeployment,
+      fetchScriptsForRepository,
+      fetchAvailableHosts,
+      fetchRepositories,
+    }),
+    [
+      deployments,
+      repositories,
+      loading,
+      error,
+      isRefreshingDeployments,
+      isInitialized,
+      fetchDeployments,
+      fetchDeploymentById,
+      createDeployment,
+      abortDeployment,
+      refreshDeployment,
+      deleteDeployment,
+      fetchScriptsForRepository,
+      fetchAvailableHosts,
+      fetchRepositories,
+    ],
   );
+
+  return <DeploymentContext.Provider value={contextValue}>{children}</DeploymentContext.Provider>;
 }
 
 // Hook to use the context
 export function useDeployment() {
   const context = useContext(DeploymentContext);
-  
+
   if (!context) {
     console.warn('[useDeployment] Deployment context is null, returning fallback');
     return {
@@ -203,6 +211,6 @@ export function useDeployment() {
       fetchRepositories: async () => [],
     };
   }
-  
+
   return context;
 }

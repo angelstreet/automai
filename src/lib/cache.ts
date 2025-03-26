@@ -1,12 +1,12 @@
 /**
  * DEPRECATED: This cache implementation has been replaced by SWR client-side caching
- * 
+ *
  * This file will be removed in a future release.
- * 
+ *
  * New implementations should leverage SWR's built-in caching capabilities instead.
  */
 
-const MESSAGE = "This cache module is deprecated. Use SWR client-side caching instead.";
+const MESSAGE = 'This cache module is deprecated. Use SWR client-side caching instead.';
 
 // Create non-functional stubs of the original API to satisfy imports during migration
 class ServerCacheStub {
@@ -63,7 +63,7 @@ class ServerCacheStub {
       totalRequests: 0,
       hitRate: 0,
       oldestEntry: null,
-      newestEntry: null
+      newestEntry: null,
     };
   }
 

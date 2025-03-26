@@ -9,6 +9,10 @@ import * as React from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
+import {
+  signUp as signUpAction,
+  signInWithOAuth as signInWithOAuthAction,
+} from '@/app/actions/auth';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -49,19 +53,26 @@ export default function SignUpPage() {
     }
 
     try {
-      // Create user with our auth hook
+      // Create user with server action
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
-      const result = await signUp(email, password, name, redirectUrl);
+      const result = await signUpAction(email, password, name, redirectUrl);
 
-      if (result?.session) {
+      if (result.error) {
+        setError(result.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (result.data?.session) {
         // Email confirmation not required, user is signed in
         setSuccess(true);
-
         // Redirect to dashboard after a short delay
         setTimeout(() => {
-          router.push(`/${locale}/${result.user?.user_metadata?.tenant_id || 'default'}/dashboard`);
+          router.push(
+            `/${locale}/${result.data.user?.user_metadata?.tenant_id || 'default'}/dashboard`,
+          );
         }, 2000);
-      } else if (result?.user) {
+      } else if (result.data?.user) {
         // Email confirmation required
         setSuccess(true);
       }
@@ -74,13 +85,17 @@ export default function SignUpPage() {
 
   const handleOAuthSignUp = async (provider: 'google' | 'github') => {
     try {
-      // Use our auth hook for OAuth
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
-      const result = await signInWithOAuth(provider, redirectUrl);
+      const result = await signInWithOAuthAction(provider, redirectUrl);
 
-      if (result?.url) {
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+
+      if (result.data?.url) {
         // Redirect to OAuth provider
-        window.location.href = result.url;
+        window.location.href = result.data.url;
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');

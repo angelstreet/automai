@@ -74,7 +74,7 @@ const repository = {
       }
 
       const { data, error } = await query;
-      
+
       if (error) {
         console.error('[DB] Error fetching repositories:', error);
         return { success: false, error: error.message };
@@ -82,7 +82,7 @@ const repository = {
 
       console.log('[DB] Successfully fetched repositories:', {
         count: data?.length || 0,
-        hasProvider: data?.[0]?.git_providers !== undefined
+        hasProvider: data?.[0]?.git_providers !== undefined,
       });
 
       return { success: true, data };
@@ -123,7 +123,7 @@ const repository = {
 
       console.log('[DB] Successfully fetched repository:', {
         id: data?.id,
-        hasProvider: data?.git_providers !== undefined
+        hasProvider: data?.git_providers !== undefined,
       });
 
       return { success: true, data };

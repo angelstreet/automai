@@ -29,9 +29,9 @@ const AppSidebar = React.memo(function AppSidebar() {
   const [isTransitioning, setIsTransitioning] = React.useState(true);
 
   // Check if user context is fully initialized
-  const isContextReady = React.useMemo(() => 
-    userContext?.isInitialized === true || userContext?.user !== null, 
-    [userContext?.isInitialized, userContext?.user]
+  const isContextReady = React.useMemo(
+    () => userContext?.isInitialized === true || userContext?.user !== null,
+    [userContext?.isInitialized, userContext?.user],
   );
 
   // Use a ref for initial render optimization to avoid double-rendering flicker
@@ -39,7 +39,7 @@ const AppSidebar = React.memo(function AppSidebar() {
 
   // Determine client-side rendering without state updates that cause re-renders
   const isClient = typeof window !== 'undefined';
-  
+
   // DEBUG: Log user context and role information on mount
   React.useEffect(() => {
     console.log('DEBUG AppSidebar - Mounted with user context:', {
@@ -69,10 +69,12 @@ const AppSidebar = React.memo(function AppSidebar() {
     if (typeof window !== 'undefined') {
       // REMOVAL: Clearing any existing debug_role in localStorage to use the actual user role
       if (localStorage.getItem('debug_role')) {
-        console.log('DEBUG AppSidebar - Removing stored debug_role from localStorage to use actual user role');
+        console.log(
+          'DEBUG AppSidebar - Removing stored debug_role from localStorage to use actual user role',
+        );
         localStorage.removeItem('debug_role');
       }
-      
+
       // Also check cached user data
       try {
         const cachedUserStr = localStorage.getItem('cached_user');
@@ -81,7 +83,7 @@ const AppSidebar = React.memo(function AppSidebar() {
           console.log('DEBUG AppSidebar - Cached user data:', {
             hasData: !!cachedUser,
             cachedRole: cachedUser?.role,
-            timestamp: localStorage.getItem('cached_user_time')
+            timestamp: localStorage.getItem('cached_user_time'),
           });
         } else {
           console.log('DEBUG AppSidebar - No cached user data found in localStorage');
@@ -112,7 +114,7 @@ const AppSidebar = React.memo(function AppSidebar() {
 
   // Initialize with server-safe default value
   const [cachedRole, setCachedRole] = React.useState('viewer');
-  
+
   // Get role from localStorage only on client after mount
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -135,21 +137,21 @@ const AppSidebar = React.memo(function AppSidebar() {
     if (user?.role) {
       return user.role;
     }
-    
+
     // Second priority: Use debug role if explicitly set
     if (debugRole) {
       return debugRole;
     }
-    
+
     // Third priority: Use cached role from localStorage
     if (cachedRole) {
       return cachedRole;
     }
-    
+
     // Final fallback: Default to viewer
     return 'viewer';
   }, [user?.role, debugRole, cachedRole]);
-  
+
   // End transition state once we have a real user or after a timeout
   React.useEffect(() => {
     if (user?.role) {
@@ -163,7 +165,7 @@ const AppSidebar = React.memo(function AppSidebar() {
       return () => clearTimeout(timer);
     }
   }, [user?.role]);
-  
+
   // Force remove any cached debug role that might be interfering
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -173,7 +175,7 @@ const AppSidebar = React.memo(function AppSidebar() {
       }
     }
   }, []);
-  
+
   // DEBUG: Log role information whenever it changes - but only on client
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -193,12 +195,12 @@ const AppSidebar = React.memo(function AppSidebar() {
   const filteredNavigation = React.useMemo(() => {
     // Create a stable version of sidebar data that won't change during SSR/CSR
     const stableSidebarData = sidebarData.navGroups;
-    
+
     // For debugging on client only
     if (typeof window !== 'undefined') {
       console.log('DEBUG AppSidebar - Filtering navigation with role:', effectiveRole);
     }
-    
+
     const result = stableSidebarData
       .map((group) => {
         // Filter items based on role
@@ -209,41 +211,41 @@ const AppSidebar = React.memo(function AppSidebar() {
           }
           // Otherwise check if user's role is in the allowed roles
           const hasAccess = item.roles.includes(effectiveRole);
-          
+
           // DEBUG: Log item filtering for admin section - client only
           if (typeof window !== 'undefined' && group.title === 'Admin') {
             console.log(`DEBUG AppSidebar - Admin item "${item.title}" access:`, {
               hasAccess,
               itemRoles: item.roles,
-              userRole: effectiveRole
+              userRole: effectiveRole,
             });
           }
-          
+
           return hasAccess;
         });
-        
+
         return {
           ...group,
-          items: filteredItems
+          items: filteredItems,
         };
       })
       .filter((group) => group.items.length > 0); // Remove empty groups
-    
+
     // DEBUG: Log filtered navigation results - client only
     if (typeof window !== 'undefined') {
       console.log('DEBUG AppSidebar - Filtered navigation result:', {
         totalGroups: result.length,
-        groups: result.map(g => g.title),
-        hasAdminGroup: result.some(g => g.title === 'Admin')
+        groups: result.map((g) => g.title),
+        hasAdminGroup: result.some((g) => g.title === 'Admin'),
       });
     }
-    
+
     return result;
   }, [effectiveRole]);
 
   // Add a state to prevent visible content until hydration is complete
   const [isHydrated, setIsHydrated] = React.useState(false);
-  
+
   // Update hydration state after initial render
   React.useEffect(() => {
     setIsHydrated(true);

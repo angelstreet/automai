@@ -84,9 +84,9 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
               <div className="flex-none w-36 mr-12">
                 {/* Force a complete component remount when user role changes by using key */}
                 {userContext?.user ? (
-                  <RoleSwitcher 
-                    key={`role-switcher-${userContext.user.role || 'default'}`} 
-                    user={userContext.user} 
+                  <RoleSwitcher
+                    key={`role-switcher-${userContext.user.role || 'default'}`}
+                    user={userContext.user}
                   />
                 ) : (
                   <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>

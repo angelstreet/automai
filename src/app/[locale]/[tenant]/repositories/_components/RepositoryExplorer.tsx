@@ -75,7 +75,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
         url: repository.url,
         providerId: repository.providerId,
         providerType: repository.providerType,
-        isValid: isValidRepository
+        isValid: isValidRepository,
       });
     } else {
       console.log('[RepositoryExplorer] No repository data provided');
@@ -137,34 +137,34 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
       try {
         // Use the providerId directly from the repository object
         const providerId = repository.providerId;
-        
-        console.log('[RepositoryExplorer] Fetching file content with params:', { 
+
+        console.log('[RepositoryExplorer] Fetching file content with params:', {
           repositoryId: repository.id,
           providerId,
           url: repository.url,
-          path: item.path
+          path: item.path,
         });
-        
+
         // Ensure all parameters are strings
         const repoId = repository.id;
         const repoUrl = repository.url || '';
         const filePath = item.path || '';
-        
+
         // Try multiple branch names since we don't know the default branch
         const branchesToTry = ['master', 'main', 'develop', 'dev'];
         let content = null;
         let lastError = null;
-        
+
         for (const branch of branchesToTry) {
           try {
             const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(filePath)}&branch=${branch}&action=file`;
-            
+
             console.log(`[RepositoryExplorer] Trying branch: ${branch}`);
             const response = await fetch(apiUrl);
-            
+
             if (response.ok) {
-              const data = await response.json() as FileAPIResponse;
-              
+              const data = (await response.json()) as FileAPIResponse;
+
               if (data.success && data.data) {
                 // Decode base64 content if needed
                 if (data.data.encoding === 'base64' && data.data.content) {
@@ -180,21 +180,24 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             } else {
               const errorText = await response.text();
               console.log(`[RepositoryExplorer] Failed with branch ${branch}:`, errorText);
-              lastError = new Error(`Error with branch ${branch}: ${response.status} ${response.statusText}`);
+              lastError = new Error(
+                `Error with branch ${branch}: ${response.status} ${response.statusText}`,
+              );
             }
           } catch (branchError: any) {
             console.error(`[RepositoryExplorer] Error with branch ${branch}:`, branchError);
             lastError = branchError;
           }
         }
-        
+
         if (!content && lastError) {
           throw lastError;
         }
-        
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching file content:', error);
-        setFileContent(`Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- The file may be in a different branch than we tried (master, main, develop, dev)`);
+        setFileContent(
+          `Error loading file: ${error.message}\n\nThis could be due to:\n- Authentication issues with the repository\n- The file might not exist\n- API rate limiting\n- The file may be in a different branch than we tried (master, main, develop, dev)`,
+        );
       }
     }
   };
@@ -215,37 +218,37 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
 
       try {
         const pathString = currentPath.join('/');
-        
+
         // Use the providerId directly from the repository object
         const providerId = repository.providerId;
-        
-        console.log('[RepositoryExplorer] Fetching files with params:', { 
+
+        console.log('[RepositoryExplorer] Fetching files with params:', {
           repositoryId: repository.id,
           providerId,
           url: repository.url,
-          path: pathString
+          path: pathString,
         });
-        
+
         // Ensure all parameters are strings
         const repoId = repository.id;
         const repoUrl = repository.url || '';
         const safePath = pathString || '';
-        
+
         // Try multiple branch names since we don't know the default branch
         const branchesToTry = ['master', 'main', 'develop', 'dev'];
         let files = null;
         let lastError = null;
-        
+
         for (const branch of branchesToTry) {
           try {
             const apiUrl = `/api/repositories/explore?repositoryId=${repoId}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(safePath)}&branch=${branch}&action=list`;
-            
+
             console.log(`[RepositoryExplorer] Trying to list files with branch: ${branch}`);
             const response = await fetch(apiUrl);
-            
+
             if (response.ok) {
-              const data = await response.json() as FilesAPIResponse;
-              
+              const data = (await response.json()) as FilesAPIResponse;
+
               if (data.success && data.data) {
                 // Sort files: directories first, then files, both alphabetically
                 const sortedFiles = [...data.data].sort((a, b) => {
@@ -253,30 +256,42 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
                   if (a.type !== 'dir' && b.type === 'dir') return 1;
                   return a.name.localeCompare(b.name);
                 });
-                
-                console.log(`[RepositoryExplorer] Successfully loaded file list with branch: ${branch}`);
+
+                console.log(
+                  `[RepositoryExplorer] Successfully loaded file list with branch: ${branch}`,
+                );
                 setFiles(sortedFiles);
                 files = data;
                 break;
               }
             } else {
               const errorText = await response.text();
-              console.log(`[RepositoryExplorer] Failed to list files with branch ${branch}:`, errorText);
-              lastError = new Error(`Error with branch ${branch}: ${response.status} ${response.statusText}`);
+              console.log(
+                `[RepositoryExplorer] Failed to list files with branch ${branch}:`,
+                errorText,
+              );
+              lastError = new Error(
+                `Error with branch ${branch}: ${response.status} ${response.statusText}`,
+              );
             }
           } catch (branchError: any) {
-            console.error(`[RepositoryExplorer] Error listing files with branch ${branch}:`, branchError);
+            console.error(
+              `[RepositoryExplorer] Error listing files with branch ${branch}:`,
+              branchError,
+            );
             lastError = branchError;
           }
         }
-        
+
         if (!files && lastError) {
           throw lastError;
         }
-        
       } catch (error: any) {
         console.error('[RepositoryExplorer] Error fetching repository files:', error);
-        setError(error.message || 'Failed to fetch repository files. The repository may not be accessible or the branch names we tried (master, main, develop, dev) are not available.');
+        setError(
+          error.message ||
+            'Failed to fetch repository files. The repository may not be accessible or the branch names we tried (master, main, develop, dev) are not available.',
+        );
         setFiles([]);
       } finally {
         setIsLoading(false);
@@ -415,7 +430,7 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
   const handleRefresh = () => {
     // If a file is selected, reload the file content
     if (selectedFile) {
-      const matchingFile = files.find(f => f.path === selectedFile);
+      const matchingFile = files.find((f) => f.path === selectedFile);
       if (matchingFile) {
         handleNavigate(matchingFile, matchingFile.type === 'dir');
       }
@@ -458,10 +473,10 @@ export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerPro
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-7 text-xs" 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
                     onClick={handleRefresh}
                     disabled={isLoading}
                   >

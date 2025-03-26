@@ -50,10 +50,10 @@ export function RepositoryList({
   onPageChange,
 }: RepositoryListProps) {
   const t = useTranslations('repositories');
-  
+
   // Safely handle potentially undefined repositories array
   const repoArray = repositories || [];
-  
+
   // Filter repositories
   const filteredRepositories = repoArray
     .filter((repo: Repository) => {
@@ -180,17 +180,13 @@ export function RepositoryList({
     if (!repositories?.length || !filteredRepositories.length) {
       return renderEmptyState();
     }
-    
+
     // Show repository cards
     return (
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentRepositories.map((repo) => (
-            <div
-              key={repo.id}
-              onClick={() => onViewRepository(repo)}
-              className="cursor-pointer"
-            >
+            <div key={repo.id} onClick={() => onViewRepository(repo)} className="cursor-pointer">
               <EnhancedRepositoryCard
                 repository={repo}
                 onSync={onSyncRepository}
@@ -256,4 +252,4 @@ export function RepositoryList({
       <TabsContent value={activeTab}>{renderRepositoryCards()}</TabsContent>
     </Tabs>
   );
-} 
+}

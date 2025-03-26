@@ -90,17 +90,20 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
     useEffect(() => {
       const fetchProviders = async () => {
         if (!cicdContext) return;
-        
+
         try {
           setLoadingProviders(true);
           const result = await cicdContext.fetchProviders();
-          
+
           // Check if result exists before accessing properties
           if (result && result.success && result.data) {
             setCicdProviders(result.data);
             console.log('[DeploymentWizard] Loaded CICD providers:', result.data);
           } else {
-            console.warn('[DeploymentWizard] Failed to load CICD providers:', result?.error || 'Unknown error');
+            console.warn(
+              '[DeploymentWizard] Failed to load CICD providers:',
+              result?.error || 'Unknown error',
+            );
             setCicdProviders([]); // Set empty array as fallback
           }
         } catch (error) {
@@ -110,7 +113,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           setLoadingProviders(false);
         }
       };
-      
+
       fetchProviders();
     }, [cicdContext]);
 
@@ -174,10 +177,10 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
     } = hostContext || {};
 
     // Convert hostsError to string for component compatibility
-    const hostsError = hostContextError 
-      ? (typeof hostContextError === 'string' 
-          ? hostContextError 
-          : JSON.stringify(hostContextError))
+    const hostsError = hostContextError
+      ? typeof hostContextError === 'string'
+        ? hostContextError
+        : JSON.stringify(hostContextError)
       : null;
 
     // Adapt hosts for deployment
@@ -195,64 +198,67 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           try {
             setIsLoadingScripts(true);
             setScriptsError(null);
-            
+
             // Get repository information from the selected repository
-            const selectedRepo = deploymentData.selectedRepository as (Repository & { 
-              providerId?: string; 
+            const selectedRepo = deploymentData.selectedRepository as Repository & {
+              providerId?: string;
               url?: string;
               provider_id?: string;
-            });
-            
+            };
+
             if (!selectedRepo) {
-              throw new Error("No repository selected");
+              throw new Error('No repository selected');
             }
-            
+
             // Use either providerId or provider_id from the repository
             const providerId = selectedRepo.providerId || selectedRepo.provider_id;
-            
+
             if (!providerId) {
-              throw new Error("Missing provider ID for the selected repository");
+              throw new Error('Missing provider ID for the selected repository');
             }
-            
+
             if (!selectedRepo.url) {
-              throw new Error("Missing repository URL");
+              throw new Error('Missing repository URL');
             }
-            
+
             console.log(`[DeploymentWizard] Loading scripts for repository: ${selectedRepo.name}`, {
               id: selectedRepo.id,
               providerId,
-              url: selectedRepo.url
+              url: selectedRepo.url,
             });
-            
+
             // Try multiple branch names since we don't know the default branch
             const branchesToTry = ['master', 'main', 'develop', 'dev'];
             let scriptFiles = null;
             let lastError = null;
-            
+
             for (const branch of branchesToTry) {
               try {
                 // Get all files recursively with branch fallback, like RepositoryExplorer does
                 const apiUrl = `/api/repositories/explore?repositoryId=${selectedRepo.id}&providerId=${providerId}&repositoryUrl=${encodeURIComponent(selectedRepo.url)}&path=&branch=${branch}&action=list&recursive=true`;
                 console.log(`[DeploymentWizard] Trying to fetch scripts with branch: ${branch}`);
-                
+
                 const response = await fetch(apiUrl);
-                
+
                 if (!response.ok) {
                   const errorText = await response.text();
                   console.log(`[DeploymentWizard] Failed with branch ${branch}:`, errorText);
-                  lastError = new Error(`Error with branch ${branch}: ${response.status} ${response.statusText}`);
+                  lastError = new Error(
+                    `Error with branch ${branch}: ${response.status} ${response.statusText}`,
+                  );
                   continue;
                 }
-                
+
                 const data = await response.json();
-                
+
                 if (data.success && data.data) {
                   // Filter for script files (.sh, .py)
-                  const filteredFiles = data.data.filter((file: any) => 
-                    file.type === 'file' && 
-                    (file.name.endsWith('.sh') || file.name.endsWith('.py'))
+                  const filteredFiles = data.data.filter(
+                    (file: any) =>
+                      file.type === 'file' &&
+                      (file.name.endsWith('.sh') || file.name.endsWith('.py')),
                   );
-                  
+
                   if (filteredFiles.length > 0) {
                     // Transform to script format
                     const scripts = filteredFiles.map((file: any, index: number) => ({
@@ -261,10 +267,12 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
                       path: file.path,
                       description: `${file.path} (${file.size} bytes)`,
                       parameters: [],
-                      type: file.name.endsWith('.py') ? 'python' : 'shell'
+                      type: file.name.endsWith('.py') ? 'python' : 'shell',
                     }));
-                    
-                    console.log(`[DeploymentWizard] Successfully found ${scripts.length} script files with branch: ${branch}`);
+
+                    console.log(
+                      `[DeploymentWizard] Successfully found ${scripts.length} script files with branch: ${branch}`,
+                    );
                     setRepositoryScripts(scripts);
                     scriptFiles = scripts;
                     break;
@@ -277,7 +285,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
                 lastError = branchError;
               }
             }
-            
+
             if (!scriptFiles) {
               if (lastError) {
                 throw lastError;
@@ -447,26 +455,26 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
         // Create scriptMapping from repositoryScripts array
         const scriptMapping: Record<string, { path: string; name: string; type: string }> = {};
-        
+
         // Populate scriptMapping for each selected script
-        deploymentData.scriptIds.forEach(scriptId => {
+        deploymentData.scriptIds.forEach((scriptId) => {
           const script = repositoryScripts.find((s: any) => s.id === scriptId);
           if (script) {
             scriptMapping[scriptId] = {
               path: script.path,
               name: script.name,
-              type: script.type || 'shell'
+              type: script.type || 'shell',
             };
           }
         });
-        
+
         // Map to the expected format according to DeploymentFormData interface
         const formData: DeploymentFormData = {
           name: deploymentData.name,
           description: deploymentData.description,
           repository: deploymentData.repositoryId,
-          selectedScripts: deploymentData.scriptIds.map(scriptId => {
-            const script = repositoryScripts.find(s => s.id === scriptId);
+          selectedScripts: deploymentData.scriptIds.map((scriptId) => {
+            const script = repositoryScripts.find((s) => s.id === scriptId);
             return script ? script.path : scriptId;
           }),
           selectedHosts: deploymentData.hostIds,
@@ -476,17 +484,17 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           cronExpression: deploymentData.cronExpression || '',
           repeatCount: deploymentData.repeatCount || 0,
           environmentVars: deploymentData.environmentVars.filter((env) => env.key && env.value),
-          parameters: deploymentData.scriptIds.map(scriptId => {
-            const script = repositoryScripts.find(s => s.id === scriptId);
+          parameters: deploymentData.scriptIds.map((scriptId) => {
+            const script = repositoryScripts.find((s) => s.id === scriptId);
             const params = deploymentData.scriptParameters[scriptId] || {};
             return {
               script_path: script ? script.path : scriptId,
-              raw: params.raw || ''
+              raw: params.raw || '',
             };
           }),
           notifications: deploymentData.notifications,
           scriptMapping: scriptMapping,
-          provider_id: cicdProviders.length > 0 ? cicdProviders[0].id : ''
+          provider_id: cicdProviders.length > 0 ? cicdProviders[0].id : '',
         };
 
         console.log('[DeploymentWizard] Submitting deployment with data:', formData);

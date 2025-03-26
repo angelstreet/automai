@@ -285,4 +285,4 @@ export function RepositoryActions({
     handleSyncRepository,
     handleToggleStarred,
   };
-} 
+}

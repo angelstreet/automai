@@ -2,12 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  Plus,
-} from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/shadcn/button';
-import { Card, CardContent,} from '@/components/shadcn/card';
+import { Card, CardContent } from '@/components/shadcn/card';
 import { useToast } from '@/components/shadcn/use-toast';
 
 import { RepositoryExplorer } from './_components/RepositoryExplorer';
@@ -16,11 +14,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 
 import { Repository, ConnectRepositoryValues } from './types';
 
-import {
-  RepositoryList,
-  RepositoryHeader,
-  RepositoryDialogs,
-} from './_components';
+import { RepositoryList, RepositoryHeader, RepositoryDialogs } from './_components';
 
 // Import the repository context provider and hook
 import { RepositoryContextProvider, useRepository } from '@/context';
@@ -38,12 +32,12 @@ function RepositoryPageContent() {
     error = null,
     starredRepositories = [],
     fetchRepositories,
-    toggleStarRepository
+    toggleStarRepository,
   } = repositoryContext || {};
 
   // Track initialization separately
   const [initializing, setInitializing] = useState(true);
-  
+
   // Track only necessary UI state
   const [starredRepos, setStarredRepos] = useState<Set<string>>(() => {
     // Initialize from context's starredRepositories
@@ -81,15 +75,15 @@ function RepositoryPageContent() {
     } else {
       console.log('[RepositoriesPage] Repositories already loaded:', repositories.length);
     }
-    
+
     // Set initializing to false after a short delay
     const initTimeout = setTimeout(() => {
       console.log('[RepositoriesPage] Initialization complete');
       setInitializing(false);
     }, 500);
-    
+
     return () => clearTimeout(initTimeout);
-  }, []); 
+  }, []);
 
   // Update starredRepos when starredRepositories change in context
   useEffect(() => {
@@ -174,51 +168,53 @@ function RepositoryPageContent() {
 
     try {
       // Import the required actions dynamically
-      const { testGitRepository, updateRepository, clearRepositoriesCache } = await import('./actions');
+      const { testGitRepository, updateRepository, clearRepositoriesCache } = await import(
+        './actions'
+      );
 
       // Process each repository one by one
       for (const repo of repositories) {
         if (!repo.url) continue;
-        
+
         setSyncingRepoIds((prev) => ({ ...prev, [repo.id]: true }));
-        
+
         try {
           // Test repository connectivity
           const testData = {
             url: repo.url,
             token: repo.provider?.access_token || '',
           };
-          
+
           const result = await testGitRepository(testData);
-          
+
           // Update repository status based on test result
           if (repo.id) {
             let newSyncStatus: 'SYNCED' | 'ERROR' | 'IDLE' = 'IDLE';
-            
+
             if (result.success) {
               newSyncStatus = 'SYNCED';
             } else if (result.error || [404, 401, 403].includes(result.status || 0)) {
               newSyncStatus = 'ERROR';
             }
-            
+
             // Update the repository status
             await updateRepository(repo.id, {
               sync_status: newSyncStatus,
               last_synced_at: new Date().toISOString(),
             });
-            
+
             // Clear this repository's cache
             await clearRepositoriesCache({ repositoryId: repo.id });
           }
-          
-          await new Promise(resolve => setTimeout(resolve, 300));
+
+          await new Promise((resolve) => setTimeout(resolve, 300));
         } catch (error) {
           console.error(`Error refreshing repository ${repo.id}:`, error);
         } finally {
           setSyncingRepoIds((prev) => ({ ...prev, [repo.id]: false }));
         }
       }
-      
+
       // Clear all repositories cache and refresh the list
       await clearRepositoriesCache();
       await fetchRepositories?.();
@@ -238,7 +234,9 @@ function RepositoryPageContent() {
       setSyncingRepoIds((prev) => ({ ...prev, [id]: true }));
 
       // Import needed functions
-      const { testGitRepository, updateRepository, clearRepositoriesCache } = await import('./actions');
+      const { testGitRepository, updateRepository, clearRepositoriesCache } = await import(
+        './actions'
+      );
 
       // Find repository
       const repo = repositories?.find((r) => r.id === id);
@@ -251,27 +249,27 @@ function RepositoryPageContent() {
       };
 
       const result = await testGitRepository(testData);
-      
+
       // Update status based on test result
       if (repo.id) {
         let newSyncStatus: 'SYNCED' | 'ERROR' | 'IDLE' = 'IDLE';
-        
+
         if (result.success) {
           newSyncStatus = 'SYNCED';
         } else if (result.error || [404, 401, 403].includes(result.status || 0)) {
           newSyncStatus = 'ERROR';
         }
-        
+
         // Update the repository in DB
         await updateRepository(repo.id, {
           sync_status: newSyncStatus,
           last_synced_at: new Date().toISOString(),
         });
-        
+
         // Clear repository cache
         await clearRepositoriesCache({ repositoryId: id });
       }
-      
+
       // Refresh repositories
       await fetchRepositories?.();
     } catch (error) {

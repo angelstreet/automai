@@ -18,9 +18,9 @@ function CICDManagerTest() {
     deleteProvider,
     testProvider,
     setSelectedProvider,
-    fetchJobs
+    fetchJobs,
   } = useCICD();
-  
+
   const [newProvider, setNewProvider] = useState<CICDProviderPayload>({
     name: 'New Provider',
     type: 'jenkins',
@@ -29,28 +29,28 @@ function CICDManagerTest() {
       auth_type: 'basic',
       credentials: {
         username: 'admin',
-        token: 'secret-token'
-      }
-    }
+        token: 'secret-token',
+      },
+    },
   });
-  
+
   const [testResult, setTestResult] = useState<string | null>(null);
-  
+
   useEffect(() => {
     // Load providers when component mounts
     fetchProviders();
   }, [fetchProviders]);
-  
+
   const handleSelectProvider = (provider: CICDProviderType) => {
     setSelectedProvider(provider);
     fetchJobs(provider.id);
   };
-  
+
   const handleTestProvider = async () => {
     const result = await testProvider(newProvider);
     setTestResult(result.success ? 'Connection successful' : `Connection failed: ${result.error}`);
   };
-  
+
   const handleCreateProvider = async () => {
     const result = await createProvider(newProvider);
     if (result.success) {
@@ -60,7 +60,7 @@ function CICDManagerTest() {
       alert(`Failed to create provider: ${result.error}`);
     }
   };
-  
+
   const handleDeleteProvider = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this provider?')) {
       const result = await deleteProvider(id);
@@ -83,14 +83,14 @@ function CICDManagerTest() {
       <div style={{ flex: 1, marginRight: '20px' }}>
         <h2>CICD Providers ({providers.length})</h2>
         <button onClick={() => fetchProviders()}>Refresh Providers</button>
-        
+
         <ul>
-          {providers.map(provider => (
-            <li 
-              key={provider.id} 
-              style={{ 
+          {providers.map((provider) => (
+            <li
+              key={provider.id}
+              style={{
                 marginBottom: '10px',
-                fontWeight: selectedProvider?.id === provider.id ? 'bold' : 'normal'
+                fontWeight: selectedProvider?.id === provider.id ? 'bold' : 'normal',
               }}
             >
               {provider.name} ({provider.type}) - {provider.url}
@@ -101,21 +101,23 @@ function CICDManagerTest() {
             </li>
           ))}
         </ul>
-        
+
         {selectedProvider && (
           <div>
             <h3>Selected Provider: {selectedProvider.name}</h3>
-            <h4>Jobs for {selectedProvider.name} ({jobs.length})</h4>
+            <h4>
+              Jobs for {selectedProvider.name} ({jobs.length})
+            </h4>
             <button onClick={() => fetchJobs(selectedProvider.id)}>Refresh Jobs</button>
             <ul>
-              {jobs.map(job => (
+              {jobs.map((job) => (
                 <li key={job.id}>{job.name}</li>
               ))}
             </ul>
           </div>
         )}
       </div>
-      
+
       <div style={{ flex: 1, padding: '10px', border: '1px solid #ccc' }}>
         <h2>Test/Create Provider</h2>
         <div>
@@ -124,7 +126,7 @@ function CICDManagerTest() {
             <input
               type="text"
               value={newProvider.name}
-              onChange={e => setNewProvider({...newProvider, name: e.target.value})}
+              onChange={(e) => setNewProvider({ ...newProvider, name: e.target.value })}
             />
           </label>
         </div>
@@ -133,7 +135,7 @@ function CICDManagerTest() {
             Type:
             <select
               value={newProvider.type}
-              onChange={e => setNewProvider({...newProvider, type: e.target.value})}
+              onChange={(e) => setNewProvider({ ...newProvider, type: e.target.value })}
             >
               <option value="jenkins">Jenkins</option>
               <option value="github">GitHub Actions</option>
@@ -147,7 +149,7 @@ function CICDManagerTest() {
             <input
               type="text"
               value={newProvider.url}
-              onChange={e => setNewProvider({...newProvider, url: e.target.value})}
+              onChange={(e) => setNewProvider({ ...newProvider, url: e.target.value })}
             />
           </label>
         </div>
@@ -155,9 +157,11 @@ function CICDManagerTest() {
           <button onClick={handleTestProvider}>Test Connection</button>
           <button onClick={handleCreateProvider}>Create Provider</button>
         </div>
-        
+
         {testResult && (
-          <div style={{ marginTop: '10px', color: testResult.includes('failed') ? 'red' : 'green' }}>
+          <div
+            style={{ marginTop: '10px', color: testResult.includes('failed') ? 'red' : 'green' }}
+          >
             {testResult}
           </div>
         )}

@@ -700,8 +700,10 @@ export async function clearHostsCache(
       // Clear specific host cache
       clearedEntries += serverCache.deleteByTag(`host:${hostId}`);
       clearedEntries += serverCache.delete(
-        serverCache.tenantKey(currentUser.tenant_id, 'host', hostId)
-      ) ? 1 : 0;
+        serverCache.tenantKey(currentUser.tenant_id, 'host', hostId),
+      )
+        ? 1
+        : 0;
       message = `Cache cleared for host: ${hostId}`;
     } else if (userId && tenantId) {
       // Clear both user and tenant specific data
@@ -717,10 +719,10 @@ export async function clearHostsCache(
 
       // Clear all hosts cache keys for this tenant
       clearedEntries += serverCache.deletePattern(
-        serverCache.tenantKey(targetTenantId, 'hosts', '')
+        serverCache.tenantKey(targetTenantId, 'hosts', ''),
       );
       clearedEntries += serverCache.deletePattern(
-        serverCache.tenantKey(targetTenantId, 'host', '')
+        serverCache.tenantKey(targetTenantId, 'host', ''),
       );
 
       message = `Cache cleared for tenant: ${targetTenantId}`;

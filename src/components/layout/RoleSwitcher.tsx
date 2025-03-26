@@ -64,27 +64,27 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
   // IMPORTANT: Always prioritize prop user role if it exists
   // Only use debug role from localStorage if prop user doesn't have a role
   let activeRole: Role = 'viewer';
-  
+
   // First check if we have a valid prop user role - this has highest priority
-  if (propUser?.role && roles.some(r => r.value === propUser.role)) {
+  if (propUser?.role && roles.some((r) => r.value === propUser.role)) {
     activeRole = propUser.role;
     console.log('[RoleSwitcher] Using prop user role:', propUser.role);
-  } 
+  }
   // Only if no prop user role, check localStorage
   else if (typeof window !== 'undefined') {
     const storedRole = localStorage.getItem('debug_role') as Role;
-    if (storedRole && roles.some(r => r.value === storedRole)) {
+    if (storedRole && roles.some((r) => r.value === storedRole)) {
       activeRole = storedRole;
       console.log('[RoleSwitcher] Using stored debug role:', storedRole);
     }
   }
-  
+
   // Track local changes with state
   const [currentRole, setCurrentRole] = React.useState<Role>(activeRole);
-  
+
   // Make sure currentRole updates when prop changes
   React.useEffect(() => {
-    if (propUser?.role && roles.some(r => r.value === propUser.role)) {
+    if (propUser?.role && roles.some((r) => r.value === propUser.role)) {
       setCurrentRole(propUser.role);
     }
   }, [propUser?.role]);
@@ -93,31 +93,28 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
   const handleRoleChange = (newRole: Role) => {
     console.log('[RoleSwitcher] Changing role to:', newRole);
     setCurrentRole(newRole);
-    
+
     // Update global state
     if (typeof window !== 'undefined') {
       // Store the debug role in localStorage for persistence
       localStorage.setItem('debug_role', newRole);
-      
+
       // Update the global debug role
       window.__debugRole = newRole;
-      
+
       // Dispatch event for other components to listen
       const event = new CustomEvent('debug-role-change', { detail: { role: newRole } });
       window.dispatchEvent(event);
     }
   };
-  
+
   // If no user provided, return loading state
   if (!propUser) {
     return <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>;
   }
-  
+
   return (
-    <Select
-      value={currentRole}
-      onValueChange={handleRoleChange}
-    >
+    <Select value={currentRole} onValueChange={handleRoleChange}>
       <SelectTrigger className={cn('w-[180px]', className)}>
         <SelectValue placeholder="Select a role">
           {roles.find((r) => r.value === currentRole)?.label || 'Select a role'}

@@ -61,12 +61,12 @@ const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: 
   // Always declare all hooks at the top level before any conditional logic
   const { open } = useSidebar();
   const [activeTeam, setActiveTeam] = React.useState<Team>(() => teams?.[0] || defaultTeams[0]);
-  
+
   // Add effect for any side effects (even if empty for now)
   React.useEffect(() => {
     // Ensure all hooks are called in the same order every render
   }, []);
-  
+
   // Derive values from state - after all hooks are called
   const isCollapsed = !open;
   const teamsToDisplay = teams || defaultTeams;
