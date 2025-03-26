@@ -23,7 +23,9 @@ interface AppSidebarClientProps {
 }
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const AppSidebarClient = React.memo(function AppSidebarClient({ user: propUser }: AppSidebarClientProps) {
+const AppSidebarClient = React.memo(function AppSidebarClient({
+  user: propUser,
+}: AppSidebarClientProps) {
   const userContext = useUser();
   // Use prop user if available, otherwise fall back to context
   const user = propUser || userContext?.user || null;
@@ -166,13 +168,13 @@ const AppSidebarClient = React.memo(function AppSidebarClient({ user: propUser }
       // Set a timeout to end transition after 750ms regardless
       const timer = setTimeout(() => {
         setIsTransitioning(false);
-        
+
         // If user data is still missing after timer, attempt to refresh user
         if (!user && userContext?.refreshUser && userContext?.isInitialized) {
           console.log('DEBUG AppSidebar - User data missing after transition, attempting refresh');
-          userContext.refreshUser().catch(e => 
-            console.error('DEBUG AppSidebar - Error refreshing user:', e)
-          );
+          userContext
+            .refreshUser()
+            .catch((e) => console.error('DEBUG AppSidebar - Error refreshing user:', e));
         }
       }, 750);
       return () => clearTimeout(timer);

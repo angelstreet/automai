@@ -2,11 +2,7 @@
 
 import React, { useState, useTransition } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import {
-  DeploymentData,
-  DeploymentFormData,
-  Host as HostType,
-} from '../../types';
+import { DeploymentData, DeploymentFormData, Host as HostType } from '../../types';
 import { Host as SystemHost } from '../../../hosts/types';
 import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
 import { toast } from '@/components/shadcn/use-toast';
@@ -63,10 +59,10 @@ export default function ClientDeploymentWizard({
   const [isPending, startTransition] = useTransition();
   const [step, setStep] = useState(1);
   const [deploymentData, setDeploymentData] = useState<DeploymentData>(initialDeploymentData);
-  
+
   // Adapter hosts for deployment format
   const adaptedHosts = adaptHostsForDeployment(initialHosts);
-  
+
   // Handler for updating deployment data
   const handleUpdateData = (data: Partial<DeploymentData>) => {
     setDeploymentData((prev) => ({
@@ -78,12 +74,12 @@ export default function ClientDeploymentWizard({
   // Navigation handlers
   const handleNext = () => setStep((s) => Math.min(s + 1, 5));
   const handleBack = () => setStep((s) => Math.max(s - 1, 1));
-  
+
   // Cancel handler
   const handleCancel = () => {
     onCancel();
   };
-  
+
   // Final submit handler
   const handleSubmit = () => {
     // Convert deployment data to form data
@@ -99,46 +95,46 @@ export default function ClientDeploymentWizard({
       scheduled: deploymentData.scheduled,
       schedule: deploymentData.schedule,
     };
-    
+
     // Start transition to prevent UI freezing during the operation
     startTransition(async () => {
       try {
         // Save deployment configuration
         const result = await saveDeploymentConfiguration(formData);
-        
+
         if (result.success && result.data) {
           // If auto-start is enabled, start the deployment
           if (deploymentData.autoStart) {
             await startDeployment(result.data.id);
           }
-          
+
           // Show success message
           toast({
-            title: "Deployment created successfully",
+            title: 'Deployment created successfully',
             description: `Your deployment "${deploymentData.name}" has been created.`,
           });
-          
+
           // Notify parent component
           onDeploymentCreated?.();
         } else {
           // Show error message
           toast({
-            title: "Failed to create deployment",
-            description: result.error || "An unknown error occurred",
-            variant: "destructive",
+            title: 'Failed to create deployment',
+            description: result.error || 'An unknown error occurred',
+            variant: 'destructive',
           });
         }
       } catch (error: any) {
         // Show error message for unexpected errors
         toast({
-          title: "Error",
-          description: error.message || "An unexpected error occurred",
-          variant: "destructive",
+          title: 'Error',
+          description: error.message || 'An unexpected error occurred',
+          variant: 'destructive',
         });
       }
     });
   };
-  
+
   // Render wizard content based on current step
   const renderStepContent = () => {
     const commonProps = {
@@ -150,45 +146,25 @@ export default function ClientDeploymentWizard({
       onSubmit: handleSubmit,
       isPending,
     };
-    
+
     switch (step) {
       case 1:
-        return (
-          <DeploymentWizardStep1
-            {...commonProps}
-            repositories={initialRepositories}
-          />
-        );
+        return <DeploymentWizardStep1 {...commonProps} repositories={initialRepositories} />;
       case 2:
-        return (
-          <DeploymentWizardStep2
-            {...commonProps}
-            hosts={adaptedHosts}
-          />
-        );
+        return <DeploymentWizardStep2 {...commonProps} hosts={adaptedHosts} />;
       case 3:
         return (
-          <DeploymentWizardStep3
-            {...commonProps}
-            repositoryId={deploymentData.repositoryId}
-          />
+          <DeploymentWizardStep3 {...commonProps} repositoryId={deploymentData.repositoryId} />
         );
       case 4:
-        return (
-          <DeploymentWizardStep4 {...commonProps} />
-        );
+        return <DeploymentWizardStep4 {...commonProps} />;
       case 5:
-        return (
-          <DeploymentWizardStep5
-            {...commonProps}
-            cicdProviders={initialCICDProviders}
-          />
-        );
+        return <DeploymentWizardStep5 {...commonProps} cicdProviders={initialCICDProviders} />;
       default:
         return null;
     }
   };
-  
+
   return (
     <div className="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-md">
       <div className="flex justify-between items-center mb-4">
@@ -208,18 +184,16 @@ export default function ClientDeploymentWizard({
           {step === 4 && 'Configure Deployment'}
           {step === 5 && 'CI/CD Integration'}
         </h2>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          Step {step} of 5
-        </div>
+        <div className="text-sm text-gray-500 dark:text-gray-400">Step {step} of 5</div>
       </div>
-      
+
       <div className="mb-4 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
         <div
           className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
           style={{ width: `${(step / 5) * 100}%` }}
         ></div>
       </div>
-      
+
       {renderStepContent()}
     </div>
   );

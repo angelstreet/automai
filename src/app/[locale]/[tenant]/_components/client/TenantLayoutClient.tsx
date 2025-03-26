@@ -14,6 +14,6 @@ export default function TenantLayoutClient({
   tenant: string;
 }) {
   // In the future, you might add client-side state or handlers here
-  
+
   return <>{children}</>;
 }

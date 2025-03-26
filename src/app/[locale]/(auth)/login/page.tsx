@@ -124,18 +124,21 @@ export default function LoginPage() {
 
     try {
       console.log('🔐 LOGIN: Attempting email/password sign in');
-      
+
       // For consistency with OAuth, we'll redirect to a "handle email auth" page
       // This gives Supabase control over setting the cookies properly
       const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
-      
+
       // Store credentials in session storage for the redirect page to use
-      sessionStorage.setItem('email_auth', JSON.stringify({
-        email,
-        password,
-        timestamp: Date.now()
-      }));
-      
+      sessionStorage.setItem(
+        'email_auth',
+        JSON.stringify({
+          email,
+          password,
+          timestamp: Date.now(),
+        }),
+      );
+
       // Redirect to the auth handler page, which will process this
       // similar to how auth-redirect handles GitHub OAuth
       window.location.href = `/${locale}/auth-redirect?auth_method=email`;

@@ -8,10 +8,7 @@ interface LoadingFallbackProps {
   className?: string;
 }
 
-export function LoadingFallback({ 
-  text = 'Loading...', 
-  className = '' 
-}: LoadingFallbackProps) {
+export function LoadingFallback({ text = 'Loading...', className = '' }: LoadingFallbackProps) {
   return (
     <div className={`flex flex-col items-center justify-center p-8 ${className}`}>
       <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />

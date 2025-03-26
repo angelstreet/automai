@@ -1,14 +1,14 @@
 'use client';
 
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
-import { useState, useCallback, useTransition, useOptimistic } from 'react';
+import { useState, useCallback, useTransition, useOptimistic, useEffect, useMemo } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { Host } from '../../types';
-import { 
-  testHostConnection, 
-  createHost as createHostAction, 
-  deleteHost as deleteHostAction 
+import {
+  testHostConnection,
+  createHost as createHostAction,
+  deleteHost as deleteHostAction,
 } from '@/app/actions/hosts';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
@@ -25,8 +25,15 @@ interface ClientHostListProps {
 type HostWithAnimation = Host & { animationDelay?: number };
 
 export default function ClientHostList({ initialHosts }: ClientHostListProps) {
-  // Component state
-  const [hosts, setHosts] = useState<HostWithAnimation[]>(initialHosts);
+  // Component state - add animation delay for smoother rendering
+  const hostsWithAnimation = useMemo(() => {
+    return initialHosts.map((host, index) => ({
+      ...host,
+      animationDelay: index * 50, // Stagger the animation by 50ms per host
+    }));
+  }, [initialHosts]);
+
+  const [hosts, setHosts] = useState<HostWithAnimation[]>(hostsWithAnimation);
   const [isPending, startTransition] = useTransition();
   const [showAddHost, setShowAddHost] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -35,7 +42,17 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [testingIndex, setTestingIndex] = useState<number>(-1);
   const t = useTranslations('Common');
-  
+
+  // Animation state
+  const [isAnimating, setIsAnimating] = useState(true);
+
+  // Initialize animation state
+  useEffect(() => {
+    setIsAnimating(true);
+    const timer = setTimeout(() => setIsAnimating(false), 300);
+    return () => clearTimeout(timer);
+  }, [initialHosts]);
+
   // Set up optimistic state updates
   const [optimisticHosts, addOptimisticHost] = useOptimistic(
     hosts,
@@ -43,16 +60,16 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       if (update.action === 'add' && update.host) {
         return [...state, update.host];
       } else if (update.action === 'delete' && update.id) {
-        return state.filter(host => host.id !== update.id);
+        return state.filter((host) => host.id !== update.id);
       } else if (update.action === 'update' && update.host) {
-        return state.map(host => 
-          host.id === update.host?.id ? { ...update.host, animationDelay: update.index } : host
+        return state.map((host) =>
+          host.id === update.host?.id ? { ...update.host, animationDelay: update.index } : host,
         );
       }
       return state;
-    }
+    },
   );
-  
+
   // Form data for adding a host
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -65,42 +82,41 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   });
 
   // Handle testing a host connection
-  const handleTestConnection = useCallback(async (host: Host, index: number) => {
-    try {
-      // Optimistic UI update with proper typing and animation delay
-      const optimisticHost = { 
-        ...host, 
-        status: 'testing' as const,
-        animationDelay: index 
-      };
-      
-      addOptimisticHost({ action: 'update', host: optimisticHost, index });
-      setTestingIndex(index);
-      
-      const result = await testHostConnection(host.id);
-      
-      if (result.success) {
-        // Update state with new status
-        setHosts(prev => 
-          prev.map(h => 
-            h.id === host.id ? { ...h, status: 'connected' as const } : h
-          )
-        );
-      } else {
-        // Update state with failed status
-        setHosts(prev => 
-          prev.map(h => 
-            h.id === host.id ? { ...h, status: 'failed' as const } : h
-          )
-        );
+  const handleTestConnection = useCallback(
+    async (host: Host, index: number) => {
+      try {
+        // Optimistic UI update with proper typing and animation delay
+        const optimisticHost = {
+          ...host,
+          status: 'testing' as const,
+          animationDelay: index,
+        };
+
+        addOptimisticHost({ action: 'update', host: optimisticHost, index });
+        setTestingIndex(index);
+
+        const result = await testHostConnection(host.id);
+
+        if (result.success) {
+          // Update state with new status
+          setHosts((prev) =>
+            prev.map((h) => (h.id === host.id ? { ...h, status: 'connected' as const } : h)),
+          );
+        } else {
+          // Update state with failed status
+          setHosts((prev) =>
+            prev.map((h) => (h.id === host.id ? { ...h, status: 'failed' as const } : h)),
+          );
+        }
+
+        return result.success;
+      } catch (error) {
+        console.error('Error testing connection:', error);
+        return false;
       }
-      
-      return result.success;
-    } catch (error) {
-      console.error('Error testing connection:', error);
-      return false;
-    }
-  }, [addOptimisticHost]);
+    },
+    [addOptimisticHost],
+  );
 
   // Handle refresh all hosts
   const handleRefreshAll = useCallback(async () => {
@@ -131,7 +147,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   const handleSaveHost = useCallback(async () => {
     try {
       setIsSaving(true);
-      
+
       const hostData = {
         name: formData.name,
         description: formData.description,
@@ -145,27 +161,27 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
         updated_at: new Date(),
         is_windows: false,
       };
-      
+
       // Optimistic UI update with temporary ID
       const tempId = `temp-${Date.now()}`;
-      const optimisticHost = { 
-        ...hostData, 
+      const optimisticHost = {
+        ...hostData,
         id: tempId,
       };
-      
+
       addOptimisticHost({ action: 'add', host: optimisticHost as Host });
-      
+
       // Start server action in a transition
       startTransition(async () => {
         const result = await createHostAction(hostData);
-        
+
         if (result.success && result.data) {
           // Update hosts array with the real data from the server
-          setHosts(prev => [
-            ...prev.filter(h => h.id !== tempId), // Remove optimistic entry
-            result.data as Host // Add the real entry
+          setHosts((prev) => [
+            ...prev.filter((h) => h.id !== tempId), // Remove optimistic entry
+            result.data as Host, // Add the real entry
           ]);
-          
+
           // Close dialog and reset form
           setShowAddHost(false);
           setFormData({
@@ -179,7 +195,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           });
         } else {
           // Remove optimistic entry on failure
-          setHosts(prev => prev.filter(h => h.id !== tempId));
+          setHosts((prev) => prev.filter((h) => h.id !== tempId));
         }
       });
     } catch (error) {
@@ -191,7 +207,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
   // Handle host selection
   const handleSelectHost = useCallback((id: string) => {
-    setSelectedHosts(prev => {
+    setSelectedHosts((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(id)) {
         newSet.delete(id);
@@ -203,32 +219,35 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   }, []);
 
   // Handle deleting a host
-  const removeHost = useCallback(async (id: string) => {
-    try {
-      // Optimistic UI update
-      addOptimisticHost({ action: 'delete', id });
-      
-      // Start server action in a transition
-      startTransition(async () => {
-        const result = await deleteHostAction(id);
-        
-        if (result.success) {
-          // Update hosts array
-          setHosts(prev => prev.filter(h => h.id !== id));
-        } else {
-          // Revert optimistic update on failure
-          setHosts(prev => {
-            const host = initialHosts.find(h => h.id === id);
-            return host ? [...prev, host] : prev;
-          });
-        }
-      });
-    } catch (error) {
-      console.error('Error deleting host:', error);
-      // Revert optimistic update on error
-      setHosts(initialHosts);
-    }
-  }, [initialHosts, addOptimisticHost]);
+  const removeHost = useCallback(
+    async (id: string) => {
+      try {
+        // Optimistic UI update
+        addOptimisticHost({ action: 'delete', id });
+
+        // Start server action in a transition
+        startTransition(async () => {
+          const result = await deleteHostAction(id);
+
+          if (result.success) {
+            // Update hosts array
+            setHosts((prev) => prev.filter((h) => h.id !== id));
+          } else {
+            // Revert optimistic update on failure
+            setHosts((prev) => {
+              const host = initialHosts.find((h) => h.id === id);
+              return host ? [...prev, host] : prev;
+            });
+          }
+        });
+      } catch (error) {
+        console.error('Error deleting host:', error);
+        // Revert optimistic update on error
+        setHosts(initialHosts);
+      }
+    },
+    [initialHosts, addOptimisticHost],
+  );
 
   // Empty state for no hosts
   if (optimisticHosts.length === 0) {
@@ -272,7 +291,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
             </Button>
           </div>
         </div>
-        
+
         <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-lg border border-dashed">
           <div className="mb-4 p-4 rounded-full bg-muted/30">
             <Plus className="h-8 w-8 text-muted-foreground" />
@@ -283,7 +302,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
             Add Host
           </Button>
         </div>
-        
+
         <Dialog open={showAddHost} onOpenChange={setShowAddHost}>
           <DialogContent>
             <DialogHeader>
@@ -322,11 +341,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           size="sm"
           onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
         >
-          {viewMode === 'grid' ? (
-            <List className="h-4 w-4" />
-          ) : (
-            <Grid className="h-4 w-4" />
-          )}
+          {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
         </Button>
         <Button onClick={() => setShowAddHost(true)}>
           <Plus className="h-4 w-4 mr-2" />

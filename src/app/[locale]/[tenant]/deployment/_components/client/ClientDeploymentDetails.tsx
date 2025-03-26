@@ -14,36 +14,31 @@ interface ClientDeploymentDetailsProps {
 
 export function ClientDeploymentDetails({ deployment }: ClientDeploymentDetailsProps) {
   const router = useRouter();
-  
+
   const handleBack = () => {
     router.back();
   };
-  
+
   const handleDeploymentStarted = () => {
     // Refresh the route to update the UI with the new status
     router.refresh();
   };
-  
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center mb-6">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="mr-2"
-          onClick={handleBack}
-        >
+        <Button variant="ghost" size="sm" className="mr-2" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back
         </Button>
         <h1 className="text-2xl font-bold">{deployment.name}</h1>
-        
-        <ClientDeploymentRunAction 
-          deployment={deployment} 
+
+        <ClientDeploymentRunAction
+          deployment={deployment}
           onDeploymentStarted={handleDeploymentStarted}
         />
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -65,12 +60,14 @@ export function ClientDeploymentDetails({ deployment }: ClientDeploymentDetailsP
               </div>
               <div className="flex justify-between">
                 <dt className="font-medium text-gray-500">Status:</dt>
-                <dd className={`
+                <dd
+                  className={`
                   ${deployment.status === 'success' ? 'text-green-600' : ''}
                   ${deployment.status === 'failed' ? 'text-red-600' : ''}
                   ${deployment.status === 'running' ? 'text-blue-600' : ''}
                   ${deployment.status === 'pending' ? 'text-yellow-600' : ''}
-                `}>
+                `}
+                >
                   {deployment.status.charAt(0).toUpperCase() + deployment.status.slice(1)}
                 </dd>
               </div>
@@ -93,7 +90,7 @@ export function ClientDeploymentDetails({ deployment }: ClientDeploymentDetailsP
             </dl>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Configuration</CardTitle>

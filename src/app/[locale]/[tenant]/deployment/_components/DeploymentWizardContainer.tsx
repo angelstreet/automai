@@ -13,7 +13,7 @@ export default async function DeploymentWizardContainer({
   onCancel,
   onDeploymentCreated,
   explicitRepositories,
-  isReady = true
+  isReady = true,
 }: DeploymentWizardContainerProps) {
   try {
     // Skip fetching if we're not ready or if explicit repositories are provided
@@ -27,7 +27,7 @@ export default async function DeploymentWizardContainer({
         </div>
       );
     }
-    
+
     // If explicit repositories were provided, use those directly
     if (explicitRepositories && explicitRepositories.length > 0) {
       return (
@@ -43,13 +43,15 @@ export default async function DeploymentWizardContainer({
 
     // Fetch all required data on the server
     const data = await getDeploymentWizardData();
-    
+
     if (!data.success) {
       return (
         <div className="p-8 text-center">
           <div className="text-destructive mb-2">Error loading data</div>
-          <p className="text-muted-foreground text-sm">{data.error || "Failed to load required data"}</p>
-          <button 
+          <p className="text-muted-foreground text-sm">
+            {data.error || 'Failed to load required data'}
+          </p>
+          <button
             onClick={onCancel}
             className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
           >
@@ -58,7 +60,7 @@ export default async function DeploymentWizardContainer({
         </div>
       );
     }
-    
+
     return (
       <ClientDeploymentWizard
         initialRepositories={data.repositories}
@@ -70,12 +72,14 @@ export default async function DeploymentWizardContainer({
     );
   } catch (error) {
     logger.error('Error in DeploymentWizardContainer:', error);
-    
+
     return (
       <div className="p-8 text-center">
         <div className="text-destructive mb-2">Unexpected error</div>
-        <p className="text-muted-foreground text-sm">An unexpected error occurred while loading the wizard</p>
-        <button 
+        <p className="text-muted-foreground text-sm">
+          An unexpected error occurred while loading the wizard
+        </p>
+        <button
           onClick={onCancel}
           className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm"
         >

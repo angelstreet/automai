@@ -20,11 +20,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { toast } from '@/components/shadcn/use-toast';
-import {
-  createCICDProvider,
-  updateCICDProvider,
-  testCICDProvider,
-} from '@/app/actions/cicd';
+import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicd';
 import {
   CICDProvider,
   CICDProviderPayload,

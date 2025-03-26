@@ -31,11 +31,7 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { toast } from '@/components/shadcn/use-toast';
 import { CICDProviderForm } from './';
-import {
-  getCICDProviders,
-  deleteCICDProvider,
-  testCICDProvider,
-} from '@/app/actions/cicd';
+import { getCICDProviders, deleteCICDProvider, testCICDProvider } from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
 import { CICDProvider as CICDProviderModel } from '../types';
 import useSWR from 'swr';
@@ -66,10 +62,11 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
   }, []);
 
   // Use SWR hook directly
-  const { data: providersData, error: providersError, mutate: refreshProviders } = useSWR(
-    'cicd-providers', 
-    () => getCICDProviders()
-  );
+  const {
+    data: providersData,
+    error: providersError,
+    mutate: refreshProviders,
+  } = useSWR('cicd-providers', () => getCICDProviders());
 
   // Update local state when data changes
   useEffect(() => {

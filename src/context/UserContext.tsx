@@ -107,7 +107,7 @@ export function UserProvider({
       setIsInitialized(true);
       log('[UserContext] Initial initialization complete');
     }, 100);
-    
+
     // Backup timer to ensure initialization happens even if auth is delayed
     const backupTimer = setTimeout(() => {
       if (!initialized.current) {
@@ -118,7 +118,7 @@ export function UserProvider({
         // Force a refresh if user data still not available
         if (!user) {
           log('[UserContext] User data still missing, forcing refresh');
-          refreshUser().catch(e => console.error('[UserContext] Refresh error:', e));
+          refreshUser().catch((e) => console.error('[UserContext] Refresh error:', e));
         }
       }
     }, 1500);
@@ -209,7 +209,7 @@ export function UserProvider({
               if (typeof window !== 'undefined') {
                 localStorage.setItem(STORAGE_KEYS.CACHED_USER, JSON.stringify(user));
                 localStorage.setItem(STORAGE_KEYS.CACHED_USER_TIME, Date.now().toString());
-                
+
                 // Cache in global context reference if it exists
                 if ((window as any).__userContext) {
                   (window as any).__userContext.user = user;
@@ -261,7 +261,7 @@ export function UserProvider({
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.CACHED_USER);
       localStorage.removeItem(STORAGE_KEYS.CACHED_USER_TIME);
-      
+
       // Clear global cache reference if exists
       if ((window as any).__userContext) {
         (window as any).__userContext.user = null;

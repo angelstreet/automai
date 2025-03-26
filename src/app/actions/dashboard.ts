@@ -3,12 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
-import { 
-  ActivityItem, 
-  Task, 
-  Stats, 
-  ChatMessage 
-} from '@/app/[locale]/[tenant]/dashboard/types';
+import { ActivityItem, Task, Stats, ChatMessage } from '@/app/[locale]/[tenant]/dashboard/types';
 import { logger } from '@/lib/logger';
 
 // Define action result type for consistent return values
@@ -249,11 +244,9 @@ export async function addChatMessage(message: string): Promise<ActionResult<Chat
 /**
  * Clear dashboard-related cache by revalidating paths
  */
-export async function clearDashboardCache(
-  options?: {
-    section?: 'stats' | 'activity' | 'tasks' | 'chat' | 'all';
-  }
-): Promise<{
+export async function clearDashboardCache(options?: {
+  section?: 'stats' | 'activity' | 'tasks' | 'chat' | 'all';
+}): Promise<{
   success: boolean;
   message: string;
 }> {
@@ -269,7 +262,7 @@ export async function clearDashboardCache(
 
     // Revalidate dashboard path
     revalidatePath('/[locale]/[tenant]/dashboard');
-    
+
     const section = options?.section || 'all';
     return {
       success: true,

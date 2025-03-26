@@ -23,7 +23,7 @@ export async function invalidateUserCache() {
 /**
  * Get the current authenticated user
  * Uses Next.js caching for stability during SSR/RSC
- * 
+ *
  * @returns The authenticated user or null if not authenticated
  */
 export async function getUser(): Promise<AuthUser | null> {

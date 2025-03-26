@@ -205,7 +205,7 @@ export async function createRepository(
 
     // Map to our Repository type
     const mappedRepository: Repository = mapDbRepositoryToRepository(result.data);
-    
+
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
 
@@ -258,7 +258,7 @@ export async function updateRepository(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     console.log(`[Server] updateRepository: Success - updated repo ${id}`);
 
     return { success: true, data: mappedRepository };
@@ -307,7 +307,7 @@ export async function deleteRepository(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return { success: true };
   } catch (error: any) {
     console.error('[Server] Error in deleteRepository:', error);
@@ -358,7 +358,7 @@ export async function syncRepository(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return { success: true, data: mappedRepository };
   } catch (error: any) {
     console.error('[Server] Error in syncRepository:', error);
@@ -418,7 +418,7 @@ export async function createRepositoryFromUrl(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return { success: true, data: repoData };
   } catch (error: any) {
     console.error('Error in createRepositoryFromUrl:', error);
@@ -629,7 +629,7 @@ export async function deleteGitProvider(id: string): Promise<{ success: boolean;
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return { success: true };
   } catch (error: any) {
     console.error('Error in deleteGitProvider:', error);
@@ -665,7 +665,7 @@ export async function addGitProvider(provider: {
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return mapDbGitProviderToGitProvider(result.data);
   } catch (error) {
     console.error('Error in addGitProvider:', error);
@@ -707,7 +707,7 @@ export async function updateGitProvider(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return mapDbGitProviderToGitProvider(result.data);
   } catch (error) {
     console.error('Error in updateGitProvider:', error);
@@ -734,7 +734,7 @@ export async function refreshGitProvider(id: string): Promise<GitProvider> {
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return mapDbGitProviderToGitProvider(result.data);
   } catch (error) {
     console.error('Error in refreshGitProvider:', error);
@@ -775,7 +775,7 @@ export async function handleOAuthCallback(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return {
       success: true,
       redirectUrl: redirectUri || '/repositories',
@@ -822,7 +822,7 @@ export async function createGitProvider(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return {
       success: true,
       data: provider,
@@ -895,7 +895,7 @@ export async function starRepositoryAction(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Error in starRepositoryAction:', error);
@@ -928,7 +928,7 @@ export async function unstarRepositoryAction(
 
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return { success: true, data: result.data };
   } catch (error: any) {
     console.error('Error in unstarRepositoryAction:', error);
@@ -1058,7 +1058,7 @@ export async function getRepositoriesWithStarred(
     }
 
     console.log('[Server] Fetching fresh data');
-    
+
     // Fetch repositories
     const reposResult = await getRepositories(filter, currentUser);
     console.log('[Server] Repository fetch result:', {
@@ -1183,7 +1183,7 @@ export async function clearRepositoriesCache(): Promise<{
   try {
     // Revalidate repository paths
     revalidatePath('/[locale]/[tenant]/repositories');
-    
+
     return {
       success: true,
       message: 'Cache cleared by revalidating paths',

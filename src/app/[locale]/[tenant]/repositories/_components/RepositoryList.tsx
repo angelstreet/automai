@@ -11,7 +11,11 @@ import { EmptyState } from '@/components/layout/EmptyState';
 
 import { EnhancedRepositoryCard } from './EnhancedRepositoryCard';
 import { Repository } from '../types';
-import { clearRepositoriesCache, starRepositoryAction, unstarRepositoryAction } from '@/app/actions/repositories';
+import {
+  clearRepositoriesCache,
+  starRepositoryAction,
+  unstarRepositoryAction,
+} from '@/app/actions/repositories';
 import { useRouter } from 'next/navigation';
 
 interface RepositoryListProps {
@@ -20,11 +24,7 @@ interface RepositoryListProps {
   error?: string;
 }
 
-export function RepositoryList({
-  repositories,
-  starredRepos,
-  error
-}: RepositoryListProps) {
+export function RepositoryList({ repositories, starredRepos, error }: RepositoryListProps) {
   const t = useTranslations('repositories');
   const router = useRouter();
 
@@ -34,7 +34,7 @@ export function RepositoryList({
   const [syncingRepoIds, setSyncingRepoIds] = useState<Record<string, boolean>>({});
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const itemsPerPage = 12;
-  
+
   // Client-side search state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('lastUpdated');
@@ -44,7 +44,7 @@ export function RepositoryList({
   const handleToggleStarred = async (id: string) => {
     // Check if repository is already starred
     const isStarred = starredRepos.has(id);
-    
+
     try {
       // Optimistic update
       const newStarredRepos = new Set(starredRepos);
@@ -53,32 +53,32 @@ export function RepositoryList({
       } else {
         newStarredRepos.add(id);
       }
-      
+
       // Call the appropriate server action
       if (isStarred) {
         await unstarRepositoryAction(id);
       } else {
         await starRepositoryAction(id);
       }
-      
+
       // Refresh the data (which will show our optimistic update until the server data arrives)
       router.refresh();
     } catch (error) {
       console.error('Error toggling star status:', error);
-      
+
       // Could add toast notification here
     }
   };
-  
+
   const handleSyncRepository = async (id: string) => {
     if (!id) return;
-    
+
     try {
       setSyncingRepoIds((prev) => ({ ...prev, [id]: true }));
-      
+
       // Call clearRepositoriesCache to refresh the data
       await clearRepositoriesCache();
-      
+
       // Refresh the UI to show updated data
       router.refresh();
     } catch (error) {
@@ -87,19 +87,23 @@ export function RepositoryList({
       setSyncingRepoIds((prev) => ({ ...prev, [id]: false }));
     }
   };
-  
+
   const handleDeleteRepository = (id: string) => {
     // We'll dispatch an event to show a deletion confirmation dialog
-    window.dispatchEvent(new CustomEvent('repository-delete-request', { 
-      detail: { id }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('repository-delete-request', {
+        detail: { id },
+      }),
+    );
   };
-  
+
   const handleViewRepository = (repo: Repository) => {
     // Navigate to repository explorer or detail view
-    window.dispatchEvent(new CustomEvent('repository-view-request', { 
-      detail: { repo }
-    }));
+    window.dispatchEvent(
+      new CustomEvent('repository-view-request', {
+        detail: { repo },
+      }),
+    );
   };
 
   // Safely handle potentially undefined repositories array
@@ -228,7 +232,11 @@ export function RepositoryList({
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentRepositories.map((repo) => (
-            <div key={repo.id} onClick={() => handleViewRepository(repo)} className="cursor-pointer">
+            <div
+              key={repo.id}
+              onClick={() => handleViewRepository(repo)}
+              className="cursor-pointer"
+            >
               <EnhancedRepositoryCard
                 repository={repo}
                 onSync={handleSyncRepository}

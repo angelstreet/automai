@@ -46,7 +46,7 @@ export default function SignUpPage() {
     let timer: NodeJS.Timeout;
     if (success && redirectCountdown > 0) {
       timer = setTimeout(() => {
-        setRedirectCountdown(prev => prev - 1);
+        setRedirectCountdown((prev) => prev - 1);
       }, 1000);
     }
     return () => clearTimeout(timer);
@@ -226,7 +226,9 @@ export default function SignUpPage() {
             )}
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? t('signingUp') || 'Creating account...' : t('signupButton') || 'Create account'}
+              {isSubmitting
+                ? t('signingUp') || 'Creating account...'
+                : t('signupButton') || 'Create account'}
             </Button>
 
             <div className="relative my-2">

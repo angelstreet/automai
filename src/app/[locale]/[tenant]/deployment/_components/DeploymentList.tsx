@@ -20,7 +20,7 @@ export function DeploymentList({ deployments }: DeploymentListProps) {
     try {
       setActionInProgress(id);
       const result = await abortDeployment(id);
-      
+
       if (result.success) {
         toast({
           title: 'Deployment aborted',
@@ -49,14 +49,18 @@ export function DeploymentList({ deployments }: DeploymentListProps) {
   // Handle deleting a deployment
   const handleDeleteDeployment = async (id: string) => {
     // Confirm deletion
-    if (!window.confirm('Are you sure you want to delete this deployment? This action cannot be undone.')) {
+    if (
+      !window.confirm(
+        'Are you sure you want to delete this deployment? This action cannot be undone.',
+      )
+    ) {
       return;
     }
-    
+
     try {
       setActionInProgress(id);
       const result = await deleteDeployment(id);
-      
+
       if (result) {
         toast({
           title: 'Deployment deleted',
@@ -116,7 +120,7 @@ export function DeploymentList({ deployments }: DeploymentListProps) {
           <div className="text-sm text-muted-foreground">{deployments.length} deployments</div>
         </div>
       </div>
-      
+
       {deployments.map((deployment) => (
         <div key={deployment.id} className="p-4 border-b last:border-0">
           <div className="flex justify-between items-center">
@@ -126,15 +130,19 @@ export function DeploymentList({ deployments }: DeploymentListProps) {
                 Created: {formatDate(deployment.createdAt)}
               </div>
               <div className="mt-2">
-                <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(deployment.status)}`}>
+                <span
+                  className={`px-2 py-1 text-xs rounded-full ${getStatusBadgeClass(deployment.status)}`}
+                >
                   {deployment.status}
                 </span>
               </div>
             </div>
-            
+
             <div className="flex space-x-2">
               {/* Show abort button only for pending/running deployments */}
-              {(deployment.status === 'pending' || deployment.status === 'running' || deployment.status === 'in_progress') && (
+              {(deployment.status === 'pending' ||
+                deployment.status === 'running' ||
+                deployment.status === 'in_progress') && (
                 <button
                   className="px-3 py-1 text-sm bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200"
                   onClick={() => handleAbortDeployment(deployment.id)}
@@ -143,7 +151,7 @@ export function DeploymentList({ deployments }: DeploymentListProps) {
                   {actionInProgress === deployment.id ? 'Aborting...' : 'Abort'}
                 </button>
               )}
-              
+
               <button
                 className="px-3 py-1 text-sm bg-red-100 text-red-800 rounded hover:bg-red-200"
                 onClick={() => handleDeleteDeployment(deployment.id)}
@@ -151,7 +159,7 @@ export function DeploymentList({ deployments }: DeploymentListProps) {
               >
                 {actionInProgress === deployment.id ? 'Deleting...' : 'Delete'}
               </button>
-              
+
               <button
                 className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
                 onClick={() => {

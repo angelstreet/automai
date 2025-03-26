@@ -26,18 +26,18 @@ interface WorkspaceHeaderClientProps {
 const HEADER_COOKIE_NAME = 'header:state';
 const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-export function WorkspaceHeaderClient({ 
+export function WorkspaceHeaderClient({
   className = '',
   fixed = false,
   tenant,
   user: propUser,
-  initialHeaderState = true
+  initialHeaderState = true,
 }: WorkspaceHeaderClientProps) {
   const { open } = useSidebar();
   const userContext = useUser();
   const isCollapsed = !open;
   const [headerVisible, setHeaderVisible] = React.useState(initialHeaderState);
-  
+
   // Use prop user if available, otherwise fall back to context
   const user = propUser || userContext?.user;
 
@@ -100,10 +100,7 @@ export function WorkspaceHeaderClient({
               <div className="flex-none w-36 mr-12">
                 {/* Force a complete component remount when user role changes by using key */}
                 {user ? (
-                  <RoleSwitcher
-                    key={`role-switcher-${user?.role || 'default'}`}
-                    user={user}
-                  />
+                  <RoleSwitcher key={`role-switcher-${user?.role || 'default'}`} user={user} />
                 ) : (
                   <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
                 )}

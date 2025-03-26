@@ -35,18 +35,20 @@ import {
   deleteCICDProvider,
   testCICDProvider,
   createCICDProvider,
-  updateCICDProvider
+  updateCICDProvider,
 } from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
 import type { CICDProviderType } from '../../types';
-import { useRouter } from 'next/navigation';
 
 interface ClientCICDProviderProps {
   initialProviders: CICDProviderType[];
   removeTitle?: boolean;
 }
 
-export default function ClientCICDProvider({ initialProviders, removeTitle = false }: ClientCICDProviderProps) {
+export default function ClientCICDProvider({
+  initialProviders,
+  removeTitle = false,
+}: ClientCICDProviderProps) {
   const [providers, setProviders] = useState<CICDProviderType[]>(initialProviders);
   const [isPending, startTransition] = useTransition();
   const [selectedProvider, setSelectedProvider] = useState<CICDProviderType | null>(null);
@@ -54,8 +56,7 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
-  
+
   // Set up optimistic state updates
   const [optimisticProviders, addOptimisticProvider] = useOptimistic(
     providers,
@@ -63,27 +64,27 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
       if (update.action === 'add' && update.provider) {
         return [...state, update.provider];
       } else if (update.action === 'delete' && update.id) {
-        return state.filter(provider => provider.id !== update.id);
+        return state.filter((provider) => provider.id !== update.id);
       } else if (update.action === 'update' && update.provider) {
-        return state.map(provider => 
-          provider.id === update.provider?.id ? update.provider : provider
+        return state.map((provider) =>
+          provider.id === update.provider?.id ? update.provider : provider,
         );
       }
       return state;
-    }
+    },
   );
-  
+
   // Listen for the add provider event from page
   useEffect(() => {
     const handleAddProviderEvent = () => {
       handleAddEditProvider();
     };
-    
+
     const addButton = document.getElementById('add-provider-button');
     if (addButton) {
       addButton.addEventListener('click', handleAddProviderEvent);
     }
-    
+
     return () => {
       if (addButton) {
         addButton.removeEventListener('click', handleAddProviderEvent);
@@ -92,43 +93,46 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
   }, []);
 
   // Test a provider connection
-  const handleTestProvider = useCallback(async (provider: CICDProviderType) => {
-    try {
-      // Create provider payload for testing
-      const providerPayload = {
-        id: provider.id,
-        name: provider.name,
-        type: provider.type,
-        url: provider.url,
-        config: {
-          auth_type: provider.config?.auth_type,
-          credentials: provider.config?.credentials,
-        },
-      };
+  const handleTestProvider = useCallback(
+    async (provider: CICDProviderType) => {
+      try {
+        // Create provider payload for testing
+        const providerPayload = {
+          id: provider.id,
+          name: provider.name,
+          type: provider.type,
+          url: provider.url,
+          config: {
+            auth_type: provider.config?.auth_type,
+            credentials: provider.config?.credentials,
+          },
+        };
 
-      const result = await testCICDProvider(providerPayload);
+        const result = await testCICDProvider(providerPayload);
 
-      if (result.success) {
+        if (result.success) {
+          toast({
+            title: 'Connection Successful',
+            description: 'Successfully connected to the CI/CD provider.',
+            variant: 'default',
+          });
+        } else {
+          toast({
+            title: 'Connection Failed',
+            description: result.error || 'Failed to connect to the CI/CD provider.',
+            variant: 'destructive',
+          });
+        }
+      } catch (error: any) {
         toast({
-          title: 'Connection Successful',
-          description: 'Successfully connected to the CI/CD provider.',
-          variant: 'default',
-        });
-      } else {
-        toast({
-          title: 'Connection Failed',
-          description: result.error || 'Failed to connect to the CI/CD provider.',
+          title: 'Error',
+          description: error.message || 'An unexpected error occurred',
           variant: 'destructive',
         });
       }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  }, [toast]);
+    },
+    [toast],
+  );
 
   // Open the add/edit dialog
   const handleAddEditProvider = useCallback((provider?: CICDProviderType) => {
@@ -156,27 +160,24 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
     try {
       // Optimistic UI update
       addOptimisticProvider({ action: 'delete', id: selectedProvider.id });
-      
+
       // Start server action in a transition
       startTransition(async () => {
         const result = await deleteCICDProvider(selectedProvider.id);
 
         if (result.success) {
           // Update providers state
-          setProviders(prev => prev.filter(provider => provider.id !== selectedProvider.id));
-          
+          setProviders((prev) => prev.filter((provider) => provider.id !== selectedProvider.id));
+
           toast({
             title: 'Provider Deleted',
             description: 'The CI/CD provider has been successfully deleted.',
             variant: 'default',
           });
-          
-          // Refresh the page to get fresh data
-          router.refresh();
         } else {
           // Revert optimistic update on failure
           setProviders(initialProviders);
-          
+
           toast({
             title: 'Error',
             description: result.error || 'Failed to delete the CI/CD provider',
@@ -187,7 +188,7 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
     } catch (error: any) {
       // Revert optimistic update on error
       setProviders(initialProviders);
-      
+
       toast({
         title: 'Error',
         description: error.message || 'An unexpected error occurred',
@@ -196,87 +197,93 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
     } finally {
       setIsDeleteDialogOpen(false);
     }
-  }, [selectedProvider, initialProviders, addOptimisticProvider, toast, router]);
+  }, [selectedProvider, initialProviders, addOptimisticProvider, toast]);
 
   // Handle form submission for add/edit
-  const handleFormSubmit = useCallback(async (formData: any) => {
-    try {
-      if (isEditing && selectedProvider) {
-        // Editing an existing provider
-        const result = await updateCICDProvider(selectedProvider.id, formData);
-        
-        if (result.success && result.data) {
-          // Update providers state with the result
-          setProviders(prev => 
-            prev.map(provider => 
-              provider.id === selectedProvider.id ? result.data as CICDProviderType : provider
-            )
-          );
-          
-          toast({
-            title: 'Provider Updated',
-            description: 'The CI/CD provider has been successfully updated.',
-            variant: 'default',
-          });
-        } else {
-          toast({
-            title: 'Error',
-            description: result.error || 'Failed to update the CI/CD provider',
-            variant: 'destructive',
-          });
-        }
-      } else {
-        // Adding a new provider
-        // Optimistic UI update with temporary ID
-        const tempId = `temp-${Date.now()}`;
-        const optimisticProvider = { 
-          ...formData, 
-          id: tempId,
-        };
-        
-        addOptimisticProvider({ action: 'add', provider: optimisticProvider as CICDProviderType });
-        
-        // Start server action in a transition
-        startTransition(async () => {
-          const result = await createCICDProvider(formData);
-          
+  const handleFormSubmit = useCallback(
+    async (formData: any) => {
+      try {
+        if (isEditing && selectedProvider) {
+          // Editing an existing provider
+          const result = await updateCICDProvider(selectedProvider.id, formData);
+
           if (result.success && result.data) {
-            // Update providers array with the real data from the server
-            setProviders(prev => [
-              ...prev.filter(p => p.id !== tempId), // Remove optimistic entry
-              result.data as CICDProviderType // Add the real entry
-            ]);
-            
+            // Update providers state with the result
+            setProviders((prev) =>
+              prev.map((provider) =>
+                provider.id === selectedProvider.id ? (result.data as CICDProviderType) : provider,
+              ),
+            );
+
             toast({
-              title: 'Provider Added',
-              description: 'The CI/CD provider has been successfully added.',
+              title: 'Provider Updated',
+              description: 'The CI/CD provider has been successfully updated.',
               variant: 'default',
             });
           } else {
-            // Remove optimistic entry on failure
-            setProviders(prev => prev.filter(p => p.id !== tempId));
-            
             toast({
               title: 'Error',
-              description: result.error || 'Failed to add the CI/CD provider',
+              description: result.error || 'Failed to update the CI/CD provider',
               variant: 'destructive',
             });
           }
+        } else {
+          // Adding a new provider
+          // Optimistic UI update with temporary ID
+          const tempId = `temp-${Date.now()}`;
+          const optimisticProvider = {
+            ...formData,
+            id: tempId,
+          };
+
+          addOptimisticProvider({
+            action: 'add',
+            provider: optimisticProvider as CICDProviderType,
+          });
+
+          // Start server action in a transition
+          startTransition(async () => {
+            const result = await createCICDProvider(formData);
+
+            if (result.success && result.data) {
+              // Update providers array with the real data from the server
+              setProviders((prev) => [
+                ...prev.filter((p) => p.id !== tempId), // Remove optimistic entry
+                result.data as CICDProviderType, // Add the real entry
+              ]);
+
+              toast({
+                title: 'Provider Added',
+                description: 'The CI/CD provider has been successfully added.',
+                variant: 'default',
+              });
+            } else {
+              // Remove optimistic entry on failure
+              setProviders((prev) => prev.filter((p) => p.id !== tempId));
+
+              toast({
+                title: 'Error',
+                description: result.error || 'Failed to add the CI/CD provider',
+                variant: 'destructive',
+              });
+            }
+          });
+        }
+
+        // Close the dialog
+        setIsAddEditDialogOpen(false);
+        return true;
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.message || 'An unexpected error occurred',
+          variant: 'destructive',
         });
+        return false;
       }
-      
-      // Close the dialog
-      setIsAddEditDialogOpen(false);
-      return true;
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-      return false;
-    }
-  }, [isEditing, selectedProvider, addOptimisticProvider, toast]);
+    },
+    [isEditing, selectedProvider, addOptimisticProvider, toast],
+  );
 
   // Get provider type badge color
   const getProviderBadgeColor = useCallback((type: string) => {
@@ -290,7 +297,7 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
       case 'azure_devops':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   }, []);
 

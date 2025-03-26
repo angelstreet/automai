@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { getUser } from '@/app/actions/user';
 import type {
   ActionResult,
@@ -77,7 +77,7 @@ export async function getCICDJobs(providerId?: string): Promise<ActionResult<CIC
  * Create a new CICD provider for the current tenant
  */
 export async function createCICDProvider(
-  payload: CICDProviderPayload
+  payload: CICDProviderPayload,
 ): Promise<CICDProviderActionResult> {
   try {
     // Get the current authenticated user
@@ -107,8 +107,7 @@ export async function createCICDProvider(
       return { success: false, error: result.error };
     }
 
-    // Revalidate cache
-    revalidateTag('cicd-providers');
+    // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/cicd');
     revalidatePath('/[locale]/[tenant]/dashboard');
 
@@ -124,7 +123,7 @@ export async function createCICDProvider(
  */
 export async function updateCICDProvider(
   id: string,
-  payload: CICDProviderPayload
+  payload: CICDProviderPayload,
 ): Promise<CICDProviderActionResult> {
   try {
     // Get the current authenticated user
@@ -157,8 +156,7 @@ export async function updateCICDProvider(
       return { success: false, error: result.error };
     }
 
-    // Revalidate cache
-    revalidateTag('cicd-providers');
+    // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/cicd');
     revalidatePath(`/[locale]/[tenant]/cicd/${id}`);
 
@@ -194,8 +192,7 @@ export async function deleteCICDProvider(id: string): Promise<ActionResult> {
       return { success: false, error: result.error };
     }
 
-    // Revalidate cache
-    revalidateTag('cicd-providers');
+    // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/cicd');
 
     return { success: true };
@@ -357,13 +354,11 @@ export async function testJenkinsAPI(): Promise<{ success: boolean; error?: stri
 /**
  * Clear CICD-related cache entries
  */
-export async function clearCICDCache(
-  options?: {
-    providerId?: string;
-    tenantId?: string;
-    userId?: string;
-  }
-): Promise<{
+export async function clearCICDCache(options?: {
+  providerId?: string;
+  tenantId?: string;
+  userId?: string;
+}): Promise<{
   success: boolean;
   message: string;
 }> {
@@ -379,38 +374,38 @@ export async function clearCICDCache(
     }
 
     const { providerId, tenantId, userId } = options || {};
-    
+
     // Revalidate CICD paths
     revalidatePath('/[locale]/[tenant]/cicd');
-    
+
     // Determine appropriate message based on parameters
     if (providerId) {
       revalidatePath(`/[locale]/[tenant]/cicd/${providerId}`);
       return {
         success: true,
-        message: `Cache cleared for CICD provider: ${providerId}`
+        message: `Cache cleared for CICD provider: ${providerId}`,
       };
     } else if (userId && tenantId) {
       return {
         success: true,
-        message: `Cache cleared for user: ${userId} and tenant: ${tenantId}`
+        message: `Cache cleared for user: ${userId} and tenant: ${tenantId}`,
       };
     } else if (tenantId || (tenantId === undefined && user)) {
       const targetTenantId = tenantId || user.tenant_id;
       return {
         success: true,
-        message: `Cache cleared for tenant: ${targetTenantId}`
+        message: `Cache cleared for tenant: ${targetTenantId}`,
       };
     } else if (userId) {
       return {
         success: true,
-        message: `Cache cleared for user: ${userId}`
+        message: `Cache cleared for user: ${userId}`,
       };
     }
-    
+
     return {
       success: true,
-      message: 'All CICD cache cleared'
+      message: 'All CICD cache cleared',
     };
   } catch (error) {
     logger.error('Error clearing CICD cache:', error);

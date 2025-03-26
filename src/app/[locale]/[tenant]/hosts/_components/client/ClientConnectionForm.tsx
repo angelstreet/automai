@@ -71,7 +71,7 @@ export function ClientConnectionForm({
   const REQUEST_THROTTLE_MS = 500;
 
   // React.useEffect is defined but not needed anymore since we removed the context dependency
-  
+
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
 
@@ -266,10 +266,12 @@ export function ClientConnectionForm({
         <Button
           variant="outline"
           onClick={testHostConnection}
-          disabled={testing || 
-            !formData.name.trim() || 
-            !formData.ip.trim() || 
-            (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim()))}
+          disabled={
+            testing ||
+            !formData.name.trim() ||
+            !formData.ip.trim() ||
+            (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim()))
+          }
           className="h-8 px-3 text-sm"
         >
           {testing ? (

@@ -22,7 +22,7 @@ export async function getDeploymentWizardData() {
         error: 'Unauthorized',
         repositories: [],
         hosts: [],
-        cicdProviders: []
+        cicdProviders: [],
       };
     }
 
@@ -30,14 +30,14 @@ export async function getDeploymentWizardData() {
     const [repositoriesResult, hostsResult, cicdProvidersResult] = await Promise.all([
       getRepositories(),
       getHosts(),
-      getCICDProviders()
+      getCICDProviders(),
     ]);
-    
+
     return {
       success: true,
       repositories: repositoriesResult.success ? repositoriesResult.data || [] : [],
       hosts: hostsResult.success ? hostsResult.data || [] : [],
-      cicdProviders: cicdProvidersResult.success ? cicdProvidersResult.data || [] : []
+      cicdProviders: cicdProvidersResult.success ? cicdProvidersResult.data || [] : [],
     };
   } catch (error: any) {
     logger.error('Error fetching deployment wizard data:', error);
@@ -46,7 +46,7 @@ export async function getDeploymentWizardData() {
       error: error.message || 'Failed to fetch deployment data',
       repositories: [],
       hosts: [],
-      cicdProviders: []
+      cicdProviders: [],
     };
   }
 }
@@ -61,7 +61,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     if (!user) {
       return {
         success: false,
-        error: 'Unauthorized'
+        error: 'Unauthorized',
       };
     }
 
@@ -69,7 +69,7 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
     if (!formData.name || !formData.repositoryId) {
       return {
         success: false,
-        error: 'Missing required fields'
+        error: 'Missing required fields',
       };
     }
 
@@ -94,13 +94,13 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
 
     // Create the deployment
     const result = await deploymentDb.createDeployment({
-      data: deploymentData
+      data: deploymentData,
     });
 
     if (!result.success) {
       return {
         success: false,
-        error: result.error || 'Failed to create deployment'
+        error: result.error || 'Failed to create deployment',
       };
     }
 
@@ -110,13 +110,13 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
 
     return {
       success: true,
-      data: result.data
+      data: result.data,
     };
   } catch (error: any) {
     logger.error('Error saving deployment configuration:', error);
     return {
       success: false,
-      error: error.message || 'Failed to save deployment configuration'
+      error: error.message || 'Failed to save deployment configuration',
     };
   }
 }
@@ -131,7 +131,7 @@ export async function startDeployment(deploymentId: string) {
     if (!user) {
       return {
         success: false,
-        error: 'Unauthorized'
+        error: 'Unauthorized',
       };
     }
 
@@ -141,13 +141,13 @@ export async function startDeployment(deploymentId: string) {
     // Update deployment status
     const result = await deploymentDb.updateDeployment({
       where: { id: deploymentId },
-      data: { status: 'running', started_at: new Date().toISOString() }
+      data: { status: 'running', started_at: new Date().toISOString() },
     });
 
     if (!result.success) {
       return {
         success: false,
-        error: result.error || 'Failed to start deployment'
+        error: result.error || 'Failed to start deployment',
       };
     }
 
@@ -157,13 +157,13 @@ export async function startDeployment(deploymentId: string) {
 
     return {
       success: true,
-      data: result.data
+      data: result.data,
     };
   } catch (error: any) {
     logger.error('Error starting deployment:', error);
     return {
       success: false,
-      error: error.message || 'Failed to start deployment'
+      error: error.message || 'Failed to start deployment',
     };
   }
 }

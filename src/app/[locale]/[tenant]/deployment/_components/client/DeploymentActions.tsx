@@ -16,13 +16,13 @@ export function DeploymentActions() {
   // Handle refreshing deployment data
   const handleRefresh = async () => {
     if (isRefreshing) return;
-    
+
     setIsRefreshing(true);
-    
+
     try {
       // Simply refresh the route to get fresh data
       router.refresh();
-      
+
       // Wait a bit for visual confirmation
       setTimeout(() => {
         setIsRefreshing(false);
@@ -30,7 +30,7 @@ export function DeploymentActions() {
     } catch (error) {
       console.error('Error refreshing deployments:', error);
       setIsRefreshing(false);
-      
+
       toast({
         title: 'Error',
         description: 'Failed to refresh deployments',
@@ -42,12 +42,12 @@ export function DeploymentActions() {
   // Handle deployment creation success
   const handleDeploymentCreated = () => {
     setWizardActive(false);
-    
+
     toast({
       title: 'Success',
       description: 'Deployment has been created successfully',
     });
-    
+
     // Refresh the data
     router.refresh();
   };
@@ -55,22 +55,15 @@ export function DeploymentActions() {
   return (
     <>
       <div className="flex items-center space-x-2">
-        <Button
-          onClick={() => setWizardActive(true)}
-        >
+        <Button onClick={() => setWizardActive(true)}>
           <Plus className="h-4 w-4 mr-1" />
           New Deployment
         </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
+        <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         </Button>
       </div>
-      
+
       {wizardActive && (
         <DeploymentWizardContainer
           onCancel={() => setWizardActive(false)}

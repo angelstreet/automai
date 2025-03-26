@@ -3,7 +3,12 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { Star, GitBranch, Clock, ExternalLink, RefreshCw, Globe, Lock, Trash2 } from 'lucide-react';
-import { deleteRepository, syncRepository, starRepositoryAction, unstarRepositoryAction } from '@/app/actions/repositories';
+import {
+  deleteRepository,
+  syncRepository,
+  starRepositoryAction,
+  unstarRepositoryAction,
+} from '@/app/actions/repositories';
 
 import {
   Card,
@@ -92,13 +97,13 @@ export function EnhancedRepositoryCard({
   // Handle sync button click without propagation
   const handleSyncClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!repository?.id) return;
-    
+
     try {
       // Use server action directly
       const result = await syncRepository(repository.id);
-      
+
       if (result.success) {
         // Refresh UI
         router.refresh();
@@ -114,9 +119,9 @@ export function EnhancedRepositoryCard({
   // Handle star button click without propagation
   const handleStarClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!repository?.id) return;
-    
+
     try {
       // Use server action directly
       if (isStarred) {
@@ -124,7 +129,7 @@ export function EnhancedRepositoryCard({
       } else {
         await starRepositoryAction(repository.id);
       }
-      
+
       // Refresh UI
       router.refresh();
       if (onToggleStarred) {
@@ -138,13 +143,13 @@ export function EnhancedRepositoryCard({
   // Handle delete button click without propagation
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!repository?.id) return;
-    
+
     try {
       // Use server action directly
       const result = await deleteRepository(repository.id);
-      
+
       if (result.success) {
         // Refresh UI
         router.refresh();

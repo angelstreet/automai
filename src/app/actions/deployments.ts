@@ -1,7 +1,11 @@
 'use server';
 
 import { AuthUser } from '@/types/user';
-import { Deployment, DeploymentFormData, DeploymentStatus } from '../[locale]/[tenant]/deployment/types';
+import {
+  Deployment,
+  DeploymentFormData,
+  DeploymentStatus,
+} from '../[locale]/[tenant]/deployment/types';
 import { getUser } from '@/app/actions/user';
 import { mapDeploymentToParameters } from '../[locale]/[tenant]/deployment/utils';
 import { cookies } from 'next/headers';
@@ -480,7 +484,7 @@ export async function updateDeployment(
 
     // Update the deployment in the database
     const result = await deploymentDb.update(id, dbData, cookieStore);
-    
+
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
 
@@ -608,7 +612,7 @@ export async function deleteDeployment(id: string): Promise<boolean> {
 
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
-    
+
     console.log(`Actions layer: Cache invalidation completed`);
 
     // Return success status with better validation
@@ -672,7 +676,7 @@ export async function abortDeployment(id: string): Promise<{
 
     // Update the deployment in the database
     const result = await deploymentDb.update(id, updateData, cookieStore);
-    
+
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
 
@@ -942,7 +946,7 @@ export async function runDeployment(
         parent_deployment_id: deploymentId,
       },
     });
-    
+
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
 
@@ -963,7 +967,7 @@ export async function clearDeploymentCache(): Promise<{
   try {
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
-    
+
     console.log('Cache invalidation completed through path revalidation');
 
     return {

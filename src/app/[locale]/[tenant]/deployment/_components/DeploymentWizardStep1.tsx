@@ -101,9 +101,7 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
               </option>
             ))}
           </select>
-          {repositoryError && (
-            <p className="text-sm text-red-500 mt-1">Error: {repositoryError}</p>
-          )}
+          {repositoryError && <p className="text-sm text-red-500 mt-1">Error: {repositoryError}</p>}
         </div>
       </div>
 

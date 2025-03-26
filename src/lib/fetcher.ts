@@ -23,14 +23,17 @@ export async function actionFetcher<T>(
 
     if (!response.success) {
       // Check if this is a "no data found" scenario
-      if (response.error?.toLowerCase().includes('not found') || 
-          response.error?.toLowerCase().includes('no results') ||
-          response.error?.toLowerCase().includes('no records') ||
-          (!response.data || (Array.isArray(response.data) && response.data.length === 0))) {
+      if (
+        response.error?.toLowerCase().includes('not found') ||
+        response.error?.toLowerCase().includes('no results') ||
+        response.error?.toLowerCase().includes('no records') ||
+        !response.data ||
+        (Array.isArray(response.data) && response.data.length === 0)
+      ) {
         // This is a valid "no data" scenario, return null without error
         return null;
       }
-      
+
       // This is an actual error, throw it
       throw new Error(response.error || 'Failed to fetch data');
     }

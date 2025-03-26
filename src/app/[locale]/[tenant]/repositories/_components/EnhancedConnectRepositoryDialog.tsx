@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { Github, Globe, GitBranch, ArrowRight, RefreshCw } from 'lucide-react';
-import { 
+import {
   testGitProviderConnection,
   createGitProvider,
   testGitRepository,
-  createRepositoryFromUrl
+  createRepositoryFromUrl,
 } from '@/app/actions/repositories';
 import {
   Dialog,
@@ -61,7 +61,6 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
 
     try {
-
       const params: CreateGitProviderParams = {
         name: `${currentProvider} Provider`,
         provider_type: currentProvider.toLowerCase(),
@@ -72,7 +71,7 @@ export function EnhancedConnectRepositoryDialog({
       if (result.success && result.authUrl) {
         // Store a flag in sessionStorage to refresh on return
         sessionStorage.setItem('shouldRefreshRepos', 'true');
-        
+
         // Redirect to the OAuth login page
         window.location.href = result.authUrl;
       } else {
@@ -125,7 +124,7 @@ export function EnhancedConnectRepositoryDialog({
           description: 'Git provider connected successfully',
           variant: 'default',
         });
-        
+
         // Refresh the page to show the new provider
         router.refresh();
 
@@ -187,7 +186,7 @@ export function EnhancedConnectRepositoryDialog({
           description: 'Repository cloned successfully',
           variant: 'default',
         });
-        
+
         // Refresh the page to show the new repository
         router.refresh();
 

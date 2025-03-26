@@ -104,7 +104,10 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
         <Eye className="mr-1 h-3 w-3" /> View
       </Button>
 
-      <ClientDeploymentRunAction deployment={{id: deploymentId}} onDeploymentStarted={() => router.refresh()} />
+      <ClientDeploymentRunAction
+        deployment={{ id: deploymentId }}
+        onDeploymentStarted={() => router.refresh()}
+      />
 
       <Button
         variant="outline"

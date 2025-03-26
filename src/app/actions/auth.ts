@@ -78,20 +78,20 @@ export async function handleAuthCallback(url: string) {
       // Try to extract locale from the URL path
       const pathParts = url.split('/');
       const localeIndex = pathParts.findIndex((part) => part === 'auth-redirect') - 1;
-      
+
       // If we're at the root URL (which happens on Vercel), use the default locale
       // or try to extract from user preferences if available
       let locale = 'en';
-      
+
       // First check if we can extract it from the URL path
       if (localeIndex >= 0) {
         locale = pathParts[localeIndex];
-      } 
+      }
       // For root URL authentication on Vercel, use tenant locale if available
       else if (userData?.user_metadata?.locale) {
         locale = userData.user_metadata.locale;
       }
-      
+
       console.log('⭐ AUTH CALLBACK - Using locale:', locale);
 
       // Log for debugging

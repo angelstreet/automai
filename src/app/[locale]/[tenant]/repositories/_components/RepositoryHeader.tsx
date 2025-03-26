@@ -21,23 +21,23 @@ import { REPOSITORY_CATEGORIES } from '../constants';
 export function RepositoryHeader() {
   const t = useTranslations('repositories');
   const router = useRouter();
-  
+
   // Local state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('lastUpdated');
   const [filterCategory, setFilterCategory] = useState('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Handle refresh
   const handleRefresh = async () => {
     if (isRefreshing) return;
-    
+
     setIsRefreshing(true);
-    
+
     try {
       // Refresh data by telling Next.js to revalidate the route
       router.refresh();
-      
+
       // Wait a bit to give visual indication
       setTimeout(() => {
         setIsRefreshing(false);
@@ -92,8 +92,8 @@ export function RepositoryHeader() {
               ))}
             </SelectContent>
           </Select>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="icon"
             onClick={() => {
               // Client-side filtering

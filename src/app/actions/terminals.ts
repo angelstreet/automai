@@ -15,7 +15,7 @@ export async function initTerminal(hostId: string) {
     if (!user) {
       return {
         success: false,
-        error: 'Unauthorized'
+        error: 'Unauthorized',
       };
     }
 
@@ -24,7 +24,7 @@ export async function initTerminal(hostId: string) {
     if (!hostResult.success || !hostResult.data) {
       return {
         success: false,
-        error: hostResult.error || 'Host not found'
+        error: hostResult.error || 'Host not found',
       };
     }
 
@@ -43,7 +43,7 @@ export async function initTerminal(hostId: string) {
         port: host.port || 22,
         username: host.user,
         password: host.password,
-      }
+      },
     });
 
     return {
@@ -53,15 +53,15 @@ export async function initTerminal(hostId: string) {
         host: {
           id: host.id,
           name: host.name,
-          ip: host.ip
-        }
-      }
+          ip: host.ip,
+        },
+      },
     };
   } catch (error: any) {
     logger.error('Error initializing terminal:', error);
     return {
       success: false,
-      error: error.message || 'Failed to initialize terminal'
+      error: error.message || 'Failed to initialize terminal',
     };
   }
 }
@@ -76,7 +76,7 @@ export async function closeTerminal(sessionId: string) {
     if (!user) {
       return {
         success: false,
-        error: 'Unauthorized'
+        error: 'Unauthorized',
       };
     }
 
@@ -87,13 +87,13 @@ export async function closeTerminal(sessionId: string) {
     await closeTerminalSession(sessionId);
 
     return {
-      success: true
+      success: true,
     };
   } catch (error: any) {
     logger.error('Error closing terminal:', error);
     return {
       success: false,
-      error: error.message || 'Failed to close terminal'
+      error: error.message || 'Failed to close terminal',
     };
   }
 }
@@ -108,7 +108,7 @@ export async function sendTerminalData(sessionId: string, data: string) {
     if (!user) {
       return {
         success: false,
-        error: 'Unauthorized'
+        error: 'Unauthorized',
       };
     }
 
@@ -119,13 +119,13 @@ export async function sendTerminalData(sessionId: string, data: string) {
     await sendDataToTerminal(sessionId, data);
 
     return {
-      success: true
+      success: true,
     };
   } catch (error: any) {
     logger.error('Error sending terminal data:', error);
     return {
       success: false,
-      error: error.message || 'Failed to send terminal data'
+      error: error.message || 'Failed to send terminal data',
     };
   }
 }

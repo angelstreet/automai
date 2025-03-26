@@ -28,15 +28,17 @@ export function RepositoryActions() {
 
       // Close dialog
       setConnectDialogOpen(false);
-      
+
       // Show success message - using global toast system or event dispatch
       window.dispatchEvent(new CustomEvent('repository-connected'));
     } catch (error: unknown) {
       console.error('Error connecting repository:', error);
       // Show error message
-      window.dispatchEvent(new CustomEvent('repository-connection-error', { 
-        detail: { message: error instanceof Error ? error.message : 'Unknown error' } 
-      }));
+      window.dispatchEvent(
+        new CustomEvent('repository-connection-error', {
+          detail: { message: error instanceof Error ? error.message : 'Unknown error' },
+        }),
+      );
     }
   };
 

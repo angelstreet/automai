@@ -17,7 +17,7 @@ export function WorkspaceHeaderSkeleton() {
         {/* Center section */}
         <div className="flex-1" />
         <Separator orientation="vertical" className="h-8 opacity-50" />
-        
+
         {/* Right section */}
         <div className="flex items-center gap-2 px-4 h-full">
           <div className="flex-none w-36 mr-12">

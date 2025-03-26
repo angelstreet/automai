@@ -14,7 +14,7 @@ export function DeploymentSkeleton() {
           <Skeleton className="h-10 w-10 rounded-md" />
         </div>
       </div>
-      
+
       {/* List skeleton */}
       <div className="rounded-md border">
         <div className="border-b p-4 bg-muted/30">
@@ -23,7 +23,7 @@ export function DeploymentSkeleton() {
             <Skeleton className="h-5 w-20" />
           </div>
         </div>
-        
+
         {skeletonItems.map((index) => (
           <div key={index} className="p-4 border-b last:border-0">
             <div className="flex justify-between items-center">

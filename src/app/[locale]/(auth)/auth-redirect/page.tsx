@@ -59,14 +59,14 @@ export default function AuthRedirectPage() {
   // Handle the authentication process
   useEffect(() => {
     // Different processing paths based on auth method
-    
+
     // Handle email authentication
     if (authMethod === 'email' && !hasRedirected) {
       const processEmailAuth = async () => {
         setLoading(true);
         try {
           console.log('🔐 AUTH REDIRECT: Processing email authentication');
-          
+
           // Get stored credentials from session storage
           const storedAuthData = sessionStorage.getItem('email_auth');
           if (!storedAuthData) {
@@ -75,10 +75,10 @@ export default function AuthRedirectPage() {
             setLoading(false);
             return;
           }
-          
+
           // Parse stored data
           const { email, password, timestamp } = JSON.parse(storedAuthData);
-          
+
           // Check if the data is too old (more than 1 minute)
           const now = Date.now();
           if (now - timestamp > 60000) {
@@ -89,32 +89,32 @@ export default function AuthRedirectPage() {
             setLoading(false);
             return;
           }
-          
+
           // Import the auth functions
           const { signInWithPassword } = await import('@/app/actions/auth');
-          
+
           // Attempt to sign in
           const result = await signInWithPassword(email, password);
-          
+
           // Clear the stored credentials immediately
           sessionStorage.removeItem('email_auth');
-          
+
           if (!result.success) {
             setAuthError(new Error(result.error || 'Authentication failed'));
             setIsProcessing(false);
             setLoading(false);
             return;
           }
-          
+
           // After successful auth, refresh user data
           await refreshUser();
-          
+
           // Add delay to ensure session is stable
           await new Promise((resolve) => setTimeout(resolve, 1200));
-          
+
           // Get tenant info from the result or use default
           const tenantName = result.data?.user?.tenant_name || 'trial';
-          
+
           // Redirect to dashboard
           setHasRedirected(true);
           router.push(`/${locale}/${tenantName}/dashboard`);
@@ -125,11 +125,11 @@ export default function AuthRedirectPage() {
           setLoading(false);
         }
       };
-      
+
       processEmailAuth();
       return;
     }
-    
+
     // Handle OAuth authentication
     // Skip if we've already processed or there's no code
     if (hasRedirected || !code) {

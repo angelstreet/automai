@@ -26,7 +26,7 @@ interface RoleSwitcherProps {
 function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps) {
   const userContext = useUser();
   const [isUpdating, setIsUpdating] = React.useState(false);
-  
+
   // Use prop user if available, otherwise fall back to context
   const user = propUser || userContext?.user;
   const activeRole = user?.role || 'viewer';
@@ -44,14 +44,14 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
   // Handle role changes through UserContext
   const handleRoleChange = async (newRole: Role) => {
     if (isUpdating) return;
-    
+
     try {
       setIsUpdating(true);
       console.log('[RoleSwitcher] Updating role to:', newRole);
-      
+
       // Update role through UserContext
       await userContext.updateRole(newRole);
-      
+
       // Local state will be updated via the useEffect when the user prop changes
     } catch (error) {
       console.error('[RoleSwitcher] Error updating role:', error);

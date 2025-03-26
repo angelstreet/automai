@@ -12,43 +12,43 @@ interface ClientDeploymentRunActionProps {
   onDeploymentStarted?: () => void;
 }
 
-export function ClientDeploymentRunAction({ 
+export function ClientDeploymentRunAction({
   deployment,
-  onDeploymentStarted
+  onDeploymentStarted,
 }: ClientDeploymentRunActionProps) {
   const [isStarting, setIsStarting] = useState(false);
   const { toast } = useToast();
 
   const handleStartDeployment = async () => {
     if (isStarting) return;
-    
+
     setIsStarting(true);
-    
+
     try {
       const result = await startDeployment(deployment.id);
-      
+
       if (result.success) {
         toast({
-          title: "Deployment started",
+          title: 'Deployment started',
           description: `Deployment ${deployment.name} has been started successfully.`,
         });
-        
+
         // Call the callback if provided
         if (onDeploymentStarted) {
           onDeploymentStarted();
         }
       } else {
         toast({
-          title: "Failed to start deployment",
-          description: result.error || "An unknown error occurred",
-          variant: "destructive",
+          title: 'Failed to start deployment',
+          description: result.error || 'An unknown error occurred',
+          variant: 'destructive',
         });
       }
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive",
+        title: 'Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
       });
     } finally {
       setIsStarting(false);
@@ -57,7 +57,7 @@ export function ClientDeploymentRunAction({
 
   // Disable button if deployment is already running
   const isDisabled = deployment.status === 'running' || isStarting;
-  
+
   return (
     <Button
       variant="default"

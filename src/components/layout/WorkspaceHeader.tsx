@@ -11,14 +11,19 @@ interface WorkspaceHeaderProps {
 
 const HEADER_COOKIE_NAME = 'header:state';
 
-export async function WorkspaceHeader({ className = '', fixed = false, tenant, user }: WorkspaceHeaderProps) {
+export async function WorkspaceHeader({
+  className = '',
+  fixed = false,
+  tenant,
+  user,
+}: WorkspaceHeaderProps) {
   // Get the header visibility state from cookies on the server
   const cookieStore = cookies();
   const headerVisibilityCookie = await cookieStore.get(HEADER_COOKIE_NAME);
   const initialHeaderState = headerVisibilityCookie?.value !== 'hidden';
-  
+
   return (
-    <WorkspaceHeaderClient 
+    <WorkspaceHeaderClient
       className={className}
       fixed={fixed}
       tenant={tenant}

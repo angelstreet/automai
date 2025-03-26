@@ -1,7 +1,7 @@
 // Context System (The Migration Is Complete)
 // -------------------------------------------------
 // This file has been simplified after the migration to React Server Components.
-// Most data fetching is now done directly in Server Components with the 
+// Most data fetching is now done directly in Server Components with the
 // appropriate Server Actions.
 //
 // The following modules have been migrated to Server Components:
