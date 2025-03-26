@@ -1,0 +1,54 @@
+---
+title: React Server Components Architecture
+description: Rules for maintaining the React Server Components architecture in our migrated application
+severity: error
+recommended: true
+---
+
+# React Server Components Architecture Guidelines
+
+This file defines rules for maintaining the React Server Components (RSC) architecture that we've migrated to.
+
+## Directory Structure
+
+- Server components should be placed directly in the feature directory
+- Client components should be placed in a `/client` subdirectory
+- Server actions should be defined in `/src/app/actions/` and not in feature-specific actions.ts files
+
+## Import Patterns
+
+- ❌ `from '@/app/[locale]/[tenant]/[feature]/actions'`
+- ✅ `from '@/app/actions/[feature]'`
+
+- ❌ `from '@/context/[Feature]Context'`
+- ✅ `from '@/context'` (for remaining global contexts only)
+
+## Component Organization
+
+- RSC components should fetch data directly using server actions
+- Use `'use client'` directive only when necessary for interactivity
+- Data fetching should happen at the top level of the component tree, not deep in the component hierarchy
+- Use Suspense for streaming and progressive rendering
+- Place loading states (skeletons) in the parent component with Suspense
+
+## Server Actions
+
+- Use centralized server actions in `/src/app/actions/` directory
+- Always include proper cache invalidation with `revalidatePath`
+- Return consistent result types with `success`, `data`, and `error` properties
+- Keep server-only code isolated with proper error handling
+
+## Data Flow
+
+- Data flows down through props from server to client components
+- Mutations flow up through server actions from client to server
+- Avoid prop drilling by splitting components at logical boundaries
+- Use SWR for client-side data caching when appropriate
+
+## Context Usage
+
+- Only use context for truly app-wide state:
+  - User authentication (`UserContext`)
+  - Theme preferences (`ThemeContext`)
+  - UI state like sidebar (`SidebarContext`)
+- All data fetching should use server actions, not context
