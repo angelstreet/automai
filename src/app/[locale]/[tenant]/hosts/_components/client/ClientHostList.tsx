@@ -64,8 +64,8 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     try {
       setIsRefreshing(true);
       
-      // Optimistic UI update
-      const optimisticHost = { ...host, status: 'testing' };
+      // Optimistic UI update with proper typing
+      const optimisticHost = { ...host, status: 'testing' as const };
       addOptimisticHost({ action: 'update', host: optimisticHost });
       
       const result = await testHostConnection(host.id);
@@ -74,7 +74,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
         // Update state with new status
         setHosts(prev => 
           prev.map(h => 
-            h.id === host.id ? { ...h, status: 'connected' } : h
+            h.id === host.id ? { ...h, status: 'connected' as const } : h
           )
         );
         
@@ -86,7 +86,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
         // Update state with failed status
         setHosts(prev => 
           prev.map(h => 
-            h.id === host.id ? { ...h, status: 'failed' } : h
+            h.id === host.id ? { ...h, status: 'failed' as const } : h
           )
         );
         
@@ -111,39 +111,29 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     }
   }, [addOptimisticHost, toast]);
 
-  // Handle refresh all hosts
+  // Handle refresh all hosts - pass user data from context
   const handleRefreshAll = useCallback(async () => {
     if (isRefreshing) return;
-    
+
+    console.log('[HostContainer] Refreshing all hosts');
+    setIsRefreshing(true);
+
     try {
-      setIsRefreshing(true);
-      
-      // Update all hosts to testing state for UI feedback
-      const updatedHosts = hosts.map(host => ({ ...host, status: 'testing' }));
-      setHosts(updatedHosts);
-      
-      // Test each host sequentially
+      // Simple approach: just loop through all hosts and call the individual refresh
       for (const host of hosts) {
         await handleTestConnection(host);
-        // Small delay between hosts for visual feedback
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Small delay between hosts to improve visual feedback
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
-      
-      toast({
-        title: "Refresh complete",
-        description: `Tested all ${hosts.length} hosts`,
-      });
+
+      console.log('[HostContainer] All hosts tested successfully');
     } catch (error) {
-      console.error('Error refreshing hosts:', error);
-      toast({
-        title: "Refresh failed",
-        description: String(error) || "Failed to refresh hosts",
-        variant: "destructive",
-      });
+      console.error('[HostContainer] Error refreshing hosts:', error);
     } finally {
       setIsRefreshing(false);
+      console.log('[HostContainer] Host refresh complete');
     }
-  }, [isRefreshing, hosts, handleTestConnection, toast]);
+  }, [isRefreshing, handleTestConnection, hosts]);
 
   // Handle adding a new host
   const handleSaveHost = useCallback(async () => {
