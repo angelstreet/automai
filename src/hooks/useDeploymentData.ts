@@ -182,15 +182,23 @@ export async function refreshDeploymentData(options?: {
   userId?: string;
 }) {
   try {
-    await clearDeploymentCache(options);
+    // Try to clear cache, but continue even if it fails
+    await clearDeploymentCache(options).catch(err => {
+      console.error('Error clearing deployment cache:', err);
+    });
 
     // Revalidate specific data or all deployment data
     if (options?.deploymentId) {
-      await mutate(`deployment-${options.deploymentId}`);
+      await mutate(`deployment-${options.deploymentId}`).catch(err => {
+        console.error(`Error mutating deployment ${options.deploymentId}:`, err);
+      });
     }
 
-    // Always revalidate the main deployments list
-    await mutate('deployments');
+    // Always revalidate the main deployments list, but catch errors
+    await mutate('deployments').catch(err => {
+      console.error('Error mutating deployments list:', err);
+    });
+    
     return true;
   } catch (error) {
     console.error('Error refreshing deployment data:', error);

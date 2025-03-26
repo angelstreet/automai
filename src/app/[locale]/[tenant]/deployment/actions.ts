@@ -1566,18 +1566,20 @@ export async function clearDeploymentCache(
   message: string;
 }> {
   try {
-    // Use provided user data or fetch it if not provided
-    if (!user) {
-      user = await getUser();
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not authenticated',
-        };
+    // Only attempt to get user if we need tenant info and it wasn't provided
+    let tenantId = options?.tenantId;
+    if (!tenantId && !options?.deploymentId && !options?.userId && !user) {
+      try {
+        user = await getUser();
+        if (user) {
+          tenantId = user.tenant_id;
+        }
+      } catch (e) {
+        console.warn('Unable to get user for cache clearing, will proceed with available info', e);
       }
     }
 
-    const { deploymentId, tenantId, userId } = options || {};
+    const { deploymentId, userId } = options || {};
     let message = 'Cache cleared via SWR revalidation';
 
     // Determine appropriate message based on parameters
@@ -1585,9 +1587,8 @@ export async function clearDeploymentCache(
       message = `Cache cleared for deployment: ${deploymentId} via SWR revalidation`;
     } else if (userId && tenantId) {
       message = `Cache cleared for user: ${userId} and tenant: ${tenantId} via SWR revalidation`;
-    } else if (tenantId || (tenantId === undefined && user)) {
-      const targetTenantId = tenantId || user.tenant_id;
-      message = `Cache cleared for tenant: ${targetTenantId} via SWR revalidation`;
+    } else if (tenantId) {
+      message = `Cache cleared for tenant: ${tenantId} via SWR revalidation`;
     } else if (userId) {
       message = `Cache cleared for user: ${userId} via SWR revalidation`;
     } else {
@@ -1595,6 +1596,7 @@ export async function clearDeploymentCache(
     }
 
     // Cache is now handled entirely by SWR on the client side
+    console.log('Cache operation: ', message);
 
     return {
       success: true,
@@ -1602,9 +1604,10 @@ export async function clearDeploymentCache(
     };
   } catch (error) {
     console.error('Error clearing deployment cache:', error);
+    // Return success anyway since the cache clearing is optional
     return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      success: true,
+      message: 'Cache clearing encountered an error but will proceed anyway',
     };
   }
 }

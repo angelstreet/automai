@@ -88,11 +88,30 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
   // Methods
   const fetchDeployments = useCallback(
     async (forceFresh: boolean = false) => {
-      if (forceFresh) {
-        await refreshDeploymentData();
+      try {
+        if (forceFresh) {
+          // Use await and catch errors
+          const refreshResult = await refreshDeploymentData().catch(err => {
+            console.error('Error refreshing deployment data:', err);
+            return false;
+          });
+          
+          if (!refreshResult) {
+            console.warn('Failed to refresh deployment data, but will try to continue');
+          }
+        }
+        
+        // Use await and catch errors from the mutation
+        await mutateDeployments().catch(err => {
+          console.error('Error mutating deployments:', err);
+        });
+        
+        setIsInitialized(true);
+      } catch (err) {
+        console.error('Error in fetchDeployments:', err);
+        // Still mark as initialized to prevent infinite loading
+        setIsInitialized(true);
       }
-      await mutateDeployments();
-      setIsInitialized(true);
     },
     [mutateDeployments],
   );
