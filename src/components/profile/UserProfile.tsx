@@ -53,11 +53,14 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
 
   const handleSignOut = async () => {
     try {
-      // Clear all caches first - with proper null check
-      if (clearCache && typeof clearCache === 'function') {
-        await clearCache();
-      } else {
-        console.warn('UserProfile: clearCache function not available');
+      // Try to clear cache, but don't block the logout process if it fails
+      try {
+        if (clearCache && typeof clearCache === 'function') {
+          await clearCache();
+        }
+      } catch (cacheError) {
+        console.warn('Error clearing cache during logout:', cacheError);
+        // Continue with logout even if cache clearing fails
       }
 
       // Then sign out
@@ -65,12 +68,31 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
       formData.append('locale', locale);
       const result = await signOut(formData);
 
+      // Try to clear localStorage manually as a backup
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('cached_user');
+          localStorage.removeItem('cached_user_time');
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+
       // Let the server action handle the redirect
       if (result.success && result.redirectUrl) {
         router.push(result.redirectUrl);
+      } else {
+        // Fallback redirect if server action doesn't provide a URL
+        router.push(`/${locale}/login`);
       }
     } catch (error) {
       console.error('Error signing out:', error);
+      // Attempt to redirect to login even if there's an error
+      try {
+        router.push(`/${locale}/login`);
+      } catch (e) {
+        console.error('Failed to redirect after logout error:', e);
+      }
     }
   };
 

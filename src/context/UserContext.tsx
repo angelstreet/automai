@@ -209,11 +209,11 @@ export function UserProvider({
               if (typeof window !== 'undefined') {
                 localStorage.setItem(STORAGE_KEYS.CACHED_USER, JSON.stringify(user));
                 localStorage.setItem(STORAGE_KEYS.CACHED_USER_TIME, Date.now().toString());
-              }
-
-              // Cache in persistedData for cross-navigation
-              if (persistedData) {
-                persistedData.user = user;
+                
+                // Cache in global context reference if it exists
+                if ((window as any).__userContext) {
+                  (window as any).__userContext.user = user;
+                }
               }
 
               return user;
@@ -261,11 +261,11 @@ export function UserProvider({
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.CACHED_USER);
       localStorage.removeItem(STORAGE_KEYS.CACHED_USER_TIME);
-    }
-
-    // Clear persisted data
-    if (persistedData) {
-      persistedData.user = null;
+      
+      // Clear global cache reference if exists
+      if ((window as any).__userContext) {
+        (window as any).__userContext.user = null;
+      }
     }
 
     // Clear SWR cache and force revalidation

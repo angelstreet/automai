@@ -43,7 +43,7 @@ import {
 import { Host } from '../types';
 
 interface HostCardProps {
-  host: Host;
+  host: Host & { animationDelay?: number };
   onDelete?: (id: string) => void;
   onTestConnection?: (host: Host) => Promise<boolean>;
 }
@@ -79,6 +79,7 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
+    const delayClass = host.animationDelay !== undefined ? `delay-${Math.min(host.animationDelay, 5)}` : '';
 
     if (!status) {
       return (
@@ -128,7 +129,7 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
             <Tooltip>
               <TooltipTrigger>
                 <div
-                  className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60`}
+                  className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`}
                 />
               </TooltipTrigger>
               <TooltipContent>

@@ -22,23 +22,29 @@ import {
 import { Host } from '../types';
 
 interface HostTableProps {
-  hosts: Host[];
+  hosts: (Host & { animationDelay?: number })[];
+  selectedHosts: Set<string>;
+  selectMode: boolean;
+  onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
-  onTestConnection?: (host: Host) => void;
+  onTestConnection?: (host: Host) => Promise<boolean>;
 }
 
-export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps) {
+export function HostTable({ hosts, selectedHosts, selectMode, onSelect, onDelete, onTestConnection }: HostTableProps) {
   const router = useRouter();
   const t = useTranslations('Common');
 
-  const getStatusDot = (status: string) => {
+  const getStatusDot = (status: string, animationDelay?: number) => {
     const baseClasses = 'h-3 w-3 rounded-full';
+    const delayClass = animationDelay !== undefined ? `delay-${Math.min(animationDelay, 5)}` : '';
 
     switch (status) {
       case 'connected':
         return <div className={`${baseClasses} bg-green-500`} title={t('connected')} />;
       case 'failed':
         return <div className={`${baseClasses} bg-red-500`} title={t('failed')} />;
+      case 'testing':
+        return <div className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`} title={t('testing')} />;
       case 'pending':
         return <div className={`${baseClasses} bg-yellow-500`} title={t('pending')} />;
       default:
@@ -72,9 +78,13 @@ export function HostTable({ hosts, onDelete, onTestConnection }: HostTableProps)
         </TableHeader>
         <TableBody key="host-table-body">
           {hosts.map((host) => (
-            <TableRow key={host.id} className="h-10">
+            <TableRow 
+              key={host.id} 
+              className="h-10"
+              onClick={() => selectMode && onSelect(host.id)}
+            >
               <TableCell className="py-2">
-                <div className="flex justify-center">{getStatusDot(host.status)}</div>
+                <div className="flex justify-center">{getStatusDot(host.status, host.animationDelay)}</div>
               </TableCell>
               <TableCell className="font-medium py-2">{host.name}</TableCell>
               <TableCell className="py-2">
