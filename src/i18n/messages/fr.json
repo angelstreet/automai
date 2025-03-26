@@ -41,6 +41,9 @@
     "haveAccount": "Vous avez déjà un compte ?",
     "signupLink": "S'inscrire",
     "loginLink": "Se connecter",
+    "signupSuccess": "Compte créé avec succès ! Veuillez vérifier votre email pour activer votre compte.",
+    "backToLogin": "Retour à la connexion",
+    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
     "error": {
       "invalidCredentials": "Email ou mot de passe invalide",
       "emailRequired": "L'email est requis",
