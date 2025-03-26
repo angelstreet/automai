@@ -2,7 +2,6 @@
 
 import { useUser } from '@/context';
 
-import { SettingsHeader } from '@/components/settings/SettingsHeader';
 import {
   Card,
   CardContent,
