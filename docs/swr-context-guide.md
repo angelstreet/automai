@@ -494,7 +494,86 @@ import { useRepository } from '@/context/RepositoryContext';
 import { useHost } from '@/context/HostContext';
 ```
 
-### 2. Memoize Complex Calculations
+### 2. Use Direct SWR When Possible
+
+For simple data fetching, prefer direct SWR usage with consistent key prefixes to help with debugging and avoid provider collisions:
+
+```typescript
+// CORRECT: Direct SWR with domain prefix
+import useSWR from 'swr';
+
+function UserProfileCard() {
+  // Use domain prefix for all user-related data
+  const { data: user } = useSWR('user:profile', fetchUserProfile);
+  
+  // Different domain for different data
+  const { data: settings } = useSWR('settings:display', fetchDisplaySettings);
+  
+  return <div>{user?.name}</div>;
+}
+```
+
+Using consistent key prefixes offers several advantages:
+- Clear separation between different data domains
+- Better debugging (errors show which domain is affected)
+- Ability to target revalidation for specific domains
+- Prevents unintended configuration collisions
+
+#### Recommended Domain Prefixes
+
+Use these prefixes for all SWR keys:
+
+| Domain | Prefix | Example |
+|--------|--------|---------|
+| User data | `user:` | `user:profile`, `user:preferences` |
+| Repository | `repo:` | `repo:list`, `repo:${id}` |
+| Deployment | `deployment:` | `deployment:list`, `deployment:${id}` |
+| Host | `host:` | `host:list`, `host:${id}` |
+| CI/CD | `cicd:` | `cicd:providers`, `cicd:pipelines` |
+| Settings | `settings:` | `settings:theme`, `settings:notifications` |
+
+### 3. Avoid Provider Collisions
+
+When using multiple SWR configurations, be aware of unintended collisions:
+
+```typescript
+// PROBLEMATIC: Custom error handling affects all SWR requests
+function CustomProvider({ children }) {
+  return (
+    <SWRConfig value={{
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // This will affect ALL SWR requests in the entire app!
+        // ...custom retry logic
+      }
+    }}>
+      {children}
+    </SWRConfig>
+  );
+}
+
+// BETTER: Scope to specific keys or use a separate cache
+function UserDataProvider({ children }) {
+  // Create a separate cache for user data
+  const [userSWRCache] = useState(() => new Map());
+  
+  return (
+    <SWRConfig 
+      value={{
+        provider: () => userSWRCache,
+        onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+          // Only apply to user-related data
+          if (!key.startsWith('user:')) return;
+          // Custom retry logic for user data
+        }
+      }}
+    >
+      {children}
+    </SWRConfig>
+  );
+}
+```
+
+### 4. Memoize Complex Calculations
 
 ```typescript
 const filteredData = useMemo(() => {
@@ -502,7 +581,7 @@ const filteredData = useMemo(() => {
 }, [data, filter]);
 ```
 
-### 3. Proper Dependency Arrays
+### 5. Proper Dependency Arrays
 
 ```typescript
 // Make sure to include all dependencies in useCallback
@@ -511,7 +590,7 @@ const handleSubmit = useCallback(() => {
 }, [formData, user.id]); // Include all variables used inside
 ```
 
-### 4. Avoid Nested Context Providers
+### 6. Avoid Nested Context Providers
 
 ```tsx
 // CORRECT: Use the FullContextProvider from AppContext
@@ -545,7 +624,7 @@ function AppWithContexts({ children }) {
 }
 ```
 
-### 5. Use Selectors for Performance
+### 7. Use Selectors for Performance
 
 Use selectors to prevent unnecessary renders:
 
@@ -554,7 +633,7 @@ Use selectors to prevent unnecessary renders:
 const repositories = useRepository(state => state.repositories);
 ```
 
-### 6. Error Boundaries for SWR Errors
+### 8. Error Boundaries for SWR Errors
 
 ```tsx
 import { ErrorBoundary } from 'react-error-boundary';

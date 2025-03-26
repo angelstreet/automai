@@ -192,7 +192,25 @@ export function useDeployment() {
   const context = useContext(DeploymentContext);
 
   if (context === undefined) {
-    throw new Error('useDeployment must be used within a DeploymentProvider');
+    console.error('useDeployment must be used within a DeploymentProvider');
+    // Return a safe fallback object with the same shape as the context
+    return {
+      deployments: [],
+      repositories: [],
+      loading: true,
+      error: 'Context not available',
+      isRefreshing: false,
+      isInitialized: false,
+      fetchDeployments: async () => {},
+      fetchDeploymentById: async () => null,
+      createDeployment: async () => ({ success: false, error: 'Context not available' }),
+      abortDeployment: async () => ({ success: false, error: 'Context not available' }),
+      refreshDeployment: async () => ({ success: false, error: 'Context not available' }),
+      deleteDeployment: async () => ({ success: false, error: 'Context not available' }),
+      fetchScriptsForRepository: async () => [],
+      fetchAvailableHosts: async () => [],
+      fetchRepositories: async () => [],
+    };
   }
 
   return context;

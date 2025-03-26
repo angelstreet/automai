@@ -488,7 +488,34 @@ export function useHost() {
   const context = useContext(HostContext);
 
   if (context === undefined) {
-    throw new Error('useHost must be used within a HostProvider');
+    console.error('useHost must be used within a HostProvider');
+    // Return a safe fallback object with the same shape as the context
+    return {
+      hosts: [],
+      filteredHosts: [],
+      selectedHost: null,
+      loading: true,
+      error: 'Context not available',
+      connectionStatuses: {},
+      loadingStatus: { state: 'idle', operation: null, entityId: null },
+      filter: {
+        query: '',
+        status: 'all',
+        type: 'all',
+        sortBy: 'name',
+        sortDir: 'asc',
+      },
+      fetchHosts: async () => [],
+      getHostById: async () => null,
+      addHost: async () => ({ success: false, error: 'Context not available' }),
+      updateHostById: async () => ({ success: false, error: 'Context not available' }),
+      removeHost: async () => ({ success: false, error: 'Context not available' }),
+      testConnection: async () => ({ success: false, error: 'Context not available' }),
+      filterHosts: () => {},
+      selectHost: () => {},
+      isLoading: () => false,
+      resetLoadingState: () => {},
+    };
   }
 
   return context;

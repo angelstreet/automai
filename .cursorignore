@@ -7,5 +7,4 @@
 .env.production.local
 node_modules
 .idx
-.cursor/rules
 electron/

@@ -1,0 +1,91 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+ # SWR and Context Architecture
+
+## Core Architecture
+
+Our application uses a three-layer architecture for data management:
+
+1. **Global SWR Provider**: Root-level configuration at `src/components/providers/SWRProvider.tsx`
+2. **Domain Contexts**: Context providers that use SWR hooks internally (Repository, Deployment, Host, CICD)
+3. **Direct SWR Usage**: Components can use SWR directly with domain-specific key prefixes
+
+## Key Prefixes
+
+All SWR keys should use domain prefixes for proper isolation:
+
+- `user:` - User data (`user:profile`, `user:preferences`)
+- `repo:` - Repository data (`repo:list`, `repo:${id}`)
+- `deployment:` - Deployment data (`deployment:list`, `deployment:${id}`)
+- `host:` - Host data (`host:list`, `host:${id}`)
+- `cicd:` - CI/CD data (`cicd:providers`, `cicd:pipelines`)
+- `settings:` - Settings data (`settings:theme`)
+
+## Usage Guidelines
+
+### Preferred Direct SWR
+
+For most components, use SWR directly with proper key prefixes:
+
+```jsx
+// PREFERRED: Direct SWR with domain prefix
+function HostDetails({ id }) {
+  const { data, error } = useSWR(`host:${id}`, () => fetchHost(id));
+  // ...
+}
+```
+
+### Context Hooks for Complex Logic
+
+Use context hooks when you need shared business logic:
+
+```jsx
+// Use context hooks when you need domain logic
+function DeploymentList() {
+  const { deployments, createDeployment, abortDeployment } = useDeployment();
+  // ...
+}
+```
+
+### Avoid Provider Configuration Collisions
+
+Never add custom SWR configurations that could affect unrelated parts:
+
+```jsx
+// AVOID: Custom configuration that affects all SWR requests
+<SWRConfig value={{
+  onErrorRetry: (error, key) => {
+    // This affects ALL SWR requests!
+  }
+}}>
+```
+
+Instead, scope configurations to specific keys:
+
+```jsx
+// BETTER: Scope configuration by checking key prefixes
+<SWRConfig value={{
+  onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+    // Only apply to specific domain
+    if (!key.startsWith('user:')) return;
+    // Custom logic only for user domain
+  }
+}}>
+```
+
+## Error Handling
+
+We use a strict approach for context errors. All hooks will throw an error if used outside their provider:
+
+```js
+export function useRepository() {
+  const context = useContext(RepositoryContext);
+  if (context === undefined) {
+    throw new Error('useRepository must be used within a RepositoryProvider');
+  }
+  return context;
+}
+```

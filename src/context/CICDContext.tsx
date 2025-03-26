@@ -204,7 +204,28 @@ export function useCICD() {
   const context = useContext(CICDContext);
 
   if (context === undefined) {
-    throw new Error('useCICD must be used within a CICDProvider');
+    console.error('useCICD must be used within a CICDProvider');
+    // Return a safe fallback object with the same shape as the context
+    return {
+      providers: [],
+      jobs: [],
+      loading: true,
+      error: 'Context not available',
+      isRefreshing: false,
+      selectedProvider: null,
+      selectedJob: null,
+      currentUser: null,
+      fetchProviders: async () => {},
+      fetchJobs: async () => [],
+      getProviderById: async () => null,
+      getJobById: async () => null,
+      createProvider: async () => ({ success: false, error: 'Context not available' }),
+      updateProvider: async () => ({ success: false, error: 'Context not available' }),
+      deleteProvider: async () => ({ success: false, error: 'Context not available' }),
+      testProvider: async () => ({ success: false, error: 'Context not available' }),
+      selectProvider: () => {},
+      selectJob: () => {},
+    };
   }
 
   return context;

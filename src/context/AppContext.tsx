@@ -117,49 +117,44 @@ export interface ContextRequirements {
 // Create specialized providers for different page requirements
 export function createContextProvider(requirements: ContextRequirements) {
   return function CustomContextProvider({ children }: { children: ReactNode }) {
-    const { user } = useAppContext();
-    const isAuthenticated = !!user?.user;
-
-    // Only render required contexts when authenticated
+    // Remove authentication check - always render providers
     let content = <>{children}</>;
 
-    if (isAuthenticated) {
-      // Wrap the content with only the required providers
-      if (requirements.cicd) {
-        const CICDProvider = lazyImports.CICDProvider;
-        content = (
-          <React.Suspense fallback={<div>Loading CICD...</div>}>
-            <CICDProvider>{content}</CICDProvider>
-          </React.Suspense>
-        );
-      }
+    // Wrap the content with only the required providers
+    if (requirements.cicd) {
+      const CICDProvider = lazyImports.CICDProvider;
+      content = (
+        <React.Suspense fallback={<div>Loading CICD...</div>}>
+          <CICDProvider>{content}</CICDProvider>
+        </React.Suspense>
+      );
+    }
 
-      if (requirements.deployment) {
-        const DeploymentProvider = lazyImports.DeploymentProvider;
-        content = (
-          <React.Suspense fallback={<div>Loading Deployment...</div>}>
-            <DeploymentProvider>{content}</DeploymentProvider>
-          </React.Suspense>
-        );
-      }
+    if (requirements.deployment) {
+      const DeploymentProvider = lazyImports.DeploymentProvider;
+      content = (
+        <React.Suspense fallback={<div>Loading Deployment...</div>}>
+          <DeploymentProvider>{content}</DeploymentProvider>
+        </React.Suspense>
+      );
+    }
 
-      if (requirements.repository) {
-        const RepositoryProvider = lazyImports.RepositoryProvider;
-        content = (
-          <React.Suspense fallback={<div>Loading Repository...</div>}>
-            <RepositoryProvider>{content}</RepositoryProvider>
-          </React.Suspense>
-        );
-      }
+    if (requirements.repository) {
+      const RepositoryProvider = lazyImports.RepositoryProvider;
+      content = (
+        <React.Suspense fallback={<div>Loading Repository...</div>}>
+          <RepositoryProvider>{content}</RepositoryProvider>
+        </React.Suspense>
+      );
+    }
 
-      if (requirements.host) {
-        const HostProvider = lazyImports.HostProvider;
-        content = (
-          <React.Suspense fallback={<div>Loading Host...</div>}>
-            <HostProvider userData={null}>{content}</HostProvider>
-          </React.Suspense>
-        );
-      }
+    if (requirements.host) {
+      const HostProvider = lazyImports.HostProvider;
+      content = (
+        <React.Suspense fallback={<div>Loading Host...</div>}>
+          <HostProvider>{content}</HostProvider>
+        </React.Suspense>
+      );
     }
 
     return content;
