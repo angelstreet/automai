@@ -43,7 +43,7 @@
     "haveAccount": "Already have an account?",
     "signupLink": "Sign up",
     "loginLink": "Sign in",
-    "signupSuccess": "Welcome to Automai! 🎉 Your account has been created successfully. You will be redirected to login in a few seconds...",
+    "signupSuccess": "Check your email! Please click the confirmation link we sent to your inbox to activate your account.",
     "backToLogin": "Back to Login",
     "passwordsDoNotMatch": "Passwords do not match",
     "redirecting": "Redirecting in",

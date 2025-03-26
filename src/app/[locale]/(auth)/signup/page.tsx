@@ -41,21 +41,16 @@ export default function SignUpPage() {
     }
   }, [authError]);
 
+  // Remove automatic redirect - user needs to verify email first
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
     if (success && redirectCountdown > 0) {
       timer = setTimeout(() => {
         setRedirectCountdown(prev => prev - 1);
       }, 1000);
-    } else if (success && redirectCountdown === 0) {
-      // Redirect to login with prefilled credentials
-      const searchParams = new URLSearchParams();
-      searchParams.set('email', email);
-      searchParams.set('password', password);
-      router.push(`/${locale}/login?${searchParams.toString()}`);
     }
     return () => clearTimeout(timer);
-  }, [success, redirectCountdown, email, password, router, locale]);
+  }, [success, redirectCountdown]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,9 +138,14 @@ export default function SignUpPage() {
             <p className="text-green-700 dark:text-green-300">
               {t('signupSuccess') || 'Account created successfully!'}
             </p>
-            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-              {t('redirecting')} {redirectCountdown}...
-            </p>
+            <div className="mt-3">
+              <Link
+                href={`/${locale}/login`}
+                className="inline-flex items-center justify-center text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                {t('backToLogin')}
+              </Link>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-4 space-y-3">

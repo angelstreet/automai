@@ -42,7 +42,7 @@
     "haveAccount": "Vous avez déjà un compte ?",
     "signupLink": "S'inscrire",
     "loginLink": "Se connecter",
-    "signupSuccess": "Bienvenue sur Automai ! 🎉 Votre compte a été créé avec succès. Vous serez redirigé vers la connexion dans quelques secondes...",
+    "signupSuccess": "Vérifiez votre email ! Cliquez sur le lien de confirmation que nous avons envoyé à votre boîte de réception pour activer votre compte.",
     "backToLogin": "Retour à la connexion",
     "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
     "redirecting": "Redirection dans",
