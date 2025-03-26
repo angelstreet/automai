@@ -240,6 +240,7 @@ export const supabaseAuth = {
             name: options.data.name,
             tenant_name: 'trial', // Default tenant for new users
             role: 'viewer', // Default role for new users
+            provider_type: 'email', // Setting provider_type to email for email signups
           },
         },
       });
