@@ -263,6 +263,95 @@ export async function testCICDProvider(provider: CICDProviderPayload): Promise<A
 }
 
 /**
+ * Test the Jenkins API directly using the provider credentials from the database
+ */
+export async function testJenkinsAPI(): Promise<{ success: boolean; error?: string; data?: any }> {
+  try {
+    // Get authenticated user
+    const user = await getUser();
+    if (!user) {
+      return { success: false, error: 'Unauthorized access' };
+    }
+
+    logger.info('Actions layer: Testing Jenkins API with authenticated user', user.id);
+
+    // Import the CI/CD database module
+    const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
+
+    // Get all Jenkins providers for the tenant
+    const providers = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
+
+    if (!providers.success || !providers.data || providers.data.length === 0) {
+      return { success: false, error: 'No Jenkins provider found' };
+    }
+
+    // Find the Jenkins provider (first one available)
+    const jenkinsProvider = providers.data.find((p) => p.type === 'jenkins');
+
+    if (!jenkinsProvider) {
+      return { success: false, error: 'No Jenkins provider found' };
+    }
+
+    logger.info('Actions layer: Found Jenkins provider:', {
+      id: jenkinsProvider.id,
+      name: jenkinsProvider.name,
+      url: jenkinsProvider.url,
+      auth_type: jenkinsProvider.config.auth_type,
+      credentials_available: {
+        username: !!jenkinsProvider.config.credentials.username,
+        token: !!jenkinsProvider.config.credentials.token,
+      },
+    });
+
+    // Import the CICD provider
+    const { getCICDProvider } = await import('@/lib/services/cicd');
+
+    // Get the provider instance
+    const providerResult = await getCICDProvider(jenkinsProvider.id, user.tenant_id);
+
+    if (!providerResult.success || !providerResult.data) {
+      return {
+        success: false,
+        error: providerResult.error || 'Failed to initialize Jenkins provider',
+      };
+    }
+
+    const provider = providerResult.data;
+
+    // Test the connection
+    const testResult = await provider.testConnection();
+
+    logger.info('Actions layer: Jenkins connection test result:', testResult);
+
+    if (!testResult.success) {
+      return { success: false, error: `Connection test failed: ${testResult.error}` };
+    }
+
+    // Try to get a crumb
+    const crumbResult = await provider['getCrumb']();
+
+    logger.info('Actions layer: Jenkins crumb result:', crumbResult);
+
+    return {
+      success: true,
+      data: {
+        connectionTest: testResult,
+        crumbTest: crumbResult,
+        provider: {
+          id: jenkinsProvider.id,
+          name: jenkinsProvider.name,
+          url: jenkinsProvider.url,
+          type: jenkinsProvider.type,
+        },
+      },
+    };
+  } catch (error: any) {
+    logger.error('Actions layer: Error testing Jenkins API:', error);
+    return { success: false, error: error.message || 'Error testing Jenkins API' };
+  }
+}
+
+/**
  * Clear CICD-related cache entries
  */
 export async function clearCICDCache(

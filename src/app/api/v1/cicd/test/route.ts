@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { testJenkinsAPI } from '@/app/actions/deployments';
+import { testJenkinsAPI } from '@/app/actions/cicd';
 
 /**
  * API route to test the Jenkins API connection

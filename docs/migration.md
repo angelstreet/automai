@@ -348,7 +348,7 @@ We have migrated all feature-specific context-based data fetch logic to centrali
    - `/src/app/actions/repositories.ts` - Replaces RepositoryContext
    - `/src/app/actions/deployments.ts` - Replaces DeploymentContext
    - `/src/app/actions/hosts.ts` - Replaces HostContext
-   - `/src/app/actions/cicd.ts` - Replaces CICDContext
+   - `/src/app/actions/cicd.ts` - Replaces CICDContext and includes testJenkinsAPI function
    - `/src/app/actions/terminals.ts` - New for terminal operations
    - `/src/app/actions/deploymentWizard.ts` - New for deployment wizard operations
    - `/src/app/actions/dashboard.ts` - New for dashboard operations
