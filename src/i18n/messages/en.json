@@ -11,6 +11,8 @@
     "signOut": "Sign Out",
     "email": "Email",
     "password": "Password",
+    "name": "Name",
+    "confirmPassword": "Confirm Password",
     "forgotPassword": "Forgot Password?",
     "rememberMe": "Remember Me",
     "dontHaveAccount": "Don't have an account?",

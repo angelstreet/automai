@@ -130,25 +130,25 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+      <div className="w-full max-w-md p-6 space-y-4 bg-white dark:bg-gray-800 rounded-lg shadow-md">
         <div className="text-center">
           <h1 className="text-2xl font-bold">{t('signupTitle') || 'Create account'}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
             {t('signupDescription') || 'Enter your details to create your account'}
           </p>
         </div>
 
         {success ? (
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md text-center">
+          <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md text-center">
             <p className="text-green-700 dark:text-green-300">
               {t('signupSuccess') || 'Account created successfully!'}
             </p>
-            <p className="text-sm text-green-600 dark:text-green-400 mt-2">
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
               {t('redirecting')} {redirectCountdown}...
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+          <form onSubmit={handleSubmit} className="mt-4 space-y-3">
             <div>
               <label htmlFor="name" className="block text-sm font-medium">
                 {t('name') || 'Name'}
@@ -218,7 +218,7 @@ export default function SignUpPage() {
             </div>
 
             {error && (
-              <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded-md text-red-800 dark:text-red-100 text-sm">
+              <div className="bg-red-100 dark:bg-red-900/20 p-2 rounded-md text-red-800 dark:text-red-100 text-sm">
                 {error}
               </div>
             )}
@@ -227,7 +227,7 @@ export default function SignUpPage() {
               {isSubmitting ? t('signingUp') || 'Creating account...' : t('signupButton') || 'Create account'}
             </Button>
 
-            <div className="relative">
+            <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
               </div>
