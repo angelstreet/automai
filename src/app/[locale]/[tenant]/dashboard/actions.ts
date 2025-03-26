@@ -1,15 +1,8 @@
 'use server';
 
 import { ActivityItem, Task, Stats, ChatMessage } from './types';
-import { serverCache } from '@/lib/cache';
 import { getUser } from '@/app/actions/user';
 import { AuthUser } from '@/types/user';
-
-// Define appropriate cache TTLs (in milliseconds)
-const DASHBOARD_STATS_TTL = 5 * 60 * 1000; // 5 minutes
-const RECENT_ACTIVITY_TTL = 3 * 60 * 1000; // 3 minutes
-const TASKS_TTL = 10 * 60 * 1000; // 10 minutes
-const TEAM_CHAT_TTL = 1 * 60 * 1000; // 1 minute (more frequently updated)
 
 // Define action result type for consistent return values
 type ActionResult<T> = {
@@ -36,32 +29,18 @@ export async function getDashboardStats(user?: AuthUser | null): Promise<Stats> 
       return getEmptyStats();
     }
 
-    // Create tenant-specific cache key
-    const cacheKey = serverCache.tenantKey(user.tenant_id, 'dashboard-stats');
+    console.log('Fetching dashboard stats for tenant:', user.tenant_id);
 
-    // Use enhanced getOrSet function with proper tagging
-    return await serverCache.getOrSet(
-      cacheKey,
-      async () => {
-        console.log('Cache miss - fetching dashboard stats for tenant:', user!.tenant_id);
+    // This is a placeholder for actual data fetching
+    // In a real implementation, you would fetch data from your database
+    const data: Stats = {
+      projects: 0,
+      testCases: 0,
+      testsRun: 0,
+      successRate: 0,
+    } as unknown as Stats;
 
-        // This is a placeholder for actual data fetching
-        // In a real implementation, you would fetch data from your database
-        const data: Stats = {
-          projects: 0,
-          testCases: 0,
-          testsRun: 0,
-          successRate: 0,
-        } as unknown as Stats;
-
-        return data;
-      },
-      {
-        ttl: DASHBOARD_STATS_TTL,
-        tags: ['dashboard', `tenant:${user.tenant_id}`],
-        source: 'getDashboardStats',
-      },
-    );
+    return data;
   } catch (error) {
     console.error('Error in getDashboardStats:', error);
     return getEmptyStats();
@@ -86,26 +65,12 @@ export async function getRecentActivity(user?: AuthUser | null): Promise<Activit
       return [];
     }
 
-    // Create tenant-specific cache key
-    const cacheKey = serverCache.tenantKey(user.tenant_id, 'recent-activity');
+    console.log('Fetching recent activity for tenant:', user.tenant_id);
 
-    // Use enhanced getOrSet function with proper tagging
-    return await serverCache.getOrSet(
-      cacheKey,
-      async () => {
-        console.log('Cache miss - fetching recent activity for tenant:', user!.tenant_id);
+    // This is a placeholder for actual data fetching
+    const data: ActivityItem[] = [];
 
-        // This is a placeholder for actual data fetching
-        const data: ActivityItem[] = [];
-
-        return data;
-      },
-      {
-        ttl: RECENT_ACTIVITY_TTL,
-        tags: ['dashboard', 'activity', `tenant:${user.tenant_id}`],
-        source: 'getRecentActivity',
-      },
-    );
+    return data;
   } catch (error) {
     console.error('Error in getRecentActivity:', error);
     return [];
@@ -130,45 +95,31 @@ export async function getTasks(user?: AuthUser | null): Promise<Task[]> {
       return [];
     }
 
-    // Create user-specific cache key (tasks are typically user-specific)
-    const cacheKey = serverCache.userKey(user.id, 'tasks');
+    console.log('Fetching tasks for user:', user.id);
 
-    // Use enhanced getOrSet function with proper tagging
-    return await serverCache.getOrSet(
-      cacheKey,
-      async () => {
-        console.log('Cache miss - fetching tasks for user:', user!.id);
-
-        // This is a placeholder for actual data fetching
-        const data: Task[] = [
-          {
-            id: '1',
-            title: 'Update test cases for login flow',
-            dueDate: 'Due in 2 days',
-            priority: 'High',
-          },
-          {
-            id: '2',
-            title: 'Review automation scripts',
-            dueDate: 'Due tomorrow',
-            priority: 'Medium',
-          },
-          {
-            id: '3',
-            title: 'Prepare test report',
-            dueDate: 'Due next week',
-            priority: 'Low',
-          },
-        ];
-
-        return data;
+    // This is a placeholder for actual data fetching
+    const data: Task[] = [
+      {
+        id: '1',
+        title: 'Update test cases for login flow',
+        dueDate: 'Due in 2 days',
+        priority: 'High',
       },
       {
-        ttl: TASKS_TTL,
-        tags: ['dashboard', 'tasks', `user:${user.id}`, `tenant:${user.tenant_id}`],
-        source: 'getTasks',
+        id: '2',
+        title: 'Review automation scripts',
+        dueDate: 'Due tomorrow',
+        priority: 'Medium',
       },
-    );
+      {
+        id: '3',
+        title: 'Prepare test report',
+        dueDate: 'Due next week',
+        priority: 'Low',
+      },
+    ];
+
+    return data;
   } catch (error) {
     console.error('Error in getTasks:', error);
     return [];
@@ -193,45 +144,31 @@ export async function getTeamChat(user?: AuthUser | null): Promise<ChatMessage[]
       return [];
     }
 
-    // Create tenant-specific cache key (chat is typically tenant/team specific)
-    const cacheKey = serverCache.tenantKey(user.tenant_id, 'team-chat');
+    console.log('Fetching team chat for tenant:', user.tenant_id);
 
-    // Use enhanced getOrSet function with proper tagging
-    return await serverCache.getOrSet(
-      cacheKey,
-      async () => {
-        console.log('Cache miss - fetching team chat for tenant:', user!.tenant_id);
-
-        // This is a placeholder for actual data fetching
-        const data: ChatMessage[] = [
-          {
-            id: '1',
-            name: 'John Doe',
-            message: 'Updated the test suite configuration',
-            timestamp: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
-          },
-          {
-            id: '2',
-            name: 'Jane Smith',
-            message: 'Added new test cases for payment flow',
-            timestamp: Date.now() - 5 * 60 * 60 * 1000, // 5 hours ago
-          },
-          {
-            id: '3',
-            name: 'Robert Johnson',
-            message: 'Fixed failing tests in CI pipeline',
-            timestamp: Date.now() - 24 * 60 * 60 * 1000, // Yesterday
-          },
-        ];
-
-        return data;
+    // This is a placeholder for actual data fetching
+    const data: ChatMessage[] = [
+      {
+        id: '1',
+        name: 'John Doe',
+        message: 'Updated the test suite configuration',
+        timestamp: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
       },
       {
-        ttl: TEAM_CHAT_TTL,
-        tags: ['dashboard', 'chat', `tenant:${user.tenant_id}`],
-        source: 'getTeamChat',
+        id: '2',
+        name: 'Jane Smith',
+        message: 'Added new test cases for payment flow',
+        timestamp: Date.now() - 5 * 60 * 60 * 1000, // 5 hours ago
       },
-    );
+      {
+        id: '3',
+        name: 'Robert Johnson',
+        message: 'Fixed failing tests in CI pipeline',
+        timestamp: Date.now() - 24 * 60 * 60 * 1000, // Yesterday
+      },
+    ];
+
+    return data;
   } catch (error) {
     console.error('Error in getTeamChat:', error);
     return [];
@@ -275,10 +212,6 @@ export async function addChatMessage(
     // In a real implementation, you would save the message to your database
     // const result = await saveMessageToDatabase(newMessage);
 
-    // Invalidate the chat cache to ensure fresh data on next fetch
-    serverCache.deleteByTag('chat');
-    serverCache.delete(serverCache.tenantKey(user.tenant_id, 'team-chat'));
-
     return {
       success: true,
       data: newMessage,
@@ -308,7 +241,6 @@ export async function clearDashboardCache(
   user?: AuthUser | null,
 ): Promise<{
   success: boolean;
-  clearedEntries: number;
   message: string;
 }> {
   try {
@@ -318,68 +250,23 @@ export async function clearDashboardCache(
       if (!user) {
         return {
           success: false,
-          clearedEntries: 0,
           message: 'User not authenticated',
         };
       }
     }
 
-    const { section, tenantId, userId } = options || {};
-    let clearedEntries = 0;
-
-    // Determine what to clear based on section parameter
-    if (section === 'stats' || section === 'all') {
-      clearedEntries += serverCache.deleteByTag('dashboard');
-      if (tenantId) {
-        clearedEntries += serverCache.delete(serverCache.tenantKey(tenantId, 'dashboard-stats'));
-      }
-    }
-
-    if (section === 'activity' || section === 'all') {
-      clearedEntries += serverCache.deleteByTag('activity');
-      if (tenantId) {
-        clearedEntries += serverCache.delete(serverCache.tenantKey(tenantId, 'recent-activity'));
-      }
-    }
-
-    if (section === 'tasks' || section === 'all') {
-      clearedEntries += serverCache.deleteByTag('tasks');
-      if (userId) {
-        clearedEntries += serverCache.delete(serverCache.userKey(userId, 'tasks'));
-      }
-    }
-
-    if (section === 'chat' || section === 'all') {
-      clearedEntries += serverCache.deleteByTag('chat');
-      if (tenantId) {
-        clearedEntries += serverCache.delete(serverCache.tenantKey(tenantId, 'team-chat'));
-      }
-    }
-
-    // If no specific section was specified, clear all dashboard-related cache
-    if (!section || section === 'all') {
-      clearedEntries += serverCache.deleteByTag('dashboard');
-
-      // Also clear tenant-specific and user-specific cache if IDs provided
-      if (tenantId) {
-        clearedEntries += serverCache.deletePattern(`tenant:${tenantId}:dashboard`);
-      }
-
-      if (userId) {
-        clearedEntries += serverCache.deletePattern(`user:${userId}:dashboard`);
-      }
-    }
+    // With SWR, cache is managed on the client side
+    // This function now acts as a placeholder for compatibility
+    // Client components should use SWR's mutate function to revalidate data
 
     return {
       success: true,
-      clearedEntries,
-      message: `Dashboard cache cleared: ${clearedEntries} entries removed`,
+      message: 'Dashboard cache cleared via SWR revalidation',
     };
   } catch (error) {
     console.error('Error clearing dashboard cache:', error);
     return {
       success: false,
-      clearedEntries: 0,
       message: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }

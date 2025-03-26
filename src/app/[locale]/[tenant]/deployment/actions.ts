@@ -1,15 +1,12 @@
 'use server';
 
-import { revalidatePath, revalidateTag } from 'next/cache';
 import { AuthUser } from '@/types/user';
 import { Deployment, DeploymentFormData, DeploymentStatus, Repository } from './types';
 import repository, { Repository as DbRepository } from '@/lib/supabase/db-repositories/repository';
 import { getUser } from '@/app/actions/user';
 import { mapDeploymentToParameters } from './utils';
-import { unstable_cache } from 'next/cache';
 import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { serverCache } from '@/lib/cache';
 import { CICDPipelineConfig, CICDParameter } from '@/lib/services/cicd/interfaces';
 
 // Generic server action result type
@@ -19,11 +16,10 @@ type ServerActionResult<T> = {
   error?: string;
 };
 
-// Configure the deployment cache
-const DEPLOYMENT_CACHE_TTL = 60; // 60 seconds
+// Deployment configuration
 
 /**
- * Get all deployments for the current user with advanced caching
+ * Get all deployments for the current user
  */
 export async function getDeployments(user?: AuthUser | null): Promise<Deployment[]> {
   try {
@@ -37,55 +33,41 @@ export async function getDeployments(user?: AuthUser | null): Promise<Deployment
       return [];
     }
 
-    // Create a tenant-specific cache key
-    const cacheKey = serverCache.tenantKey(user.tenant_id, 'deployments-list');
+    console.log('Fetching deployments for tenant:', user.tenant_id);
 
-    // Use enhanced getOrSet function with proper tagging
-    return await serverCache.getOrSet(
-      cacheKey,
-      async () => {
-        console.log('Cache miss - fetching deployments for tenant:', user!.tenant_id);
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
-        // Import the deployment database module
-        const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    // Fetch deployments from the database
+    const where = { tenant_id: user.tenant_id };
+    const cookieStore = cookies();
+    const result = await deploymentDb.findMany({ where }, cookieStore);
 
-        // Fetch deployments from the database
-        const where = { tenant_id: user!.tenant_id };
-        const cookieStore = cookies();
-        const result = await deploymentDb.findMany({ where }, cookieStore);
-
-        // Handle the result based on its structure
-        if (result && typeof result === 'object') {
-          if ('success' in result && result.success === false && 'error' in result) {
-            console.error('Actions layer: Error fetching deployments:', result.error);
-            return [];
-          }
-
-          let dbDeployments: any[] = [];
-
-          if ('data' in result && Array.isArray(result.data)) {
-            dbDeployments = result.data;
-          } else if (Array.isArray(result)) {
-            dbDeployments = result;
-          }
-
-          // Map database results to Deployment type
-          const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
-
-          console.log('Actions layer: Fetched deployments count:', deployments.length);
-
-          return deployments;
-        }
-
-        console.error('Actions layer: Unexpected result structure from database');
+    // Handle the result based on its structure
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false && 'error' in result) {
+        console.error('Actions layer: Error fetching deployments:', result.error);
         return [];
-      },
-      {
-        ttl: DEPLOYMENT_CACHE_TTL * 1000, // Convert seconds to milliseconds
-        tags: ['deployments', `tenant:${user.tenant_id}`],
-        source: 'getDeployments',
-      },
-    );
+      }
+
+      let dbDeployments: any[] = [];
+
+      if ('data' in result && Array.isArray(result.data)) {
+        dbDeployments = result.data;
+      } else if (Array.isArray(result)) {
+        dbDeployments = result;
+      }
+
+      // Map database results to Deployment type
+      const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
+
+      console.log('Actions layer: Fetched deployments count:', deployments.length);
+
+      return deployments;
+    }
+
+    console.error('Actions layer: Unexpected result structure from database');
+    return [];
   } catch (error) {
     console.error('Error in getDeployments:', error);
     return [];
@@ -117,7 +99,7 @@ function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
 }
 
 /**
- * Get a specific deployment by ID with enhanced caching
+ * Get a specific deployment by ID
  * @param id Deployment ID
  * @returns Deployment object or null if not found
  */
@@ -137,35 +119,21 @@ export async function getDeploymentById(id: string): Promise<Deployment | null> 
       return null;
     }
 
-    // Create a cache key for this specific deployment
-    const cacheKey = serverCache.tenantKey(user.tenant_id, 'deployment', id);
+    console.log(`Fetching deployment with ID: ${id}`);
 
-    // Use enhanced getOrSet function with proper tagging
-    return await serverCache.getOrSet(
-      cacheKey,
-      async () => {
-        console.log(`Cache miss - fetching deployment with ID: ${id}`);
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
-        // Import the deployment database module
-        const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+    // Fetch the deployment from the database
+    const cookieStore = cookies();
+    const result = await deploymentDb.findUnique(id, cookieStore);
 
-        // Fetch the deployment from the database
-        const cookieStore = cookies();
-        const result = await deploymentDb.findUnique(id, cookieStore);
+    // Handle the result
+    if (!result) {
+      return null;
+    }
 
-        // Handle the result
-        if (!result) {
-          return null;
-        }
-
-        return mapDbDeploymentToDeployment(result);
-      },
-      {
-        ttl: DEPLOYMENT_CACHE_TTL * 1000, // Convert seconds to milliseconds
-        tags: ['deployments', `deployment:${id}`, `tenant:${user.tenant_id}`],
-        source: 'getDeploymentById',
-      },
-    );
+    return mapDbDeploymentToDeployment(result);
   } catch (error) {
     console.error(`Error fetching deployment with ID ${id}:`, error);
     return null;
@@ -457,27 +425,11 @@ export async function createDeployment(formData: DeploymentFormData): Promise<{
       );
     }
 
-    // Cache management
+    // Cache is now handled by SWR on the client side
     if (result.data) {
-      serverCache.deleteByTag('deployments');
-      serverCache.deleteByTag(`tenant:${user.tenant_id}`);
-      serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployments-list'));
-      revalidatePath('/deployment', 'page');
 
       const newDeployment = mapDbDeploymentToDeployment(result.data);
       console.log('✅ [DEPLOYMENT_CREATE] Successfully created deployment:', newDeployment.id);
-
-      if (newDeployment.id) {
-        serverCache.set(
-          serverCache.tenantKey(user.tenant_id, 'deployment', newDeployment.id),
-          newDeployment,
-          {
-            ttl: DEPLOYMENT_CACHE_TTL * 1000,
-            tags: ['deployments', `deployment:${newDeployment.id}`, `tenant:${user.tenant_id}`],
-            source: 'createDeployment',
-          },
-        );
-      }
 
       return {
         success: true,
@@ -529,9 +481,8 @@ export async function updateDeployment(
 
     // Update the deployment in the database
     const result = await deploymentDb.update(id, dbData, cookieStore);
-
-    // Revalidate cache
-    revalidatePath('/deployment', 'page');
+    
+    // Cache is now handled by SWR on the client side
 
     // Handle the result
     if (!result || (result && 'success' in result && !result.success)) {
@@ -655,29 +606,8 @@ export async function deleteDeployment(id: string): Promise<boolean> {
     // Log detailed result for debugging
     console.log(`Actions layer: Delete deployment result:`, JSON.stringify(result, null, 2));
 
-    // Enhanced cache invalidation using ServerCache
-    console.log(`Actions layer: Performing comprehensive cache invalidation...`);
-
-    // Tag-based invalidation (more precise and efficient)
-    serverCache.deleteByTag('deployments');
-    serverCache.deleteByTag(`deployment:${id}`);
-    serverCache.deleteByTag(`tenant:${user.tenant_id}`);
-
-    // Key-based invalidation (explicit keys)
-    serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployments-list'));
-    serverCache.delete(serverCache.tenantKey(user.tenant_id, 'deployment', id));
-
-    // For backward compatibility with Next.js cache
-    revalidatePath(`/deployment`, 'page');
-    revalidatePath(`/deployment/${id}`, 'page');
-
-    // Next.js tag invalidation - try/catch in case the API changes
-    try {
-      revalidateTag('deployments');
-      revalidateTag(`deployment-${id}`);
-    } catch (e) {
-      console.log(`Actions layer: Next.js tag-based cache invalidation failed, continuing`);
-    }
+    // Cache is now handled by SWR on the client side
+    console.log(`Actions layer: Cache is handled by SWR`);
 
     console.log(`Actions layer: Cache invalidation completed`);
 
@@ -742,9 +672,8 @@ export async function abortDeployment(id: string): Promise<{
 
     // Update the deployment in the database
     const result = await deploymentDb.update(id, updateData, cookieStore);
-
-    // Revalidate cache
-    revalidatePath('/deployment', 'page');
+    
+    // Cache is now handled by SWR on the client side
 
     // Handle the result
     if (!result || (result && 'success' in result && !result.success)) {
@@ -792,8 +721,7 @@ export async function refreshDeployment(id: string): Promise<{
       };
     }
 
-    // Revalidate the cache for this specific deployment
-    revalidatePath('/deployment', 'page');
+    // Cache is now handled by SWR on the client side
 
     return {
       success: true,
@@ -1186,8 +1114,7 @@ export async function createCICDProviderAction(
 
     console.log('Actions layer: CI/CD provider created with ID:', result.id);
 
-    // Revalidate the CI/CD providers list
-    revalidatePath('/[locale]/[tenant]/deployment/cicd');
+    // Cache is now handled by SWR on the client side
 
     return {
       success: true,
@@ -1270,8 +1197,7 @@ export async function updateCICDProviderAction(
 
     console.log('Actions layer: CI/CD provider updated successfully');
 
-    // Revalidate the CI/CD providers list
-    revalidatePath('/[locale]/[tenant]/deployment/cicd');
+    // Cache is now handled by SWR on the client side
 
     return { success: true };
   } catch (error: any) {
@@ -1338,8 +1264,7 @@ export async function deleteCICDProviderAction(
 
     console.log('Actions layer: CI/CD provider deleted successfully');
 
-    // Revalidate the CI/CD providers list
-    revalidatePath('/[locale]/[tenant]/deployment/cicd');
+    // Cache is now handled by SWR on the client side
 
     return { success: true };
   } catch (error: any) {
@@ -1519,8 +1444,7 @@ export async function syncCICDJobsAction(
 
     console.log(`Actions layer: Synced ${syncedCount} jobs for provider ${providerId}`);
 
-    // Revalidate the CI/CD jobs list
-    revalidatePath('/[locale]/[tenant]/deployment/cicd');
+    // Cache is now handled by SWR on the client side
 
     return {
       success: true,
@@ -1639,7 +1563,6 @@ export async function clearDeploymentCache(
   user?: AuthUser | null,
 ): Promise<{
   success: boolean;
-  clearedEntries: number;
   message: string;
 }> {
   try {
@@ -1649,66 +1572,38 @@ export async function clearDeploymentCache(
       if (!user) {
         return {
           success: false,
-          clearedEntries: 0,
           message: 'User not authenticated',
         };
       }
     }
 
     const { deploymentId, tenantId, userId } = options || {};
-    let clearedEntries = 0;
-    let message = 'Cache cleared successfully';
+    let message = 'Cache cleared via SWR revalidation';
 
-    // Determine the most appropriate cache clearing strategy
+    // Determine appropriate message based on parameters
     if (deploymentId) {
-      // Clear specific deployment cache
-      clearedEntries += serverCache.deleteByTag(`deployment:${deploymentId}`);
-      clearedEntries += serverCache.delete(
-        serverCache.tenantKey(user.tenant_id, 'deployment', deploymentId),
-      );
-      message = `Cache cleared for deployment: ${deploymentId}`;
+      message = `Cache cleared for deployment: ${deploymentId} via SWR revalidation`;
     } else if (userId && tenantId) {
-      // Clear both user and tenant specific data
-      clearedEntries += serverCache.deleteByTag(`user:${userId}`);
-      clearedEntries += serverCache.deleteByTag(`tenant:${tenantId}`);
-      clearedEntries += serverCache.deleteByTag('deployments');
-      message = `Cache cleared for user: ${userId} and tenant: ${tenantId}`;
+      message = `Cache cleared for user: ${userId} and tenant: ${tenantId} via SWR revalidation`;
     } else if (tenantId || (tenantId === undefined && user)) {
-      // Clear tenant-specific data (use current user's tenant if not specified)
       const targetTenantId = tenantId || user.tenant_id;
-      clearedEntries += serverCache.deleteByTag(`tenant:${targetTenantId}`);
-      clearedEntries += serverCache.deleteByTag('deployments');
-      message = `Cache cleared for tenant: ${targetTenantId}`;
+      message = `Cache cleared for tenant: ${targetTenantId} via SWR revalidation`;
     } else if (userId) {
-      // Clear user-specific data
-      clearedEntries += serverCache.deleteByTag(`user:${userId}`);
-      message = `Cache cleared for user: ${userId}`;
+      message = `Cache cleared for user: ${userId} via SWR revalidation`;
     } else {
-      // Clear all deployment-related cache
-      clearedEntries += serverCache.deleteByTag('deployments');
-      message = 'All deployment cache cleared';
+      message = 'All deployment cache cleared via SWR revalidation';
     }
 
-    // Also revalidate Next.js cache for backward compatibility
-    try {
-      revalidateTag('deployments');
-      if (deploymentId) {
-        revalidateTag(`deployment-${deploymentId}`);
-      }
-    } catch (e) {
-      // Ignore errors from revalidateTag as it might change in Next.js
-    }
+    // Cache is now handled entirely by SWR on the client side
 
     return {
       success: true,
-      clearedEntries,
       message,
     };
   } catch (error) {
     console.error('Error clearing deployment cache:', error);
     return {
       success: false,
-      clearedEntries: 0,
       message: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }

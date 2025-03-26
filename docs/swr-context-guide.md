@@ -4,6 +4,19 @@
 
 The AutomAI application uses SWR (stale-while-revalidate) for data fetching and caching within its React context system. This guide explains how the SWR-based context system works, best practices for using it, and implementation details.
 
+## Migration Status (Completed March 2025)
+
+The application has been fully migrated from the previous server-side cache implementation to SWR's client-side caching system. The following changes were made:
+
+1. Removed `serverCache` usage from all server actions
+2. Removed the deprecated cache module (`src/lib/cache.ts`) 
+3. Implemented SWR hooks in `src/hooks/` directory
+4. Updated context providers to use SWR hooks
+5. Removed all Next.js cache invalidation code (`revalidatePath`, `revalidateTag`)
+6. Replaced cache clearing functions with placeholder messages
+
+All server actions now focus solely on data fetching and CRUD operations, while caching is handled by SWR on the client side. The migration is 100% complete with no backward compatibility code remaining.
+
 ## Architecture
 
 The SWR context architecture follows a clean separation of concerns with three distinct layers:
@@ -659,3 +672,22 @@ For developers working with existing code, follow these steps to use the SWR-bas
 ## Conclusion
 
 The SWR-based context system provides a clean, efficient way to manage application state and data fetching. By following these patterns and best practices, you can build performant and maintainable features that leverage the power of SWR's caching and revalidation capabilities.
+
+## Migration Notes
+
+During the migration from the server-side caching system to SWR, we made the following changes:
+
+1. **Server Actions**: All server actions were simplified to focus only on data operations. Cache-related code like `serverCache.get()`, `serverCache.set()`, TTL settings, and tags were removed.
+
+2. **Cache Functions**: Cache clearing functions were replaced with placeholders that return simple messages acknowledging that SWR now handles caching.
+
+3. **Next.js Cache API**: All references to `revalidatePath` and `revalidateTag` were removed since client-side caching with SWR eliminates the need for server-side cache invalidation.
+
+4. **Context Providers**: Updated to use SWR hooks, providing a consistent interface while improving performance with automatic revalidation.
+
+The result is a more efficient, maintainable codebase with better separation of concerns:
+- Server actions focus solely on data operations
+- SWR handles caching, revalidation, and optimistic updates
+- Context providers expose a clean API for components
+
+This enables better performance, improved developer experience, and more responsive UI updates.
