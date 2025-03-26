@@ -63,16 +63,17 @@ function RepositoryPageContent() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(12);
 
-  // Refresh repositories on mount
+  // Use direct SWR pattern instead of useEffect for initial data fetching
   useEffect(() => {
-    // Only fetch if we don't already have repositories
-    if (!repositories || repositories.length === 0) {
-      console.log('[RepositoriesPage] No repositories found, triggering fetch');
-      fetchRepositories?.();
+    if (fetchRepositories && (!repositories || repositories.length === 0)) {
+      console.log('[RepositoriesPage] No repositories found, fetching data with SWR');
+      fetchRepositories().catch(error => {
+        console.error('[RepositoriesPage] Error fetching repositories:', error);
+      });
     } else {
-      console.log('[RepositoriesPage] Repositories already loaded:', repositories.length);
+      console.log('[RepositoriesPage] Repositories already loaded:', repositories?.length);
     }
-  }, []);
+  }, []); // Empty dependency array - only runs once on mount
 
   // Update starredRepos when starredRepositories change in context
   useEffect(() => {
@@ -206,7 +207,9 @@ function RepositoryPageContent() {
 
       // Clear all repositories cache and refresh the list
       await clearRepositoriesCache();
-      await fetchRepositories?.();
+      if (fetchRepositories) {
+        await fetchRepositories();
+      }
     } catch (error) {
       console.error('Error refreshing repositories:', error);
     } finally {
@@ -260,7 +263,9 @@ function RepositoryPageContent() {
       }
 
       // Refresh repositories
-      await fetchRepositories?.();
+      if (fetchRepositories) {
+        await fetchRepositories();
+      }
     } catch (error) {
       console.error('Error syncing repository:', error);
     } finally {
@@ -284,7 +289,9 @@ function RepositoryPageContent() {
       }
 
       // Refresh repositories after connection
-      await fetchRepositories?.();
+      if (fetchRepositories) {
+        await fetchRepositories();
+      }
 
       toast({
         title: 'Success',
@@ -321,7 +328,9 @@ function RepositoryPageContent() {
       }
 
       // Refresh repositories after deletion
-      await fetchRepositories?.();
+      if (fetchRepositories) {
+        await fetchRepositories();
+      }
 
       toast({
         title: 'Success',

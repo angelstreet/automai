@@ -19,9 +19,6 @@ export default function HostContainer() {
   const renderCount = useRef(0);
   const isInitialized = useRef(false);
 
-  // Add data fetching state
-  const dataFetched = useRef(false);
-
   // Get contexts first - all hooks must be called in the same order every render
   const userContext = useUser();
   const hostContext = useHost();
@@ -103,38 +100,39 @@ export default function HostContainer() {
     }
   }, [hosts, loading, error]);
 
-  // Fetch hosts on initial mount, only if needed
+  // Use direct SWR pattern for initial data fetching
   useEffect(() => {
-    if (!isInitialized.current) {
-      console.log('[HostContainer] Initial mount - fetching hosts data');
-      isInitialized.current = true;
-
-      // If we already have hosts from context, don't trigger loading state
-      if (hosts.length > 0) {
-        setIsInitialLoading(false);
-        return;
-      }
-
+    // Only fetch if we don't have hosts and fetchHosts is available
+    if (fetchHosts && (!hosts || hosts.length === 0)) {
+      console.log('[HostContainer] No hosts found, fetching data with SWR');
+      
       // Only show loading if we don't have hosts yet
       setIsInitialLoading(true);
-
+      
       // Set a timeout to stop loading after max 1 second
       const timeoutId = setTimeout(() => {
         setIsInitialLoading(false);
       }, 1000);
-
-      if (fetchHosts) {
-        fetchHosts().finally(() => {
+      
+      // Fetch hosts data via SWR context
+      fetchHosts()
+        .catch(error => {
+          console.error('[HostContainer] Error fetching hosts:', error);
+        })
+        .finally(() => {
           clearTimeout(timeoutId);
           setIsInitialLoading(false);
+          isInitialized.current = true;
         });
-      }
-
+        
       return () => {
         clearTimeout(timeoutId);
       };
+    } else {
+      isInitialized.current = true;
+      console.log('[HostContainer] Hosts already loaded:', hosts?.length);
     }
-  }, [fetchHosts, hosts.length]);
+  }, []); // Empty dependency array - only runs once on mount
 
   // Create a memoized test connection handler
   const handleTestConnection = useCallback(
@@ -154,7 +152,9 @@ export default function HostContainer() {
         console.log('[HostList] Test connection result:', result);
 
         // Refresh the hosts list to get updated statuses
-        await fetchHosts();
+        if (fetchHosts) {
+          await fetchHosts();
+        }
 
         return result;
       } catch (error) {
@@ -231,8 +231,12 @@ export default function HostContainer() {
         // Clear the request cache before fetching new hosts
         clearRequestCache('fetchHosts');
 
-        // Refresh the hosts list
-        fetchHosts && fetchHosts();
+        // Refresh the hosts list using direct SWR pattern
+        if (fetchHosts) {
+          await fetchHosts().catch(error => {
+            console.error('[HostContainer] Error fetching hosts after adding new host:', error);
+          });
+        }
       } else {
         console.error('[HostContainer] Error adding host:', result.error);
       }

@@ -19,12 +19,23 @@ function DeploymentPageContent() {
   const deploymentContext = useDeployment();
   const repositoryContext = useRepository();
 
-  const { isInitialized, deployments, loading, isRefreshing } = deploymentContext || {};
+  // Use SWR through the context
+  const { isInitialized, deployments, loading, isRefreshing, fetchDeployments } = deploymentContext || {};
   const deploymentRepos = deploymentContext?.repositories || [];
   const repositoryRepos = repositoryContext?.repositories || [];
   const repositories = deploymentRepos.length > 0 ? deploymentRepos : repositoryRepos;
   const isDataReady = repositories.length > 0 && isInitialized;
-  const hasFetchedRef = useRef(false);
+
+  // Trigger initial data fetch once when component mounts (if needed)
+  useEffect(() => {
+    // Only trigger a fetch if we have no data and a function to fetch
+    if (fetchDeployments && (!deployments || deployments.length === 0)) {
+      console.log('[DeploymentPage] No deployments found, fetching data');
+      fetchDeployments(false).catch(error => {
+        console.error('[DeploymentPage] Error fetching deployments:', error);
+      });
+    }
+  }, []); // Empty dependency array - only runs once on mount
 
   // Debug logs
   console.log('[DeploymentPage] Debug status:', {
@@ -34,43 +45,17 @@ function DeploymentPageContent() {
     deployments: deployments?.length || 0,
     isDataReady,
     wizardActive,
-    hasFetched: hasFetchedRef.current,
     isInitialized,
   });
 
   const handleRefresh = () => {
-    if (deploymentContext?.fetchDeployments) {
+    if (fetchDeployments) {
       console.log('[DeploymentPage] Manually refreshing deployments');
-      deploymentContext.fetchDeployments();
+      fetchDeployments(true); // Force fresh data
     } else {
       console.warn('[DeploymentPage] fetchDeployments is not available in context');
     }
   };
-
-  useEffect(() => {
-    if (deploymentContext && deploymentContext.fetchDeployments) {
-      console.log('[DeploymentPage] Component mounted, checking deployment data');
-      if (!deployments || (deployments.length === 0 && !loading && !isRefreshing)) {
-        console.log('[DeploymentPage] Fetching deployments on mount');
-        hasFetchedRef.current = true;
-        // Fix: Handle the case where fetchDeployments doesn't return a Promise
-        try {
-          const result = deploymentContext.fetchDeployments();
-          if (result && typeof result.finally === 'function') {
-            result.finally(() => {
-              setIsInitialLoading(false);
-            });
-          } else {
-            // If not a Promise, set loading to false immediately
-            setIsInitialLoading(false);
-          }
-        } catch (error) {
-          console.error('[DeploymentPage] Error fetching deployments:', error);
-          setIsInitialLoading(false);
-        }
-      }
-    }
-  }, [deploymentContext, deployments, loading, isRefreshing]);
 
   // Set initial loading state based on data presence
   useEffect(() => {
@@ -108,7 +93,7 @@ function DeploymentPageContent() {
       setWizardActive(true);
     };
     const handleRefreshEvent = () => {
-      if (!wizardActive) handleRefresh();
+      if (!wizardActive && fetchDeployments) fetchDeployments();
     };
     document.addEventListener('toggle-deployment-view', handleToggleView);
     document.addEventListener('refresh-deployments', handleRefreshEvent);
@@ -125,15 +110,15 @@ function DeploymentPageContent() {
       document.removeEventListener('toggle-deployment-view', handleToggleView);
       document.removeEventListener('refresh-deployments', handleRefreshEvent);
     };
-  }, []);
+  }, [fetchDeployments, wizardActive]);
 
   useEffect(() => {
     const handleRefreshEvent = () => {
-      if (!wizardActive) handleRefresh();
+      if (!wizardActive && fetchDeployments) fetchDeployments();
     };
     document.addEventListener('refresh-deployments', handleRefreshEvent);
     return () => document.removeEventListener('refresh-deployments', handleRefreshEvent);
-  }, [wizardActive]);
+  }, [wizardActive, fetchDeployments]);
 
   const handleCancelWizard = () => {
     console.log('[DeploymentPage] Cancelling wizard');
@@ -184,7 +169,7 @@ function DeploymentPageContent() {
             onCancel={handleCancelWizard}
             onDeploymentCreated={() => {
               console.log('[DeploymentPage] Deployment created successfully');
-              handleRefresh();
+              if (fetchDeployments) fetchDeployments();
               setWizardActive(false);
             }}
             explicitRepositories={repositories}
