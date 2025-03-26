@@ -41,8 +41,16 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
       });
     } else {
       console.log('[WorkspaceHeader] User data not available yet, loading:', userContext?.loading);
+      
+      // If context is initialized but user is still missing, try refreshing
+      if (userContext?.isInitialized && !userContext?.loading && userContext?.refreshUser) {
+        console.log('[WorkspaceHeader] Attempting to refresh missing user data');
+        userContext.refreshUser().catch(e => 
+          console.error('[WorkspaceHeader] Error refreshing user:', e)
+        );
+      }
     }
-  }, [userContext?.user, userContext?.loading]);
+  }, [userContext?.user, userContext?.loading, userContext?.isInitialized, userContext?.refreshUser]);
 
   const toggleHeader = React.useCallback(() => {
     const newState = !headerVisible;

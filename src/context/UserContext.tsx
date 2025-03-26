@@ -103,15 +103,34 @@ export function UserProvider({
       log('[UserContext] UserProvider initialized as singleton');
     }
 
-    const timer = setTimeout(() => {
+    // Initialize user context with a quick initial timeout, but ensure it gets set
+    // even when there might be auth delays
+    const quickTimer = setTimeout(() => {
       setIsInitialized(true);
+      log('[UserContext] Initial initialization complete');
     }, 100);
+    
+    // Backup timer to ensure initialization happens even if auth is delayed
+    const backupTimer = setTimeout(() => {
+      if (!initialized.current) {
+        log('[UserContext] Backup initialization triggered');
+        initializationAttempts.current += 1;
+        setIsInitialized(true);
+        initialized.current = true;
+        // Force a refresh if user data still not available
+        if (!user) {
+          log('[UserContext] User data still missing, forcing refresh');
+          refreshUser().catch(e => console.error('[UserContext] Refresh error:', e));
+        }
+      }
+    }, 1500);
 
     return () => {
       if (USER_CONTEXT_INITIALIZED) {
         USER_CONTEXT_INITIALIZED = false;
       }
-      clearTimeout(timer);
+      clearTimeout(quickTimer);
+      clearTimeout(backupTimer);
     };
   }, []);
 
@@ -119,6 +138,7 @@ export function UserProvider({
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const initialized = useRef(false);
+  const initializationAttempts = useRef(0);
 
   // Add request protection
   const { protectedFetch, safeUpdateState } = useRequestProtection('UserContext');
@@ -220,20 +240,33 @@ export function UserProvider({
     [protectedFetch],
   );
 
-  // Use SWR for data fetching with stable SSR behavior
+  // Use SWR for data fetching with stable SSR behavior and better retry handling
   const {
     data: user,
     isLoading: loading,
     mutate: mutateUser,
   } = useSWR('user-data', () => fetchUserData(false), {
     fallbackData: initialUser,
-    revalidateOnFocus: false,
+    revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    dedupingInterval: 60000,
+    dedupingInterval: 30000, // Reduced from 60s to 30s
     keepPreviousData: true,
     loadingTimeout: 3000,
     revalidateIfStale: true,
     refreshInterval: 300000,
+    errorRetryCount: 3,
+    errorRetryInterval: 2000,
+    // Add onErrorRetry to attempt quick retries on auth failures
+    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+      // Only retry for the first few attempts and then back off
+      if (retryCount >= 3) return;
+      
+      // Quick retry for auth-related issues
+      const retryDelay = 1000 * Math.min(retryCount + 1, 3);
+      log('[UserContext] Retrying user data fetch in', retryDelay, 'ms');
+      
+      setTimeout(() => revalidate({ retryCount }), retryDelay);
+    },
   });
 
   // Function to clear all caches
