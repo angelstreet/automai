@@ -16,7 +16,7 @@ import { useUser } from '@/context';
 import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '../sidebar/constants';
 import { sidebarData } from '@/components/sidebar/sidebarData';
 import * as React from 'react';
-import { Role } from '@/types/user';
+import { Role, User } from '@/types/user';
 
 interface AppSidebarProps {
   user?: User | null;
