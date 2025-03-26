@@ -19,6 +19,7 @@ export function useRepositoriesWithStarred() {
   return useSWR('repositories-with-starred', () => actionFetcher(getRepositoriesWithStarred), {
     dedupingInterval: 15 * 60 * 1000, // 15 minutes
     revalidateOnFocus: false,
+    keepPreviousData: true, // Keep previous data while fetching new data for smoother UI
   });
 }
 

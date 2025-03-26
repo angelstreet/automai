@@ -35,10 +35,7 @@ function RepositoryPageContent() {
     toggleStarRepository,
   } = repositoryContext || {};
 
-  // Track initialization separately
-  const [initializing, setInitializing] = useState(true);
-
-  // Track only necessary UI state
+  // Track necessary UI state
   const [starredRepos, setStarredRepos] = useState<Set<string>>(() => {
     // Initialize from context's starredRepositories
     const initialStarred = new Set<string>();
@@ -75,14 +72,6 @@ function RepositoryPageContent() {
     } else {
       console.log('[RepositoriesPage] Repositories already loaded:', repositories.length);
     }
-
-    // Set initializing to false after a short delay
-    const initTimeout = setTimeout(() => {
-      console.log('[RepositoriesPage] Initialization complete');
-      setInitializing(false);
-    }, 500);
-
-    return () => clearTimeout(initTimeout);
   }, []);
 
   // Update starredRepos when starredRepositories change in context
@@ -409,7 +398,7 @@ function RepositoryPageContent() {
               starredRepos={starredRepos}
               syncingRepoIds={syncingRepoIds}
               isDeleting={isDeleting}
-              initializing={initializing}
+              loading={loading}
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               onToggleStarred={handleToggleStarred}

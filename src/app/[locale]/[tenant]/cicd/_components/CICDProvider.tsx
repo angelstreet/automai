@@ -38,6 +38,7 @@ import {
 } from '../actions';
 import { Badge } from '@/components/shadcn/badge';
 import { CICDProvider as CICDProviderModel } from '../types';
+import useSWR from 'swr';
 
 interface CICDProviderProps {
   removeTitle?: boolean;
@@ -64,45 +65,32 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
     };
   }, []);
 
-  // Load providers on component mount
+  // Use SWR hook directly
+  const { data: providersData, error: providersError, mutate: refreshProviders } = useSWR(
+    'cicd-providers', 
+    () => getCICDProvidersAction()
+  );
+
+  // Update local state when data changes
   useEffect(() => {
-    loadProviders();
-  }, []);
-
-  // Fetch providers from the backend
-  const loadProviders = async () => {
-    setLoading(true);
-
-    try {
-      console.log('CICDProvider component: Calling getCICDProvidersAction');
-      const result = await getCICDProvidersAction();
-
-      console.log('CICDProvider component: Received result:', JSON.stringify(result, null, 2));
-
-      if (result.success) {
-        console.log(
-          'CICDProvider component: Setting providers with data:',
-          JSON.stringify(result.data, null, 2),
-        );
-        setProviders(result.data || []);
-      } else {
-        console.error('CICDProvider component: Error fetching providers:', result.error);
-        toast({
-          title: 'Error loading providers',
-          description: result.error || 'Failed to fetch CI/CD providers',
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      console.error('CICDProvider component: Exception occurred:', error);
+    if (providersData?.success) {
+      setProviders(providersData.data || []);
+      setLoading(false);
+    } else if (providersError) {
+      console.error('CICDProvider component: Error fetching providers:', providersError);
       toast({
-        title: 'Error',
-        description: error.message || 'An unexpected error occurred',
+        title: 'Error loading providers',
+        description: 'Failed to fetch CI/CD providers',
         variant: 'destructive',
       });
-    } finally {
       setLoading(false);
     }
+  }, [providersData, providersError]);
+
+  // Helper function to refresh data
+  const loadProviders = async () => {
+    setLoading(true);
+    await refreshProviders();
   };
 
   // Test a provider connection

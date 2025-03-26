@@ -24,8 +24,9 @@ import type {
  */
 export function useCICDProviders() {
   return useSWR('cicd-providers', () => actionFetcher(getCICDProviders), {
-    dedupingInterval: 5 * 60 * 1000, // 5 minutes
+    dedupingInterval: 15 * 60 * 1000, // 15 minutes (match hosts)
     revalidateOnFocus: false,
+    keepPreviousData: true, // Keep previous data while fetching new data
   });
 }
 
@@ -37,8 +38,9 @@ export function useCICDJobs(providerId?: string) {
     providerId ? `cicd-jobs-${providerId}` : 'cicd-jobs',
     () => actionFetcher(getCICDJobs, providerId),
     {
-      dedupingInterval: 2 * 60 * 1000, // 2 minutes
+      dedupingInterval: 5 * 60 * 1000, // 5 minutes
       revalidateOnFocus: false,
+      keepPreviousData: true, // Keep previous data while fetching new data
     },
   );
 }

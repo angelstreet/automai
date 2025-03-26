@@ -15,7 +15,7 @@ interface RepositoryListProps {
   starredRepos: Set<string>;
   syncingRepoIds: Record<string, boolean>;
   isDeleting: string | null;
-  initializing: boolean;
+  loading?: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onToggleStarred: (id: string) => Promise<void>;
@@ -35,7 +35,7 @@ export function RepositoryList({
   starredRepos,
   syncingRepoIds,
   isDeleting,
-  initializing,
+  loading = false,
   activeTab,
   setActiveTab,
   onToggleStarred,
@@ -157,8 +157,8 @@ export function RepositoryList({
 
   // SIMPLIFIED RENDER METHOD
   const renderRepositoryCards = (): React.ReactNode => {
-    // Only show skeletons during initial loading state
-    if (initializing) {
+    // Only show skeletons during loading state
+    if (loading) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, index) => (
