@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getUser } from '@/app/actions/user';
 import type {
   ActionResult,
@@ -107,7 +107,8 @@ export async function createCICDProvider(
       return { success: false, error: result.error };
     }
 
-    // Revalidate relevant paths
+    // Revalidate cache
+    revalidateTag('cicd-providers');
     revalidatePath('/[locale]/[tenant]/cicd');
     revalidatePath('/[locale]/[tenant]/dashboard');
 
@@ -156,7 +157,8 @@ export async function updateCICDProvider(
       return { success: false, error: result.error };
     }
 
-    // Revalidate relevant paths
+    // Revalidate cache
+    revalidateTag('cicd-providers');
     revalidatePath('/[locale]/[tenant]/cicd');
     revalidatePath(`/[locale]/[tenant]/cicd/${id}`);
 
@@ -192,7 +194,8 @@ export async function deleteCICDProvider(id: string): Promise<ActionResult> {
       return { success: false, error: result.error };
     }
 
-    // Revalidate relevant paths
+    // Revalidate cache
+    revalidateTag('cicd-providers');
     revalidatePath('/[locale]/[tenant]/cicd');
 
     return { success: true };

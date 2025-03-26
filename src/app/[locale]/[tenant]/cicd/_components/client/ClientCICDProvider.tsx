@@ -39,6 +39,7 @@ import {
 } from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
 import type { CICDProviderType } from '../../types';
+import { useRouter } from 'next/navigation';
 
 interface ClientCICDProviderProps {
   initialProviders: CICDProviderType[];
@@ -53,6 +54,7 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
   
   // Set up optimistic state updates
   const [optimisticProviders, addOptimisticProvider] = useOptimistic(
@@ -168,6 +170,9 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
             description: 'The CI/CD provider has been successfully deleted.',
             variant: 'default',
           });
+          
+          // Refresh the page to get fresh data
+          router.refresh();
         } else {
           // Revert optimistic update on failure
           setProviders(initialProviders);
@@ -191,7 +196,7 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
     } finally {
       setIsDeleteDialogOpen(false);
     }
-  }, [selectedProvider, initialProviders, addOptimisticProvider, toast]);
+  }, [selectedProvider, initialProviders, addOptimisticProvider, toast, router]);
 
   // Handle form submission for add/edit
   const handleFormSubmit = useCallback(async (formData: any) => {
@@ -285,7 +290,7 @@ export default function ClientCICDProvider({ initialProviders, removeTitle = fal
       case 'azure_devops':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
     }
   }, []);
 

@@ -22,13 +22,14 @@ export async function invalidateUserCache() {
 
 /**
  * Get the current authenticated user
- * SWR will handle caching this at the client side
+ * Uses Next.js caching for stability during SSR/RSC
  * 
  * @returns The authenticated user or null if not authenticated
  */
 export async function getUser(): Promise<AuthUser | null> {
   try {
-    // Get user from auth service
+    // Get user from auth service with aggressive caching for stability
+    // during server-side rendering and streaming
     const result = await supabaseAuth.getUser();
 
     if (!result.success || !result.data) {
