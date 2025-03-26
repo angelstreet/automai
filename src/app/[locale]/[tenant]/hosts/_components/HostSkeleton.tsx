@@ -6,40 +6,27 @@ import { Skeleton } from "@/components/shadcn/skeleton";
 
 export default function HostSkeleton() {
   return (
-    <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-2">
-          <div className="border rounded-md p-1 mr-2">
-            <Button
-              variant="default"
-              size="sm"
-              className="px-2"
-              disabled
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="px-2"
-              disabled
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button disabled>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Host
-          </Button>
-        </div>
+    <div className="space-y-4">
+      <div className="flex justify-end items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled
+        >
+          <Grid className="h-4 w-4" />
+        </Button>
+        <Button disabled>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Host
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

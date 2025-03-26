@@ -13,44 +13,47 @@ import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
 import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 import { useSidebar, useUser } from '@/context';
+import { User } from '@/types/user';
 
 interface WorkspaceHeaderProps {
   className?: string;
   fixed?: boolean;
   tenant?: string;
+  user?: User | null;
 }
 
 const HEADER_COOKIE_NAME = 'header:state';
 const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
-export function WorkspaceHeader({ className = '', fixed = false, tenant }: WorkspaceHeaderProps) {
+export function WorkspaceHeader({ className = '', fixed = false, tenant, user: propUser }: WorkspaceHeaderProps) {
   const { open } = useSidebar();
   const userContext = useUser();
   const isCollapsed = !open;
   const [headerVisible, setHeaderVisible] = React.useState(
     Cookies.get(HEADER_COOKIE_NAME) !== 'hidden',
   );
+  
+  // Use prop user if available, otherwise fall back to context
+  const user = propUser || userContext?.user;
 
-  // Debug log for user role - always call hooks unconditionally
+  // Debug logging for user data sources
   React.useEffect(() => {
-    if (userContext?.user) {
-      console.log('[WorkspaceHeader] User data:', {
+    if (propUser) {
+      console.log('[WorkspaceHeader] Using user from props:', {
+        id: propUser.id,
+        role: propUser.role || 'No role found',
+        source: 'props',
+      });
+    } else if (userContext?.user) {
+      console.log('[WorkspaceHeader] Using user from context:', {
         id: userContext.user.id,
         role: userContext.user.role || 'No role found',
-        tenant: userContext.user.tenant_name,
+        source: 'context',
       });
     } else {
-      console.log('[WorkspaceHeader] User data not available yet, loading:', userContext?.loading);
-      
-      // If context is initialized but user is still missing, try refreshing
-      if (userContext?.isInitialized && !userContext?.loading && userContext?.refreshUser) {
-        console.log('[WorkspaceHeader] Attempting to refresh missing user data');
-        userContext.refreshUser().catch(e => 
-          console.error('[WorkspaceHeader] Error refreshing user:', e)
-        );
-      }
+      console.log('[WorkspaceHeader] No user data available');
     }
-  }, [userContext?.user, userContext?.loading, userContext?.isInitialized, userContext?.refreshUser]);
+  }, [propUser, userContext?.user]);
 
   const toggleHeader = React.useCallback(() => {
     const newState = !headerVisible;
@@ -91,10 +94,10 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
             <div className="flex items-center gap-2 px-4 h-full">
               <div className="flex-none w-36 mr-12">
                 {/* Force a complete component remount when user role changes by using key */}
-                {userContext?.user ? (
+                {user ? (
                   <RoleSwitcher
-                    key={`role-switcher-${userContext.user.role || 'default'}`}
-                    user={userContext.user}
+                    key={`role-switcher-${user?.role || 'default'}`}
+                    user={user}
                   />
                 ) : (
                   <div className="w-[180px] h-10 bg-muted animate-pulse rounded-md"></div>
@@ -108,7 +111,7 @@ export function WorkspaceHeader({ className = '', fixed = false, tenant }: Works
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <ThemeToggle />
                 <Separator orientation="vertical" className="h-8 opacity-30" />
-                <UserProfile tenant={tenant} user={userContext?.user} />
+                <UserProfile tenant={tenant} user={user} />
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <Button
                   variant="outline"

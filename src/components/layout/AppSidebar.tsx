@@ -18,10 +18,15 @@ import { sidebarData } from '@/components/sidebar/sidebarData';
 import * as React from 'react';
 import { Role } from '@/types/user';
 
+interface AppSidebarProps {
+  user?: User | null;
+}
+
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const AppSidebar = React.memo(function AppSidebar() {
+const AppSidebar = React.memo(function AppSidebar({ user: propUser }: AppSidebarProps) {
   const userContext = useUser();
-  const user = userContext?.user || null;
+  // Use prop user if available, otherwise fall back to context
+  const user = propUser || userContext?.user || null;
   const { open } = useSidebar();
   // Use state for isCollapsed to ensure hydration consistency
   const [isCollapsed, setIsCollapsed] = React.useState(false);

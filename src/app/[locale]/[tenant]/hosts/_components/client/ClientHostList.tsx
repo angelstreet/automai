@@ -303,36 +303,34 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshAll}
-            disabled={isRefreshing || hosts.length === 0}
-          >
-            <RefreshCw
-              className={cn('h-4 w-4 mr-2', {
-                'animate-spin': isRefreshing,
-              })}
-            />
-            {t('refresh')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
-          >
-            {viewMode === 'grid' ? (
-              <List className="h-4 w-4" />
-            ) : (
-              <Grid className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
+      <div className="flex justify-end items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefreshAll}
+          disabled={isRefreshing || hosts.length === 0}
+        >
+          <RefreshCw
+            className={cn('h-4 w-4 mr-2', {
+              'animate-spin': isRefreshing,
+            })}
+          />
+          Refresh
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
+        >
+          {viewMode === 'grid' ? (
+            <List className="h-4 w-4" />
+          ) : (
+            <Grid className="h-4 w-4" />
+          )}
+        </Button>
         <Button onClick={() => setShowAddHost(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          {t('addHost')}
+          Add Host
         </Button>
       </div>
 
