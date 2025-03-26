@@ -1,8 +1,7 @@
 ---
-title: React Server Components Architecture
-description: Rules for maintaining the React Server Components architecture in our migrated application
-severity: error
-recommended: true
+description: 
+globs: 
+alwaysApply: true
 ---
 
 # React Server Components Architecture Guidelines

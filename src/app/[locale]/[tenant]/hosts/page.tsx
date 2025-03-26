@@ -9,11 +9,13 @@ export default async function HostsPage() {
   const t = await getTranslations('hosts');
   
   return (
-    <div>
+    <div className="container mx-auto py-6 px-4">
+      <div className="flex flex-col gap-4">
       <PageHeader title={t('hosts')} description={t('hosts_description')} />
       <Suspense fallback={<HostSkeleton />}>
         <HostContent />
       </Suspense>
+    </div>
     </div>
   );
 }

@@ -5,6 +5,10 @@
     "getStarted": "Get Started",
     "learnMore": "Learn More"
   },
+  "hosts": {
+    "hosts": "Hosts",
+    "hosts_description": "Manage your hosts and connections"
+  },
   "Auth": {
     "signIn": "Sign In",
     "signUp": "Sign Up",
@@ -362,6 +366,27 @@
     "removeUser": "Remove",
     "confirmRemove": "Are you sure you want to remove this user?",
     "noMembers": "No team members found"
+  },
+  "cicd": {
+    "title": "CI/CD Integration",
+    "description": "Configure CI/CD providers for automated deployments",
+    "providers": "CI/CD Providers",
+    "add_provider": "Add Provider",
+    "no_providers": "No CI/CD providers configured",
+    "add_provider_description": "Connect to your CI/CD systems to automate deployments",
+    "provider_type": "Provider Type",
+    "display_name": "Display Name",
+    "server_url": "Server URL",
+    "username": "Username",
+    "token": "API Token",
+    "connect": "Connect",
+    "connecting": "Connecting...",
+    "test_connection": "Test Connection",
+    "testing": "Testing Connection...",
+    "refresh": "Refresh",
+    "delete": "Delete",
+    "confirm_delete": "Are you sure you want to delete this CI/CD provider?",
+    "delete_warning": "This will remove all associated jobs and pipelines. This action cannot be undone."
   },
   "deployment": {
     "wizard": {

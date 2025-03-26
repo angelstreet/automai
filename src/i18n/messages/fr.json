@@ -347,6 +347,27 @@
     "profile": "Profil",
     "logout": "Déconnexion"
   },
+  "cicd": {
+    "title": "Intégration CI/CD",
+    "description": "Configurez les fournisseurs CI/CD pour les déploiements automatisés",
+    "providers": "Fournisseurs CI/CD",
+    "add_provider": "Ajouter un fournisseur",
+    "no_providers": "Aucun fournisseur CI/CD configuré",
+    "add_provider_description": "Connectez-vous à vos systèmes CI/CD pour automatiser les déploiements",
+    "provider_type": "Type de fournisseur",
+    "display_name": "Nom d'affichage",
+    "server_url": "URL du serveur",
+    "username": "Nom d'utilisateur",
+    "token": "Jeton API",
+    "connect": "Connecter",
+    "connecting": "Connexion en cours...",
+    "test_connection": "Tester la connexion",
+    "testing": "Test en cours...",
+    "refresh": "Actualiser",
+    "delete": "Supprimer",
+    "confirm_delete": "Êtes-vous sûr de vouloir supprimer ce fournisseur CI/CD ?",
+    "delete_warning": "Cela supprimera tous les jobs et pipelines associés. Cette action ne peut pas être annulée."
+  },
   "deployment": {
     "wizard": {
       "next": "Suivant",

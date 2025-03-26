@@ -266,7 +266,10 @@ export function ClientConnectionForm({
         <Button
           variant="outline"
           onClick={testHostConnection}
-          disabled={testing}
+          disabled={testing || 
+            !formData.name.trim() || 
+            !formData.ip.trim() || 
+            (formData.type === 'ssh' && (!formData.username.trim() || !formData.password.trim()))}
           className="h-8 px-3 text-sm"
         >
           {testing ? (

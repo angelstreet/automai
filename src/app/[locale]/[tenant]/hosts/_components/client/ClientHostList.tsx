@@ -286,6 +286,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     return (
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
+          <div></div>
           <div className="flex items-center space-x-2">
             <div className="border rounded-md p-1 mr-2">
               <Button
@@ -354,6 +355,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
+        <div></div>
         <div className="flex items-center space-x-2">
           <div className="border rounded-md p-1 mr-2">
             <Button

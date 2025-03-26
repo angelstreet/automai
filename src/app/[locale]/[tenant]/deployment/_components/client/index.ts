@@ -5,3 +5,4 @@ export { ClientDeploymentDetails } from './ClientDeploymentDetails';
 export { ClientDeploymentRunAction } from './ClientDeploymentRunAction';
 export { default as DeploymentWizardStep5 } from './DeploymentWizardStep5';
 export { DeploymentActions } from './DeploymentActions';
+export { ClientEmptyState } from './ClientEmptyState';
