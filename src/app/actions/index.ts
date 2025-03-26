@@ -2,3 +2,8 @@ export * from './git-providers';
 export * from './hosts';
 export * from './repositories';
 export * from './user';
+export * from './dashboard';
+export * from './cicd';
+export * from './deployments';
+export * from './terminals';
+export * from './auth';

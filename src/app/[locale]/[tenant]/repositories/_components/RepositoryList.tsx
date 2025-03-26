@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, GitBranch } from 'lucide-react';
 
@@ -9,47 +11,96 @@ import { EmptyState } from '@/components/layout/EmptyState';
 
 import { EnhancedRepositoryCard } from './EnhancedRepositoryCard';
 import { Repository } from '../types';
+import { clearRepositoriesCache, starRepositoryAction, unstarRepositoryAction } from '@/app/actions/repositories';
+import { useRouter } from 'next/navigation';
 
 interface RepositoryListProps {
   repositories: Repository[];
   starredRepos: Set<string>;
-  syncingRepoIds: Record<string, boolean>;
-  isDeleting: string | null;
-  loading?: boolean;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  onToggleStarred: (id: string) => Promise<void>;
-  onSyncRepository: (id: string) => Promise<void>;
-  onDeleteRepository: (id: string) => void;
-  onViewRepository: (repo: Repository) => void;
-  searchQuery: string;
-  filterCategory: string;
-  sortBy: string;
-  currentPage: number;
-  itemsPerPage: number;
-  onPageChange: (pageNumber: number) => void;
+  error?: string;
 }
 
 export function RepositoryList({
   repositories,
   starredRepos,
-  syncingRepoIds,
-  isDeleting,
-  loading = false,
-  activeTab,
-  setActiveTab,
-  onToggleStarred,
-  onSyncRepository,
-  onDeleteRepository,
-  onViewRepository,
-  searchQuery,
-  filterCategory,
-  sortBy,
-  currentPage,
-  itemsPerPage,
-  onPageChange,
+  error
 }: RepositoryListProps) {
   const t = useTranslations('repositories');
+  const router = useRouter();
+
+  // Local state
+  const [activeTab, setActiveTab] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [syncingRepoIds, setSyncingRepoIds] = useState<Record<string, boolean>>({});
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const itemsPerPage = 12;
+  
+  // Client-side search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('lastUpdated');
+  const [filterCategory, setFilterCategory] = useState('All');
+
+  // Action handlers
+  const handleToggleStarred = async (id: string) => {
+    // Check if repository is already starred
+    const isStarred = starredRepos.has(id);
+    
+    try {
+      // Optimistic update
+      const newStarredRepos = new Set(starredRepos);
+      if (isStarred) {
+        newStarredRepos.delete(id);
+      } else {
+        newStarredRepos.add(id);
+      }
+      
+      // Call the appropriate server action
+      if (isStarred) {
+        await unstarRepositoryAction(id);
+      } else {
+        await starRepositoryAction(id);
+      }
+      
+      // Refresh the data (which will show our optimistic update until the server data arrives)
+      router.refresh();
+    } catch (error) {
+      console.error('Error toggling star status:', error);
+      
+      // Could add toast notification here
+    }
+  };
+  
+  const handleSyncRepository = async (id: string) => {
+    if (!id) return;
+    
+    try {
+      setSyncingRepoIds((prev) => ({ ...prev, [id]: true }));
+      
+      // Call clearRepositoriesCache to refresh the data
+      await clearRepositoriesCache();
+      
+      // Refresh the UI to show updated data
+      router.refresh();
+    } catch (error) {
+      console.error('Error syncing repository:', error);
+    } finally {
+      setSyncingRepoIds((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+  
+  const handleDeleteRepository = (id: string) => {
+    // We'll dispatch an event to show a deletion confirmation dialog
+    window.dispatchEvent(new CustomEvent('repository-delete-request', { 
+      detail: { id }
+    }));
+  };
+  
+  const handleViewRepository = (repo: Repository) => {
+    // Navigate to repository explorer or detail view
+    window.dispatchEvent(new CustomEvent('repository-view-request', { 
+      detail: { repo }
+    }));
+  };
 
   // Safely handle potentially undefined repositories array
   const repoArray = repositories || [];
@@ -114,7 +165,17 @@ export function RepositoryList({
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentRepositories = filteredRepositories.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Extract empty state to a separate function
+  // Error state
+  if (error) {
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+        <h3 className="mb-2 text-lg font-medium">Error loading repositories</h3>
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  // Empty state
   const renderEmptyState = () => {
     // Customize the message based on which filter is active
     let emptyStateMessage = '';
@@ -155,27 +216,8 @@ export function RepositoryList({
     );
   };
 
-  // SIMPLIFIED RENDER METHOD
+  // Repository cards
   const renderRepositoryCards = (): React.ReactNode => {
-    // Only show skeletons during loading state
-    if (loading) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Card key={index} className="h-48 animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-muted rounded w-3/4 mb-4"></div>
-                <div className="h-3 bg-muted rounded w-1/2 mb-2"></div>
-                <div className="h-3 bg-muted rounded w-2/3 mb-6"></div>
-                <div className="h-3 bg-muted rounded w-full"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      );
-    }
-
-    // After initialization, show repositories if we have them
     // No repositories or filtered results
     if (!repositories?.length || !filteredRepositories.length) {
       return renderEmptyState();
@@ -186,27 +228,27 @@ export function RepositoryList({
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentRepositories.map((repo) => (
-            <div key={repo.id} onClick={() => onViewRepository(repo)} className="cursor-pointer">
+            <div key={repo.id} onClick={() => handleViewRepository(repo)} className="cursor-pointer">
               <EnhancedRepositoryCard
                 repository={repo}
-                onSync={onSyncRepository}
+                onSync={handleSyncRepository}
                 isSyncing={syncingRepoIds[repo.id] === true}
-                onToggleStarred={onToggleStarred}
+                onToggleStarred={handleToggleStarred}
                 isStarred={starredRepos.has(repo.id)}
-                onDelete={onDeleteRepository}
+                onDelete={handleDeleteRepository}
                 isDeleting={isDeleting === repo.id}
               />
             </div>
           ))}
         </div>
 
-        {/* Pagination controls - fixed rendering */}
+        {/* Pagination controls */}
         {totalPages > 1 && (
           <div className="flex justify-center mt-6 gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onPageChange(currentPage - 1)}
+              onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -217,7 +259,7 @@ export function RepositoryList({
                 key={page}
                 variant={page === currentPage ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => onPageChange(page)}
+                onClick={() => setCurrentPage(page)}
               >
                 {page}
               </Button>
@@ -226,7 +268,7 @@ export function RepositoryList({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onPageChange(currentPage + 1)}
+              onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
             >
               <ChevronRight className="h-4 w-4" />

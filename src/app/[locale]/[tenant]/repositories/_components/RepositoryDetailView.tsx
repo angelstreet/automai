@@ -42,7 +42,7 @@ import {
   TooltipTrigger,
 } from '@/components/shadcn/tooltip';
 import { cn } from '@/lib/utils';
-import { getRepositoryFiles, getFileContent } from '@/app/[locale]/[tenant]/repositories/actions';
+import { getRepositoryFiles, getFileContent } from '@/app/actions/repositories';
 
 // File extension colors for syntax highlighting
 const FILE_EXTENSION_COLORS = {

@@ -1,28 +1,19 @@
-'use client';
-
-import { useTranslations } from 'next-intl';
-import { HostContextProvider } from '@/context';
-import HostList from './_components/HostList';
+import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { getHosts } from '@/app/actions/hosts';
+import HostContent from './_components/HostContent';
+import HostSkeleton from './_components/HostSkeleton';
 
-// Create separate content component that safely uses the context
-// This separates the context consumption from the provider wrapper
-function HostsPageContent() {
-  const t = useTranslations('hosts');
+export default async function HostsPage() {
+  const t = await getTranslations('hosts');
   
   return (
     <div>
       <PageHeader title={t('hosts')} description={t('hosts_description')} />
-      <HostList />
+      <Suspense fallback={<HostSkeleton />}>
+        <HostContent />
+      </Suspense>
     </div>
-  );
-}
-
-// Main exported page component that wraps the content with the provider
-export default function HostsPage() {
-  return (
-    <HostContextProvider>
-      <HostsPageContent />
-    </HostContextProvider>
   );
 }

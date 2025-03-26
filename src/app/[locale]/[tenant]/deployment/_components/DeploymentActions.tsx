@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Eye, Trash2, PlayCircle } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { DeploymentRunAction } from './DeploymentRunAction';
+import { ClientDeploymentRunAction } from './client';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { toast } from '@/components/shadcn/use-toast';
-import { useDeployment } from '@/context';
+import { deleteDeployment } from '@/app/actions/deployments';
 
 interface DeploymentActionsProps {
   deploymentId: string;
@@ -38,14 +38,7 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
   const { locale, tenant } = params;
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const deploymentContext = useDeployment();
-
-  const {
-    deleteDeployment = async () => ({
-      success: false,
-      error: 'Deployment context not initialized',
-    }),
-  } = deploymentContext || {};
+  // Use server action instead of context
 
   const handleView = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -111,7 +104,7 @@ export const DeploymentActions: React.FC<DeploymentActionsProps> = ({
         <Eye className="mr-1 h-3 w-3" /> View
       </Button>
 
-      <DeploymentRunAction deploymentId={deploymentId} />
+      <ClientDeploymentRunAction deployment={{id: deploymentId}} onDeploymentStarted={() => router.refresh()} />
 
       <Button
         variant="outline"

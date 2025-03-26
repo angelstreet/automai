@@ -32,10 +32,10 @@ import {
 import { toast } from '@/components/shadcn/use-toast';
 import { CICDProviderForm } from './';
 import {
-  getCICDProvidersAction,
-  deleteCICDProviderAction,
-  testCICDProviderAction,
-} from '../actions';
+  getCICDProviders,
+  deleteCICDProvider,
+  testCICDProvider,
+} from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
 import { CICDProvider as CICDProviderModel } from '../types';
 import useSWR from 'swr';
@@ -68,7 +68,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
   // Use SWR hook directly
   const { data: providersData, error: providersError, mutate: refreshProviders } = useSWR(
     'cicd-providers', 
-    () => getCICDProvidersAction()
+    () => getCICDProviders()
   );
 
   // Update local state when data changes
@@ -108,7 +108,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
         },
       };
 
-      const result = await testCICDProviderAction(providerPayload);
+      const result = await testCICDProvider(providerPayload);
 
       if (result.success) {
         toast({
@@ -156,7 +156,7 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
     if (!selectedProvider) return;
 
     try {
-      const result = await deleteCICDProviderAction(selectedProvider.id);
+      const result = await deleteCICDProvider(selectedProvider.id);
 
       if (result.success) {
         toast({

@@ -1,6 +1,9 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Filter, Plus, RefreshCw, Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Button } from '@/components/shadcn/button';
@@ -15,30 +18,35 @@ import {
 
 import { REPOSITORY_CATEGORIES } from '../constants';
 
-interface RepositoryHeaderProps {
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  sortBy: string;
-  setSortBy: (value: string) => void;
-  filterCategory: string;
-  setFilterCategory: (value: string) => void;
-  isRefreshingAll: boolean;
-  onRefreshAll: () => Promise<void>;
-  onOpenConnectDialog: () => void;
-}
-
-export function RepositoryHeader({
-  searchQuery,
-  setSearchQuery,
-  sortBy,
-  setSortBy,
-  filterCategory,
-  setFilterCategory,
-  isRefreshingAll,
-  onRefreshAll,
-  onOpenConnectDialog,
-}: RepositoryHeaderProps) {
+export function RepositoryHeader() {
   const t = useTranslations('repositories');
+  const router = useRouter();
+  
+  // Local state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('lastUpdated');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Handle refresh
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    
+    try {
+      // Refresh data by telling Next.js to revalidate the route
+      router.refresh();
+      
+      // Wait a bit to give visual indication
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 800);
+    } catch (error) {
+      console.error('Error refreshing repositories:', error);
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <CardHeader className="pb-2">
@@ -55,8 +63,8 @@ export function RepositoryHeader({
               <SelectItem value="owner">{t('owner')}</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" onClick={onRefreshAll} disabled={isRefreshingAll}>
-            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshingAll ? 'animate-spin' : ''}`} />
+          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {t('refresh')}
           </Button>
         </div>
@@ -84,7 +92,14 @@ export function RepositoryHeader({
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon">
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => {
+              // Client-side filtering
+              // Since this is just UI state, we handle it client-side
+            }}
+          >
             <Filter className="h-4 w-4" />
           </Button>
         </div>

@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { Github, Globe, GitBranch, ArrowRight, RefreshCw } from 'lucide-react';
-import { useRepository } from '@/context';
+import { 
+  testGitProviderConnection,
+  createGitProvider,
+  testGitRepository,
+  createRepositoryFromUrl
+} from '@/app/actions/repositories';
 import {
   Dialog,
   DialogContent,
@@ -42,28 +48,8 @@ export function EnhancedConnectRepositoryDialog({
   const [serverUrl, setServerUrl] = useState('');
   const { toast } = useToast();
 
-  // Use the repository context with null safety
-  const repositoryContext = useRepository();
-
-  // Handle the case where context is still initializing (null)
-  const {
-    createGitProvider = async () => ({
-      success: false,
-      error: 'Repository context not initialized',
-      data: null,
-      authUrl: null,
-    }),
-    createRepository = async () => ({
-      success: false,
-      error: 'Repository context not initialized',
-      data: null,
-    }),
-    verifyRepositoryUrl = async () => ({
-      success: false,
-      error: 'Repository context not initialized',
-      data: null,
-    }),
-  } = repositoryContext || {};
+  // Use router for refreshing data after actions
+  const router = useRouter();
 
   const handleConnect = (provider: string) => {
     setCurrentProvider(provider);
@@ -75,14 +61,6 @@ export function EnhancedConnectRepositoryDialog({
     setIsConnecting(true);
 
     try {
-      if (!repositoryContext) {
-        toast({
-          title: 'Error',
-          description: 'Repository context not initialized yet. Please try again later.',
-          variant: 'destructive',
-        });
-        return;
-      }
 
       const params: CreateGitProviderParams = {
         name: `${currentProvider} Provider`,
@@ -92,6 +70,9 @@ export function EnhancedConnectRepositoryDialog({
       const result = await createGitProvider(params);
 
       if (result.success && result.authUrl) {
+        // Store a flag in sessionStorage to refresh on return
+        sessionStorage.setItem('shouldRefreshRepos', 'true');
+        
         // Redirect to the OAuth login page
         window.location.href = result.authUrl;
       } else {
@@ -144,6 +125,9 @@ export function EnhancedConnectRepositoryDialog({
           description: 'Git provider connected successfully',
           variant: 'default',
         });
+        
+        // Refresh the page to show the new provider
+        router.refresh();
 
         if (onSubmit) {
           onSubmit({
@@ -180,17 +164,8 @@ export function EnhancedConnectRepositoryDialog({
     setIsCloning(true);
 
     try {
-      if (!repositoryContext) {
-        toast({
-          title: 'Error',
-          description: 'Repository context not initialized yet. Please try again later.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
       // First verify the URL is valid
-      const verifyResult = await verifyRepositoryUrl(quickCloneUrl);
+      const verifyResult = await testGitRepository({ url: quickCloneUrl });
 
       if (!verifyResult.success) {
         toast({
@@ -203,14 +178,8 @@ export function EnhancedConnectRepositoryDialog({
       }
 
       // Create the repository
-      const params: CreateRepositoryParams = {
-        url: quickCloneUrl,
-        name:
-          verifyResult.data?.name ||
-          quickCloneUrl.split('/').pop()?.replace('.git', '') ||
-          'Repository',
-      };
-      const result = await createRepository(params);
+      const repoName = quickCloneUrl.split('/').pop()?.replace('.git', '') || 'Repository';
+      const result = await createRepositoryFromUrl(quickCloneUrl, false, '');
 
       if (result.success) {
         toast({
@@ -218,6 +187,9 @@ export function EnhancedConnectRepositoryDialog({
           description: 'Repository cloned successfully',
           variant: 'default',
         });
+        
+        // Refresh the page to show the new repository
+        router.refresh();
 
         if (onSubmit) {
           onSubmit({

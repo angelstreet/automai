@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/s
 import { addHost, testConnection } from '../actions';
 import { Host } from '../types';
 
-import { ConnectionForm, FormData } from './ConnectionForm';
+import { ClientConnectionForm, FormData } from './client/ClientConnectionForm';
 
 interface ConnectHostDialogProps {
   open: boolean;
@@ -160,7 +160,7 @@ export function ConnectHostDialog({ open, onOpenChange, onSuccess }: ConnectHost
           <DialogTitle>{t('addNewHost')}</DialogTitle>
         </DialogHeader>
 
-        <ConnectionForm
+        <ClientConnectionForm
           formData={formData}
           onChange={handleFormChange}
           onTestSuccess={() => {

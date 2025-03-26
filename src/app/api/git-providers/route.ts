@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { createClient } from '@/lib/supabase/server';
-import { createGitProvider } from '@/app/[locale]/[tenant]/repositories/actions';
+import { createGitProvider, getGitProviders } from '@/app/actions/repositories';
 import { createGithubOauthUrl, createGitlabOauthUrl } from '@/lib/services/oauth';
-import { getGitProviders } from '@/app/[locale]/[tenant]/repositories/actions';
 
 // Schema validation for creating a git provider
 const GitProviderCreateSchema = z.object({

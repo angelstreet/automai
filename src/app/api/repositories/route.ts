@@ -3,7 +3,7 @@ import {
   getRepositories,
   createRepository,
   createRepositoryFromUrl,
-} from '@/app/[locale]/[tenant]/repositories/actions';
+} from '@/app/actions/repositories';
 
 /**
  * GET /api/repositories

@@ -14,8 +14,8 @@ import { updateProfile as updateProfileAction } from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
 import { Role, User, AuthUser } from '@/types/user';
 import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
-import { persistedData } from './AppContext';
-import { AppContextType } from '@/types/context/app';
+// AppContext has been removed in the RSC migration
+import type { AppContextType } from '@/types/context/app';
 import {
   signUp as signUpAction,
   signInWithOAuth as signInWithOAuthAction,
@@ -87,11 +87,9 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
 
 export function UserProvider({
   children,
-  appContextRef,
   onAuthChange,
 }: {
   children: React.ReactNode;
-  appContextRef: React.MutableRefObject<AppContextType>;
   onAuthChange?: (isAuthenticated: boolean) => void;
 }) {
   // Check for multiple instances of UserProvider
@@ -146,12 +144,6 @@ export function UserProvider({
   // Get initial user data synchronously from localStorage
   const [initialUser, setInitialUser] = useState<User | null>(() => {
     if (typeof window !== 'undefined') {
-      // Check if we have persisted data from AppContext first
-      if (persistedData.user) {
-        log('[UserContext] Using initial user data from persistedData');
-        return persistedData.user;
-      }
-
       try {
         const cachedUser = localStorage.getItem(STORAGE_KEYS.CACHED_USER);
         if (cachedUser) {
@@ -335,10 +327,14 @@ export function UserProvider({
     }
   }, [user]);
 
-  // Persist user data for cross-navigation
+  // Persist user data in localStorage
   useEffect(() => {
-    if (user && persistedData) {
-      persistedData.user = user;
+    if (user && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEYS.CACHED_USER, JSON.stringify(user));
+      } catch (e) {
+        // Ignore localStorage errors
+      }
     }
   }, [user]);
 
@@ -402,10 +398,7 @@ export function UserProvider({
     [user, loading, error, refreshUser, clearCache, isInitialized, signUp, signInWithOAuth],
   );
 
-  // Update the central AppContext via the ref for synchronous access
-  if (appContextRef?.current) {
-    appContextRef.current.user = value;
-  }
+  // AppContext has been removed in the RSC migration
 
   // Also expose user context globally for immediate access
   if (typeof window !== 'undefined') {

@@ -1,8 +1,10 @@
-import { AlertCircle, Check, CheckCircle, Loader2, ShieldAlert, X } from 'lucide-react';
+'use client';
+
+import { AlertCircle, Check, CheckCircle, Loader2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
@@ -19,9 +21,7 @@ import { Textarea } from '@/components/shadcn/textarea';
 import {
   verifyFingerprint as verifyFingerprintAction,
   testConnection as testConnectionAction,
-} from '../actions';
-import { useHost } from '@/context';
-import { Host } from '../types';
+} from '@/app/actions/hosts';
 
 export interface FormData {
   name: string;
@@ -44,7 +44,7 @@ interface ConnectionFormProps {
   testStatus?: 'idle' | 'success' | 'error';
 }
 
-export function ConnectionForm({
+export function ClientConnectionForm({
   formData,
   onChange,
   onTestSuccess,
@@ -54,7 +54,6 @@ export function ConnectionForm({
   testStatus = 'idle',
 }: ConnectionFormProps) {
   const t = useTranslations('Common');
-  const hostContext = useHost();
   const [connectionType, setConnectionType] = useState<'ssh' | 'docker' | 'portainer'>(
     formData.type as 'ssh' | 'docker' | 'portainer',
   );
@@ -68,21 +67,11 @@ export function ConnectionForm({
     hostname: string;
     fingerprint: string;
   } | null>(null);
-  const { locale, tenant } = useParams() as { locale: string; tenant: string };
   const lastRequestTime = useRef<number>(0);
   const REQUEST_THROTTLE_MS = 500;
 
-  // Synchronize testSuccess with testStatus
-  useEffect(() => {
-    if (testStatus === 'success' && !testSuccess) {
-      setTestSuccess(true);
-    }
-
-    if (testSuccess && testStatus !== 'success' && onTestSuccess) {
-      onTestSuccess();
-    }
-  }, [testSuccess, testStatus, onTestSuccess]);
-
+  // React.useEffect is defined but not needed anymore since we removed the context dependency
+  
   const handleTypeChange = (value: string) => {
     setConnectionType(value as 'ssh' | 'docker' | 'portainer');
 
@@ -304,7 +293,7 @@ export function ConnectionForm({
             }
 
             try {
-              const result = await onSubmit();
+              await onSubmit();
             } catch (error) {
               console.error('Error executing onSubmit callback:', error);
             }

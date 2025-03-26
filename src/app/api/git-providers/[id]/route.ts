@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getGitProvider, deleteGitProvider } from '@/app/[locale]/[tenant]/repositories/actions';
+import { getGitProvider, deleteGitProvider } from '@/app/actions/repositories';
 
 type Props = {
   params: { id: string };

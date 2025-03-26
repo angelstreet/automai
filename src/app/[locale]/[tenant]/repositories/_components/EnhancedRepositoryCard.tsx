@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { Star, GitBranch, Clock, ExternalLink, RefreshCw, Globe, Lock, Trash2 } from 'lucide-react';
-import { useRepository } from '@/context';
+import { deleteRepository, syncRepository, starRepositoryAction, unstarRepositoryAction } from '@/app/actions/repositories';
 
 import {
   Card,
@@ -33,8 +34,8 @@ export function EnhancedRepositoryCard({
   const [isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
 
-  // Get repository context (with proper null check)
-  const repositoryContext = useRepository();
+  // Use the router for refreshing data after actions
+  const router = useRouter();
 
   // Log whenever the card receives new props
   useEffect(() => {
@@ -89,22 +90,70 @@ export function EnhancedRepositoryCard({
   };
 
   // Handle sync button click without propagation
-  const handleSyncClick = (e: React.MouseEvent) => {
+  const handleSyncClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSync(repository?.id || '');
+    
+    if (!repository?.id) return;
+    
+    try {
+      // Use server action directly
+      const result = await syncRepository(repository.id);
+      
+      if (result.success) {
+        // Refresh UI
+        router.refresh();
+        if (onSync) {
+          onSync(repository.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing repository:', error);
+    }
   };
 
   // Handle star button click without propagation
-  const handleStarClick = (e: React.MouseEvent) => {
+  const handleStarClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    onToggleStarred(repository?.id || '');
+    
+    if (!repository?.id) return;
+    
+    try {
+      // Use server action directly
+      if (isStarred) {
+        await unstarRepositoryAction(repository.id);
+      } else {
+        await starRepositoryAction(repository.id);
+      }
+      
+      // Refresh UI
+      router.refresh();
+      if (onToggleStarred) {
+        onToggleStarred(repository.id);
+      }
+    } catch (error) {
+      console.error('Error toggling star status:', error);
+    }
   };
 
   // Handle delete button click without propagation
-  const handleDeleteClick = (e: React.MouseEvent) => {
+  const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onDelete) {
-      onDelete(repository?.id || '');
+    
+    if (!repository?.id) return;
+    
+    try {
+      // Use server action directly
+      const result = await deleteRepository(repository.id);
+      
+      if (result.success) {
+        // Refresh UI
+        router.refresh();
+        if (onDelete) {
+          onDelete(repository.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting repository:', error);
     }
   };
 

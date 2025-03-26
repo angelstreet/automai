@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { testGitProviderConnection } from '@/app/[locale]/[tenant]/repositories/actions';
+import { testGitProviderConnection } from '@/app/actions/repositories';
 
 /**
  * POST /api/repositories/test-connection

@@ -21,10 +21,10 @@ import {
 } from '@/components/shadcn/select';
 import { toast } from '@/components/shadcn/use-toast';
 import {
-  createCICDProviderAction,
-  updateCICDProviderAction,
-  testCICDProviderAction,
-} from '../actions';
+  createCICDProvider,
+  updateCICDProvider,
+  testCICDProvider,
+} from '@/app/actions/cicd';
 import {
   CICDProvider,
   CICDProviderPayload,
@@ -136,7 +136,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
       };
 
       // Test the connection
-      const result = await testCICDProviderAction(providerData);
+      const result = await testCICDProvider(providerData);
 
       if (result.success) {
         setTestMessage({
@@ -196,8 +196,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
 
       // Create or update the provider
       const action = providerId
-        ? () => updateCICDProviderAction(providerId, providerPayload)
-        : () => createCICDProviderAction(providerPayload);
+        ? () => updateCICDProvider(providerId, providerPayload)
+        : () => createCICDProvider(providerPayload);
 
       const result = await action();
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleOAuthCallback } from '@/app/[locale]/[tenant]/repositories/actions';
+import { handleOAuthCallback } from '@/app/actions/repositories';
 
 /**
  * GET /api/git-providers/callback

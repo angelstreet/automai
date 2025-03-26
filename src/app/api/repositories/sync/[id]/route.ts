@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { syncRepository } from '@/app/[locale]/[tenant]/repositories/actions';
+import { syncRepository } from '@/app/actions/repositories';
 
 type Props = {
   params: { id: string };
