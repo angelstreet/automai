@@ -41,9 +41,10 @@
     "haveAccount": "Already have an account?",
     "signupLink": "Sign up",
     "loginLink": "Sign in",
-    "signupSuccess": "Account created successfully! Please check your email to verify your account.",
+    "signupSuccess": "Welcome to Automai! 🎉 Your account has been created successfully. You will be redirected to login in a few seconds...",
     "backToLogin": "Back to Login",
     "passwordsDoNotMatch": "Passwords do not match",
+    "redirecting": "Redirecting in",
     "error": {
       "invalidCredentials": "Invalid email or password",
       "emailRequired": "Email is required",

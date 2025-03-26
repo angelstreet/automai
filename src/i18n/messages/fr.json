@@ -41,9 +41,10 @@
     "haveAccount": "Vous avez déjà un compte ?",
     "signupLink": "S'inscrire",
     "loginLink": "Se connecter",
-    "signupSuccess": "Compte créé avec succès ! Veuillez vérifier votre email pour activer votre compte.",
+    "signupSuccess": "Bienvenue sur Automai ! 🎉 Votre compte a été créé avec succès. Vous serez redirigé vers la connexion dans quelques secondes...",
     "backToLogin": "Retour à la connexion",
     "passwordsDoNotMatch": "Les mots de passe ne correspondent pas",
+    "redirecting": "Redirection dans",
     "error": {
       "invalidCredentials": "Email ou mot de passe invalide",
       "emailRequired": "L'email est requis",

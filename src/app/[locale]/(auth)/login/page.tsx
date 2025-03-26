@@ -27,6 +27,24 @@ export default function LoginPage() {
   // Use the user hook only for user data and loading state
   const { user, loading, error: authError } = useUser();
 
+  // Check for prefilled credentials from URL
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const emailParam = urlParams.get('email');
+      const passwordParam = urlParams.get('password');
+
+      if (emailParam) setEmail(emailParam);
+      if (passwordParam) setPassword(passwordParam);
+
+      // Clear the URL parameters after getting the values
+      if (emailParam || passwordParam) {
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, []);
+
   // Redirect if user is already logged in
   React.useEffect(() => {
     // Check for auth cookies, even if the user object isn't loaded yet
@@ -190,7 +208,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="mt-1"
+              className="mt-1 border border-gray-200 dark:border-gray-700"
               placeholder="you@example.com"
               autoComplete="username"
               disabled={isButtonDisabled}
@@ -215,7 +233,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="mt-1"
+              className="mt-1 border border-gray-200 dark:border-gray-700"
               autoComplete="current-password"
               disabled={isButtonDisabled}
             />
