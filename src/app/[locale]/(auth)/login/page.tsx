@@ -125,85 +125,20 @@ export default function LoginPage() {
     try {
       console.log('🔐 LOGIN: Attempting email/password sign in');
       
-      // Check environment to detect potential CORS issues
-      const hostname = window.location.hostname;
-      // Always use CORS workaround in non-localhost environments for now
-      const needsCorsWorkaround = true; // Force using workaround
+      // For consistency with OAuth, we'll redirect to a "handle email auth" page
+      // This gives Supabase control over setting the cookies properly
+      const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
       
-      console.log('🔐 LOGIN: Environment check:', { 
-        hostname, 
-        needsCorsWorkaround 
-      });
+      // Store credentials in session storage for the redirect page to use
+      sessionStorage.setItem('email_auth', JSON.stringify({
+        email,
+        password,
+        timestamp: Date.now()
+      }));
       
-      let result;
-      
-      // Skip trying the standard method for now and go straight to CORS method
-      if (needsCorsWorkaround) {
-        // Use our CORS-enabled API endpoint
-        console.log('🔐 LOGIN: Using CORS API workaround directly');
-        try {
-          const apiUrl = `${window.location.origin}/api/auth/cors`;
-          
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ email, password }),
-          });
-          
-          if (!response.ok) {
-            let errorMessage = 'Authentication failed';
-            try {
-              const errorData = await response.json();
-              errorMessage = errorData.error || errorMessage;
-            } catch (parseError) {
-              console.error('🔐 LOGIN: Error parsing error response:', parseError);
-            }
-            throw new Error(errorMessage);
-          }
-          
-          const data = await response.json();
-          result = { success: true, data: data.data };
-        } catch (corsError) {
-          console.error('🔐 LOGIN: CORS workaround failed:', corsError);
-          
-          // Show more specific error message and suggest GitHub auth
-          setError(`Email login is currently unavailable. Please try GitHub authentication instead. Error: ${corsError.message}`);
-          setIsSubmitting(false);
-          setIsAuthenticating(false);
-          return; // Exit early
-        }
-      } else {
-        // Use standard method in local environment
-        try {
-          console.log('🔐 LOGIN: Using standard auth method');
-          result = await signInWithPasswordAction(email, password);
-        } catch (authError: any) {
-          console.error('🔐 LOGIN: Standard auth failed:', authError);
-          throw authError;
-        }
-      }
-      
-      console.log('🔐 LOGIN: Sign in result:', { 
-        success: result.success, 
-        hasSession: !!result.data?.session,
-        error: result.error
-      });
-      
-      if (result.success && result.data?.session) {
-        // tenant_name is directly on the user object (not in user_metadata)
-        const tenantName = result.data.user?.tenant_name || 'trial';
-
-        console.log('Login submission redirecting to tenant:', tenantName);
-        // Redirect to dashboard
-        router.push(`/${locale}/${tenantName}/dashboard`);
-      } else {
-        // If authentication failed, show the error
-        setError(result.error || 'Failed to sign in');
-        setIsSubmitting(false);
-        setIsAuthenticating(false);
-      }
+      // Redirect to the auth handler page, which will process this
+      // similar to how auth-redirect handles GitHub OAuth
+      window.location.href = `/${locale}/auth-redirect?auth_method=email`;
     } catch (err: any) {
       console.error('🔐 LOGIN: Error during sign in:', err);
       setError(err.message || 'An error occurred');

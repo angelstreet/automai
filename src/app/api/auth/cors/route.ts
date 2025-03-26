@@ -98,16 +98,54 @@ export async function POST(request: NextRequest) {
         
         console.log('CORS Auth: Authentication successful!');
         
-        // Set appropriate CORS headers
-        const headers = {
-          'Access-Control-Allow-Origin': origin,
-          'Access-Control-Allow-Credentials': 'true',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, X-Supabase-Client',
-        };
+        // We need to manually set the cookies in the response        
+        const response = NextResponse.json(
+          { data }, 
+          { 
+            headers: {
+              'Access-Control-Allow-Origin': origin,
+              'Access-Control-Allow-Credentials': 'true',
+              'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, X-Supabase-Client',
+            }
+          }
+        );
+
+        // Set auth cookies in the response so middleware can detect the session
+        if (data.session) {
+          console.log('CORS Auth: Setting auth cookies in response');
+          
+          // Determine if request is from Cloudworkstations
+          const isCloudWorkstation = origin.includes('cloudworkstations.dev');
+          
+          // These are the auth cookies Supabase typically sets
+          const cookieOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: isCloudWorkstation ? 'none' as const : 'lax' as const,
+            path: '/',
+            maxAge: data.session.expires_in || 60 * 60 * 24 * 7, // 1 week default
+          };
+          
+          console.log('CORS Auth: Setting cookies with options:', {
+            secure: cookieOptions.secure,
+            sameSite: cookieOptions.sameSite,
+            path: cookieOptions.path
+          });
+          
+          // Set auth cookies directly
+          response.cookies.set('sb-access-token', data.session.access_token, cookieOptions);
+          response.cookies.set('sb-refresh-token', data.session.refresh_token, cookieOptions);
+          
+          // Also set a cookie with basic session info for the client (needed for middleware)
+          response.cookies.set(
+            'supabase-auth-token',
+            JSON.stringify([data.session.access_token, data.session.refresh_token]),
+            cookieOptions
+          );
+        }
         
-        // Return the session data
-        return NextResponse.json({ data }, { headers });
+        return response;
       } catch (authError: any) {
         console.error('CORS Auth: Error during Supabase auth call:', authError);
         return NextResponse.json(

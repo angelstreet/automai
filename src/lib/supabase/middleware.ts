@@ -16,8 +16,19 @@ export const createClient = (request: NextRequest) => {
     URL: ${request.nextUrl.pathname}${request.nextUrl.search}
     Method: ${request.method}
     Host: ${request.headers.get('host')}
+    Origin: ${request.headers.get('origin')}
     Referer: ${request.headers.get('referer')}`,
   );
+  
+  // Check if this request is from Cloudworkstations
+  const isCloudWorkstation = 
+    request.headers.get('host')?.includes('cloudworkstations.dev') ||
+    request.headers.get('referer')?.includes('cloudworkstations.dev') ||
+    request.headers.get('origin')?.includes('cloudworkstations.dev');
+    
+  if (isCloudWorkstation) {
+    console.log('[Middleware] Cloudworkstations environment detected');
+  }
 
   // Create response to manipulate cookies
   const response = NextResponse.next({
@@ -67,15 +78,23 @@ export const createClient = (request: NextRequest) => {
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              // Enhanced cookie options for both development and production
+              // Enhanced cookie options based on environment
               const finalOptions = {
                 ...options,
                 path: '/',
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax' as const,
+                secure: isCloudWorkstation || process.env.NODE_ENV === 'production',
+                sameSite: isCloudWorkstation ? 'none' as const : 'lax' as const,
                 domain: process.env.NODE_ENV === 'production' ? '.vercel.app' : undefined,
                 maxAge: name.includes('token') ? 60 * 60 * 24 * 7 : undefined,
               };
+              
+              console.log(`[Middleware:cookies] Setting cookie ${name} with options:`, {
+                secure: finalOptions.secure,
+                sameSite: finalOptions.sameSite,
+                domain: finalOptions.domain,
+                path: finalOptions.path,
+                maxAge: finalOptions.maxAge
+              });
 
               request.cookies.set({
                 name,
