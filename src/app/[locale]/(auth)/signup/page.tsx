@@ -65,8 +65,10 @@ export default function SignUpPage() {
     }
 
     try {
-      // Create user with server action
-      const redirectUrl = `${window.location.origin}/${locale}/auth-redirect`;
+      // Create user with server action - use absolute URL with https for Supabase email confirmation
+      // Ensure correct format to prevent CORS/redirect issues
+      const baseUrl = window.location.origin;
+      const redirectUrl = `${baseUrl}/${locale}/login`; // Redirect to login after email confirmation instead of auth-redirect
       const result = await signUpAction(email, password, name, redirectUrl);
 
       if (result.error) {

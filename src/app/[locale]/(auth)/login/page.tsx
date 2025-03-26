@@ -123,9 +123,60 @@ export default function LoginPage() {
     setIsAuthenticating(true);
 
     try {
-      // Use the server action directly instead of going through UserContext
-      const result = await signInWithPasswordAction(email, password);
-
+      console.log('🔐 LOGIN: Attempting email/password sign in');
+      
+      // Check environment to detect potential CORS issues
+      const hostname = window.location.hostname;
+      const needsCorsWorkaround = hostname.includes('cloudworkstations.dev') || 
+                                 hostname.includes('vercel.app') ||
+                                 hostname !== 'localhost';
+      
+      console.log('🔐 LOGIN: Environment check:', { 
+        hostname, 
+        needsCorsWorkaround 
+      });
+      
+      let result;
+      
+      try {
+        // First try the standard method
+        console.log('🔐 LOGIN: Trying standard auth first');
+        result = await signInWithPasswordAction(email, password);
+      } catch (authError) {
+        console.error('🔐 LOGIN: Standard auth failed, trying CORS workaround:', authError);
+        
+        if (needsCorsWorkaround) {
+          // If standard auth fails, use our CORS-enabled API endpoint
+          console.log('🔐 LOGIN: Using CORS API workaround');
+          const apiUrl = `${window.location.origin}/api/auth/cors`;
+          
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Authentication failed');
+          }
+          
+          const data = await response.json();
+          result = { success: true, data: data.data };
+        } else {
+          // Re-throw the error if we're not using the workaround
+          throw authError;
+        }
+      }
+      
+      console.log('🔐 LOGIN: Sign in result:', { 
+        success: result.success, 
+        hasSession: !!result.data?.session,
+        error: result.error
+      });
+      
       if (result.success && result.data?.session) {
         // tenant_name is directly on the user object (not in user_metadata)
         const tenantName = result.data.user?.tenant_name || 'trial';
@@ -139,7 +190,14 @@ export default function LoginPage() {
         setIsSubmitting(false);
         setIsAuthenticating(false);
       }
+      } catch (innerErr: any) {
+        console.error('🔐 LOGIN: Inner error during sign in:', innerErr);
+        setError(innerErr.message || 'Failed to sign in');
+        setIsSubmitting(false);
+        setIsAuthenticating(false);
+      }
     } catch (err: any) {
+      console.error('🔐 LOGIN: Outer error during sign in:', err);
       setError(err.message || 'An error occurred');
       setIsSubmitting(false);
       setIsAuthenticating(false);
