@@ -127,9 +127,8 @@ export default function LoginPage() {
       
       // Check environment to detect potential CORS issues
       const hostname = window.location.hostname;
-      const needsCorsWorkaround = hostname.includes('cloudworkstations.dev') || 
-                                 hostname.includes('vercel.app') ||
-                                 hostname !== 'localhost';
+      // Always use CORS workaround in non-localhost environments for now
+      const needsCorsWorkaround = true; // Force using workaround
       
       console.log('🔐 LOGIN: Environment check:', { 
         hostname, 
@@ -138,16 +137,11 @@ export default function LoginPage() {
       
       let result;
       
-      try {
-        // First try the standard method
-        console.log('🔐 LOGIN: Trying standard auth first');
-        result = await signInWithPasswordAction(email, password);
-      } catch (authError) {
-        console.error('🔐 LOGIN: Standard auth failed, trying CORS workaround:', authError);
-        
-        if (needsCorsWorkaround) {
-          // If standard auth fails, use our CORS-enabled API endpoint
-          console.log('🔐 LOGIN: Using CORS API workaround');
+      // Skip trying the standard method for now and go straight to CORS method
+      if (needsCorsWorkaround) {
+        // Use our CORS-enabled API endpoint
+        console.log('🔐 LOGIN: Using CORS API workaround directly');
+        try {
           const apiUrl = `${window.location.origin}/api/auth/cors`;
           
           const response = await fetch(apiUrl, {
@@ -159,14 +153,34 @@ export default function LoginPage() {
           });
           
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Authentication failed');
+            let errorMessage = 'Authentication failed';
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorMessage;
+            } catch (parseError) {
+              console.error('🔐 LOGIN: Error parsing error response:', parseError);
+            }
+            throw new Error(errorMessage);
           }
           
           const data = await response.json();
           result = { success: true, data: data.data };
-        } else {
-          // Re-throw the error if we're not using the workaround
+        } catch (corsError) {
+          console.error('🔐 LOGIN: CORS workaround failed:', corsError);
+          
+          // Show more specific error message and suggest GitHub auth
+          setError(`Email login is currently unavailable. Please try GitHub authentication instead. Error: ${corsError.message}`);
+          setIsSubmitting(false);
+          setIsAuthenticating(false);
+          return; // Exit early
+        }
+      } else {
+        // Use standard method in local environment
+        try {
+          console.log('🔐 LOGIN: Using standard auth method');
+          result = await signInWithPasswordAction(email, password);
+        } catch (authError: any) {
+          console.error('🔐 LOGIN: Standard auth failed:', authError);
           throw authError;
         }
       }
