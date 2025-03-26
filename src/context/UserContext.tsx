@@ -256,17 +256,6 @@ export function UserProvider({
     refreshInterval: 300000,
     errorRetryCount: 3,
     errorRetryInterval: 2000,
-    // Add onErrorRetry to attempt quick retries on auth failures
-    onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
-      // Only retry for the first few attempts and then back off
-      if (retryCount >= 3) return;
-      
-      // Quick retry for auth-related issues
-      const retryDelay = 1000 * Math.min(retryCount + 1, 3);
-      log('[UserContext] Retrying user data fetch in', retryDelay, 'ms');
-      
-      setTimeout(() => revalidate({ retryCount }), retryDelay);
-    },
   });
 
   // Function to clear all caches

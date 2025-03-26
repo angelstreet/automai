@@ -141,19 +141,8 @@ export function RepositoryProvider({ children }: { children: ReactNode }) {
 export function useRepository() {
   const context = useContext(RepositoryContext);
 
-  if (!context) {
-    console.warn('[useRepository] Repository context is null, returning fallback');
-    return {
-      repositories: [],
-      filteredRepositories: [],
-      starredRepositories: [],
-      loading: true,
-      error: null,
-      connectionStatuses: {},
-      refreshRepositories: async () => {},
-      filterRepositories: () => {},
-      toggleStarRepository: async () => {},
-    };
+  if (context === undefined) {
+    throw new Error('useRepository must be used within a RepositoryProvider');
   }
 
   return context;

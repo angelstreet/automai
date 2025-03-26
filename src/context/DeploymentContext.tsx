@@ -191,25 +191,8 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
 export function useDeployment() {
   const context = useContext(DeploymentContext);
 
-  if (!context) {
-    console.warn('[useDeployment] Deployment context is null, returning fallback');
-    return {
-      deployments: [],
-      repositories: [],
-      loading: true,
-      error: null,
-      isRefreshing: false,
-      isInitialized: false,
-      fetchDeployments: async () => {},
-      fetchDeploymentById: async () => null,
-      createDeployment: async () => ({ success: false, error: 'Context not available' }),
-      abortDeployment: async () => ({ success: false, error: 'Context not available' }),
-      refreshDeployment: async () => ({ success: false, error: 'Context not available' }),
-      deleteDeployment: async () => ({ success: false, error: 'Context not available' }),
-      fetchScriptsForRepository: async () => [],
-      fetchAvailableHosts: async () => [],
-      fetchRepositories: async () => [],
-    };
+  if (context === undefined) {
+    throw new Error('useDeployment must be used within a DeploymentProvider');
   }
 
   return context;

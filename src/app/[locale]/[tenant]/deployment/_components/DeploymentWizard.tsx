@@ -86,29 +86,32 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
     const [cicdProviders, setCicdProviders] = useState<any[]>([]);
     const [loadingProviders, setLoadingProviders] = useState(false);
 
-    // Fetch CICD providers on mount
+    // Fetch CICD providers on mount using direct SWR pattern
     useEffect(() => {
-      const fetchProviders = async () => {
-        if (!cicdContext) return;
+      if (!cicdContext || !cicdContext.fetchProviders) {
+        console.warn('[DeploymentWizard] fetchProviders not available in CICD context');
+        setCicdProviders([]);
+        return;
+      }
 
+      const fetchProviders = async () => {
         try {
           setLoadingProviders(true);
           const result = await cicdContext.fetchProviders();
-
-          // Check if result exists before accessing properties
+          
           if (result && result.success && result.data) {
             setCicdProviders(result.data);
             console.log('[DeploymentWizard] Loaded CICD providers:', result.data);
           } else {
             console.warn(
               '[DeploymentWizard] Failed to load CICD providers:',
-              result?.error || 'Unknown error',
+              result?.error || 'Unknown error'
             );
-            setCicdProviders([]); // Set empty array as fallback
+            setCicdProviders([]);
           }
         } catch (error) {
           console.error('[DeploymentWizard] Error fetching CICD providers:', error);
-          setCicdProviders([]); // Set empty array as fallback
+          setCicdProviders([]);
         } finally {
           setLoadingProviders(false);
         }
@@ -239,7 +242,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
                 console.log(`[DeploymentWizard] Trying to fetch scripts with branch: ${branch}`);
 
                 const response = await fetch(apiUrl);
-
                 if (!response.ok) {
                   const errorText = await response.text();
                   console.log(`[DeploymentWizard] Failed with branch ${branch}:`, errorText);
@@ -250,7 +252,6 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
                 }
 
                 const data = await response.json();
-
                 if (data.success && data.data) {
                   // Filter for script files (.sh, .py)
                   const filteredFiles = data.data.filter(
@@ -432,6 +433,31 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
 
     const handlePrevStep = () => {
       setStep((prev) => prev - 1);
+    };
+
+    // Handle refreshing repositories using direct SWR pattern
+    const handleRefreshRepositories = async () => {
+      console.log('[DeploymentWizard] Refreshing repositories using direct SWR pattern');
+      
+      try {
+        // Try deployment context first (preferred)
+        if (deploymentContext && 'fetchRepositories' in deploymentContext) {
+          console.log('[DeploymentWizard] Using deployment context to fetch repositories');
+          await (deploymentContext as any).fetchRepositories();
+          return;
+        }
+        
+        // Fall back to repository context if needed
+        if (repositoryContext && repositoryContext.refreshRepositories) {
+          console.log('[DeploymentWizard] Using repository context to refresh repositories');
+          await repositoryContext.refreshRepositories();
+          return;
+        }
+        
+        console.warn('[DeploymentWizard] No context available to refresh repositories');
+      } catch (error) {
+        console.error('[DeploymentWizard] Error refreshing repositories:', error);
+      }
     };
 
     const [isCreating, setIsCreating] = useState(false);
@@ -657,95 +683,65 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           </div>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Step 1: Basic Deployment Information */}
-          {step === 1 && (
-            <DeploymentWizardStep1
-              name={deploymentData.name}
-              description={deploymentData.description}
-              repositoryId={deploymentData.repositoryId}
-              repositories={repositories}
-              repositoryError={repositoryError}
-              onInputChange={handleInputChange}
-              onNextStep={handleNextStep}
-              isStepValid={isStepValid}
-              onRefreshRepositories={() => {
-                // Only use deployment context refresh if available
-                if (deploymentContextValue?.fetchDeployments) {
-                  deploymentContextValue.fetchDeployments();
-                }
-              }}
-            />
-          )}
-
-          {/* Step 2: Select Scripts with Parameters */}
-          {step === 2 && (
-            <DeploymentWizardStep2
-              selectedRepository={deploymentData.selectedRepository || null}
-              scriptIds={deploymentData.scriptIds}
-              repositoryScripts={repositoryScripts}
-              isLoadingScripts={isLoadingScripts}
-              scriptsError={scriptsError}
-              scriptParameters={deploymentData.scriptParameters}
-              onScriptsChange={handleScriptsChange}
-              onScriptParameterChange={handleScriptParameterChange}
-              onPrevStep={handlePrevStep}
-              onNextStep={handleNextStep}
-              isStepValid={isStepValid}
-            />
-          )}
-
-          {/* Step 3: Select Target Hosts */}
-          {step === 3 && (
-            <DeploymentWizardStep3
-              hostIds={deploymentData.hostIds}
-              availableHosts={availableHosts}
-              isLoadingHosts={isLoadingHosts}
-              hostsError={hostsError}
-              onHostToggle={handleHostsChange}
-              onPrevStep={handlePrevStep}
-              onNextStep={handleNextStep}
-              isStepValid={isStepValid}
-            />
-          )}
-
-          {/* Step 4: Schedule */}
-          {step === 4 && (
-            <DeploymentWizardStep4
-              schedule={deploymentData.schedule}
-              scheduledTime={deploymentData.scheduledTime || ''}
-              cronExpression={deploymentData.cronExpression || ''}
-              repeatCount={deploymentData.repeatCount || 0}
-              onInputChange={handleInputChange}
-              onPrevStep={handlePrevStep}
-              onNextStep={handleNextStep}
-              isStepValid={isStepValid}
-            />
-          )}
-
-          {/* Step 5: Review */}
-          {step === 5 && (
-            <DeploymentWizardStep5
-              scriptIds={deploymentData.scriptIds}
-              scriptParameters={deploymentData.scriptParameters}
-              hostIds={deploymentData.hostIds}
-              schedule={deploymentData.schedule}
-              scheduledTime={deploymentData.scheduledTime || ''}
-              cronExpression={deploymentData.cronExpression || ''}
-              repeatCount={deploymentData.repeatCount || 0}
-              repositoryScripts={repositoryScripts}
-              availableHosts={availableHosts}
-              onPrevStep={handlePrevStep}
-              isSubmitting={isCreating}
-              selectedRepository={deploymentData.selectedRepository}
-            />
-          )}
-        </form>
+        {/* Content of the wizard */}
+        {step === 1 && (
+          <DeploymentWizardStep1
+            name={deploymentData.name}
+            description={deploymentData.description}
+            repositoryId={deploymentData.repositoryId}
+            repositories={repositories}
+            repositoryError={repositoryError}
+            onInputChange={handleInputChange}
+            onNextStep={handleNextStep}
+            isStepValid={isStepValid}
+            onRefreshRepositories={handleRefreshRepositories}
+          />
+        )}
+        {step === 2 && (
+          <DeploymentWizardStep2
+            scriptIds={deploymentData.scriptIds}
+            repositoryScripts={repositoryScripts}
+            scriptsError={scriptsError}
+            onScriptsChange={handleScriptsChange}
+            onScriptParameterChange={handleScriptParameterChange}
+            onNextStep={handleNextStep}
+            onPrevStep={handlePrevStep}
+            isStepValid={isStepValid}
+          />
+        )}
+        {step === 3 && (
+          <DeploymentWizardStep3
+            hostIds={deploymentData.hostIds}
+            availableHosts={availableHosts}
+            onHostsChange={handleHostsChange}
+            onNextStep={handleNextStep}
+            onPrevStep={handlePrevStep}
+            isStepValid={isStepValid}
+          />
+        )}
+        {step === 4 && (
+          <DeploymentWizardStep4
+            schedule={deploymentData.schedule}
+            scheduledTime={deploymentData.scheduledTime}
+            cronExpression={deploymentData.cronExpression}
+            repeatCount={deploymentData.repeatCount}
+            onScheduleChange={handleInputChange}
+            onNextStep={handleNextStep}
+            onPrevStep={handlePrevStep}
+            isStepValid={isStepValid}
+          />
+        )}
+        {step === 5 && (
+          <DeploymentWizardStep5
+            formData={deploymentData}
+            onSubmit={handleSubmit}
+            isCreating={isCreating}
+            submissionError={submissionError}
+          />
+        )}
       </div>
     );
-  },
+  }
 );
-
-DeploymentWizard.displayName = 'DeploymentWizard';
 
 export default DeploymentWizard;

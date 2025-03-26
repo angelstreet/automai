@@ -166,21 +166,6 @@ export function createContextProvider(requirements: ContextRequirements) {
   };
 }
 
-// Pre-built context providers for common scenarios
-export const HostContextProvider = createContextProvider({ host: true });
-export const RepositoryContextProvider = createContextProvider({ repository: true });
-export const DeploymentContextProvider = createContextProvider({
-  deployment: true,
-  repository: true,
-});
-export const CICDContextProvider = createContextProvider({ cicd: true });
-export const FullContextProvider = createContextProvider({
-  host: true,
-  repository: true,
-  deployment: true,
-  cicd: true,
-});
-
 // Unified hook for accessing the app context
 export function useAppContext() {
   return useContext(AppContext);

@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useTranslations } from 'next-intl';
+import React from 'react';
 import { Repository } from '../types';
+import { Button } from '@/components/shadcn/button';
+import { Input } from '@/components/shadcn/input';
+import { Textarea } from '@/components/shadcn/textarea';
+import { RefreshCw } from 'lucide-react';
 
 interface DeploymentWizardStep1Props {
   name: string;
@@ -15,7 +18,7 @@ interface DeploymentWizardStep1Props {
   ) => void;
   onNextStep: () => void;
   isStepValid: () => boolean;
-  onRefreshRepositories?: () => void;
+  onRefreshRepositories: () => void;
 }
 
 const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
@@ -23,96 +26,91 @@ const DeploymentWizardStep1: React.FC<DeploymentWizardStep1Props> = ({
   description,
   repositoryId,
   repositories,
+  repositoryError,
   onInputChange,
   onNextStep,
   isStepValid,
+  onRefreshRepositories,
 }) => {
-  const t = useTranslations('deployment.wizard');
-
-  useEffect(() => {
-    console.log('DeploymentWizardStep1 received repositories:', repositories);
-  }, [repositories]);
+  // Handle refreshing repositories
+  const handleRefreshClick = () => {
+    // Use direct SWR pattern for refreshing repositories
+    onRefreshRepositories();
+  };
 
   return (
-    <div>
-      <div className="flex justify-end mb-1">
-        <button
-          type="button"
-          onClick={onNextStep}
-          disabled={!isStepValid()}
-          className={`px-4 py-2 rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-            isStepValid()
-              ? 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'
-              : 'bg-blue-300 dark:bg-blue-800 cursor-not-allowed'
-          }`}
-        >
-          {t('next')}
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3">
-        <div className="mb-1">
-          <label
-            htmlFor="name"
-            className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            {t('nameLabel')} *
+    <div className="p-4">
+      <h2 className="text-lg font-medium mb-4">Deployment Details</h2>
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium mb-1">
+            Deployment Name
           </label>
-          <input
-            type="text"
+          <Input
             id="name"
             name="name"
             value={name}
             onChange={onInputChange}
-            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-            placeholder={t('namePlaceholder')}
+            placeholder="Enter deployment name"
             required
           />
         </div>
 
-        <div className="mb-1">
-          <label
-            htmlFor="description"
-            className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
-          >
-            {t('descriptionLabel')}
+        <div>
+          <label htmlFor="description" className="block text-sm font-medium mb-1">
+            Description
           </label>
-          <textarea
+          <Textarea
             id="description"
             name="description"
             value={description}
             onChange={onInputChange}
-            rows={2}
-            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-            placeholder={t('descriptionPlaceholder')}
+            placeholder="Briefly describe this deployment"
+            rows={3}
           />
         </div>
 
-        <div className="mb-1">
+        <div>
           <div className="flex justify-between items-center mb-1">
-            <label
-              htmlFor="repositoryId"
-              className="block text-xs font-medium text-gray-700 dark:text-gray-300"
-            >
-              {t('repositoryLabel')} *
+            <label htmlFor="repositoryId" className="block text-sm font-medium">
+              Repository
             </label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleRefreshClick}
+              className="h-7 px-2 text-xs flex items-center gap-1"
+            >
+              <RefreshCw className="h-3 w-3" />
+              <span>Refresh</span>
+            </Button>
           </div>
           <select
             id="repositoryId"
             name="repositoryId"
             value={repositoryId}
             onChange={onInputChange}
-            className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             required
           >
-            <option value="">{t('selectRepository')}</option>
-            {repositories.map((repo: Repository) => (
+            <option value="">Select repository</option>
+            {repositories.map((repo) => (
               <option key={repo.id} value={repo.id}>
-                {repo.name}
+                {repo.name} ({repo.url ? new URL(repo.url).hostname : 'Unknown'})
               </option>
             ))}
           </select>
+          {repositoryError && (
+            <p className="text-sm text-red-500 mt-1">Error: {repositoryError}</p>
+          )}
         </div>
+      </div>
+
+      <div className="mt-8 flex justify-end">
+        <Button type="button" onClick={onNextStep} disabled={!isStepValid()}>
+          Next
+        </Button>
       </div>
     </div>
   );

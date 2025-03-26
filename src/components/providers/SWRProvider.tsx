@@ -8,7 +8,7 @@ export function SWRProvider({ children }: { children: React.ReactNode }) {
       value={{
         revalidateOnFocus: false,
         revalidateOnReconnect: true,
-        dedupingInterval: 60000, // 1 minute between identical requests
+        dedupingInterval: 120000, // 1 minute between identical requests
         errorRetryCount: 3,
         onError: (error) => {
           console.error('SWR Error:', error);
