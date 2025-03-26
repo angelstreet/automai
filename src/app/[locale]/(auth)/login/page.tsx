@@ -190,14 +190,8 @@ export default function LoginPage() {
         setIsSubmitting(false);
         setIsAuthenticating(false);
       }
-      } catch (innerErr: any) {
-        console.error('🔐 LOGIN: Inner error during sign in:', innerErr);
-        setError(innerErr.message || 'Failed to sign in');
-        setIsSubmitting(false);
-        setIsAuthenticating(false);
-      }
     } catch (err: any) {
-      console.error('🔐 LOGIN: Outer error during sign in:', err);
+      console.error('🔐 LOGIN: Error during sign in:', err);
       setError(err.message || 'An error occurred');
       setIsSubmitting(false);
       setIsAuthenticating(false);
