@@ -363,7 +363,11 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
             </Button>
             <p className="text-xs mt-1 text-muted-foreground">
               {host.updated_at
-                ? `${t('updated_at')}: ${new Date(host.updated_at).toLocaleDateString()}`
+                ? `${t('updated_at')}: ${new Date(host.updated_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  })}`
                 : `${t('updated_at')}: ${t('never')}`}
             </p>
           </div>

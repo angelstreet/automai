@@ -284,7 +284,7 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
     >
       {!isCollapsed && (
         <SidebarHeader className="p-1.5 flex flex-col gap-2">
-          <TeamSwitcher />
+          <TeamSwitcher defaultCollapsed={!open} />
         </SidebarHeader>
       )}
       <SidebarContent className={isCollapsed ? 'pt-4' : 'pt-2'}>

@@ -10,8 +10,5 @@ echo "=== Clearing Next.js cache ==="
 rm -rf .next
 rm -rf node_modules/.cache
 
-echo "=== Rebuilding ==="
-npm run build
-
 echo "=== Starting development server ==="
 npm run dev

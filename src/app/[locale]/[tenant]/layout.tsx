@@ -8,6 +8,7 @@ import TenantLayoutClient from './_components/client/TenantLayoutClient';
 import { getUser } from '@/app/actions/user';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
 import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkeleton';
+import { User } from '@/types/user';
 
 export default async function TenantLayout({
   children,
@@ -16,8 +17,22 @@ export default async function TenantLayout({
   children: React.ReactNode;
   params: { tenant: string; locale: string };
 }) {
-  const tenant = params.tenant;
-  const user = await getUser();
+  // In Next.js 14+, params can be a Promise that needs to be awaited
+  const resolvedParams = 'then' in params ? await params : params;
+  const tenant = resolvedParams.tenant;
+  const authUser = await getUser();
+  
+  // Transform AuthUser to User type
+  const user: User | null = authUser ? {
+    id: authUser.id,
+    email: authUser.email,
+    name: authUser.name || authUser.email.split('@')[0],
+    role: ((authUser.user_metadata as any)?.role || 'viewer') as User['role'],
+    tenant_id: authUser.tenant_id,
+    tenant_name: authUser.tenant_name,
+    avatar_url: authUser.user_metadata?.avatar_url || '',
+    user_metadata: authUser.user_metadata
+  } : null;
 
   // Server-side logging
   console.log('[TenantLayout] Rendering tenant layout, tenant:', tenant);

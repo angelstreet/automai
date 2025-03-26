@@ -18,7 +18,7 @@ export async function WorkspaceHeader({
   user,
 }: WorkspaceHeaderProps) {
   // Get the header visibility state from cookies on the server
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const headerVisibilityCookie = await cookieStore.get(HEADER_COOKIE_NAME);
   const initialHeaderState = headerVisibilityCookie?.value !== 'hidden';
 

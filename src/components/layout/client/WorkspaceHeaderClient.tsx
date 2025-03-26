@@ -35,11 +35,25 @@ export function WorkspaceHeaderClient({
 }: WorkspaceHeaderClientProps) {
   const { open } = useSidebar();
   const userContext = useUser();
-  const isCollapsed = !open;
+  const [isCollapsed, setIsCollapsed] = React.useState(false); // Start with default state
   const [headerVisible, setHeaderVisible] = React.useState(initialHeaderState);
+  const [headerStyles, setHeaderStyles] = React.useState<React.CSSProperties>({});
 
   // Use prop user if available, otherwise fall back to context
   const user = propUser || userContext?.user;
+
+  // Update collapsed state and styles when sidebar state changes
+  React.useEffect(() => {
+    setIsCollapsed(!open);
+    if (!open) {
+      setHeaderStyles({
+        marginLeft: 'var(--sidebar-width-offset, 0)',
+        width: 'calc(100% - var(--sidebar-width-offset, 0))',
+      });
+    } else {
+      setHeaderStyles({});
+    }
+  }, [open]);
 
   // Debug logging for user data sources
   React.useEffect(() => {
@@ -74,14 +88,7 @@ export function WorkspaceHeaderClient({
       {headerVisible ? (
         <header
           className={`sticky top-0 z-40 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 ${className}`}
-          style={
-            isCollapsed
-              ? {
-                  marginLeft: 'var(--sidebar-width-offset, 0)',
-                  width: 'calc(100% - var(--sidebar-width-offset, 0))',
-                }
-              : undefined
-          }
+          style={headerStyles}
         >
           <div className="flex h-14 items-center">
             {/* Left section */}
@@ -132,14 +139,7 @@ export function WorkspaceHeaderClient({
       ) : (
         <div
           className="sticky top-0 z-50 flex justify-end px-4 py-1 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b"
-          style={
-            isCollapsed
-              ? {
-                  marginLeft: 'var(--sidebar-width-offset, 0)',
-                  width: 'calc(100% - var(--sidebar-width-offset, 0))',
-                }
-              : undefined
-          }
+          style={headerStyles}
         >
           <Button
             variant="outline"

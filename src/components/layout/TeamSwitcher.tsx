@@ -35,6 +35,7 @@ type Team = {
 
 interface TeamSwitcherProps {
   teams?: Team[];
+  defaultCollapsed?: boolean;
 }
 
 // Default teams if none provided
@@ -57,23 +58,15 @@ const defaultTeams: Team[] = [
 ];
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: TeamSwitcherProps) {
-  // Always declare all hooks at the top level before any conditional logic
-  const { open } = useSidebar();
+const TeamSwitcher = React.memo(function TeamSwitcher({ 
+  teams = defaultTeams,
+  defaultCollapsed = false 
+}: TeamSwitcherProps) {
   const [activeTeam, setActiveTeam] = React.useState<Team>(() => teams?.[0] || defaultTeams[0]);
-
-  // Add effect for any side effects (even if empty for now)
-  React.useEffect(() => {
-    // Ensure all hooks are called in the same order every render
-  }, []);
-
-  // Derive values from state - after all hooks are called
-  const isCollapsed = !open;
-  const teamsToDisplay = teams || defaultTeams;
   const Icon = activeTeam.logo;
 
-  // Show different UI based on sidebar state - AFTER all hooks
-  if (isCollapsed) {
+  // Render collapsed view for SSR and initial mount
+  if (defaultCollapsed) {
     return (
       <div className="flex items-center justify-center p-1.5">
         <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background">
@@ -99,7 +92,7 @@ const TeamSwitcher = React.memo(function TeamSwitcher({ teams = defaultTeams }: 
       <DropdownMenuContent className="w-56" align="start" side="right" forceMount>
         <DropdownMenuLabel>Switch team</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {teamsToDisplay.map((team) => (
+        {teams.map((team) => (
           <DropdownMenuItem
             key={team.name}
             onClick={() => setActiveTeam(team)}
