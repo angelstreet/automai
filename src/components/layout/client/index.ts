@@ -1,0 +1,1 @@
+export { WorkspaceHeaderClient } from './WorkspaceHeaderClient';
