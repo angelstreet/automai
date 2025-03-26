@@ -23,6 +23,7 @@ interface DeploymentContextType {
   error: string | null;
   isRefreshing: boolean;
   isInitialized: boolean;
+  isLoadingRepositories: boolean;
   // Methods
   fetchDeployments: (forceFresh?: boolean) => Promise<void>;
   fetchDeploymentById: (id: string) => Promise<Deployment | null>;
@@ -46,6 +47,7 @@ interface DeploymentContextType {
   }>;
   fetchScriptsForRepository: (repositoryId: string) => Promise<any[]>;
   fetchAvailableHosts: () => Promise<any[]>;
+  loadRepositories: () => Promise<any[]>;
   fetchRepositories: () => Promise<any[]>;
 }
 
@@ -54,26 +56,27 @@ const DeploymentContext = createContext<DeploymentContextType | undefined>(undef
 
 // Provider component
 export function DeploymentProvider({ children }: { children: ReactNode }) {
-  // Use SWR hooks
+  // Use SWR hooks for deployments (eager loading)
   const {
     data: deploymentsData,
     error: deploymentsError,
     mutate: mutateDeployments,
     isValidating: isRefreshingDeployments,
   } = useDeployments();
-  const { data: repositoriesData, error: repositoriesError } = useRepositoriesForDeployment();
+
+  // Local state for repositories (lazy loading)
+  const [repositories, setRepositories] = useState<any[]>([]);
+  const [isLoadingRepositories, setIsLoadingRepositories] = useState(false);
+  const [repositoriesError, setRepositoriesError] = useState<Error | null>(null);
 
   // Local state for tracking initialization
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Derived values from SWR data
   const deployments = useMemo(() => deploymentsData || [], [deploymentsData]);
-  const repositories = useMemo(() => repositoriesData?.data || [], [repositoriesData]);
   const loading = useMemo(
-    () =>
-      (deploymentsData === undefined && !deploymentsError) ||
-      (repositoriesData === undefined && !repositoriesError),
-    [deploymentsData, deploymentsError, repositoriesData, repositoriesError],
+    () => deploymentsData === undefined && !deploymentsError,
+    [deploymentsData, deploymentsError],
   );
   const error = useMemo(
     () =>
@@ -85,37 +88,48 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     [deploymentsError, repositoriesError],
   );
 
-  // Methods
+  // Fetch deployments implementation
   const fetchDeployments = useCallback(
-    async (forceFresh: boolean = false) => {
+    async (forceFresh = false) => {
       try {
-        if (forceFresh) {
-          // Use await and catch errors
-          const refreshResult = await refreshDeploymentData().catch(err => {
-            console.error('Error refreshing deployment data:', err);
-            return false;
-          });
-          
-          if (!refreshResult) {
-            console.warn('Failed to refresh deployment data, but will try to continue');
-          }
-        }
-        
-        // Use await and catch errors from the mutation
-        await mutateDeployments().catch(err => {
-          console.error('Error mutating deployments:', err);
-        });
-        
+        await mutateDeployments();
         setIsInitialized(true);
-      } catch (err) {
-        console.error('Error in fetchDeployments:', err);
-        // Still mark as initialized to prevent infinite loading
-        setIsInitialized(true);
+      } catch (error) {
+        console.error('[DeploymentContext] Error fetching deployments:', error);
+        throw error;
       }
     },
     [mutateDeployments],
   );
 
+  // Lazy load repositories
+  const loadRepositories = useCallback(async () => {
+    if (repositories.length > 0) {
+      return repositories; // Return cached repositories if available
+    }
+
+    setIsLoadingRepositories(true);
+    try {
+      const { data: repoData } = await useRepositoriesForDeployment();
+      const newRepositories = repoData?.data || [];
+      setRepositories(newRepositories);
+      setRepositoriesError(null);
+      return newRepositories;
+    } catch (error) {
+      console.error('[DeploymentContext] Error loading repositories:', error);
+      setRepositoriesError(error as Error);
+      throw error;
+    } finally {
+      setIsLoadingRepositories(false);
+    }
+  }, [repositories]);
+
+  // Fetch repositories (alias for loadRepositories for backward compatibility)
+  const fetchRepositories = useCallback(() => {
+    return loadRepositories();
+  }, [loadRepositories]);
+
+  // Methods
   const fetchDeploymentById = useCallback(
     async (id: string) => {
       // First check if it's already in our deployments array
@@ -161,10 +175,6 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
     return data || [];
   }, []);
 
-  const fetchRepositories = useCallback(async () => {
-    return repositories;
-  }, [repositories]);
-
   // Create context value with memoization
   const contextValue = useMemo(
     () => ({
@@ -174,6 +184,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       error,
       isRefreshing: isRefreshingDeployments,
       isInitialized,
+      isLoadingRepositories,
       fetchDeployments,
       fetchDeploymentById,
       createDeployment,
@@ -182,6 +193,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       deleteDeployment,
       fetchScriptsForRepository,
       fetchAvailableHosts,
+      loadRepositories,
       fetchRepositories,
     }),
     [
@@ -191,6 +203,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       error,
       isRefreshingDeployments,
       isInitialized,
+      isLoadingRepositories,
       fetchDeployments,
       fetchDeploymentById,
       createDeployment,
@@ -199,6 +212,7 @@ export function DeploymentProvider({ children }: { children: ReactNode }) {
       deleteDeployment,
       fetchScriptsForRepository,
       fetchAvailableHosts,
+      loadRepositories,
       fetchRepositories,
     ],
   );
@@ -220,6 +234,7 @@ export function useDeployment() {
       error: 'Context not available',
       isRefreshing: false,
       isInitialized: false,
+      isLoadingRepositories: false,
       fetchDeployments: async () => {},
       fetchDeploymentById: async () => null,
       createDeployment: async () => ({ success: false, error: 'Context not available' }),
@@ -228,6 +243,7 @@ export function useDeployment() {
       deleteDeployment: async () => ({ success: false, error: 'Context not available' }),
       fetchScriptsForRepository: async () => [],
       fetchAvailableHosts: async () => [],
+      loadRepositories: async () => [],
       fetchRepositories: async () => [],
     };
   }

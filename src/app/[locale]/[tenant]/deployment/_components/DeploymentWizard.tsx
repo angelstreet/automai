@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import {
   DeploymentData,
   DeploymentFormData,
@@ -583,6 +583,21 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
       }
     };
 
+    // Show loading state if not ready
+    if (!isReady) {
+      return (
+        <div className="p-6 bg-white rounded-lg shadow">
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="mb-4">
+              <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+            <p className="text-lg font-medium">Loading repositories...</p>
+            <p className="text-sm text-gray-500 mt-2">Please wait while we fetch repository data</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-2">
         <div className="mb-1">
@@ -695,6 +710,7 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
             onNextStep={handleNextStep}
             isStepValid={isStepValid}
             onRefreshRepositories={handleRefreshRepositories}
+            isLoadingRepositories={isLoadingRepositories}
           />
         )}
         {step === 2 && (
