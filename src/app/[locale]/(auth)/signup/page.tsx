@@ -122,119 +122,129 @@ export default function SignUpPage() {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="h-8 w-8 text-primary"
+            className="h-6 w-6"
           >
             <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
           </svg>
-          <span className="text-2xl font-bold text-primary">Automai</span>
+          <span className="text-xl font-bold">AutomAI</span>
         </div>
       </div>
 
-      <div className="w-full max-w-[400px] p-4 sm:p-0 space-y-6">
-        <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{t('signupTitle') || 'Sign Up'}</h1>
-          <p className="text-sm text-muted-foreground">
-            {t('signupDescription') || 'Create an account to get started'}
+      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">{t('signupTitle') || 'Create account'}</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            {t('signupDescription') || 'Enter your details to create your account'}
           </p>
         </div>
 
         {success ? (
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md text-center">
             <p className="text-green-700 dark:text-green-300">
-              {t('signupSuccess') ||
-                'Account created successfully! Please check your email to verify your account.'}
+              {t('signupSuccess') || 'Account created successfully!'}
             </p>
             <p className="text-sm text-green-600 dark:text-green-400 mt-2">
               {t('redirecting')} {redirectCountdown}...
             </p>
-            <Button className="mt-4 w-full" onClick={() => router.push(`/${locale}/login`)}>
-              {t('backToLogin')}
-            </Button>
           </div>
         ) : (
-          <div className="grid gap-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-2">
-                <div className="grid gap-1">
-                  <Input
-                    id="name"
-                    placeholder={t('namePlaceholder') || 'Your name'}
-                    type="text"
-                    autoComplete="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="h-11"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Input
-                    id="email"
-                    placeholder={t('emailPlaceholder') || 'Email address'}
-                    type="email"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    autoCorrect="off"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-11"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Input
-                    id="password"
-                    placeholder={t('passwordPlaceholder') || 'Password'}
-                    type="password"
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="h-11"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Input
-                    id="confirmPassword"
-                    placeholder={t('confirmPasswordPlaceholder') || 'Confirm password'}
-                    type="password"
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="h-11"
-                  />
-                </div>
-                {error && (
-                  <div className="text-sm text-red-500 text-center bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                    {error}
-                  </div>
-                )}
-              </div>
+          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium">
+                {t('name') || 'Name'}
+              </label>
+              <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="mt-1 border border-gray-200 dark:border-gray-700"
+                placeholder={t('namePlaceholder') || 'Your name'}
+                autoComplete="name"
+                disabled={isSubmitting}
+              />
+            </div>
 
-              <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
-                {isSubmitting
-                  ? t('signingUp') || 'Signing up...'
-                  : t('signupButton') || 'Create Account'}
-              </Button>
-            </form>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium">
+                {t('email') || 'Email'}
+              </label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="mt-1 border border-gray-200 dark:border-gray-700"
+                placeholder={t('emailPlaceholder') || 'name@example.com'}
+                autoComplete="email"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium">
+                {t('password') || 'Password'}
+              </label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="mt-1 border border-gray-200 dark:border-gray-700"
+                placeholder={t('passwordPlaceholder') || 'Enter your password'}
+                autoComplete="new-password"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium">
+                {t('confirmPassword') || 'Confirm Password'}
+              </label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                className="mt-1 border border-gray-200 dark:border-gray-700"
+                placeholder={t('confirmPasswordPlaceholder') || 'Confirm your password'}
+                autoComplete="new-password"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-100 dark:bg-red-900/20 p-3 rounded-md text-red-800 dark:text-red-100 text-sm">
+                {error}
+              </div>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? t('signingUp') || 'Creating account...' : t('signupButton') || 'Create account'}
+            </Button>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <div className="w-full border-t border-gray-300 dark:border-gray-700"></div>
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  {t('orContinueWith')}
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                  {t('orContinueWith') || 'Or continue with'}
                 </span>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => handleOAuthSignUp('google')}
-                className="h-11"
+                className="flex items-center justify-center"
+                disabled={isSubmitting}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path
@@ -258,9 +268,11 @@ export default function SignUpPage() {
                 Google
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => handleOAuthSignUp('github')}
-                className="h-11"
+                className="flex items-center justify-center"
+                disabled={isSubmitting}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path
@@ -271,14 +283,14 @@ export default function SignUpPage() {
                 GitHub
               </Button>
             </div>
-          </div>
+          </form>
         )}
 
-        <div className="text-sm text-muted-foreground text-center">
+        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
           {t('alreadyHaveAccount') || 'Already have an account?'}{' '}
           <Link
             href={`/${locale}/login`}
-            className="text-primary underline-offset-4 hover:underline font-medium"
+            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
           >
             {t('loginLink') || 'Sign in'}
           </Link>
