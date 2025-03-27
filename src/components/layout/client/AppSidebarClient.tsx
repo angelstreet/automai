@@ -268,19 +268,17 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
 
   // Always ensure sidebar is visible, without unnecessary transitions
   // The skeleton fallback will handle the initial loading state now
-  const sidebarClassName = `fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300 ${isClient ? 'sidebar-ready' : ''}`;
+  const sidebarClassName = "fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300";
 
   return (
     <Sidebar
       collapsible="icon"
       variant="floating"
       className={sidebarClassName}
-      style={
-        {
-          '--sidebar-width': APP_SIDEBAR_WIDTH,
-          '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
-        } as React.CSSProperties
-      }
+      style={{
+        '--sidebar-width': APP_SIDEBAR_WIDTH,
+        '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
+      } as React.CSSProperties}
     >
       {!isCollapsed && (
         <SidebarHeader className="p-1.5 flex flex-col gap-2">

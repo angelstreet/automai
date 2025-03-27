@@ -52,28 +52,15 @@ const repository = {
   /**
    * Get all repositories for a specific profile (via provider ownership)
    */
-  async getRepositories(profileId: string, providerId?: string): Promise<DbResponse<Repository[]>> {
+  async getRepositories(): Promise<DbResponse<Repository[]>> {
     try {
-      console.log('[DB] getRepositories: Starting query for profile:', profileId);
+      console.log('[DB] getRepositories: Starting query');
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
 
-      let query = supabase
+      const { data, error } = await supabase
         .from('repositories')
-        .select(
-          `
-          *,
-          git_providers(*)
-        `,
-        )
-        .eq('git_providers.profile_id', profileId);
-
-      if (providerId) {
-        console.log('[DB] Filtering by provider:', providerId);
-        query = query.eq('provider_id', providerId);
-      }
-
-      const { data, error } = await query;
+        .select('*');
 
       if (error) {
         console.error('[DB] Error fetching repositories:', error);
@@ -82,7 +69,6 @@ const repository = {
 
       console.log('[DB] Successfully fetched repositories:', {
         count: data?.length || 0,
-        hasProvider: data?.[0]?.git_providers !== undefined,
       });
 
       return { success: true, data };

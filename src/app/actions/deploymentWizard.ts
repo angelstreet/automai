@@ -14,18 +14,6 @@ import type { DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/type
  */
 export async function getDeploymentWizardData() {
   try {
-    // Get current user for auth checks
-    const user = await getUser();
-    if (!user) {
-      return {
-        success: false,
-        error: 'Unauthorized',
-        repositories: [],
-        hosts: [],
-        cicdProviders: [],
-      };
-    }
-
     // Fetch all required data in parallel
     const [repositoriesResult, hostsResult, cicdProvidersResult] = await Promise.all([
       getRepositories(),
@@ -56,15 +44,6 @@ export async function getDeploymentWizardData() {
  */
 export async function saveDeploymentConfiguration(formData: DeploymentFormData) {
   try {
-    // Get current user for auth checks
-    const user = await getUser();
-    if (!user) {
-      return {
-        success: false,
-        error: 'Unauthorized',
-      };
-    }
-
     // Validate required fields
     if (!formData.name || !formData.repositoryId) {
       return {
@@ -84,8 +63,6 @@ export async function saveDeploymentConfiguration(formData: DeploymentFormData) 
       target_host_id: formData.targetHostId,
       script_path: formData.scriptPath || '',
       cicd_provider_id: formData.cicdProviderId,
-      tenant_id: user.tenant_id,
-      created_by: user.id,
       configuration: formData.configuration || {},
       status: 'pending',
       scheduled: formData.scheduled || false,

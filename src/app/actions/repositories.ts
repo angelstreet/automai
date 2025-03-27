@@ -91,68 +91,30 @@ function mapDbGitProviderToGitProvider(dbProvider: DbGitProvider): GitProvider {
 /**
  * Get all repositories with optional filtering
  * @param filter Optional filter criteria for repositories
- * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
 export async function getRepositories(
   filter?: RepositoryFilter,
-  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository[] }> {
   try {
     console.log('[Server] getRepositories: Starting...');
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || (await getUser());
-    console.log(
-      '[Server] User context for repositories:',
-      currentUser
-        ? {
-            id: currentUser.id,
-            tenant: currentUser.tenant_id,
-          }
-        : 'No user',
-    );
-
-    if (!currentUser) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
-    }
 
     console.log('[Server] Fetching repositories from database');
+    // Call the repository module instead of direct db access
+    const result = await repository.getRepositories();
 
-    // IMPORTANT: Use profile_id instead of tenant_id since that's what exists in the database
-    // The repositories are linked to git_providers which have a profile_id field
-    try {
-      // Call the database layer directly with the user's ID (which should match profile_id)
-      const result = await repository.getRepositories(currentUser.id, filter?.providerId);
-      console.log('[Server] DB query result:', {
-        success: result.success,
-        count: result.data?.length || 0,
-        error: result.error,
-      });
-
-      if (!result.success || !result.data) {
-        return {
-          success: false,
-          error: result.error || 'Failed to fetch repositories from database',
-        };
-      }
-
-      // Transform raw DB results to the Repository type
-      const repositories = result.data;
-      const data: Repository[] = repositories.map((repo) => mapDbRepositoryToRepository(repo));
-      console.log('[Server] Mapped repositories count:', data.length);
-
-      return { success: true, data };
-    } catch (error: any) {
-      console.error('[Server] Database error in getRepositories:', error);
-      return {
-        success: false,
-        error: error.message || 'Database error fetching repositories',
-      };
+    if (!result.success || !result.data) {
+      return { success: false, error: 'No repositories found' };
     }
+
+    // Map DB repositories to our Repository type
+    const repositories = result.data.map(mapDbRepositoryToRepository);
+
+    return {
+      success: true,
+      data: repositories,
+    };
   } catch (error: any) {
-    console.error('[Server] Error in getRepositories:', error);
+    console.error('Error in getRepositories:', error);
     return { success: false, error: error.message || 'Failed to fetch repositories' };
   }
 }
@@ -430,27 +392,17 @@ export async function createRepositoryFromUrl(
  * Get a repository by ID
  *
  * @param id Repository ID
- * @param user Optional pre-fetched user data to avoid redundant auth calls
  */
 export async function getRepository(
   id: string,
-  user?: AuthUser | null,
 ): Promise<{ success: boolean; error?: string; data?: Repository }> {
   try {
     console.log(`[Server] getRepository: Starting for repository ${id}`);
-    // Get current user for tenant isolation
-    const currentUser = user || (await getUser());
-    if (!currentUser) {
-      return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
-      };
-    }
 
     console.log(`[Server] Fetching repository ${id} from database`);
 
     // Call the repository module instead of direct db access
-    const result = await repository.getRepository(id, currentUser.id);
+    const result = await repository.getRepository(id);
 
     if (!result.success || !result.data) {
       return { success: false, error: 'Repository not found' };
@@ -1060,7 +1012,7 @@ export async function getRepositoriesWithStarred(
     console.log('[Server] Fetching fresh data');
 
     // Fetch repositories
-    const reposResult = await getRepositories(filter, currentUser);
+    const reposResult = await getRepositories(filter);
     console.log('[Server] Repository fetch result:', {
       success: reposResult.success,
       count: reposResult.data?.length || 0,

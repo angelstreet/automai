@@ -8,7 +8,8 @@ export async function DeploymentContent() {
   const deployments = await getDeployments();
   
   // Also fetch repositories for display
-  const repositories = await getRepositories();
+  const repositoriesResult = await getRepositories();
+  const repositories = repositoriesResult.success ? repositoriesResult.data || [] : [];
 
   // If no deployments, show empty state
   if (deployments.length === 0) {
