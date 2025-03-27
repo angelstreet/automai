@@ -16,13 +16,19 @@ export async function GET() {
     console.log(`Hosts fetched successfully: ${hosts.length} hosts found`);
 
     // Add timestamps to help with debugging
-    const response = NextResponse.json(hosts, { headers });
+    const response = NextResponse.json({ 
+      success: true, 
+      data: hosts 
+    }, { headers });
     console.log(`GET /api/hosts returning ${hosts.length} hosts at ${new Date().toISOString()}`);
 
     return response;
   } catch (error) {
     console.error('Error in GET /api/hosts:', error);
-    return NextResponse.json({ error: 'Failed to fetch hosts' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Failed to fetch hosts'
+    }, { status: 500 });
   }
 }
 

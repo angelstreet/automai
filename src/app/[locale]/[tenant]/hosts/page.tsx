@@ -11,13 +11,16 @@ export default async function HostsPage() {
 
   return (
     <div className="container mx-auto py-6 px-4">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-8">
         <PageHeader title={t('hosts')} description={t('hosts_description')}>
           <HostActions />
         </PageHeader>
-        <Suspense fallback={<HostSkeleton />}>
-          <HostContent />
-        </Suspense>
+        
+        <div className="border rounded-lg overflow-auto h-[calc(100vh-250px)]">
+          <Suspense fallback={<HostSkeleton />}>
+            <HostContent />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

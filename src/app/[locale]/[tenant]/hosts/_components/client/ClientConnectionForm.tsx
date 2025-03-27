@@ -167,8 +167,8 @@ export function ClientConnectionForm({
   };
 
   return (
-    <div className="grid gap-3 py-2">
-      <div className="grid grid-cols-4 items-center gap-3">
+    <div className="grid gap-2 py-1">
+      <div className="grid grid-cols-4 items-center gap-2">
         <Label htmlFor="name" className="text-right">
           {t('name')}
         </Label>
@@ -183,7 +183,7 @@ export function ClientConnectionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 items-center gap-3">
+      <div className="grid grid-cols-4 items-center gap-2">
         <Label htmlFor="type" className="text-right">
           {t('connectionType')}
         </Label>
@@ -199,7 +199,7 @@ export function ClientConnectionForm({
         </Select>
       </div>
 
-      <div className="grid grid-cols-4 items-center gap-3">
+      <div className="grid grid-cols-4 items-center gap-2">
         <Label htmlFor="ip" className="text-right">
           {t('ipAddress')}
         </Label>
@@ -226,7 +226,7 @@ export function ClientConnectionForm({
 
       {formData.type === 'ssh' && (
         <>
-          <div className="grid grid-cols-4 items-center gap-3">
+          <div className="grid grid-cols-4 items-center gap-2">
             <Label htmlFor="username" className="text-right">
               {t('username')}
             </Label>
@@ -238,7 +238,7 @@ export function ClientConnectionForm({
               className="col-span-3 h-8"
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-3">
+          <div className="grid grid-cols-4 items-center gap-2">
             <Label htmlFor="password" className="text-right">
               {t('password')}
             </Label>
@@ -254,7 +254,7 @@ export function ClientConnectionForm({
         </>
       )}
 
-      <div className="grid grid-cols-4 items-center gap-3">
+      <div className="grid grid-cols-4 items-center gap-2">
         <Label htmlFor="description" className="text-right">
           {t('description')}
         </Label>
@@ -263,11 +263,11 @@ export function ClientConnectionForm({
           placeholder={t('form.descriptionPlaceholder')}
           value={formData.description}
           onChange={(e) => handleInputChange('description', e.target.value)}
-          className="col-span-3 min-h-[60px] py-1"
+          className="col-span-3 min-h-[50px] py-1"
         />
       </div>
 
-      <div className="flex justify-end space-x-3 mt-3">
+      <div className="flex justify-end space-x-3 mt-2">
         <Button
           variant="outline"
           onClick={testHostConnection}
@@ -330,10 +330,10 @@ export function ClientConnectionForm({
         </Button>
       </div>
 
-      {/* Status message container with fixed height */}
-      <div className="min-h-[60px]">
+      {/* Status message container with smaller fixed height */}
+      <div className="min-h-[50px]">
         {testError && (
-          <Alert variant="destructive" className="py-2">
+          <Alert variant="destructive" className="py-1">
             <AlertCircle className="h-3 w-3" />
             <AlertTitle className="text-sm">{t('connectionFailed')}</AlertTitle>
             <AlertDescription className="text-xs">{testError}</AlertDescription>
@@ -341,7 +341,7 @@ export function ClientConnectionForm({
         )}
 
         {testSuccess && (
-          <Alert variant="success" className="py-2">
+          <Alert variant="success" className="py-1">
             <Check className="h-3 w-3" />
             <AlertTitle className="text-sm">{t('connectionSuccessful')}</AlertTitle>
             <AlertDescription className="text-xs">{t('readyToConnect')}</AlertDescription>
@@ -349,7 +349,7 @@ export function ClientConnectionForm({
         )}
       </div>
 
-      <div className="flex justify-end space-x-2 mt-2">
+      <div className="flex justify-end space-x-2 mt-1">
         {onCancel && (
           <Button
             variant="outline"

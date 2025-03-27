@@ -92,8 +92,28 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
   // Listen for refresh action
   useEffect(() => {
-    const handleRefresh = () => {
-      handleRefreshAll();
+    const handleRefresh = async () => {
+      try {
+        console.log('[ClientHostList] Refreshing hosts from server');
+        setIsRefreshing(true);
+        
+        // Fetch the latest hosts from the server
+        const response = await fetch('/api/hosts');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setHosts(data.data);
+            console.log('[ClientHostList] Hosts refreshed from server:', data.data.length);
+          }
+        }
+        
+        // Update connection status for all hosts
+        handleRefreshAll();
+      } catch (error) {
+        console.error('[ClientHostList] Error refreshing hosts from server:', error);
+        // Fall back to just testing connections if fetch fails
+        handleRefreshAll();
+      }
     };
 
     window.addEventListener('refresh-hosts', handleRefresh);
@@ -133,7 +153,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   // Empty state for no hosts
   if (hosts.length === 0) {
     return (
-      <div className="rounded-lg border">
+      <div className="p-6">
         <EmptyState
           icon={<Server className="h-10 w-10" />}
           title="No hosts found"
@@ -150,7 +170,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4">
       {viewMode === 'grid' ? (
         <HostGrid
           hosts={hosts}
