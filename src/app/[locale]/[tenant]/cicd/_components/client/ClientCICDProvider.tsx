@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
@@ -34,12 +34,12 @@ import CICDProviderForm from '../CICDProviderForm';
 import {
   deleteCICDProvider,
   testCICDProvider,
-  getCICDProviders,
 } from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
 import type { CICDProviderType } from '../../types';
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 
 interface ClientCICDProviderProps {
   initialProviders: CICDProviderType[];
@@ -50,34 +50,14 @@ export default function ClientCICDProvider({
   initialProviders,
   removeTitle = false,
 }: ClientCICDProviderProps) {
-  const [providers, setProviders] = useState<CICDProviderType[]>(initialProviders);
   const [selectedProvider, setSelectedProvider] = useState<CICDProviderType | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const t = useTranslations('cicd');
-
-  // Memoize the loadProviders function
-  const loadProviders = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await getCICDProviders();
-      if (result.success) {
-        setProviders(result.data || []);
-      }
-    } catch (error) {
-      console.error('Error loading providers:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Memoize the refresh handler
-  const handleRefresh = useCallback(() => {
-    loadProviders();
-  }, [loadProviders]);
+  const router = useRouter();
 
   // Memoize dialog handlers
   const handleAddEditProvider = useCallback((provider?: CICDProviderType) => {
@@ -100,6 +80,7 @@ export default function ClientCICDProvider({
   // Memoize test provider handler
   const handleTestProvider = useCallback(async (provider: CICDProviderType) => {
     try {
+      setIsLoading(true);
       const providerPayload = {
         id: provider.id,
         name: provider.name,
@@ -126,30 +107,32 @@ export default function ClientCICDProvider({
         description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   }, [toast]);
 
   // Memoize dialog completion handler
-  const handleDialogComplete = useCallback(async () => {
+  const handleDialogComplete = useCallback(() => {
     setIsAddEditDialogOpen(false);
-    await loadProviders();
-  }, [loadProviders]);
+    router.refresh(); // Use Next.js router refresh to trigger server revalidation
+  }, [router]);
 
   // Memoize delete confirmation handler
   const handleConfirmDelete = useCallback(async () => {
     if (!selectedProvider) return;
 
     try {
-      setLoading(true);
+      setIsLoading(true);
       const result = await deleteCICDProvider(selectedProvider.id);
 
       if (result.success) {
-        setProviders((prev) => prev.filter((p) => p.id !== selectedProvider.id));
         toast({
           title: 'Provider Deleted',
           description: `The provider "${selectedProvider.name}" has been successfully deleted.`,
           variant: 'default',
         });
+        router.refresh(); // Use Next.js router refresh to trigger server revalidation
       } else {
         toast({
           title: 'Error',
@@ -164,10 +147,10 @@ export default function ClientCICDProvider({
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
       setIsDeleteDialogOpen(false);
     }
-  }, [selectedProvider, toast]);
+  }, [selectedProvider, toast, router]);
 
   // Memoize provider badge color function
   const getProviderBadgeColor = useCallback((type: string) => {
@@ -185,15 +168,8 @@ export default function ClientCICDProvider({
     }
   }, []);
 
-  // Initial load effect
-  useEffect(() => {
-    if (initialProviders.length === 0) {
-      handleRefresh();
-    }
-  }, [handleRefresh, initialProviders.length]);
-
   // Empty state render
-  if (providers.length === 0 && !loading) {
+  if (initialProviders.length === 0 && !isLoading) {
     return (
       <Card className="border-0">
         <CardContent className="p-0">
@@ -226,7 +202,7 @@ export default function ClientCICDProvider({
       )}
 
       <CardContent>
-        {loading ? (
+        {isLoading ? (
           <div className="flex justify-center items-center h-32">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-50"></div>
           </div>
@@ -243,7 +219,7 @@ export default function ClientCICDProvider({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {providers.map((provider) => (
+                {initialProviders.map((provider) => (
                   <TableRow key={provider.id}>
                     <TableCell className="font-medium">{provider.name}</TableCell>
                     <TableCell>
