@@ -15,7 +15,6 @@ import { getUser } from '@/app/actions/user';
 import { Role, User, AuthUser, UserTeam, TeamMember, ResourceLimit } from '@/types/user';
 import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
 // AppContext has been removed in the RSC migration
-import type { AppContextType } from '@/types/context/app';
 import {
   signUp as signUpAction,
   signInWithOAuth as signInWithOAuthAction,

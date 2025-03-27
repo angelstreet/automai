@@ -66,7 +66,7 @@ export async function getDeployments(user?: AuthUser | null): Promise<Deployment
 
     // Fetch deployments from the database
     const where = { tenant_id: user.tenant_id };
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const result = await deploymentDb.findMany({ where }, cookieStore);
 
     // Handle the result based on its structure
