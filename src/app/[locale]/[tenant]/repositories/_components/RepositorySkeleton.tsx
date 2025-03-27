@@ -2,67 +2,50 @@
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Skeleton } from '@/components/shadcn/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/shadcn/table';
 
 export function RepositorySkeleton() {
   return (
     <Card>
-      <CardContent className="py-6">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <Skeleton className="h-5 w-24" />
-                </TableHead>
-                <TableHead>
-                  <Skeleton className="h-5 w-16" />
-                </TableHead>
-                <TableHead>
-                  <Skeleton className="h-5 w-28" />
-                </TableHead>
-                <TableHead>
-                  <Skeleton className="h-5 w-20" />
-                </TableHead>
-                <TableHead className="w-[80px]">
-                  <Skeleton className="h-5 w-16" />
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array(5)
-                .fill(0)
-                .map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-6 w-36" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-6 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-6 w-48" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-6 w-28" />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-            </TableBody>
-          </Table>
+      <CardContent>
+        {/* Header with tabs and search */}
+        <div className="flex justify-between items-center py-4 mb-4 relative">
+          <div className="absolute inset-0 flex justify-center items-center">
+            <div className="flex gap-2 min-w-[400px]">
+              {Array(4).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-9 flex-1" />
+              ))}
+            </div>
+          </div>
+
+          <div className="invisible">
+            {/* Placeholder to maintain layout */}
+            <div className="w-[300px]" />
+          </div>
+
+          <div className="relative w-[300px]">
+            <Skeleton className="h-9" />
+          </div>
+        </div>
+
+        {/* Repository cards grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array(6).fill(0).map((_, i) => (
+            <div key={i} className="space-y-2 p-4 border rounded-lg">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-20" />
+              </div>
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+              <div className="flex justify-between items-center pt-2">
+                <Skeleton className="h-4 w-24" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
