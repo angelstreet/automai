@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, ChevronRight, GitBranch } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GitBranch, Plus } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Button } from '@/components/shadcn/button';
@@ -211,7 +211,7 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
           description={emptyStateMessage}
           action={
             <Button onClick={() => document.dispatchEvent(new CustomEvent('open-connect-dialog'))}>
-              <GitBranch className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2" />
               {t('addRepository')}
             </Button>
           }

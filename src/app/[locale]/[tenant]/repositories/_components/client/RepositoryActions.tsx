@@ -44,9 +44,9 @@ export function RepositoryActions() {
 
   return (
     <>
-      <Button onClick={() => setConnectDialogOpen(true)}>
+      <Button onClick={() => setConnectDialogOpen(true)} id="add-repository-button" aria-label="Add Repository">
         <Plus className="mr-2 h-4 w-4" />
-        {t('add_provider')}
+        {t('addRepository')}
       </Button>
 
       <EnhancedConnectRepositoryDialog

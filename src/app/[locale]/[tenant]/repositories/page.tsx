@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { RepositoryContent } from './_components/RepositoryContent';
 import { RepositorySkeleton } from './_components/RepositorySkeleton';
 import { RepositoryActions } from './_components/client/RepositoryActions';
+import Script from 'next/script';
 
 // Error component for Repository errors
 function RepositoryError({ error }: { error: string }) {
@@ -29,6 +30,19 @@ export default async function RepositoriesPage() {
           <RepositoryContent />
         </Suspense>
       </div>
+      
+      {/* Script to handle custom event for opening repository dialog */}
+      <Script id="open-connect-dialog-handler">
+        {`
+          document.addEventListener('open-connect-dialog', () => {
+            // Find the Add Repository button by ID
+            const addButton = document.getElementById('add-repository-button');
+            if (addButton) {
+              addButton.click();
+            }
+          });
+        `}
+      </Script>
     </div>
   );
 }
