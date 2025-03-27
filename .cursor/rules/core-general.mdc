@@ -8,6 +8,7 @@ alwaysApply: true
 **IMPORTANT: This is the primary rule file for the entire codebase. Always consult this document first before making any changes.**
 
 ## Planning and Communication
+- NEVER modify a file if mentionned at top #NEVER MODIFY
 - ALWAYS provide a clear plan before implementing code changes
 - Wait for explicit agreement before making changes
 - Document any deviations from the approved plan

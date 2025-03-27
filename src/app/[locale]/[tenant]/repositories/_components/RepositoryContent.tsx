@@ -1,29 +1,23 @@
 import { Card, CardContent } from '@/components/shadcn/card';
-import { RepositoryList } from './RepositoryList';
 import { RepositoryHeader } from './RepositoryHeader';
-import { getRepositoriesWithStarred } from '@/app/actions/repositories';
+import { getRepositories } from '@/app/actions/repositories';
+import { ClientRepositoryList } from './client/ClientRepositoryList';
 
 export async function RepositoryContent() {
-  // Fetch repository data directly on the server
-  const result = await getRepositoriesWithStarred();
-
+  // Fetch repositories directly in the server component
+  const reposResult = await getRepositories();
+  
   // Extract data or provide empty defaults
-  const repositories = result.success && result.data ? result.data.repositories : [];
-  const starredRepositoryIds =
-    result.success && result.data ? result.data.starredRepositoryIds : [];
-
-  // Convert starredRepositoryIds to Set for easier use in the component
-  const starredRepos = new Set(starredRepositoryIds);
+  const repositories = reposResult.success && reposResult.data ? reposResult.data : [];
 
   return (
     <Card className="w-full">
       <RepositoryHeader />
 
       <CardContent className="pt-4">
-        <RepositoryList
-          repositories={repositories}
-          starredRepos={starredRepos}
-          error={result.success ? undefined : result.error}
+        <ClientRepositoryList 
+          initialRepositories={repositories} 
+          initialStarredIds={[]} // We'll fetch starred repos on the client
         />
       </CardContent>
     </Card>

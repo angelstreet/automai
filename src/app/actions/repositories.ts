@@ -788,15 +788,20 @@ export async function createGitProvider(
 
 /**
  * Get starred repositories for the current user
- * @param user Optional pre-fetched user data to avoid redundant auth calls
+ * Safe to call from client components
  */
-export async function getStarredRepositories(
-  user?: AuthUser | null,
-): Promise<{ success: boolean; error?: string; data?: any[] }> {
+export async function getStarredRepositories(): Promise<{ success: boolean; error?: string; data?: any[] }> {
   try {
     console.log('[Server] getStarredRepositories: Starting...');
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || (await getUser());
+    
+    // Get the current user
+    let currentUser;
+    try {
+      currentUser = await getUser();
+    } catch (error) {
+      console.error('[Server] Error fetching user in getStarredRepositories:', error);
+      return { success: false, error: 'Unauthorized - Please sign in' };
+    }
 
     if (!currentUser) {
       return {
@@ -990,8 +995,18 @@ export async function getRepositoriesWithStarred(
 }> {
   try {
     console.log('[Server] getRepositoriesWithStarred: Starting...');
-    // Use provided user data or fetch it if not provided
-    const currentUser = user || (await getUser());
+    // Try to use provided user data or fetch it if not provided
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const userResult = await getUser();
+        currentUser = userResult;
+      } catch (userError) {
+        console.error('[Server] Error fetching current user:', userError);
+        // Continue with null user - we'll handle repositories without starred info
+      }
+    }
+    
     console.log(
       '[Server] User context:',
       currentUser
@@ -1002,10 +1017,25 @@ export async function getRepositoriesWithStarred(
         : 'No user',
     );
 
+    // If no authenticated user, return repositories without starred information
     if (!currentUser) {
+      console.log('[Server] No authenticated user, fetching repositories without starred info');
+      const reposResult = await getRepositories(filter);
+      
+      if (!reposResult.success) {
+        return {
+          success: false,
+          error: reposResult.error || 'Failed to fetch repositories',
+        };
+      }
+      
+      // Return repositories without starred info
       return {
-        success: false,
-        error: 'Unauthorized - Please sign in',
+        success: true,
+        data: {
+          repositories: reposResult.data || [],
+          starredRepositoryIds: [],
+        },
       };
     }
 
@@ -1027,18 +1057,24 @@ export async function getRepositoriesWithStarred(
     }
 
     // Fetch starred repositories
-    const starredResult = await getStarredRepositories(currentUser);
-    console.log('[Server] Starred repositories result:', {
-      success: starredResult.success,
-      count: starredResult.data?.length || 0,
-      error: starredResult.error,
-    });
+    let starredRepositoryIds: string[] = [];
+    try {
+      const starredResult = await getStarredRepositories();
+      console.log('[Server] Starred repositories result:', {
+        success: starredResult.success,
+        count: starredResult.data?.length || 0,
+        error: starredResult.error,
+      });
 
-    // Extract just the IDs from starred repositories for efficiency
-    const starredRepositoryIds =
-      starredResult.success && starredResult.data
-        ? starredResult.data.map((repo: any) => repo.repository_id || repo.id)
-        : [];
+      // Extract just the IDs from starred repositories for efficiency
+      starredRepositoryIds =
+        starredResult.success && starredResult.data
+          ? starredResult.data.map((repo: any) => repo.repository_id || repo.id)
+          : [];
+    } catch (starredError) {
+      console.error('[Server] Error fetching starred repositories:', starredError);
+      // Continue with empty starred list
+    }
 
     // Combine the data
     const combinedData = {

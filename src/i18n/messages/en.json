@@ -234,6 +234,7 @@
     "noRepositoriesYet": "You don't have any repositories yet",
     "noRepositoriesMatchingSearch": "No repositories match your search criteria",
     "noPrivateRepositories": "No private repositories found",
+    "noPublicRepositories": "No public repositories found",
     "noStarredRepositories": "You haven't starred any repositories yet",
     "addRepository": "Add Repository",
     "view_providers": "View Git Providers",
@@ -340,7 +341,10 @@
     "terminalNotImplemented": "Terminal functionality is not yet implemented",
     "settingsNotImplemented": "Repository settings are not yet implemented",
     "emptyDirectory": "This directory is empty",
-    "connect_repository": "Connect Repository"
+    "connect_repository": "Connect Repository",
+    "error_loading": "Error loading repositories",
+    "unauthorized": "Please sign in to view repositories",
+    "try_refreshing": "Try refreshing the page or check your connection"
   },
   "Settings": {
     "title": "Settings",

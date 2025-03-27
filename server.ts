@@ -1,3 +1,4 @@
+// DO NOT MODIFY THIS FILE
 import dotenv from 'dotenv';
 import { existsSync } from 'fs';
 import path from 'path';

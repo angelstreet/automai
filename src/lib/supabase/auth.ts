@@ -1,3 +1,4 @@
+// DO NOT MODIFY THIS FILE
 import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/user';
 
 import { createClient } from './server';

@@ -1,4 +1,4 @@
-// src/middleware.ts
+// DO NOT MODIFY THIS FILE
 import { NextRequest, NextResponse } from 'next/server';
 
 import { updateSession, createClient } from '@/lib/supabase/middleware';
