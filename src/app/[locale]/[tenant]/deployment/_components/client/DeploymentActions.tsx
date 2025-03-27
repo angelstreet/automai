@@ -55,7 +55,7 @@ export function DeploymentActions() {
   return (
     <>
       <div className="flex items-center space-x-2">
-        <Button onClick={() => setWizardActive(true)}>
+        <Button onClick={() => setWizardActive(true)} id="new-deployment-button" aria-label="New Deployment">
           <Plus className="h-4 w-4 mr-1" />
           New Deployment
         </Button>

@@ -5,6 +5,7 @@ import { getHosts } from '@/app/actions/hosts';
 import HostContent from './_components/HostContent';
 import HostSkeleton from './_components/HostSkeleton';
 import { HostActions } from './_components/client/HostActions';
+import Script from 'next/script';
 
 export default async function HostsPage() {
   const t = await getTranslations('hosts');
@@ -19,6 +20,19 @@ export default async function HostsPage() {
           <HostContent />
         </Suspense>
       </div>
+      
+      {/* Script to handle custom event for opening host dialog */}
+      <Script id="open-host-dialog-handler">
+        {`
+          document.addEventListener('open-host-dialog', () => {
+            // Find the Add Host button by ID and click it
+            const addButton = document.getElementById('add-host-button');
+            if (addButton) {
+              addButton.click();
+            }
+          });
+        `}
+      </Script>
     </div>
   );
 }

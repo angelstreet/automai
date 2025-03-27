@@ -215,7 +215,7 @@ export default function ClientCICDProvider({
             title="No CI/CD Providers"
             description="Add a CI/CD provider to start creating deployments"
             action={
-              <Button onClick={() => handleAddEditProvider()}>
+              <Button onClick={() => document.dispatchEvent(new CustomEvent('open-provider-dialog'))}>
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Add Provider
               </Button>

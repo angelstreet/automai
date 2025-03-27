@@ -56,7 +56,7 @@ export function HostActions() {
       <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeChange}>
         {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
       </Button>
-      <Button size="sm" className="h-8" onClick={handleAddHost}>
+      <Button size="sm" className="h-8" onClick={handleAddHost} id="add-host-button" aria-label="Add Host">
         <Plus className="h-4 w-4 mr-2" />
         Add Host
       </Button>

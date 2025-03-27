@@ -204,7 +204,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           title="No hosts found"
           description="Add your first host to get started"
           action={
-            <Button onClick={() => setShowAddHost(true)}>
+            <Button onClick={() => document.dispatchEvent(new CustomEvent('open-host-dialog'))}>
               <Plus className="h-4 w-4 mr-2" />
               Add Host
             </Button>

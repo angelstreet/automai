@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import CICDContent from './_components/CICDContent';
 import CICDSkeleton from './_components/CICDSkeleton';
 import { CICDActions } from './_components/client/CICDActions';
+import Script from 'next/script';
 
 export default async function CICDPage() {
   const t = await getTranslations('cicd');
@@ -22,6 +23,19 @@ export default async function CICDPage() {
           <CICDContent />
         </Suspense>
       </div>
+      
+      {/* Script to handle custom event for opening provider dialog */}
+      <Script id="open-provider-dialog-handler">
+        {`
+          document.addEventListener('open-provider-dialog', () => {
+            // Find the Add Provider button by ID and click it
+            const addButton = document.getElementById('add-provider-button');
+            if (addButton) {
+              addButton.click();
+            }
+          });
+        `}
+      </Script>
     </div>
   );
 }
