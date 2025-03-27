@@ -1,7 +1,6 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState, useMemo } from 'react';
 
 // Import chart config
 import '@/lib/chart';
@@ -40,8 +39,8 @@ const options = {
   },
 };
 
-// Define initial data outside component to prevent recreation on each render
-const initialData = {
+// Define chart data
+const chartData = {
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   datasets: [
     {
@@ -57,23 +56,6 @@ const initialData = {
 };
 
 export function Overview() {
-  // Use a single state variable for client-side rendering check
-  const [mounted, setMounted] = useState(false);
-
-  // Use useMemo to create chart data only once
-  const chartData = useMemo(() => initialData, []);
-
-  // Run effect only once on mount
-  useEffect(() => {
-    setMounted(true);
-    // No cleanup needed, so return nothing
-  }, []);
-
-  // If not mounted yet, show loading state
-  if (!mounted) {
-    return <div className="h-[350px] bg-muted/5 animate-pulse rounded-lg" />;
-  }
-
   return (
     <div className="h-[350px]">
       <LineChart options={options} data={chartData} />

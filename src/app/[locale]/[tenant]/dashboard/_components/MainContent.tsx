@@ -1,89 +1,39 @@
-'use client';
-
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { Overview } from './Overview';
 import { RecentSales } from './RecentSales';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/shadcn/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/shadcn/card';
-import { useEffect, useState } from 'react';
 
 export function MainContent() {
-  type Task = {
-    id: string;
-    title: string;
-    dueDate: string;
-  };
+  // Static demo data
+  const tasks = [
+    { id: '1', title: 'Review test results', dueDate: 'Today' },
+    { id: '2', title: 'Update test cases', dueDate: 'Tomorrow' },
+    { id: '3', title: 'Create new project', dueDate: 'Next week' }
+  ];
 
-  type ChatMessage = {
-    id: string;
-    name: string;
-    avatar: string;
-    message: string;
-    time: string;
-  };
-
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [teamChat, setTeamChat] = useState<ChatMessage[]>([]);
-
-  useEffect(() => {
-    // Using static demo data instead of server calls
-    const staticTasks = [
-      {
-        id: '1',
-        title: 'Update test cases for login flow',
-        dueDate: 'Due in 2 days',
-      },
-      {
-        id: '2',
-        title: 'Review automation scripts',
-        dueDate: 'Due tomorrow',
-      },
-      {
-        id: '3',
-        title: 'Prepare test report',
-        dueDate: 'Due next week',
-      },
-    ];
-
-    const staticChat = [
-      {
-        id: '1',
-        name: 'John Doe',
-        avatar: '/avatars/01.svg',
-        message: 'Updated the test suite configuration',
-        time: '2 hours ago',
-      },
-      {
-        id: '2',
-        name: 'Jane Smith',
-        avatar: '/avatars/02.svg',
-        message: 'Added new test cases for payment flow',
-        time: '5 hours ago',
-      },
-      {
-        id: '3',
-        name: 'Robert Johnson',
-        avatar: '/avatars/03.svg',
-        message: 'Fixed failing tests in CI pipeline',
-        time: 'Yesterday',
-      },
-    ];
-
-    setTasks(staticTasks);
-    setTeamChat(staticChat);
-  }, []);
+  const teamChat = [
+    {
+      id: '1',
+      name: 'John Doe',
+      avatar: 'https://avatar.vercel.sh/jdoe',
+      message: 'Just completed the new test suite.',
+      time: '2 hours ago'
+    },
+    {
+      id: '2',
+      name: 'Jane Smith',
+      avatar: 'https://avatar.vercel.sh/jsmith',
+      message: 'Found a bug in the login flow.',
+      time: '3 hours ago'
+    }
+  ];
 
   return (
     <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-7">
       {/* Left Column - Chart and Tasks */}
       <div className="col-span-1 md:col-span-2 lg:col-span-4 space-y-4">
-        <Card>
+        <Card className="h-[450px]">
           <CardHeader>
             <CardTitle>Success Rate Over Time</CardTitle>
             <CardDescription>Monthly success rate for all test executions</CardDescription>
@@ -118,7 +68,7 @@ export function MainContent() {
 
       {/* Right Column - Recent Activity and Chats */}
       <div className="col-span-1 md:col-span-2 lg:col-span-3 space-y-4">
-        <Card>
+        <Card className="h-[450px]">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Latest test executions by team members</CardDescription>

@@ -1,5 +1,3 @@
-'use client';
-
 import { DashboardHeader } from './_components/DashboardHeader';
 import { DashboardTabs } from './_components/DashboardTabs';
 

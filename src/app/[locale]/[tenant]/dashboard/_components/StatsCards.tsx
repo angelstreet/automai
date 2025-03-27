@@ -1,34 +1,13 @@
-'use client';
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
-import { useEffect, useState } from 'react';
 
 export function StatsCards() {
-  type DashboardStats = {
-    projects: number;
-    testCases: number;
-    testsRun: number;
-    successRate: number;
+  // Static demo data
+  const stats = {
+    projects: 12,
+    testCases: 180,
+    testsRun: 1023,
+    successRate: 92,
   };
-
-  const [stats, setStats] = useState<DashboardStats>({
-    projects: 0,
-    testCases: 0,
-    testsRun: 0,
-    successRate: 0,
-  });
-
-  useEffect(() => {
-    // Using static demo data instead of server calls
-    const staticStats = {
-      projects: 12,
-      testCases: 180,
-      testsRun: 1023,
-      successRate: 92,
-    };
-
-    setStats(staticStats);
-  }, []);
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

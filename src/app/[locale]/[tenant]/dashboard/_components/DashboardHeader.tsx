@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 
 function DashboardHeaderComponent() {
   const t = useTranslations('Dashboard');
+
   return (
     <div className="flex items-center justify-between">
       <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>

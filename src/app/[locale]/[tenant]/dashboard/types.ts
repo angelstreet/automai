@@ -27,3 +27,11 @@ export interface ChatMessage {
   message: string;
   timestamp: number;
 }
+
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  memberCount?: number;
+  projectCount?: number;
+}
