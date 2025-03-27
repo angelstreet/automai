@@ -126,12 +126,10 @@ export interface EnhancedConnectRepositoryDialogProps {
 
 export interface EnhancedRepositoryCardProps {
   repository: Repository;
-  onSync: (id: string) => Promise<void>;
-  onDelete?: (id: string) => void;
-  isSyncing: boolean;
-  isDeleting?: boolean;
   onToggleStarred: (id: string) => void;
   isStarred: boolean;
+  isDeleting?: boolean;
+  onDelete?: (id: string) => void;
 }
 
 // Schema definitions for validation

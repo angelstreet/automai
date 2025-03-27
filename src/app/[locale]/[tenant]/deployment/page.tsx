@@ -1,13 +1,16 @@
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { DeploymentContent } from './_components/DeploymentContent';
 import { DeploymentSkeleton } from './_components/DeploymentSkeleton';
 import { DeploymentActions } from './_components/client/DeploymentActions';
 
-export default function DeploymentPage() {
+export default async function DeploymentPage() {
+  const t = await getTranslations('deployments');
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <PageHeader title="Deployments" description="Manage your application deployments">
+      <PageHeader title={t('deployments')} description={t('deployments_description')}>
         <DeploymentActions />
       </PageHeader>
 

@@ -4,7 +4,6 @@ export * from './EnhancedConnectRepositoryDialog';
 export * from './RepositoryDetailView';
 export * from './RepositoryExplorer';
 export * from './RepositoryList';
-export * from './RepositoryHeader';
 export * from './RepositoryDialogs';
 export * from './RepositoryActions';
 

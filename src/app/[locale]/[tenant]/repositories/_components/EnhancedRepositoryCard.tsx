@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
-import { Star, GitBranch, Clock, ExternalLink, RefreshCw, Globe, Lock, Trash2 } from 'lucide-react';
-import {
-  deleteRepository,
-  syncRepository,
-  starRepositoryAction,
-  unstarRepositoryAction,
-} from '@/app/actions/repositories';
+import { Star, GitBranch, Clock, ExternalLink, Globe, Lock, Trash2 } from 'lucide-react';
 
 import {
   Card,
@@ -21,35 +14,19 @@ import {
 import { Button } from '@/components/shadcn/button';
 import { Badge } from '@/components/shadcn/badge';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { LANGUAGE_COLORS, SYNC_STATUS_STYLES } from '../constants';
+import { LANGUAGE_COLORS } from '../constants';
 import { EnhancedRepositoryCardProps } from '../types';
 
 export function EnhancedRepositoryCard({
   repository,
-  onSync,
   onDelete,
-  isSyncing,
   isDeleting,
   onToggleStarred,
   isStarred,
 }: EnhancedRepositoryCardProps) {
-  // Initialize isHovered to false to prevent hydration mismatch
   const [isHovered, setIsHovered] = useState(false);
-  // Add isClient state to handle client-side rendering safely
   const [isClient, setIsClient] = useState(false);
   const t = useTranslations('repositories');
-
-  // Use the router for refreshing data after actions
-  const router = useRouter();
-
-  // Log whenever the card receives new props
-  useEffect(() => {
-    console.log(`[EnhancedRepositoryCard] Received update for repo: ${repository?.id}`, {
-      name: repository?.name,
-      syncStatus: repository?.syncStatus,
-      lastSyncedAt: repository?.lastSyncedAt,
-    });
-  }, [repository]);
 
   // This effect only runs on the client after hydration is complete
   useEffect(() => {
@@ -94,72 +71,18 @@ export function EnhancedRepositoryCard({
     return LANGUAGE_COLORS[key] || LANGUAGE_COLORS.default;
   };
 
-  // Handle sync button click without propagation
-  const handleSyncClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (!repository?.id) return;
-
-    try {
-      // Use server action directly
-      const result = await syncRepository(repository.id);
-
-      if (result.success) {
-        // Refresh UI
-        router.refresh();
-        if (onSync) {
-          onSync(repository.id);
-        }
-      }
-    } catch (error) {
-      console.error('Error syncing repository:', error);
-    }
-  };
-
   // Handle star button click without propagation
   const handleStarClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-
     if (!repository?.id) return;
-
-    try {
-      // Use server action directly
-      if (isStarred) {
-        await unstarRepositoryAction(repository.id);
-      } else {
-        await starRepositoryAction(repository.id);
-      }
-
-      // Refresh UI
-      router.refresh();
-      if (onToggleStarred) {
-        onToggleStarred(repository.id);
-      }
-    } catch (error) {
-      console.error('Error toggling star status:', error);
-    }
+    onToggleStarred(repository.id);
   };
 
   // Handle delete button click without propagation
   const handleDeleteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
-
-    if (!repository?.id) return;
-
-    try {
-      // Use server action directly
-      const result = await deleteRepository(repository.id);
-
-      if (result.success) {
-        // Refresh UI
-        router.refresh();
-        if (onDelete) {
-          onDelete(repository.id);
-        }
-      }
-    } catch (error) {
-      console.error('Error deleting repository:', error);
-    }
+    if (!repository?.id || !onDelete) return;
+    onDelete(repository.id);
   };
 
   return (
@@ -197,64 +120,60 @@ export function EnhancedRepositoryCard({
           )}
         </div>
       </CardHeader>
-
-      <CardContent className="py-2 px-4">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center">
-            <GitBranch className="h-3 w-3 mr-1" />
-            {repository?.defaultBranch || 'main'}
+      
+      <CardContent className="px-4 py-2">
+        {repository?.description && (
+          <CardDescription className="line-clamp-2 text-xs mb-2">
+            {repository.description}
+          </CardDescription>
+        )}
+        
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {repository?.owner && <div>{repository.owner}</div>}
+          
+          {repository?.language && (
+            <div className="flex items-center gap-1">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: getLanguageColor(repository.language) }}
+              />
+              <span>{repository.language}</span>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            <span>{lastSyncedText}</span>
           </div>
-          <Badge
-            variant={repository?.syncStatus === 'SYNCED' ? 'default' : 'outline'}
-            className={`text-xs py-0 text-[10px] ml-auto ${SYNC_STATUS_STYLES[repository?.syncStatus || 'IDLE']}`}
-          >
-            {repository?.syncStatus || 'IDLE'}
-          </Badge>
-        </div>
-        <div className="flex items-center text-[10px] text-muted-foreground mt-1">
-          <Clock className="h-3 w-3 mr-1" />
-          {lastSyncedText}
         </div>
       </CardContent>
-
-      <CardFooter
-        className={`py-3 px-3 border-t flex justify-center transition-opacity duration-200 ${isClient && isHovered ? 'opacity-100' : 'opacity-0'}`}
-      >
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={handleDeleteClick}
-            disabled={isDeleting}
+      
+      <CardFooter className="px-4 py-2 flex justify-between items-center text-xs border-t">
+        <div className="flex items-center gap-1">
+          <ExternalLink className="h-3 w-3" />
+          <a
+            href={repository?.url || '#'}
+            target="_blank"
+            rel="noreferrer"
+            className="hover:underline"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Trash2 className="h-3 w-3 mr-1" />
-            {t('deleteAction')}
-          </Button>
-          {repository.url && (
+            {t('viewOnProvider')}
+          </a>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {onDelete && (
             <Button
               variant="ghost"
-              size="sm"
-              className="h-6"
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(repository.url, '_blank');
-              }}
+              size="icon"
+              className="h-6 w-6"
+              onClick={handleDeleteClick}
+              disabled={isDeleting}
             >
-              <ExternalLink className="h-3 w-3 mr-1" />
-              {t('open')}
+              <Trash2 className="h-3.5 w-3.5 text-red-500" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6"
-            onClick={handleSyncClick}
-            disabled={isSyncing}
-          >
-            <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
-            {t('sync')}
-          </Button>
         </div>
       </CardFooter>
     </Card>
