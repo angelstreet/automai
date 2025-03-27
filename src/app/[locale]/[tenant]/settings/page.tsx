@@ -18,7 +18,7 @@ export default function SettingsPage() {
   const t = useTranslations('Settings');
 
   return (
-    <div className="container mx-auto py-4 space-y-6">
+    <div className="container mx-auto py-6 px-4 space-y-6">
       <PageHeader title={t('title')} description={t('description')} />
       <div className="space-y-6">
         <div className="grid gap-6">
