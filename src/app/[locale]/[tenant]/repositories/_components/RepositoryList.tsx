@@ -210,7 +210,7 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
           title={t('noRepositories')}
           description={emptyStateMessage}
           action={
-            <Button onClick={() => document.dispatchEvent(new CustomEvent('open-connect-dialog'))}>
+            <Button onClick={() => document.getElementById('add-repository-button')?.click()}>
               <Plus className="h-4 w-4 mr-2" />
               {t('addRepository')}
             </Button>

@@ -11,7 +11,7 @@ alwaysApply: true
 - ALWAYS provide a clear plan before implementing code changes
 - Wait for explicit agreement before making changes
 - Document any deviations from the approved plan
-- Make minimal, focused changes to achieve the goal
+- Make minimal focused changes to achieve the goal but always respect best practices
 - NEVER edit a component ui layout without agreement
 - NEVER use mock data 
 

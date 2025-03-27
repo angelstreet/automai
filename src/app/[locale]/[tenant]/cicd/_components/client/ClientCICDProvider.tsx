@@ -41,6 +41,7 @@ import {
 import { Badge } from '@/components/shadcn/badge';
 import type { CICDProviderType } from '../../types';
 import { EmptyState } from '@/components/layout/EmptyState';
+import { useTranslations } from 'next-intl';
 
 interface ClientCICDProviderProps {
   initialProviders: CICDProviderType[];
@@ -58,6 +59,22 @@ export default function ClientCICDProvider({
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const t = useTranslations('cicd');
+
+  // Function to load providers from the server
+  const loadProviders = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await getCICDProviders();
+      if (result.success) {
+        setProviders(result.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading providers:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Open the add/edit dialog
   const handleAddEditProvider = useCallback((provider?: CICDProviderType) => {
@@ -75,20 +92,18 @@ export default function ClientCICDProvider({
     setIsAddEditDialogOpen(true);
   }, []);
 
-  // Listen for the open-provider-dialog event
+  // Add a new useEffect to listen for refresh events
   useEffect(() => {
-    const handleOpenDialog = () => {
-      console.log('[ClientCICDProvider] Received open-provider-dialog event');
-      handleAddEditProvider();
+    const handleRefresh = () => {
+      console.log('[ClientCICDProvider] Refreshing provider list');
+      loadProviders();
     };
 
-    console.log('[ClientCICDProvider] Adding open-provider-dialog event listener');
-    window.addEventListener('open-provider-dialog', handleOpenDialog);
-
+    window.addEventListener('refresh-providers', handleRefresh);
     return () => {
-      window.removeEventListener('open-provider-dialog', handleOpenDialog);
+      window.removeEventListener('refresh-providers', handleRefresh);
     };
-  }, [handleAddEditProvider]);
+  }, [loadProviders]);
 
   // Test a provider connection
   const handleTestProvider = async (provider: CICDProviderType) => {
@@ -212,12 +227,12 @@ export default function ClientCICDProvider({
         <CardContent className="p-0">
           <EmptyState
             icon={<AlertCircle className="h-10 w-10" />}
-            title="No CI/CD Providers"
-            description="Add a CI/CD provider to start creating deployments"
+            title={t('no_providers_title', { fallback: 'No CI/CD Providers' })}
+            description={t('no_providers_description', { fallback: 'Add a CI/CD provider to start creating deployments' })}
             action={
-              <Button onClick={() => document.dispatchEvent(new CustomEvent('open-provider-dialog'))}>
+              <Button onClick={() => document.getElementById('add-provider-button')?.click()}>
                 <PlusCircle className="h-4 w-4 mr-2" />
-                Add Provider
+                {t('add_provider', { fallback: 'Add Provider' })}
               </Button>
             }
           />
@@ -230,10 +245,10 @@ export default function ClientCICDProvider({
     <Card>
       {!removeTitle && (
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">CI/CD Providers</CardTitle>
+          <CardTitle className="text-xl font-bold">{t('providers_title', { fallback: 'CI/CD Providers' })}</CardTitle>
           <Button onClick={() => handleAddEditProvider()} size="sm" className="h-8 gap-1">
             <PlusCircle className="h-4 w-4" />
-            <span>Add Provider</span>
+            <span>{t('add_provider', { fallback: 'Add Provider' })}</span>
           </Button>
         </CardHeader>
       )}
@@ -248,11 +263,11 @@ export default function ClientCICDProvider({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>URL</TableHead>
-                  <TableHead>Auth Type</TableHead>
-                  <TableHead className="w-[80px]">Actions</TableHead>
+                  <TableHead>{t('provider_name', { fallback: 'Name' })}</TableHead>
+                  <TableHead>{t('provider_type', { fallback: 'Type' })}</TableHead>
+                  <TableHead>{t('provider_url', { fallback: 'URL' })}</TableHead>
+                  <TableHead>{t('provider_auth_type', { fallback: 'Auth Type' })}</TableHead>
+                  <TableHead className="w-[80px]">{t('actions', { fallback: 'Actions' })}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -261,20 +276,20 @@ export default function ClientCICDProvider({
                     <TableCell className="font-medium">{provider.name}</TableCell>
                     <TableCell>
                       <Badge className={getProviderBadgeColor(provider.type)}>
-                        {provider.type === 'jenkins' && 'Jenkins'}
-                        {provider.type === 'github' && 'GitHub Actions'}
-                        {provider.type === 'gitlab' && 'GitLab CI'}
-                        {provider.type === 'azure_devops' && 'Azure DevOps'}
+                        {provider.type === 'jenkins' && t('provider_type_jenkins', { fallback: 'Jenkins' })}
+                        {provider.type === 'github' && t('provider_type_github', { fallback: 'GitHub Actions' })}
+                        {provider.type === 'gitlab' && t('provider_type_gitlab', { fallback: 'GitLab CI' })}
+                        {provider.type === 'azure_devops' && t('provider_type_azure', { fallback: 'Azure DevOps' })}
                         {!['jenkins', 'github', 'gitlab', 'azure_devops'].includes(provider.type) &&
                           provider.type}
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">{provider.url}</TableCell>
                     <TableCell>
-                      {provider.config?.auth_type === 'token' && 'API Token'}
-                      {provider.config?.auth_type === 'basic_auth' && 'Username & Password'}
-                      {provider.config?.auth_type === 'oauth' && 'OAuth'}
-                      {!provider.config?.auth_type && 'Not specified'}
+                      {provider.config?.auth_type === 'token' && t('auth_type_token', { fallback: 'API Token' })}
+                      {provider.config?.auth_type === 'basic_auth' && t('auth_type_basic', { fallback: 'Username & Password' })}
+                      {provider.config?.auth_type === 'oauth' && t('auth_type_oauth', { fallback: 'OAuth' })}
+                      {!provider.config?.auth_type && t('auth_type_not_specified', { fallback: 'Not specified' })}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -287,18 +302,18 @@ export default function ClientCICDProvider({
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleTestProvider(provider)}>
                             <RefreshCcw className="h-4 w-4 mr-2" />
-                            Test Connection
+                            {t('test_connection', { fallback: 'Test Connection' })}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleAddEditProvider(provider)}>
                             <Edit className="h-4 w-4 mr-2" />
-                            Edit
+                            {t('edit', { fallback: 'Edit' })}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleDeleteClick(provider)}
                             className="text-red-600 dark:text-red-400"
                           >
                             <Trash className="h-4 w-4 mr-2" />
-                            Delete
+                            {t('delete', { fallback: 'Delete' })}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -314,7 +329,12 @@ export default function ClientCICDProvider({
         <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
-              <DialogTitle>{isEditing ? 'Edit CI/CD Provider' : 'Add CI/CD Provider'}</DialogTitle>
+              <DialogTitle>
+                {isEditing 
+                  ? t('edit_provider_dialog_title', { fallback: 'Edit CI/CD Provider' })
+                  : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })
+                }
+              </DialogTitle>
             </DialogHeader>
             <CICDProviderForm
               providerId={selectedProvider?.id}
@@ -328,19 +348,21 @@ export default function ClientCICDProvider({
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete CI/CD Provider</AlertDialogTitle>
+              <AlertDialogTitle>{t('delete_provider_dialog_title', { fallback: 'Delete CI/CD Provider' })}</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{selectedProvider?.name}"? This action cannot be
-                undone and will remove all access to this provider.
+                {t('delete_provider_confirmation', {
+                  name: selectedProvider?.name,
+                  fallback: `Are you sure you want to delete "${selectedProvider?.name}"? This action cannot be undone and will remove all access to this provider.`
+                })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t('cancel', { fallback: 'Cancel' })}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
                 className="bg-red-600 hover:bg-red-700"
               >
-                Delete
+                {t('delete', { fallback: 'Delete' })}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

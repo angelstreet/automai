@@ -371,7 +371,7 @@
     "title": "CI/CD Integration",
     "description": "Configure CI/CD providers for automated deployments",
     "providers": "CI/CD Providers",
-    "add_provider": "Add Provider",
+    "add_cicd": "Add CI/CD",
     "no_providers": "No CI/CD providers configured",
     "add_provider_description": "Connect to your CI/CD systems to automate deployments",
     "provider_type": "Provider Type",

@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { Plus, RefreshCw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { useRouter } from 'next/navigation';
 import DeploymentWizardContainer from '../DeploymentWizardContainer';
 import { useToast } from '@/components/shadcn/use-toast';
 
 export function DeploymentActions() {
+  const t = useTranslations('deployment');
   const [wizardActive, setWizardActive] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
@@ -32,8 +34,8 @@ export function DeploymentActions() {
       setIsRefreshing(false);
 
       toast({
-        title: 'Error',
-        description: 'Failed to refresh deployments',
+        title: t('error', { fallback: 'Error' }),
+        description: t('refresh_error', { fallback: 'Failed to refresh deployments' }),
         variant: 'destructive',
       });
     }
@@ -44,8 +46,8 @@ export function DeploymentActions() {
     setWizardActive(false);
 
     toast({
-      title: 'Success',
-      description: 'Deployment has been created successfully',
+      title: t('success', { fallback: 'Success' }),
+      description: t('deployment_created', { fallback: 'Deployment has been created successfully' }),
     });
 
     // Refresh the data
@@ -57,7 +59,7 @@ export function DeploymentActions() {
       <div className="flex items-center space-x-2">
         <Button onClick={() => setWizardActive(true)} id="new-deployment-button" aria-label="New Deployment">
           <Plus className="h-4 w-4 mr-1" />
-          New Deployment
+          {t('new_deployment', { fallback: 'New Deployment' })}
         </Button>
         <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />

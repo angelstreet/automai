@@ -4,11 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Host } from '../../types';
 import { HostGrid } from '../HostGrid';
 import { HostTable } from '../HostTable';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import { ClientConnectionForm, FormData as ConnectionFormData } from './ClientConnectionForm';
 import { VIEW_MODE_CHANGE } from './HostActions';
 import {
-  createHost as createHostAction,
   testHostConnection,
   deleteHost as deleteHostAction,
 } from '@/app/actions/hosts';
@@ -24,18 +21,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   const [hosts, setHosts] = useState<Host[]>(initialHosts);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
-  const [showAddHost, setShowAddHost] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [formData, setFormData] = useState<ConnectionFormData>({
-    name: '',
-    description: '',
-    type: 'ssh',
-    ip: '',
-    port: '22',
-    username: '',
-    password: '',
-  });
 
   // Listen for view mode changes
   useEffect(() => {
@@ -114,57 +100,6 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     return () => window.removeEventListener('refresh-hosts', handleRefresh);
   }, [handleRefreshAll]);
 
-  // Listen for add host dialog
-  useEffect(() => {
-    const handleOpenDialog = () => {
-      setShowAddHost(true);
-    };
-
-    window.addEventListener('open-host-dialog', handleOpenDialog);
-    return () => window.removeEventListener('open-host-dialog', handleOpenDialog);
-  }, []);
-
-  // Handle saving new host
-  const handleSaveHost = useCallback(async () => {
-    try {
-      setIsSaving(true);
-      const result = await createHostAction({
-        name: formData.name,
-        description: formData.description,
-        type: formData.type as 'ssh' | 'docker' | 'portainer',
-        ip: formData.ip,
-        port: parseInt(formData.port || '22'),
-        status: 'connected',
-        created_at: new Date(),
-        updated_at: new Date(),
-        is_windows: false,
-      });
-
-      if (result.success && result.data) {
-        setHosts((prev) => [...prev, result.data as Host]);
-        setShowAddHost(false);
-        // Reset form data
-        setFormData({
-          name: '',
-          description: '',
-          type: 'ssh',
-          ip: '',
-          port: '22',
-          username: '',
-          password: '',
-        });
-      }
-    } catch (error) {
-      console.error('Error adding host:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [formData]);
-
-  const handleFormChange = (newFormData: ConnectionFormData) => {
-    setFormData(newFormData);
-  };
-
   const handleSelectHost = (host: Host | string) => {
     const hostId = typeof host === 'string' ? host : host.id;
     const newSelectedHosts = new Set(selectedHosts);
@@ -204,7 +139,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           title="No hosts found"
           description="Add your first host to get started"
           action={
-            <Button onClick={() => document.dispatchEvent(new CustomEvent('open-host-dialog'))}>
+            <Button onClick={() => document.getElementById('add-host-button')?.click()}>
               <Plus className="h-4 w-4 mr-2" />
               Add Host
             </Button>
@@ -235,20 +170,6 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           onTestConnection={handleTestConnection}
         />
       )}
-
-      <Dialog open={showAddHost} onOpenChange={setShowAddHost}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Host</DialogTitle>
-          </DialogHeader>
-          <ClientConnectionForm
-            formData={formData}
-            onChange={handleFormChange}
-            onSubmit={handleSaveHost}
-            isSaving={isSaving}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

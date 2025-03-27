@@ -351,7 +351,7 @@
     "title": "Intégration CI/CD",
     "description": "Configurez les fournisseurs CI/CD pour les déploiements automatisés",
     "providers": "Fournisseurs CI/CD",
-    "add_provider": "Ajouter un fournisseur",
+    "add_cicd": "Ajouter CI/CD",
     "no_providers": "Aucun fournisseur CI/CD configuré",
     "add_provider_description": "Connectez-vous à vos systèmes CI/CD pour automatiser les déploiements",
     "provider_type": "Type de fournisseur",
