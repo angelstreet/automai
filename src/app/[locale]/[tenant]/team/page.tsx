@@ -1,22 +1,33 @@
-'use client';
+import { Metadata } from 'next';
+import { getUser } from '@/app/actions/user';
+import { getTeams } from '../team/actions';
+import TeamPageContent from './_components/TeamPageContent';
+import { redirect } from 'next/navigation';
 
-import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+export const metadata: Metadata = {
+  title: 'Team Management',
+  description: 'Manage teams and team members',
+};
 
-export default function TeamPage() {
-  const _params = useParams();
-  const t = useTranslations('Team');
+export default async function TeamPage() {
+  const user = await getUser();
+  if (!user) {
+    redirect('/login');
+  }
+
+  const teamsResult = await getTeams();
+  const teams = teamsResult.success ? teamsResult.data : [];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">{t('title')}</h1>
-      <div className="grid gap-6">
-        {/* Team members list will go here */}
-        <div className="p-6 bg-card rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">{t('teamMembers')}</h2>
-          <p className="text-muted-foreground">{t('description')}</p>
-        </div>
+    <div className="container mx-auto py-6 space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
+        <p className="text-muted-foreground">
+          Manage teams, members, and resource limits
+        </p>
       </div>
+
+      <TeamPageContent initialTeams={teams} />
     </div>
   );
 }

@@ -2,8 +2,9 @@
 
 import { ReactNode } from 'react';
 import { User } from '@/types/user';
+import { UserProvider, TeamProvider } from '@/context';
 
-// This client component wraps the layout and provides any client-side functionality needed
+// This client component wraps the layout and provides client-side context providers
 export default function TenantLayoutClient({
   children,
   user,
@@ -13,7 +14,11 @@ export default function TenantLayoutClient({
   user: User | null;
   tenant: string;
 }) {
-  // In the future, you might add client-side state or handlers here
-
-  return <>{children}</>;
+  return (
+    <UserProvider initialUser={user}>
+      <TeamProvider>
+        {children}
+      </TeamProvider>
+    </UserProvider>
+  );
 }

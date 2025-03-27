@@ -34,11 +34,14 @@ export { useSidebar } from './SidebarContext';
 export { SidebarProvider } from './SidebarContext';
 export { useTheme } from './ThemeContext';
 export { ThemeProvider } from './ThemeContext';
+export { useTeam } from './teamContext';
+export { TeamProvider } from './teamContext';
 
 // Export types for context usage
 export type { UserContextType } from '@/types/context/user';
 export type { SidebarContext as SidebarContextType } from '@/types/sidebar';
 export type { ThemeContextType } from './ThemeContext';
+export type { TeamContextValue } from '@/types/context/team';
 
 // Export context state types for component usage
 export type { User, Role, AuthUser } from '@/types/user';

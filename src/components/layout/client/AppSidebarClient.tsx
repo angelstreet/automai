@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
 import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
+import TeamSelector from '@/components/layout/TeamSelector';
 import {
   Sidebar,
   SidebarContent,
@@ -304,6 +305,7 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
       {!isCollapsed && (
         <SidebarHeader className="p-1.5 flex flex-col gap-2">
           <TeamSwitcher defaultCollapsed={!open} />
+          <TeamSelector />
         </SidebarHeader>
       )}
       <SidebarContent className={isCollapsed ? 'pt-4' : 'pt-2'}>
