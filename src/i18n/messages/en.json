@@ -187,6 +187,7 @@
     "description": "Manage your billing and subscription plans",
     "currentPlan": "Current Plan",
     "upgrade": "Upgrade Plan",
+    "refresh": "Refresh",
     "manageSubscription": "Manage Subscription",
     "billingHistory": "Billing History",
     "paymentMethods": "Payment Methods",
@@ -366,19 +367,7 @@
   },
   "Team": {
     "title": "Team Management",
-    "teamMembers": "Team Members",
-    "description": "Manage your team members and their permissions",
-    "inviteMembers": "Invite Members",
-    "memberName": "Name",
-    "memberEmail": "Email",
-    "memberRole": "Role",
-    "memberStatus": "Status",
-    "memberActions": "Actions",
-    "invitePending": "Pending",
-    "inviteAccepted": "Accepted",
-    "removeUser": "Remove",
-    "confirmRemove": "Are you sure you want to remove this user?",
-    "noMembers": "No team members found"
+    "description": "Manage teams, members, and resource limits"
   },
   "cicd": {
     "title": "CI/CD Integration",

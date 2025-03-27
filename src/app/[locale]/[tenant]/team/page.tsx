@@ -1,19 +1,44 @@
+import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next';
-
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 export const metadata: Metadata = {
   title: 'Team Management',
   description: 'Manage teams and team members',
 };
 
+// Simple team content component
+function TeamContent() {
+  return (
+    <div className="p-4">
+      <p>Team management will be available here.</p>
+    </div>
+  );
+}
+
+// Simple loading skeleton
+function TeamSkeleton() {
+  return (
+    <div className="p-4 w-full">
+      <div className="h-8 bg-muted animate-pulse rounded w-1/4 mb-4"></div>
+      <div className="h-32 bg-muted animate-pulse rounded"></div>
+    </div>
+  );
+}
+
 export default async function TeamPage() {
+  const t = await getTranslations('team');
 
   return (
-    <div className="container mx-auto py-6 space-x-4">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
-        <p className="text-muted-foreground">Manage teams, members, and resource limits</p>
-      </div>
-    </div>
+    <FeaturePageContainer
+      title={t('title', { defaultValue: 'Team Management' })}
+      description={t('description', { defaultValue: 'Manage teams, members, and resource limits' })}
+      actions={<div />}
+    >
+      <Suspense fallback={<TeamSkeleton />}>
+        <TeamContent />
+      </Suspense>
+    </FeaturePageContainer>
   );
 }

@@ -1,21 +1,45 @@
-'use client';
+import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
+import { Metadata } from 'next';
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
-import { useParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
+export const metadata: Metadata = {
+  title: 'Reports',
+  description: 'Reports for your deployments',
+};
 
-export default function ReportsPage() {
-  const _params = useParams();
-  const t = useTranslations('Reports');
-
+// Simple reports content component
+function ReportsContent() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">{t('title')}</h1>
-      <div className="grid gap-6">
-        <div className="p-6 bg-card rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">{t('reportsList')}</h2>
-          <p className="text-muted-foreground">{t('description')}</p>
-        </div>
-      </div>
+    <div className="p-4">
+      <p>Reports will be available here.</p>
     </div>
+  );
+}
+
+// Simple loading skeleton
+function ReportsSkeleton() {
+  return (
+    <div className="p-4 w-full">
+      <div className="h-8 bg-muted animate-pulse rounded w-1/4 mb-4"></div>
+      <div className="h-32 bg-muted animate-pulse rounded"></div>
+    </div>
+  );
+}
+
+export default async function ReportsPage() {
+  const t = await getTranslations('Reports');
+  
+  return (
+    <FeaturePageContainer
+      title={t('title')}
+      description={t('description')}
+      // Empty actions for now
+      actions={<div />}
+    >
+      <Suspense fallback={<ReportsSkeleton />}>
+        <ReportsContent />
+      </Suspense>
+    </FeaturePageContainer>
   );
 }
