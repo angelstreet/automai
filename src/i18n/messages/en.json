@@ -184,6 +184,7 @@
   },
   "billing": {
     "title": "Billing & Plans",
+    "description": "Manage your billing and subscription plans",
     "currentPlan": "Current Plan",
     "upgrade": "Upgrade Plan",
     "manageSubscription": "Manage Subscription",

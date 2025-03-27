@@ -172,6 +172,7 @@
   },
   "billing": {
     "title": "Facturation & Plans",
+    "description": "Gérez votre facturation et vos plans d'abonnement",
     "currentPlan": "Plan actuel",
     "upgrade": "Mettre à niveau",
     "manageSubscription": "Gérer l'abonnement",
