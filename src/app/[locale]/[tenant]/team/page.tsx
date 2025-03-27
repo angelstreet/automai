@@ -1,8 +1,5 @@
 import { Metadata } from 'next';
-import { getUser } from '@/app/actions/user';
-import { getTeams } from '../team/actions';
-import TeamPageContent from './_components/TeamPageContent';
-import { redirect } from 'next/navigation';
+
 
 export const metadata: Metadata = {
   title: 'Team Management',
@@ -10,13 +7,6 @@ export const metadata: Metadata = {
 };
 
 export default async function TeamPage() {
-  const user = await getUser();
-  if (!user) {
-    redirect('/login');
-  }
-
-  const teamsResult = await getTeams();
-  const teams = teamsResult.success ? teamsResult.data : [];
 
   return (
     <div className="container mx-auto py-6 space-x-4">
