@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, ChevronRight, GitBranch, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GitBranch, PlusCircle } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Button } from '@/components/shadcn/button';
@@ -210,9 +210,9 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
           title={t('noRepositories')}
           description={emptyStateMessage}
           action={
-            <Button onClick={() => document.getElementById('add-repository-button')?.click()}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('addRepository')}
+            <Button onClick={() => document.getElementById('add-repository-button')?.click()} size="sm" className="gap-1">
+              <PlusCircle className="h-4 w-4" />
+              <span>{t('addRepository')}</span>
             </Button>
           }
         />

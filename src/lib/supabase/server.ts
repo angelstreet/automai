@@ -2,11 +2,12 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export const createClient = async () => {
-  const cookieStore = cookies();
+export const createClient = async (cookieStore?: any) => {
+  // Use provided cookieStore or get a new one
+  const cookieJar = cookieStore || cookies();
   
   // Get the HTTP method to determine if we're in a Server Action or Route Handler (POST request)
-  const requestHeaders = new Headers(cookieStore.getAll().map(c => ['cookie', `${c.name}=${c.value}`]));
+  const requestHeaders = new Headers(cookieJar.getAll().map((c: { name: string; value: string }) => ['cookie', `${c.name}=${c.value}`]));
   
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,14 +15,15 @@ export const createClient = async () => {
     {
       cookies: {
         async get(name) {
-          return cookieStore.get(name)?.value;
+          const cookie = await cookieJar.get(name);
+          return cookie?.value;
         },
         async set(name, value, options) {
           try {
             // Only modify cookies in Server Actions or Route Handlers
             // This check helps prevent the "Cookies can only be modified in a Server Action or Route Handler" error
             if (requestHeaders.get('next-action') || requestHeaders.get('x-supabase-server-action')) {
-              cookieStore.set(name, value, options);
+              cookieJar.set(name, value, options);
             } else {
               // Log that we're skipping setting cookie in an RSC context
               console.log(`[Supabase] Skipping cookie set for ${name} in RSC context`);
@@ -34,7 +36,7 @@ export const createClient = async () => {
           try {
             // Only modify cookies in Server Actions or Route Handlers
             if (requestHeaders.get('next-action') || requestHeaders.get('x-supabase-server-action')) {
-              cookieStore.set(name, '', { ...options, maxAge: 0 });
+              cookieJar.set(name, '', { ...options, maxAge: 0 });
             } else {
               // Log that we're skipping removing cookie in an RSC context
               console.log(`[Supabase] Skipping cookie removal for ${name} in RSC context`);
