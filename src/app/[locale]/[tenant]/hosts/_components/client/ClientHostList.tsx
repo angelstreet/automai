@@ -5,9 +5,10 @@ import { Host } from '../../types';
 import { HostGrid } from '../HostGrid';
 import { HostTable } from '../HostTable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import { ClientConnectionForm, FormData } from './ClientConnectionForm';
+import { ClientConnectionForm, FormData as ConnectionFormData } from './ClientConnectionForm';
 import { VIEW_MODE_CHANGE } from './HostActions';
 import { createHost as createHostAction, testHostConnection } from '@/app/actions/hosts';
+import { useToast } from '@/components/shadcn/use-toast';
 
 interface ClientHostListProps {
   initialHosts: Host[];
@@ -19,10 +20,13 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   const [selectedHosts] = useState<Set<string>>(new Set());
   const [showAddHost, setShowAddHost] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
+  const { toast } = useToast();
+  const [formData, setFormData] = useState<ConnectionFormData>({
     name: '',
+    description: '',
+    type: 'ssh',
     ip: '',
-    port: '',
+    port: '22',
     username: '',
     password: '',
   });
@@ -39,22 +43,52 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
   // Listen for refresh action
   useEffect(() => {
-    const handleRefresh = async () => {
-      const updatedHosts = [...hosts];
-      for (const host of updatedHosts) {
-        const result = await testHostConnection(host.id);
-        if (result.success) {
-          host.status = 'connected';
-        } else {
-          host.status = 'failed';
+    const handleRefresh = async (event: CustomEvent<{ timestamp: number }>) => {
+      try {
+        const updatedHosts = [...hosts];
+        let successCount = 0;
+        let failedCount = 0;
+
+        for (const host of updatedHosts) {
+          try {
+            const result = await testHostConnection(host.id);
+            if (result.success) {
+              host.status = 'connected';
+              successCount++;
+            } else {
+              host.status = 'failed';
+              failedCount++;
+            }
+          } catch (error) {
+            host.status = 'failed';
+            failedCount++;
+          }
         }
+
+        setHosts(updatedHosts);
+
+        // Show toast with results
+        toast({
+          title: 'Refresh Complete',
+          description: `Successfully connected to ${successCount} hosts. ${failedCount} connections failed.`,
+          variant: successCount > 0 ? 'default' : 'destructive',
+        });
+      } catch (error) {
+        console.error('Error refreshing hosts:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to refresh host connections',
+          variant: 'destructive',
+        });
+      } finally {
+        // Dispatch event to indicate refresh is complete
+        window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
       }
-      setHosts(updatedHosts);
     };
 
-    window.addEventListener('refresh-hosts', handleRefresh);
-    return () => window.removeEventListener('refresh-hosts', handleRefresh);
-  }, [hosts]);
+    window.addEventListener('refresh-hosts', handleRefresh as EventListener);
+    return () => window.removeEventListener('refresh-hosts', handleRefresh as EventListener);
+  }, [hosts, toast]);
 
   // Listen for add host dialog
   useEffect(() => {
@@ -72,29 +106,52 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       setIsSaving(true);
       const result = await createHostAction({
         name: formData.name,
+        description: formData.description,
+        type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port || '22'),
-        username: formData.username,
-        password: formData.password,
+        status: 'pending',
+        created_at: new Date(),
+        updated_at: new Date(),
+        is_windows: false,
       });
 
       if (result.success && result.data) {
-        setHosts(prev => [...prev, result.data]);
+        setHosts((prev: Host[]) => [...prev, result.data as Host]);
         setShowAddHost(false);
-        setFormData({
+        // Reset form data
+        const defaultFormData: ConnectionFormData = {
           name: '',
+          description: '',
+          type: 'ssh',
           ip: '',
-          port: '',
+          port: '22',
           username: '',
           password: '',
+        };
+        setFormData(defaultFormData);
+        
+        toast({
+          title: 'Success',
+          description: 'Host added successfully',
+          variant: 'default',
         });
       }
     } catch (error) {
       console.error('Error adding host:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add host',
+        variant: 'destructive',
+      });
     } finally {
       setIsSaving(false);
     }
-  }, [formData]);
+  }, [formData, toast]);
+
+  const handleFormChange = (newFormData: ConnectionFormData) => {
+    setFormData(newFormData);
+  };
 
   // Empty state for no hosts
   if (hosts.length === 0) {
@@ -135,7 +192,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           </DialogHeader>
           <ClientConnectionForm
             formData={formData}
-            onChange={setFormData}
+            onChange={handleFormChange}
             onSubmit={handleSaveHost}
             isSaving={isSaving}
           />

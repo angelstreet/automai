@@ -3,6 +3,7 @@
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/shadcn/button';
+import { testHostConnection } from '@/app/actions/hosts';
 
 // Create a custom event for view mode changes
 export const VIEW_MODE_CHANGE = 'host-view-mode-change';
@@ -19,17 +20,29 @@ export function HostActions() {
   };
 
   const handleRefresh = () => {
+    if (isRefreshing) return;
+    
     setIsRefreshing(true);
-    // Dispatch event for refresh action
-    window.dispatchEvent(new CustomEvent('refresh-hosts'));
-    // Reset refresh state after animation
-    setTimeout(() => setIsRefreshing(false), 1000);
+    // Dispatch event for refresh action with a timestamp to ensure uniqueness
+    window.dispatchEvent(new CustomEvent('refresh-hosts', {
+      detail: { timestamp: Date.now() }
+    }));
   };
 
   const handleAddHost = () => {
     // Dispatch event to show add host dialog
     window.dispatchEvent(new CustomEvent('open-host-dialog'));
   };
+
+  // Listen for refresh complete event
+  useEffect(() => {
+    const handleRefreshComplete = () => {
+      setIsRefreshing(false);
+    };
+
+    window.addEventListener('refresh-hosts-complete', handleRefreshComplete);
+    return () => window.removeEventListener('refresh-hosts-complete', handleRefreshComplete);
+  }, []);
 
   return (
     <div className="flex items-center gap-2">
