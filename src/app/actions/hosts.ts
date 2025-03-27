@@ -15,7 +15,9 @@ export interface HostFilter {
 /**
  * Get all hosts with optional filtering
  */
-export async function getHosts(filter?: HostFilter): Promise<{ success: boolean; error?: string; data?: Host[] }> {
+export async function getHosts(
+  filter?: HostFilter,
+): Promise<{ success: boolean; error?: string; data?: Host[] }> {
   try {
     // Get current user
     const currentUser = await getUser();
@@ -55,7 +57,9 @@ export async function getHosts(filter?: HostFilter): Promise<{ success: boolean;
 /**
  * Get a specific host by ID
  */
-export async function getHostById(id: string): Promise<{ success: boolean; error?: string; data?: Host }> {
+export async function getHostById(
+  id: string,
+): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     if (!id) {
       return { success: false, error: 'Host ID is required' };
@@ -88,7 +92,9 @@ export async function getHostById(id: string): Promise<{ success: boolean; error
 /**
  * Create a new host
  */
-export async function createHost(data: Omit<Host, 'id'>): Promise<{ success: boolean; error?: string; data?: Host }> {
+export async function createHost(
+  data: Omit<Host, 'id'>,
+): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     // Get current user
     const currentUser = await getUser();
@@ -124,7 +130,7 @@ export async function createHost(data: Omit<Host, 'id'>): Promise<{ success: boo
  */
 export async function updateHost(
   id: string,
-  updates: Partial<Omit<Host, 'id'>>
+  updates: Partial<Omit<Host, 'id'>>,
 ): Promise<{ success: boolean; error?: string; data?: Host }> {
   try {
     if (!id) {
@@ -206,7 +212,9 @@ export async function deleteHost(id: string): Promise<{ success: boolean; error?
 /**
  * Test connection to a specific host
  */
-export async function testHostConnection(id: string): Promise<{ success: boolean; error?: string; message?: string }> {
+export async function testHostConnection(
+  id: string,
+): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
     if (!id) {
       return { success: false, error: 'Host ID is required' };
@@ -387,13 +395,13 @@ export async function testConnection(data: {
 }) {
   try {
     const result = await testHostConnectionService(data);
-    
+
     // Revalidate paths if we have a host ID
     if (data.hostId) {
       revalidatePath('/[locale]/[tenant]/hosts');
       revalidatePath(`/[locale]/[tenant]/hosts/${data.hostId}`);
     }
-    
+
     return result;
   } catch (error: any) {
     logger.error('Error in testConnection:', error);

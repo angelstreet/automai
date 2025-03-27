@@ -10,11 +10,7 @@ import {
   CommandInput,
   CommandItem,
 } from '@/components/shadcn/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/shadcn/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
 import { cn } from '@/lib/utils';
 import { useTeam, useUser } from '@/context';
 
@@ -45,9 +41,7 @@ export default function TeamSelector() {
         >
           <div className="flex items-center">
             <Users className="mr-2 h-4 w-4" />
-            <span className="truncate">
-              {selectedTeam ? selectedTeam.name : "Select team..."}
-            </span>
+            <span className="truncate">{selectedTeam ? selectedTeam.name : 'Select team...'}</span>
           </div>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -68,8 +62,8 @@ export default function TeamSelector() {
               >
                 <Check
                   className={cn(
-                    "mr-2 h-4 w-4",
-                    selectedTeam?.id === team.id ? "opacity-100" : "opacity-0"
+                    'mr-2 h-4 w-4',
+                    selectedTeam?.id === team.id ? 'opacity-100' : 'opacity-0',
                   )}
                 />
                 {team.name}

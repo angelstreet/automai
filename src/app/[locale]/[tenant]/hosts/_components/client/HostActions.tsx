@@ -20,7 +20,7 @@ export function HostActions() {
 
   const handleRefresh = () => {
     if (isRefreshing) return;
-    
+
     setIsRefreshing(true);
     // Dispatch event for refresh action
     window.dispatchEvent(new CustomEvent('refresh-hosts'));
@@ -53,12 +53,7 @@ export function HostActions() {
         <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
         Refresh
       </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8"
-        onClick={handleViewModeChange}
-      >
+      <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeChange}>
         {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
       </Button>
       <Button size="sm" className="h-8" onClick={handleAddHost}>
@@ -67,4 +62,4 @@ export function HostActions() {
       </Button>
     </div>
   );
-} 
+}

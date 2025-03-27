@@ -11,7 +11,7 @@ import type { Deployment } from '@/types/context/deployment';
  */
 export async function getDeploymentsByTeam(
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Deployment[]>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -48,7 +48,7 @@ export async function getDeploymentsByTeam(
 export async function createDeploymentWithTeam(
   deploymentData: Omit<Deployment, 'id' | 'created_at' | 'updated_at'>,
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Deployment>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -88,7 +88,7 @@ export async function createDeploymentWithTeam(
 export async function updateDeploymentTeam(
   deploymentId: string,
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Deployment>> {
   try {
     const supabase = await createClient(cookieStore);

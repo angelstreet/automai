@@ -16,9 +16,7 @@ export default function TenantLayoutClient({
 }) {
   return (
     <UserProvider initialUser={user}>
-      <TeamProvider>
-        {children}
-      </TeamProvider>
+      <TeamProvider>{children}</TeamProvider>
     </UserProvider>
   );
 }

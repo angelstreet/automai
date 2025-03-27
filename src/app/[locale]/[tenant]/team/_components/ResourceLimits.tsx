@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { Progress } from '@/components/shadcn/progress';
+import { Progress } from '@/components/ui/Progress';
 import { useTeam } from '@/context';
 import { useUser } from '@/context';
 import type { ResourceLimit } from '@/types/context/team';
@@ -33,24 +33,24 @@ export default function ResourceLimits() {
     hosts: 'Hosts',
     repositories: 'Repositories',
     deployments: 'Deployments',
-    cicd_providers: 'CI/CD Providers'
+    cicd_providers: 'CI/CD Providers',
   };
 
   useEffect(() => {
     const fetchLimits = async () => {
       if (!user) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
         const results = await Promise.all(
           resourceTypes.map(async (type) => {
             const result = await checkResourceLimit(type);
             return result ? { ...result } : null;
-          })
+          }),
         );
-        
+
         setLimits(results.filter(Boolean) as ResourceLimit[]);
       } catch (err) {
         setError('Failed to load resource limits');
@@ -58,7 +58,7 @@ export default function ResourceLimits() {
         setLoading(false);
       }
     };
-    
+
     fetchLimits();
   }, [user, checkResourceLimit]);
 
@@ -74,9 +74,7 @@ export default function ResourceLimits() {
     <Card>
       <CardHeader>
         <CardTitle>Resource Limits</CardTitle>
-        <CardDescription>
-          Current usage and limits for your subscription tier
-        </CardDescription>
+        <CardDescription>Current usage and limits for your subscription tier</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
@@ -99,15 +97,29 @@ export default function ResourceLimits() {
                       <span>
                         {resource.current} / {resource.isUnlimited ? 'Unlimited' : resource.limit}
                       </span>
-                      <span className={resource.current >= resource.limit && !resource.isUnlimited ? 'text-red-500' : ''}>
-                        {resource.isUnlimited 
-                          ? '∞' 
+                      <span
+                        className={
+                          resource.current >= resource.limit && !resource.isUnlimited
+                            ? 'text-red-500'
+                            : ''
+                        }
+                      >
+                        {resource.isUnlimited
+                          ? '∞'
                           : `${Math.min(Math.round((resource.current / resource.limit) * 100), 100)}%`}
                       </span>
                     </div>
-                    <Progress 
-                      value={resource.isUnlimited ? 10 : Math.min((resource.current / resource.limit) * 100, 100)}
-                      className={resource.current >= resource.limit && !resource.isUnlimited ? 'text-red-500' : ''}
+                    <Progress
+                      value={
+                        resource.isUnlimited
+                          ? 10
+                          : Math.min((resource.current / resource.limit) * 100, 100)
+                      }
+                      className={
+                        resource.current >= resource.limit && !resource.isUnlimited
+                          ? 'text-red-500'
+                          : ''
+                      }
                     />
                   </div>
                 </TableCell>

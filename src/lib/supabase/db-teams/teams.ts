@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/client";
-import { cookies } from "next/headers";
-import type { DbResponse } from "@/lib/supabase/db";
-import type { Team, TeamCreateInput, TeamUpdateInput } from "@/types/context/team";
+import { createClient } from '@/lib/supabase/client';
+import { cookies } from 'next/headers';
+import type { DbResponse } from '@/lib/supabase/db';
+import type { Team, TeamCreateInput, TeamUpdateInput } from '@/types/context/team';
 
 /**
  * Get all teams for a tenant
@@ -11,16 +11,16 @@ import type { Team, TeamCreateInput, TeamUpdateInput } from "@/types/context/tea
  */
 export async function getTeams(
   tenantId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Team[]>> {
   try {
     const supabase = createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+      .from('teams')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
 
     if (error) {
       return { success: false, error: error.message };
@@ -33,7 +33,7 @@ export async function getTeams(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to fetch teams",
+      error: error.message || 'Failed to fetch teams',
     };
   }
 }
@@ -44,18 +44,11 @@ export async function getTeams(
  * @param cookieStore Cookie store for authentication
  * @returns Team data
  */
-export async function getTeam(
-  teamId: string,
-  cookieStore = cookies()
-): Promise<DbResponse<Team>> {
+export async function getTeam(teamId: string, cookieStore = cookies()): Promise<DbResponse<Team>> {
   try {
     const supabase = createClient(cookieStore);
 
-    const { data, error } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("id", teamId)
-      .single();
+    const { data, error } = await supabase.from('teams').select('*').eq('id', teamId).single();
 
     if (error) {
       return { success: false, error: error.message };
@@ -68,7 +61,7 @@ export async function getTeam(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to fetch team",
+      error: error.message || 'Failed to fetch team',
     };
   }
 }
@@ -81,25 +74,25 @@ export async function getTeam(
  */
 export async function createTeam(
   input: TeamCreateInput & { tenant_id: string },
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Team>> {
   try {
     const supabase = createClient(cookieStore);
 
     // First fetch the user to set created_by
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError) {
       return { success: false, error: userError.message };
     }
 
     const { data, error } = await supabase
-      .from("teams")
+      .from('teams')
       .insert({
         ...input,
         created_by: userData.user.id,
       })
-      .select("*")
+      .select('*')
       .single();
 
     if (error) {
@@ -113,7 +106,7 @@ export async function createTeam(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to create team",
+      error: error.message || 'Failed to create team',
     };
   }
 }
@@ -128,19 +121,19 @@ export async function createTeam(
 export async function updateTeam(
   teamId: string,
   input: TeamUpdateInput,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Team>> {
   try {
     const supabase = createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from("teams")
+      .from('teams')
       .update({
         ...input,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", teamId)
-      .select("*")
+      .eq('id', teamId)
+      .select('*')
       .single();
 
     if (error) {
@@ -154,7 +147,7 @@ export async function updateTeam(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to update team",
+      error: error.message || 'Failed to update team',
     };
   }
 }
@@ -167,16 +160,16 @@ export async function updateTeam(
  */
 export async function deleteTeam(
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<null>> {
   try {
     const supabase = createClient(cookieStore);
 
     // Check if team is default - don't allow deleting default teams
     const { data: teamData, error: teamError } = await supabase
-      .from("teams")
-      .select("is_default")
-      .eq("id", teamId)
+      .from('teams')
+      .select('is_default')
+      .eq('id', teamId)
       .single();
 
     if (teamError) {
@@ -184,16 +177,13 @@ export async function deleteTeam(
     }
 
     if (teamData?.is_default) {
-      return { 
-        success: false, 
-        error: "Cannot delete the default team. Make another team default first." 
+      return {
+        success: false,
+        error: 'Cannot delete the default team. Make another team default first.',
       };
     }
 
-    const { error } = await supabase
-      .from("teams")
-      .delete()
-      .eq("id", teamId);
+    const { error } = await supabase.from('teams').delete().eq('id', teamId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -203,7 +193,7 @@ export async function deleteTeam(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to delete team",
+      error: error.message || 'Failed to delete team',
     };
   }
 }

@@ -6,11 +6,4 @@ import files from './files';
 import * as repositoryTeamIntegration from './repository-team-integration';
 
 // Export all repository-related DB functions
-export { 
-  gitProvider, 
-  repository, 
-  pinRepository, 
-  starRepository, 
-  files,
-  repositoryTeamIntegration
-};
+export { gitProvider, repository, pinRepository, starRepository, files, repositoryTeamIntegration };

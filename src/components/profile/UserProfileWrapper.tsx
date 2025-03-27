@@ -12,7 +12,7 @@ export interface UserProfileWrapperProps {
 // Cache the user data and avatar at the server component level
 const getPreloadedUserData = cache((user?: User | null, tenant?: string) => {
   if (!user) return null;
-  
+
   const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
   const avatarSrc = user?.user_metadata?.avatar_url || '/avatars/default.svg';
   const initials = userName
@@ -20,11 +20,11 @@ const getPreloadedUserData = cache((user?: User | null, tenant?: string) => {
     .map((part) => part[0])
     .join('')
     .toUpperCase();
-    
+
   return {
     userName,
     avatarSrc,
-    initials
+    initials,
   };
 });
 
@@ -35,22 +35,17 @@ const getPreloadedUserData = cache((user?: User | null, tenant?: string) => {
 export function UserProfileWrapper({ tenant, user }: UserProfileWrapperProps) {
   // Preload and cache user data on the server
   const userData = getPreloadedUserData(user, tenant);
-  
+
   // Pre-cache the avatar image if possible
   if (userData?.avatarSrc) {
     // This is a hint to the browser to preload the image
     return (
       <>
-        <link 
-          rel="preload" 
-          href={userData.avatarSrc} 
-          as="image" 
-          fetchPriority="high" 
-        />
+        <link rel="preload" href={userData.avatarSrc} as="image" fetchPriority="high" />
         <UserProfile tenant={tenant} user={user} />
       </>
     );
   }
-  
+
   return <UserProfile tenant={tenant} user={user} />;
 }

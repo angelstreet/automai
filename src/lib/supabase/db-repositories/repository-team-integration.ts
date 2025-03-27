@@ -11,7 +11,7 @@ import type { Repository } from '@/types/context/repository';
  */
 export async function getRepositoriesByTeam(
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Repository[]>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -48,7 +48,7 @@ export async function getRepositoriesByTeam(
 export async function createRepositoryWithTeam(
   repoData: Omit<Repository, 'id' | 'created_at' | 'updated_at'>,
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Repository>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -88,7 +88,7 @@ export async function createRepositoryWithTeam(
 export async function updateRepositoryTeam(
   repoId: string,
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Repository>> {
   try {
     const supabase = await createClient(cookieStore);

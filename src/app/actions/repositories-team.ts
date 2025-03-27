@@ -21,7 +21,7 @@ export async function getRepositoriesByTeam(teamId: string): Promise<ActionResul
 
     const cookieStore = cookies();
     const result = await repositoryTeamIntegration.getRepositoriesByTeam(teamId, cookieStore);
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch repositories by team' };
@@ -36,7 +36,7 @@ export async function getRepositoriesByTeam(teamId: string): Promise<ActionResul
  */
 export async function createRepositoryWithTeam(
   repoData: Omit<Repository, 'id' | 'created_at' | 'updated_at'>,
-  teamId: string
+  teamId: string,
 ): Promise<ActionResult<Repository>> {
   try {
     const user = await getUser();
@@ -47,28 +47,28 @@ export async function createRepositoryWithTeam(
     // Check resource limits
     const cookieStore = cookies();
     const limitResult = await checkResourceLimit(user.tenant_id, 'repositories', cookieStore);
-    
+
     if (!limitResult.success) {
       return { success: false, error: limitResult.error };
     }
-    
+
     if (!limitResult.data.canCreate) {
-      return { 
-        success: false, 
-        error: `Repository limit reached (${limitResult.data.current}/${limitResult.data.limit}). Please upgrade your subscription.`
+      return {
+        success: false,
+        error: `Repository limit reached (${limitResult.data.current}/${limitResult.data.limit}). Please upgrade your subscription.`,
       };
     }
-    
+
     // Create repository with team association
     const result = await repositoryTeamIntegration.createRepositoryWithTeam(
       {
         ...repoData,
-        tenant_id: user.tenant_id
+        tenant_id: user.tenant_id,
       },
       teamId,
-      cookieStore
+      cookieStore,
     );
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create repository' };
@@ -83,7 +83,7 @@ export async function createRepositoryWithTeam(
  */
 export async function updateRepositoryTeam(
   repoId: string,
-  teamId: string
+  teamId: string,
 ): Promise<ActionResult<Repository>> {
   try {
     const user = await getUser();
@@ -92,8 +92,12 @@ export async function updateRepositoryTeam(
     }
 
     const cookieStore = cookies();
-    const result = await repositoryTeamIntegration.updateRepositoryTeam(repoId, teamId, cookieStore);
-    
+    const result = await repositoryTeamIntegration.updateRepositoryTeam(
+      repoId,
+      teamId,
+      cookieStore,
+    );
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update repository team' };

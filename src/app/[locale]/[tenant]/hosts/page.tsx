@@ -8,7 +8,7 @@ import { HostActions } from './_components/client/HostActions';
 
 export default async function HostsPage() {
   const t = await getTranslations('hosts');
-  
+
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="flex flex-col gap-4">

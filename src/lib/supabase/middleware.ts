@@ -19,13 +19,13 @@ export const createClient = (request: NextRequest) => {
     Origin: ${request.headers.get('origin')}
     Referer: ${request.headers.get('referer')}`,
   );
-  
+
   // Check if this request is from Cloudworkstations
-  const isCloudWorkstation = 
+  const isCloudWorkstation =
     request.headers.get('host')?.includes('cloudworkstations.dev') ||
     request.headers.get('referer')?.includes('cloudworkstations.dev') ||
     request.headers.get('origin')?.includes('cloudworkstations.dev');
-    
+
   if (isCloudWorkstation) {
     console.log('[Middleware] Cloudworkstations environment detected');
   }
@@ -83,18 +83,18 @@ export const createClient = (request: NextRequest) => {
                 ...options,
                 path: '/',
                 secure: isCloudWorkstation || process.env.NODE_ENV === 'production',
-                sameSite: isCloudWorkstation ? 'none' as const : 'lax' as const,
+                sameSite: isCloudWorkstation ? ('none' as const) : ('lax' as const),
                 // Don't set domain - let the browser determine it based on the current host
                 domain: undefined,
                 maxAge: name.includes('token') ? 60 * 60 * 24 * 7 : undefined,
               };
-              
+
               console.log(`[Middleware:cookies] Setting cookie ${name} with options:`, {
                 secure: finalOptions.secure,
                 sameSite: finalOptions.sameSite,
                 domain: finalOptions.domain,
                 path: finalOptions.path,
-                maxAge: finalOptions.maxAge
+                maxAge: finalOptions.maxAge,
               });
 
               request.cookies.set({

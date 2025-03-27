@@ -64,7 +64,11 @@ export interface TeamContextValue {
   selectTeam: (teamId: string) => Promise<void>;
   fetchTeamMembers: (teamId: string) => Promise<void>;
   addTeamMember: (input: TeamMemberCreateInput) => Promise<TeamMember | null>;
-  updateTeamMemberRole: (teamId: string, profileId: string, role: string) => Promise<TeamMember | null>;
+  updateTeamMemberRole: (
+    teamId: string,
+    profileId: string,
+    role: string,
+  ) => Promise<TeamMember | null>;
   removeTeamMember: (teamId: string, profileId: string) => Promise<boolean>;
   checkResourceLimit: (resourceType: string) => Promise<ResourceLimit | null>;
 }

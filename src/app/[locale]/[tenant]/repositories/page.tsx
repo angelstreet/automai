@@ -21,10 +21,7 @@ export default async function RepositoriesPage() {
   return (
     <div className="container mx-auto py-6 px-4">
       <div className="flex flex-col gap-4">
-        <PageHeader 
-          title={t('repositories')} 
-          description={t('repositories_description')}
-        >
+        <PageHeader title={t('repositories')} description={t('repositories_description')}>
           <RepositoryActions />
         </PageHeader>
 

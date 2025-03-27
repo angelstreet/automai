@@ -12,7 +12,9 @@ import type { CICDProvider } from '@/types/context/cicd';
  * @param teamId Team ID to filter CICD providers by
  * @returns Action result containing CICD providers or error
  */
-export async function getCICDProvidersByTeam(teamId: string): Promise<ActionResult<CICDProvider[]>> {
+export async function getCICDProvidersByTeam(
+  teamId: string,
+): Promise<ActionResult<CICDProvider[]>> {
   try {
     const user = await getUser();
     if (!user || !user.tenant_id) {
@@ -21,7 +23,7 @@ export async function getCICDProvidersByTeam(teamId: string): Promise<ActionResu
 
     const cookieStore = cookies();
     const result = await cicdTeamIntegration.getCICDProvidersByTeam(teamId, cookieStore);
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch CICD providers by team' };
@@ -36,7 +38,7 @@ export async function getCICDProvidersByTeam(teamId: string): Promise<ActionResu
  */
 export async function createCICDProviderWithTeam(
   providerData: Omit<CICDProvider, 'id' | 'created_at' | 'updated_at'>,
-  teamId: string
+  teamId: string,
 ): Promise<ActionResult<CICDProvider>> {
   try {
     const user = await getUser();
@@ -47,28 +49,28 @@ export async function createCICDProviderWithTeam(
     // Check resource limits
     const cookieStore = cookies();
     const limitResult = await checkResourceLimit(user.tenant_id, 'cicd_providers', cookieStore);
-    
+
     if (!limitResult.success) {
       return { success: false, error: limitResult.error };
     }
-    
+
     if (!limitResult.data.canCreate) {
-      return { 
-        success: false, 
-        error: `CICD provider limit reached (${limitResult.data.current}/${limitResult.data.limit}). Please upgrade your subscription.`
+      return {
+        success: false,
+        error: `CICD provider limit reached (${limitResult.data.current}/${limitResult.data.limit}). Please upgrade your subscription.`,
       };
     }
-    
+
     // Create CICD provider with team association
     const result = await cicdTeamIntegration.createCICDProviderWithTeam(
       {
         ...providerData,
-        tenant_id: user.tenant_id
+        tenant_id: user.tenant_id,
       },
       teamId,
-      cookieStore
+      cookieStore,
     );
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create CICD provider' };
@@ -83,7 +85,7 @@ export async function createCICDProviderWithTeam(
  */
 export async function updateCICDProviderTeam(
   providerId: string,
-  teamId: string
+  teamId: string,
 ): Promise<ActionResult<CICDProvider>> {
   try {
     const user = await getUser();
@@ -92,8 +94,12 @@ export async function updateCICDProviderTeam(
     }
 
     const cookieStore = cookies();
-    const result = await cicdTeamIntegration.updateCICDProviderTeam(providerId, teamId, cookieStore);
-    
+    const result = await cicdTeamIntegration.updateCICDProviderTeam(
+      providerId,
+      teamId,
+      cookieStore,
+    );
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update CICD provider team' };

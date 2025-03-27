@@ -40,27 +40,27 @@ export default function TeamMembers() {
 
   const handleRoleChange = async (profileId: string, role: string) => {
     setIsUpdating(profileId);
-    
+
     try {
       const result = await updateTeamMemberRole(selectedTeam.id, profileId, role);
-      
+
       if (result) {
         toast({
           title: 'Role updated',
-          description: 'Team member role has been updated successfully.'
+          description: 'Team member role has been updated successfully.',
         });
       } else {
         toast({
           title: 'Failed to update role',
           description: 'An error occurred while updating the role.',
-          variant: 'destructive'
+          variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsUpdating(null);
@@ -69,27 +69,27 @@ export default function TeamMembers() {
 
   const handleRemoveMember = async (profileId: string) => {
     setIsRemoving(profileId);
-    
+
     try {
       const result = await removeTeamMember(selectedTeam.id, profileId);
-      
+
       if (result) {
         toast({
           title: 'Member removed',
-          description: 'Team member has been removed successfully.'
+          description: 'Team member has been removed successfully.',
         });
       } else {
         toast({
           title: 'Failed to remove member',
           description: 'An error occurred while removing the member.',
-          variant: 'destructive'
+          variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsRemoving(null);
@@ -104,7 +104,7 @@ export default function TeamMembers() {
           <PlusIcon className="mr-2 h-4 w-4" /> Add Member
         </Button>
       </div>
-      
+
       {loading ? (
         <div>Loading members...</div>
       ) : teamMembers.length === 0 ? (
@@ -168,7 +168,7 @@ export default function TeamMembers() {
           </TableBody>
         </Table>
       )}
-      
+
       <AddMemberDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}

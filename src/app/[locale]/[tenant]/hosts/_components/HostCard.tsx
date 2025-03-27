@@ -79,7 +79,8 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
 
   const getStatusDot = (status: string) => {
     const baseClasses = 'h-4 w-4 rounded-full transition-colors duration-300';
-    const delayClass = host.animationDelay !== undefined ? `delay-${Math.min(host.animationDelay, 5)}` : '';
+    const delayClass =
+      host.animationDelay !== undefined ? `delay-${Math.min(host.animationDelay, 5)}` : '';
 
     if (!status) {
       return (
@@ -366,7 +367,7 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
                 ? `${t('updated_at')}: ${new Date(host.updated_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: '2-digit',
-                    day: '2-digit'
+                    day: '2-digit',
                   })}`
                 : `${t('updated_at')}: ${t('never')}`}
             </p>

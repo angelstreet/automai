@@ -11,7 +11,7 @@ import type { CICDProvider } from '@/types/context/cicd';
  */
 export async function getCICDProvidersByTeam(
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<CICDProvider[]>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -48,7 +48,7 @@ export async function getCICDProvidersByTeam(
 export async function createCICDProviderWithTeam(
   providerData: Omit<CICDProvider, 'id' | 'created_at' | 'updated_at'>,
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<CICDProvider>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -88,7 +88,7 @@ export async function createCICDProviderWithTeam(
 export async function updateCICDProviderTeam(
   providerId: string,
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<CICDProvider>> {
   try {
     const supabase = await createClient(cookieStore);

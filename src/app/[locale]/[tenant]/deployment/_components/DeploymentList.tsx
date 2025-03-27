@@ -32,10 +32,14 @@ interface DeploymentListProps {
   onViewDeployment?: (deploymentId: string) => void;
 }
 
-export function DeploymentList({ deployments = [], repositories = [], onViewDeployment }: DeploymentListProps) {
+export function DeploymentList({
+  deployments = [],
+  repositories = [],
+  onViewDeployment,
+}: DeploymentListProps) {
   const { toast } = useToast();
   const router = useRouter();
-  
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [repositoriesMap, setRepositoriesMap] = useState<Record<string, Repository>>({});
@@ -60,10 +64,13 @@ export function DeploymentList({ deployments = [], repositories = [], onViewDepl
 
   useEffect(() => {
     if (repositories && repositories.length > 0) {
-      const repoMap = repositories.reduce((acc, repo) => {
-        acc[repo.id] = repo;
-        return acc;
-      }, {} as Record<string, Repository>);
+      const repoMap = repositories.reduce(
+        (acc, repo) => {
+          acc[repo.id] = repo;
+          return acc;
+        },
+        {} as Record<string, Repository>,
+      );
       setRepositoriesMap(repoMap);
     }
   }, [repositories]);
@@ -131,7 +138,12 @@ export function DeploymentList({ deployments = [], repositories = [], onViewDepl
     return deployments.filter((deployment) => {
       if (activeTab === 'scheduled' && deployment.scheduleType !== 'scheduled') return false;
       if (activeTab === 'pending' && deployment.status !== 'pending') return false;
-      if (activeTab === 'active' && deployment.status !== 'in_progress' && deployment.status !== 'running') return false;
+      if (
+        activeTab === 'active' &&
+        deployment.status !== 'in_progress' &&
+        deployment.status !== 'running'
+      )
+        return false;
       if (
         activeTab === 'completed' &&
         deployment.status !== 'success' &&
@@ -238,12 +250,14 @@ export function DeploymentList({ deployments = [], repositories = [], onViewDepl
                 <option value="failed">Failed</option>
                 <option value="scheduled">Scheduled</option>
               </select>
-              <button 
+              <button
                 onClick={handleRefresh}
                 className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
                 disabled={isRefreshing}
               >
-                <RefreshCw className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`}
+                />
               </button>
             </div>
           </div>
@@ -399,11 +413,13 @@ export function DeploymentList({ deployments = [], repositories = [], onViewDepl
                         <StatusBadge status={deployment.status} />
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {getFormattedTime ? getFormattedTime(deployment.createdAt) : new Date(deployment.createdAt).toLocaleString()}
+                        {getFormattedTime
+                          ? getFormattedTime(deployment.createdAt)
+                          : new Date(deployment.createdAt).toLocaleString()}
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {deployment.completedAt && deployment.startedAt
-                          ? getFormattedTime 
+                          ? getFormattedTime
                             ? getFormattedTime(deployment.startedAt, deployment.completedAt)
                             : `${Math.round((new Date(deployment.completedAt).getTime() - new Date(deployment.startedAt).getTime()) / 1000 / 60)} min`
                           : deployment.startedAt

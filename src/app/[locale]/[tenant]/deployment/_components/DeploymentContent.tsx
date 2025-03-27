@@ -6,7 +6,7 @@ import { ClientEmptyState } from './client/ClientEmptyState';
 export async function DeploymentContent() {
   // Fetch deployments directly on the server
   const deployments = await getDeployments();
-  
+
   // Also fetch repositories for display
   const repositoriesResult = await getRepositories();
   const repositories = repositoriesResult.success ? repositoriesResult.data || [] : [];

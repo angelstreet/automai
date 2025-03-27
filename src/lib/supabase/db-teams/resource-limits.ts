@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
-import { cookies } from "next/headers";
-import type { DbResponse } from "@/lib/supabase/db";
+import { createClient } from '@/lib/supabase/client';
+import { cookies } from 'next/headers';
+import type { DbResponse } from '@/lib/supabase/db';
 
 export interface ResourceLimitCheck {
   canCreate: boolean;
@@ -19,16 +19,16 @@ export interface ResourceLimitCheck {
 export async function checkResourceLimit(
   tenantId: string,
   resourceType: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<ResourceLimitCheck>> {
   try {
     const supabase = createClient(cookieStore);
 
     // Get the tenant's subscription tier
     const { data: tenantData, error: tenantError } = await supabase
-      .from("tenants")
-      .select("subscription_tier_id")
-      .eq("id", tenantId)
+      .from('tenants')
+      .select('subscription_tier_id')
+      .eq('id', tenantId)
       .single();
 
     if (tenantError) {
@@ -42,10 +42,10 @@ export async function checkResourceLimit(
 
     // Get the resource limit for this tier and resource type
     const { data: limitData, error: limitError } = await supabase
-      .from("resource_limits")
-      .select("max_count, is_unlimited")
-      .eq("tier_id", tierId)
-      .eq("resource_type", resourceType)
+      .from('resource_limits')
+      .select('max_count, is_unlimited')
+      .eq('tier_id', tierId)
+      .eq('resource_type', resourceType)
       .single();
 
     if (limitError) {
@@ -72,8 +72,8 @@ export async function checkResourceLimit(
     let currentCount = 0;
     const { count, error: countError } = await supabase
       .from(resourceType)
-      .select("id", { count: 'exact', head: true })
-      .eq("tenant_id", tenantId);
+      .select('id', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId);
 
     if (countError) {
       return {

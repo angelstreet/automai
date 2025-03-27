@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/shadcn/dialog';
 import {
   Form,
@@ -18,7 +18,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
 } from '@/components/shadcn/form';
 import { Input } from '@/components/shadcn/input';
 import { Button } from '@/components/shadcn/button';
@@ -30,7 +30,7 @@ import { useToast } from '@/components/shadcn/use-toast';
 const formSchema = z.object({
   name: z.string().min(1, 'Team name is required'),
   description: z.string().optional(),
-  is_default: z.boolean().default(false)
+  is_default: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,40 +50,40 @@ export default function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialo
     defaultValues: {
       name: '',
       description: '',
-      is_default: false
-    }
+      is_default: false,
+    },
   });
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-    
+
     try {
       const team = await createTeam({
         name: values.name,
         description: values.description || undefined,
-        is_default: values.is_default
+        is_default: values.is_default,
       });
-      
+
       if (team) {
         toast({
           title: 'Team created',
-          description: `${values.name} team has been created successfully.`
+          description: `${values.name} team has been created successfully.`,
         });
-        
+
         onOpenChange(false);
         form.reset();
       } else {
         toast({
           title: 'Failed to create team',
           description: 'An error occurred while creating the team.',
-          variant: 'destructive'
+          variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -95,11 +95,9 @@ export default function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialo
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create New Team</DialogTitle>
-          <DialogDescription>
-            Create a new team to organize users and resources.
-          </DialogDescription>
+          <DialogDescription>Create a new team to organize users and resources.</DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             <FormField
@@ -115,7 +113,7 @@ export default function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialo
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="description"
@@ -123,9 +121,9 @@ export default function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialo
                 <FormItem>
                   <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Enter team description" 
-                      {...field} 
+                    <Textarea
+                      placeholder="Enter team description"
+                      {...field}
                       value={field.value || ''}
                     />
                   </FormControl>
@@ -133,7 +131,7 @@ export default function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialo
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="is_default"
@@ -143,13 +141,11 @@ export default function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialo
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={teams.some(team => team.is_default)}
+                      disabled={teams.some((team) => team.is_default)}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      Set as default team
-                    </FormLabel>
+                    <FormLabel>Set as default team</FormLabel>
                     <p className="text-sm text-muted-foreground">
                       Default team is used for new users and resources.
                     </p>
@@ -157,11 +153,11 @@ export default function CreateTeamDialog({ open, onOpenChange }: CreateTeamDialo
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
               >

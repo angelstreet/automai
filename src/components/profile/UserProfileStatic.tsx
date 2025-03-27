@@ -31,12 +31,12 @@ interface UserProfileStaticProps {
 /**
  * Optimized static user profile component that prevents flashing during load
  */
-export function UserProfileStatic({ 
-  tenant: propTenant, 
+export function UserProfileStatic({
+  tenant: propTenant,
   user: propUser,
   avatarUrl,
   userName: displayName,
-  userEmail
+  userEmail,
 }: UserProfileStaticProps) {
   const router = useRouter();
   const params = useParams();
@@ -45,7 +45,7 @@ export function UserProfileStatic({
   // Use provided user prop if available, otherwise use from context
   const user = propUser || contextUser;
   const locale = (params.locale as string) || 'en';
-  
+
   // Use tenant from props if available, otherwise use from URL params as fallback
   const tenant = propTenant || (params.tenant as string) || 'trial';
 

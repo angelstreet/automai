@@ -58,9 +58,7 @@ const repository = {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
 
-      const { data, error } = await supabase
-        .from('repositories')
-        .select('*');
+      const { data, error } = await supabase.from('repositories').select('*');
 
       if (error) {
         console.error('[DB] Error fetching repositories:', error);

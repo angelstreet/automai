@@ -21,7 +21,7 @@ export async function getHostsByTeam(teamId: string): Promise<ActionResult<Host[
 
     const cookieStore = cookies();
     const result = await hostTeamIntegration.getHostsByTeam(teamId, cookieStore);
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch hosts by team' };
@@ -36,7 +36,7 @@ export async function getHostsByTeam(teamId: string): Promise<ActionResult<Host[
  */
 export async function createHostWithTeam(
   hostData: Omit<Host, 'id' | 'created_at' | 'updated_at'>,
-  teamId: string
+  teamId: string,
 ): Promise<ActionResult<Host>> {
   try {
     const user = await getUser();
@@ -47,28 +47,28 @@ export async function createHostWithTeam(
     // Check resource limits
     const cookieStore = cookies();
     const limitResult = await checkResourceLimit(user.tenant_id, 'hosts', cookieStore);
-    
+
     if (!limitResult.success) {
       return { success: false, error: limitResult.error };
     }
-    
+
     if (!limitResult.data.canCreate) {
-      return { 
-        success: false, 
-        error: `Host limit reached (${limitResult.data.current}/${limitResult.data.limit}). Please upgrade your subscription.`
+      return {
+        success: false,
+        error: `Host limit reached (${limitResult.data.current}/${limitResult.data.limit}). Please upgrade your subscription.`,
       };
     }
-    
+
     // Create host with team association
     const result = await hostTeamIntegration.createHostWithTeam(
       {
         ...hostData,
-        tenant_id: user.tenant_id
+        tenant_id: user.tenant_id,
       },
       teamId,
-      cookieStore
+      cookieStore,
     );
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create host' };
@@ -81,10 +81,7 @@ export async function createHostWithTeam(
  * @param teamId Team ID to associate the host with
  * @returns Action result containing updated host or error
  */
-export async function updateHostTeam(
-  hostId: string,
-  teamId: string
-): Promise<ActionResult<Host>> {
+export async function updateHostTeam(hostId: string, teamId: string): Promise<ActionResult<Host>> {
   try {
     const user = await getUser();
     if (!user || !user.tenant_id) {
@@ -93,7 +90,7 @@ export async function updateHostTeam(
 
     const cookieStore = cookies();
     const result = await hostTeamIntegration.updateHostTeam(hostId, teamId, cookieStore);
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update host team' };

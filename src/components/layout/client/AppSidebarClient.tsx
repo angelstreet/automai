@@ -109,26 +109,26 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
     // Force immediate re-render when role changes
     const handleRoleChange = (event: CustomEvent<{ role: Role; user?: User }>) => {
       console.log('AppSidebar received role change event:', event.detail.role);
-      
+
       // Update debug role state
       setDebugRole(event.detail.role);
-      
+
       // If we have a patched user object, use it directly
       if (event.detail.user) {
         // Force a re-render by creating a new object reference
         if (propUser && propUser.id === event.detail.user.id) {
           // Update the memoization inputs directly to force re-render
-          const patchedUser = {...event.detail.user};
+          const patchedUser = { ...event.detail.user };
           (propUser as any).role = patchedUser.role;
         }
       }
     };
-    
+
     // Force re-renders on direct UI update requests
     const handleForceUpdate = () => {
       // Simple state toggle to force re-render
-      setIsCollapsed(prev => !prev);
-      setTimeout(() => setIsCollapsed(prev => !prev), 0);
+      setIsCollapsed((prev) => !prev);
+      setTimeout(() => setIsCollapsed((prev) => !prev), 0);
     };
 
     // Add event listeners
@@ -160,13 +160,13 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
     }
   }, []);
 
-  // MODIFIED: For debugging, debug role now has highest priority 
+  // MODIFIED: For debugging, debug role now has highest priority
   const effectiveRole = React.useMemo(() => {
     // For debugging purposes, debug role should have highest priority
     if (debugRole) {
       return debugRole;
     }
-    
+
     // Next priority: Use actual user role if available
     if (user?.role) {
       return user.role;
@@ -290,17 +290,20 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
 
   // Always ensure sidebar is visible, without unnecessary transitions
   // The skeleton fallback will handle the initial loading state now
-  const sidebarClassName = "fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300";
+  const sidebarClassName =
+    'fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300';
 
   return (
     <Sidebar
       collapsible="icon"
       variant="floating"
       className={sidebarClassName}
-      style={{
-        '--sidebar-width': APP_SIDEBAR_WIDTH,
-        '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
-      } as React.CSSProperties}
+      style={
+        {
+          '--sidebar-width': APP_SIDEBAR_WIDTH,
+          '--sidebar-width-icon': APP_SIDEBAR_WIDTH_ICON,
+        } as React.CSSProperties
+      }
     >
       {!isCollapsed && (
         <SidebarHeader className="p-1.5 flex flex-col gap-2">

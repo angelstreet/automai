@@ -20,11 +20,7 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicd';
-import {
-  CICDProvider,
-  CICDProviderPayload,
-  CICDProviderType,
-} from '@/types/context/cicd';
+import { CICDProvider, CICDProviderPayload, CICDProviderType } from '@/types/context/cicd';
 
 interface CICDProviderFormProps {
   providerId?: string;
@@ -276,9 +272,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
           {testMessage && (
             <div className="grid grid-cols-[200px,1fr] items-center gap-4">
               <div></div>
-              <div className="text-sm">
-                {testMessage.message}
-              </div>
+              <div className="text-sm">{testMessage.message}</div>
             </div>
           )}
 
@@ -296,8 +290,8 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                 {isTesting ? 'Testing...' : 'Test Connection'}
               </Button>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSubmitting}
                 variant="outline"
                 className="h-9 border rounded-md bg-transparent"

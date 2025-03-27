@@ -30,7 +30,14 @@ interface HostTableProps {
   onTestConnection?: (host: Host) => Promise<boolean>;
 }
 
-export function HostTable({ hosts, selectedHosts, selectMode, onSelect, onDelete, onTestConnection }: HostTableProps) {
+export function HostTable({
+  hosts,
+  selectedHosts,
+  selectMode,
+  onSelect,
+  onDelete,
+  onTestConnection,
+}: HostTableProps) {
   const router = useRouter();
   const t = useTranslations('Common');
 
@@ -44,7 +51,12 @@ export function HostTable({ hosts, selectedHosts, selectMode, onSelect, onDelete
       case 'failed':
         return <div className={`${baseClasses} bg-red-500`} title={t('failed')} />;
       case 'testing':
-        return <div className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`} title={t('testing')} />;
+        return (
+          <div
+            className={`${baseClasses} host-testing-animation ring-2 ring-yellow-300 ring-opacity-60 ${delayClass}`}
+            title={t('testing')}
+          />
+        );
       case 'pending':
         return <div className={`${baseClasses} bg-yellow-500`} title={t('pending')} />;
       default:
@@ -78,13 +90,15 @@ export function HostTable({ hosts, selectedHosts, selectMode, onSelect, onDelete
         </TableHeader>
         <TableBody key="host-table-body">
           {hosts.map((host) => (
-            <TableRow 
-              key={host.id} 
+            <TableRow
+              key={host.id}
               className="h-10"
               onClick={() => selectMode && onSelect(host.id)}
             >
               <TableCell className="py-2">
-                <div className="flex justify-center">{getStatusDot(host.status, host.animationDelay)}</div>
+                <div className="flex justify-center">
+                  {getStatusDot(host.status, host.animationDelay)}
+                </div>
               </TableCell>
               <TableCell className="font-medium py-2">{host.name}</TableCell>
               <TableCell className="py-2">

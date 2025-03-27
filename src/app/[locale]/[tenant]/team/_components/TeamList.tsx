@@ -34,7 +34,7 @@ export default function TeamList() {
           <PlusIcon className="mr-2 h-4 w-4" /> New Team
         </Button>
       </div>
-      
+
       {teams.length === 0 ? (
         <div className="text-center p-8">
           <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
@@ -49,21 +49,17 @@ export default function TeamList() {
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {teams.map((team) => (
-            <Card 
-              key={team.id} 
+            <Card
+              key={team.id}
               className={`cursor-pointer ${selectedTeam?.id === team.id ? 'border-primary' : ''}`}
               onClick={() => selectTeam(team.id)}
             >
               <CardHeader>
                 <CardTitle>{team.name}</CardTitle>
-                <CardDescription>
-                  {team.is_default ? 'Default Team' : ''}
-                </CardDescription>
+                <CardDescription>{team.is_default ? 'Default Team' : ''}</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm">
-                  {team.description || 'No description provided'}
-                </p>
+                <p className="text-sm">{team.description || 'No description provided'}</p>
               </CardContent>
               <CardFooter>
                 <div className="flex items-center text-sm text-gray-500">
@@ -75,11 +71,8 @@ export default function TeamList() {
           ))}
         </div>
       )}
-      
-      <CreateTeamDialog 
-        open={isDialogOpen} 
-        onOpenChange={setIsDialogOpen} 
-      />
+
+      <CreateTeamDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
     </div>
   );
 }

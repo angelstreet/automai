@@ -21,7 +21,7 @@ export async function getDeploymentsByTeam(teamId: string): Promise<ActionResult
 
     const cookieStore = cookies();
     const result = await deploymentTeamIntegration.getDeploymentsByTeam(teamId, cookieStore);
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch deployments by team' };
@@ -36,7 +36,7 @@ export async function getDeploymentsByTeam(teamId: string): Promise<ActionResult
  */
 export async function createDeploymentWithTeam(
   deploymentData: Omit<Deployment, 'id' | 'created_at' | 'updated_at'>,
-  teamId: string
+  teamId: string,
 ): Promise<ActionResult<Deployment>> {
   try {
     const user = await getUser();
@@ -47,28 +47,28 @@ export async function createDeploymentWithTeam(
     // Check resource limits
     const cookieStore = cookies();
     const limitResult = await checkResourceLimit(user.tenant_id, 'deployments', cookieStore);
-    
+
     if (!limitResult.success) {
       return { success: false, error: limitResult.error };
     }
-    
+
     if (!limitResult.data.canCreate) {
-      return { 
-        success: false, 
-        error: `Deployment limit reached (${limitResult.data.current}/${limitResult.data.limit}). Please upgrade your subscription.`
+      return {
+        success: false,
+        error: `Deployment limit reached (${limitResult.data.current}/${limitResult.data.limit}). Please upgrade your subscription.`,
       };
     }
-    
+
     // Create deployment with team association
     const result = await deploymentTeamIntegration.createDeploymentWithTeam(
       {
         ...deploymentData,
-        tenant_id: user.tenant_id
+        tenant_id: user.tenant_id,
       },
       teamId,
-      cookieStore
+      cookieStore,
     );
-    
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create deployment' };
@@ -83,7 +83,7 @@ export async function createDeploymentWithTeam(
  */
 export async function updateDeploymentTeam(
   deploymentId: string,
-  teamId: string
+  teamId: string,
 ): Promise<ActionResult<Deployment>> {
   try {
     const user = await getUser();
@@ -92,8 +92,12 @@ export async function updateDeploymentTeam(
     }
 
     const cookieStore = cookies();
-    const result = await deploymentTeamIntegration.updateDeploymentTeam(deploymentId, teamId, cookieStore);
-    
+    const result = await deploymentTeamIntegration.updateDeploymentTeam(
+      deploymentId,
+      teamId,
+      cookieStore,
+    );
+
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update deployment team' };

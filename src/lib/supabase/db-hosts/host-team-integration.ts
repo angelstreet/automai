@@ -11,7 +11,7 @@ import type { Host } from '@/app/[locale]/[tenant]/hosts/types';
  */
 export async function getHostsByTeam(
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Host[]>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -48,7 +48,7 @@ export async function getHostsByTeam(
 export async function createHostWithTeam(
   hostData: Omit<Host, 'id' | 'created_at' | 'updated_at'>,
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Host>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -88,7 +88,7 @@ export async function createHostWithTeam(
 export async function updateHostTeam(
   hostId: string,
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<Host>> {
   try {
     const supabase = await createClient(cookieStore);

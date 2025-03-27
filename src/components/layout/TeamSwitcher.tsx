@@ -58,9 +58,9 @@ const defaultTeams: Team[] = [
 ];
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
-const TeamSwitcher = React.memo(function TeamSwitcher({ 
+const TeamSwitcher = React.memo(function TeamSwitcher({
   teams = defaultTeams,
-  defaultCollapsed = false 
+  defaultCollapsed = false,
 }: TeamSwitcherProps) {
   const [activeTeam, setActiveTeam] = React.useState<Team>(() => teams?.[0] || defaultTeams[0]);
   const Icon = activeTeam.logo;

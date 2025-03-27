@@ -60,34 +60,34 @@ export default function AddMemberDialog({ open, onOpenChange, teamId }: AddMembe
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
-    
+
     try {
       const result = await addTeamMember({
         team_id: teamId,
         profile_id: values.profile_id,
         role: values.role,
       });
-      
+
       if (result) {
         toast({
           title: 'Member added',
-          description: 'Team member has been added successfully.'
+          description: 'Team member has been added successfully.',
         });
-        
+
         onOpenChange(false);
         form.reset();
       } else {
         toast({
           title: 'Failed to add member',
           description: 'An error occurred while adding the member.',
-          variant: 'destructive'
+          variant: 'destructive',
         });
       }
     } catch (error) {
       toast({
         title: 'Error',
         description: 'An unexpected error occurred.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
@@ -99,11 +99,9 @@ export default function AddMemberDialog({ open, onOpenChange, teamId }: AddMembe
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add Team Member</DialogTitle>
-          <DialogDescription>
-            Add a user to this team and assign a role.
-          </DialogDescription>
+          <DialogDescription>Add a user to this team and assign a role.</DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             <FormField
@@ -119,17 +117,14 @@ export default function AddMemberDialog({ open, onOpenChange, teamId }: AddMembe
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="role"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Role</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a role" />
@@ -146,9 +141,9 @@ export default function AddMemberDialog({ open, onOpenChange, teamId }: AddMembe
                 </FormItem>
               )}
             />
-            
+
             <DialogFooter>
-              <Button 
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}

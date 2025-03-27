@@ -16,4 +16,4 @@ export function CICDActions() {
       <span>Add Provider</span>
     </Button>
   );
-} 
+}

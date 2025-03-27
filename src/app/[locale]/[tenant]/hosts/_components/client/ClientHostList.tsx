@@ -7,7 +7,11 @@ import { HostTable } from '../HostTable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { ClientConnectionForm, FormData as ConnectionFormData } from './ClientConnectionForm';
 import { VIEW_MODE_CHANGE } from './HostActions';
-import { createHost as createHostAction, testHostConnection, deleteHost as deleteHostAction } from '@/app/actions/hosts';
+import {
+  createHost as createHostAction,
+  testHostConnection,
+  deleteHost as deleteHostAction,
+} from '@/app/actions/hosts';
 
 interface ClientHostListProps {
   initialHosts: Host[];
@@ -45,27 +49,23 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     try {
       console.log(`[ClientHostList] Testing connection for host: ${host.name}`);
       const result = await testHostConnection(host.id);
-      
+
       // Update the host status in the local state
-      setHosts(prevHosts => 
-        prevHosts.map(h => 
-          h.id === host.id 
-            ? { ...h, status: result.success ? 'connected' : 'failed' } 
-            : h
-        )
+      setHosts((prevHosts) =>
+        prevHosts.map((h) =>
+          h.id === host.id ? { ...h, status: result.success ? 'connected' : 'failed' } : h,
+        ),
       );
-      
+
       return result.success;
     } catch (error) {
       console.error(`[ClientHostList] Error testing connection for host: ${host.name}`, error);
-      
+
       // Update the host status to failed
-      setHosts(prevHosts => 
-        prevHosts.map(h => 
-          h.id === host.id ? { ...h, status: 'failed' } : h
-        )
+      setHosts((prevHosts) =>
+        prevHosts.map((h) => (h.id === host.id ? { ...h, status: 'failed' } : h)),
       );
-      
+
       return false;
     }
   };
@@ -76,22 +76,21 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
     console.log('[ClientHostList] Refreshing all hosts');
     setIsRefreshing(true);
-    
+
     try {
       // First, set all hosts to 'testing' status
-      setHosts(prevHosts => 
-        prevHosts.map(host => ({
+      setHosts((prevHosts) =>
+        prevHosts.map((host) => ({
           ...host,
           status: 'testing',
-        }))
+        })),
       );
-      
+
       // Test connections concurrently
-      const testPromises = hosts.map(host => handleTestConnection(host));
+      const testPromises = hosts.map((host) => handleTestConnection(host));
       await Promise.all(testPromises);
-      
+
       console.log('[ClientHostList] All hosts tested successfully');
-      
     } catch (error) {
       console.error('[ClientHostList] Error refreshing hosts:', error);
     } finally {
@@ -180,7 +179,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       const result = await deleteHostAction(hostId);
       if (result.success) {
         setHosts((prevHosts) => prevHosts.filter((h) => h.id !== hostId));
-        
+
         // If the host was selected, remove it from selection
         if (selectedHosts.has(hostId)) {
           const newSelectedHosts = new Set(selectedHosts);

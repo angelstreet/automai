@@ -60,7 +60,10 @@ export default function ClientCICDProvider({
 
   // Open the add/edit dialog
   const handleAddEditProvider = useCallback((provider?: CICDProviderType) => {
-    console.log('[ClientCICDProvider] Opening add/edit dialog', provider ? 'edit mode' : 'add mode');
+    console.log(
+      '[ClientCICDProvider] Opening add/edit dialog',
+      provider ? 'edit mode' : 'add mode',
+    );
     if (provider) {
       setSelectedProvider(provider);
       setIsEditing(true);
@@ -80,7 +83,7 @@ export default function ClientCICDProvider({
 
     console.log('[ClientCICDProvider] Adding open-provider-dialog event listener');
     window.addEventListener('open-provider-dialog', handleOpenDialog);
-    
+
     return () => {
       window.removeEventListener('open-provider-dialog', handleOpenDialog);
     };
@@ -134,7 +137,7 @@ export default function ClientCICDProvider({
   // Handle dialog completion
   const handleDialogComplete = useCallback(async () => {
     setIsAddEditDialogOpen(false);
-    
+
     // Refresh providers after dialog closes
     try {
       setLoading(true);
@@ -160,7 +163,7 @@ export default function ClientCICDProvider({
       if (result.success) {
         // Remove the provider from the list
         setProviders((prev) => prev.filter((p) => p.id !== selectedProvider.id));
-        
+
         toast({
           title: 'Provider Deleted',
           description: `The provider "${selectedProvider.name}" has been successfully deleted.`,

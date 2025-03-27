@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/client";
-import { cookies } from "next/headers";
-import type { DbResponse } from "@/lib/supabase/db";
-import type { TeamMember, TeamMemberCreateInput } from "@/types/context/team";
+import { createClient } from '@/lib/supabase/client';
+import { cookies } from 'next/headers';
+import type { DbResponse } from '@/lib/supabase/db';
+import type { TeamMember, TeamMemberCreateInput } from '@/types/context/team';
 
 /**
  * Get team members for a specific team
@@ -11,22 +11,24 @@ import type { TeamMember, TeamMemberCreateInput } from "@/types/context/team";
  */
 export async function getTeamMembers(
   teamId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<TeamMember[]>> {
   try {
     const supabase = createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from("team_members")
-      .select(`
+      .from('team_members')
+      .select(
+        `
         team_id,
         profile_id,
         role,
         created_at,
         updated_at,
         profiles:profile_id (id, email, avatar_url)
-      `)
-      .eq("team_id", teamId);
+      `,
+      )
+      .eq('team_id', teamId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -39,7 +41,7 @@ export async function getTeamMembers(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to fetch team members",
+      error: error.message || 'Failed to fetch team members',
     };
   }
 }
@@ -52,55 +54,57 @@ export async function getTeamMembers(
  */
 export async function addTeamMember(
   input: TeamMemberCreateInput,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<TeamMember>> {
   try {
     const supabase = createClient(cookieStore);
 
     // Check if the user exists in the profiles table
     const { data: profileExists, error: profileError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", input.profile_id)
+      .from('profiles')
+      .select('id')
+      .eq('id', input.profile_id)
       .single();
 
     if (profileError || !profileExists) {
-      return { 
-        success: false, 
-        error: "User does not exist" 
+      return {
+        success: false,
+        error: 'User does not exist',
       };
     }
 
     // Check if the member is already in the team
     const { data: existingMember, error: existingError } = await supabase
-      .from("team_members")
-      .select("*")
-      .eq("team_id", input.team_id)
-      .eq("profile_id", input.profile_id);
+      .from('team_members')
+      .select('*')
+      .eq('team_id', input.team_id)
+      .eq('profile_id', input.profile_id);
 
     if (existingError) {
       return { success: false, error: existingError.message };
     }
 
     if (existingMember && existingMember.length > 0) {
-      return { 
-        success: false, 
-        error: "User is already a member of this team" 
+      return {
+        success: false,
+        error: 'User is already a member of this team',
       };
     }
 
     // Add the member
     const { data, error } = await supabase
-      .from("team_members")
+      .from('team_members')
       .insert(input)
-      .select(`
+      .select(
+        `
         team_id,
         profile_id,
         role,
         created_at,
         updated_at,
         profiles:profile_id (id, email, avatar_url)
-      `)
+      `,
+      )
       .single();
 
     if (error) {
@@ -114,7 +118,7 @@ export async function addTeamMember(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to add team member",
+      error: error.message || 'Failed to add team member',
     };
   }
 }
@@ -131,27 +135,29 @@ export async function updateTeamMemberRole(
   teamId: string,
   profileId: string,
   role: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<TeamMember>> {
   try {
     const supabase = createClient(cookieStore);
 
     const { data, error } = await supabase
-      .from("team_members")
+      .from('team_members')
       .update({
         role,
         updated_at: new Date().toISOString(),
       })
-      .eq("team_id", teamId)
-      .eq("profile_id", profileId)
-      .select(`
+      .eq('team_id', teamId)
+      .eq('profile_id', profileId)
+      .select(
+        `
         team_id,
         profile_id,
         role,
         created_at,
         updated_at,
         profiles:profile_id (id, email, avatar_url)
-      `)
+      `,
+      )
       .single();
 
     if (error) {
@@ -165,7 +171,7 @@ export async function updateTeamMemberRole(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to update team member role",
+      error: error.message || 'Failed to update team member role',
     };
   }
 }
@@ -180,16 +186,16 @@ export async function updateTeamMemberRole(
 export async function removeTeamMember(
   teamId: string,
   profileId: string,
-  cookieStore = cookies()
+  cookieStore = cookies(),
 ): Promise<DbResponse<null>> {
   try {
     const supabase = createClient(cookieStore);
 
     const { error } = await supabase
-      .from("team_members")
+      .from('team_members')
       .delete()
-      .eq("team_id", teamId)
-      .eq("profile_id", profileId);
+      .eq('team_id', teamId)
+      .eq('profile_id', profileId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -199,7 +205,7 @@ export async function removeTeamMember(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to remove team member",
+      error: error.message || 'Failed to remove team member',
     };
   }
 }

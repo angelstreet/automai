@@ -14,7 +14,7 @@ interface TeamPageContentProps {
 
 export default function TeamPageContent({ initialTeams }: TeamPageContentProps) {
   const { teams, setTeams } = useTeam();
-  
+
   // Initialize teams from server-side props
   useEffect(() => {
     if (initialTeams.length > 0 && teams.length === 0) {
@@ -27,18 +27,18 @@ export default function TeamPageContent({ initialTeams }: TeamPageContentProps) 
       <div className="lg:col-span-1">
         <TeamList />
       </div>
-      
+
       <div className="lg:col-span-2">
         <Tabs defaultValue="members" className="w-full">
           <TabsList className="grid grid-cols-2 w-[400px]">
             <TabsTrigger value="members">Team Members</TabsTrigger>
             <TabsTrigger value="resources">Resource Limits</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="members" className="mt-6">
             <TeamMembers />
           </TabsContent>
-          
+
           <TabsContent value="resources" className="mt-6">
             <ResourceLimits />
           </TabsContent>
