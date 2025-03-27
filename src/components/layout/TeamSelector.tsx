@@ -12,18 +12,17 @@ import {
 } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
 import { cn } from '@/lib/utils';
-import { useTeam, useUser } from '@/context';
+import { useUser } from '@/context';
 
 export default function TeamSelector() {
-  const { user } = useUser();
-  const { teams, selectedTeam, selectTeam, fetchTeams } = useTeam();
+  const { user, teams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (user && user.tenant_name === 'enterprise') {
-      fetchTeams();
+      refreshUser();
     }
-  }, [user, fetchTeams]);
+  }, [user, refreshUser]);
 
   // Only show for enterprise users with multiple teams
   if (!user || user.tenant_name !== 'enterprise' || teams.length <= 1) {
@@ -56,7 +55,7 @@ export default function TeamSelector() {
                 key={team.id}
                 value={team.name}
                 onSelect={() => {
-                  selectTeam(team.id);
+                  setSelectedTeam(team.id);
                   setOpen(false);
                 }}
               >

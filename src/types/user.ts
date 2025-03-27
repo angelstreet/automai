@@ -4,6 +4,39 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
  * USER CORE TYPES
  ********************************************/
 
+// Team related types defined directly in user.ts
+export interface UserTeam {
+  id: string;
+  name: string;
+  description?: string;
+  tenant_id: string;
+  created_by?: string;
+  is_default: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TeamMember {
+  team_id: string;
+  profile_id: string;
+  role: string;
+  created_at?: string;
+  updated_at?: string;
+  profiles?: {
+    id: string;
+    email?: string;
+    avatar_url?: string;
+  };
+}
+
+export interface ResourceLimit {
+  type: string;
+  current: number;
+  limit: number;
+  isUnlimited: boolean;
+  canCreate: boolean;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -16,6 +49,10 @@ export interface User {
     avatar_url?: string;
     [key: string]: any;
   };
+  // Team data directly embedded in user
+  teams?: UserTeam[];
+  selectedTeamId?: string;
+  teamMembers?: TeamMember[];
 }
 
 export type AuthUser = {
@@ -39,6 +76,10 @@ export type AuthUser = {
       preferred_username?: string;
     };
   };
+  // Team data from the database
+  teams?: UserTeam[];
+  selectedTeamId?: string;
+  teamMembers?: TeamMember[];
 };
 
 // Role type used in RoleContext

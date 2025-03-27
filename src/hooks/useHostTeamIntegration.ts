@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { getHostsByTeam, createHostWithTeam, updateHostTeam } from '@/app/actions/hosts-team';
-import { useTeam } from '@/context';
+import { useUser } from '@/context';
 import { useToast } from '@/components/shadcn/use-toast';
 import { useResourceLimit } from '@/hooks/useResourceLimit';
 import type { Host } from '@/app/[locale]/[tenant]/hosts/types';
@@ -12,7 +12,7 @@ import type { Host } from '@/app/[locale]/[tenant]/hosts/types';
  * @returns Object with host-team operations
  */
 export function useHostTeamIntegration() {
-  const { selectedTeam } = useTeam();
+  const { selectedTeam } = useUser();
   const { toast } = useToast();
   const { checkAndNotify } = useResourceLimit();
 

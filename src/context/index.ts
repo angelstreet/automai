@@ -25,7 +25,14 @@
 //    - Server actions: /src/app/actions/hosts.ts
 //    - Server components: /src/app/[locale]/[tenant]/hosts/_components/
 //    - Client components: /src/app/[locale]/[tenant]/hosts/_components/client/
+//
+// 5. Team functionality: 
+//    - Consolidated directly into UserContext (2023 migration)
+//    - Previously: /src/context/teamContext.tsx
+//    - Now: All team functionality is part of UserContext
 // -------------------------------------------------
+
+import type { UserContextType } from '@/types/context/user';
 
 // Re-export hooks and providers that are still needed
 export { useUser } from './UserContext';
@@ -34,17 +41,14 @@ export { useSidebar } from './SidebarContext';
 export { SidebarProvider } from './SidebarContext';
 export { useTheme } from './ThemeContext';
 export { ThemeProvider } from './ThemeContext';
-export { useTeam } from './teamContext';
-export { TeamProvider } from './teamContext';
 
 // Export types for context usage
 export type { UserContextType } from '@/types/context/user';
 export type { SidebarContext as SidebarContextType } from '@/types/sidebar';
 export type { ThemeContextType } from './ThemeContext';
-export type { TeamContextValue } from '@/types/context/team';
 
 // Export context state types for component usage
-export type { User, Role, AuthUser } from '@/types/user';
+export type { User, Role, AuthUser, UserTeam, TeamMember, ResourceLimit } from '@/types/user';
 
 // User selectors for optimized context usage
 export const userSelectors = {
@@ -59,4 +63,10 @@ export const userSelectors = {
 
   // Get loading state only
   isLoading: (context: UserContextType) => context.loading,
+  
+  // Get just the team data
+  teams: (context: UserContextType) => context.teams,
+  
+  // Get just the selected team
+  selectedTeam: (context: UserContextType) => context.selectedTeam,
 };

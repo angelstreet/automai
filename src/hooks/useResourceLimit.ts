@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useTeam } from '@/context';
+import { useUser } from '@/context';
 import { useToast } from '@/components/shadcn/use-toast';
 
 /**
@@ -7,7 +7,7 @@ import { useToast } from '@/components/shadcn/use-toast';
  * @returns Object with checkAndNotify function
  */
 export function useResourceLimit() {
-  const { checkResourceLimit } = useTeam();
+  const { checkResourceLimit } = useUser();
   const { toast } = useToast();
 
   /**

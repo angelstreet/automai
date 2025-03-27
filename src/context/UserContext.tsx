@@ -10,9 +10,9 @@ import React, {
   useMemo,
 } from 'react';
 import useSWR from 'swr';
-import { updateProfile as updateProfileAction } from '@/app/actions/user';
+import { updateProfile as updateProfileAction, setSelectedTeam as setSelectedTeamAction } from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
-import { Role, User, AuthUser } from '@/types/user';
+import { Role, User, AuthUser, UserTeam, TeamMember, ResourceLimit } from '@/types/user';
 import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
 // AppContext has been removed in the RSC migration
 import type { AppContextType } from '@/types/context/app';
@@ -46,6 +46,12 @@ interface UserContextType {
   isInitialized: boolean;
   signUp: (email: string, password: string, name: string, redirectUrl: string) => Promise<any>;
   signInWithOAuth: (provider: 'google' | 'github', redirectUrl: string) => Promise<any>;
+  // Team-related functionality
+  teams: UserTeam[];
+  selectedTeam: UserTeam | null;
+  teamMembers: TeamMember[];
+  setSelectedTeam: (teamId: string) => Promise<void>;
+  checkResourceLimit: (resourceType: string) => Promise<ResourceLimit | null>;
 }
 
 const UserContext = createContext<UserContextType>({
@@ -59,6 +65,12 @@ const UserContext = createContext<UserContextType>({
   isInitialized: false,
   signUp: async () => {},
   signInWithOAuth: async () => {},
+  // Team-related functionality
+  teams: [],
+  selectedTeam: null,
+  teamMembers: [],
+  setSelectedTeam: async () => {},
+  checkResourceLimit: async () => null,
 });
 
 // Reduce logging with a DEBUG flag
@@ -84,6 +96,7 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
   // Try to extract role from different possible locations
   const role = (authUser as any).role || authUser?.user_metadata?.role || 'viewer';
 
+  // Create a User object with all properties
   return {
     id: authUser.id,
     email: authUser.email,
@@ -93,6 +106,10 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
     tenant_name: authUser.tenant_name,
     avatar_url: authUser.user_metadata?.avatar_url || '',
     user_metadata: authUser.user_metadata,
+    // Include team data
+    teams: authUser.teams || [],
+    selectedTeamId: authUser.selectedTeamId,
+    teamMembers: authUser.teamMembers || [],
   };
 };
 
@@ -286,6 +303,16 @@ function UserProviderImpl({
     errorRetryInterval: 2000,
   });
 
+  // Team-related computed values
+  const teams = useMemo(() => user?.teams || [], [user?.teams]);
+  
+  const selectedTeam = useMemo(() => {
+    if (!user?.selectedTeamId || !teams.length) return null;
+    return teams.find(team => team.id === user.selectedTeamId) || null;
+  }, [user?.selectedTeamId, teams]);
+  
+  const teamMembers = useMemo(() => user?.teamMembers || [], [user?.teamMembers]);
+
   // Modify the clearCache function to return Promise<void> instead of Promise<null>
   const handleClearCache = async () => {
     log('[UserContext] Clearing cache');
@@ -343,6 +370,45 @@ function UserProviderImpl({
       setError(err instanceof Error ? err : new Error('Failed to update role'));
       throw err;
     }
+  };
+
+  // Function to select a team
+  const handleSetSelectedTeam = async (teamId: string) => {
+    log('[UserContext] Setting selected team to:', teamId);
+    try {
+      if (!user?.id) throw new Error('No user found');
+      
+      // Validate the team exists in the user's teams
+      if (!teams.some(team => team.id === teamId)) {
+        throw new Error('Team not found or access denied');
+      }
+      
+      // Call the server action to update the selected team
+      await setSelectedTeamAction(teamId);
+      
+      // Refresh user data to get updated team and members
+      await refreshUser();
+    } catch (err) {
+      log('[UserContext] Team selection error:', err);
+      setError(err instanceof Error ? err : new Error('Failed to select team'));
+      throw err;
+    }
+  };
+
+  // Function to check resource limits
+  const handleCheckResourceLimit = async (resourceType: string): Promise<ResourceLimit | null> => {
+    // Simple implementation - we'll check against the current team's resource limits
+    // In a real implementation, you would fetch this from the server or have it as part of the user data
+    if (!user?.teams?.length || !selectedTeam) return null;
+    
+    // This is a placeholder - in a real implementation, you would call a server action to check the limit
+    return {
+      type: resourceType,
+      current: 0, // This would be the current count of resources
+      limit: 10, // This would be the team's limit for this resource type
+      isUnlimited: false,
+      canCreate: true // Based on current < limit || isUnlimited
+    };
   };
 
   // Log current context state on significant changes only
@@ -411,7 +477,7 @@ function UserProviderImpl({
     [],
   );
 
-  // Update the value object to include the new functions
+  // Update the value object to include the team-related functions
   const value = useMemo(
     () => ({
       user,
@@ -424,8 +490,28 @@ function UserProviderImpl({
       isInitialized,
       signUp,
       signInWithOAuth,
+      // Team-related fields and functions
+      teams,
+      selectedTeam,
+      teamMembers,
+      setSelectedTeam: handleSetSelectedTeam,
+      checkResourceLimit: handleCheckResourceLimit,
     }),
-    [user, loading, error, refreshUser, handleClearCache, isInitialized, signUp, signInWithOAuth],
+    [
+      user,
+      loading,
+      error,
+      refreshUser,
+      handleClearCache,
+      isInitialized,
+      signUp,
+      signInWithOAuth,
+      teams,
+      selectedTeam,
+      teamMembers,
+      handleSetSelectedTeam,
+      handleCheckResourceLimit,
+    ],
   );
 
   // AppContext has been removed in the RSC migration
@@ -464,6 +550,12 @@ export function useUser() {
       isInitialized: false,
       signUp: async () => {},
       signInWithOAuth: async () => {},
+      // Team-related fields and functions
+      teams: [],
+      selectedTeam: null,
+      teamMembers: [],
+      setSelectedTeam: async () => {},
+      checkResourceLimit: async () => null,
     };
   }
 

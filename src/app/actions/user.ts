@@ -1,9 +1,10 @@
 'use server';
 
 import { supabaseAuth } from '@/lib/supabase/auth';
-import { AuthUser } from '@/types/user';
+import { AuthUser, UserTeam, TeamMember } from '@/types/user';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
+import { createClient as createServerClient } from '@/lib/supabase/server';
 
 /**
  * Invalidate user-related cache
@@ -47,10 +48,10 @@ if (typeof setInterval !== 'undefined') {
 }
 
 /**
- * Get the current authenticated user
+ * Get the current authenticated user with their teams
  * Uses Next.js caching and server-side caching for stability during SSR/RSC
  *
- * @returns The authenticated user or null if not authenticated
+ * @returns The authenticated user with teams or null if not authenticated
  */
 export const getUser = cache(async function getUser(): Promise<AuthUser | null> {
   try {
@@ -92,6 +93,97 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
       // Add role if missing
       if (!(result.data as any).role) {
         (result.data as any).role = result.data.user_metadata?.role || 'viewer';
+      }
+      
+      // Now fetch the user's teams if they have a tenant_id
+      if (result.data.tenant_id) {
+        try {
+          // Create a Supabase client for database access (using server client)
+          const supabase = await createServerClient(cookieStore);
+          
+          // Fetch teams for the user's tenant
+          const { data: teams, error: teamsError } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('tenant_id', result.data.tenant_id);
+            
+          if (teamsError) {
+            console.error('Error fetching teams:', teamsError);
+          } else if (teams) {
+            // Add teams to the user data
+            (result.data as AuthUser).teams = teams as UserTeam[];
+            
+            // Get stored team ID from cookie instead of localStorage (which isn't available in server components)
+            const selectedTeamCookie = cookieStore.get(`selected_team_${result.data.id}`);
+            const storedTeamId = selectedTeamCookie?.value;
+            
+            // Try to find a selected team (prioritize default team)
+            const defaultTeam = teams.find((team: UserTeam) => team.is_default);
+            
+            // Set the selected team ID
+            if (storedTeamId && teams.some((team: UserTeam) => team.id === storedTeamId)) {
+              (result.data as AuthUser).selectedTeamId = storedTeamId;
+            } else if (defaultTeam) {
+              (result.data as AuthUser).selectedTeamId = defaultTeam.id;
+            } else if (teams.length > 0) {
+              (result.data as AuthUser).selectedTeamId = teams[0].id;
+            }
+            
+            // If there's a selected team, fetch its members
+            if ((result.data as AuthUser).selectedTeamId) {
+              try {
+                // First, get team members without join to ensure structure is correct
+                const { data: members, error: membersError } = await supabase
+                  .from('team_members')
+                  .select('*')
+                  .eq('team_id', (result.data as AuthUser).selectedTeamId);
+                  
+                if (membersError) {
+                  console.error('Error fetching team members:', membersError);
+                } else if (members) {
+                  // For each member, get their user info separately
+                  const transformedMembers = [];
+                  
+                  for (const member of members) {
+                    try {
+                      // Get user info for this profile ID
+                      const { data: userData, error: userError } = await supabase
+                        .from('users')
+                        .select('id, email')
+                        .eq('id', member.profile_id)
+                        .single();
+                        
+                      if (userError) {
+                        console.error(`Error fetching user data for profile ${member.profile_id}:`, userError);
+                      }
+                      
+                      transformedMembers.push({
+                        team_id: member.team_id,
+                        profile_id: member.profile_id,
+                        role: member.role,
+                        created_at: member.created_at,
+                        updated_at: member.updated_at,
+                        profiles: {
+                          id: member.profile_id,
+                          email: userData?.email || '',
+                          avatar_url: ''
+                        }
+                      });
+                    } catch (userError) {
+                      console.error('Error enhancing team member:', userError);
+                    }
+                  }
+                  
+                  (result.data as AuthUser).teamMembers = transformedMembers;
+                }
+              } catch (memberError) {
+                console.error('Exception fetching team members:', memberError);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error enhancing user with teams:', error);
+        }
       }
     }
 
@@ -170,5 +262,40 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
   } catch (error) {
     console.error('Error updating profile:', error);
     throw new Error(error instanceof Error ? error.message : 'Failed to update profile');
+  }
+}
+
+/**
+ * Set the user's selected team
+ * 
+ * @param teamId The ID of the team to select
+ * @returns Result object with success status
+ */
+export async function setSelectedTeam(teamId: string) {
+  try {
+    const user = await getUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
+    // Verify the team exists and the user has access to it
+    if (!user.teams?.some(team => team.id === teamId)) {
+      throw new Error('Team not found or access denied');
+    }
+    
+    // Store the selected team ID in a cookie
+    const cookieStore = await cookies();
+    cookieStore.set(`selected_team_${user.id}`, teamId, { maxAge: 60 * 60 * 24 * 365 }); // 1 year
+    
+    // Invalidate cache to force refresh of user data
+    await invalidateUserCache();
+    
+    return {
+      success: true,
+      message: 'Team selected successfully',
+    };
+  } catch (error) {
+    console.error('Error selecting team:', error);
+    throw new Error(error instanceof Error ? error.message : 'Failed to select team');
   }
 }

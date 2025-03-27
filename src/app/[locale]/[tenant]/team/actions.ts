@@ -13,7 +13,7 @@ import {
   removeTeamMember as dbRemoveTeamMember,
   checkResourceLimit as dbCheckResourceLimit
 } from '@/lib/supabase/db-teams';
-import type { ActionResult } from '@/lib/types';
+import type { ActionResult } from '@/types/context/cicd';
 import type { 
   Team, 
   TeamCreateInput, 
@@ -23,14 +23,16 @@ import type {
   ResourceLimit
 } from '@/types/context/team';
 import { cache } from 'react';
+import { User } from '@/types/user';
 
 /**
  * Get all teams for the current user's tenant
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing teams or error
  */
-export const getTeams = cache(async (): Promise<ActionResult<Team[]>> => {
+export const getTeams = cache(async (providedUser?: User | null): Promise<ActionResult<Team[]>> => {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -46,11 +48,12 @@ export const getTeams = cache(async (): Promise<ActionResult<Team[]>> => {
 /**
  * Get a single team by ID
  * @param teamId Team ID to fetch
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing team or error
  */
-export const getTeam = cache(async (teamId: string): Promise<ActionResult<Team>> => {
+export const getTeam = cache(async (teamId: string, providedUser?: User | null): Promise<ActionResult<Team>> => {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -66,11 +69,15 @@ export const getTeam = cache(async (teamId: string): Promise<ActionResult<Team>>
 /**
  * Create a new team
  * @param input Team data to create
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing created team or error
  */
-export async function createTeam(input: TeamCreateInput): Promise<ActionResult<Team>> {
+export async function createTeam(
+  input: TeamCreateInput, 
+  providedUser?: User | null
+): Promise<ActionResult<Team>> {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -89,14 +96,16 @@ export async function createTeam(input: TeamCreateInput): Promise<ActionResult<T
  * Update an existing team
  * @param teamId Team ID to update
  * @param input Team data to update
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing updated team or error
  */
 export async function updateTeam(
   teamId: string,
-  input: TeamUpdateInput
+  input: TeamUpdateInput,
+  providedUser?: User | null
 ): Promise<ActionResult<Team>> {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -112,11 +121,15 @@ export async function updateTeam(
 /**
  * Delete a team
  * @param teamId Team ID to delete
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result with success status or error
  */
-export async function deleteTeam(teamId: string): Promise<ActionResult<null>> {
+export async function deleteTeam(
+  teamId: string,
+  providedUser?: User | null
+): Promise<ActionResult<null>> {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -132,11 +145,15 @@ export async function deleteTeam(teamId: string): Promise<ActionResult<null>> {
 /**
  * Get members of a team
  * @param teamId Team ID to get members for
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing team members or error
  */
-export const getTeamMembers = cache(async (teamId: string): Promise<ActionResult<TeamMember[]>> => {
+export const getTeamMembers = cache(async (
+  teamId: string,
+  providedUser?: User | null
+): Promise<ActionResult<TeamMember[]>> => {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -152,13 +169,15 @@ export const getTeamMembers = cache(async (teamId: string): Promise<ActionResult
 /**
  * Add a member to a team
  * @param input Team member data to create
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing created team member or error
  */
 export async function addTeamMember(
-  input: TeamMemberCreateInput
+  input: TeamMemberCreateInput,
+  providedUser?: User | null
 ): Promise<ActionResult<TeamMember>> {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -176,15 +195,17 @@ export async function addTeamMember(
  * @param teamId Team ID
  * @param profileId Profile ID of the team member
  * @param role New role for the team member
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing updated team member or error
  */
 export async function updateTeamMemberRole(
   teamId: string,
   profileId: string,
-  role: string
+  role: string,
+  providedUser?: User | null
 ): Promise<ActionResult<TeamMember>> {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -201,14 +222,16 @@ export async function updateTeamMemberRole(
  * Remove a member from a team
  * @param teamId Team ID
  * @param profileId Profile ID of the team member to remove
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result with success status or error
  */
 export async function removeTeamMember(
   teamId: string,
-  profileId: string
+  profileId: string,
+  providedUser?: User | null
 ): Promise<ActionResult<null>> {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -224,13 +247,15 @@ export async function removeTeamMember(
 /**
  * Check if a resource limit is reached for the current tenant
  * @param resourceType Type of resource to check (hosts, repositories, deployments, cicd_providers)
+ * @param providedUser Optional user object to avoid redundant getUser calls
  * @returns Action result containing limit check data or error
  */
 export const checkResourceLimit = cache(async (
-  resourceType: string
+  resourceType: string,
+  providedUser?: User | null
 ): Promise<ActionResult<ResourceLimit>> => {
   try {
-    const user = await getUser();
+    const user = providedUser || await getUser();
     if (!user || !user.tenant_id) {
       return { success: false, error: 'Unauthorized' };
     }
@@ -250,10 +275,7 @@ export const checkResourceLimit = cache(async (
       };
     }
     
-    return { 
-      success: false, 
-      error: result.error || `Failed to check ${resourceType} limit` 
-    };
+    return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to check resource limit' };
   }
