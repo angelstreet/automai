@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import type { DbResponse } from '@/lib/supabase/db';
 
 export interface ResourceLimitCheck {
@@ -19,10 +18,9 @@ export interface ResourceLimitCheck {
 export async function checkResourceLimit(
   tenantId: string,
   resourceType: string,
-  cookieStore = cookies(),
 ): Promise<DbResponse<ResourceLimitCheck>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient();
 
     // Get the tenant's subscription tier
     const { data: tenantData, error: tenantError } = await supabase

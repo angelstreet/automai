@@ -1,9 +1,8 @@
-'use server';
+'use server'
 
-import { cookies } from 'next/headers';
 import { getUser } from '@/app/actions/user';
-import {
-  getTeams as dbGetTeams,
+import { 
+  getTeams as dbGetTeams, 
   getTeam as dbGetTeam,
   createTeam as dbCreateTeam,
   updateTeam as dbUpdateTeam,
@@ -12,16 +11,16 @@ import {
   addTeamMember as dbAddTeamMember,
   updateTeamMemberRole as dbUpdateTeamMemberRole,
   removeTeamMember as dbRemoveTeamMember,
-  checkResourceLimit as dbCheckResourceLimit,
+  checkResourceLimit as dbCheckResourceLimit
 } from '@/lib/supabase/db-teams';
 import type { ActionResult } from '@/lib/types';
-import type {
-  Team,
-  TeamCreateInput,
+import type { 
+  Team, 
+  TeamCreateInput, 
   TeamUpdateInput,
   TeamMember,
   TeamMemberCreateInput,
-  ResourceLimit,
+  ResourceLimit
 } from '@/types/context/team';
 
 /**
@@ -35,9 +34,8 @@ export async function getTeams(): Promise<ActionResult<Team[]>> {
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbGetTeams(user.tenant_id, cookieStore);
-
+    const result = await dbGetTeams(user.tenant_id);
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch teams' };
@@ -56,9 +54,8 @@ export async function getTeam(teamId: string): Promise<ActionResult<Team>> {
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbGetTeam(teamId, cookieStore);
-
+    const result = await dbGetTeam(teamId);
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch team' };
@@ -77,9 +74,10 @@ export async function createTeam(input: TeamCreateInput): Promise<ActionResult<T
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbCreateTeam({ ...input, tenant_id: user.tenant_id }, cookieStore);
-
+    const result = await dbCreateTeam(
+      { ...input, tenant_id: user.tenant_id }
+    );
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to create team' };
@@ -94,7 +92,7 @@ export async function createTeam(input: TeamCreateInput): Promise<ActionResult<T
  */
 export async function updateTeam(
   teamId: string,
-  input: TeamUpdateInput,
+  input: TeamUpdateInput
 ): Promise<ActionResult<Team>> {
   try {
     const user = await getUser();
@@ -102,9 +100,8 @@ export async function updateTeam(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbUpdateTeam(teamId, input, cookieStore);
-
+    const result = await dbUpdateTeam(teamId, input);
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update team' };
@@ -123,9 +120,8 @@ export async function deleteTeam(teamId: string): Promise<ActionResult<null>> {
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbDeleteTeam(teamId, cookieStore);
-
+    const result = await dbDeleteTeam(teamId);
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to delete team' };
@@ -144,9 +140,8 @@ export async function getTeamMembers(teamId: string): Promise<ActionResult<TeamM
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbGetTeamMembers(teamId, cookieStore);
-
+    const result = await dbGetTeamMembers(teamId);
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch team members' };
@@ -159,7 +154,7 @@ export async function getTeamMembers(teamId: string): Promise<ActionResult<TeamM
  * @returns Action result containing created team member or error
  */
 export async function addTeamMember(
-  input: TeamMemberCreateInput,
+  input: TeamMemberCreateInput
 ): Promise<ActionResult<TeamMember>> {
   try {
     const user = await getUser();
@@ -167,9 +162,8 @@ export async function addTeamMember(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbAddTeamMember(input, cookieStore);
-
+    const result = await dbAddTeamMember(input);
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to add team member' };
@@ -186,7 +180,7 @@ export async function addTeamMember(
 export async function updateTeamMemberRole(
   teamId: string,
   profileId: string,
-  role: string,
+  role: string
 ): Promise<ActionResult<TeamMember>> {
   try {
     const user = await getUser();
@@ -194,9 +188,8 @@ export async function updateTeamMemberRole(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbUpdateTeamMemberRole(teamId, profileId, role, cookieStore);
-
+    const result = await dbUpdateTeamMemberRole(teamId, profileId, role);
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to update team member role' };
@@ -211,7 +204,7 @@ export async function updateTeamMemberRole(
  */
 export async function removeTeamMember(
   teamId: string,
-  profileId: string,
+  profileId: string
 ): Promise<ActionResult<null>> {
   try {
     const user = await getUser();
@@ -219,9 +212,8 @@ export async function removeTeamMember(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbRemoveTeamMember(teamId, profileId, cookieStore);
-
+    const result = await dbRemoveTeamMember(teamId, profileId);
+    
     return result;
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to remove team member' };
@@ -234,7 +226,7 @@ export async function removeTeamMember(
  * @returns Action result containing limit check data or error
  */
 export async function checkResourceLimit(
-  resourceType: string,
+  resourceType: string
 ): Promise<ActionResult<ResourceLimit>> {
   try {
     const user = await getUser();
@@ -242,9 +234,8 @@ export async function checkResourceLimit(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const cookieStore = cookies();
-    const result = await dbCheckResourceLimit(user.tenant_id, resourceType, cookieStore);
-
+    const result = await dbCheckResourceLimit(user.tenant_id, resourceType);
+    
     if (result.success && result.data) {
       return {
         success: true,
@@ -253,14 +244,14 @@ export async function checkResourceLimit(
           current: result.data.current,
           limit: result.data.limit,
           isUnlimited: result.data.isUnlimited,
-          canCreate: result.data.canCreate,
-        },
+          canCreate: result.data.canCreate
+        }
       };
     }
-
-    return {
-      success: false,
-      error: result.error || `Failed to check ${resourceType} limit`,
+    
+    return { 
+      success: false, 
+      error: result.error || `Failed to check ${resourceType} limit` 
     };
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to check resource limit' };

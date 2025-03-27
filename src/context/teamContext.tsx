@@ -21,7 +21,7 @@ import {
   removeTeamMember as removeTeamMemberAction,
   checkResourceLimit as checkResourceLimitAction,
 } from '@/app/[locale]/[tenant]/team/actions';
-import { useUser } from './UserContext';
+import { useUser } from '@/context';
 import type {
   TeamContextValue,
   Team,

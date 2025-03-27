@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import type { DbResponse } from '@/lib/supabase/db';
 import type { TeamMember, TeamMemberCreateInput } from '@/types/context/team';
 
@@ -11,10 +10,9 @@ import type { TeamMember, TeamMemberCreateInput } from '@/types/context/team';
  */
 export async function getTeamMembers(
   teamId: string,
-  cookieStore = cookies(),
 ): Promise<DbResponse<TeamMember[]>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('team_members')
@@ -54,10 +52,9 @@ export async function getTeamMembers(
  */
 export async function addTeamMember(
   input: TeamMemberCreateInput,
-  cookieStore = cookies(),
 ): Promise<DbResponse<TeamMember>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient();
 
     // Check if the user exists in the profiles table
     const { data: profileExists, error: profileError } = await supabase
@@ -135,10 +132,9 @@ export async function updateTeamMemberRole(
   teamId: string,
   profileId: string,
   role: string,
-  cookieStore = cookies(),
 ): Promise<DbResponse<TeamMember>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from('team_members')
@@ -186,10 +182,9 @@ export async function updateTeamMemberRole(
 export async function removeTeamMember(
   teamId: string,
   profileId: string,
-  cookieStore = cookies(),
 ): Promise<DbResponse<null>> {
   try {
-    const supabase = createClient(cookieStore);
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from('team_members')
