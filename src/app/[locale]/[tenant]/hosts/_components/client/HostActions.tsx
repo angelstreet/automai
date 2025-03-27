@@ -3,7 +3,6 @@
 import { Plus, RefreshCw, Grid, List } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/shadcn/button';
-import { testHostConnection } from '@/app/actions/hosts';
 
 // Create a custom event for view mode changes
 export const VIEW_MODE_CHANGE = 'host-view-mode-change';
@@ -23,10 +22,8 @@ export function HostActions() {
     if (isRefreshing) return;
     
     setIsRefreshing(true);
-    // Dispatch event for refresh action with a timestamp to ensure uniqueness
-    window.dispatchEvent(new CustomEvent('refresh-hosts', {
-      detail: { timestamp: Date.now() }
-    }));
+    // Dispatch event for refresh action
+    window.dispatchEvent(new CustomEvent('refresh-hosts'));
   };
 
   const handleAddHost = () => {

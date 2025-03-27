@@ -7,8 +7,7 @@ import { HostTable } from '../HostTable';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { ClientConnectionForm, FormData as ConnectionFormData } from './ClientConnectionForm';
 import { VIEW_MODE_CHANGE } from './HostActions';
-import { createHost as createHostAction, testHostConnection } from '@/app/actions/hosts';
-import { useToast } from '@/components/shadcn/use-toast';
+import { createHost as createHostAction, testHostConnection, deleteHost as deleteHostAction } from '@/app/actions/hosts';
 
 interface ClientHostListProps {
   initialHosts: Host[];
@@ -17,10 +16,9 @@ interface ClientHostListProps {
 export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   const [hosts, setHosts] = useState<Host[]>(initialHosts);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [selectedHosts] = useState<Set<string>>(new Set());
+  const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
   const [showAddHost, setShowAddHost] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
   const [formData, setFormData] = useState<ConnectionFormData>({
     name: '',
     description: '',
@@ -33,62 +31,46 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
 
   // Listen for view mode changes
   useEffect(() => {
-    const handleViewModeChange = (event: CustomEvent<{ mode: 'grid' | 'table' }>) => {
-      setViewMode(event.detail.mode);
+    const handleViewModeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ mode: 'grid' | 'table' }>;
+      setViewMode(customEvent.detail.mode);
     };
 
-    window.addEventListener(VIEW_MODE_CHANGE, handleViewModeChange as EventListener);
-    return () => window.removeEventListener(VIEW_MODE_CHANGE, handleViewModeChange as EventListener);
+    window.addEventListener(VIEW_MODE_CHANGE, handleViewModeChange);
+    return () => window.removeEventListener(VIEW_MODE_CHANGE, handleViewModeChange);
   }, []);
 
   // Listen for refresh action
   useEffect(() => {
-    const handleRefresh = async (event: CustomEvent<{ timestamp: number }>) => {
+    const handleRefresh = async () => {
       try {
         const updatedHosts = [...hosts];
-        let successCount = 0;
-        let failedCount = 0;
-
+        
         for (const host of updatedHosts) {
           try {
             const result = await testHostConnection(host.id);
             if (result.success) {
               host.status = 'connected';
-              successCount++;
             } else {
               host.status = 'failed';
-              failedCount++;
             }
           } catch (error) {
             host.status = 'failed';
-            failedCount++;
           }
         }
 
         setHosts(updatedHosts);
-
-        // Show toast with results
-        toast({
-          title: 'Refresh Complete',
-          description: `Successfully connected to ${successCount} hosts. ${failedCount} connections failed.`,
-          variant: successCount > 0 ? 'default' : 'destructive',
-        });
       } catch (error) {
         console.error('Error refreshing hosts:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to refresh host connections',
-          variant: 'destructive',
-        });
       } finally {
         // Dispatch event to indicate refresh is complete
         window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
       }
     };
 
-    window.addEventListener('refresh-hosts', handleRefresh as EventListener);
-    return () => window.removeEventListener('refresh-hosts', handleRefresh as EventListener);
-  }, [hosts, toast]);
+    window.addEventListener('refresh-hosts', handleRefresh);
+    return () => window.removeEventListener('refresh-hosts', handleRefresh);
+  }, [hosts]);
 
   // Listen for add host dialog
   useEffect(() => {
@@ -117,10 +99,10 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       });
 
       if (result.success && result.data) {
-        setHosts((prev: Host[]) => [...prev, result.data as Host]);
+        setHosts((prev) => [...prev, result.data as Host]);
         setShowAddHost(false);
         // Reset form data
-        const defaultFormData: ConnectionFormData = {
+        setFormData({
           name: '',
           description: '',
           type: 'ssh',
@@ -128,29 +110,75 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           port: '22',
           username: '',
           password: '',
-        };
-        setFormData(defaultFormData);
-        
-        toast({
-          title: 'Success',
-          description: 'Host added successfully',
-          variant: 'default',
         });
       }
     } catch (error) {
       console.error('Error adding host:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to add host',
-        variant: 'destructive',
-      });
     } finally {
       setIsSaving(false);
     }
-  }, [formData, toast]);
+  }, [formData]);
 
   const handleFormChange = (newFormData: ConnectionFormData) => {
     setFormData(newFormData);
+  };
+
+  const handleSelectHost = (host: Host | string) => {
+    const hostId = typeof host === 'string' ? host : host.id;
+    const newSelectedHosts = new Set(selectedHosts);
+    if (newSelectedHosts.has(hostId)) {
+      newSelectedHosts.delete(hostId);
+    } else {
+      newSelectedHosts.add(hostId);
+    }
+    setSelectedHosts(newSelectedHosts);
+  };
+
+  const handleDeleteHost = async (host: Host | string) => {
+    const hostId = typeof host === 'string' ? host : host.id;
+    try {
+      const result = await deleteHostAction(hostId);
+      if (result.success) {
+        setHosts((prevHosts) => prevHosts.filter((h) => h.id !== hostId));
+        
+        // If the host was selected, remove it from selection
+        if (selectedHosts.has(hostId)) {
+          const newSelectedHosts = new Set(selectedHosts);
+          newSelectedHosts.delete(hostId);
+          setSelectedHosts(newSelectedHosts);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting host:', error);
+    }
+  };
+
+  const handleTestConnection = async (host: Host): Promise<boolean> => {
+    try {
+      const result = await testHostConnection(host.id);
+      
+      // Update the host status in the local state
+      setHosts((prevHosts) => 
+        prevHosts.map((h) => 
+          h.id === host.id 
+            ? { ...h, status: result.success ? 'connected' : 'failed' } 
+            : h
+        )
+      );
+      
+      return result.success;
+    } catch (error) {
+      console.error('Error testing connection:', error);
+      
+      // Update the host status to failed
+      setHosts((prevHosts) => 
+        prevHosts.map((h) => 
+          h.id === host.id ? { ...h, status: 'failed' } : h
+        )
+      );
+      
+      return false;
+    }
   };
 
   // Empty state for no hosts
@@ -170,18 +198,18 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           hosts={hosts}
           selectedHosts={selectedHosts}
           selectMode={false}
-          onSelect={() => {}}
-          onDelete={() => {}}
-          onTestConnection={() => Promise.resolve(false)}
+          onSelect={handleSelectHost}
+          onDelete={handleDeleteHost}
+          onTestConnection={handleTestConnection}
         />
       ) : (
         <HostTable
           hosts={hosts}
           selectedHosts={selectedHosts}
           selectMode={false}
-          onSelect={() => {}}
-          onDelete={() => {}}
-          onTestConnection={() => Promise.resolve(false)}
+          onSelect={handleSelectHost}
+          onDelete={handleDeleteHost}
+          onTestConnection={handleTestConnection}
         />
       )}
 

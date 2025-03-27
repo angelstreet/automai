@@ -45,7 +45,7 @@ export function UserProfileWrapper({ tenant, user }: UserProfileWrapperProps) {
           rel="preload" 
           href={userData.avatarSrc} 
           as="image" 
-          fetchpriority="high" 
+          fetchPriority="high" 
         />
         <UserProfile tenant={tenant} user={user} />
       </>
