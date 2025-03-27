@@ -48,11 +48,56 @@ function RoleSwitcherComponent({ className, user: propUser }: RoleSwitcherProps)
     try {
       setIsUpdating(true);
       console.log('[RoleSwitcher] Updating role to:', newRole);
-
-      // Update role through UserContext
-      await userContext.updateRole(newRole);
-
-      // Local state will be updated via the useEffect when the user prop changes
+      
+      // Set current role immediately for faster UI response
+      setCurrentRole(newRole);
+      
+      // Direct update in user object for immediate effect
+      if (user) {
+        // Create a patched user object with the new role
+        const patchedUser = {
+          ...user,
+          role: newRole
+        };
+        
+        // Update user in localStorage for app-wide access
+        if (typeof window !== 'undefined') {
+          try {
+            // Get current cached user and update role
+            const cachedUserStr = localStorage.getItem('cached_user');
+            if (cachedUserStr) {
+              const cachedUser = JSON.parse(cachedUserStr);
+              cachedUser.role = newRole;
+              localStorage.setItem('cached_user', JSON.stringify(cachedUser));
+            }
+            
+            // Direct global state access
+            if (window.__userContext && window.__userContext.user) {
+              window.__userContext.user.role = newRole;
+            }
+            
+            // Dispatch event for components listening for role changes
+            const event = new CustomEvent('debug-role-change', { 
+              detail: { role: newRole, user: patchedUser } 
+            });
+            window.dispatchEvent(event);
+            
+            // Also set in window.__debugRole
+            window.__debugRole = newRole;
+            
+            // Force a custom sync event to trigger re-renders
+            window.dispatchEvent(new CustomEvent('force-ui-update'));
+          } catch (e) {
+            console.error('Failed to update user in localStorage', e);
+          }
+        }
+      }
+      
+      // Update role through UserContext (in background)
+      userContext.updateRole(newRole).catch(error => {
+        console.error('[RoleSwitcher] Background role update error:', error);
+      });
+      
     } catch (error) {
       console.error('[RoleSwitcher] Error updating role:', error);
       // Revert to previous role on error

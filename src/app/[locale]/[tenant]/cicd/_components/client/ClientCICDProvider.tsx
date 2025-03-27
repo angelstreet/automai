@@ -92,6 +92,16 @@ export default function ClientCICDProvider({
     };
   }, []);
 
+  // Listen for the open-provider-dialog event
+  useEffect(() => {
+    const handleOpenDialog = () => {
+      handleAddEditProvider();
+    };
+
+    window.addEventListener('open-provider-dialog', handleOpenDialog);
+    return () => window.removeEventListener('open-provider-dialog', handleOpenDialog);
+  }, []);
+
   // Test a provider connection
   const handleTestProvider = useCallback(
     async (provider: CICDProviderType) => {

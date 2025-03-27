@@ -101,23 +101,45 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
     }
   }, []);
 
-  // Listen for debug role changes
+  // Listen for debug role changes and force updates
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const handleRoleChange = (event: CustomEvent<{ role: Role }>) => {
+    // Force immediate re-render when role changes
+    const handleRoleChange = (event: CustomEvent<{ role: Role; user?: User }>) => {
       console.log('AppSidebar received role change event:', event.detail.role);
+      
+      // Update debug role state
       setDebugRole(event.detail.role);
+      
+      // If we have a patched user object, use it directly
+      if (event.detail.user) {
+        // Force a re-render by creating a new object reference
+        if (propUser && propUser.id === event.detail.user.id) {
+          // Update the memoization inputs directly to force re-render
+          const patchedUser = {...event.detail.user};
+          (propUser as any).role = patchedUser.role;
+        }
+      }
+    };
+    
+    // Force re-renders on direct UI update requests
+    const handleForceUpdate = () => {
+      // Simple state toggle to force re-render
+      setIsCollapsed(prev => !prev);
+      setTimeout(() => setIsCollapsed(prev => !prev), 0);
     };
 
-    // Add event listener
+    // Add event listeners
     window.addEventListener('debug-role-change', handleRoleChange as EventListener);
+    window.addEventListener('force-ui-update', handleForceUpdate);
 
-    // Remove event listener on cleanup
+    // Remove event listeners on cleanup
     return () => {
       window.removeEventListener('debug-role-change', handleRoleChange as EventListener);
+      window.removeEventListener('force-ui-update', handleForceUpdate);
     };
-  }, []);
+  }, [propUser]);
 
   // Initialize with server-safe default value
   const [cachedRole, setCachedRole] = React.useState('viewer');
@@ -137,17 +159,16 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
     }
   }, []);
 
-  // FIXED: User's actual role should take precedence over debug role
-  // Only use debug role for testing if explicitly requested
+  // MODIFIED: For debugging, debug role now has highest priority 
   const effectiveRole = React.useMemo(() => {
-    // First priority: Use actual user role if available
-    if (user?.role) {
-      return user.role;
-    }
-
-    // Second priority: Use debug role if explicitly set
+    // For debugging purposes, debug role should have highest priority
     if (debugRole) {
       return debugRole;
+    }
+    
+    // Next priority: Use actual user role if available
+    if (user?.role) {
+      return user.role;
     }
 
     // Third priority: Use cached role from localStorage
