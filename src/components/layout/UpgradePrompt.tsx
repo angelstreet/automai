@@ -18,7 +18,7 @@ export function UpgradePrompt({ feature, className = '' }: UpgradePromptProps) {
   if (!user) return null;
 
   // Get the user's plan from metadata
-  const userPlan = (user.user_metadata as any)?.plan || 'free';
+  const userPlan = (user.user_metadata as any)?.plan || 'trial';
 
   // Simple message based on feature
   const message = {

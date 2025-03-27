@@ -43,7 +43,7 @@ const defaultTeams: Team[] = [
   {
     name: 'Acme Inc',
     logo: Building2,
-    plan: 'free',
+    plan: 'trial',
   },
   {
     name: 'Monsters Inc',
