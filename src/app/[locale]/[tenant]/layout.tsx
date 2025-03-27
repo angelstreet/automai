@@ -28,13 +28,21 @@ export default async function TenantLayout({
         id: authUser.id,
         email: authUser.email,
         name: authUser.name || authUser.email.split('@')[0],
-        role: ((authUser.user_metadata as any)?.role || 'viewer') as User['role'],
+        // Use role directly from authUser if available, otherwise fall back to metadata
+        role: ((authUser as any).role || authUser.user_metadata?.role || 'viewer') as User['role'],
         tenant_id: authUser.tenant_id,
         tenant_name: authUser.tenant_name,
         avatar_url: authUser.user_metadata?.avatar_url || '',
         user_metadata: authUser.user_metadata,
       }
     : null;
+    
+  // Log the user role for debugging
+  console.log('[TenantLayout] User role resolution:', {
+    directRole: (authUser as any)?.role,
+    metadataRole: authUser?.user_metadata?.role,
+    finalRole: user?.role
+  });
 
   // Server-side logging
   console.log('[TenantLayout] Rendering tenant layout, tenant:', tenant);
