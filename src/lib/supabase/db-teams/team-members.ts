@@ -14,30 +14,6 @@ export async function getTeamMembers(
   try {
     const supabase = await createClient();
     
-    // Get the current user to add explicit filters
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      return { success: false, error: userError.message };
-    }
-    
-    // Get tenant_id to filter directly
-    const tenant_id = userData.user?.user_metadata?.tenant_id || (userData.user as any)?.tenant_id;
-    if (!tenant_id) {
-      return { success: false, error: 'User tenant information not available' };
-    }
-    
-    // First check if the team belongs to the user's tenant
-    const { data: teamData, error: teamError } = await supabase
-      .from('teams')
-      .select('id')
-      .eq('id', teamId)
-      .eq('tenant_id', tenant_id)
-      .single();
-      
-    if (teamError || !teamData) {
-      return { success: false, error: 'Team not found or access denied' };
-    }
-    
     // Now query team members with direct filtering
     const { data, error } = await supabase
       .from('team_members')

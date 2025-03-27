@@ -6,25 +6,9 @@ const host = {
   async findMany(options: any = {}) {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
-
-    // First fetch the current user's role and tenant to make policy decisions client-side
-    // This avoids the infinite recursion in the database policies
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      console.error('Error getting user for hosts query:', userError);
-      return [];
-    }
-    
-    // Extract tenant_id for the query
-    const tenant_id = userData.user?.user_metadata?.tenant_id || (userData.user as any)?.tenant_id;
     
     // Start building the query
     let builder = supabase.from('hosts').select('*');
-    
-    // Add tenant_id filter to avoid policy recursion
-    if (tenant_id) {
-      builder = builder.eq('tenant_id', tenant_id);
-    }
 
     // Apply filters if provided
     if (options.where) {
@@ -64,26 +48,9 @@ const host = {
   async findUnique({ where }: { where: any }) {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
-
-    // First fetch the current user's role and tenant to make policy decisions client-side
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      console.error('Error getting user for host query:', userError);
-      return null;
-    }
-    
-    // Extract tenant_id for the query
-    const tenant_id = userData.user?.user_metadata?.tenant_id || (userData.user as any)?.tenant_id;
-    
-    let query = supabase.from('hosts').select();
-    
-    // Add tenant_id filter to avoid policy recursion
-    if (tenant_id) {
-      query = query.eq('tenant_id', tenant_id);
-    }
     
     // Apply the 'where' conditions
-    const { data, error } = await query.match(where).single();
+    const { data, error } = await supabase.from('hosts').select().match(where).single();
 
     if (error) {
       console.error('Error finding host:', error);
