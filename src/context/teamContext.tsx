@@ -31,6 +31,7 @@ import type {
   TeamMemberCreateInput,
   ResourceLimit,
 } from '@/types/context/team';
+import { User } from '@/types/user';
 
 const initialState: TeamContextValue = {
   teams: [],
@@ -53,8 +54,17 @@ const initialState: TeamContextValue = {
 
 const TeamContext = createContext<TeamContextValue>(initialState);
 
-export function TeamProvider({ children }: { children: ReactNode }) {
-  const { user } = useUser();
+interface TeamProviderProps {
+  children: ReactNode;
+  user?: User | null;
+  tenant?: string;
+}
+
+export function TeamProvider({ children, user: propUser, tenant }: TeamProviderProps) {
+  const { user: contextUser } = useUser();
+  
+  const user = propUser || contextUser;
+  
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
