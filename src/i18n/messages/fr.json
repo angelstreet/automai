@@ -76,6 +76,7 @@
     "noData": "Aucune donnée disponible",
     "devices": "Appareils",
     "hosts": "Hôtes",
+    "hosts_description": "Gérer vos hôtes et connexions",
     "managehosts": "Gérer vos hôtes et conteneurs",
     "refresh": "Actualiser",
     "table_view": "Vue tableau",
@@ -366,9 +367,41 @@
     "refresh": "Actualiser",
     "delete": "Supprimer",
     "confirm_delete": "Êtes-vous sûr de vouloir supprimer ce fournisseur CI/CD ?",
-    "delete_warning": "Cela supprimera tous les jobs et pipelines associés. Cette action ne peut pas être annulée."
+    "delete_warning": "Cela supprimera tous les jobs et pipelines associés. Cette action ne peut pas être annulée.",
+    "add_provider": "Ajouter un fournisseur",
+    "add_provider_dialog_title": "Ajouter un fournisseur CI/CD",
+    "edit_provider_dialog_title": "Modifier le fournisseur CI/CD",
+    "no_providers_title": "Aucun fournisseur CI/CD",
+    "no_providers_description": "Ajoutez un fournisseur CI/CD pour commencer à créer des déploiements",
+    "providers_title": "Fournisseurs CI/CD",
+    "provider_name": "Nom",
+    "provider_url": "URL",
+    "provider_auth_type": "Type d'authentification",
+    "actions": "Actions",
+    "edit": "Modifier",
+    "cancel": "Annuler",
+    "success": "Succès",
+    "error": "Erreur",
+    "delete_provider_dialog_title": "Supprimer le fournisseur CI/CD",
+    "delete_provider_confirmation": "Êtes-vous sûr de vouloir supprimer \"{name}\" ? Cette action ne peut pas être annulée et supprimera tout accès à ce fournisseur.",
+    "auth_type_token": "Jeton API",
+    "auth_type_basic": "Nom d'utilisateur et mot de passe",
+    "auth_type_oauth": "OAuth",
+    "auth_type_not_specified": "Non spécifié",
+    "provider_type_jenkins": "Jenkins",
+    "provider_type_github": "GitHub Actions",
+    "provider_type_gitlab": "GitLab CI",
+    "provider_type_azure": "Azure DevOps"
   },
   "deployment": {
+    "new_deployment": "Nouveau déploiement",
+    "refresh": "Actualiser",
+    "error": "Erreur",
+    "refresh_error": "Échec de l'actualisation des déploiements",
+    "success": "Succès",
+    "deployment_created": "Le déploiement a été créé avec succès",
+    "no_deployments_title": "Aucun déploiement trouvé",
+    "no_deployments_description": "Créez votre premier déploiement pour commencer",
     "wizard": {
       "next": "Suivant",
       "previous": "Précédent",
@@ -409,5 +442,17 @@
       "failedFetchJobs": "Échec de récupération des jobs CI/CD",
       "failedFetchJobDetails": "Échec de récupération des détails du job"
     }
+  },
+  "hosts": {
+    "hosts": "Hôtes",
+    "hosts_description": "Gérer vos hôtes et connexions",
+    "refresh": "Actualiser",
+    "add_host": "Ajouter un hôte",
+    "add_host_dialog_title": "Ajouter un nouvel hôte",
+    "no_hosts_title": "Aucun hôte trouvé",
+    "no_hosts_description": "Ajoutez votre premier hôte pour commencer",
+    "test_connection": "Tester la connexion",
+    "view_mode_grid": "Vue en grille",
+    "view_mode_table": "Vue en tableau"
   }
 }
