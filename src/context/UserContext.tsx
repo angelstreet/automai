@@ -24,6 +24,17 @@ import {
 // Singleton flag to prevent multiple instances
 let USER_CONTEXT_INITIALIZED = false;
 
+// Create a meaningful message for the provider duplication issue
+const PROVIDER_DUPLICATION_MESSAGE = `
+Multiple instances of UserProvider detected.
+This can happen if:
+1. You have more than one UserProvider in your component tree
+2. The app is being rendered with different React roots
+3. You're using the same context in multiple places
+
+Check your layout components and make sure UserProvider only appears once.
+`;
+
 interface UserContextType {
   user: User | null;
   loading: boolean;
@@ -85,22 +96,50 @@ const mapAuthUserToUser = (authUser: AuthUser): User => {
   };
 };
 
-export function UserProvider({
+// Create a functional wrapper component that checks for duplicate providers
+function SingletonUserProvider({
   children,
+  initialUser,
   onAuthChange,
 }: {
   children: React.ReactNode;
+  initialUser?: User | null;
   onAuthChange?: (isAuthenticated: boolean) => void;
 }) {
-  // Check for multiple instances of UserProvider
+  // Check for multiple instances first
   useEffect(() => {
     if (USER_CONTEXT_INITIALIZED) {
-      console.warn('[UserContext] Multiple instances of UserProvider detected');
-    } else {
-      USER_CONTEXT_INITIALIZED = true;
-      log('[UserContext] UserProvider initialized as singleton');
-    }
+      console.warn(PROVIDER_DUPLICATION_MESSAGE);
+      return;
+    } 
+    
+    USER_CONTEXT_INITIALIZED = true;
+    return () => {
+      USER_CONTEXT_INITIALIZED = false;
+    };
+  }, []);
 
+  return <UserProviderImpl initialUser={initialUser} onAuthChange={onAuthChange}>{children}</UserProviderImpl>;
+}
+
+// The actual provider implementation (internal)
+function UserProviderImpl({
+  children,
+  initialUser: propInitialUser,
+  onAuthChange,
+}: {
+  children: React.ReactNode;
+  initialUser?: User | null;
+  onAuthChange?: (isAuthenticated: boolean) => void;
+}) {
+  // Add explicit initialization state
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const initialized = useRef(false);
+  const initializationAttempts = useRef(0);
+
+  // Initialize quickly
+  useEffect(() => {
     // Initialize user context with a quick initial timeout, but ensure it gets set
     // even when there might be auth delays
     const quickTimer = setTimeout(() => {
@@ -124,25 +163,22 @@ export function UserProvider({
     }, 1500);
 
     return () => {
-      if (USER_CONTEXT_INITIALIZED) {
-        USER_CONTEXT_INITIALIZED = false;
-      }
       clearTimeout(quickTimer);
       clearTimeout(backupTimer);
     };
   }, []);
 
-  // Add explicit initialization state
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const initialized = useRef(false);
-  const initializationAttempts = useRef(0);
-
   // Add request protection
   const { protectedFetch, safeUpdateState } = useRequestProtection('UserContext');
 
-  // Get initial user data synchronously from localStorage
-  const [initialUser, setInitialUser] = useState<User | null>(() => {
+  // Get initial user data from the props or from localStorage
+  const [localInitialUser, setInitialUser] = useState<User | null>(() => {
+    // If we have initialUser from props, prefer that (server-fetched data)
+    if (propInitialUser) {
+      return propInitialUser;
+    }
+    
+    // Otherwise try localStorage
     if (typeof window !== 'undefined') {
       try {
         const cachedUser = localStorage.getItem(STORAGE_KEYS.CACHED_USER);
@@ -238,7 +274,7 @@ export function UserProvider({
     isLoading: loading,
     mutate: mutateUser,
   } = useSWR('user-data', () => fetchUserData(false), {
-    fallbackData: initialUser,
+    fallbackData: localInitialUser,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
     dedupingInterval: 30000, // Reduced from 60s to 30s
@@ -250,29 +286,23 @@ export function UserProvider({
     errorRetryInterval: 2000,
   });
 
-  // Function to clear all caches
-  const clearCache = useCallback(async () => {
-    log('[UserContext] Clearing all user caches');
-
-    // Clear request protection cache for user keys
-    clearRequestCache(/^user\./);
-
-    // Clear localStorage
+  // Modify the clearCache function to return Promise<void> instead of Promise<null>
+  const handleClearCache = async () => {
+    log('[UserContext] Clearing cache');
+    // Clear localStorage items
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.CACHED_USER);
       localStorage.removeItem(STORAGE_KEYS.CACHED_USER_TIME);
-
-      // Clear global cache reference if exists
-      if ((window as any).__userContext) {
-        (window as any).__userContext.user = null;
-      }
     }
 
-    // Clear SWR cache and force revalidation
-    await mutateUser(null, true);
+    // Clear request cache
+    await clearRequestCache();
 
-    return null;
-  }, [mutateUser]);
+    // Force refresh of user data
+    if (typeof mutateUser === 'function') {
+      await mutateUser(null, { revalidate: true });
+    }
+  };
 
   const refreshUser = useCallback(async () => {
     log('[UserContext] Manually refreshing user data');
@@ -390,12 +420,12 @@ export function UserProvider({
       updateProfile: handleUpdateProfile,
       refreshUser,
       updateRole: handleRoleUpdate,
-      clearCache,
+      clearCache: handleClearCache,
       isInitialized,
       signUp,
       signInWithOAuth,
     }),
-    [user, loading, error, refreshUser, clearCache, isInitialized, signUp, signInWithOAuth],
+    [user, loading, error, refreshUser, handleClearCache, isInitialized, signUp, signInWithOAuth],
   );
 
   // AppContext has been removed in the RSC migration
@@ -407,6 +437,9 @@ export function UserProvider({
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
+
+// Export the singleton wrapper as the UserProvider
+export const UserProvider = SingletonUserProvider;
 
 export function useUser() {
   // Try to get the global version first if in browser

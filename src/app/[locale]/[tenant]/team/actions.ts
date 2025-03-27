@@ -22,12 +22,13 @@ import type {
   TeamMemberCreateInput,
   ResourceLimit
 } from '@/types/context/team';
+import { cache } from 'react';
 
 /**
  * Get all teams for the current user's tenant
  * @returns Action result containing teams or error
  */
-export async function getTeams(): Promise<ActionResult<Team[]>> {
+export const getTeams = cache(async (): Promise<ActionResult<Team[]>> => {
   try {
     const user = await getUser();
     if (!user || !user.tenant_id) {
@@ -40,14 +41,14 @@ export async function getTeams(): Promise<ActionResult<Team[]>> {
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch teams' };
   }
-}
+});
 
 /**
  * Get a single team by ID
  * @param teamId Team ID to fetch
  * @returns Action result containing team or error
  */
-export async function getTeam(teamId: string): Promise<ActionResult<Team>> {
+export const getTeam = cache(async (teamId: string): Promise<ActionResult<Team>> => {
   try {
     const user = await getUser();
     if (!user || !user.tenant_id) {
@@ -60,7 +61,7 @@ export async function getTeam(teamId: string): Promise<ActionResult<Team>> {
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch team' };
   }
-}
+});
 
 /**
  * Create a new team
@@ -133,7 +134,7 @@ export async function deleteTeam(teamId: string): Promise<ActionResult<null>> {
  * @param teamId Team ID to get members for
  * @returns Action result containing team members or error
  */
-export async function getTeamMembers(teamId: string): Promise<ActionResult<TeamMember[]>> {
+export const getTeamMembers = cache(async (teamId: string): Promise<ActionResult<TeamMember[]>> => {
   try {
     const user = await getUser();
     if (!user || !user.tenant_id) {
@@ -146,7 +147,7 @@ export async function getTeamMembers(teamId: string): Promise<ActionResult<TeamM
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to fetch team members' };
   }
-}
+});
 
 /**
  * Add a member to a team
@@ -225,9 +226,9 @@ export async function removeTeamMember(
  * @param resourceType Type of resource to check (hosts, repositories, deployments, cicd_providers)
  * @returns Action result containing limit check data or error
  */
-export async function checkResourceLimit(
+export const checkResourceLimit = cache(async (
   resourceType: string
-): Promise<ActionResult<ResourceLimit>> {
+): Promise<ActionResult<ResourceLimit>> => {
   try {
     const user = await getUser();
     if (!user || !user.tenant_id) {
@@ -256,4 +257,4 @@ export async function checkResourceLimit(
   } catch (error: any) {
     return { success: false, error: error.message || 'Failed to check resource limit' };
   }
-}
+});

@@ -26,11 +26,13 @@ export type AuthUser = {
   tenant_name: string;
   created_at: string;
   updated_at: string;
+  role?: Role;
   user_metadata?: {
     name?: string;
     full_name?: string;
     preferred_username?: string;
     avatar_url?: string;
+    role?: Role;
     raw_user_meta_data?: {
       name?: string;
       full_name?: string;

@@ -69,12 +69,11 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
     const now = Date.now();
     
     if (cachedEntry && (now - cachedEntry.timestamp) < CACHE_TTL) {
-      console.log('Using cached user data');
+      // Use cached data silently - no logging in production
       return cachedEntry.user;
     }
     
     // If no valid cache, fetch from Supabase
-    console.log('Cache miss, fetching user from Supabase');
     const result = await supabaseAuth.getUser();
 
     if (!result.success || !result.data) {
@@ -94,14 +93,6 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
       if (!(result.data as any).role) {
         (result.data as any).role = result.data.user_metadata?.role || 'viewer';
       }
-
-      // Validate required fields
-      if (!result.data.tenant_id || !result.data.tenant_name) {
-        console.warn('[getUser] User data missing tenant information:', {
-          hasTenantId: !!result.data.tenant_id,
-          hasTenantName: !!result.data.tenant_name,
-        });
-      }
     }
 
     // Cache the result
@@ -118,18 +109,16 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
       return null;
     }
 
-    // Log the error but don't re-throw for auth errors
+    // Auth errors should just return null
     if (
       error instanceof Error &&
       (error.message.includes('Refresh Token') ||
         error.message.includes('session') ||
         error.message.includes('auth'))
     ) {
-      console.error('Auth error getting current user:', error);
       return null;
     }
 
-    console.error('Error getting current user:', error);
     throw new Error('Failed to get current user');
   }
 });

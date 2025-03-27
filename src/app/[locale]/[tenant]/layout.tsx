@@ -37,13 +37,6 @@ export default async function TenantLayout({
       }
     : null;
     
-  // Log the user role for debugging
-  console.log('[TenantLayout] User role resolution:', {
-    directRole: (authUser as any)?.role,
-    metadataRole: authUser?.user_metadata?.role,
-    finalRole: user?.role
-  });
-
   // Server-side logging
   console.log('[TenantLayout] Rendering tenant layout, tenant:', tenant);
 
