@@ -146,17 +146,23 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
                   
                   for (const member of members) {
                     try {
-                      // Get user info for this profile ID
+                      // Get user info for this profile ID from the profiles table
                       const { data: userData, error: userError } = await supabase
-                        .from('users')
-                        .select('id, email')
+                        .from('profiles')  // Use the profiles table instead of auth.users
+                        .select('id, user_id')
                         .eq('id', member.profile_id)
                         .single();
                         
                       if (userError) {
-                        console.error(`Error fetching user data for profile ${member.profile_id}:`, userError);
+                        console.error(`Error fetching profile data for profile ${member.profile_id}:`, userError);
                       }
                       
+                      // If we found the profile, get the user's email from our cached user data
+                      // We already have the current user's email from the auth data
+                      const userEmail = member.profile_id === result.data.id 
+                        ? result.data.email 
+                        : 'Team Member'; // Always a string, never null
+                        
                       transformedMembers.push({
                         team_id: member.team_id,
                         profile_id: member.profile_id,
@@ -165,7 +171,7 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
                         updated_at: member.updated_at,
                         profiles: {
                           id: member.profile_id,
-                          email: userData?.email || '',
+                          email: userEmail,
                           avatar_url: ''
                         }
                       });
@@ -174,7 +180,7 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
                     }
                   }
                   
-                  (result.data as AuthUser).teamMembers = transformedMembers;
+                  (result.data as AuthUser).teamMembers = transformedMembers as TeamMember[];
                 }
               } catch (memberError) {
                 console.error('Exception fetching team members:', memberError);

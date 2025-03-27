@@ -26,8 +26,8 @@ import { useRouter } from 'next/navigation';
 import * as React from 'react';
 import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { useUser, useTeam } from '@/context';
-import type { Team as TeamInterface } from '@/types/context/team';
+import { useUser } from '@/context';
+import type { UserTeam } from '@/types/user';
 
 // Define team type for visual consistency
 type VisualTeam = {
@@ -39,7 +39,7 @@ type VisualTeam = {
 
 interface TeamSwitcherClientProps {
   defaultCollapsed?: boolean;
-  initialTeams?: TeamInterface[];
+  initialTeams?: UserTeam[];
 }
 
 // Icons mapping for different subscription tiers
@@ -53,17 +53,16 @@ export default function TeamSwitcherClient({
   defaultCollapsed = false,
   initialTeams = [],
 }: TeamSwitcherClientProps) {
-  const { user } = useUser();
-  const { teams, selectedTeam, selectTeam, fetchTeams } = useTeam();
+  const { user, teams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
   const [displayTeams, setDisplayTeams] = React.useState<VisualTeam[]>([]);
   const [activeTeam, setActiveTeam] = React.useState<VisualTeam | null>(null);
   
   // Fetch teams on mount
   useEffect(() => {
     if (user) {
-      fetchTeams();
+      refreshUser();
     }
-  }, [user, fetchTeams]);
+  }, [user, refreshUser]);
 
   // Transform teams data for display
   useEffect(() => {
@@ -121,7 +120,7 @@ export default function TeamSwitcherClient({
     setActiveTeam(team);
     // Only select in context if team has ID and we're on enterprise tier
     if (team.id && user?.tenant_name === 'enterprise') {
-      selectTeam(team.id);
+      setSelectedTeam(team.id);
     }
   };
 
