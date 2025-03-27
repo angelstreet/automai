@@ -155,13 +155,22 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Match all paths except static files
-    '/((?!_next/static|_next/image|avatars|favicon.ico).*)',
-    // Match all locale routes
-    '/(fr|en)/:path*',
-    // Match API routes
+    // Only match GET requests for authenticated routes
+    {
+      source: '/((?!_next/static|_next/image|avatars|favicon.ico|api).*)',
+      missing: [
+        { type: 'header', key: 'next-router-prefetch' },
+        { type: 'header', key: 'purpose', value: 'prefetch' }
+      ],
+      has: [
+        { type: 'header', key: 'accept', value: 'text/html' }
+      ]
+    },
+    // Match API routes that need auth
     '/api/:path*',
     // Match root path
-    '/',
+    { source: '/', has: [{ type: 'header', key: 'accept', value: 'text/html' }] },
+    // Match locale routes
+    { source: '/(fr|en)/:path*', has: [{ type: 'header', key: 'accept', value: 'text/html' }] }
   ],
 };

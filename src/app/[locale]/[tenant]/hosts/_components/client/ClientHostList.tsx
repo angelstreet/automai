@@ -90,7 +90,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     }
   }, [isRefreshing, handleTestConnection, hosts]);
 
-  // Listen for refresh action
+  // Listen for refresh action - ONLY triggered by explicit user action
   useEffect(() => {
     const handleRefresh = async () => {
       try {
@@ -116,6 +116,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       }
     };
 
+    // Only add the event listener, don't automatically refresh on mount
     window.addEventListener('refresh-hosts', handleRefresh);
     return () => window.removeEventListener('refresh-hosts', handleRefresh);
   }, [handleRefreshAll]);

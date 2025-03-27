@@ -309,7 +309,7 @@ export async function testHostConnection(
 }
 
 /**
- * Test all hosts
+ * Test all hosts with a batched approach to reduce Supabase calls
  */
 export async function testAllHosts(): Promise<{
   success: boolean;
@@ -317,7 +317,7 @@ export async function testAllHosts(): Promise<{
   results?: Array<{ hostId: string; result: { success: boolean; message?: string } }>;
 }> {
   try {
-    // Get current user
+    // Get current user once for all operations
     const currentUser = await getUser();
     if (!currentUser) {
       return {
@@ -334,18 +334,20 @@ export async function testAllHosts(): Promise<{
     const hosts = hostsResult.data || [];
     const results = [];
 
-    // Test each host sequentially
-    for (const hostItem of hosts) {
-      // First update the host to testing state
-      await hostDb.update({
-        where: { id: hostItem.id },
+    // First, update all hosts to testing state in one batch (if possible)
+    const updatePromises = hosts.map(host => 
+      hostDb.update({
+        where: { id: host.id },
         data: {
           status: 'testing',
           updated_at: new Date().toISOString(),
         },
-      });
+      })
+    );
+    await Promise.all(updatePromises);
 
-      // Test the connection
+    // Test each host concurrently
+    const testPromises = hosts.map(async (hostItem) => {
       const result = await testHostConnectionService({
         type: hostItem.type,
         ip: hostItem.ip,
@@ -364,17 +366,20 @@ export async function testAllHosts(): Promise<{
         },
       });
 
-      // Add result to array
-      results.push({
+      return {
         hostId: hostItem.id,
         result: {
           success: result.success,
           message: result.message,
         },
-      });
-    }
+      };
+    });
 
-    // Revalidate paths
+    // Wait for all tests to complete
+    const testResults = await Promise.all(testPromises);
+    results.push(...testResults);
+
+    // Revalidate paths once for all hosts
     revalidatePath('/[locale]/[tenant]/hosts');
     revalidatePath('/[locale]/[tenant]/dashboard');
 

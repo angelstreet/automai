@@ -1,7 +1,9 @@
 'use server';
 
 import { supabaseAuth } from '@/lib/supabase/auth';
-import { AuthUser, ProfileData } from '@/types/user';
+import { AuthUser } from '@/types/user';
+import { cache } from 'react';
+import { cookies } from 'next/headers';
 
 /**
  * Invalidate user-related cache
@@ -20,21 +22,66 @@ export async function invalidateUserCache() {
   };
 }
 
+// Cache user data for 5 minutes (300000ms)
+const CACHE_TTL = 300000;
+
+// In-memory server-side cache with TTL
+type CacheEntry = {
+  user: AuthUser | null;
+  timestamp: number;
+};
+
+// Server-side cache instance (stays across requests in same Node.js instance)
+const serverCache = new Map<string, CacheEntry>();
+
+// Clean up expired cache entries every minute
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of serverCache.entries()) {
+      if (now - entry.timestamp > CACHE_TTL) {
+        serverCache.delete(key);
+      }
+    }
+  }, 60000);
+}
+
 /**
  * Get the current authenticated user
- * Uses Next.js caching for stability during SSR/RSC
+ * Uses Next.js caching and server-side caching for stability during SSR/RSC
  *
  * @returns The authenticated user or null if not authenticated
  */
-export async function getUser(): Promise<AuthUser | null> {
+export const getUser = cache(async function getUser(): Promise<AuthUser | null> {
   try {
-    // Get user from auth service with aggressive caching for stability
-    // during server-side rendering and streaming
+    // Get all auth cookies - must await cookies()
+    const cookieStore = await cookies();
+    const authCookie = cookieStore.get('sb-wexkgcszrwxqsthahfyq-auth-token.0');
+    
+    // Create a stable cache key from the auth cookie (if available)
+    // This ensures the same user gets the same cache entry across requests
+    const cacheKey = authCookie?.value ? 
+      `user_cache_${authCookie.value.slice(0, 32)}` : 
+      'user_cache_anonymous';
+    
+    // Check in-memory cache first
+    const cachedEntry = serverCache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cachedEntry && (now - cachedEntry.timestamp) < CACHE_TTL) {
+      console.log('Using cached user data');
+      return cachedEntry.user;
+    }
+    
+    // If no valid cache, fetch from Supabase
+    console.log('Cache miss, fetching user from Supabase');
     const result = await supabaseAuth.getUser();
 
     if (!result.success || !result.data) {
       // Handle common auth errors
       if (result.error === 'No active session' || result.error === 'Auth session missing!') {
+        // Cache the null result to avoid repeated failures
+        serverCache.set(cacheKey, { user: null, timestamp: now });
         return null;
       }
 
@@ -57,7 +104,11 @@ export async function getUser(): Promise<AuthUser | null> {
       }
     }
 
-    return result.data as AuthUser;
+    // Cache the result
+    const userData = result.data as AuthUser;
+    serverCache.set(cacheKey, { user: userData, timestamp: now });
+
+    return userData;
   } catch (error) {
     // Handle session-related errors specially
     if (
@@ -81,7 +132,7 @@ export async function getUser(): Promise<AuthUser | null> {
     console.error('Error getting current user:', error);
     throw new Error('Failed to get current user');
   }
-}
+});
 
 /**
  * Update user profile
@@ -89,7 +140,7 @@ export async function getUser(): Promise<AuthUser | null> {
  * @param formData Form data or profile data object
  * @returns Result object with success status
  */
-export async function updateProfile(formData: FormData | ProfileData) {
+export async function updateProfile(formData: FormData | Record<string, any>) {
   try {
     // Extract data - handle both FormData and direct objects
     let name, locale, avatar_url, role;

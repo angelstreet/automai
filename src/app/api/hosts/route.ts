@@ -1,34 +1,43 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getHosts } from '@/app/actions/hosts';
+import { getUser } from '@/app/actions/user';
 
-import { getHosts, createHost, deleteHost } from '@/lib/services/hosts';
-
-export async function GET() {
+/**
+ * API route for fetching hosts
+ * Uses the cached getUser function to minimize Supabase API calls
+ */
+export async function GET(request: NextRequest) {
   try {
-    console.log('Fetching hosts from database...');
-
-    // Add a cache-control header to the response
-    const headers = new Headers();
-    headers.append('Cache-Control', 'no-cache, no-store, must-revalidate');
-    headers.append('Pragma', 'no-cache');
-    headers.append('Expires', '0');
-
-    const hosts = await getHosts();
-    console.log(`Hosts fetched successfully: ${hosts.length} hosts found`);
-
-    // Add timestamps to help with debugging
-    const response = NextResponse.json({ 
-      success: true, 
-      data: hosts 
-    }, { headers });
-    console.log(`GET /api/hosts returning ${hosts.length} hosts at ${new Date().toISOString()}`);
-
-    return response;
-  } catch (error) {
-    console.error('Error in GET /api/hosts:', error);
+    // First check authentication using our cached user implementation
+    const user = await getUser();
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    // Get all hosts for this user
+    const result = await getHosts();
+    
+    if (!result.success) {
+      return NextResponse.json(
+        { success: false, error: result.error || 'Failed to fetch hosts' },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to fetch hosts'
-    }, { status: 500 });
+      success: true, 
+      data: result.data 
+    });
+  } catch (error) {
+    console.error('Error in hosts API route:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
