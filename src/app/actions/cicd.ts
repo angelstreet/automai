@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { cache } from 'react';
 import { getUser } from '@/app/actions/user';
 import type {
   ActionResult,
@@ -15,7 +16,7 @@ import { logger } from '@/lib/logger';
 /**
  * Fetch all CI/CD providers for the current tenant
  */
-export async function getCICDProviders(): Promise<CICDProviderListResult> {
+export const getCICDProviders = cache(async (): Promise<CICDProviderListResult> => {
   try {
     // Get the current authenticated user
     const user = await getUser();
@@ -24,7 +25,7 @@ export async function getCICDProviders(): Promise<CICDProviderListResult> {
       return { success: false, error: 'User not authenticated', data: [] };
     }
 
-    logger.info('Fetching CICD providers for tenant:', user.tenant_id);
+    logger.info('Fetching CICD providers for tenant:', { tenantId: user.tenant_id });
 
     // Import the CI/CD database module
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd/cicd');
@@ -33,16 +34,16 @@ export async function getCICDProviders(): Promise<CICDProviderListResult> {
     const result = await cicdDb.getCICDProviders({ where: { tenant_id: user.tenant_id } });
 
     if (!result.success) {
-      logger.error('Error fetching CICD providers:', result.error);
+      logger.error('Error fetching CICD providers:', { error: result.error });
       return { success: false, error: result.error, data: [] };
     }
 
     return { success: true, data: result.data || [] };
   } catch (error: any) {
-    logger.error('Unexpected error fetching CICD providers:', error);
+    logger.error('Unexpected error fetching CICD providers:', { error: error.message });
     return { success: false, error: error.message || 'An unexpected error occurred', data: [] };
   }
-}
+});
 
 /**
  * Get CI/CD jobs for all providers or a specific provider

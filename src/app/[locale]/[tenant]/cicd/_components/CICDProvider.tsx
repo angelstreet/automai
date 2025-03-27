@@ -48,19 +48,6 @@ export default function CICDProvider({ removeTitle = false }: CICDProviderProps)
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  // Listen for the add provider event from page
-  useEffect(() => {
-    const handleAddProviderEvent = () => {
-      handleAddEditProvider();
-    };
-
-    document.addEventListener('add-cicd-provider', handleAddProviderEvent);
-
-    return () => {
-      document.removeEventListener('add-cicd-provider', handleAddProviderEvent);
-    };
-  }, []);
-
   // Use SWR hook directly
   const {
     data: providersData,

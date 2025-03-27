@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Edit, Trash, AlertCircle, RefreshCcw, MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
@@ -34,9 +35,6 @@ import CICDProviderForm from '../CICDProviderForm';
 import {
   deleteCICDProvider,
   testCICDProvider,
-  createCICDProvider,
-  updateCICDProvider,
-  getCICDProviders,
 } from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
 import type { CICDProviderType } from '../../types';
@@ -59,25 +57,11 @@ export default function ClientCICDProvider({
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
   const t = useTranslations('cicd');
 
-  // Function to load providers from the server
-  const loadProviders = useCallback(async () => {
-    try {
-      setLoading(true);
-      const result = await getCICDProviders();
-      if (result.success) {
-        setProviders(result.data || []);
-      }
-    } catch (error) {
-      console.error('Error loading providers:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // Open the add/edit dialog
-  const handleAddEditProvider = useCallback((provider?: CICDProviderType) => {
+  const handleAddEditProvider = (provider?: CICDProviderType) => {
     console.log(
       '[ClientCICDProvider] Opening add/edit dialog',
       provider ? 'edit mode' : 'add mode',
@@ -90,20 +74,7 @@ export default function ClientCICDProvider({
       setIsEditing(false);
     }
     setIsAddEditDialogOpen(true);
-  }, []);
-
-  // Add a new useEffect to listen for refresh events
-  useEffect(() => {
-    const handleRefresh = () => {
-      console.log('[ClientCICDProvider] Refreshing provider list');
-      loadProviders();
-    };
-
-    window.addEventListener('refresh-providers', handleRefresh);
-    return () => {
-      window.removeEventListener('refresh-providers', handleRefresh);
-    };
-  }, [loadProviders]);
+  };
 
   // Test a provider connection
   const handleTestProvider = async (provider: CICDProviderType) => {
@@ -151,22 +122,10 @@ export default function ClientCICDProvider({
   }, []);
 
   // Handle dialog completion
-  const handleDialogComplete = useCallback(async () => {
+  const handleDialogComplete = useCallback(() => {
     setIsAddEditDialogOpen(false);
-
-    // Refresh providers after dialog closes
-    try {
-      setLoading(true);
-      const result = await getCICDProviders();
-      if (result.success) {
-        setProviders(result.data || []);
-      }
-    } catch (error) {
-      console.error('Error refreshing providers:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    router.refresh(); // Use router.refresh() instead of custom events
+  }, [router]);
 
   // Handle provider deletion
   const handleConfirmDelete = useCallback(async () => {
@@ -185,6 +144,8 @@ export default function ClientCICDProvider({
           description: `The provider "${selectedProvider.name}" has been successfully deleted.`,
           variant: 'default',
         });
+        
+        router.refresh(); // Refresh server components
       } else {
         toast({
           title: 'Error',
@@ -202,7 +163,7 @@ export default function ClientCICDProvider({
       setLoading(false);
       setIsDeleteDialogOpen(false);
     }
-  }, [selectedProvider, toast]);
+  }, [selectedProvider, toast, router]);
 
   // Get provider type badge color
   const getProviderBadgeColor = useCallback((type: string) => {
