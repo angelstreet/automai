@@ -10,7 +10,7 @@ export async function RepositoryContent() {
   const repositories = reposResult.success && reposResult.data ? reposResult.data : [];
 
   return (
-    <Card className="w-full">
+    <Card className="w-full border-0 shadow-none">
       <CardContent>
         <ClientRepositoryList 
           initialRepositories={repositories} 

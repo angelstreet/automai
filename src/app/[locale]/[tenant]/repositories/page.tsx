@@ -1,9 +1,9 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { RepositoryContent } from './_components/RepositoryContent';
 import { RepositorySkeleton } from './_components/RepositorySkeleton';
 import { RepositoryActions } from './_components/client/RepositoryActions';
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 // Error component for Repository errors
 function RepositoryError({ error }: { error: string }) {
@@ -19,16 +19,14 @@ export default async function RepositoriesPage() {
   const t = await getTranslations('repositories');
 
   return (
-    <div className="container mx-auto py-6 px-4">
-      <div className="flex flex-col gap-4">
-        <PageHeader title={t('repositories')} description={t('repositories_description')}>
-          <RepositoryActions />
-        </PageHeader>
-
-        <Suspense fallback={<RepositorySkeleton />}>
-          <RepositoryContent />
-        </Suspense>
-      </div>
-    </div>
+    <FeaturePageContainer
+      title={t('repositories')}
+      description={t('repositories_description')}
+      actions={<RepositoryActions />}
+    >
+      <Suspense fallback={<RepositorySkeleton />}>
+        <RepositoryContent />
+      </Suspense>
+    </FeaturePageContainer>
   );
 }
