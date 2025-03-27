@@ -21,6 +21,7 @@ import {
 } from '@/components/shadcn/select';
 import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicd';
 import { CICDProvider, CICDProviderPayload, CICDProviderType } from '@/types/context/cicd';
+import { CheckCircle } from 'lucide-react';
 
 interface CICDProviderFormProps {
   providerId?: string;
@@ -285,18 +286,20 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                 variant="outline"
                 onClick={handleTestConnection}
                 disabled={isTesting}
-                className="h-9 border rounded-md bg-transparent"
               >
-                {isTesting ? 'Testing...' : 'Test Connection'}
+                {isTesting ? 'Testing...' : (
+                  <>
+                    <CheckCircle className="h-3 w-3 mr-2" />
+                    Test Connection
+                  </>
+                )}
               </Button>
 
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                variant="outline"
-                className="h-9 border rounded-md bg-transparent"
               >
-                {isSubmitting ? 'Saving...' : isEditMode ? 'Update Provider' : 'Create Provider'}
+                {isSubmitting ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </div>
