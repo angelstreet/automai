@@ -8,7 +8,7 @@ import { createClient as createServerClient } from '@/lib/supabase/server';
 
 /**
  * Invalidate user-related cache
- * Now just clears any client-side storage, as SWR handles caching
+ * Clears both client-side storage and server-side cache
  */
 export async function invalidateUserCache() {
   // Clear any client-side cache if possible
@@ -16,6 +16,9 @@ export async function invalidateUserCache() {
     localStorage.removeItem('user-data-cache');
     localStorage.removeItem('cached_user');
   }
+
+  // Clear the server-side cache
+  serverCache.clear();
 
   return {
     success: true,
