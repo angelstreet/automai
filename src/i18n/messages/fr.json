@@ -463,6 +463,43 @@
       "failedFetchJobDetails": "Échec de récupération des détails du job"
     }
   },
+  "deployments": {
+    "title": "Déploiements",
+    "description": "Gérer et surveiller vos déploiements",
+    "create": "Ajouter un déploiement",
+    "refresh": "Actualiser",
+    "deployments": "Déploiements",
+    "deployments_description": "Gérer et surveiller vos déploiements",
+    "status": {
+      "pending": "En attente",
+      "in_progress": "En cours",
+      "completed": "Terminé",
+      "failed": "Échoué",
+      "cancelled": "Annulé"
+    },
+    "no_deployments": "Aucun déploiement trouvé",
+    "no_deployments_description": "Commencez par créer votre premier déploiement",
+    "filter": {
+      "all": "Tous les déploiements",
+      "active": "Actifs",
+      "completed": "Terminés",
+      "failed": "Échoués"
+    },
+    "sort": {
+      "newest": "Plus récents",
+      "oldest": "Plus anciens",
+      "name_asc": "Nom A-Z",
+      "name_desc": "Nom Z-A"
+    },
+    "details": {
+      "view": "Voir les détails",
+      "edit": "Modifier le déploiement",
+      "delete": "Supprimer le déploiement",
+      "logs": "Voir les logs",
+      "retry": "Réessayer le déploiement",
+      "cancel": "Annuler le déploiement"
+    }
+  },
   "hosts": {
     "hosts": "Hôtes",
     "hosts_description": "Gérer vos hôtes et connexions",

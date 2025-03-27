@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { EnhancedConnectRepositoryDialog } from '../EnhancedConnectRepositoryDialog';
@@ -44,10 +44,16 @@ export function RepositoryActions() {
 
   return (
     <>
-      <Button onClick={() => setConnectDialogOpen(true)} id="add-repository-button" size="sm" className="h-8 gap-1">
-        <PlusCircle className="h-4 w-4" />
-        <span>{t('addRepository')}</span>
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" className="h-8">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          {t('refresh')}
+        </Button>
+        <Button onClick={() => setConnectDialogOpen(true)} id="add-repository-button" size="sm" className="h-8 gap-1">
+          <PlusCircle className="h-4 w-4" />
+          <span>{t('addRepository')}</span>
+        </Button>
+      </div>
 
       <EnhancedConnectRepositoryDialog
         open={connectDialogOpen}

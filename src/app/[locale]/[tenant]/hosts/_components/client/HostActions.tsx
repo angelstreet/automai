@@ -100,6 +100,9 @@ export function HostActions() {
   return (
     <>
       <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeChange}>
+          {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -110,9 +113,7 @@ export function HostActions() {
           <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
           {t('refresh', { fallback: 'Refresh' })}
         </Button>
-        <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeChange}>
-          {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
-        </Button>
+        
         <Button size="sm" className="h-8 gap-1" onClick={handleAddHost} id="add-host-button">
           <PlusCircle className="h-4 w-4" />
           <span>{t('add_host', { fallback: 'Add Host' })}</span>

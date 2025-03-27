@@ -9,9 +9,9 @@ export function DeploymentSkeleton() {
       {/* Header skeleton */}
       <div className="flex justify-between items-center mb-6">
         <Skeleton className="h-8 w-64" />
-        <div className="flex items-center space-x-2">
-          <Skeleton className="h-10 w-32" />
-          <Skeleton className="h-10 w-10 rounded-md" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-36" />
         </div>
       </div>
 

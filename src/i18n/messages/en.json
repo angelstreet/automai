@@ -425,7 +425,7 @@
     "provider_type_azure": "Azure DevOps"
   },
   "deployment": {
-    "new_deployment": "New Deployment",
+    "new_deployment": "Add Deployment",
     "refresh": "Refresh",
     "error": "Error",
     "refresh_error": "Failed to refresh deployments",
@@ -472,6 +472,43 @@
       "failedFetchProviders": "Failed to fetch CI/CD providers",
       "failedFetchJobs": "Failed to fetch CI/CD jobs",
       "failedFetchJobDetails": "Failed to fetch job details"
+    }
+  },
+  "deployments": {
+    "title": "Deployments",
+    "description": "Manage and monitor your deployments",
+    "create": "Add Deployment",
+    "refresh": "Refresh",
+    "deployments": "Deployments",
+    "deployments_description": "Manage and monitor your deployments",
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "no_deployments": "No deployments found",
+    "no_deployments_description": "Start by creating your first deployment",
+    "filter": {
+      "all": "All Deployments",
+      "active": "Active",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "sort": {
+      "newest": "Newest First",
+      "oldest": "Oldest First",
+      "name_asc": "Name A-Z",
+      "name_desc": "Name Z-A"
+    },
+    "details": {
+      "view": "View Details",
+      "edit": "Edit Deployment",
+      "delete": "Delete Deployment",
+      "logs": "View Logs",
+      "retry": "Retry Deployment",
+      "cancel": "Cancel Deployment"
     }
   }
 }

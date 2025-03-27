@@ -17,9 +17,9 @@ export function RepositorySkeleton() {
             </div>
           </div>
 
-          <div className="invisible">
-            {/* Placeholder to maintain layout */}
-            <div className="w-[300px]" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-8 w-36" />
           </div>
 
           <div className="relative w-[300px]">
