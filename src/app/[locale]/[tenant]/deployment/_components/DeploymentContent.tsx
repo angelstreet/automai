@@ -1,10 +1,14 @@
 import { getDeployments } from '@/app/actions/deployments';
+import { getRepositories } from '@/app/actions/repositories';
 import { DeploymentList } from './DeploymentList';
 import { ClientEmptyState } from './client/ClientEmptyState';
 
 export async function DeploymentContent() {
   // Fetch deployments directly on the server
   const deployments = await getDeployments();
+  
+  // Also fetch repositories for display
+  const repositories = await getRepositories();
 
   // If no deployments, show empty state
   if (deployments.length === 0) {
@@ -12,5 +16,5 @@ export async function DeploymentContent() {
   }
 
   // Otherwise, show the deployment list
-  return <DeploymentList deployments={deployments} />;
+  return <DeploymentList deployments={deployments} repositories={repositories} />;
 }

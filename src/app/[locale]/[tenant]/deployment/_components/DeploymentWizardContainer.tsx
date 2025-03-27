@@ -1,5 +1,5 @@
 import { getDeploymentWizardData } from '@/app/actions/deploymentWizard';
-import ClientDeploymentWizard from './client/ClientDeploymentWizard';
+import DeploymentWizard from './client/DeploymentWizard';
 import { logger } from '@/lib/logger';
 
 interface DeploymentWizardContainerProps {
@@ -31,10 +31,10 @@ export default async function DeploymentWizardContainer({
     // If explicit repositories were provided, use those directly
     if (explicitRepositories && explicitRepositories.length > 0) {
       return (
-        <ClientDeploymentWizard
-          initialRepositories={explicitRepositories}
-          initialHosts={[]}
-          initialCICDProviders={[]}
+        <DeploymentWizard
+          repositories={explicitRepositories}
+          hosts={[]}
+          cicdProviders={[]}
           onCancel={onCancel}
           onDeploymentCreated={onDeploymentCreated}
         />
@@ -62,10 +62,10 @@ export default async function DeploymentWizardContainer({
     }
 
     return (
-      <ClientDeploymentWizard
-        initialRepositories={data.repositories}
-        initialHosts={data.hosts}
-        initialCICDProviders={data.cicdProviders}
+      <DeploymentWizard
+        repositories={data.repositories}
+        hosts={data.hosts}
+        cicdProviders={data.cicdProviders}
         onCancel={onCancel}
         onDeploymentCreated={onDeploymentCreated}
       />

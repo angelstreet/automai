@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { useTranslations } from 'next-intl';
+import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { RepositoryContent } from './_components/RepositoryContent';
 import { RepositorySkeleton } from './_components/RepositorySkeleton';
@@ -15,16 +15,19 @@ function RepositoryError({ error }: { error: string }) {
   );
 }
 
-export default function RepositoriesPage() {
-  const t = useTranslations('repositories');
+export default async function RepositoriesPage() {
+  const t = await getTranslations('repositories');
 
   return (
-    <div className="container mx-auto py-6">
-      <PageHeader title={t('repositories')} description={t('repositories_description')}>
-        <RepositoryActions />
-      </PageHeader>
+    <div className="container mx-auto py-6 px-4">
+      <div className="flex flex-col gap-4">
+        <PageHeader 
+          title={t('repositories')} 
+          description={t('repositories_description')}
+        >
+          <RepositoryActions />
+        </PageHeader>
 
-      <div className="mt-6">
         <Suspense fallback={<RepositorySkeleton />}>
           <RepositoryContent />
         </Suspense>
