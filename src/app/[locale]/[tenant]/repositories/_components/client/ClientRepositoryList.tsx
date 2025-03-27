@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, ChevronRight, GitBranch, Plus, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GitBranch, PlusCircle, Search } from 'lucide-react';
 import { Input } from '@/components/shadcn/input';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
@@ -162,9 +162,9 @@ export function ClientRepositoryList({
               title={t('noRepositories')}
               description={searchQuery ? t('noRepositoriesMatchingSearch') : t('noRepositoriesYet')}
               action={
-                <Button onClick={() => document.getElementById('add-repository-button')?.click()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('addRepository')}
+                <Button onClick={() => document.getElementById('add-repository-button')?.click()} size="sm" className="gap-1">
+                  <PlusCircle className="h-4 w-4" />
+                  <span>{t('addRepository')}</span>
                 </Button>
               }
             />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, RefreshCw } from 'lucide-react';
+import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { useRouter } from 'next/navigation';
@@ -57,9 +57,9 @@ export function DeploymentActions() {
   return (
     <>
       <div className="flex items-center space-x-2">
-        <Button onClick={() => setWizardActive(true)} id="new-deployment-button" aria-label="New Deployment">
-          <Plus className="h-4 w-4 mr-1" />
-          {t('new_deployment', { fallback: 'New Deployment' })}
+        <Button onClick={() => setWizardActive(true)} id="new-deployment-button" size="sm" className="h-8 gap-1">
+          <PlusCircle className="h-4 w-4" />
+          <span>{t('new_deployment', { fallback: 'New Deployment' })}</span>
         </Button>
         <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />

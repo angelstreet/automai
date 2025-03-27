@@ -1,6 +1,6 @@
 'use client';
 
-import { Rocket, Plus } from 'lucide-react';
+import { Rocket, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/layout/EmptyState';
@@ -23,9 +23,9 @@ export function ClientEmptyState() {
         title={t('no_deployments_title', { fallback: 'No deployments found' })}
         description={t('no_deployments_description', { fallback: 'Create your first deployment to get started' })}
         action={
-          <Button onClick={handleNewDeployment}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('new_deployment', { fallback: 'New Deployment' })}
+          <Button onClick={handleNewDeployment} size="sm" className="gap-1">
+            <PlusCircle className="h-4 w-4" />
+            <span>{t('new_deployment', { fallback: 'New Deployment' })}</span>
           </Button>
         }
       />

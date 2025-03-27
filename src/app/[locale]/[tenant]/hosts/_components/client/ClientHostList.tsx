@@ -10,7 +10,7 @@ import {
   deleteHost as deleteHostAction,
 } from '@/app/actions/hosts';
 import { Button } from '@/components/shadcn/button';
-import { Server, Plus } from 'lucide-react';
+import { Server, PlusCircle } from 'lucide-react';
 import { EmptyState } from '@/components/layout/EmptyState';
 
 interface ClientHostListProps {
@@ -139,9 +139,9 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           title="No hosts found"
           description="Add your first host to get started"
           action={
-            <Button onClick={() => document.getElementById('add-host-button')?.click()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Host
+            <Button onClick={() => document.getElementById('add-host-button')?.click()} size="sm" className="gap-1">
+              <PlusCircle className="h-4 w-4" />
+              <span>Add Host</span>
             </Button>
           }
         />

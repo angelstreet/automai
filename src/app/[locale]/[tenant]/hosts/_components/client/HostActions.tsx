@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, RefreshCw, Grid, List } from 'lucide-react';
+import { PlusCircle, RefreshCw, Grid, List } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/shadcn/button';
@@ -113,9 +113,9 @@ export function HostActions() {
         <Button variant="outline" size="sm" className="h-8" onClick={handleViewModeChange}>
           {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
         </Button>
-        <Button size="sm" className="h-8" onClick={handleAddHost} id="add-host-button" aria-label="Add Host">
-          <Plus className="h-4 w-4 mr-2" />
-          {t('add_host', { fallback: 'Add Host' })}
+        <Button size="sm" className="h-8 gap-1" onClick={handleAddHost} id="add-host-button">
+          <PlusCircle className="h-4 w-4" />
+          <span>{t('add_host', { fallback: 'Add Host' })}</span>
         </Button>
       </div>
 
