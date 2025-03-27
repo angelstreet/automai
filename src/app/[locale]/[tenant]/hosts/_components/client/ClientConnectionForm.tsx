@@ -1,7 +1,6 @@
 'use client';
 
 import { AlertCircle, Check, CheckCircle, Loader2 } from 'lucide-react';
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import { useState, useRef } from 'react';

@@ -1,4 +1,3 @@
-import { Loader2 } from 'lucide-react';
 import { useParams } from 'next/navigation';
 /* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { useTranslations } from 'next-intl';
@@ -7,7 +6,7 @@ import { toast } from 'sonner';
 import * as React from 'react';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import { addHost, testConnection } from '../actions';
+import { addHost } from '../actions';
 import { Host } from '../types';
 
 import { ClientConnectionForm, FormData } from './client/ClientConnectionForm';
