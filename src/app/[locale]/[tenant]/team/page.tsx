@@ -19,13 +19,11 @@ export default async function TeamPage() {
   const teams = teamsResult.success ? teamsResult.data : [];
 
   return (
-    <div className="container mx-auto py-6 space-y-8">
+    <div className="container mx-auto py-6 space-x-4">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
         <p className="text-muted-foreground">Manage teams, members, and resource limits</p>
       </div>
-
-      <TeamPageContent initialTeams={teams} />
     </div>
   );
 }
