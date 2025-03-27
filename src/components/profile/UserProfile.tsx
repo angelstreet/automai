@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import * as React from 'react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -47,25 +46,9 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
       .toUpperCase();
   };
 
-  // Use memo to keep values stable across renders
-  const userName = React.useMemo(() => {
-    return user?.name || user?.email?.split('@')[0] || 'Guest';
-  }, [user?.name, user?.email]);
-  
-  const avatarSrc = React.useMemo(() => {
-    // Add cache busting parameter only once when component mounts
-    const src = user?.user_metadata?.avatar_url || '/avatars/default.svg';
-    
-    // For external URLs, we need to respect the cache control of the remote server
-    if (src.startsWith('http')) {
-      return src;
-    }
-    
-    // For local assets, add a fixed cache parameter
-    // Use tenant ID or user ID as a stable cache key that changes only when profile changes
-    const cacheKey = user?.id || tenant || 'default';
-    return `${src}?v=${encodeURIComponent(cacheKey)}`;
-  }, [user?.user_metadata?.avatar_url, user?.id, tenant]);
+  // Get user information the same way NavUser does
+  const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
+  const avatarUrl = user?.avatar_url || user?.user_metadata?.avatar_url;
 
   const handleSignOut = async () => {
     try {
@@ -119,21 +102,19 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
           variant="ghost"
           className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground"
         >
-          <Avatar className="h-8 w-8 border border-border dark:border-gray-600 shadow-sm">
-            <AvatarImage 
-              src={avatarSrc}
-              alt={userName} 
-              onError={() => setImageError(true)} 
-              loading="eager"
-              fetchPriority="high"
-            />
-            <AvatarFallback 
-              className="bg-accent text-accent-foreground dark:bg-gray-700 dark:text-gray-200"
-              delayMs={500} // Increase delay before showing fallback
-            >
-              {userName ? getInitials(userName) : <UserIcon className="h-4 w-4" />}
-            </AvatarFallback>
-          </Avatar>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={userName}
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full"
+              />
+            ) : (
+              <UserIcon className="h-4 w-4 text-foreground" />
+            )}
+          </div>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>

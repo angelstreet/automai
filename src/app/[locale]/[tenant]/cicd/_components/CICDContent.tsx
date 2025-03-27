@@ -10,13 +10,6 @@ export default async function CICDContent() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Button id="add-provider-button" size="sm" className="h-8 gap-1">
-          <PlusCircle className="h-4 w-4" />
-          <span>Add Provider</span>
-        </Button>
-      </div>
-
       <ClientCICDProvider initialProviders={providers} removeTitle={true} />
     </div>
   );

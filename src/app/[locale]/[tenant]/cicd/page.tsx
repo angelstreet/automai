@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { PageHeader } from '@/components/layout/PageHeader';
 import CICDContent from './_components/CICDContent';
 import CICDSkeleton from './_components/CICDSkeleton';
+import { CICDActions } from './_components/client/CICDActions';
 
 export default async function CICDPage() {
   const t = await getTranslations('cicd');
@@ -13,7 +14,9 @@ export default async function CICDPage() {
         <PageHeader
           title={t('title') || 'CI/CD Integration'}
           description={t('description') || 'Configure CI/CD providers for automated deployments'}
-        />
+        >
+          <CICDActions />
+        </PageHeader>
 
         <Suspense fallback={<CICDSkeleton />}>
           <CICDContent />
