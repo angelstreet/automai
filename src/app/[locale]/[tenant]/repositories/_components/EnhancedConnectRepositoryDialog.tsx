@@ -464,13 +464,7 @@ export function EnhancedConnectRepositoryDialog({
               </Button>
             </div>
           </TabsContent>
-        </Tabs>
-
-        <DialogFooter className="mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('cancel')}
-          </Button>
-        </DialogFooter>
+        </Tabs> 
       </DialogContent>
     </Dialog>
   );
