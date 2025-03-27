@@ -21,6 +21,7 @@ interface WorkspaceHeaderClientProps {
   tenant?: string;
   user?: User | null;
   initialHeaderState?: boolean;
+  children?: React.ReactNode;
 }
 
 const HEADER_COOKIE_NAME = 'header:state';
@@ -32,6 +33,7 @@ export function WorkspaceHeaderClient({
   tenant,
   user: propUser,
   initialHeaderState = true,
+  children,
 }: WorkspaceHeaderClientProps) {
   const { open } = useSidebar();
   const userContext = useUser();
@@ -118,9 +120,10 @@ export function WorkspaceHeaderClient({
               </div>
               <div className="flex items-center gap-1">
                 <Separator orientation="vertical" className="h-8 opacity-30" />
-                <ThemeToggle />
+                {/* ThemeToggle and UserProfile are loaded separately via Suspense in the parent */}
+                {React.Children.toArray(children)[0]}
                 <Separator orientation="vertical" className="h-8 opacity-30" />
-                <UserProfile tenant={tenant} user={user} />
+                {React.Children.toArray(children)[1]}
                 <Separator orientation="vertical" className="h-8 opacity-30" />
                 <Button
                   variant="outline"

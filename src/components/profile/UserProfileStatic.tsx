@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import * as React from 'react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -19,13 +18,26 @@ import {
 import { useUser } from '@/context';
 import { signOut } from '@/app/actions/auth';
 import { cn } from '@/lib/utils';
+import { User } from '@/types/user';
 
-interface UserProfileProps {
+interface UserProfileStaticProps {
   tenant?: string;
-  user?: any; // Allow passing user directly
+  user?: User | null;
+  avatarUrl?: string;
+  userName?: string;
+  userEmail?: string;
 }
 
-export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileProps) {
+/**
+ * Optimized static user profile component that prevents flashing during load
+ */
+export function UserProfileStatic({ 
+  tenant: propTenant, 
+  user: propUser,
+  avatarUrl,
+  userName: displayName,
+  userEmail
+}: UserProfileStaticProps) {
   const router = useRouter();
   const params = useParams();
   const { user: contextUser, clearCache } = useUser();
@@ -33,8 +45,7 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
   // Use provided user prop if available, otherwise use from context
   const user = propUser || contextUser;
   const locale = (params.locale as string) || 'en';
-  const [imageError, setImageError] = React.useState(false);
-
+  
   // Use tenant from props if available, otherwise use from URL params as fallback
   const tenant = propTenant || (params.tenant as string) || 'trial';
 
@@ -47,25 +58,10 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
       .toUpperCase();
   };
 
-  // Use memo to keep values stable across renders
-  const userName = React.useMemo(() => {
-    return user?.name || user?.email?.split('@')[0] || 'Guest';
-  }, [user?.name, user?.email]);
-  
-  const avatarSrc = React.useMemo(() => {
-    // Add cache busting parameter only once when component mounts
-    const src = user?.user_metadata?.avatar_url || '/avatars/default.svg';
-    
-    // For external URLs, we need to respect the cache control of the remote server
-    if (src.startsWith('http')) {
-      return src;
-    }
-    
-    // For local assets, add a fixed cache parameter
-    // Use tenant ID or user ID as a stable cache key that changes only when profile changes
-    const cacheKey = user?.id || tenant || 'default';
-    return `${src}?v=${encodeURIComponent(cacheKey)}`;
-  }, [user?.user_metadata?.avatar_url, user?.id, tenant]);
+  // Use provided values or extract from user
+  const userName = displayName || user?.name || user?.email?.split('@')[0] || 'Guest';
+  const email = userEmail || user?.email || '';
+  const initials = getInitials(userName);
 
   const handleSignOut = async () => {
     try {
@@ -76,7 +72,6 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
         }
       } catch (cacheError) {
         console.warn('Error clearing cache during logout:', cacheError);
-        // Continue with logout even if cache clearing fails
       }
 
       // Then sign out
@@ -119,28 +114,27 @@ export function UserProfile({ tenant: propTenant, user: propUser }: UserProfileP
           variant="ghost"
           className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground"
         >
-          <Avatar className="h-8 w-8 border border-border dark:border-gray-600 shadow-sm">
-            <AvatarImage 
-              src={avatarSrc}
-              alt={userName} 
-              onError={() => setImageError(true)} 
-              loading="eager"
-              fetchPriority="high"
-            />
-            <AvatarFallback 
-              className="bg-accent text-accent-foreground dark:bg-gray-700 dark:text-gray-200"
-              delayMs={500} // Increase delay before showing fallback
-            >
-              {userName ? getInitials(userName) : <UserIcon className="h-4 w-4" />}
-            </AvatarFallback>
-          </Avatar>
+          <div className="h-8 w-8 rounded-full border border-border dark:border-gray-600 shadow-sm overflow-hidden flex items-center justify-center bg-accent text-accent-foreground dark:bg-gray-700 dark:text-gray-200">
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt={userName}
+                width={32}
+                height={32}
+                priority
+                className="h-8 w-8 rounded-full"
+              />
+            ) : (
+              initials || <UserIcon className="h-4 w-4" />
+            )}
+          </div>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{userName}</p>
-            {user && <p className="text-xs leading-none text-muted-foreground">{user.email}</p>}
+            {email && <p className="text-xs leading-none text-muted-foreground">{email}</p>}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
