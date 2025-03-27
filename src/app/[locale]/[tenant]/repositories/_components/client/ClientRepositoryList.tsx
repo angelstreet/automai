@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { ChevronLeft, ChevronRight, GitBranch, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GitBranch, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Card, CardContent } from '@/components/shadcn/card';
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { EmptyState } from '@/components/layout/EmptyState';
+import { Input } from '@/components/shadcn/input';
 
 import { EnhancedRepositoryCard } from '../EnhancedRepositoryCard';
 import { Repository } from '../../types';
@@ -313,15 +314,34 @@ export function ClientRepositoryList({
 
   return (
     <div>
-      {/* Tabs filter */}
-      <Tabs defaultValue="all" className="mb-4" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-4">
-          <TabsTrigger value="all">{t('all')}</TabsTrigger>
-          <TabsTrigger value="public">{t('public')}</TabsTrigger>
-          <TabsTrigger value="private">{t('private')}</TabsTrigger>
-          <TabsTrigger value="starred">{t('starred')}</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Tabs filter and search */}
+      <div className="flex justify-between items-center py-4 mb-4 relative">
+        <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="pointer-events-auto">
+            <TabsList className="grid grid-cols-4 min-w-[400px]">
+              <TabsTrigger value="all">{t('all')}</TabsTrigger>
+              <TabsTrigger value="public">{t('public')}</TabsTrigger>
+              <TabsTrigger value="private">{t('private')}</TabsTrigger>
+              <TabsTrigger value="starred">{t('starred')}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        <div className="invisible">
+          {/* Placeholder to maintain layout */}
+          <div className="w-[300px]" />
+        </div>
+
+        <div className="relative w-[300px]">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t('searchRepositories')}
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
 
       {/* Repository cards with pagination */}
       {renderRepositoryCards()}

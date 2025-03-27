@@ -1,5 +1,4 @@
 import { Card, CardContent } from '@/components/shadcn/card';
-import { RepositoryHeader } from './RepositoryHeader';
 import { getRepositories } from '@/app/actions/repositories';
 import { ClientRepositoryList } from './client/ClientRepositoryList';
 
@@ -12,9 +11,7 @@ export async function RepositoryContent() {
 
   return (
     <Card className="w-full">
-      <RepositoryHeader />
-
-      <CardContent className="pt-4">
+      <CardContent>
         <ClientRepositoryList 
           initialRepositories={repositories} 
           initialStarredIds={[]} // We'll fetch starred repos on the client
