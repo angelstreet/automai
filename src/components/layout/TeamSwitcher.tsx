@@ -24,45 +24,131 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import * as React from 'react';
+import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { useUser, useTeam } from '@/context';
 
 // Define team type for consistency
 type Team = {
+  id?: string;
   name: string;
   logo: React.ElementType;
   plan: string;
 };
 
 interface TeamSwitcherProps {
-  teams?: Team[];
   defaultCollapsed?: boolean;
 }
 
-// Default teams if none provided
-const defaultTeams: Team[] = [
-  {
-    name: 'Acme Inc',
-    logo: Building2,
-    plan: 'trial',
-  },
-  {
-    name: 'Monsters Inc',
-    logo: Factory,
-    plan: 'pro',
-  },
-  {
-    name: 'Devs Inc',
-    logo: Code2,
-    plan: 'enterprise',
-  },
-];
+// Icons mapping for different subscription tiers
+const tierIcons = {
+  trial: Building2,
+  pro: Factory,
+  enterprise: Code2,
+};
 
 // Wrap the component with React.memo to prevent unnecessary re-renders
 const TeamSwitcher = React.memo(function TeamSwitcher({
-  teams = defaultTeams,
   defaultCollapsed = false,
 }: TeamSwitcherProps) {
-  const [activeTeam, setActiveTeam] = React.useState<Team>(() => teams?.[0] || defaultTeams[0]);
+  const { user } = useUser();
+  const { teams, selectedTeam, selectTeam, fetchTeams } = useTeam();
+  const [displayTeams, setDisplayTeams] = React.useState<Team[]>([]);
+  const [activeTeam, setActiveTeam] = React.useState<Team | null>(null);
+
+  // Fetch teams on mount
+  useEffect(() => {
+    if (user) {
+      fetchTeams();
+    }
+  }, [user, fetchTeams]);
+
+  // Transform teams data for display
+  useEffect(() => {
+    if (!user) return;
+
+    // Generate teams based on user's tier
+    let teamsList: Team[] = [];
+    
+    if (user.tenant_name === 'trial') {
+      // Trial: Only one team, not selectable
+      teamsList = [{
+        name: 'Trial',
+        logo: tierIcons.trial,
+        plan: 'trial',
+      }];
+    } else if (user.tenant_name === 'pro') {
+      // Pro: Only one team, not selectable
+      teamsList = [{
+        id: teams.length > 0 ? teams[0].id : undefined,
+        name: 'Pro',
+        logo: tierIcons.pro,
+        plan: 'pro',
+      }];
+    } else if (user.tenant_name === 'enterprise') {
+      // Enterprise: Multiple selectable teams
+      teamsList = teams.map(team => ({
+        id: team.id,
+        name: team.name,
+        logo: tierIcons.enterprise,
+        plan: 'enterprise',
+      }));
+    }
+    
+    // Set teams for display
+    setDisplayTeams(teamsList);
+    
+    // Set active team
+    if (teamsList.length > 0) {
+      // If we have a selected team from context, use it
+      if (selectedTeam) {
+        const matchingTeam = teamsList.find(t => t.id === selectedTeam.id);
+        if (matchingTeam) {
+          setActiveTeam(matchingTeam);
+        } else {
+          setActiveTeam(teamsList[0]);
+        }
+      } else {
+        setActiveTeam(teamsList[0]);
+      }
+    }
+  }, [user, teams, selectedTeam]);
+
+  // Handle team selection
+  const handleTeamSelect = (team: Team) => {
+    setActiveTeam(team);
+    // Only select in context if team has ID and we're on enterprise tier
+    if (team.id && user?.tenant_name === 'enterprise') {
+      selectTeam(team.id);
+    }
+  };
+
+  // If no active team yet, show loading state
+  if (!activeTeam) {
+    // Render collapsed view for SSR and initial mount
+    if (defaultCollapsed) {
+      return (
+        <div className="flex items-center justify-center p-1.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background">
+            <Building2 className="h-4 w-4" />
+          </div>
+        </div>
+      );
+    }
+    
+    // Default loading state
+    return (
+      <button className="flex w-full items-center justify-between rounded-lg border border-border p-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+            <Building2 className="h-3.5 w-3.5" />
+          </div>
+          <span className="text-xs font-medium">Loading...</span>
+        </div>
+      </button>
+    );
+  }
+
   const Icon = activeTeam.logo;
 
   // Render collapsed view for SSR and initial mount
@@ -76,6 +162,21 @@ const TeamSwitcher = React.memo(function TeamSwitcher({
     );
   }
 
+  // For trial and pro, or when there's only one team, don't show dropdown
+  if (user?.tenant_name !== 'enterprise' || displayTeams.length <= 1) {
+    return (
+      <button className="flex w-full items-center justify-between rounded-lg border border-border p-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-border bg-background">
+            <Icon className="h-3.5 w-3.5" />
+          </div>
+          <span className="text-xs font-medium">{activeTeam.name}</span>
+        </div>
+      </button>
+    );
+  }
+
+  // For enterprise with multiple teams, show dropdown
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -92,13 +193,15 @@ const TeamSwitcher = React.memo(function TeamSwitcher({
       <DropdownMenuContent className="w-56" align="start" side="right" forceMount>
         <DropdownMenuLabel>Switch team</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {teams.map((team) => (
+        {displayTeams.map((team) => (
           <DropdownMenuItem
-            key={team.name}
-            onClick={() => setActiveTeam(team)}
+            key={team.id || team.name}
+            onClick={() => handleTeamSelect(team)}
             className={cn(
               'cursor-pointer',
-              team.name === activeTeam.name ? 'bg-accent text-accent-foreground' : '',
+              (activeTeam && team.id === activeTeam.id) || 
+              (!team.id && !activeTeam.id && team.name === activeTeam.name) 
+                ? 'bg-accent text-accent-foreground' : '',
             )}
           >
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-background mr-2">
