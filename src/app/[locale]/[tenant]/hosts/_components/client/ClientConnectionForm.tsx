@@ -123,7 +123,13 @@ export function ClientConnectionForm({
           onTestSuccess();
         }
       } else {
-        setTestError(result.message || t('errors.testFailed'));
+        // Handle both types of error response formats
+        const errorMessage = 'message' in result 
+          ? result.message 
+          : 'error' in result 
+            ? result.error
+            : t('errors.testFailed');
+        setTestError(errorMessage);
       }
     } catch (error) {
       console.error('Error testing connection:', error);
@@ -324,21 +330,24 @@ export function ClientConnectionForm({
         </Button>
       </div>
 
-      {testError && (
-        <Alert variant="destructive" className="py-2">
-          <AlertCircle className="h-3 w-3" />
-          <AlertTitle className="text-sm">{t('connectionFailed')}</AlertTitle>
-          <AlertDescription className="text-xs">{testError}</AlertDescription>
-        </Alert>
-      )}
+      {/* Status message container with fixed height */}
+      <div className="min-h-[60px]">
+        {testError && (
+          <Alert variant="destructive" className="py-2">
+            <AlertCircle className="h-3 w-3" />
+            <AlertTitle className="text-sm">{t('connectionFailed')}</AlertTitle>
+            <AlertDescription className="text-xs">{testError}</AlertDescription>
+          </Alert>
+        )}
 
-      {testSuccess && (
-        <Alert variant="success" className="py-2">
-          <Check className="h-3 w-3" />
-          <AlertTitle className="text-sm">{t('connectionSuccessful')}</AlertTitle>
-          <AlertDescription className="text-xs">{t('readyToConnect')}</AlertDescription>
-        </Alert>
-      )}
+        {testSuccess && (
+          <Alert variant="success" className="py-2">
+            <Check className="h-3 w-3" />
+            <AlertTitle className="text-sm">{t('connectionSuccessful')}</AlertTitle>
+            <AlertDescription className="text-xs">{t('readyToConnect')}</AlertDescription>
+          </Alert>
+        )}
+      </div>
 
       <div className="flex justify-end space-x-2 mt-2">
         {onCancel && (

@@ -4,10 +4,15 @@ import { cookies } from 'next/headers';
 
 export const createClient = async (cookieStore?: any) => {
   // Use provided cookieStore or get a new one
-  const cookieJar = cookieStore || cookies();
+  const cookieJar = cookieStore || await cookies();
   
-  // Get the HTTP method to determine if we're in a Server Action or Route Handler (POST request)
-  const requestHeaders = new Headers(cookieJar.getAll().map((c: { name: string; value: string }) => ['cookie', `${c.name}=${c.value}`]));
+  // Get all cookies and convert to headers
+  const allCookies = await Promise.all((cookieJar.getAll()).map(async (c: { name: string; value: string }) => 
+    ['cookie', `${c.name}=${c.value}`]
+  ));
+  
+  // Create request headers
+  const requestHeaders = new Headers(allCookies);
   
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
