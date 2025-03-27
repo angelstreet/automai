@@ -33,6 +33,11 @@ export const supabaseAuth = {
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
+        return { success: false, error: 'Failed to fetch user profile' };
+      }
+
+      if (!profile) {
+        return { success: false, error: 'No profile found for user' };
       }
 
       const metadata = user.user_metadata || {};
@@ -41,8 +46,8 @@ export const supabaseAuth = {
       const name = metadata.name || metadata.full_name || user.email?.split('@')[0] || 'Guest';
 
       // Only use role from profiles table
-      const role = profile?.role;
-      console.log('Role resolution in getSession:', { profileRole: profile?.role });
+      const role = profile.role;
+      console.log('Role resolution in getSession:', { profileRole: profile.role });
 
       if (!role) {
         console.error('No role found in profiles table');
@@ -56,10 +61,10 @@ export const supabaseAuth = {
             id: user.id,
             email: user.email,
             name,
-            image: profile?.avatar_url || metadata.avatar_url || null,
+            image: profile.avatar_url || metadata.avatar_url || null,
             role,
-            tenant_id: profile?.tenant_id,
-            tenant_name: profile?.tenant_name,
+            tenant_id: profile.tenant_id,
+            tenant_name: profile.tenant_name,
             user_metadata: metadata,
           },
           accessToken: access_token,
@@ -110,6 +115,13 @@ export const supabaseAuth = {
         return {
           success: false,
           error: profileError.message,
+        };
+      }
+
+      if (!profile) {
+        return {
+          success: false,
+          error: 'No profile found for user',
         };
       }
 
