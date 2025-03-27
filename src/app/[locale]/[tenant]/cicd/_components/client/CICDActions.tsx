@@ -2,29 +2,34 @@
 
 import { Button } from '@/components/shadcn/button';
 import { PlusCircle, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import CICDProviderForm from '../CICDProviderForm';
+import { useRouter } from 'next/navigation';
 
 export function CICDActions() {
   const t = useTranslations('cicd');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const router = useRouter();
 
-  const handleAddProvider = () => {
+  const handleAddProvider = useCallback(() => {
     setIsAddDialogOpen(true);
-  };
+  }, []);
 
-  const handleDialogComplete = () => {
+  const handleRefresh = useCallback(() => {
+    router.refresh();
+  }, [router]);
+
+  const handleDialogComplete = useCallback(() => {
     setIsAddDialogOpen(false);
-    // Dispatch a refresh event so the provider list is updated
-    window.dispatchEvent(new CustomEvent('refresh-providers'));
-  };
+    router.refresh(); // Use Next.js router refresh instead of custom events
+  }, [router]);
 
   return (
     <>
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="h-8">
+        <Button variant="outline" size="sm" className="h-8" onClick={handleRefresh}>
           <RefreshCw className="h-4 w-4 mr-2" />
           {t('refresh')}
         </Button>
