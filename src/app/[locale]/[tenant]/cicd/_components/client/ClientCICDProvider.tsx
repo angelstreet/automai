@@ -34,8 +34,6 @@ import CICDProviderForm from '../CICDProviderForm';
 import {
   deleteCICDProvider,
   testCICDProvider,
-  createCICDProvider,
-  updateCICDProvider,
   getCICDProviders,
 } from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
@@ -61,7 +59,7 @@ export default function ClientCICDProvider({
   const { toast } = useToast();
   const t = useTranslations('cicd');
 
-  // Function to load providers from the server
+  // Memoize the loadProviders function
   const loadProviders = useCallback(async () => {
     try {
       setLoading(true);
@@ -76,12 +74,13 @@ export default function ClientCICDProvider({
     }
   }, []);
 
-  // Open the add/edit dialog
+  // Memoize the refresh handler
+  const handleRefresh = useCallback(() => {
+    loadProviders();
+  }, [loadProviders]);
+
+  // Memoize dialog handlers
   const handleAddEditProvider = useCallback((provider?: CICDProviderType) => {
-    console.log(
-      '[ClientCICDProvider] Opening add/edit dialog',
-      provider ? 'edit mode' : 'add mode',
-    );
     if (provider) {
       setSelectedProvider(provider);
       setIsEditing(true);
@@ -92,23 +91,15 @@ export default function ClientCICDProvider({
     setIsAddEditDialogOpen(true);
   }, []);
 
-  // Add a new useEffect to listen for refresh events
-  useEffect(() => {
-    const handleRefresh = () => {
-      console.log('[ClientCICDProvider] Refreshing provider list');
-      loadProviders();
-    };
+  // Memoize delete handler
+  const handleDeleteClick = useCallback((provider: CICDProviderType) => {
+    setSelectedProvider(provider);
+    setIsDeleteDialogOpen(true);
+  }, []);
 
-    window.addEventListener('refresh-providers', handleRefresh);
-    return () => {
-      window.removeEventListener('refresh-providers', handleRefresh);
-    };
-  }, [loadProviders]);
-
-  // Test a provider connection
-  const handleTestProvider = async (provider: CICDProviderType) => {
+  // Memoize test provider handler
+  const handleTestProvider = useCallback(async (provider: CICDProviderType) => {
     try {
-      // Create provider payload for testing
       const providerPayload = {
         id: provider.id,
         name: provider.name,
@@ -122,19 +113,13 @@ export default function ClientCICDProvider({
 
       const result = await testCICDProvider(providerPayload);
 
-      if (result.success) {
-        toast({
-          title: 'Connection Successful',
-          description: 'Successfully connected to the CI/CD provider.',
-          variant: 'default',
-        });
-      } else {
-        toast({
-          title: 'Connection Failed',
-          description: result.error || 'Failed to connect to the CI/CD provider.',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: result.success ? 'Connection Successful' : 'Connection Failed',
+        description: result.success 
+          ? 'Successfully connected to the CI/CD provider.'
+          : result.error || 'Failed to connect to the CI/CD provider.',
+        variant: result.success ? 'default' : 'destructive',
+      });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -142,33 +127,15 @@ export default function ClientCICDProvider({
         variant: 'destructive',
       });
     }
-  };
+  }, [toast]);
 
-  // Open the delete confirmation dialog
-  const handleDeleteClick = useCallback((provider: CICDProviderType) => {
-    setSelectedProvider(provider);
-    setIsDeleteDialogOpen(true);
-  }, []);
-
-  // Handle dialog completion
+  // Memoize dialog completion handler
   const handleDialogComplete = useCallback(async () => {
     setIsAddEditDialogOpen(false);
+    await loadProviders();
+  }, [loadProviders]);
 
-    // Refresh providers after dialog closes
-    try {
-      setLoading(true);
-      const result = await getCICDProviders();
-      if (result.success) {
-        setProviders(result.data || []);
-      }
-    } catch (error) {
-      console.error('Error refreshing providers:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Handle provider deletion
+  // Memoize delete confirmation handler
   const handleConfirmDelete = useCallback(async () => {
     if (!selectedProvider) return;
 
@@ -177,9 +144,7 @@ export default function ClientCICDProvider({
       const result = await deleteCICDProvider(selectedProvider.id);
 
       if (result.success) {
-        // Remove the provider from the list
         setProviders((prev) => prev.filter((p) => p.id !== selectedProvider.id));
-
         toast({
           title: 'Provider Deleted',
           description: `The provider "${selectedProvider.name}" has been successfully deleted.`,
@@ -204,7 +169,7 @@ export default function ClientCICDProvider({
     }
   }, [selectedProvider, toast]);
 
-  // Get provider type badge color
+  // Memoize provider badge color function
   const getProviderBadgeColor = useCallback((type: string) => {
     switch (type) {
       case 'jenkins':
@@ -220,6 +185,13 @@ export default function ClientCICDProvider({
     }
   }, []);
 
+  // Initial load effect
+  useEffect(() => {
+    if (initialProviders.length === 0) {
+      handleRefresh();
+    }
+  }, [handleRefresh, initialProviders.length]);
+
   // Empty state render
   if (providers.length === 0 && !loading) {
     return (
@@ -230,7 +202,7 @@ export default function ClientCICDProvider({
             title={t('no_providers_title', { fallback: 'No CI/CD Providers' })}
             description={t('no_providers_description', { fallback: 'Add a CI/CD provider to start creating deployments' })}
             action={
-              <Button onClick={() => document.getElementById('add-provider-button')?.click()}>
+              <Button onClick={() => handleAddEditProvider()}>
                 <PlusCircle className="h-4 w-4 mr-2" />
                 {t('add_provider', { fallback: 'Add Provider' })}
               </Button>
