@@ -223,7 +223,7 @@ export default function ClientCICDProvider({
   // Empty state render
   if (providers.length === 0 && !loading) {
     return (
-      <Card>
+      <Card className="border-0">
         <CardContent className="p-0">
           <EmptyState
             icon={<AlertCircle className="h-10 w-10" />}
@@ -242,7 +242,7 @@ export default function ClientCICDProvider({
   }
 
   return (
-    <Card>
+    <Card className="border-0">
       {!removeTitle && (
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xl font-bold">{t('providers_title', { fallback: 'CI/CD Providers' })}</CardTitle>

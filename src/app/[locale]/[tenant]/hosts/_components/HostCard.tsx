@@ -303,7 +303,7 @@ function HostCard({ host, onDelete, onTestConnection }: HostCardProps) {
 
   return (
     <>
-      <Card className="relative w-[300px]">
+      <Card className="relative w-[300px] border-0 shadow-sm">
         <CardHeader className="p-4 pb-2 flex flex-row items-start justify-between space-y-0">
           <div className="flex flex-col space-y-1.5">
             <div className="flex items-center">

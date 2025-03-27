@@ -17,7 +17,7 @@ export function ClientEmptyState() {
   };
 
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-lg p-6">
       <EmptyState
         icon={<Rocket className="h-10 w-10" />}
         title={t('no_deployments_title', { fallback: 'No deployments found' })}
