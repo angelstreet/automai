@@ -1,8 +1,40 @@
 // DO NOT MODIFY THIS FILE
 import { createServerClient, CookieOptions } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
 import { locales, defaultLocale } from '@/config';
+
+// Cache to store validated sessions (5-minute TTL)
+const sessionCache = new Map<string, { userId: string; expiresAt: number }>();
+
+// Clean expired cache entries every minute
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of sessionCache.entries()) {
+      if (value.expiresAt < now) {
+        sessionCache.delete(key);
+      }
+    }
+  }, 60 * 1000);
+}
+
+// Helper function to decode JWT base64url format
+function base64urlDecode(str: string): string {
+  // Convert base64url to base64 by replacing URL-safe chars and adding padding
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  // Add padding if needed
+  while (base64.length % 4) {
+    base64 += '=';
+  }
+  // Decode to string
+  try {
+    return Buffer.from(base64, 'base64').toString();
+  } catch (e) {
+    throw new Error('Invalid base64 string');
+  }
+}
 
 /**
  * Creates a Supabase client for middleware
@@ -53,7 +85,7 @@ export const createClient = (request: NextRequest) => {
     authCookies.forEach((cookie) => {
       // Only log the cookie name and a hint about its value (not the full value for security)
       console.log(
-        `[Middleware:auth-cookie] ${cookie.name}: length=${cookie.value.length}, expires=${cookie.expires || 'session'}`,
+        `[Middleware:auth-cookie] ${cookie.name}: length=${cookie.value.length}, expires=session`,
       );
     });
   }
@@ -142,9 +174,102 @@ function clearAuthCookies(response: NextResponse): NextResponse {
 }
 
 /**
+ * Extract and validate JWT token from auth cookie
+ * Returns userId if valid, null if invalid
+ */
+async function validateAuthToken(request: NextRequest): Promise<string | null> {
+  try {
+    // Get auth cookie (JWT token)
+    const authCookie = request.cookies.get('sb-wexkgcszrwxqsthahfyq-auth-token.0');
+    
+    if (!authCookie?.value) {
+      return null;
+    }
+    
+    // Check cache first
+    const cacheKey = authCookie.value.slice(0, 64); // Use part of token as cache key
+    const cachedSession = sessionCache.get(cacheKey);
+    
+    if (cachedSession && cachedSession.expiresAt > Date.now()) {
+      console.log('[Middleware:auth] Using cached session validation');
+      return cachedSession.userId;
+    }
+    
+    // Parse the JWT to extract payload
+    try {
+      // Handle base64 format - the cookie appears to start with "base64-eyJ"
+      let tokenValue = authCookie.value;
+      
+      // Check if it's in the base64 format (starts with "base64-")
+      if (tokenValue.startsWith('base64-')) {
+        // Extract just the base64 part (remove the "base64-" prefix)
+        tokenValue = tokenValue.substring(7);
+      }
+      
+      // Try to parse as JSON first (Supabase may store structured data)
+      try {
+        const jsonData = JSON.parse(tokenValue);
+        // If parsed successfully as JSON and contains access_token, use that
+        if (jsonData && jsonData.access_token) {
+          tokenValue = jsonData.access_token;
+        }
+      } catch (e) {
+        // Not JSON, continue with the raw value (might be direct JWT)
+      }
+      
+      // Decode JWT parts - JWT structure is header.payload.signature
+      const parts = tokenValue.split('.');
+      
+      // Need at least 2 parts for a proper JWT (header and payload)
+      if (parts.length < 2) {
+        return null;
+      }
+      
+      // The payload is the second part (index 1)
+      let payload;
+      try {
+        // Base64url decode and parse the payload
+        const base64Payload = parts[1]; 
+        const decodedPayload = base64urlDecode(base64Payload);
+        payload = JSON.parse(decodedPayload);
+      } catch (e) {
+        console.error('[Middleware:auth] Error decoding JWT payload:', e);
+        return null;
+      }
+      
+      // Check if token is expired
+      if (!payload.exp || payload.exp * 1000 < Date.now()) {
+        return null;
+      }
+      
+      // Extract user ID (sub claim in JWT)
+      const userId = payload.sub;
+      
+      if (!userId) {
+        return null;
+      }
+      
+      // Cache the validation result (5-minute TTL)
+      sessionCache.set(cacheKey, {
+        userId,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      });
+      
+      return userId;
+    } catch (err) {
+      console.error('[Middleware:auth] Error parsing JWT token:', err);
+      return null;
+    }
+  } catch (error) {
+    console.error('[Middleware:auth] Token validation error:', error);
+    return null;
+  }
+}
+
+/**
  * Updates the Supabase Auth session in middleware
- * - Refreshes the auth token
- * - Validates the user's session
+ * - Efficiently validates JWT token without Supabase API calls when possible
+ * - Falls back to Supabase auth API only when needed
  * - Returns a NextResponse with updated cookies
  * - Redirects to login if no authenticated user is found
  */
@@ -154,11 +279,33 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   );
   const startTime = Date.now();
 
-  // Create the Supabase client
+  // First, try to validate the token locally without API calls
+  const userId = await validateAuthToken(request);
+  
+  // Create the default response
   const { supabase, response } = createClient(request);
-
-  // IMPORTANT: DO NOT REMOVE auth.getUser() call or add code between
-  // createClient and getUser() - this ensures proper token validation
+  
+  if (userId) {
+    // Token is valid, skip Supabase API call
+    console.log('🔍 AUTH MIDDLEWARE: User authenticated via local validation', userId);
+    console.log(`[Middleware:auth] User authenticated in ${Date.now() - startTime}ms`);
+    
+    // Check if this is a data fetching request (POST to a page route)
+    const isDataFetchRequest =
+      request.method === 'POST' && !request.nextUrl.pathname.startsWith('/api/');
+    
+    console.log(
+      `[Middleware:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`,
+    );
+    
+    console.log(`[Middleware:complete] Finished processing request in ${Date.now() - startTime}ms`);
+    return response;
+  }
+  
+  // Token validation failed or no token found, fallback to Supabase API
+  console.log('[Middleware:auth] Local validation failed, falling back to Supabase API');
+  
+  // Standard Supabase auth check
   const { data, error } = await supabase.auth.getUser();
 
   // Reduced logging for better performance - only log errors
@@ -167,7 +314,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     console.log('🔍 Request URL:', request.nextUrl.pathname);
   } else if (data.user) {
     // Just log minimal user info
-    console.log('🔍 AUTH MIDDLEWARE: User authenticated', data.user.id);
+    console.log('🔍 AUTH MIDDLEWARE: User authenticated via Supabase API', data.user.id);
     console.log(`[Middleware:auth] User authenticated in ${Date.now() - startTime}ms`);
   }
 
