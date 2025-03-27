@@ -5,14 +5,14 @@ export default async function BillingContent() {
   const t = await getTranslations('billing');
   
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-2">
       {/* Current Plan Card */}
       <Card className="border-0 shadow-none">
         <CardHeader>
           <CardTitle>{t('currentPlan')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4">
+          <div className="grid gap-2">
             <div className="border p-4 rounded-md">
               <h3 className="text-lg font-semibold mb-2">{t('pro')}</h3>
               <p className="text-muted-foreground">{t('price')}: $19.99 / {t('monthly')}</p>
