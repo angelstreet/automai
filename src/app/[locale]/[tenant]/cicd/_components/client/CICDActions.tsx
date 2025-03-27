@@ -5,6 +5,7 @@ import { PlusCircle } from 'lucide-react';
 
 export function CICDActions() {
   const handleAddProvider = () => {
+    console.log('[CICDActions] Dispatching open-provider-dialog event');
     // Dispatch the event to show the add provider dialog
     window.dispatchEvent(new CustomEvent('open-provider-dialog'));
   };
