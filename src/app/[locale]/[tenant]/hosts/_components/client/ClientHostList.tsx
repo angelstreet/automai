@@ -19,6 +19,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   const [selectedHosts, setSelectedHosts] = useState<Set<string>>(new Set());
   const [showAddHost, setShowAddHost] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [formData, setFormData] = useState<ConnectionFormData>({
     name: '',
     description: '',
@@ -40,37 +41,94 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     return () => window.removeEventListener(VIEW_MODE_CHANGE, handleViewModeChange);
   }, []);
 
+  const handleTestConnection = async (host: Host): Promise<boolean> => {
+    try {
+      console.log(`[ClientHostList] Testing connection for host: ${host.name}`);
+      const result = await testHostConnection(host.id);
+      
+      // Update the host status in the local state
+      setHosts((prevHosts) => 
+        prevHosts.map((h) => 
+          h.id === host.id 
+            ? { ...h, status: result.success ? 'connected' : 'failed' } 
+            : h
+        )
+      );
+      
+      return result.success;
+    } catch (error) {
+      console.error(`[ClientHostList] Error testing connection for host: ${host.name}`, error);
+      
+      // Update the host status to failed
+      setHosts((prevHosts) => 
+        prevHosts.map((h) => 
+          h.id === host.id ? { ...h, status: 'failed' } : h
+        )
+      );
+      
+      return false;
+    }
+  };
+
+  // Handle refresh all hosts
+  const handleRefreshAll = useCallback(async () => {
+    if (isRefreshing) return;
+
+    console.log('[ClientHostList] Refreshing all hosts');
+    setIsRefreshing(true);
+    
+    try {
+      // First, set all hosts to 'testing' status with staggered animation delays
+      setHosts(prevHosts => 
+        prevHosts.map((host, index) => ({
+          ...host,
+          status: 'testing',
+          animationDelay: index % 5  // Add staggered animation delays (0-4)
+        }))
+      );
+      
+      // Small initial delay to let animations start
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Then sequentially test each host with visual delay
+      const updatedHosts = [...hosts];
+      for (let i = 0; i < updatedHosts.length; i++) {
+        const host = updatedHosts[i];
+        await handleTestConnection(host);
+        // Small delay between hosts to improve visual feedback
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+      
+      console.log('[ClientHostList] All hosts tested successfully');
+      
+    } catch (error) {
+      console.error('[ClientHostList] Error refreshing hosts:', error);
+    } finally {
+      setIsRefreshing(false);
+      
+      // Clean up animation delays after refresh is complete
+      setHosts(prevHosts => 
+        prevHosts.map(host => ({
+          ...host,
+          animationDelay: undefined
+        }))
+      );
+      
+      console.log('[ClientHostList] Host refresh complete');
+      // Dispatch event to indicate refresh is complete
+      window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
+    }
+  }, [isRefreshing, handleTestConnection, hosts]);
+
   // Listen for refresh action
   useEffect(() => {
-    const handleRefresh = async () => {
-      try {
-        const updatedHosts = [...hosts];
-        
-        for (const host of updatedHosts) {
-          try {
-            const result = await testHostConnection(host.id);
-            if (result.success) {
-              host.status = 'connected';
-            } else {
-              host.status = 'failed';
-            }
-          } catch (error) {
-            host.status = 'failed';
-          }
-        }
-
-        setHosts(updatedHosts);
-      } catch (error) {
-        console.error('Error refreshing hosts:', error);
-      } finally {
-        // Dispatch event to indicate refresh is complete
-        window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
-      }
+    const handleRefresh = () => {
+      handleRefreshAll();
     };
 
     window.addEventListener('refresh-hosts', handleRefresh);
     return () => window.removeEventListener('refresh-hosts', handleRefresh);
-  }, [hosts]);
+  }, [handleRefreshAll]);
 
   // Listen for add host dialog
   useEffect(() => {
@@ -92,7 +150,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
         type: formData.type as 'ssh' | 'docker' | 'portainer',
         ip: formData.ip,
         port: parseInt(formData.port || '22'),
-        status: 'pending',
+        status: 'connected',
         created_at: new Date(),
         updated_at: new Date(),
         is_windows: false,
@@ -150,34 +208,6 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       }
     } catch (error) {
       console.error('Error deleting host:', error);
-    }
-  };
-
-  const handleTestConnection = async (host: Host): Promise<boolean> => {
-    try {
-      const result = await testHostConnection(host.id);
-      
-      // Update the host status in the local state
-      setHosts((prevHosts) => 
-        prevHosts.map((h) => 
-          h.id === host.id 
-            ? { ...h, status: result.success ? 'connected' : 'failed' } 
-            : h
-        )
-      );
-      
-      return result.success;
-    } catch (error) {
-      console.error('Error testing connection:', error);
-      
-      // Update the host status to failed
-      setHosts((prevHosts) => 
-        prevHosts.map((h) => 
-          h.id === host.id ? { ...h, status: 'failed' } : h
-        )
-      );
-      
-      return false;
     }
   };
 
