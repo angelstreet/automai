@@ -12,6 +12,9 @@ import {
   testHostConnection,
   deleteHost as deleteHostAction,
 } from '@/app/actions/hosts';
+import { Button } from '@/components/shadcn/button';
+import { Server, Plus } from 'lucide-react';
+import { EmptyState } from '@/components/layout/EmptyState';
 
 interface ClientHostListProps {
   initialHosts: Host[];
@@ -195,9 +198,18 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
   // Empty state for no hosts
   if (hosts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-lg border border-dashed">
-        <p className="mb-2 text-lg font-medium">No hosts found</p>
-        <p className="text-muted-foreground mb-4">Add your first host to get started</p>
+      <div className="rounded-lg border">
+        <EmptyState
+          icon={<Server className="h-10 w-10" />}
+          title="No hosts found"
+          description="Add your first host to get started"
+          action={
+            <Button onClick={() => setShowAddHost(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Host
+            </Button>
+          }
+        />
       </div>
     );
   }

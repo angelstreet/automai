@@ -40,6 +40,7 @@ import {
 } from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
 import type { CICDProviderType } from '../../types';
+import { EmptyState } from '@/components/layout/EmptyState';
 
 interface ClientCICDProviderProps {
   initialProviders: CICDProviderType[];
@@ -208,27 +209,18 @@ export default function ClientCICDProvider({
   if (providers.length === 0 && !loading) {
     return (
       <Card>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center h-32 space-y-2 border-2 border-dashed rounded-lg p-4">
-            <AlertCircle className="h-8 w-8 text-gray-400" />
-            <div className="text-center space-y-1">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                No CI/CD Providers
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Add a CI/CD provider to start creating deployments
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleAddEditProvider()}
-              className="mt-2"
-            >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Add Provider
-            </Button>
-          </div>
+        <CardContent className="p-0">
+          <EmptyState
+            icon={<AlertCircle className="h-10 w-10" />}
+            title="No CI/CD Providers"
+            description="Add a CI/CD provider to start creating deployments"
+            action={
+              <Button onClick={() => handleAddEditProvider()}>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Provider
+              </Button>
+            }
+          />
         </CardContent>
       </Card>
     );
