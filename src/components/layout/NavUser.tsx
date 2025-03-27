@@ -32,23 +32,8 @@ export function NavUser({ user }: NavUserProps) {
   const { clearCache } = useUser();
   const isCollapsed = !open;
 
-  // Display actual user role (previously was for debug role)
-  // We keep any window.__debugRole value but show the actual user role
-  if (typeof window !== 'undefined' && window.__debugRole) {
-    console.log('DEBUG NavUser - Found window.__debugRole:', window.__debugRole);
-  }
   // Use the actual user role for display
   const displayRole = user.role;
-
-  // DEBUG: Log user role information in NavUser
-  React.useEffect(() => {
-    console.log('DEBUG NavUser - Role information:', {
-      currentUser: user,
-      userRole: user?.role,
-      displayRole,
-      windowDebugRole: typeof window !== 'undefined' ? window.__debugRole : null,
-    });
-  }, [user, displayRole]);
 
   const handleSignOut = async () => {
     try {

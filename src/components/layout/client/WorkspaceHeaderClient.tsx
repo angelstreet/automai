@@ -25,7 +25,7 @@ interface WorkspaceHeaderClientProps {
 }
 
 const HEADER_COOKIE_NAME = 'header:state';
-const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year in seconds
 
 export function WorkspaceHeaderClient({
   className = '',
@@ -37,7 +37,7 @@ export function WorkspaceHeaderClient({
 }: WorkspaceHeaderClientProps) {
   const { open } = useSidebar();
   const userContext = useUser();
-  const [isCollapsed, setIsCollapsed] = React.useState(false); // Start with default state
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [headerVisible, setHeaderVisible] = React.useState(initialHeaderState);
   const [headerStyles, setHeaderStyles] = React.useState<React.CSSProperties>({});
 
@@ -47,41 +47,18 @@ export function WorkspaceHeaderClient({
   // Update collapsed state and styles when sidebar state changes
   React.useEffect(() => {
     setIsCollapsed(!open);
-    if (!open) {
-      setHeaderStyles({
-        marginLeft: 'var(--sidebar-width-offset, 0)',
-        width: 'calc(100% - var(--sidebar-width-offset, 0))',
-      });
-    } else {
-      setHeaderStyles({});
-    }
+    setHeaderStyles(!open ? {
+      marginLeft: 'var(--sidebar-width-offset, 0)',
+      width: 'calc(100% - var(--sidebar-width-offset, 0))',
+    } : {});
   }, [open]);
-
-  // Debug logging for user data sources
-  React.useEffect(() => {
-    if (propUser) {
-      console.log('[WorkspaceHeader] Using user from props:', {
-        id: propUser.id,
-        role: propUser.role || 'No role found',
-        source: 'props',
-      });
-    } else if (userContext?.user) {
-      console.log('[WorkspaceHeader] Using user from context:', {
-        id: userContext.user.id,
-        role: userContext.user.role || 'No role found',
-        source: 'context',
-      });
-    } else {
-      console.log('[WorkspaceHeader] No user data available');
-    }
-  }, [propUser, userContext?.user]);
 
   const toggleHeader = React.useCallback(() => {
     const newState = !headerVisible;
     setHeaderVisible(newState);
     Cookies.set(HEADER_COOKIE_NAME, newState ? 'visible' : 'hidden', {
       path: '/',
-      expires: HEADER_COOKIE_MAX_AGE / (60 * 60 * 24), // Convert seconds to days
+      expires: 365, // 1 year in days
     });
   }, [headerVisible]);
 
