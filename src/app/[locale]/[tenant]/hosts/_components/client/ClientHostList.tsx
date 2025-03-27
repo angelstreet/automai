@@ -47,8 +47,8 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       const result = await testHostConnection(host.id);
       
       // Update the host status in the local state
-      setHosts((prevHosts) => 
-        prevHosts.map((h) => 
+      setHosts(prevHosts => 
+        prevHosts.map(h => 
           h.id === host.id 
             ? { ...h, status: result.success ? 'connected' : 'failed' } 
             : h
@@ -60,8 +60,8 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       console.error(`[ClientHostList] Error testing connection for host: ${host.name}`, error);
       
       // Update the host status to failed
-      setHosts((prevHosts) => 
-        prevHosts.map((h) => 
+      setHosts(prevHosts => 
+        prevHosts.map(h => 
           h.id === host.id ? { ...h, status: 'failed' } : h
         )
       );
@@ -78,26 +78,17 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
     setIsRefreshing(true);
     
     try {
-      // First, set all hosts to 'testing' status with staggered animation delays
+      // First, set all hosts to 'testing' status
       setHosts(prevHosts => 
-        prevHosts.map((host, index) => ({
+        prevHosts.map(host => ({
           ...host,
           status: 'testing',
-          animationDelay: index % 5  // Add staggered animation delays (0-4)
         }))
       );
       
-      // Small initial delay to let animations start
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Then sequentially test each host with visual delay
-      const updatedHosts = [...hosts];
-      for (let i = 0; i < updatedHosts.length; i++) {
-        const host = updatedHosts[i];
-        await handleTestConnection(host);
-        // Small delay between hosts to improve visual feedback
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
+      // Test connections concurrently
+      const testPromises = hosts.map(host => handleTestConnection(host));
+      await Promise.all(testPromises);
       
       console.log('[ClientHostList] All hosts tested successfully');
       
@@ -105,15 +96,6 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       console.error('[ClientHostList] Error refreshing hosts:', error);
     } finally {
       setIsRefreshing(false);
-      
-      // Clean up animation delays after refresh is complete
-      setHosts(prevHosts => 
-        prevHosts.map(host => ({
-          ...host,
-          animationDelay: undefined
-        }))
-      );
-      
       console.log('[ClientHostList] Host refresh complete');
       // Dispatch event to indicate refresh is complete
       window.dispatchEvent(new CustomEvent('refresh-hosts-complete'));
