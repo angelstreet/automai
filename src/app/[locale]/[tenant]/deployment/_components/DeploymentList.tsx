@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Clock, RefreshCw, Play, MoreHorizontal, Trash } from 'lucide-react';
+import { Search, Clock, RefreshCw, Play, MoreHorizontal, Trash, Eye, PlayCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
-import { abortDeployment, deleteDeployment } from '@/app/actions/deployments';
+import { runDeployment as runDeploymentAction, deleteDeployment as deleteDeploymentAction } from '@/app/actions/deployments';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { useToast } from '@/components/shadcn/use-toast';
 import { DeploymentActions } from './client/DeploymentActions';
+import { Button } from '@/components/shadcn/button';
 
 interface DeploymentListProps {
   deployments: Deployment[];
@@ -50,6 +51,7 @@ export function DeploymentList({
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState<string | null>(null);
 
   const hasAttemptedRepoFetchRef = React.useRef(false);
 
@@ -105,14 +107,14 @@ export function DeploymentList({
     if (!selectedDeployment) return;
     try {
       setActionInProgress(selectedDeployment.id);
-      const success = await deleteDeployment(selectedDeployment.id);
+      const success = await deleteDeploymentAction(selectedDeployment.id);
       if (success) {
         toast({
           title: 'Deployment Deleted',
           description: 'Successfully deleted.',
           variant: 'default',
         });
-        router.refresh(); // Refresh the page to get updated data
+        router.refresh();
       } else {
         toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' });
       }
@@ -131,31 +133,24 @@ export function DeploymentList({
   const getRepositoryName = (deployment: Deployment): string => {
     if (!deployment.repositoryId) return 'Unknown';
     const repo = repositoriesMap[deployment.repositoryId];
-    return repo?.name || deployment.repositoryName || 'Unknown';
+    return repo?.name || 'Unknown';
   };
 
   const getFilteredDeployments = () => {
     return deployments.filter((deployment) => {
       if (activeTab === 'scheduled' && deployment.scheduleType !== 'scheduled') return false;
       if (activeTab === 'pending' && deployment.status !== 'pending') return false;
-      if (
-        activeTab === 'active' &&
-        deployment.status !== 'in_progress' &&
-        deployment.status !== 'running'
-      )
-        return false;
+      if (activeTab === 'active' && deployment.status === 'in_progress') return true;
       if (
         activeTab === 'completed' &&
-        deployment.status !== 'success' &&
-        deployment.status !== 'failed'
+        (deployment.status === 'success' || deployment.status === 'failed')
       )
-        return false;
+        return true;
       const repoName = getRepositoryName(deployment);
       const matchesSearch =
         searchQuery === '' ||
         deployment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        repoName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (deployment.userId && deployment.userId.toLowerCase().includes(searchQuery.toLowerCase()));
+        repoName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = filterStatus === 'all' || deployment.status === filterStatus;
       return matchesSearch && matchesStatus;
     });
@@ -200,6 +195,38 @@ export function DeploymentList({
           </td>
         </tr>
       ));
+  };
+
+  const handleRunDeployment = async (deployment: Deployment) => {
+    if (isRunning === deployment.id) return;
+    
+    setIsRunning(deployment.id);
+    try {
+      const result = await runDeploymentAction(deployment.id);
+      
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: 'Deployment started successfully',
+          variant: 'default',
+        });
+        router.refresh();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to start deployment',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRunning(null);
+    }
   };
 
   return (
@@ -420,33 +447,51 @@ export function DeploymentList({
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm">
                         <div className="flex space-x-2 justify-end">
-                          <button
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDeployment(deployment);
+                            }}
+                          >
+                            <Eye className="mr-1 h-3 w-3" /> View
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center text-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRunDeployment(deployment);
+                            }}
+                            disabled={isRunning === deployment.id}
+                          >
+                            {isRunning === deployment.id ? (
+                              <>
+                                <span className="animate-spin mr-1">⟳</span> Running...
+                              </>
+                            ) : (
+                              <>
+                                <PlayCircle className="mr-1 h-3 w-3" /> Run
+                              </>
+                            )}
+                          </Button>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteClick(deployment, e);
                             }}
-                            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
                             disabled={actionInProgress === deployment.id}
                           >
-                            <Trash className="h-4 w-4 text-gray-500" />
-                          </button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700">
-                                <MoreHorizontal className="h-4 w-4 text-gray-500" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleViewDeployment(deployment);
-                                }}
-                              >
-                                View Details
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                            <Trash2 className="mr-1 h-3 w-3" /> Delete
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -529,19 +574,18 @@ export function DeploymentList({
           )}
         </div>
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-[400px]">
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Deployment</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be
-                undone.
+                Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogFooter className="flex justify-end gap-2">
+              <AlertDialogCancel className="mt-0">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleConfirmDelete}
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete
               </AlertDialogAction>
