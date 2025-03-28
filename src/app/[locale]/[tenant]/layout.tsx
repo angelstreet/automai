@@ -27,7 +27,7 @@ export default async function TenantLayout({
 
   return (
     <UserProvider initialUser={user}>
-      <TenantLayoutClient user={user} tenant={tenant}>
+      <TenantLayoutClient user={user}>
         <TooltipProvider>
           <ToasterProvider />
           <div className="relative flex min-h-screen w-full">

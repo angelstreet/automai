@@ -36,7 +36,7 @@ export const createClient = async (cookieStore?: any) => {
               cookieJar.set(name, value, options);
             } else {
               // Log that we're skipping setting cookie in an RSC context
-              console.log(`[Supabase] Skipping cookie set for ${name} in RSC context`);
+              //console.debug(`[Supabase] Skipping cookie set for ${name} in RSC context`);
             }
           } catch (error) {
             console.error(`[Supabase] Error setting cookie ${name}:`, error);
@@ -52,7 +52,7 @@ export const createClient = async (cookieStore?: any) => {
               cookieJar.set(name, '', { ...options, maxAge: 0 });
             } else {
               // Log that we're skipping removing cookie in an RSC context
-              console.log(`[Supabase] Skipping cookie removal for ${name} in RSC context`);
+              //console.debug(`[Supabase] Skipping cookie removal for ${name} in RSC context`);
             }
           } catch (error) {
             console.error(`[Supabase] Error removing cookie ${name}:`, error);

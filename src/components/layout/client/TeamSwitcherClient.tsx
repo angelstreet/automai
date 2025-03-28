@@ -1,7 +1,9 @@
 'use client';
 
-import { Button } from '@/components/shadcn/button';
-import { CommandSeparator } from '@/components/shadcn/command';
+import { ChevronDown, Building2, Factory, Code2 } from 'lucide-react';
+import * as React from 'react';
+import { useEffect } from 'react';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,24 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useSidebar } from '@/components/sidebar';
-import {
-  ChevronDown,
-  ChevronUp,
-  Compass,
-  PlusCircle,
-  Settings,
-  User as UserIcon,
-  Building2,
-  Factory,
-  Code2,
-} from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import * as React from 'react';
-import { useEffect } from 'react';
-import { cn } from '@/lib/utils';
 import { useUser } from '@/context';
-import type { UserTeam } from '@/types/user';
+import { cn } from '@/lib/utils';
+import type { UserTeam, User } from '@/types/user';
 
 // Define team type for visual consistency
 type VisualTeam = {
@@ -40,6 +27,7 @@ type VisualTeam = {
 interface TeamSwitcherClientProps {
   defaultCollapsed?: boolean;
   initialTeams?: UserTeam[];
+  initialUser?: User | null;
 }
 
 // Icons mapping for different subscription tiers
@@ -52,26 +40,21 @@ const tierIcons = {
 export default function TeamSwitcherClient({
   defaultCollapsed = false,
   initialTeams = [],
+  initialUser,
 }: TeamSwitcherClientProps) {
   const { user, teams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
   const [displayTeams, setDisplayTeams] = React.useState<VisualTeam[]>([]);
   const [activeTeam, setActiveTeam] = React.useState<VisualTeam | null>(null);
 
-  // Fetch teams on mount
-  useEffect(() => {
-    if (user) {
-      refreshUser();
-    }
-  }, [user, refreshUser]);
-
   // Transform teams data for display
   useEffect(() => {
-    if (!user) return;
+    const currentUser = initialUser || user;
+    if (!currentUser) return;
 
     // Generate teams based on user's tier
     let teamsList: VisualTeam[] = [];
 
-    if (user.tenant_name === 'trial') {
+    if (currentUser.tenant_name === 'trial') {
       // Trial: Always display "Trial" (hardcoded)
       teamsList = [
         {
@@ -80,7 +63,7 @@ export default function TeamSwitcherClient({
           plan: 'trial',
         },
       ];
-    } else if (user.tenant_name === 'pro') {
+    } else if (currentUser.tenant_name === 'pro') {
       // Pro: Always display "Pro" (hardcoded)
       teamsList = [
         {
@@ -90,7 +73,7 @@ export default function TeamSwitcherClient({
           plan: 'pro',
         },
       ];
-    } else if (user.tenant_name === 'enterprise') {
+    } else if (currentUser.tenant_name === 'enterprise') {
       // Enterprise: Multiple selectable teams
       teamsList = teams.map((team) => ({
         id: team.id,
@@ -117,13 +100,14 @@ export default function TeamSwitcherClient({
         setActiveTeam(teamsList[0]);
       }
     }
-  }, [user, teams, selectedTeam]);
+  }, [user, initialUser, teams, selectedTeam]);
 
   // Handle team selection
   const handleTeamSelect = (team: VisualTeam) => {
     setActiveTeam(team);
+    const currentUser = initialUser || user;
     // Only select in context if team has ID and we're on enterprise tier
-    if (team.id && user?.tenant_name === 'enterprise') {
+    if (team.id && currentUser?.tenant_name === 'enterprise') {
       setSelectedTeam(team.id);
     }
   };
@@ -155,6 +139,7 @@ export default function TeamSwitcherClient({
   }
 
   const Icon = activeTeam.logo;
+  const currentUser = initialUser || user;
 
   // Render collapsed view for SSR and initial mount
   if (defaultCollapsed) {
@@ -168,7 +153,7 @@ export default function TeamSwitcherClient({
   }
 
   // For trial and pro, or when there's only one team, don't show dropdown
-  if (user?.tenant_name !== 'enterprise' || displayTeams.length <= 1) {
+  if (currentUser?.tenant_name !== 'enterprise' || displayTeams.length <= 1) {
     return (
       <button className="flex w-full items-center justify-between rounded-lg border border-border p-2">
         <div className="flex items-center gap-2">

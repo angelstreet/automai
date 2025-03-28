@@ -65,12 +65,12 @@ export function UserProvider({
   const { protectedFetch } = useRequestProtection('UserContext');
   const [error, setError] = React.useState<Error | null>(null);
   
-  console.log('[DEBUG] UserProvider initializing with initialUser:', initialUser ? `${initialUser.id} (${initialUser.email})` : 'null');
+  console.debug('[UserContext] UserProvider initializing with initialUser:', initialUser ? `${initialUser.id} (${initialUser.email})` : 'null');
 
   // Fetch user data only when forced (e.g., refresh)
   const fetchUserData = useCallback(
     async (force = false): Promise<User | null> => {
-      console.log('[DEBUG] fetchUserData called with initialUser:', initialUser ? 'exists' : 'null', 'force:', force);
+      console.log('[DEBUG]  fetchUserData called with initialUser:', initialUser ? 'exists' : 'null', 'force:', force);
       if (force) {
         console.log('[DEBUG] Force fetch triggered by:', new Error().stack);
       }
@@ -113,11 +113,6 @@ export function UserProvider({
       refreshInterval: 0, // Manual refresh only
     }
   );
-
-  // Log when user data changes
-  useEffect(() => {
-    console.log('[DEBUG] User data changed:', user ? `${user.id} (${user.email})` : 'null');
-  }, [user]);
 
   // Refresh user data explicitly
   const refreshUser = useCallback(async () => {
@@ -227,21 +222,6 @@ export function UserProvider({
       checkResourceLimit,
     ],
   );
-
-  // Set up a one-time console log to track component mounts in dev mode
-  useEffect(() => {
-    console.log('[DEBUG] UserProvider mounted. Next.js strict mode may cause double mounting in development.');
-    
-    // Detect if we're in development and strict mode
-    const isDevMode = process.env.NODE_ENV === 'development';
-    if (isDevMode) {
-      console.log('[DEBUG] Running in development mode - double renders are expected due to React Strict Mode');
-    }
-    
-    return () => {
-      console.log('[DEBUG] UserProvider unmounted');
-    };
-  }, []);
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }

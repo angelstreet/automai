@@ -1,15 +1,18 @@
-import { Suspense } from 'react';
-import TeamSwitcherClient from './client/TeamSwitcherClient';
 import { Building2 } from 'lucide-react';
+import { Suspense } from 'react';
+
 import type { Team } from '@/types/context/team';
+import type { User } from '@/types/user';
+
+import TeamSwitcherClient from './client/TeamSwitcherClient';
 
 interface TeamSwitcherProps {
   defaultCollapsed?: boolean;
   teams?: Team[];
+  user?: User | null;
 }
 
-export function TeamSwitcher({ defaultCollapsed = false }: TeamSwitcherProps) {
-  // Server-side component that wraps the client component with suspense
+export function TeamSwitcher({ defaultCollapsed = false, user }: TeamSwitcherProps) {
   return (
     <Suspense
       fallback={
@@ -20,7 +23,7 @@ export function TeamSwitcher({ defaultCollapsed = false }: TeamSwitcherProps) {
         </div>
       }
     >
-      <TeamSwitcherClient defaultCollapsed={defaultCollapsed} />
+      <TeamSwitcherClient defaultCollapsed={defaultCollapsed} initialUser={user} />
     </Suspense>
   );
 }
