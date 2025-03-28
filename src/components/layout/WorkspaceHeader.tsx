@@ -8,7 +8,6 @@ import { UserProfileWrapper } from './UserProfileWrapper';
 interface WorkspaceHeaderProps {
   className?: string;
   fixed?: boolean;
-  tenant?: string;
   user?: User | null;
 }
 
@@ -17,7 +16,6 @@ const HEADER_COOKIE_NAME = 'header:state';
 export async function WorkspaceHeader({
   className = '',
   fixed = false,
-  tenant,
   user,
 }: WorkspaceHeaderProps) {
   // Get the header visibility state from cookies on the server
@@ -29,7 +27,6 @@ export async function WorkspaceHeader({
     <WorkspaceHeaderClient
       className={className}
       fixed={fixed}
-      tenant={tenant}
       user={user}
       initialHeaderState={initialHeaderState}
     >

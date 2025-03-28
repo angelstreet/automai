@@ -36,7 +36,7 @@ export default async function TenantLayout({
         user_metadata: authUser.user_metadata,
       }
     : null;
-    
+
   // Server-side logging
   console.log('[TenantLayout] Rendering tenant layout, tenant:', tenant);
 
@@ -57,7 +57,7 @@ export default async function TenantLayout({
             }}
           >
             <Suspense fallback={<WorkspaceHeaderSkeleton />}>
-              <WorkspaceHeader tenant={tenant} user={user} />
+              <WorkspaceHeader user={user} />
             </Suspense>
             <main className="flex-1 px-3 py-0 w-full max-w-full border border-gray-30 rounded-md">
               {children}

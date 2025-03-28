@@ -18,7 +18,6 @@ import { User } from '@/types/user';
 interface WorkspaceHeaderClientProps {
   className?: string;
   fixed?: boolean;
-  tenant?: string;
   user?: User | null;
   initialHeaderState?: boolean;
   children?: React.ReactNode;
@@ -30,13 +29,15 @@ const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year in seconds
 export function WorkspaceHeaderClient({
   className = '',
   fixed = false,
-  tenant,
   user: propUser,
   initialHeaderState = true,
   children,
 }: WorkspaceHeaderClientProps) {
   const { open } = useSidebar();
   const userContext = useUser();
+  const user = propUser || userContext?.user;
+  // Derive tenant from user data if available
+  const tenant = user?.tenant_name || user?.tenant_id;
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [headerVisible, setHeaderVisible] = React.useState(initialHeaderState);
   const [headerStyles, setHeaderStyles] = React.useState<React.CSSProperties>({});
