@@ -245,15 +245,36 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   // Standard Supabase auth check
   const { data, error } = await supabase.auth.getUser();
 
-  // Only log errors, not every auth success
+  // Only log unexpected errors, not common auth failures
   if (error) {
-    console.error('AUTH MIDDLEWARE ERROR:', error.message);
+    // Skip logging of common auth errors in middleware
+    const isCommonAuthError = 
+      error.message.includes('Invalid Refresh Token') || 
+      error.message.includes('refresh_token_not_found') ||
+      error.message.includes('session') ||
+      error.status === 401;
+      
+    if (!isCommonAuthError) {
+      console.error('AUTH MIDDLEWARE ERROR:', error.message);
+    }
   }
 
   // Check if this is a data fetching request (POST to a page route)
   // These should not be redirected to prevent redirect loops
   const isDataFetchRequest =
     request.method === 'POST' && !request.nextUrl.pathname.startsWith('/api/');
+
+  // Add detailed logging to understand middleware flow
+  console.log('[DEBUG] Middleware auth check:', {
+    hasError: !!error,
+    errorStatus: error?.status,
+    errorMessage: error?.message,
+    errorCode: error?.code,
+    hasUser: !!data?.user,
+    isDataFetchRequest,
+    method: request.method,
+    path: request.nextUrl.pathname
+  });
 
   // Only redirect for specific auth errors, not network errors
   const isAuthError = error && (
@@ -262,8 +283,15 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     error.message?.includes('Invalid Refresh Token') ||
     error.code === 'refresh_token_not_found'
   );
-
-  if ((!data.user || isAuthError) && !isDataFetchRequest) {
+  
+  console.log('[DEBUG] Middleware redirect check:', {
+    isAuthError,
+    noUserData: !data?.user,
+    shouldRedirect: (!data?.user || isAuthError) && !isDataFetchRequest
+  });
+  
+  if ((!data?.user || isAuthError) && !isDataFetchRequest) {
+    console.log('[DEBUG] 🔄 Middleware will redirect to login');
     // We used to skip redirect for auth cookie issues, but now we always redirect
     // if authentication fails, even if auth cookies are present
 
@@ -279,7 +307,14 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     const redirectResponse = NextResponse.redirect(redirectUrl, { status: 307 });
 
     // Clear auth cookies in the redirect response
-    return clearAuthCookies(redirectResponse);
+    console.log('[DEBUG] About to clear auth cookies and redirect to:', redirectUrl.toString());
+    const finalResponse = clearAuthCookies(redirectResponse);
+    
+    // Verify the location header is set
+    console.log('[DEBUG] Final redirect response has location?', finalResponse.headers.has('location'),
+                'location:', finalResponse.headers.get('location'));
+                
+    return finalResponse;
   }
 
   // Return the response with updated cookies for authenticated users

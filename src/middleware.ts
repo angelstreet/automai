@@ -89,6 +89,13 @@ export default async function middleware(request: NextRequest) {
   const isPublicPath =
     publicPaths.some((path) => request.nextUrl.pathname === path) ||
     request.nextUrl.pathname === '/';
+    
+  console.log('[DEBUG] Path check:', {
+    path: request.nextUrl.pathname, 
+    isPublicPath,
+    publicPaths,
+    pathParts
+  });
 
   // Check if it's an auth-only path (like login)
   const isAuthOnlyPath =
@@ -136,11 +143,15 @@ export default async function middleware(request: NextRequest) {
 
   // 4. For all other paths, use Supabase's updateSession
   // This will handle session validation and token refresh
+  console.log('[DEBUG] Main middleware: about to call updateSession for path:', request.nextUrl.pathname);
   const response = await updateSession(request);
 
   // If the response is a redirect (unauthenticated), return it directly
+  console.log('[DEBUG] Main middleware: received response, has location?', response.headers.has('location'), 
+              'location:', response.headers.get('location'));
+              
   if (response.headers.has('location')) {
-    console.log('Redirecting to:', response.headers.get('location'));
+    console.log('[DEBUG] 🔄 Main middleware redirecting to:', response.headers.get('location'));
     return response;
   }
 
