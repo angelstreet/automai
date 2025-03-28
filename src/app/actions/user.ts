@@ -82,7 +82,12 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
 
     if (!result.success || !result.data) {
       // Handle common auth errors
-      if (result.error === 'No active session' || result.error === 'Auth session missing!') {
+      if (
+        result.error === 'No active session' || 
+        result.error === 'Auth session missing!' ||
+        result.error?.includes('Invalid Refresh Token') ||
+        result.error?.includes('refresh_token_not_found')
+      ) {
         // Cache the null result to avoid repeated failures
         serverCache.set(cacheKey, { user: null, timestamp: now });
         return null;
@@ -214,12 +219,16 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
     if (
       error instanceof Error &&
       (error.message.includes('Refresh Token') ||
+        error.message.includes('refresh_token_not_found') ||
         error.message.includes('session') ||
         error.message.includes('auth'))
     ) {
+      // Silently return null for common auth errors - don't log these as they're expected
       return null;
     }
 
+    // Only throw for unexpected errors
+    console.error('Unexpected error in getUser:', error);
     throw new Error('Failed to get current user');
   }
 });

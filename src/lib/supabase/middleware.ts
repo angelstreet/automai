@@ -229,19 +229,18 @@ async function validateAuthToken(request: NextRequest): Promise<string | null> {
  * - Redirects to login if no authenticated user is found
  */
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
-  const startTime = Date.now();
 
   // First, try to validate the token locally without API calls
   const userId = await validateAuthToken(request);
-  
+
   // Create the default response
   const { supabase, response } = createClient(request);
-  
+
   if (userId) {
     // Token is valid, skip Supabase API call
     return response;
   }
-  
+
   // Token validation failed or no token found, fallback to Supabase API
   // Standard Supabase auth check
   const { data, error } = await supabase.auth.getUser();
@@ -263,7 +262,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     error.message?.includes('Invalid Refresh Token') ||
     error.code === 'refresh_token_not_found'
   );
-  
+
   if ((!data.user || isAuthError) && !isDataFetchRequest) {
     // We used to skip redirect for auth cookie issues, but now we always redirect
     // if authentication fails, even if auth cookies are present
