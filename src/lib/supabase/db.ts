@@ -1,10 +1,6 @@
-import { createClient } from './server';
 import { cookies } from 'next/headers';
 
-// Import specialized DB modules
-import { gitProvider, repository } from './db-repositories';
-import { host } from './db-hosts';
-import { deployment } from './db-deployment';
+import { createClient } from './server';
 
 // Create a simple database interface that uses Supabase
 const db = {
@@ -244,12 +240,6 @@ const db = {
       return result;
     },
   },
-
-  // Re-export specialized DB modules for backward compatibility
-  gitProvider,
-  repository,
-  host,
-  deployment,
 };
 
 export default db;

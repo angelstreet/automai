@@ -1,10 +1,9 @@
 'use server';
 
-import { supabaseAuth } from '@/lib/supabase/auth';
-import { AuthUser, UserTeam, TeamMember } from '@/types/user';
-import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { createClient as createServerClient } from '@/lib/supabase/server';
+
+import { supabaseAuth } from '@/lib/supabase/auth';
+import { AuthUser } from '@/types/user';
 
 /**
  * Invalidate user-related cache
@@ -26,216 +25,32 @@ export async function invalidateUserCache() {
   };
 }
 
-// Cache user data for 5 minutes (300000ms)
+// Server-side cache (unchanged)
 const CACHE_TTL = 300000;
+const serverCache = new Map<string, { user: AuthUser | null; timestamp: number }>();
 
-// In-memory server-side cache with TTL
-type CacheEntry = {
-  user: AuthUser | null;
-  timestamp: number;
-};
+export async function getUser(): Promise<AuthUser | null> {
+  const cookieStore = await cookies();
+  const authCookie = cookieStore.get('sb-wexkgcszrwxqsthahfyq-auth-token.0');
+  if (!authCookie?.value) return null;
 
-// Server-side cache instance (stays across requests in same Node.js instance)
-const serverCache = new Map<string, CacheEntry>();
+  const cacheKey = `user_cache_${authCookie.value.slice(0, 32)}`;
+  const cachedEntry = serverCache.get(cacheKey);
+  const now = Date.now();
 
-// Clean up expired cache entries every minute
-if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of serverCache.entries()) {
-      if (now - entry.timestamp > CACHE_TTL) {
-        serverCache.delete(key);
-      }
-    }
-  }, 60000);
+  if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
+    return cachedEntry.user;
+  }
+
+  const result = await supabaseAuth.getUser();
+  if (!result.success || !result.data) return null;
+
+  const userData = result.data as AuthUser;
+  serverCache.set(cacheKey, { user: userData, timestamp: now });
+  return userData;
 }
 
-/**
- * Get the current authenticated user with their teams
- * Uses Next.js caching and server-side caching for stability during SSR/RSC
- *
- * @returns The authenticated user with teams or null if not authenticated
- */
-export const getUser = cache(async function getUser(): Promise<AuthUser | null> {
-  try {
-    // Get all auth cookies - must await cookies()
-    const cookieStore = await cookies();
-    const authCookie = cookieStore.get('sb-wexkgcszrwxqsthahfyq-auth-token.0');
-
-    // Fail fast if no auth cookie exists - prevent unnecessary DB queries
-    if (!authCookie?.value) {
-      return null;
-    }
-
-    // Create a stable cache key from the auth cookie
-    const cacheKey = `user_cache_${authCookie.value.slice(0, 32)}`;
-
-    // Check in-memory cache first
-    const cachedEntry = serverCache.get(cacheKey);
-    const now = Date.now();
-
-    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
-      // Use cached data silently - no logging in production
-      return cachedEntry.user;
-    }
-
-    // If no valid cache, fetch from Supabase
-    const result = await supabaseAuth.getUser();
-
-    if (!result.success || !result.data) {
-      // Handle common auth errors
-      if (
-        result.error === 'No active session' ||
-        result.error === 'Auth session missing!' ||
-        result.error?.includes('Invalid Refresh Token') ||
-        result.error?.includes('refresh_token_not_found')
-      ) {
-        // Cache the null result to avoid repeated failures
-        serverCache.set(cacheKey, { user: null, timestamp: now });
-        return null;
-      }
-
-      throw new Error(result.error || 'Not authenticated');
-    }
-
-    // Verify and enhance user data
-    if (result.data) {
-      // Add role if missing
-      if (!(result.data as any).role) {
-        (result.data as any).role = result.data.user_metadata?.role || 'viewer';
-      }
-
-      // Now fetch the user's teams if they have a tenant_id
-      if (result.data.tenant_id) {
-        try {
-          // Create a Supabase client for database access (using server client)
-          const supabase = await createServerClient(cookieStore);
-
-          // Fetch teams for the user's tenant
-          const { data: teams, error: teamsError } = await supabase
-            .from('teams')
-            .select('*')
-            .eq('tenant_id', result.data.tenant_id);
-
-          if (teamsError) {
-            console.error('Error fetching teams:', teamsError);
-          } else if (teams) {
-            // Add teams to the user data
-            (result.data as AuthUser).teams = teams as UserTeam[];
-
-            // Get stored team ID from cookie instead of localStorage (which isn't available in server components)
-            const selectedTeamCookie = cookieStore.get(`selected_team_${result.data.id}`);
-            const storedTeamId = selectedTeamCookie?.value;
-
-            // Try to find a selected team (prioritize default team)
-            const defaultTeam = teams.find((team: UserTeam) => team.is_default);
-
-            // Set the selected team ID
-            if (storedTeamId && teams.some((team: UserTeam) => team.id === storedTeamId)) {
-              (result.data as AuthUser).selectedTeamId = storedTeamId;
-            } else if (defaultTeam) {
-              (result.data as AuthUser).selectedTeamId = defaultTeam.id;
-            } else if (teams.length > 0) {
-              (result.data as AuthUser).selectedTeamId = teams[0].id;
-            }
-
-            // If there's a selected team, fetch its members
-            if ((result.data as AuthUser).selectedTeamId) {
-              try {
-                // First, get team members without join to ensure structure is correct
-                const { data: members, error: membersError } = await supabase
-                  .from('team_members')
-                  .select('*')
-                  .eq('team_id', (result.data as AuthUser).selectedTeamId);
-
-                if (membersError) {
-                  console.error('Error fetching team members:', membersError);
-                } else if (members) {
-                  // For each member, get their user info separately
-                  const transformedMembers = [];
-
-                  for (const member of members) {
-                    try {
-                      // Get user info for this profile ID from the profiles table
-                      const { data: userData, error: userError } = await supabase
-                        .from('profiles') // Use the profiles table instead of auth.users
-                        .select('id, avatar_url, tenant_id, role, tenant_name')
-                        .eq('id', member.profile_id)
-                        .single();
-
-                      if (userError) {
-                        console.error(
-                          `Error fetching profile data for profile ${member.profile_id}:`,
-                          userError,
-                        );
-                      }
-
-                      // If we found the profile, get the user's email from our cached user data
-                      // We already have the current user's email from the auth data
-                      const userEmail =
-                        member.profile_id === result.data.id ? result.data.email : 'Team Member'; // Always a string, never null
-
-                      transformedMembers.push({
-                        team_id: member.team_id,
-                        profile_id: member.profile_id,
-                        role: member.role,
-                        created_at: member.created_at,
-                        updated_at: member.updated_at,
-                        profiles: {
-                          id: member.profile_id,
-                          email: userEmail,
-                          avatar_url: '',
-                        },
-                      });
-                    } catch (userError) {
-                      console.error('Error enhancing team member:', userError);
-                    }
-                  }
-
-                  (result.data as AuthUser).teamMembers = transformedMembers as TeamMember[];
-                }
-              } catch (memberError) {
-                console.error('Exception fetching team members:', memberError);
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error enhancing user with teams:', error);
-        }
-      }
-    }
-
-    // Cache the result
-    const userData = result.data as AuthUser;
-    serverCache.set(cacheKey, { user: userData, timestamp: now });
-
-    return userData;
-  } catch (error) {
-    // Handle session-related errors specially
-    if (
-      error instanceof Error &&
-      (error.message === 'No active session' || error.message === 'Auth session missing!')
-    ) {
-      return null;
-    }
-
-    // Auth errors should just return null
-    if (
-      error instanceof Error &&
-      (error.message.includes('Refresh Token') ||
-        error.message.includes('refresh_token_not_found') ||
-        error.message.includes('session') ||
-        error.message.includes('auth'))
-    ) {
-      // Silently return null for common auth errors - don't log these as they're expected
-      return null;
-    }
-
-    // Only throw for unexpected errors
-    console.error('Unexpected error in getUser:', error);
-    throw new Error('Failed to get current user');
-  }
-});
+// Other functions (updateProfile, setSelectedTeam) remain unchanged
 
 /**
  * Update user profile

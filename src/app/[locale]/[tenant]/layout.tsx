@@ -7,8 +7,8 @@ import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkeleton';
 import { ToasterProvider } from '@/components/shadcn/toaster';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
-import { User } from '@/types/user';
 import { UserProvider } from '@/context/UserContext';
+import { mapAuthUserToUser } from '@/utils/user';
 
 import TenantLayoutClient from './_components/client/TenantLayoutClient';
 
@@ -19,30 +19,14 @@ export default async function TenantLayout({
   children: React.ReactNode;
   params: { tenant: string; locale: string };
 }) {
-  // In Next.js 14+, params can be a Promise that needs to be awaited
-  const resolvedParams = 'then' in params ? await params : params;
-  const tenant = resolvedParams.tenant;
+  const { tenant } = await params;
   const authUser = await getUser();
+  const user = authUser ? mapAuthUserToUser(authUser) : null;
 
-  // Transform AuthUser to User type
-  const user: User | null = authUser
-    ? {
-        id: authUser.id,
-        email: authUser.email,
-        name: authUser.name || authUser.email.split('@')[0],
-        role: ((authUser as any).role || authUser.user_metadata?.role || 'viewer') as User['role'],
-        tenant_id: authUser.tenant_id,
-        tenant_name: authUser.tenant_name,
-        avatar_url: authUser.user_metadata?.avatar_url || '',
-        user_metadata: authUser.user_metadata,
-      }
-    : null;
-
-  // Server-side logging
   console.log('[TenantLayout] Rendering tenant layout, tenant:', tenant);
 
   return (
-    <UserProvider>
+    <UserProvider initialUser={user}>
       <TenantLayoutClient user={user} tenant={tenant}>
         <TooltipProvider>
           <ToasterProvider />
