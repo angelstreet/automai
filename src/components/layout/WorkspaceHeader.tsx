@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { User } from '@/types/user';
 import { WorkspaceHeaderClient } from './client/WorkspaceHeaderClient';
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
-import { UserProfileWrapper } from '@/components/profile/UserProfileWrapper';
+import { UserProfileWrapper } from './UserProfileWrapper';
 
 interface WorkspaceHeaderProps {
   className?: string;

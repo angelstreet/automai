@@ -15,28 +15,21 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useUser } from '@/context';
 import { signOut } from '@/app/actions/auth';
-import { cn } from '@/lib/utils';
+import { User } from '@/types/user';
 
-interface UserProfileProps {
-  user?: any; // Allow passing user directly
+interface UserProfileDropdownProps {
+  user: User;
   clearCache?: () => Promise<void>;
 }
 
-export function UserProfile({ user: propUser, clearCache: propClearCache }: UserProfileProps) {
+export function UserProfileDropdown({ user, clearCache }: UserProfileDropdownProps) {
   const router = useRouter();
   const params = useParams();
-  const { user: contextUser, clearCache: contextClearCache } = useUser();
-
-  // Use provided user prop if available, otherwise use from context
-  const user = propUser || contextUser;
-  const clearCache = propClearCache || contextClearCache;
   const locale = (params.locale as string) || 'en';
-  const [imageError, setImageError] = React.useState(false);
-
-  // Derive tenant from user data or URL params as fallback
-  const tenant = user?.tenant_name || user?.tenant_id || (params.tenant as string) || 'trial';
+  
+  // Derive tenant from user data
+  const tenant = user.tenant_name || user.tenant_id || (params.tenant as string) || 'trial';
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
@@ -47,20 +40,20 @@ export function UserProfile({ user: propUser, clearCache: propClearCache }: User
       .toUpperCase();
   };
 
-  // Get user information the same way NavUser does
-  const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
-  const avatarUrl = user?.avatar_url || user?.user_metadata?.avatar_url;
+  // Extract user information
+  const userName = user.name || user.email?.split('@')[0] || 'Guest';
+  const avatarUrl = user.avatar_url || user.user_metadata?.avatar_url;
+  const initials = getInitials(userName);
 
   const handleSignOut = async () => {
     try {
       // Try to clear cache, but don't block the logout process if it fails
-      try {
-        if (clearCache && typeof clearCache === 'function') {
+      if (clearCache) {
+        try {
           await clearCache();
+        } catch (cacheError) {
+          console.warn('Error clearing cache during logout:', cacheError);
         }
-      } catch (cacheError) {
-        console.warn('Error clearing cache during logout:', cacheError);
-        // Continue with logout even if cache clearing fails
       }
 
       // Then sign out
@@ -88,11 +81,7 @@ export function UserProfile({ user: propUser, clearCache: propClearCache }: User
     } catch (error) {
       console.error('Error signing out:', error);
       // Attempt to redirect to login even if there's an error
-      try {
-        router.push(`/${locale}/login`);
-      } catch (e) {
-        console.error('Failed to redirect after logout error:', e);
-      }
+      router.push(`/${locale}/login`);
     }
   };
 
@@ -103,17 +92,18 @@ export function UserProfile({ user: propUser, clearCache: propClearCache }: User
           variant="ghost"
           className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-background">
+          <div className="h-8 w-8 rounded-full border border-border dark:border-gray-600 shadow-sm overflow-hidden flex items-center justify-center bg-accent text-accent-foreground dark:bg-gray-700 dark:text-gray-200">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
                 alt={userName}
                 width={32}
                 height={32}
+                priority
                 className="h-8 w-8 rounded-full"
               />
             ) : (
-              <UserIcon className="h-4 w-4 text-foreground" />
+              initials || <UserIcon className="h-4 w-4" />
             )}
           </div>
         </Button>
@@ -122,7 +112,7 @@ export function UserProfile({ user: propUser, clearCache: propClearCache }: User
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{userName}</p>
-            {user && <p className="text-xs leading-none text-muted-foreground">{user.email}</p>}
+            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
