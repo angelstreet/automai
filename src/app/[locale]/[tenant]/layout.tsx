@@ -1,14 +1,15 @@
-import * as React from 'react';
 import { Suspense } from 'react';
-import { AppSidebar } from '@/components/layout/AppSidebar';
-import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
-import { TooltipProvider } from '@/components/shadcn/tooltip';
-import { ToasterProvider } from '@/components/shadcn/toaster';
-import TenantLayoutClient from './_components/client/TenantLayoutClient';
+
 import { getUser } from '@/app/actions/user';
+import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
+import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkeleton';
+import { ToasterProvider } from '@/components/shadcn/toaster';
+import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { User } from '@/types/user';
+
+import TenantLayoutClient from './_components/client/TenantLayoutClient';
 
 export default async function TenantLayout({
   children,
@@ -28,7 +29,6 @@ export default async function TenantLayout({
         id: authUser.id,
         email: authUser.email,
         name: authUser.name || authUser.email.split('@')[0],
-        // Use role directly from authUser if available, otherwise fall back to metadata
         role: ((authUser as any).role || authUser.user_metadata?.role || 'viewer') as User['role'],
         tenant_id: authUser.tenant_id,
         tenant_name: authUser.tenant_name,
