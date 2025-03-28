@@ -12,7 +12,7 @@ import { locales, defaultLocale } from '@/config';
  */
 export const createClient = (request: NextRequest) => {
   // Log request details
-  console.log(
+  console.debug(
     `[SUPABASE MW:createClient] URL: ${request.nextUrl.pathname}${request.nextUrl.search}, Method: ${request.method}`,
   );
 
@@ -35,12 +35,12 @@ export const createClient = (request: NextRequest) => {
             name: cookie.name,
             value: cookie.value,
           }));
-          console.log(`[SUPABASE MW:cookies] Found ${cookies.length} cookies`);
+          console.debug(`[SUPABASE MW:cookies] Found ${cookies.length} cookies`);
           return cookies;
         },
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
           // Set cookies both on the request (for Supabase) and response (for browser)
-          console.log(`[SUPABASE MW:cookies] Setting ${cookiesToSet.length} cookies`);
+          console.debug(`[SUPABASE MW:cookies] Setting ${cookiesToSet.length} cookies`);
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set({
               name,
@@ -65,8 +65,8 @@ export const createClient = (request: NextRequest) => {
  * Clears all Supabase auth-related cookies
  */
 function clearAuthCookies(response: NextResponse): NextResponse {
-  console.log(`--------------------------------`);
-  console.log('[SUPABASE MW:clearAuthCookies] Clearing auth cookies');
+  console.debug(`--------------------------------`);
+  console.debug('[SUPABASE MW:clearAuthCookies] Clearing auth cookies');
   // Known Supabase auth cookie names
   const authCookies = ['sb-access-token', 'sb-refresh-token', 'supabase-auth-token'];
 
@@ -79,7 +79,7 @@ function clearAuthCookies(response: NextResponse): NextResponse {
       path: '/',
     });
   });
-  console.log(`--------------------------------`);
+  console.debug(`--------------------------------`);
   return response;
 }
 
@@ -91,8 +91,8 @@ function clearAuthCookies(response: NextResponse): NextResponse {
  * - Redirects to login if no authenticated user is found
  */
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
-  console.log(`--------------------------------`);
-  console.log(`[SUPABASE MW:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`);
+  console.debug(`--------------------------------`);
+  console.debug(`[SUPABASE MW:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`);
   const startTime = Date.now();
 
   // Create the Supabase client
@@ -104,12 +104,12 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   // Reduced logging for better performance - only log errors
   if (error) {
-    console.log('🔍 SUPABASE MW ERROR:', error.message);
-    console.log('🔍 Request URL:', request.nextUrl.pathname);
+    console.debug('🔍 SUPABASE MW ERROR:', error.message);
+    console.debug('🔍 Request URL:', request.nextUrl.pathname);
   } else if (data.user) {
     // Just log minimal user info
-    console.log(
-      '[SUPABASE MW:auth] User authenticated in ${Date.now() - startTime}ms', 
+    console.debug(
+      '[SUPABASE MW:auth] User authenticated in ${Date.now() - startTime}ms',
       data.user.id,
     );
   }
@@ -119,15 +119,17 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const isDataFetchRequest =
     request.method === 'POST' && !request.nextUrl.pathname.startsWith('/api/');
 
-  console.log(`[SUPABASE MW:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`);
+  console.debug(
+    `[SUPABASE MW:check] isDataFetchRequest=${isDataFetchRequest},Method=${request.method},Path=${request.nextUrl.pathname}`,
+  );
 
   // If no user is found or there's an error, redirect to login ONLY for GET requests
   // Allow data fetching POST requests to proceed even without authentication
   if ((error || !data.user) && !isDataFetchRequest) {
-    console.log('[SUPABASE MW:redirect] No authenticated user found. Redirecting to login page.');
+    console.debug('[SUPABASE MW:redirect] No authenticated user found. Redirecting to login page.');
     // Reduce logging to essential information only
     if (error) {
-      console.log('[SUPABASE MW:redirect] Auth error details:', error?.message);
+      console.debug('[SUPABASE MW:redirect] Auth error details:', error?.message);
     }
 
     // Check if there are some auth cookies present even though we couldn't get a user
@@ -137,8 +139,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
       .some((c) => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
 
     if (hasAuthCookies) {
-      console.log(
-        '[SUPABASE MW :cookies] Auth cookies present but failed to authenticate - possible cookie issue',
+      console.debug('[SUPABASE MW :cookies] Auth cookies present but failed to authenticate - possible cookie issue',
       );
       return response;
     }
@@ -150,7 +151,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
     // Create a new URL for the redirect
     const redirectUrl = new URL(`/${locale}/login`, request.url);
-    console.log(`[SUPABASE MW:redirect] Redirecting to ${redirectUrl.toString()}`);
+    console.debug(`[SUPABASE MW:redirect] Redirecting to ${redirectUrl.toString()}`);
 
     // Create a redirect response
     const redirectResponse = NextResponse.redirect(redirectUrl, { status: 307 });
@@ -160,7 +161,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   }
 
   // Return the response with updated cookies for authenticated users
-  console.log(`[SUPABASE MW:complete] Finished processing request in ${Date.now() - startTime}ms`);
-  console.log(`--------------------------------`);
+  console.debug(`[SUPABASE MW:complete] Finished processing request in ${Date.now() - startTime}ms`);
+  console.debug(`--------------------------------`);
   return response;
 }
