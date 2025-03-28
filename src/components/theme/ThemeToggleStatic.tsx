@@ -1,9 +1,7 @@
 'use client';
-
-import * as React from 'react';
 import { Moon, Sun, Laptop } from 'lucide-react';
 import { useTheme as useNextThemes } from 'next-themes';
-import { useTheme as useCustomTheme } from '@/context';
+import * as React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -12,15 +10,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-
+import { useTheme as useCustomTheme } from '@/context';
 export function ThemeToggleStatic() {
   // Use both theme hooks for compatibility
   const nextThemes = useNextThemes();
   const customTheme = useCustomTheme();
-  const [mounted, setMounted] = React.useState(true); // Start as true to prevent flashing
-
-  // Determine which theme API to use (prefer next-themes)
-  const theme = nextThemes.theme || customTheme.theme || 'light'; // Default to light to avoid flash
+  const [_mounted, _setMounted] = React.useState(true); // Start as true to prevent flashing
 
   // Function to set theme in both providers for maximum compatibility
   const setTheme = (newTheme: string) => {
