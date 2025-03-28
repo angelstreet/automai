@@ -109,7 +109,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   } else if (data.user) {
     // Just log minimal user info
     console.debug(
-      '[SUPABASE MW:auth] User authenticated in ${Date.now() - startTime}ms',
+      `[SUPABASE MW:auth] User authenticated in ${Date.now() - startTime}ms`,
       data.user.id,
     );
   }

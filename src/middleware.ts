@@ -51,14 +51,14 @@ export default async function middleware(request: NextRequest) {
   // 3. Protected routes: enforce locale and auth
   const hasLocale = locales.some((locale) => path.startsWith(`/${locale}/`));
   if (!hasLocale) {
-    //console.debug('MW : --- NO LOCALE ---');
+    console.debug('MW : --- NO LOCALE ---');
     return NextResponse.redirect(new URL(`/${defaultLocale}${path}`, request.url));
   }
 
   const response = await updateSession(request);
   //console.debug('MW : --- UPDATE SESSION ---', response);
   if (response.headers.has('location')) {
-    //console.debug('MW : --- REDIRECT UNAUTHENTICATED ---');
+    console.debug('MW : --- REDIRECT UNAUTHENTICATED ---');
     return response; // Redirect if unauthenticated
   }
 
