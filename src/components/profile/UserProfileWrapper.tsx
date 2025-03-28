@@ -5,12 +5,12 @@ import { UserIcon } from 'lucide-react';
 import { cache } from 'react';
 
 export interface UserProfileWrapperProps {
-  tenant?: string;
   user?: User | null;
+  clearCache?: () => Promise<void>;
 }
 
 // Cache the user data and avatar at the server component level
-const getPreloadedUserData = cache((user?: User | null, tenant?: string) => {
+const getPreloadedUserData = cache((user?: User | null) => {
   if (!user) return null;
 
   const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
@@ -32,9 +32,9 @@ const getPreloadedUserData = cache((user?: User | null, tenant?: string) => {
  * Server component wrapper for UserProfile
  * This allows for better prerendering and suspense in server components
  */
-export function UserProfileWrapper({ tenant, user }: UserProfileWrapperProps) {
+export function UserProfileWrapper({ user, clearCache }: UserProfileWrapperProps) {
   // Preload and cache user data on the server
-  const userData = getPreloadedUserData(user, tenant);
+  const userData = getPreloadedUserData(user);
 
   // Pre-cache the avatar image if possible
   if (userData?.avatarSrc) {
@@ -42,10 +42,10 @@ export function UserProfileWrapper({ tenant, user }: UserProfileWrapperProps) {
     return (
       <>
         <link rel="preload" href={userData.avatarSrc} as="image" fetchPriority="high" />
-        <UserProfile tenant={tenant} user={user} />
+        <UserProfile user={user} clearCache={clearCache} />
       </>
     );
   }
 
-  return <UserProfile tenant={tenant} user={user} />;
+  return <UserProfile user={user} clearCache={clearCache} />;
 }

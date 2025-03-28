@@ -37,7 +37,7 @@ export async function WorkspaceHeader({
         <ThemeToggleStatic />
       </Suspense>
       <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}>
-        <UserProfileWrapper tenant={tenant} user={user} />
+        <UserProfileWrapper user={user} />
       </Suspense>
     </WorkspaceHeaderClient>
   );

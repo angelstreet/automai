@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import * as React from 'react';
 
+import { signOut } from '@/app/actions/auth';
 import { Button } from '@/components/shadcn/button';
 import {
   DropdownMenu,
@@ -16,8 +17,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
 import { useUser } from '@/context';
-import { signOut } from '@/app/actions/auth';
-import { cn } from '@/lib/utils';
 import { User } from '@/types/user';
 
 interface UserProfileStaticProps {
@@ -85,7 +84,7 @@ export function UserProfileStatic({
           localStorage.removeItem('cached_user');
           localStorage.removeItem('cached_user_time');
         }
-      } catch (e) {
+      } catch (_e) {
         // Ignore localStorage errors
       }
 
