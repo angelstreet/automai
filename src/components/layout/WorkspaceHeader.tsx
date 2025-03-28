@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { User } from '@/types/user';
 import { WorkspaceHeaderClient } from './client/WorkspaceHeaderClient';
-import { ThemeToggleWrapper } from '@/components/theme/ThemeToggleWrapper';
+import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
 import { UserProfileWrapper } from '@/components/profile/UserProfileWrapper';
 
 interface WorkspaceHeaderProps {
@@ -34,7 +34,7 @@ export async function WorkspaceHeader({
       initialHeaderState={initialHeaderState}
     >
       <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-md animate-pulse" />}>
-        <ThemeToggleWrapper />
+        <ThemeToggleStatic />
       </Suspense>
       <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}>
         <UserProfileWrapper tenant={tenant} user={user} />

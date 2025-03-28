@@ -1,12 +1,8 @@
-import { Inter } from 'next/font/google';
-
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { ToasterProvider } from '@/components/shadcn/toaster';
 import { locales } from '@/config';
 import { getMessages } from '@/i18n';
-
-const inter = Inter({ subsets: ['latin'] });
 
 // Define props type
 type Props = {
