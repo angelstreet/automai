@@ -13,7 +13,7 @@ import { locales, defaultLocale } from '@/config';
 export const createClient = (request: NextRequest) => {
   // Log request details
   console.log(
-    `[Middleware:createClient] URL: ${request.nextUrl.pathname}${request.nextUrl.search}, Method: ${request.method}`,
+    `[SUPABASE MW:createClient] URL: ${request.nextUrl.pathname}${request.nextUrl.search}, Method: ${request.method}`,
   );
 
   // Create response to manipulate cookies
@@ -35,12 +35,12 @@ export const createClient = (request: NextRequest) => {
             name: cookie.name,
             value: cookie.value,
           }));
-          console.log(`[Middleware:cookies] Found ${cookies.length} cookies`);
+          console.log(`[SUPABASE MW:cookies] Found ${cookies.length} cookies`);
           return cookies;
         },
         setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
           // Set cookies both on the request (for Supabase) and response (for browser)
-          console.log(`[Middleware:cookies] Setting ${cookiesToSet.length} cookies`);
+          console.log(`[SUPABASE MW:cookies] Setting ${cookiesToSet.length} cookies`);
           cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set({
               name,
@@ -66,7 +66,7 @@ export const createClient = (request: NextRequest) => {
  */
 function clearAuthCookies(response: NextResponse): NextResponse {
   console.log(`--------------------------------`);
-  console.log('[Middleware:clearAuthCookies] Clearing auth cookies');
+  console.log('[SUPABASE MW:clearAuthCookies] Clearing auth cookies');
   // Known Supabase auth cookie names
   const authCookies = ['sb-access-token', 'sb-refresh-token', 'supabase-auth-token'];
 
@@ -92,8 +92,7 @@ function clearAuthCookies(response: NextResponse): NextResponse {
  */
 export async function updateSession(request: NextRequest): Promise<NextResponse> {
   console.log(`--------------------------------`);
-  console.log(`
-    [SUPABASE MW:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`);
+  console.log(`[SUPABASE MW:updateSession] Processing ${request.method} request for ${request.nextUrl.pathname}`);
   const startTime = Date.now();
 
   // Create the Supabase client
@@ -120,8 +119,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const isDataFetchRequest =
     request.method === 'POST' && !request.nextUrl.pathname.startsWith('/api/');
 
-  console.log(`
-    [SUPABASE MW:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`);
+  console.log(`[SUPABASE MW:check] isDataFetchRequest=${isDataFetchRequest}, Method=${request.method}, Path=${request.nextUrl.pathname}`);
 
   // If no user is found or there's an error, redirect to login ONLY for GET requests
   // Allow data fetching POST requests to proceed even without authentication
