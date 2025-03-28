@@ -250,15 +250,7 @@ export function DeploymentList({
                 <option value="failed">Failed</option>
                 <option value="scheduled">Scheduled</option>
               </select>
-              <button
-                onClick={handleRefresh}
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                disabled={isRefreshing}
-              >
-                <RefreshCw
-                  className={`h-5 w-5 text-gray-500 ${isRefreshing ? 'animate-spin' : ''}`}
-                />
-              </button>
+              
             </div>
           </div>
         </div>
@@ -413,9 +405,7 @@ export function DeploymentList({
                         <StatusBadge status={deployment.status} />
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {getFormattedTime
-                          ? getFormattedTime(deployment.createdAt)
-                          : new Date(deployment.createdAt).toLocaleString()}
+                        {getFormattedTime ? getFormattedTime(deployment.createdAt) : new Date(deployment.createdAt).toLocaleString()}
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {deployment.completedAt && deployment.startedAt
