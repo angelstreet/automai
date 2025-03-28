@@ -1,5 +1,5 @@
 // DO NOT MODIFY THIS FILE
-import { UserSession, SessionData, AuthResult, OAuthProvider } from '@/types/user';
+import { SessionData, AuthResult, OAuthProvider } from '@/types/user';
 
 import { createClient } from './server';
 
@@ -77,131 +77,6 @@ export const supabaseAuth = {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  },
-
-  async getUser(): Promise<AuthResult<UserSession>> {
-    if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available' };
-    }
-    try {
-      const supabase = await createClient();
-      const {
-        data: { user: authUser },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !authUser) {
-        return {
-          success: false,
-          error: authError?.message || 'No authenticated user',
-        };
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select(
-          `
-          role,
-          tenant_id,
-          tenant_name,
-          avatar_url
-        `,
-        )
-        .eq('id', authUser.id)
-        .single();
-
-      if (profileError) {
-        return {
-          success: false,
-          error: profileError.message,
-        };
-      }
-
-      if (!profile) {
-        return {
-          success: false,
-          error: 'No profile found for user',
-        };
-      }
-
-      // Get name from user metadata with fallbacks
-      const name =
-        authUser.user_metadata?.name ||
-        authUser.user_metadata?.full_name ||
-        authUser.email?.split('@')[0] ||
-        'Guest';
-
-      // Only use role from profiles table
-      const role = profile.role;
-      console.log('Role resolution in getUser:', { profileRole: profile.role });
-
-      if (!role) {
-        console.error('No role found in profiles table');
-        return { success: false, error: 'No role found in profiles table' };
-      }
-
-      return {
-        success: true,
-        data: {
-          id: authUser.id,
-          email: authUser.email || '',
-          name,
-          role,
-          tenant_id: profile.tenant_id,
-          tenant_name: profile.tenant_name,
-          avatar_url:
-            authUser.user_metadata?.avatar_url || profile.avatar_url || '/avatars/default.svg',
-          user_metadata: authUser.user_metadata,
-        },
-      };
-    } catch (error) {
-      console.error('Error in getUser:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to get user data',
-      };
-    }
-  },
-
-  async updateUser(userId: string, metadata: Record<string, any>): Promise<AuthResult<any>> {
-    if (!isUsingSupabase()) {
-      return { success: false, error: 'Supabase auth not available' };
-    }
-    try {
-      const supabase = await createClient();
-      const { data: authData, error: authError } = await supabase.auth.updateUser({
-        data: metadata,
-      });
-
-      if (authError) {
-        console.error('Error updating auth metadata:', authError);
-        return { success: false, error: authError.message };
-      }
-
-      const profileUpdate = {
-        tenant_id: metadata.tenant_id || null,
-        tenant_name: metadata.tenant_name || null,
-        role: metadata.role || null,
-        avatar_url: metadata.avatar_url || null,
-      };
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update(profileUpdate)
-        .eq('id', userId);
-
-      if (profileError) {
-        console.error('Error updating profile:', profileError);
-        return { success: false, error: profileError.message };
-      }
-
-      return { success: true, data: authData.user };
-    } catch (error) {
-      console.error('Error updating user metadata:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to update user metadata',
       };
     }
   },
@@ -447,7 +322,6 @@ export const supabaseAuth = {
 
 // Export simplified direct access
 export const getSession = () => supabaseAuth.getSession();
-export const getUser = () => supabaseAuth.getUser();
 export const isAuthenticated = () => supabaseAuth.isAuthenticated();
 export const signInWithPassword = (email: string, password: string) =>
   supabaseAuth.signInWithPassword(email, password);
@@ -455,7 +329,7 @@ export const signUp = (
   email: string,
   password: string,
   options?: { redirectTo?: string; data?: Record<string, any> },
-) => supabaseAuth.signUp(email, password, options);
+) => supabaseAuth.signUp(email, password, options as any);
 export const signInWithOAuth = (provider: OAuthProvider, options?: { redirectTo?: string }) =>
   supabaseAuth.signInWithOAuth(provider, options);
 export const handleOAuthCallback = (code: string) => supabaseAuth.handleOAuthCallback(code);
