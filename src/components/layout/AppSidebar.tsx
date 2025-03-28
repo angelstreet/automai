@@ -1,4 +1,5 @@
 import { User } from '@/types/user';
+
 import { AppSidebarClient } from './client/AppSidebarClient';
 
 interface AppSidebarProps {

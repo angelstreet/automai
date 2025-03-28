@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import * as React from 'react';
+
 import { NavGroup } from '@/components/layout/NavGroup';
 import { NavUser } from '@/components/layout/NavUser';
-import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
 import TeamSelector from '@/components/layout/TeamSelector';
+import { TeamSwitcher } from '@/components/layout/TeamSwitcher';
 import {
   Sidebar,
   SidebarContent,
@@ -13,11 +14,11 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/sidebar';
-import { useUser } from '@/context';
-import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '../../sidebar/constants';
 import { sidebarData } from '@/components/sidebar/sidebarData';
-import * as React from 'react';
+import { useUser } from '@/context';
 import { User } from '@/types/user';
+
+import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '../../sidebar/constants';
 
 interface AppSidebarClientProps {
   user?: User | null;
@@ -31,7 +32,7 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
   // Use prop user if available, otherwise fall back to context
   const user = propUser || userContext?.user || null;
   const { open } = useSidebar();
-  
+
   // Use state for isCollapsed to ensure hydration consistency
   const [isCollapsed, setIsCollapsed] = React.useState(false);
 
@@ -42,11 +43,6 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
 
   // Simplified role resolution
   const effectiveRole = user?.role || 'viewer';
-
-  // Show team selector only for admin/owner
-  const showTeamSelector = useMemo(() => {
-    return user && ['admin', 'owner'].includes(effectiveRole);
-  }, [user, effectiveRole]);
 
   // Filter navigation groups based on role - simplified
   const filteredNavigation = React.useMemo(() => {
