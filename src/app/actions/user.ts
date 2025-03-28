@@ -152,7 +152,7 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
                       // Get user info for this profile ID from the profiles table
                       const { data: userData, error: userError } = await supabase
                         .from('profiles')  // Use the profiles table instead of auth.users
-                        .select('id')
+                        .select('id, avatar_url, tenant_id, role, tenant_name') 
                         .eq('id', member.profile_id)
                         .single();
                         
