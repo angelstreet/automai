@@ -257,19 +257,16 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
     request.method === 'POST' && !request.nextUrl.pathname.startsWith('/api/');
 
   // Only redirect for specific auth errors, not network errors
-  const isAuthError = error && (error.status === 401 || error.message?.includes('Invalid JWT'));
+  const isAuthError = error && (
+    error.status === 401 || 
+    error.message?.includes('Invalid JWT') ||
+    error.message?.includes('Invalid Refresh Token') ||
+    error.code === 'refresh_token_not_found'
+  );
+  
   if ((!data.user || isAuthError) && !isDataFetchRequest) {
-    // Check if there are some auth cookies present even though we couldn't get a user
-    // This might indicate a cookie-related issue rather than truly unauthenticated
-    const hasAuthCookies = request.cookies
-      .getAll()
-      .some((c) => c.name.startsWith('sb-access-token') || c.name.startsWith('sb-refresh-token'));
-
-    if (hasAuthCookies) {
-      // For debugging: if auth cookies exist but auth failed, we'll still let the request through
-      // This helps diagnose issues where cookies exist but aren't being properly parsed
-      return response;
-    }
+    // We used to skip redirect for auth cookie issues, but now we always redirect
+    // if authentication fails, even if auth cookies are present
 
     // Extract locale from URL
     const pathParts = request.nextUrl.pathname.split('/').filter(Boolean);

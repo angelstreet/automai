@@ -6,12 +6,10 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 import { SidebarTrigger } from '@/components/sidebar';
-import { UserProfile } from '@/components/profile/UserProfile';
 import { Button } from '@/components/shadcn/button';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
-import { ThemeToggle } from '@/components/shadcn/theme-toggle';
 import { useSidebar, useUser } from '@/context';
 import { User } from '@/types/user';
 
@@ -24,7 +22,6 @@ interface WorkspaceHeaderClientProps {
 }
 
 const HEADER_COOKIE_NAME = 'header:state';
-const HEADER_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year in seconds
 
 export function WorkspaceHeaderClient({
   className = '',
@@ -35,15 +32,12 @@ export function WorkspaceHeaderClient({
 }: WorkspaceHeaderClientProps) {
   const { open } = useSidebar();
   const userContext = useUser();
-  const user = propUser || userContext?.user;
+  // Use prop user if available, otherwise fall back to context, then null as final fallback
+  const user = propUser || userContext?.user || null;
   // Derive tenant from user data if available
-  const tenant = user?.tenant_name || user?.tenant_id;
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [headerVisible, setHeaderVisible] = React.useState(initialHeaderState);
   const [headerStyles, setHeaderStyles] = React.useState<React.CSSProperties>({});
-
-  // Use prop user if available, otherwise fall back to context
-  const user = propUser || userContext?.user;
 
   // Update collapsed state and styles when sidebar state changes
   React.useEffect(() => {

@@ -103,7 +103,7 @@ export default async function middleware(request: NextRequest) {
   // If they are, redirect them to dashboard
   if (isAuthOnlyPath) {
     // Import from supabase/middleware.ts
-    const { supabase, response } = createClient(request);
+    const { supabase, _response } = createClient(request);
     try {
       const { data } = await supabase.auth.getUser();
 
@@ -160,17 +160,15 @@ export const config = {
       source: '/((?!_next/static|_next/image|avatars|favicon.ico|api).*)',
       missing: [
         { type: 'header', key: 'next-router-prefetch' },
-        { type: 'header', key: 'purpose', value: 'prefetch' }
+        { type: 'header', key: 'purpose', value: 'prefetch' },
       ],
-      has: [
-        { type: 'header', key: 'accept', value: 'text/html' }
-      ]
+      has: [{ type: 'header', key: 'accept', value: 'text/html' }],
     },
     // Match API routes that need auth
     '/api/:path*',
     // Match root path
     { source: '/', has: [{ type: 'header', key: 'accept', value: 'text/html' }] },
     // Match locale routes
-    { source: '/(fr|en)/:path*', has: [{ type: 'header', key: 'accept', value: 'text/html' }] }
+    { source: '/(fr|en)/:path*', has: [{ type: 'header', key: 'accept', value: 'text/html' }] },
   ],
 };

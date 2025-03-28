@@ -19,7 +19,7 @@ import { signOut } from '@/app/actions/auth';
 import { User } from '@/types/user';
 
 interface UserProfileDropdownProps {
-  user: User;
+  user: User | null;
   clearCache?: () => Promise<void>;
 }
 
@@ -27,22 +27,21 @@ export function UserProfileDropdown({ user, clearCache }: UserProfileDropdownPro
   const router = useRouter();
   const params = useParams();
   const locale = (params.locale as string) || 'en';
-  
-  // Derive tenant from user data
-  const tenant = user.tenant_name || user.tenant_id || (params.tenant as string) || 'trial';
+  const tenant = (params.tenant as string) || 'trial';
 
   // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
+    if (!name) return '';
     return name
       .split(' ')
-      .map((part) => part[0])
+      .map((part) => part?.[0] || '')
       .join('')
       .toUpperCase();
   };
 
-  // Extract user information
-  const userName = user.name || user.email?.split('@')[0] || 'Guest';
-  const avatarUrl = user.avatar_url || user.user_metadata?.avatar_url;
+  // Extract user information with null safety
+  const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
+  const avatarUrl = user?.avatar_url || user?.user_metadata?.avatar_url;
   const initials = getInitials(userName);
 
   const handleSignOut = async () => {
@@ -112,7 +111,7 @@ export function UserProfileDropdown({ user, clearCache }: UserProfileDropdownPro
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{userName}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+            <p className="text-xs leading-none text-muted-foreground">{user?.email || ''}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
