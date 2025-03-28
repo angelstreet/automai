@@ -6,7 +6,7 @@ const host = {
   async findMany(options: any = {}) {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
-    
+
     // Start building the query
     let builder = supabase.from('hosts').select('*');
 
@@ -48,7 +48,7 @@ const host = {
   async findUnique({ where }: { where: any }) {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
-    
+
     // Apply the 'where' conditions
     const { data, error } = await supabase.from('hosts').select().match(where).single();
 

@@ -31,10 +31,7 @@ import {
 } from '@/components/shadcn/alert-dialog';
 import { useToast } from '@/components/shadcn/use-toast';
 import CICDProviderForm from '../CICDProviderForm';
-import {
-  deleteCICDProvider,
-  testCICDProvider,
-} from '@/app/actions/cicd';
+import { deleteCICDProvider, testCICDProvider } from '@/app/actions/cicd';
 import { Badge } from '@/components/shadcn/badge';
 import type { CICDProviderType } from '../../types';
 import { EmptyState } from '@/components/layout/EmptyState';
@@ -78,39 +75,42 @@ export default function ClientCICDProvider({
   }, []);
 
   // Memoize test provider handler
-  const handleTestProvider = useCallback(async (provider: CICDProviderType) => {
-    try {
-      setIsLoading(true);
-      const providerPayload = {
-        id: provider.id,
-        name: provider.name,
-        type: provider.type,
-        url: provider.url,
-        config: {
-          auth_type: provider.config?.auth_type,
-          credentials: provider.config?.credentials,
-        },
-      };
+  const handleTestProvider = useCallback(
+    async (provider: CICDProviderType) => {
+      try {
+        setIsLoading(true);
+        const providerPayload = {
+          id: provider.id,
+          name: provider.name,
+          type: provider.type,
+          url: provider.url,
+          config: {
+            auth_type: provider.config?.auth_type,
+            credentials: provider.config?.credentials,
+          },
+        };
 
-      const result = await testCICDProvider(providerPayload);
+        const result = await testCICDProvider(providerPayload);
 
-      toast({
-        title: result.success ? 'Connection Successful' : 'Connection Failed',
-        description: result.success 
-          ? 'Successfully connected to the CI/CD provider.'
-          : result.error || 'Failed to connect to the CI/CD provider.',
-        variant: result.success ? 'default' : 'destructive',
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+        toast({
+          title: result.success ? 'Connection Successful' : 'Connection Failed',
+          description: result.success
+            ? 'Successfully connected to the CI/CD provider.'
+            : result.error || 'Failed to connect to the CI/CD provider.',
+          variant: result.success ? 'default' : 'destructive',
+        });
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.message || 'An unexpected error occurred',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [toast],
+  );
 
   // Memoize dialog completion handler
   const handleDialogComplete = useCallback(() => {
@@ -176,7 +176,9 @@ export default function ClientCICDProvider({
           <EmptyState
             icon={<AlertCircle className="h-10 w-10" />}
             title={t('no_providers_title', { fallback: 'No CI/CD Providers' })}
-            description={t('no_providers_description', { fallback: 'Add a CI/CD provider to start creating deployments' })}
+            description={t('no_providers_description', {
+              fallback: 'Add a CI/CD provider to start creating deployments',
+            })}
             action={
               <Button onClick={() => handleAddEditProvider()}>
                 <PlusCircle className="h-4 w-4 mr-2" />
@@ -193,7 +195,9 @@ export default function ClientCICDProvider({
     <Card className="border-0">
       {!removeTitle && (
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">{t('providers_title', { fallback: 'CI/CD Providers' })}</CardTitle>
+          <CardTitle className="text-xl font-bold">
+            {t('providers_title', { fallback: 'CI/CD Providers' })}
+          </CardTitle>
           <Button onClick={() => handleAddEditProvider()} size="sm" className="h-8 gap-1">
             <PlusCircle className="h-4 w-4" />
             <span>{t('add_provider', { fallback: 'Add Provider' })}</span>
@@ -215,7 +219,9 @@ export default function ClientCICDProvider({
                   <TableHead>{t('provider_type', { fallback: 'Type' })}</TableHead>
                   <TableHead>{t('provider_url', { fallback: 'URL' })}</TableHead>
                   <TableHead>{t('provider_auth_type', { fallback: 'Auth Type' })}</TableHead>
-                  <TableHead className="w-[80px]">{t('actions', { fallback: 'Actions' })}</TableHead>
+                  <TableHead className="w-[80px]">
+                    {t('actions', { fallback: 'Actions' })}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -224,20 +230,28 @@ export default function ClientCICDProvider({
                     <TableCell className="font-medium">{provider.name}</TableCell>
                     <TableCell>
                       <Badge className={getProviderBadgeColor(provider.type)}>
-                        {provider.type === 'jenkins' && t('provider_type_jenkins', { fallback: 'Jenkins' })}
-                        {provider.type === 'github' && t('provider_type_github', { fallback: 'GitHub Actions' })}
-                        {provider.type === 'gitlab' && t('provider_type_gitlab', { fallback: 'GitLab CI' })}
-                        {provider.type === 'azure_devops' && t('provider_type_azure', { fallback: 'Azure DevOps' })}
+                        {provider.type === 'jenkins' &&
+                          t('provider_type_jenkins', { fallback: 'Jenkins' })}
+                        {provider.type === 'github' &&
+                          t('provider_type_github', { fallback: 'GitHub Actions' })}
+                        {provider.type === 'gitlab' &&
+                          t('provider_type_gitlab', { fallback: 'GitLab CI' })}
+                        {provider.type === 'azure_devops' &&
+                          t('provider_type_azure', { fallback: 'Azure DevOps' })}
                         {!['jenkins', 'github', 'gitlab', 'azure_devops'].includes(provider.type) &&
                           provider.type}
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">{provider.url}</TableCell>
                     <TableCell>
-                      {provider.config?.auth_type === 'token' && t('auth_type_token', { fallback: 'API Token' })}
-                      {provider.config?.auth_type === 'basic_auth' && t('auth_type_basic', { fallback: 'Username & Password' })}
-                      {provider.config?.auth_type === 'oauth' && t('auth_type_oauth', { fallback: 'OAuth' })}
-                      {!provider.config?.auth_type && t('auth_type_not_specified', { fallback: 'Not specified' })}
+                      {provider.config?.auth_type === 'token' &&
+                        t('auth_type_token', { fallback: 'API Token' })}
+                      {provider.config?.auth_type === 'basic_auth' &&
+                        t('auth_type_basic', { fallback: 'Username & Password' })}
+                      {provider.config?.auth_type === 'oauth' &&
+                        t('auth_type_oauth', { fallback: 'OAuth' })}
+                      {!provider.config?.auth_type &&
+                        t('auth_type_not_specified', { fallback: 'Not specified' })}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -278,10 +292,9 @@ export default function ClientCICDProvider({
           <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle>
-                {isEditing 
+                {isEditing
                   ? t('edit_provider_dialog_title', { fallback: 'Edit CI/CD Provider' })
-                  : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })
-                }
+                  : t('add_provider_dialog_title', { fallback: 'Add CI/CD Provider' })}
               </DialogTitle>
             </DialogHeader>
             <CICDProviderForm
@@ -296,11 +309,13 @@ export default function ClientCICDProvider({
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>{t('delete_provider_dialog_title', { fallback: 'Delete CI/CD Provider' })}</AlertDialogTitle>
+              <AlertDialogTitle>
+                {t('delete_provider_dialog_title', { fallback: 'Delete CI/CD Provider' })}
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 {t('delete_provider_confirmation', {
                   name: selectedProvider?.name,
-                  fallback: `Are you sure you want to delete "${selectedProvider?.name}"? This action cannot be undone and will remove all access to this provider.`
+                  fallback: `Are you sure you want to delete "${selectedProvider?.name}"? This action cannot be undone and will remove all access to this provider.`,
                 })}
               </AlertDialogDescription>
             </AlertDialogHeader>

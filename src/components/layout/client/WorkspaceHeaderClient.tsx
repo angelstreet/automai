@@ -42,10 +42,14 @@ export function WorkspaceHeaderClient({
   // Update collapsed state and styles when sidebar state changes
   React.useEffect(() => {
     setIsCollapsed(!open);
-    setHeaderStyles(!open ? {
-      marginLeft: 'var(--sidebar-width-offset, 0)',
-      width: 'calc(100% - var(--sidebar-width-offset, 0))',
-    } : {});
+    setHeaderStyles(
+      !open
+        ? {
+            marginLeft: 'var(--sidebar-width-offset, 0)',
+            width: 'calc(100% - var(--sidebar-width-offset, 0))',
+          }
+        : {},
+    );
   }, [open]);
 
   const toggleHeader = React.useCallback(() => {

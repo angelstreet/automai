@@ -32,7 +32,12 @@ export function DeploymentActions() {
         <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
         {t('refresh')}
       </Button>
-      <Button onClick={handleAddDeployment} id="add-deployment-button" size="sm" className="h-8 gap-1">
+      <Button
+        onClick={handleAddDeployment}
+        id="add-deployment-button"
+        size="sm"
+        className="h-8 gap-1"
+      >
         <PlusCircle className="h-4 w-4" />
         <span>{t('create')}</span>
       </Button>

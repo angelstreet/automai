@@ -15,7 +15,7 @@ export default function BillingSkeleton() {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Billing History Card Skeleton */}
       <Card className="border-0 shadow-none">
         <CardHeader>
@@ -27,4 +27,4 @@ export default function BillingSkeleton() {
       </Card>
     </div>
   );
-} 
+}

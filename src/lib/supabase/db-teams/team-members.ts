@@ -8,12 +8,10 @@ import type { TeamMember, TeamMemberCreateInput } from '@/types/context/team';
  * @param cookieStore Cookie store for authentication
  * @returns Team members with their profile data
  */
-export async function getTeamMembers(
-  teamId: string,
-): Promise<DbResponse<TeamMember[]>> {
+export async function getTeamMembers(teamId: string): Promise<DbResponse<TeamMember[]>> {
   try {
     const supabase = await createClient();
-    
+
     // Now query team members with direct filtering
     const { data, error } = await supabase
       .from('team_members')
@@ -51,9 +49,7 @@ export async function getTeamMembers(
  * @param cookieStore Cookie store for authentication
  * @returns Created team member data
  */
-export async function addTeamMember(
-  input: TeamMemberCreateInput,
-): Promise<DbResponse<TeamMember>> {
+export async function addTeamMember(input: TeamMemberCreateInput): Promise<DbResponse<TeamMember>> {
   try {
     const supabase = await createClient();
 

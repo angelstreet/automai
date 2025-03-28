@@ -56,7 +56,7 @@ export default function TeamSwitcherClient({
   const { user, teams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
   const [displayTeams, setDisplayTeams] = React.useState<VisualTeam[]>([]);
   const [activeTeam, setActiveTeam] = React.useState<VisualTeam | null>(null);
-  
+
   // Fetch teams on mount
   useEffect(() => {
     if (user) {
@@ -70,40 +70,44 @@ export default function TeamSwitcherClient({
 
     // Generate teams based on user's tier
     let teamsList: VisualTeam[] = [];
-    
+
     if (user.tenant_name === 'trial') {
       // Trial: Always display "Trial" (hardcoded)
-      teamsList = [{
-        name: 'Trial',
-        logo: tierIcons.trial,
-        plan: 'trial',
-      }];
+      teamsList = [
+        {
+          name: 'Trial',
+          logo: tierIcons.trial,
+          plan: 'trial',
+        },
+      ];
     } else if (user.tenant_name === 'pro') {
       // Pro: Always display "Pro" (hardcoded)
-      teamsList = [{
-        id: teams.length > 0 ? teams[0].id : undefined,
-        name: 'Pro',
-        logo: tierIcons.pro,
-        plan: 'pro',
-      }];
+      teamsList = [
+        {
+          id: teams.length > 0 ? teams[0].id : undefined,
+          name: 'Pro',
+          logo: tierIcons.pro,
+          plan: 'pro',
+        },
+      ];
     } else if (user.tenant_name === 'enterprise') {
       // Enterprise: Multiple selectable teams
-      teamsList = teams.map(team => ({
+      teamsList = teams.map((team) => ({
         id: team.id,
         name: team.name,
         logo: tierIcons.enterprise,
         plan: 'enterprise',
       }));
     }
-    
+
     // Set teams for display
     setDisplayTeams(teamsList);
-    
+
     // Set active team
     if (teamsList.length > 0) {
       // If we have a selected team from context, use it
       if (selectedTeam) {
-        const matchingTeam = teamsList.find(t => t.id === selectedTeam.id);
+        const matchingTeam = teamsList.find((t) => t.id === selectedTeam.id);
         if (matchingTeam) {
           setActiveTeam(matchingTeam);
         } else {
@@ -136,7 +140,7 @@ export default function TeamSwitcherClient({
         </div>
       );
     }
-    
+
     // Default loading state
     return (
       <button className="flex w-full items-center justify-between rounded-lg border border-border p-2">
@@ -200,9 +204,10 @@ export default function TeamSwitcherClient({
             onClick={() => handleTeamSelect(team)}
             className={cn(
               'cursor-pointer',
-              (activeTeam && team.id === activeTeam.id) || 
-              (!team.id && !activeTeam.id && team.name === activeTeam.name) 
-                ? 'bg-accent text-accent-foreground' : '',
+              (activeTeam && team.id === activeTeam.id) ||
+                (!team.id && !activeTeam.id && team.name === activeTeam.name)
+                ? 'bg-accent text-accent-foreground'
+                : '',
             )}
           >
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-background mr-2">

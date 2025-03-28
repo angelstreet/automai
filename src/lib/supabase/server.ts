@@ -4,16 +4,18 @@ import { cookies } from 'next/headers';
 
 export const createClient = async (cookieStore?: any) => {
   // Use provided cookieStore or get a new one
-  const cookieJar = cookieStore || await cookies();
-  
+  const cookieJar = cookieStore || (await cookies());
+
   // Get all cookies and convert to headers
-  const allCookies = await Promise.all((cookieJar.getAll()).map(async (c: { name: string; value: string }) => 
-    ['cookie', `${c.name}=${c.value}`]
-  ));
-  
+  const allCookies = await Promise.all(
+    cookieJar
+      .getAll()
+      .map(async (c: { name: string; value: string }) => ['cookie', `${c.name}=${c.value}`]),
+  );
+
   // Create request headers
   const requestHeaders = new Headers(allCookies);
-  
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,7 +29,10 @@ export const createClient = async (cookieStore?: any) => {
           try {
             // Only modify cookies in Server Actions or Route Handlers
             // This check helps prevent the "Cookies can only be modified in a Server Action or Route Handler" error
-            if (requestHeaders.get('next-action') || requestHeaders.get('x-supabase-server-action')) {
+            if (
+              requestHeaders.get('next-action') ||
+              requestHeaders.get('x-supabase-server-action')
+            ) {
               cookieJar.set(name, value, options);
             } else {
               // Log that we're skipping setting cookie in an RSC context
@@ -40,7 +45,10 @@ export const createClient = async (cookieStore?: any) => {
         async remove(name, options) {
           try {
             // Only modify cookies in Server Actions or Route Handlers
-            if (requestHeaders.get('next-action') || requestHeaders.get('x-supabase-server-action')) {
+            if (
+              requestHeaders.get('next-action') ||
+              requestHeaders.get('x-supabase-server-action')
+            ) {
               cookieJar.set(name, '', { ...options, maxAge: 0 });
             } else {
               // Log that we're skipping removing cookie in an RSC context

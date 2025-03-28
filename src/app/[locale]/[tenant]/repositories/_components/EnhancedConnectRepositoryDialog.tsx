@@ -464,7 +464,7 @@ export function EnhancedConnectRepositoryDialog({
               </Button>
             </div>
           </TabsContent>
-        </Tabs> 
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

@@ -1,12 +1,10 @@
 import './globals.css';
-import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
-import { ThemeProviders, SWRProvider } from '@/components/providers';
+import { Inter } from 'next/font/google';
 import { cookies } from 'next/headers';
-import { SidebarProvider } from '@/context/SidebarContext';
 
-// Import only what we need from the context
-import { UserProvider } from '@/context/UserContext';
+import { ThemeProviders, SWRProvider } from '@/components/providers';
+import { SidebarProvider } from '@/context/SidebarContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -67,9 +65,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ThemeProviders defaultTheme={theme}>
           <SWRProvider>
-            <SidebarProvider>
-              <UserProvider>{children}</UserProvider>
-            </SidebarProvider>
+            <SidebarProvider>{children}</SidebarProvider>
           </SWRProvider>
         </ThemeProviders>
       </body>

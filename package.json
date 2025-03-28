@@ -6,7 +6,8 @@
   "site_url": "https://automai-eta.vercel.app",
   "scripts": {
     "browser-tools": "npx @agentdeskai/browser-tools-server",
-    "dev": "NODE_ENV=development ts-node server.ts",
+    "dev": "NEXT_DEBUG=1 next dev",
+    "dev:http": "NODE_ENV=development ts-node server.ts",
     "dev:windows": "set NODE_ENV=development && ts-node server.ts",
     "prod": "NODE_ENV=production ts-node server.ts",
     "build": "next build",

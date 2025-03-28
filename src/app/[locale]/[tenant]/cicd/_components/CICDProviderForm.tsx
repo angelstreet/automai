@@ -287,7 +287,9 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                 onClick={handleTestConnection}
                 disabled={isTesting}
               >
-                {isTesting ? 'Testing...' : (
+                {isTesting ? (
+                  'Testing...'
+                ) : (
                   <>
                     <CheckCircle className="h-3 w-3 mr-2" />
                     Test Connection
@@ -295,10 +297,7 @@ const CICDProviderForm: React.FC<CICDProviderFormProps> = ({
                 )}
               </Button>
 
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-              >
+              <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Saving...' : 'Save'}
               </Button>
             </div>

@@ -5,12 +5,12 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@/context';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/shadcn/card';
 import { Input } from '@/components/shadcn/input';
 import { Button } from '@/components/shadcn/button';
@@ -28,17 +28,22 @@ export function ProfileContent({
   updateProfile: propUpdateProfile,
   refreshUser: propRefreshUser,
 }: ProfileContentProps) {
-  const { user: contextUser, loading, refreshUser: contextRefreshUser, updateProfile: contextUpdateProfile } = useUser();
-  
+  const {
+    user: contextUser,
+    loading,
+    refreshUser: contextRefreshUser,
+    updateProfile: contextUpdateProfile,
+  } = useUser();
+
   // Use provided props or fall back to context
   const user = propUser || contextUser;
   const updateProfile = propUpdateProfile || contextUpdateProfile;
   const refreshUser = propRefreshUser || contextRefreshUser;
-  
+
   const t = useTranslations('Profile');
   const params = useParams();
   const locale = params.locale as string;
-  const tenant = params.tenant as string || user?.tenant_id || 'trial';
+  const tenant = (params.tenant as string) || user?.tenant_id || 'trial';
   const [name, setName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
@@ -139,10 +144,7 @@ export function ProfileContent({
               >
                 {t('manageSettings')}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/${locale}/${tenant}/billing`)}
-              >
+              <Button variant="outline" onClick={() => router.push(`/${locale}/${tenant}/billing`)}>
                 {t('upgradePlan')}
               </Button>
             </CardContent>
@@ -160,10 +162,7 @@ export function ProfileContent({
                   <label className="text-sm font-medium">Workspace ID</label>
                   <p className="text-muted-foreground">{tenant}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => router.push(`/${locale}/${tenant}/team`)}
-                >
+                <Button variant="outline" onClick={() => router.push(`/${locale}/${tenant}/team`)}>
                   {t('manageTeam')}
                 </Button>
               </CardContent>

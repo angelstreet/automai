@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server';
 
 export default async function BillingContent() {
   const t = await getTranslations('billing');
-  
+
   return (
     <div className="p-2">
       {/* Current Plan Card */}
@@ -15,7 +15,9 @@ export default async function BillingContent() {
           <div className="grid gap-2">
             <div className="border p-4 rounded-md">
               <h3 className="text-lg font-semibold mb-2">{t('pro')}</h3>
-              <p className="text-muted-foreground">{t('price')}: $19.99 / {t('monthly')}</p>
+              <p className="text-muted-foreground">
+                {t('price')}: $19.99 / {t('monthly')}
+              </p>
               <div className="mt-4">
                 <p className="text-sm font-medium">{t('features')}:</p>
                 <ul className="list-disc list-inside text-sm text-muted-foreground mt-2 space-y-1">
@@ -29,7 +31,7 @@ export default async function BillingContent() {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Billing History Card */}
       <Card className="border-0 shadow-none">
         <CardHeader>
@@ -63,4 +65,4 @@ export default async function BillingContent() {
       </Card>
     </div>
   );
-} 
+}

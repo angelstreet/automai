@@ -49,7 +49,12 @@ export function RepositoryActions() {
           <RefreshCw className="h-4 w-4 mr-2" />
           {t('refresh')}
         </Button>
-        <Button onClick={() => setConnectDialogOpen(true)} id="add-repository-button" size="sm" className="h-8 gap-1">
+        <Button
+          onClick={() => setConnectDialogOpen(true)}
+          id="add-repository-button"
+          size="sm"
+          className="h-8 gap-1"
+        >
           <PlusCircle className="h-4 w-4" />
           <span>{t('addRepository')}</span>
         </Button>

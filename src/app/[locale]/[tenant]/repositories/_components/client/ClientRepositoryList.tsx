@@ -20,9 +20,9 @@ interface ClientRepositoryListProps {
   initialStarredIds: string[];
 }
 
-export function ClientRepositoryList({ 
-  initialRepositories, 
-  initialStarredIds 
+export function ClientRepositoryList({
+  initialRepositories,
+  initialStarredIds,
 }: ClientRepositoryListProps) {
   const t = useTranslations('repositories');
 
@@ -67,10 +67,10 @@ export function ClientRepositoryList({
 
     try {
       // Optimistic update
-      const newStarredIds = isStarred 
-        ? starredIds.filter(repoId => repoId !== id)
+      const newStarredIds = isStarred
+        ? starredIds.filter((repoId) => repoId !== id)
         : [...starredIds, id];
-      
+
       setStarredIds(newStarredIds);
 
       // Call the appropriate server action
@@ -94,33 +94,36 @@ export function ClientRepositoryList({
   };
 
   // Filter repositories
-  const filteredRepositories = repositories
-    .filter((repo: Repository) => {
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const repoName = repo.name?.toLowerCase() || '';
-        const repoOwner = repo.owner?.toLowerCase() || '';
-        const repoDescription = repo.description?.toLowerCase() || '';
+  const filteredRepositories = repositories.filter((repo: Repository) => {
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const repoName = repo.name?.toLowerCase() || '';
+      const repoOwner = repo.owner?.toLowerCase() || '';
+      const repoDescription = repo.description?.toLowerCase() || '';
 
-        if (!repoName.includes(query) && !repoOwner.includes(query) && !repoDescription.includes(query)) {
-          return false;
-        }
+      if (
+        !repoName.includes(query) &&
+        !repoOwner.includes(query) &&
+        !repoDescription.includes(query)
+      ) {
+        return false;
       }
+    }
 
-      // Filter by tab
-      if (activeTab === 'public' && repo.isPrivate === true) return false;
-      if (activeTab === 'private' && repo.isPrivate !== true) return false;
-      if (activeTab === 'starred' && !starredRepos.has(repo.id)) return false;
+    // Filter by tab
+    if (activeTab === 'public' && repo.isPrivate === true) return false;
+    if (activeTab === 'private' && repo.isPrivate !== true) return false;
+    if (activeTab === 'starred' && !starredRepos.has(repo.id)) return false;
 
-      return true;
-    });
+    return true;
+  });
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredRepositories.length / itemsPerPage);
   const currentRepositories = filteredRepositories.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   return (
@@ -128,7 +131,12 @@ export function ClientRepositoryList({
       {/* Tabs filter and search */}
       <div className="flex justify-between items-center py-4 mb-4 relative">
         <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab} className="pointer-events-auto">
+          <Tabs
+            defaultValue="all"
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="pointer-events-auto"
+          >
             <TabsList className="grid grid-cols-4 min-w-[400px]">
               <TabsTrigger value="all">{t('all')}</TabsTrigger>
               <TabsTrigger value="public">{t('public')}</TabsTrigger>
@@ -162,7 +170,11 @@ export function ClientRepositoryList({
               title={t('noRepositories')}
               description={searchQuery ? t('noRepositoriesMatchingSearch') : t('noRepositoriesYet')}
               action={
-                <Button onClick={() => document.getElementById('add-repository-button')?.click()} size="sm" className="gap-1">
+                <Button
+                  onClick={() => document.getElementById('add-repository-button')?.click()}
+                  size="sm"
+                  className="gap-1"
+                >
                   <PlusCircle className="h-4 w-4" />
                   <span>{t('addRepository')}</span>
                 </Button>
@@ -213,4 +225,4 @@ export function ClientRepositoryList({
       )}
     </div>
   );
-} 
+}

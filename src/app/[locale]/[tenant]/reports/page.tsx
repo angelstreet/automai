@@ -29,7 +29,7 @@ function ReportsSkeleton() {
 
 export default async function ReportsPage() {
   const t = await getTranslations('Reports');
-  
+
   return (
     <FeaturePageContainer
       title={t('title')}

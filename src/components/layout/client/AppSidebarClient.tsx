@@ -67,7 +67,8 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
   }, [effectiveRole]);
 
   // Always ensure sidebar is visible, without unnecessary transitions
-  const sidebarClassName = 'fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300';
+  const sidebarClassName =
+    'fixed left-0 top-0 z-30 sidebar-visible animate-in fade-in-50 duration-300';
 
   return (
     <Sidebar

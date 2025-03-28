@@ -7,17 +7,15 @@ import type { Team, TeamCreateInput, TeamUpdateInput } from '@/types/context/tea
  * @param tenantId Tenant ID
  * @returns Teams belonging to the tenant
  */
-export async function getTeams(
-  tenantId: string,
-): Promise<DbResponse<Team[]>> {
+export async function getTeams(tenantId: string): Promise<DbResponse<Team[]>> {
   try {
     const supabase = await createClient();
 
     const { data, error } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+      .from('teams')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false });
 
     if (error) {
       return { success: false, error: error.message };
@@ -30,7 +28,7 @@ export async function getTeams(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to fetch teams",
+      error: error.message || 'Failed to fetch teams',
     };
   }
 }
@@ -40,17 +38,11 @@ export async function getTeams(
  * @param teamId Team ID
  * @returns Team data
  */
-export async function getTeam(
-  teamId: string,
-): Promise<DbResponse<Team>> {
+export async function getTeam(teamId: string): Promise<DbResponse<Team>> {
   try {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
-      .from("teams")
-      .select("*")
-      .eq("id", teamId)
-      .single();
+    const { data, error } = await supabase.from('teams').select('*').eq('id', teamId).single();
 
     if (error) {
       return { success: false, error: error.message };
@@ -63,7 +55,7 @@ export async function getTeam(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to fetch team",
+      error: error.message || 'Failed to fetch team',
     };
   }
 }
@@ -81,18 +73,18 @@ export async function createTeam(
 
     // First fetch the user to set created_by
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError) {
       return { success: false, error: userError.message };
     }
 
     const { data, error } = await supabase
-      .from("teams")
+      .from('teams')
       .insert({
         ...input,
         created_by: userData.user.id,
       })
-      .select("*")
+      .select('*')
       .single();
 
     if (error) {
@@ -106,7 +98,7 @@ export async function createTeam(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to create team",
+      error: error.message || 'Failed to create team',
     };
   }
 }
@@ -125,13 +117,13 @@ export async function updateTeam(
     const supabase = await createClient();
 
     const { data, error } = await supabase
-      .from("teams")
+      .from('teams')
       .update({
         ...input,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", teamId)
-      .select("*")
+      .eq('id', teamId)
+      .select('*')
       .single();
 
     if (error) {
@@ -145,7 +137,7 @@ export async function updateTeam(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to update team",
+      error: error.message || 'Failed to update team',
     };
   }
 }
@@ -155,17 +147,15 @@ export async function updateTeam(
  * @param teamId Team ID to delete
  * @returns Success status
  */
-export async function deleteTeam(
-  teamId: string,
-): Promise<DbResponse<null>> {
+export async function deleteTeam(teamId: string): Promise<DbResponse<null>> {
   try {
     const supabase = await createClient();
 
     // Check if team is default - don't allow deleting default teams
     const { data: teamData, error: teamError } = await supabase
-      .from("teams")
-      .select("is_default")
-      .eq("id", teamId)
+      .from('teams')
+      .select('is_default')
+      .eq('id', teamId)
       .single();
 
     if (teamError) {
@@ -173,16 +163,13 @@ export async function deleteTeam(
     }
 
     if (teamData?.is_default) {
-      return { 
-        success: false, 
-        error: "Cannot delete the default team. Make another team default first." 
+      return {
+        success: false,
+        error: 'Cannot delete the default team. Make another team default first.',
       };
     }
 
-    const { error } = await supabase
-      .from("teams")
-      .delete()
-      .eq("id", teamId);
+    const { error } = await supabase.from('teams').delete().eq('id', teamId);
 
     if (error) {
       return { success: false, error: error.message };
@@ -192,7 +179,7 @@ export async function deleteTeam(
   } catch (error: any) {
     return {
       success: false,
-      error: error.message || "Failed to delete team",
+      error: error.message || 'Failed to delete team',
     };
   }
 }

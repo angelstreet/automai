@@ -1,11 +1,11 @@
 'use client';
 
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from '@/components/shadcn/card';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Skeleton } from '@/components/shadcn/skeleton';

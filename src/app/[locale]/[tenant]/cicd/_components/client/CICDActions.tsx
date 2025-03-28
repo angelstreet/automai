@@ -33,20 +33,23 @@ export function CICDActions() {
           <RefreshCw className="h-4 w-4 mr-2" />
           {t('refresh')}
         </Button>
-        <Button id="add-provider-button" size="sm" className="h-8 gap-1" onClick={handleAddProvider}>
+        <Button
+          id="add-provider-button"
+          size="sm"
+          className="h-8 gap-1"
+          onClick={handleAddProvider}
+        >
           <PlusCircle className="h-4 w-4" />
           <span>{t('add_provider')}</span>
         </Button>
       </div>
-      
+
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>{t('add_provider_dialog_title')}</DialogTitle>
           </DialogHeader>
-          <CICDProviderForm
-            onComplete={handleDialogComplete}
-          />
+          <CICDProviderForm onComplete={handleDialogComplete} />
         </DialogContent>
       </Dialog>
     </>

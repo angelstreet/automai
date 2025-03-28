@@ -124,11 +124,12 @@ export function ClientConnectionForm({
         }
       } else {
         // Handle both types of error response formats
-        const errorMessage = 'message' in result 
-          ? result.message 
-          : 'error' in result 
-            ? result.error
-            : t('errors.testFailed');
+        const errorMessage =
+          'message' in result
+            ? result.message
+            : 'error' in result
+              ? result.error
+              : t('errors.testFailed');
         setTestError(errorMessage);
       }
     } catch (error) {

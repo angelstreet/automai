@@ -113,7 +113,7 @@ export function HostActions() {
           <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
           {t('refresh', { fallback: 'Refresh' })}
         </Button>
-        
+
         <Button size="sm" className="h-8 gap-1" onClick={handleAddHost} id="add-host-button">
           <PlusCircle className="h-4 w-4" />
           <span>{t('add_host', { fallback: 'Add Host' })}</span>

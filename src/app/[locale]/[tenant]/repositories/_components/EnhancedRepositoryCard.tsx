@@ -120,17 +120,17 @@ export function EnhancedRepositoryCard({
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent className="px-4 py-2">
         {repository?.description && (
           <CardDescription className="line-clamp-2 text-xs mb-2">
             {repository.description}
           </CardDescription>
         )}
-        
+
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
           {repository?.owner && <div>{repository.owner}</div>}
-          
+
           {repository?.language && (
             <div className="flex items-center gap-1">
               <span
@@ -140,14 +140,14 @@ export function EnhancedRepositoryCard({
               <span>{repository.language}</span>
             </div>
           )}
-          
+
           <div className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             <span>{lastSyncedText}</span>
           </div>
         </div>
       </CardContent>
-      
+
       <CardFooter className="px-4 py-2 flex justify-between items-center text-xs border-t">
         <div className="flex items-center gap-1">
           <ExternalLink className="h-3 w-3" />
@@ -161,7 +161,7 @@ export function EnhancedRepositoryCard({
             {t('viewOnProvider')}
           </a>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {onDelete && (
             <Button

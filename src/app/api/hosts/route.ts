@@ -10,34 +10,28 @@ export async function GET(request: NextRequest) {
   try {
     // First check authentication using our cached user implementation
     const user = await getUser();
-    
+
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     // Get all hosts for this user
     const result = await getHosts();
-    
+
     if (!result.success) {
       return NextResponse.json(
         { success: false, error: result.error || 'Failed to fetch hosts' },
-        { status: 500 }
+        { status: 500 },
       );
     }
-    
-    return NextResponse.json({ 
-      success: true, 
-      data: result.data 
+
+    return NextResponse.json({
+      success: true,
+      data: result.data,
     });
   } catch (error) {
     console.error('Error in hosts API route:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
 

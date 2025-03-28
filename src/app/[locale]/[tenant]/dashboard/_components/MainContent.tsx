@@ -1,4 +1,10 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/shadcn/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/shadcn/card';
 import { Overview } from './Overview';
 import { RecentSales } from './RecentSales';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
@@ -9,7 +15,7 @@ export function MainContent() {
   const tasks = [
     { id: '1', title: 'Review test results', dueDate: 'Today' },
     { id: '2', title: 'Update test cases', dueDate: 'Tomorrow' },
-    { id: '3', title: 'Create new project', dueDate: 'Next week' }
+    { id: '3', title: 'Create new project', dueDate: 'Next week' },
   ];
 
   const teamChat = [
@@ -18,15 +24,15 @@ export function MainContent() {
       name: 'John Doe',
       avatar: 'https://avatar.vercel.sh/jdoe',
       message: 'Just completed the new test suite.',
-      time: '2 hours ago'
+      time: '2 hours ago',
     },
     {
       id: '2',
       name: 'Jane Smith',
       avatar: 'https://avatar.vercel.sh/jsmith',
       message: 'Found a bug in the login flow.',
-      time: '3 hours ago'
-    }
+      time: '3 hours ago',
+    },
   ];
 
   return (

@@ -790,10 +790,14 @@ export async function createGitProvider(
  * Get starred repositories for the current user
  * Safe to call from client components
  */
-export async function getStarredRepositories(): Promise<{ success: boolean; error?: string; data?: any[] }> {
+export async function getStarredRepositories(): Promise<{
+  success: boolean;
+  error?: string;
+  data?: any[];
+}> {
   try {
     console.log('[Server] getStarredRepositories: Starting...');
-    
+
     // Get the current user
     let currentUser;
     try {
@@ -1006,7 +1010,7 @@ export async function getRepositoriesWithStarred(
         // Continue with null user - we'll handle repositories without starred info
       }
     }
-    
+
     console.log(
       '[Server] User context:',
       currentUser
@@ -1021,14 +1025,14 @@ export async function getRepositoriesWithStarred(
     if (!currentUser) {
       console.log('[Server] No authenticated user, fetching repositories without starred info');
       const reposResult = await getRepositories(filter);
-      
+
       if (!reposResult.success) {
         return {
           success: false,
           error: reposResult.error || 'Failed to fetch repositories',
         };
       }
-      
+
       // Return repositories without starred info
       return {
         success: true,

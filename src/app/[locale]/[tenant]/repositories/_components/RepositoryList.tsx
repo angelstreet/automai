@@ -210,7 +210,11 @@ export function RepositoryList({ repositories, starredRepos, error }: Repository
           title={t('noRepositories')}
           description={emptyStateMessage}
           action={
-            <Button onClick={() => document.getElementById('add-repository-button')?.click()} size="sm" className="gap-1">
+            <Button
+              onClick={() => document.getElementById('add-repository-button')?.click()}
+              size="sm"
+              className="gap-1"
+            >
               <PlusCircle className="h-4 w-4" />
               <span>{t('addRepository')}</span>
             </Button>

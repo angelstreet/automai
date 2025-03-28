@@ -16,10 +16,10 @@ export function UserProfileWrapper({ user, clearCache }: UserProfileWrapperProps
   if (!user) {
     return <UserProfileDropdown user={null as unknown as User} clearCache={clearCache} />;
   }
-  
+
   // When user has an avatar, preload it
   const avatarUrl = user?.avatar_url || user?.user_metadata?.avatar_url;
-  
+
   if (avatarUrl) {
     return (
       <>

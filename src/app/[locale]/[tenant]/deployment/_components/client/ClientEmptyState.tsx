@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/layout/EmptyState';
 
 export function ClientEmptyState() {
   const t = useTranslations('deployment');
-  
+
   const handleNewDeployment = () => {
     // Find and click the deployment button directly
     const newDeploymentButton = document.getElementById('new-deployment-button');
@@ -21,7 +21,9 @@ export function ClientEmptyState() {
       <EmptyState
         icon={<Rocket className="h-10 w-10" />}
         title={t('no_deployments_title', { fallback: 'No deployments found' })}
-        description={t('no_deployments_description', { fallback: 'Create your first deployment to get started' })}
+        description={t('no_deployments_description', {
+          fallback: 'Create your first deployment to get started',
+        })}
         action={
           <Button onClick={handleNewDeployment} size="sm" className="gap-1">
             <PlusCircle className="h-4 w-4" />

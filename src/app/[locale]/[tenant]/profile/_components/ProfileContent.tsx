@@ -11,7 +11,5 @@ interface ProfileContentProps {
  * Allows passing server-fetched data to client component
  */
 export function ProfileContent({ user }: ProfileContentProps) {
-  return (
-    <ClientProfileContent user={user} />
-  );
+  return <ClientProfileContent user={user} />;
 }

@@ -5,10 +5,7 @@ import { Host } from '../../types';
 import { HostGrid } from '../HostGrid';
 import { HostTable } from '../HostTable';
 import { VIEW_MODE_CHANGE } from './HostActions';
-import {
-  testHostConnection,
-  deleteHost as deleteHostAction,
-} from '@/app/actions/hosts';
+import { testHostConnection, deleteHost as deleteHostAction } from '@/app/actions/hosts';
 import { Button } from '@/components/shadcn/button';
 import { Server, PlusCircle } from 'lucide-react';
 import { EmptyState } from '@/components/layout/EmptyState';
@@ -96,7 +93,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
       try {
         console.log('[ClientHostList] Refreshing hosts from server');
         setIsRefreshing(true);
-        
+
         // Fetch the latest hosts from the server
         const response = await fetch('/api/hosts');
         if (response.ok) {
@@ -106,7 +103,7 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
             console.log('[ClientHostList] Hosts refreshed from server:', data.data.length);
           }
         }
-        
+
         // Update connection status for all hosts
         handleRefreshAll();
       } catch (error) {
@@ -160,7 +157,11 @@ export default function ClientHostList({ initialHosts }: ClientHostListProps) {
           title="No hosts found"
           description="Add your first host to get started"
           action={
-            <Button onClick={() => document.getElementById('add-host-button')?.click()} size="sm" className="gap-1">
+            <Button
+              onClick={() => document.getElementById('add-host-button')?.click()}
+              size="sm"
+              className="gap-1"
+            >
               <PlusCircle className="h-4 w-4" />
               <span>Add Host</span>
             </Button>

@@ -1,12 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Clock, RefreshCw, Play, MoreHorizontal, Trash, Eye, PlayCircle, Trash2 } from 'lucide-react';
+import {
+  Search,
+  Clock,
+  RefreshCw,
+  Play,
+  MoreHorizontal,
+  Trash,
+  Eye,
+  PlayCircle,
+  Trash2,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Deployment, Repository } from '../types';
 import StatusBadge from './StatusBadge';
 import { getFormattedTime } from '../utils';
-import { runDeployment as runDeploymentAction, deleteDeployment as deleteDeploymentAction } from '@/app/actions/deployments';
+import {
+  runDeployment as runDeploymentAction,
+  deleteDeployment as deleteDeploymentAction,
+} from '@/app/actions/deployments';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -199,11 +212,11 @@ export function DeploymentList({
 
   const handleRunDeployment = async (deployment: Deployment) => {
     if (isRunning === deployment.id) return;
-    
+
     setIsRunning(deployment.id);
     try {
       const result = await runDeploymentAction(deployment.id);
-      
+
       if (result.success) {
         toast({
           title: 'Success',
@@ -277,7 +290,6 @@ export function DeploymentList({
                 <option value="failed">Failed</option>
                 <option value="scheduled">Scheduled</option>
               </select>
-              
             </div>
           </div>
         </div>
@@ -432,7 +444,9 @@ export function DeploymentList({
                         <StatusBadge status={deployment.status} />
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {getFormattedTime ? getFormattedTime(deployment.createdAt) : new Date(deployment.createdAt).toLocaleString()}
+                        {getFormattedTime
+                          ? getFormattedTime(deployment.createdAt)
+                          : new Date(deployment.createdAt).toLocaleString()}
                       </td>
                       <td className="px-2 py-1 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {deployment.completedAt && deployment.startedAt
@@ -578,7 +592,8 @@ export function DeploymentList({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Deployment</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be undone.
+                Are you sure you want to delete "{selectedDeployment?.name}"? This action cannot be
+                undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="flex justify-end gap-2">

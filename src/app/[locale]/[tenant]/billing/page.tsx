@@ -13,10 +13,10 @@ export const metadata: Metadata = {
 
 export default async function BillingPage() {
   const t = await getTranslations('billing');
-  
+
   return (
     <div className="container mx-auto py-6 px-4">
-    <PageHeader title={t('title')} description={t('description')} />
+      <PageHeader title={t('title')} description={t('description')} />
       <Suspense fallback={<BillingSkeleton />}>
         <BillingContent />
       </Suspense>

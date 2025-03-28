@@ -31,10 +31,10 @@ export async function getHosts(
 
     // No need to add filter parameters - the RLS policies
     // are already set up to handle team-based access control
-    
+
     // Set up query filters
     const where: Record<string, any> = {};
-    
+
     if (filter?.status) {
       where.status = filter.status;
     }
@@ -77,7 +77,7 @@ export async function getHostById(
         error: 'Unauthorized - Please sign in',
       };
     }
-    
+
     // No need to filter by team_id - the RLS policies
     // will handle access control
     const data = await hostDb.findUnique({
@@ -335,14 +335,14 @@ export async function testAllHosts(): Promise<{
     const results = [];
 
     // First, update all hosts to testing state in one batch (if possible)
-    const updatePromises = hosts.map(host => 
+    const updatePromises = hosts.map((host) =>
       hostDb.update({
         where: { id: host.id },
         data: {
           status: 'testing',
           updated_at: new Date().toISOString(),
         },
-      })
+      }),
     );
     await Promise.all(updatePromises);
 

@@ -10,7 +10,10 @@ import React, {
   useMemo,
 } from 'react';
 import useSWR from 'swr';
-import { updateProfile as updateProfileAction, setSelectedTeam as setSelectedTeamAction } from '@/app/actions/user';
+import {
+  updateProfile as updateProfileAction,
+  setSelectedTeam as setSelectedTeamAction,
+} from '@/app/actions/user';
 import { getUser } from '@/app/actions/user';
 import { Role, User, AuthUser, UserTeam, TeamMember, ResourceLimit } from '@/types/user';
 import { useRequestProtection, clearRequestCache } from '@/hooks/useRequestProtection';
@@ -127,15 +130,19 @@ function SingletonUserProvider({
     if (USER_CONTEXT_INITIALIZED) {
       console.warn(PROVIDER_DUPLICATION_MESSAGE);
       return;
-    } 
-    
+    }
+
     USER_CONTEXT_INITIALIZED = true;
     return () => {
       USER_CONTEXT_INITIALIZED = false;
     };
   }, []);
 
-  return <UserProviderImpl initialUser={initialUser} onAuthChange={onAuthChange}>{children}</UserProviderImpl>;
+  return (
+    <UserProviderImpl initialUser={initialUser} onAuthChange={onAuthChange}>
+      {children}
+    </UserProviderImpl>
+  );
 }
 
 // The actual provider implementation (internal)
@@ -193,7 +200,7 @@ function UserProviderImpl({
     if (propInitialUser) {
       return propInitialUser;
     }
-    
+
     // Otherwise try localStorage
     if (typeof window !== 'undefined') {
       try {
@@ -304,12 +311,12 @@ function UserProviderImpl({
 
   // Team-related computed values
   const teams = useMemo(() => user?.teams || [], [user?.teams]);
-  
+
   const selectedTeam = useMemo(() => {
     if (!user?.selectedTeamId || !teams.length) return null;
-    return teams.find(team => team.id === user.selectedTeamId) || null;
+    return teams.find((team) => team.id === user.selectedTeamId) || null;
   }, [user?.selectedTeamId, teams]);
-  
+
   const teamMembers = useMemo(() => user?.teamMembers || [], [user?.teamMembers]);
 
   // Modify the clearCache function to return Promise<void> instead of Promise<null>
@@ -376,15 +383,15 @@ function UserProviderImpl({
     log('[UserContext] Setting selected team to:', teamId);
     try {
       if (!user?.id) throw new Error('No user found');
-      
+
       // Validate the team exists in the user's teams
-      if (!teams.some(team => team.id === teamId)) {
+      if (!teams.some((team) => team.id === teamId)) {
         throw new Error('Team not found or access denied');
       }
-      
+
       // Call the server action to update the selected team
       await setSelectedTeamAction(teamId);
-      
+
       // Refresh user data to get updated team and members
       await refreshUser();
     } catch (err) {
@@ -399,14 +406,14 @@ function UserProviderImpl({
     // Simple implementation - we'll check against the current team's resource limits
     // In a real implementation, you would fetch this from the server or have it as part of the user data
     if (!user?.teams?.length || !selectedTeam) return null;
-    
+
     // This is a placeholder - in a real implementation, you would call a server action to check the limit
     return {
       type: resourceType,
       current: 0, // This would be the current count of resources
       limit: 10, // This would be the team's limit for this resource type
       isUnlimited: false,
-      canCreate: true // Based on current < limit || isUnlimited
+      canCreate: true, // Based on current < limit || isUnlimited
     };
   };
 

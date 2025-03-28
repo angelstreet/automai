@@ -61,29 +61,31 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
     // Get all auth cookies - must await cookies()
     const cookieStore = await cookies();
     const authCookie = cookieStore.get('sb-wexkgcszrwxqsthahfyq-auth-token.0');
-    
-    // Create a stable cache key from the auth cookie (if available)
-    // This ensures the same user gets the same cache entry across requests
-    const cacheKey = authCookie?.value ? 
-      `user_cache_${authCookie.value.slice(0, 32)}` : 
-      'user_cache_anonymous';
-    
+
+    // Fail fast if no auth cookie exists - prevent unnecessary DB queries
+    if (!authCookie?.value) {
+      return null;
+    }
+
+    // Create a stable cache key from the auth cookie
+    const cacheKey = `user_cache_${authCookie.value.slice(0, 32)}`;
+
     // Check in-memory cache first
     const cachedEntry = serverCache.get(cacheKey);
     const now = Date.now();
-    
-    if (cachedEntry && (now - cachedEntry.timestamp) < CACHE_TTL) {
+
+    if (cachedEntry && now - cachedEntry.timestamp < CACHE_TTL) {
       // Use cached data silently - no logging in production
       return cachedEntry.user;
     }
-    
+
     // If no valid cache, fetch from Supabase
     const result = await supabaseAuth.getUser();
 
     if (!result.success || !result.data) {
       // Handle common auth errors
       if (
-        result.error === 'No active session' || 
+        result.error === 'No active session' ||
         result.error === 'Auth session missing!' ||
         result.error?.includes('Invalid Refresh Token') ||
         result.error?.includes('refresh_token_not_found')
@@ -102,32 +104,32 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
       if (!(result.data as any).role) {
         (result.data as any).role = result.data.user_metadata?.role || 'viewer';
       }
-      
+
       // Now fetch the user's teams if they have a tenant_id
       if (result.data.tenant_id) {
         try {
           // Create a Supabase client for database access (using server client)
           const supabase = await createServerClient(cookieStore);
-          
+
           // Fetch teams for the user's tenant
           const { data: teams, error: teamsError } = await supabase
             .from('teams')
             .select('*')
             .eq('tenant_id', result.data.tenant_id);
-            
+
           if (teamsError) {
             console.error('Error fetching teams:', teamsError);
           } else if (teams) {
             // Add teams to the user data
             (result.data as AuthUser).teams = teams as UserTeam[];
-            
+
             // Get stored team ID from cookie instead of localStorage (which isn't available in server components)
             const selectedTeamCookie = cookieStore.get(`selected_team_${result.data.id}`);
             const storedTeamId = selectedTeamCookie?.value;
-            
+
             // Try to find a selected team (prioritize default team)
             const defaultTeam = teams.find((team: UserTeam) => team.is_default);
-            
+
             // Set the selected team ID
             if (storedTeamId && teams.some((team: UserTeam) => team.id === storedTeamId)) {
               (result.data as AuthUser).selectedTeamId = storedTeamId;
@@ -136,7 +138,7 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
             } else if (teams.length > 0) {
               (result.data as AuthUser).selectedTeamId = teams[0].id;
             }
-            
+
             // If there's a selected team, fetch its members
             if ((result.data as AuthUser).selectedTeamId) {
               try {
@@ -145,32 +147,34 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
                   .from('team_members')
                   .select('*')
                   .eq('team_id', (result.data as AuthUser).selectedTeamId);
-                  
+
                 if (membersError) {
                   console.error('Error fetching team members:', membersError);
                 } else if (members) {
                   // For each member, get their user info separately
                   const transformedMembers = [];
-                  
+
                   for (const member of members) {
                     try {
                       // Get user info for this profile ID from the profiles table
                       const { data: userData, error: userError } = await supabase
-                        .from('profiles')  // Use the profiles table instead of auth.users
-                        .select('id, avatar_url, tenant_id, role, tenant_name') 
+                        .from('profiles') // Use the profiles table instead of auth.users
+                        .select('id, avatar_url, tenant_id, role, tenant_name')
                         .eq('id', member.profile_id)
                         .single();
-                        
+
                       if (userError) {
-                        console.error(`Error fetching profile data for profile ${member.profile_id}:`, userError);
+                        console.error(
+                          `Error fetching profile data for profile ${member.profile_id}:`,
+                          userError,
+                        );
                       }
-                      
+
                       // If we found the profile, get the user's email from our cached user data
                       // We already have the current user's email from the auth data
-                      const userEmail = member.profile_id === result.data.id 
-                        ? result.data.email 
-                        : 'Team Member'; // Always a string, never null
-                        
+                      const userEmail =
+                        member.profile_id === result.data.id ? result.data.email : 'Team Member'; // Always a string, never null
+
                       transformedMembers.push({
                         team_id: member.team_id,
                         profile_id: member.profile_id,
@@ -180,14 +184,14 @@ export const getUser = cache(async function getUser(): Promise<AuthUser | null> 
                         profiles: {
                           id: member.profile_id,
                           email: userEmail,
-                          avatar_url: ''
-                        }
+                          avatar_url: '',
+                        },
                       });
                     } catch (userError) {
                       console.error('Error enhancing team member:', userError);
                     }
                   }
-                  
+
                   (result.data as AuthUser).teamMembers = transformedMembers as TeamMember[];
                 }
               } catch (memberError) {
@@ -285,7 +289,7 @@ export async function updateProfile(formData: FormData | Record<string, any>) {
 
 /**
  * Set the user's selected team
- * 
+ *
  * @param teamId The ID of the team to select
  * @returns Result object with success status
  */
@@ -295,19 +299,19 @@ export async function setSelectedTeam(teamId: string) {
     if (!user) {
       throw new Error('User not authenticated');
     }
-    
+
     // Verify the team exists and the user has access to it
-    if (!user.teams?.some(team => team.id === teamId)) {
+    if (!user.teams?.some((team) => team.id === teamId)) {
       throw new Error('Team not found or access denied');
     }
-    
+
     // Store the selected team ID in a cookie
     const cookieStore = await cookies();
     cookieStore.set(`selected_team_${user.id}`, teamId, { maxAge: 60 * 60 * 24 * 365 }); // 1 year
-    
+
     // Invalidate cache to force refresh of user data
     await invalidateUserCache();
-    
+
     return {
       success: true,
       message: 'Team selected successfully',

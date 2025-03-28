@@ -21,11 +21,9 @@ export function FeaturePageContainer({
           {actions}
         </PageHeader>
       </div>
-      
+
       {/* Content Container */}
-      <div className="border rounded-lg overflow-auto h-[calc(100vh-250px)]">
-        {children}
-      </div>
+      <div className="border rounded-lg overflow-auto h-[calc(100vh-250px)]">{children}</div>
     </div>
   );
-} 
+}
