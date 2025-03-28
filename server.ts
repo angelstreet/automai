@@ -1,8 +1,8 @@
 // DO NOT MODIFY THIS FILE
-import dotenv from 'dotenv';
 import { existsSync } from 'fs';
 import path from 'path';
 
+import dotenv from 'dotenv';
 // Load environment variables before any imports that might use them
 console.log('Loading environment variables...');
 
@@ -29,7 +29,7 @@ let isShuttingDown = false;
 async function main() {
   try {
     const startTime = Date.now();
-    
+
     // Start server without WebSocket support by default
     // WebSockets will be lazily initialized when needed
     const server = await startServer({
