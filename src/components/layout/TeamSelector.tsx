@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Check, ChevronsUpDown, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
 import { Button } from '@/components/shadcn/button';
 import {
   Command,
@@ -11,8 +12,8 @@ import {
   CommandItem,
 } from '@/components/shadcn/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
-import { cn } from '@/lib/utils';
 import { useUser } from '@/context';
+import { cn } from '@/lib/utils';
 
 export default function TeamSelector() {
   const { user, teams, selectedTeam, setSelectedTeam, refreshUser } = useUser();

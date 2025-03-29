@@ -1,9 +1,9 @@
 'use client';
 
-import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import * as React from 'react';
+
 import { Button } from '@/components/shadcn/button';
-import { Package2 } from 'lucide-react';
 import { useUser } from '@/context';
 
 interface UpgradePromptProps {

@@ -3,14 +3,14 @@
 import Cookies from 'js-cookie';
 import { ChevronUp } from 'lucide-react';
 import * as React from 'react';
-import { cn } from '@/lib/utils';
 
-import { SidebarTrigger } from '@/components/sidebar';
-import { Button } from '@/components/shadcn/button';
 import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
+import { Button } from '@/components/shadcn/button';
 import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
+import { SidebarTrigger } from '@/components/sidebar';
 import { useSidebar, useUser } from '@/context';
+import { cn } from '@/lib/utils';
 import { User } from '@/types/user';
 
 interface WorkspaceHeaderClientProps {

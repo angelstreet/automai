@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Button } from '@/components/shadcn/button';
-import { Eye, Trash2, PlayCircle } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { ClientDeploymentRunAction } from './client';
+import React, { useState } from 'react';
+
+import { deleteDeployment } from '@/app/actions/deployments';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -15,14 +15,10 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/shadcn/alert-dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
+import { Button } from '@/components/shadcn/button';
 import { toast } from '@/components/shadcn/use-toast';
-import { deleteDeployment } from '@/app/actions/deployments';
+
+import { ClientDeploymentRunAction } from './client';
 
 interface DeploymentActionsProps {
   deploymentId: string;

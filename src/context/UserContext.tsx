@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import useSWR from 'swr';
 
 import {

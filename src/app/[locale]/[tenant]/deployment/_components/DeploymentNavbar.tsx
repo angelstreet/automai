@@ -1,6 +1,7 @@
-import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import React from 'react';
+
 import { deploymentNavItems } from '@/components/layouts/sidebar/DeploymentNav';
 
 export const DeploymentNavbar: React.FC = () => {

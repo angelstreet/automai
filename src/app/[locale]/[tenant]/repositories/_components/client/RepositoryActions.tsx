@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
 import { PlusCircle, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import React, { useState } from 'react';
+
 import { Button } from '@/components/shadcn/button';
-import { EnhancedConnectRepositoryDialog } from '../EnhancedConnectRepositoryDialog';
+
 import { ConnectRepositoryValues } from '../../types';
+import { EnhancedConnectRepositoryDialog } from '../EnhancedConnectRepositoryDialog';
 
 export function RepositoryActions() {
   const t = useTranslations('repositories');

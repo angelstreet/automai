@@ -1,19 +1,22 @@
 'use client';
 
-import React, { useState, useTransition } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { DeploymentData, DeploymentFormData, Host as HostType } from '../../types';
-import { Host as SystemHost } from '../../../hosts/types';
+import React, { useState, useTransition } from 'react';
+
+import { CICDProviderType } from '@/app/[locale]/[tenant]/cicd/types';
 import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
+import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizard';
 import { toast } from '@/components/shadcn/use-toast';
+import { useUser } from '@/context';
+
+import { Host as SystemHost } from '../../../hosts/types';
+import { DeploymentData, DeploymentFormData, Host as HostType } from '../../types';
 import DeploymentWizardStep1 from '../DeploymentWizardStep1';
 import DeploymentWizardStep2 from '../DeploymentWizardStep2';
 import DeploymentWizardStep3 from '../DeploymentWizardStep3';
 import DeploymentWizardStep4 from '../DeploymentWizardStep4';
+
 import DeploymentWizardStep5 from './DeploymentWizardStep5';
-import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizard';
-import { useUser } from '@/context';
-import { CICDProviderType } from '@/app/[locale]/[tenant]/cicd/types';
 
 // Helper function to adapt system hosts to the format expected by the deployment module
 const adaptHostsForDeployment = (systemHosts: SystemHost[]): HostType[] => {

@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+import React, { useEffect } from 'react';
+
 import { Host } from '../types';
+
 import HostSelector from './HostSelector';
 
 interface DeploymentWizardStep3Props {

@@ -1,5 +1,5 @@
-import { HostContextType } from './host';
 import { DeploymentContextType } from './deployment';
+import { HostContextType } from './host';
 import { RepositoryContextType } from './repository';
 import { UserContextType } from './user';
 

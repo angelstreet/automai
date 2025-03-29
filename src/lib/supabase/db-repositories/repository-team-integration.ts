@@ -1,7 +1,9 @@
-import { createClient } from '../server';
 import { cookies } from 'next/headers';
+
 import type { DbResponse } from '@/lib/supabase/db';
 import type { Repository } from '@/types/context/repository';
+
+import { createClient } from '../server';
 
 /**
  * Get all repositories for a specific team

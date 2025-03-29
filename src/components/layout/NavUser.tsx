@@ -1,12 +1,10 @@
 'use client';
 
-import * as React from 'react';
 import { User } from 'lucide-react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { User as UserType } from '@/types/user';
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
-import { useSidebar } from '@/components/sidebar';
+import * as React from 'react';
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,8 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
+import { useSidebar, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
 import { useUser } from '@/context';
 import { cn } from '@/lib/utils';
+import { User as UserType } from '@/types/user';
 
 interface NavUserProps {
   user: UserType;

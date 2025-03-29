@@ -1,9 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getUser } from '@/app/actions/user';
-import { AuthUser } from '@/types/user';
+
 import { ActivityItem, Task, Stats, ChatMessage } from '@/app/[locale]/[tenant]/dashboard/types';
+import { getUser } from '@/app/actions/user';
 import { logger } from '@/lib/logger';
 
 // Define action result type for consistent return values

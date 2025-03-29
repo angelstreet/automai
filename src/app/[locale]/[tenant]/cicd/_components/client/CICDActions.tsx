@@ -1,12 +1,14 @@
 'use client';
 
-import { Button } from '@/components/shadcn/button';
 import { PlusCircle, RefreshCw } from 'lucide-react';
-import { useState, useCallback } from 'react';
-import { useTranslations } from 'next-intl';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
-import CICDProviderForm from '../CICDProviderForm';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useState, useCallback } from 'react';
+
+import { Button } from '@/components/shadcn/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+
+import CICDProviderForm from '../CICDProviderForm';
 
 export function CICDActions() {
   const t = useTranslations('cicd');

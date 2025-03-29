@@ -5,6 +5,10 @@ import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import { useState, useRef } from 'react';
 
+import {
+  verifyFingerprint as verifyFingerprintAction,
+  testConnection as testConnectionAction,
+} from '@/app/actions/hosts';
 import { Alert, AlertDescription, AlertTitle } from '@/components/shadcn/alert';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
@@ -17,10 +21,6 @@ import {
   SelectValue,
 } from '@/components/shadcn/select';
 import { Textarea } from '@/components/shadcn/textarea';
-import {
-  verifyFingerprint as verifyFingerprintAction,
-  testConnection as testConnectionAction,
-} from '@/app/actions/hosts';
 
 export interface FormData {
   name: string;

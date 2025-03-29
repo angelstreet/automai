@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
   GitBranch,
@@ -16,21 +14,22 @@ import {
   History,
   PlusCircle,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState, useEffect } from 'react';
 
-import { Card, CardContent } from '@/components/shadcn/card';
-import { Button } from '@/components/shadcn/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { Badge } from '@/components/shadcn/badge';
-import { ScrollArea } from '@/components/shadcn/scroll-area';
-import { Alert, AlertDescription } from '@/components/shadcn/alert';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../constants';
+import { Alert, AlertDescription } from '@/components/shadcn/alert';
+import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/shadcn/button';
+import { Card, CardContent } from '@/components/shadcn/card';
+import { ScrollArea } from '@/components/shadcn/scroll-area';
+import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import {
-  RepositoryExplorerProps,
-  RepositoryFile,
-  FilesAPIResponse,
-  FileAPIResponse,
-} from '../types';
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/shadcn/tooltip';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -38,13 +37,15 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/shadcn/tooltip';
 import { cn } from '@/lib/utils';
+
+import { FILE_EXTENSION_COLORS, EXPLORER_TABS } from '../constants';
+import {
+  RepositoryExplorerProps,
+  RepositoryFile,
+  FilesAPIResponse,
+  FileAPIResponse,
+} from '../types';
 
 export function RepositoryExplorer({ repository, onBack }: RepositoryExplorerProps) {
   const t = useTranslations('repositories');

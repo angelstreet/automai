@@ -4,9 +4,8 @@ import { IconSearch } from '@tabler/icons-react';
 
 import { cn } from '@/lib/utils';
 
-import { Button } from '../shadcn/button';
-
 import { useSearch } from '../../context/SearchContext';
+import { Button } from '../shadcn/button';
 
 interface Props {
   className?: string;

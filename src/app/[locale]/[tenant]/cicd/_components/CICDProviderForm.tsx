@@ -1,7 +1,11 @@
 'use client';
 
+import { CheckCircle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+
+import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicd';
+import { Button } from '@/components/shadcn/button';
 import {
   Form,
   FormControl,
@@ -11,7 +15,6 @@ import {
   FormMessage,
 } from '@/components/shadcn/form';
 import { Input } from '@/components/shadcn/input';
-import { Button } from '@/components/shadcn/button';
 import {
   Select,
   SelectContent,
@@ -19,9 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { createCICDProvider, updateCICDProvider, testCICDProvider } from '@/app/actions/cicd';
 import { CICDProvider, CICDProviderPayload, CICDProviderType } from '@/types/context/cicd';
-import { CheckCircle } from 'lucide-react';
 
 interface CICDProviderFormProps {
   providerId?: string;

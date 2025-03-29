@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+
 import TerminalContainer from './_components/TerminalContainer';
 import TerminalSkeleton from './_components/TerminalSkeleton';
 

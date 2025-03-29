@@ -1,7 +1,9 @@
-import { createClient } from '../server';
 import { cookies } from 'next/headers';
+
 import type { DbResponse } from '@/lib/supabase/db';
 import type { Deployment } from '@/types/context/deployment';
+
+import { createClient } from '../server';
 
 /**
  * Get all deployments for a specific team

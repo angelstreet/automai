@@ -1,5 +1,6 @@
 'use client';
 
+import Cookies from 'js-cookie';
 import {
   createContext,
   useContext,
@@ -9,13 +10,13 @@ import {
   useLayoutEffect,
   useMemo,
 } from 'react';
-import Cookies from 'js-cookie';
-import { SidebarContext as SidebarContextType } from '@/types/sidebar';
+
 import {
   SIDEBAR_COOKIE_NAME,
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_ICON,
 } from '@/components/sidebar/constants';
+import { SidebarContext as SidebarContextType } from '@/types/sidebar';
 
 // Singleton flag to prevent multiple instances
 let SIDEBAR_CONTEXT_INITIALIZED = false;

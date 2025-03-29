@@ -1,10 +1,11 @@
 'use client';
 
-import { User } from '@/types/user';
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser } from '@/context';
+import { useTranslations } from 'next-intl';
+import { useState, useEffect } from 'react';
+
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Button } from '@/components/shadcn/button';
 import {
   Card,
   CardContent,
@@ -13,8 +14,8 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 import { Input } from '@/components/shadcn/input';
-import { Button } from '@/components/shadcn/button';
-import { PageHeader } from '@/components/layout/PageHeader';
+import { useUser } from '@/context';
+import { User } from '@/types/user';
 
 interface ProfileContentProps {
   user?: User | null;

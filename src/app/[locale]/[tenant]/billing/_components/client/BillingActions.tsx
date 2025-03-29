@@ -1,10 +1,11 @@
 'use client';
 
-import { Button } from '@/components/shadcn/button';
 import { RefreshCw, CreditCard } from 'lucide-react';
-import { useCallback } from 'react';
-import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useCallback } from 'react';
+
+import { Button } from '@/components/shadcn/button';
 
 export function BillingActions() {
   const t = useTranslations('billing');

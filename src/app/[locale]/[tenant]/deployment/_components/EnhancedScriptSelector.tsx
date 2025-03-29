@@ -1,9 +1,11 @@
 'use client';
 
+import { CheckSquare, Square } from 'lucide-react';
 import React, { useState } from 'react';
-import { Code, ChevronDown, ChevronRight, CheckSquare, Square } from 'lucide-react';
-import { Script, ScriptParameter, Repository } from '../types';
+
 import { Input } from '@/components/shadcn/input';
+
+import { Script, Repository } from '../types';
 
 interface EnhancedScriptSelectorProps {
   selectedRepository?: Repository;

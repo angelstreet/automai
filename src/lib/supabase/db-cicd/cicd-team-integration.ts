@@ -1,7 +1,9 @@
-import { createClient } from '../server';
 import { cookies } from 'next/headers';
+
 import type { DbResponse } from '@/lib/supabase/db';
 import type { CICDProvider } from '@/types/context/cicd';
+
+import { createClient } from '../server';
 
 /**
  * Get all CICD providers for a specific team

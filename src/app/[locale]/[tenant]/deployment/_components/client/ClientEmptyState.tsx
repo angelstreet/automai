@@ -2,8 +2,9 @@
 
 import { Rocket, PlusCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Button } from '@/components/shadcn/button';
+
 import { EmptyState } from '@/components/layout/EmptyState';
+import { Button } from '@/components/shadcn/button';
 
 export function ClientEmptyState() {
   const t = useTranslations('deployment');

@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server';
 import type { DbResponse } from '@/lib/supabase/db';
+import { createClient } from '@/lib/supabase/server';
 import type { Team, TeamCreateInput, TeamUpdateInput } from '@/types/context/team';
 
 /**

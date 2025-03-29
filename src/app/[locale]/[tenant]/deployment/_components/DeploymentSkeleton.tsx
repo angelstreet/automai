@@ -35,11 +35,13 @@ export function DeploymentSkeleton() {
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-transparent dark:bg-transparent">
                 <tr>
-                  {['Name', 'Repository', 'Status', 'Created', 'Runtime', 'Actions'].map((header) => (
-                    <th key={header} className="px-2 py-1 text-left text-xs font-medium">
-                      <Skeleton className="h-4 w-full max-w-[80px]" />
-                    </th>
-                  ))}
+                  {['Name', 'Repository', 'Status', 'Created', 'Runtime', 'Actions'].map(
+                    (header) => (
+                      <th key={header} className="px-2 py-1 text-left text-xs font-medium">
+                        <Skeleton className="h-4 w-full max-w-[80px]" />
+                      </th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">

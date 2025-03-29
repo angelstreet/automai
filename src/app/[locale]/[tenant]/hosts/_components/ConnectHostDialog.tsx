@@ -1,11 +1,11 @@
 import { useParams } from 'next/navigation';
-/* eslint-disable @typescript-eslint/no-unused-vars, unused-imports/no-unused-vars */
 import { useTranslations } from 'next-intl';
 import { useState, useCallback, useRef } from 'react';
-import { toast } from 'sonner';
 import * as React from 'react';
+import { toast } from 'sonner';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+
 import { addHost } from '../actions';
 import { Host } from '../types';
 

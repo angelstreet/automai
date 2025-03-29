@@ -1,36 +1,31 @@
-import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { Github, Globe, ArrowRight, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Github, Globe, GitBranch, ArrowRight, RefreshCw } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
+
 import {
-  testGitProviderConnection,
   createGitProvider,
   testGitRepository,
   createRepositoryFromUrl,
 } from '@/app/actions/repositories';
+import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
+import { Alert, AlertDescription } from '@/components/shadcn/alert';
+import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/shadcn/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from '@/components/shadcn/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Label } from '@/components/shadcn/label';
-import { Badge } from '@/components/shadcn/badge';
-import { Alert, AlertDescription } from '@/components/shadcn/alert';
-import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
-import {
-  ConnectRepositoryValues,
-  EnhancedConnectRepositoryDialogProps,
-  CreateGitProviderParams,
-  CreateRepositoryParams,
-} from '../types';
-import { CONNECT_REPOSITORY_TABS, AUTH_METHODS, PROVIDER_DISPLAY_INFO } from '../constants';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useToast } from '@/components/shadcn/use-toast';
+
+import { CONNECT_REPOSITORY_TABS, AUTH_METHODS } from '../constants';
+import { EnhancedConnectRepositoryDialogProps, CreateGitProviderParams } from '../types';
 
 export function EnhancedConnectRepositoryDialog({
   open,

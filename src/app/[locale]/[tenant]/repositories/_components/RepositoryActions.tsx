@@ -1,5 +1,7 @@
-import { useToast } from '@/components/shadcn/use-toast';
 import { useTranslations } from 'next-intl';
+
+import { useToast } from '@/components/shadcn/use-toast';
+
 import { Repository } from '../types';
 
 interface RepositoryActionsProps {

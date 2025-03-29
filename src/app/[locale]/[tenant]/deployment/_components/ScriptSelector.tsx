@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
 import { Code } from 'lucide-react';
+import React from 'react';
+
 import { Script } from '../types';
 
 interface ScriptSelectorProps {

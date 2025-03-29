@@ -1,5 +1,7 @@
 'use server';
 
+import { cache } from 'react';
+
 import { getUser } from '@/app/actions/user';
 import {
   getTeams as dbGetTeams,
@@ -22,7 +24,6 @@ import type {
   TeamMemberCreateInput,
   ResourceLimit,
 } from '@/types/context/team';
-import { cache } from 'react';
 import { User } from '@/types/user';
 
 /**

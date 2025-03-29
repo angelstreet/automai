@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  Terminal,
-  AlertCircle,
-  MoreHorizontal,
-  RefreshCw,
-  XCircle,
-  ScrollText,
-} from 'lucide-react';
+import { Terminal, MoreHorizontal, RefreshCw, XCircle, ScrollText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect, useCallback } from 'react';
@@ -40,6 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/shadcn/tooltip';
+
 import { Host } from '../types';
 
 interface HostCardProps {

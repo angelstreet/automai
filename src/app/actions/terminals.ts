@@ -1,9 +1,9 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-import { getUser } from './user';
-import { getHostById } from './hosts';
 import { logger } from '@/lib/logger';
+
+import { getHostById } from './hosts';
+import { getUser } from './user';
 
 /**
  * Initialize a terminal session

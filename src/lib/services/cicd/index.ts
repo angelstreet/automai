@@ -6,8 +6,9 @@ export { GitHubProvider } from './github';
 
 // Export async function to get a provider instance
 import { cicd } from '@/lib/supabase/db-deployment';
-import { CICDProvider, CICDProviderConfig, CICDResponse } from './interfaces';
+
 import { CICDProviderFactory } from './factory';
+import { CICDProvider, CICDProviderConfig, CICDResponse } from './interfaces';
 
 /**
  * Get a CI/CD provider instance by direct configuration

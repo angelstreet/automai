@@ -1,11 +1,13 @@
 'use server';
 
 import { cookies } from 'next/headers';
+
+import type { Host } from '@/app/[locale]/[tenant]/hosts/types';
 import { getUser } from '@/app/actions/user';
 import { hostTeamIntegration } from '@/lib/supabase/db-hosts';
 import { checkResourceLimit } from '@/lib/supabase/db-teams';
+
 import type { ActionResult } from '@/lib/types';
-import type { Host } from '@/app/[locale]/[tenant]/hosts/types';
 
 /**
  * Get all hosts for a specific team

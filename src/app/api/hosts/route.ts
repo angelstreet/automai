@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getHosts } from '@/app/actions/hosts';
 import { getUser } from '@/app/actions/user';
 

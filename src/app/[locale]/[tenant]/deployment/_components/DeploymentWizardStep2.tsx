@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
 import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import { Repository, Script } from '../types';
+
 import EnhancedScriptSelector from './EnhancedScriptSelector';
 
 interface DeploymentWizardStep2Props {

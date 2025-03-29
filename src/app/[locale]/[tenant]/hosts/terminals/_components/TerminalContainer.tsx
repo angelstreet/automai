@@ -1,8 +1,10 @@
-import { getHostById } from '@/app/actions/hosts';
-import { Suspense } from 'react';
-import ClientTerminal from './client/ClientTerminal';
-import TerminalSkeleton from './TerminalSkeleton';
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+
+import { getHostById } from '@/app/actions/hosts';
+
+import TerminalSkeleton from './TerminalSkeleton';
+import ClientTerminal from './client/ClientTerminal';
 
 interface TerminalContainerProps {
   hostId: string;

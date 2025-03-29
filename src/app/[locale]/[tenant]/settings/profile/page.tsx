@@ -1,7 +1,5 @@
 'use client';
 
-import { useUser } from '@/context';
-
 import {
   Card,
   CardContent,
@@ -9,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
+import { useUser } from '@/context';
 
 export default function ProfileSettingsPage() {
   const { user } = useUser();

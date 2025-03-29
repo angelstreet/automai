@@ -1,4 +1,5 @@
 import * as React from 'react';
+
 import {
   Select,
   SelectContent,
@@ -6,9 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
+import { useUser } from '@/context';
 import { cn } from '@/lib/utils';
 import { Role } from '@/types/user';
-import { useUser } from '@/context';
 
 // Define roles based on the Role type definition
 const roles: { value: Role; label: string }[] = [

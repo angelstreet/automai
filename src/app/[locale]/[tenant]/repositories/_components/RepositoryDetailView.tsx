@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
   GitBranch,
@@ -8,7 +6,6 @@ import {
   Code,
   Play,
   Settings,
-  Terminal,
   FileCode,
   Folder,
   Star,
@@ -20,14 +17,23 @@ import {
   PlusCircle,
   FileText,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState, useEffect } from 'react';
 
-import { Card, CardContent } from '@/components/shadcn/card';
-import { Button } from '@/components/shadcn/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { Badge } from '@/components/shadcn/badge';
-import { ScrollArea } from '@/components/shadcn/scroll-area';
-import { Alert, AlertDescription } from '@/components/shadcn/alert';
+import { getRepositoryFiles, getFileContent } from '@/app/actions/repositories';
 import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
+import { Alert, AlertDescription } from '@/components/shadcn/alert';
+import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/shadcn/button';
+import { Card, CardContent } from '@/components/shadcn/card';
+import { ScrollArea } from '@/components/shadcn/scroll-area';
+import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/shadcn/tooltip';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -35,14 +41,7 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from '@/components/ui/Breadcrumb';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/shadcn/tooltip';
 import { cn } from '@/lib/utils';
-import { getRepositoryFiles, getFileContent } from '@/app/actions/repositories';
 
 // File extension colors for syntax highlighting
 const FILE_EXTENSION_COLORS = {

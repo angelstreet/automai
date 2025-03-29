@@ -1,5 +1,5 @@
-import { AuthUser } from '@/types/user';
 import { Deployment, DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
+import { AuthUser } from '@/types/user';
 
 /**
  * Deployment data interface - contains all state

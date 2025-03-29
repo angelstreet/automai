@@ -1,14 +1,15 @@
 'use client';
 
-import { initTerminal, closeTerminal, sendTerminalData } from '@/app/actions/terminals';
-import { Host } from '@/app/[locale]/[tenant]/hosts/types';
-import { useToast } from '@/components/shadcn/use-toast';
-import { useEffect, useRef, useState } from 'react';
 import { AttachAddon } from '@xterm/addon-attach';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Terminal as XTerm } from '@xterm/xterm';
+import { useEffect, useRef, useState } from 'react';
+
+import { Host } from '@/app/[locale]/[tenant]/hosts/types';
+import { initTerminal, closeTerminal } from '@/app/actions/terminals';
+import { useToast } from '@/components/shadcn/use-toast';
 import '@xterm/xterm/css/xterm.css';
 
 interface ClientTerminalProps {

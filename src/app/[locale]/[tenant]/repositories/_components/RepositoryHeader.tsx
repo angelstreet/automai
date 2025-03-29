@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { Search } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import React, { useState } from 'react';
+
 import { Input } from '@/components/shadcn/input';
 
 export function RepositoryHeader() {

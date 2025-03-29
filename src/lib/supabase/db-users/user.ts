@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers';
 
-import { createClient } from '../server';
 import { AuthUser, UserTeam } from '@/types/user';
+
+import { createClient } from '../server';
 
 // Cache for user data
 const CACHE_TTL = 300000;

@@ -1,18 +1,17 @@
 'use client';
 
-import { Chrome, Github } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 
-import { Button } from '@/components/shadcn/button';
-import { Input } from '@/components/shadcn/input';
-import { useUser } from '@/context/UserContext';
 import {
   signUp as signUpAction,
   signInWithOAuth as signInWithOAuthAction,
 } from '@/app/actions/auth';
+import { Button } from '@/components/shadcn/button';
+import { Input } from '@/components/shadcn/input';
+import { useUser } from '@/context/UserContext';
 
 export default function SignUpPage() {
   const router = useRouter();

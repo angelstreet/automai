@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
 import * as React from 'react';
 
+import { ScrollArea } from '@/components/shadcn/scroll-area';
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -16,7 +17,6 @@ import {
   SidebarMenuSubButton,
 } from '@/components/sidebar';
 import { useSidebar } from '@/context';
-import { ScrollArea } from '@/components/shadcn/scroll-area';
 import { cn } from '@/lib/utils';
 
 interface NavGroupProps {

@@ -1,5 +1,7 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import {
   Repository,
   GitProvider,
@@ -13,12 +15,10 @@ import {
   gitProviderCreateSchema,
   testRepositorySchema,
 } from '@/app/[locale]/[tenant]/repositories/types';
-
 import { getUser } from '@/app/actions/user';
-import { AuthUser } from '@/types/user';
 import { starRepository, repository, files, gitProvider } from '@/lib/supabase/db-repositories';
 import { GitProvider as DbGitProvider } from '@/lib/supabase/db-repositories/git-provider';
-import { revalidatePath } from 'next/cache';
+import { AuthUser } from '@/types/user';
 
 /**
  * Convert DB repository to our Repository type

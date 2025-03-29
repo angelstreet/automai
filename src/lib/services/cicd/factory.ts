@@ -1,6 +1,6 @@
+import { GitHubProvider } from './github';
 import { CICDProvider, CICDProviderConfig } from './interfaces';
 import { JenkinsProvider } from './jenkins';
-import { GitHubProvider } from './github';
 
 /**
  * Factory for creating CI/CD provider instances

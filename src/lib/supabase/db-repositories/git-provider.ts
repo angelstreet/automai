@@ -1,5 +1,6 @@
-import { createClient } from '../server';
 import { cookies } from 'next/headers';
+
+import { createClient } from '../server';
 
 // Improved response type format following guidelines
 type DbResponse<T> = {

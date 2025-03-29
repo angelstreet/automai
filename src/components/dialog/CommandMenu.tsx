@@ -14,9 +14,9 @@ import {
   CommandSeparator,
 } from '@/components/shadcn/command';
 import { ScrollArea } from '@/components/shadcn/scroll-area';
+import { sidebarData } from '@/components/sidebar/sidebarData';
 import { useSearch } from '@/context/SearchContext';
 import { useTheme } from '@/context/ThemeContext';
-import { sidebarData } from '@/components/sidebar/sidebarData';
 
 interface NavItem {
   title: string;

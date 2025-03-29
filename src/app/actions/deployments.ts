@@ -1,17 +1,17 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
+
+import { getUser } from '@/app/actions/user';
+import { CICDPipelineConfig } from '@/lib/services/cicd/interfaces';
 import { AuthUser } from '@/types/user';
+
 import {
   Deployment,
   DeploymentFormData,
   DeploymentStatus,
 } from '../[locale]/[tenant]/deployment/types';
-import { getUser } from '@/app/actions/user';
-import { mapDeploymentToParameters } from '../[locale]/[tenant]/deployment/utils';
-import { cookies } from 'next/headers';
-import { createClient } from '@/lib/supabase/server';
-import { CICDPipelineConfig } from '@/lib/services/cicd/interfaces';
-import { revalidatePath } from 'next/cache';
 
 // Generic server action result type
 type ServerActionResult<T> = {

@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useTranslations } from 'next-intl';
 import { formatDistanceToNow } from 'date-fns';
 import { Star, GitBranch, Clock, ExternalLink, Globe, Lock, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useState, useEffect } from 'react';
 
+import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
+import { Badge } from '@/components/shadcn/badge';
+import { Button } from '@/components/shadcn/button';
 import {
   Card,
   CardContent,
@@ -11,9 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { Button } from '@/components/shadcn/button';
-import { Badge } from '@/components/shadcn/badge';
-import { GitHubIcon, GitLabIcon, GiteaIcon } from '@/components/icons';
+
 import { LANGUAGE_COLORS } from '../constants';
 import { EnhancedRepositoryCardProps } from '../types';
 

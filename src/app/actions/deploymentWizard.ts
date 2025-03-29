@@ -1,13 +1,14 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { getRepositories } from './repositories';
-import { getHosts } from './hosts';
-import { getCICDProviders } from './cicd';
-import { AuthUser } from '@/types/user';
-import { getUser } from './user';
-import { logger } from '@/lib/logger';
+
 import type { DeploymentFormData } from '@/app/[locale]/[tenant]/deployment/types';
+import { logger } from '@/lib/logger';
+
+import { getCICDProviders } from './cicd';
+import { getHosts } from './hosts';
+import { getRepositories } from './repositories';
+import { getUser } from './user';
 
 /**
  * Fetches all data needed for the deployment wizard

@@ -6,7 +6,6 @@ import {
   CICDProviderConfig,
   CICDResponse,
   CICDPipelineConfig,
-  CICDParameter,
 } from './interfaces';
 
 /**

@@ -1,11 +1,14 @@
 'use client';
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/shadcn/card';
-import { Button } from '@/components/shadcn/button';
 import { ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import React from 'react';
+
+import { Button } from '@/components/shadcn/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/shadcn/card';
+
 import { Deployment } from '../../types';
+
 import { ClientDeploymentRunAction } from './ClientDeploymentRunAction';
 
 interface ClientDeploymentDetailsProps {

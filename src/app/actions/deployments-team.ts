@@ -1,11 +1,13 @@
 'use server';
 
 import { cookies } from 'next/headers';
+
 import { getUser } from '@/app/actions/user';
 import { deploymentTeamIntegration } from '@/lib/supabase/db-deployment';
 import { checkResourceLimit } from '@/lib/supabase/db-teams';
-import type { ActionResult } from '@/lib/types';
 import type { Deployment } from '@/types/context/deployment';
+
+import type { ActionResult } from '@/lib/types';
 
 /**
  * Get all deployments for a specific team

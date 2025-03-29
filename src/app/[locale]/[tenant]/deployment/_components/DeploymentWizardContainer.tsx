@@ -1,6 +1,7 @@
 import { getDeploymentWizardData } from '@/app/actions/deploymentWizard';
-import DeploymentWizard from './client/DeploymentWizard';
 import { logger } from '@/lib/logger';
+
+import DeploymentWizard from './client/DeploymentWizard';
 
 interface DeploymentWizardContainerProps {
   onCancel: () => void;

@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { ChevronLeft, ChevronRight, GitBranch, PlusCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import React, { useState } from 'react';
 
-import { Card, CardContent } from '@/components/shadcn/card';
-import { Button } from '@/components/shadcn/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { EmptyState } from '@/components/layout/EmptyState';
-
-import { EnhancedRepositoryCard } from './EnhancedRepositoryCard';
-import { Repository } from '../types';
 import {
   clearRepositoriesCache,
   starRepositoryAction,
   unstarRepositoryAction,
 } from '@/app/actions/repositories';
-import { useRouter } from 'next/navigation';
+import { EmptyState } from '@/components/layout/EmptyState';
+import { Button } from '@/components/shadcn/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+
+import { Repository } from '../types';
+
+import { EnhancedRepositoryCard } from './EnhancedRepositoryCard';
 
 interface RepositoryListProps {
   repositories: Repository[];

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
 import { Server, Check, Filter } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { Host } from '../types';
 
 interface HostSelectorProps {

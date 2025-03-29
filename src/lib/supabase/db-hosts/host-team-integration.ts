@@ -1,7 +1,9 @@
-import { createClient } from '../server';
 import { cookies } from 'next/headers';
-import type { DbResponse } from '@/lib/supabase/db';
+
 import type { Host } from '@/app/[locale]/[tenant]/hosts/types';
+import type { DbResponse } from '@/lib/supabase/db';
+
+import { createClient } from '../server';
 
 /**
  * Get all hosts for a specific team

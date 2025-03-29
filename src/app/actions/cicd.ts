@@ -2,15 +2,15 @@
 
 import { revalidatePath } from 'next/cache';
 import { cache } from 'react';
-import { getUser } from '@/app/actions/user';
+
 import type {
   ActionResult,
-  CICDProviderType,
   CICDProviderPayload,
   CICDProviderListResult,
   CICDProviderActionResult,
   CICDJob,
 } from '@/app/[locale]/[tenant]/cicd/types';
+import { getUser } from '@/app/actions/user';
 import { logger } from '@/lib/logger';
 
 /**

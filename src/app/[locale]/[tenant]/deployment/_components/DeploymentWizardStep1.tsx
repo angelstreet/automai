@@ -1,11 +1,13 @@
 'use client';
 
+import { RefreshCw } from 'lucide-react';
 import React from 'react';
-import { Repository } from '../types';
+
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { Textarea } from '@/components/shadcn/textarea';
-import { RefreshCw } from 'lucide-react';
+
+import { Repository } from '../types';
 
 interface DeploymentWizardStep1Props {
   name: string;

@@ -1,5 +1,8 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
+import { PageHeader } from '@/components/layout/PageHeader';
 import {
   Card,
   CardContent,
@@ -7,9 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Skeleton } from '@/components/shadcn/skeleton';
-import { useTranslations } from 'next-intl';
 
 export function ProfileSkeleton() {
   const t = useTranslations('Profile');

@@ -1,12 +1,13 @@
 'use client';
 
-import * as React from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import * as React from 'react';
+
+import { resetPasswordForEmail } from '@/app/actions/auth';
 import { Button } from '@/components/shadcn/button';
 import { Input } from '@/components/shadcn/input';
 import { useUser } from '@/context/UserContext';
-import { resetPasswordForEmail } from '@/app/actions/auth';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();

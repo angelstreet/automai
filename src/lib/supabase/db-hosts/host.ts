@@ -1,5 +1,6 @@
-import { createClient } from '../server';
 import { cookies } from 'next/headers';
+
+import { createClient } from '../server';
 
 // Host DB operations
 const host = {

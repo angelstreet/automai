@@ -1,12 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import hostDb from '@/lib/supabase/db-hosts/host';
+
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
+import { getUser } from '@/app/actions/user';
 import { logger } from '@/lib/logger';
 import { testHostConnection as testHostConnectionService } from '@/lib/services/hosts';
-import { getUser } from '@/app/actions/user';
-import { AuthUser } from '@/types/user';
+import hostDb from '@/lib/supabase/db-hosts/host';
 
 export interface HostFilter {
   status?: string;

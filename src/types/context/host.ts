@@ -1,5 +1,4 @@
 import { Host } from '@/app/[locale]/[tenant]/hosts/types';
-import { AuthUser } from '@/types/user';
 
 /**
  * Loading status states

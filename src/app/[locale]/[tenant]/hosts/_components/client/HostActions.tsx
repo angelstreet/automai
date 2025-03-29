@@ -1,12 +1,14 @@
 'use client';
 
 import { PlusCircle, RefreshCw, Grid, List } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
+
+import { createHost } from '@/app/actions/hosts';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
+
 import { ClientConnectionForm, FormData as ConnectionFormData } from './ClientConnectionForm';
-import { createHost } from '@/app/actions/hosts';
 
 // Create a custom event for view mode changes
 export const VIEW_MODE_CHANGE = 'host-view-mode-change';

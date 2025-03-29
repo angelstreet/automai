@@ -1,6 +1,6 @@
-import { Suspense } from 'react';
-import { ProfileContent as ClientProfileContent } from './client/ProfileContent';
 import { User } from '@/types/user';
+
+import { ProfileContent as ClientProfileContent } from './client/ProfileContent';
 
 interface ProfileContentProps {
   user?: User | null;

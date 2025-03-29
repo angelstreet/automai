@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import {
   getRepository as getGiteaRepository,
   listFiles as listGiteaFiles,
@@ -7,19 +8,19 @@ import {
   extractGiteaRepoInfo,
 } from '@/lib/gitea-api';
 import {
-  getRepository as getGitLabRepository,
-  listFiles as listGitLabFiles,
-  getFileContent as getGitLabFileContent,
-  listBranches as listGitLabBranches,
-  extractGitLabProjectId,
-} from '@/lib/gitlab-api';
-import {
   getRepository as getGitHubRepository,
   listFiles as listGitHubFiles,
   getFileContent as getGitHubFileContent,
   listBranches as listGitHubBranches,
   extractGitHubRepoInfo,
 } from '@/lib/github-api';
+import {
+  getRepository as getGitLabRepository,
+  listFiles as listGitLabFiles,
+  getFileContent as getGitLabFileContent,
+  listBranches as listGitLabBranches,
+  extractGitLabProjectId,
+} from '@/lib/gitlab-api';
 import { getGitProviderById } from '@/lib/supabase/db-repositories/git-provider';
 
 /**

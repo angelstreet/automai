@@ -1,11 +1,13 @@
 'use server';
 
 import { cookies } from 'next/headers';
+
 import { getUser } from '@/app/actions/user';
 import { cicdTeamIntegration } from '@/lib/supabase/db-cicd';
 import { checkResourceLimit } from '@/lib/supabase/db-teams';
-import type { ActionResult } from '@/lib/types';
 import type { CICDProvider } from '@/types/context/cicd';
+
+import type { ActionResult } from '@/lib/types';
 
 /**
  * Get all CICD providers for a specific team

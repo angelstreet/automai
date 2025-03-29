@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { DeploymentData } from '../../types';
-import { Button } from '@/components/shadcn/button';
+import React, { useState } from 'react';
+
 import { CICDProviderType } from '@/app/[locale]/[tenant]/cicd/types';
+import { Button } from '@/components/shadcn/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { FormLabel } from '@/components/shadcn/form';
 import {
   Select,
   SelectContent,
@@ -12,9 +14,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/shadcn/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
-import { FormLabel } from '@/components/shadcn/form';
 import { Switch } from '@/components/shadcn/switch';
+
+import { DeploymentData } from '../../types';
 
 interface DeploymentWizardStep5Props {
   data: DeploymentData;

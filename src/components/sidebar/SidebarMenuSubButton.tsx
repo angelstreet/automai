@@ -2,12 +2,9 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva } from 'class-variance-authority';
 import type { VariantProps } from 'class-variance-authority';
 import * as React from 'react';
-import NextLink from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useSidebar } from '@/context';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shadcn/tooltip';
+import { useSidebar } from '@/context';
 import { cn } from '@/lib/utils';
 
 const sidebarMenuSubButtonVariants = cva(

@@ -1,14 +1,17 @@
 'use client';
 
+import { Server, PlusCircle } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
+
+import { testHostConnection, deleteHost as deleteHostAction } from '@/app/actions/hosts';
+import { EmptyState } from '@/components/layout/EmptyState';
+import { Button } from '@/components/shadcn/button';
+
 import { Host } from '../../types';
 import { HostGrid } from '../HostGrid';
 import { HostTable } from '../HostTable';
+
 import { VIEW_MODE_CHANGE } from './HostActions';
-import { testHostConnection, deleteHost as deleteHostAction } from '@/app/actions/hosts';
-import { Button } from '@/components/shadcn/button';
-import { Server, PlusCircle } from 'lucide-react';
-import { EmptyState } from '@/components/layout/EmptyState';
 
 interface ClientHostListProps {
   initialHosts: Host[];

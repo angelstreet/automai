@@ -3,8 +3,6 @@
  * Simplified version of the server-side logger in src/lib/logger.ts
  */
 
-import type { LogLevel } from '@/types/logger';
-
 /**
  * Log a message with optional error data
  */

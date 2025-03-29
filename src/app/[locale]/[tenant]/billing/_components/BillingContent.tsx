@@ -1,5 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { getTranslations } from 'next-intl/server';
+
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 
 export default async function BillingContent() {
   const t = await getTranslations('billing');

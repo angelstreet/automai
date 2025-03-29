@@ -1,22 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import {
-  DeploymentData,
-  DeploymentFormData,
-  ScriptParameter,
-  Repository,
-  Host as HostType,
-} from '../../types';
-import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizard';
-import { Host as SystemHost } from '../../../hosts/types';
+import React, { useState, useEffect, useRef } from 'react';
+
 import { Repository as RepositoryInterface } from '@/app/[locale]/[tenant]/repositories/types';
+import { saveDeploymentConfiguration, startDeployment } from '@/app/actions/deploymentWizard';
 import { toast } from '@/components/shadcn/use-toast';
+
+import { Host as SystemHost } from '../../../hosts/types';
+import { DeploymentData, Repository, Host as HostType } from '../../types';
 import DeploymentWizardStep1 from '../DeploymentWizardStep1';
 import DeploymentWizardStep2 from '../DeploymentWizardStep2';
 import DeploymentWizardStep3 from '../DeploymentWizardStep3';
 import DeploymentWizardStep4 from '../DeploymentWizardStep4';
+
 import DeploymentWizardStep5 from './DeploymentWizardStep5';
 
 // Helper function to adapt system hosts to the format expected by the deployment module

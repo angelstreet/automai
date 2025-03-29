@@ -3,7 +3,7 @@
  */
 
 // Import types
-import { Repository, GitProvider, GitProviderType, RepositorySyncStatus } from './types';
+import { GitProviderType, RepositorySyncStatus } from './types';
 
 // Language color mapping for repository cards
 export const LANGUAGE_COLORS: Record<string, string> = {

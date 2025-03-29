@@ -1,5 +1,5 @@
-import React from 'react';
 import { useTranslations } from 'next-intl';
+import React from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -11,8 +11,9 @@ import {
   DialogTitle,
 } from '@/components/shadcn/dialog';
 
-import { EnhancedConnectRepositoryDialog } from './EnhancedConnectRepositoryDialog';
 import { ConnectRepositoryValues } from '../types';
+
+import { EnhancedConnectRepositoryDialog } from './EnhancedConnectRepositoryDialog';
 
 interface RepositoryDialogsProps {
   connectDialogOpen: boolean;

@@ -1,3 +1,5 @@
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
+import { Button } from '@/components/shadcn/button';
 import {
   Card,
   CardContent,
@@ -5,10 +7,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
+
 import { Overview } from './Overview';
 import { RecentSales } from './RecentSales';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
-import { Button } from '@/components/shadcn/button';
 
 export function MainContent() {
   // Static demo data
