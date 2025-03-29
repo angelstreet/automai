@@ -42,36 +42,7 @@ export default function LoginPage() {
     }
   }, []);
 
-  // Redirect if user is already logged in
-  React.useEffect(() => {
-    // Check for auth cookies, even if the user object isn't loaded yet
-    // This is a workaround for cases where the session exists but isn't being detected
-    const hasSbAccessToken = document.cookie.includes('sb-access-token');
-    const hasSbRefreshToken = document.cookie.includes('sb-refresh-token');
-
-    console.log('🔒 LOGIN PAGE: Auth cookie check:', {
-      hasSbAccessToken,
-      hasSbRefreshToken,
-      userLoaded: !!user,
-      isLoading: loading,
-    });
-
-    if (user && !loading) {
-      // tenant_name is directly on the user object (not in user_metadata)
-      const tenantName = user.tenant_name || 'trial';
-
-      console.log('🔒 LOGIN PAGE: Redirecting to tenant dashboard:', tenantName);
-      router.push(`/${locale}/${tenantName}/dashboard`);
-    }
-    // Fallback redirect if we have auth cookies but the user object isn't loading
-    else if (hasSbAccessToken && hasSbRefreshToken && !loading) {
-      console.log(
-        '🔒 LOGIN PAGE: Auth cookies present but no user object, attempting fallback redirect',
-      );
-      // Use default tenant for fallback
-      router.push(`/${locale}/trial/dashboard`);
-    }
-  }, [user, loading, router, locale]);
+  // Middleware now handles redirect if user is already logged in
 
   // Set error from auth hook if present
   React.useEffect(() => {

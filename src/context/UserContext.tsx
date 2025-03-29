@@ -167,28 +167,45 @@ export function UserProvider({
   const signOut = useCallback(
     async (locale: string = 'en') => {
       try {
-        // First clear cache
+        // First clear all local caches
         await clearRequestCache();
+
+        // Clear user state immediately
         await mutateUser(null, { revalidate: false });
 
-        // Clear localStorage as a backup
+        // Clear all localStorage cache
         try {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('cached_user');
             localStorage.removeItem('cached_user_time');
+            localStorage.removeItem('user-data-cache');
+
+            // Clear any supabase-related items
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+                localStorage.removeItem(key);
+              }
+            }
           }
-        } catch {
-          // Ignore localStorage errors
+        } catch (error) {
+          console.error('Error clearing localStorage:', error);
         }
 
         // Then sign out with the server
         const formData = new FormData();
         formData.append('locale', locale);
+
+        // Call the server action to sign out
         const result = await signOutAction(formData);
+
+        console.log('Sign out result:', result);
+
         return result;
       } catch (err) {
+        console.error('Sign out error:', err);
         setError(err instanceof Error ? err : new Error('Sign out failed'));
-        return { success: false };
+        return { success: false, error: 'Sign out failed' };
       }
     },
     [mutateUser],

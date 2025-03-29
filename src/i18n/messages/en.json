@@ -365,9 +365,25 @@
     "english": "English",
     "french": "French"
   },
-  "Team": {
+  "team": {
     "title": "Team Management",
-    "description": "Manage teams, members, and resource limits"
+    "description": "Manage teams, members, and resource limits",
+    "teamMembers": "Team Members",
+    "inviteMembers": "Invite Members",
+    "memberName": "Name",
+    "memberEmail": "Email",
+    "memberRole": "Role",
+    "memberStatus": "Status",
+    "memberActions": "Actions",
+    "invitePending": "Pending",
+    "inviteAccepted": "Accepted",
+    "removeUser": "Remove",
+    "confirmRemove": "Are you sure you want to remove this user?",
+    "noMembers": "No team members found",
+    "team": "Team",
+    "addMember": "Add Member",
+    "overview": "Overview",
+    "members": "Members"
   },
   "cicd": {
     "title": "CI/CD Integration",

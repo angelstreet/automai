@@ -1,3 +1,4 @@
+import { useTranslations } from 'next-intl';
 import { UnassignedResourcesList } from '@/app/[locale]/[tenant]/team/_components/client/UnassignedResourcesList';
 import {
   Card,
@@ -6,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
+import { ResourceCard } from '@/components/ui/resource-card';
 
 interface ResourceCount {
   repositories: number;
@@ -28,14 +30,40 @@ interface UnassignedResources {
 }
 
 export default function TeamOverview({
-  team,
   unassignedResources,
 }: {
-  team: TeamDetails;
+  team?: TeamDetails;
   unassignedResources: UnassignedResources;
 }) {
   const hasUnassignedRepos = unassignedResources?.repositories?.length > 0;
-  const resourceCounts = team?.resourceCounts || { repositories: 0, hosts: 0, cicd: 0 };
+
+  // Create resource cards for the overview
+  const resourceCards = [
+    {
+      type: 'repository',
+      name: 'Repositories',
+      count: 0,
+      status: 'inactive',
+    },
+    {
+      type: 'host',
+      name: 'Hosts',
+      count: 0,
+      status: 'inactive',
+    },
+    {
+      type: 'cicd',
+      name: 'CI/CD',
+      count: 0,
+      status: 'inactive',
+    },
+    {
+      type: 'deployment',
+      name: 'Deployments',
+      count: 0,
+      status: 'inactive',
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -46,28 +74,10 @@ export default function TeamOverview({
           <CardDescription>Overview of team resources</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 border rounded-md text-center">
-              <h3 className="font-medium">Repositories</h3>
-              <p className="text-2xl">{resourceCounts.repositories}</p>
-              {hasUnassignedRepos && (
-                <p className="text-sm text-amber-500">
-                  {unassignedResources.repositories.length} unassigned
-                </p>
-              )}
-            </div>
-            <div className="p-4 border rounded-md text-center">
-              <h3 className="font-medium">Hosts</h3>
-              <p className="text-2xl">{resourceCounts.hosts}</p>
-            </div>
-            <div className="p-4 border rounded-md text-center">
-              <h3 className="font-medium">CI/CD</h3>
-              <p className="text-2xl">{resourceCounts.cicd}</p>
-            </div>
-            <div className="p-4 border rounded-md text-center">
-              <h3 className="font-medium">Deployments</h3>
-              <p className="text-2xl">0</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {resourceCards.map((resource) => (
+              <ResourceCard key={resource.type} resource={resource} />
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -82,8 +92,8 @@ export default function TeamOverview({
           <CardContent>
             <UnassignedResourcesList
               repositories={unassignedResources.repositories}
-              teamId={team?.id}
-              teamName={team?.name}
+              teamId={null}
+              teamName=""
             />
           </CardContent>
         </Card>

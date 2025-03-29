@@ -329,7 +329,7 @@
     "english": "Anglais",
     "french": "Français"
   },
-  "Team": {
+  "team": {
     "title": "Gestion d'équipe",
     "teamMembers": "Membres de l'équipe",
     "description": "Gérez les membres de votre équipe et leurs permissions",
@@ -343,7 +343,11 @@
     "inviteAccepted": "Accepté",
     "removeUser": "Supprimer",
     "confirmRemove": "Êtes-vous sûr de vouloir supprimer cet utilisateur ?",
-    "noMembers": "Aucun membre d'équipe trouvé"
+    "noMembers": "Aucun membre d'équipe trouvé",
+    "team": "Équipe",
+    "addMember": "Ajouter un membre",
+    "overview": "Aperçu",
+    "members": "Membres"
   },
   "Projects": {
     "projects": "Projets",

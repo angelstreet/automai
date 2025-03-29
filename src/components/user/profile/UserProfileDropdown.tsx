@@ -36,13 +36,24 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
 
   const handleSignOut = async () => {
     try {
-      // First immediately redirect to login
-      router.push(`/${locale}/login`);
+      // Use a more reliable approach for signing out
+      const result = await signOut(locale);
 
-      // Then handle signOut in the background
-      await signOut(locale);
+      // Only redirect after successful signout
+      if (result.success) {
+        // Small delay to ensure cookies are cleared
+        setTimeout(() => {
+          router.push(`/${locale}/login`);
+        }, 200);
+      } else {
+        console.error('Error signing out:', result);
+        // If sign out failed through the context, try a direct page reload as a fallback
+        window.location.href = `/${locale}/login`;
+      }
     } catch (error) {
       console.error('Error signing out:', error);
+      // If all else fails, force a direct navigation
+      window.location.href = `/${locale}/login`;
     }
   };
 

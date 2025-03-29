@@ -1,0 +1,38 @@
+"team": {
+  "title": "Gestion d'Équipe",
+  "description": "Gérer les équipes, les membres et les limites de ressources",
+  "overview": "Aperçu",
+  "members": {
+    "title": "Membres de l'Équipe",
+    "add": "Ajouter un Membre",
+    "search": "Rechercher par nom, email ou rôle...",
+    "name": "Nom",
+    "email": "Email",
+    "role": "Rôle",
+    "actions": {
+      "title": "Actions",
+      "changeRole": "Changer le Rôle",
+      "remove": "Retirer le Membre"
+    },
+    "noSearchResults": "Aucun membre correspondant à votre recherche",
+    "noMembers": "Aucun membre trouvé dans cette équipe",
+    "noTeam": "Créez une équipe pour ajouter des membres"
+  },
+  "resources": {
+    "title": "Ressources",
+    "overview": "Aperçu des ressources de l'équipe",
+    "hosts": "Serveurs",
+    "repositories": "Dépôts",
+    "cicd": "CI/CD",
+    "deployments": "Déploiements",
+    "add": "Ajouter une Ressource",
+    "noResources": "Aucune ressource trouvée",
+    "ip": "Adresse IP",
+    "status": "Statut",
+    "name": "Nom",
+    "url": "URL",
+    "visibility": "Visibilité",
+    "type": "Type",
+    "environment": "Environnement"
+  }
+} 

@@ -1,31 +1,51 @@
 import { Suspense } from 'react';
+import { getTranslations } from 'next-intl/server';
 
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
+import TeamSkeleton from './_components/TeamSkeleton';
+import MembersTabSkeleton from './_components/MembersTabSkeleton';
+import OverviewTabSkeleton from './_components/OverviewTabSkeleton';
+import { MembersTab } from './_components/client/MembersTab';
 import TeamHeader from './_components/TeamHeader';
 import TeamTabs from './_components/client/TeamTabs';
 import { getTeamDetails, getUnassignedResources } from './actions';
 
 export default async function TeamPage({ searchParams }: { searchParams: { tab?: string } }) {
-  // Use Promise.resolve to await searchParams
-  const params = await Promise.resolve(searchParams);
-  const activeTab = params.tab || 'overview';
+  const t = await getTranslations('team');
 
-  const teamDetails = await getTeamDetails();
+  // The correct way to handle searchParams in Next.js 14+
+  const { tab = 'overview' } = searchParams;
+
+  // Prefetch the team details once - this is important for caching
+  const teamDetailsPromise = getTeamDetails();
+  const teamDetails = await teamDetailsPromise;
   const unassignedResources = await getUnassignedResources();
 
   return (
-    <div className="container px-4 py-6 mx-auto space-y-8">
-      <Suspense fallback={<LoadingSpinner />}>
-        <TeamHeader team={teamDetails} activeTab={activeTab} />
+    <FeaturePageContainer
+      title={t('title')}
+      description={t('description')}
+      actions={null} // No specific actions for team page
+    >
+      <Suspense fallback={<TeamSkeleton />}>
+        <TeamHeader team={teamDetails} activeTab={tab} />
 
-        <TeamTabs
-          activeTab={activeTab}
-          teamDetails={teamDetails}
-          unassignedResources={unassignedResources}
-        />
+        {tab === 'members' ? (
+          <Suspense fallback={<MembersTabSkeleton />}>
+            <MembersTab teamId={teamDetails?.id} />
+          </Suspense>
+        ) : (
+          <Suspense fallback={<OverviewTabSkeleton />}>
+            {/* Use the existing TeamTabs component for overview */}
+            <TeamTabs
+              activeTab="overview"
+              teamDetails={teamDetails}
+              unassignedResources={unassignedResources}
+            />
+          </Suspense>
+        )}
       </Suspense>
-    </div>
+    </FeaturePageContainer>
   );
 }
 

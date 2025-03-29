@@ -13,7 +13,8 @@ interface TeamDetails {
   subscription_tier: string;
   memberCount: number;
   userRole?: string;
-  ownerId: string;
+  ownerId: string | null;
+  ownerEmail?: string | null;
   resourceCounts: {
     repositories: number;
     hosts: number;

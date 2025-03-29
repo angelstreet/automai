@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { updateSession } from '@/lib/supabase/middleware';
+import { createClient } from '@/lib/supabase/middleware';
 
 import { locales, defaultLocale } from './config';
 
@@ -25,12 +26,38 @@ const PUBLIC_PATHS = [
   '/features',
   '/pricing',
   '/docs',
-  '/login',
   '/signup',
   '/auth-redirect',
   '/forgot-password',
   '/reset-password',
 ];
+
+// Handle login redirects for authenticated users
+async function handleLoginPath(request: NextRequest) {
+  // Allow login with code parameter (for OAuth callbacks)
+  if (request.nextUrl.searchParams.has('code') || request.nextUrl.searchParams.has('error')) {
+    console.log(
+      '[MIDDLEWARE] Bypassing auth check for login path with code/error param:',
+      request.nextUrl.pathname,
+    );
+    return NextResponse.next();
+  }
+
+  // Check if user is authenticated and redirect to dashboard if they are
+  const { supabase, response } = createClient(request);
+  const { data } = await supabase.auth.getUser();
+
+  if (data.user) {
+    // User is authenticated, redirect to dashboard
+    const locale = request.nextUrl.pathname.split('/')[1] || defaultLocale;
+    const tenantName = data.user.user_metadata?.tenant_name || 'trial';
+    console.log('[MIDDLEWARE] User already authenticated, redirecting from login to dashboard');
+    return NextResponse.redirect(new URL(`/${locale}/${tenantName}/dashboard`, request.url));
+  }
+
+  // Not authenticated, allow access to login page
+  return NextResponse.next();
+}
 
 export default async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -40,6 +67,11 @@ export default async function middleware(request: NextRequest) {
   const acceptHeader = request.headers.get('accept') || '';
   if (contentType.includes('text/html') || acceptHeader.includes('text/html')) {
     return NextResponse.next();
+  }
+
+  // Special handling for login path
+  if (path === '/login' || path.endsWith('/login')) {
+    return handleLoginPath(request);
   }
 
   // 2. Public paths: apply locale but RETURN EARLY

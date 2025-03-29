@@ -229,24 +229,40 @@ export async function signOut(formData: FormData) {
     // Get locale from form data for redirect
     const locale = (formData.get('locale') as string) || 'en';
 
+    console.log('🔐 SIGNOUT: Starting sign out process...');
+
     // Invalidate user cache on sign out
     await invalidateUserCache();
+    console.log('🔐 SIGNOUT: User cache invalidated');
 
+    // Sign out from Supabase
     const result = await supabaseAuth.signOut();
+    console.log('🔐 SIGNOUT: Supabase signOut result:', result);
 
     if (!result.success) {
-      console.error('Error signing out:', result.error);
+      console.error('🔐 SIGNOUT ERROR:', result.error);
       throw new Error(result.error || 'Failed to sign out');
     }
+
+    // Set cache-busting query parameter to prevent browser cache issues
+    const timestamp = Date.now();
+    const redirectUrl = `/${locale}/login?t=${timestamp}`;
+
+    console.log('🔐 SIGNOUT: Successfully signed out, redirect URL:', redirectUrl);
 
     // Return success and redirect URL
     return {
       success: true,
-      redirectUrl: `/${locale}/login`,
+      redirectUrl,
     };
   } catch (error) {
-    console.error('Error signing out:', error);
-    throw new Error('Failed to sign out');
+    console.error('🔐 SIGNOUT ERROR:', error);
+    // Still return some redirect URL even on error
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error during sign out',
+      redirectUrl: `/${formData.get('locale') || 'en'}/login?error=signout`,
+    };
   }
 }
 

@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
+import { Server, Code, GitBranch, Rocket } from 'lucide-react';
+
 import {
   Card,
   CardContent,
@@ -8,188 +11,304 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
-import { Button } from '@/components/shadcn/button';
-import { DatabaseIcon, ServerIcon, GitBranchIcon, PlusIcon } from 'lucide-react';
-import { UnassignedResourcesList } from './UnassignedResourcesList';
+import { ScrollArea } from '@/components/shadcn/scroll-area';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/shadcn/table';
+import ResourcesTabSkeleton from '../ResourcesTabSkeleton';
+
+// Mock resource data types
+interface Host {
+  id: string;
+  name: string;
+  ip: string;
+  status: 'online' | 'offline' | 'maintenance';
+}
+
+interface Repository {
+  id: string;
+  name: string;
+  url: string;
+  isPublic: boolean;
+}
+
+interface CICDPipeline {
+  id: string;
+  name: string;
+  status: 'active' | 'inactive' | 'failed';
+  type: 'github' | 'gitlab' | 'jenkins' | 'custom';
+}
+
+interface Deployment {
+  id: string;
+  name: string;
+  environment: string;
+  status: 'deployed' | 'pending' | 'failed';
+}
 
 interface ResourcesTabProps {
-  teamId: string | null;
-  teamName?: string;
-  unassignedRepositories: any[];
-  resourceCounts: {
-    repositories: number;
-    hosts: number;
-    cicd: number;
+  teamDetails: {
+    id: string | null;
+    resourceCounts: {
+      repositories: number;
+      hosts: number;
+      cicd: number;
+    };
   };
 }
 
-export function ResourcesTab({
-  teamId,
-  teamName,
-  unassignedRepositories,
-  resourceCounts,
-}: ResourcesTabProps) {
-  const [resourceType, setResourceType] = useState('repositories');
+export function ResourcesTab({ teamDetails }: ResourcesTabProps) {
+  const t = useTranslations('team');
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!teamId) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Resources</CardTitle>
-          <CardDescription>Create a team to manage resources</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center p-6">
-            <Button>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Create Team
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  // Mock data - Replace with actual data fetching
+  const hosts: Host[] = [
+    { id: 'h1', name: 'Production Server', ip: '192.168.1.1', status: 'online' },
+    { id: 'h2', name: 'Development Server', ip: '192.168.1.2', status: 'online' },
+  ];
+
+  const repositories: Repository[] = [
+    { id: 'r1', name: 'Main App', url: 'https://github.com/org/main-app', isPublic: false },
+    { id: 'r2', name: 'Documentation', url: 'https://github.com/org/docs', isPublic: true },
+  ];
+
+  const cicdPipelines: CICDPipeline[] = [
+    { id: 'c1', name: 'Main App Build', status: 'active', type: 'github' },
+    { id: 'c2', name: 'Deploy Pipeline', status: 'inactive', type: 'jenkins' },
+  ];
+
+  const deployments: Deployment[] = [
+    { id: 'd1', name: 'Frontend v1.2', environment: 'production', status: 'deployed' },
+    { id: 'd2', name: 'Backend v2.0', environment: 'staging', status: 'pending' },
+  ];
+
+  useEffect(() => {
+    // Simulate loading data
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online':
+      case 'active':
+      case 'deployed':
+        return 'text-green-500';
+      case 'offline':
+      case 'inactive':
+      case 'pending':
+        return 'text-yellow-500';
+      case 'maintenance':
+      case 'failed':
+        return 'text-red-500';
+      default:
+        return 'text-gray-500';
+    }
+  };
+
+  if (isLoading) {
+    return <ResourcesTabSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Hosts Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Team Resources</CardTitle>
-          <CardDescription>Manage resources for {teamName}</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              {t('resources.hosts')}
+            </CardTitle>
+            <CardDescription>
+              {hosts.length} {hosts.length === 1 ? 'server' : 'servers'} available
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
-          <Tabs value={resourceType} onValueChange={setResourceType} className="w-full">
-            <TabsList className="grid grid-cols-4 mb-6">
-              <TabsTrigger value="repositories" className="flex items-center">
-                <GitBranchIcon className="h-4 w-4 mr-2" />
-                Repositories
-              </TabsTrigger>
-              <TabsTrigger value="hosts" className="flex items-center">
-                <ServerIcon className="h-4 w-4 mr-2" />
-                Hosts
-              </TabsTrigger>
-              <TabsTrigger value="cicd" className="flex items-center">
-                <DatabaseIcon className="h-4 w-4 mr-2" />
-                CI/CD
-              </TabsTrigger>
-              <TabsTrigger value="deployments" className="flex items-center">
-                <DatabaseIcon className="h-4 w-4 mr-2" />
-                Deployments
-              </TabsTrigger>
-            </TabsList>
+          <ScrollArea className="h-[250px] w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('resources.name')}</TableHead>
+                  <TableHead>{t('resources.ip')}</TableHead>
+                  <TableHead>{t('resources.status')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {hosts.map((host) => (
+                  <TableRow key={host.id}>
+                    <TableCell>{host.name}</TableCell>
+                    <TableCell>{host.ip}</TableCell>
+                    <TableCell className={getStatusColor(host.status)}>{host.status}</TableCell>
+                  </TableRow>
+                ))}
+                {hosts.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                      {t('resources.noResources')}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
-            <TabsContent value="repositories">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h3 className="text-lg font-medium">Repositories</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {resourceCounts.repositories} repositories assigned to this team
-                  </p>
-                </div>
-                <Button size="sm">
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Add Repository
-                </Button>
-              </div>
+      {/* Repositories Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <Code className="h-5 w-5" />
+              {t('resources.repositories')}
+            </CardTitle>
+            <CardDescription>
+              {repositories.length} {repositories.length === 1 ? 'repository' : 'repositories'}{' '}
+              available
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[250px] w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('resources.name')}</TableHead>
+                  <TableHead>{t('resources.url')}</TableHead>
+                  <TableHead>{t('resources.visibility')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {repositories.map((repo) => (
+                  <TableRow key={repo.id}>
+                    <TableCell>{repo.name}</TableCell>
+                    <TableCell>
+                      <a
+                        href={repo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        {repo.url}
+                      </a>
+                    </TableCell>
+                    <TableCell>{repo.isPublic ? 'Public' : 'Private'}</TableCell>
+                  </TableRow>
+                ))}
+                {repositories.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                      {t('resources.noResources')}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
-              {resourceCounts.repositories === 0 ? (
-                <div className="text-center p-6 border rounded-md">
-                  <p className="text-muted-foreground">No repositories assigned to this team</p>
-                </div>
-              ) : (
-                <div className="border rounded-md p-4">
-                  <p className="text-center text-muted-foreground">
-                    Repository list would be displayed here
-                  </p>
-                </div>
-              )}
+      {/* CI/CD Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <GitBranch className="h-5 w-5" />
+              {t('resources.cicd')}
+            </CardTitle>
+            <CardDescription>
+              {cicdPipelines.length} {cicdPipelines.length === 1 ? 'pipeline' : 'pipelines'}{' '}
+              available
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[250px] w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('resources.name')}</TableHead>
+                  <TableHead>{t('resources.type')}</TableHead>
+                  <TableHead>{t('resources.status')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cicdPipelines.map((pipeline) => (
+                  <TableRow key={pipeline.id}>
+                    <TableCell>{pipeline.name}</TableCell>
+                    <TableCell className="capitalize">{pipeline.type}</TableCell>
+                    <TableCell className={getStatusColor(pipeline.status)}>
+                      {pipeline.status}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {cicdPipelines.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                      {t('resources.noResources')}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+      </Card>
 
-              {unassignedRepositories.length > 0 && (
-                <div className="mt-8">
-                  <h3 className="text-lg font-medium mb-4">Unassigned Repositories</h3>
-                  <UnassignedResourcesList
-                    repositories={unassignedRepositories}
-                    teamId={teamId}
-                    teamName={teamName}
-                  />
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="hosts">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h3 className="text-lg font-medium">Hosts</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {resourceCounts.hosts} hosts assigned to this team
-                  </p>
-                </div>
-                <Button size="sm">
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Add Host
-                </Button>
-              </div>
-
-              {resourceCounts.hosts === 0 ? (
-                <div className="text-center p-6 border rounded-md">
-                  <p className="text-muted-foreground">No hosts assigned to this team</p>
-                </div>
-              ) : (
-                <div className="border rounded-md p-4">
-                  <p className="text-center text-muted-foreground">
-                    Host list would be displayed here
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="cicd">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h3 className="text-lg font-medium">CI/CD</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {resourceCounts.cicd} CI/CD providers assigned to this team
-                  </p>
-                </div>
-                <Button size="sm">
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Add Provider
-                </Button>
-              </div>
-
-              {resourceCounts.cicd === 0 ? (
-                <div className="text-center p-6 border rounded-md">
-                  <p className="text-muted-foreground">No CI/CD providers assigned to this team</p>
-                </div>
-              ) : (
-                <div className="border rounded-md p-4">
-                  <p className="text-center text-muted-foreground">
-                    CI/CD provider list would be displayed here
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="deployments">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <h3 className="text-lg font-medium">Deployments</h3>
-                  <p className="text-sm text-muted-foreground">
-                    0 deployments assigned to this team
-                  </p>
-                </div>
-                <Button size="sm">
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Create Deployment
-                </Button>
-              </div>
-
-              <div className="text-center p-6 border rounded-md">
-                <p className="text-muted-foreground">No deployments found for this team</p>
-              </div>
-            </TabsContent>
-          </Tabs>
+      {/* Deployments Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <Rocket className="h-5 w-5" />
+              {t('resources.deployments')}
+            </CardTitle>
+            <CardDescription>
+              {deployments.length} {deployments.length === 1 ? 'deployment' : 'deployments'}{' '}
+              available
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[250px] w-full">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('resources.name')}</TableHead>
+                  <TableHead>{t('resources.environment')}</TableHead>
+                  <TableHead>{t('resources.status')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {deployments.map((deployment) => (
+                  <TableRow key={deployment.id}>
+                    <TableCell>{deployment.name}</TableCell>
+                    <TableCell className="capitalize">{deployment.environment}</TableCell>
+                    <TableCell className={getStatusColor(deployment.status)}>
+                      {deployment.status}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {deployments.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">
+                      {t('resources.noResources')}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         </CardContent>
       </Card>
     </div>

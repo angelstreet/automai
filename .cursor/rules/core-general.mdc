@@ -33,3 +33,31 @@ alwaysApply: true
 - Use curl and static analysis for debugging when possible
 - Propose server testing with clear justification when needed
 - NEVER modify shadcn components directly
+
+## Internationalization Guidelines (i18n)
+
+### Translation Keys and Namespaces
+
+- ✅ ALWAYS use lowercase for namespace keys in translation files (e.g., `"team"` not `"Team"`)
+- ✅ ALWAYS check both `en.json` and `fr.json` when adding or modifying translations
+- ✅ ALWAYS keep translation keys consistent between language files
+- ✅ ALWAYS organize related translations under the same namespace
+- ❌ NEVER mix casing styles for the same namespace (e.g., `"Team"` in one file and `"team"` in another)
+- ❌ NEVER leave translation keys without corresponding entries in all language files
+
+### Translation Usage in Components
+
+- ✅ ALWAYS import translation functions using the appropriate namespace: `const t = await getTranslations('team')`
+- ✅ ALWAYS handle potential missing translations with fallbacks when necessary
+- ✅ ALWAYS wrap dynamic content in translation functions: `t('deleteWarning', { name: itemName })`
+- ❌ NEVER hardcode text that should be translatable
+- ❌ NEVER use different namespaces for related UI elements
+
+### Translation File Maintenance
+
+- ✅ ALWAYS use string keys that are descriptive of the text's purpose, not the text itself
+- ✅ ALWAYS organize translations hierarchically with related items grouped together
+- ✅ ALWAYS update all language files simultaneously when adding new keys
+- ✅ ALWAYS keep translation files sorted in a consistent order
+- ❌ NEVER remove translations without checking for references
+- ❌ NEVER modify translation structure without updating all usage instances

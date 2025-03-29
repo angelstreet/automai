@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/shadcn/card';
+import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
+import { Button } from '@/components/shadcn/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import { Input } from '@/components/shadcn/input';
 import {
   Table,
   TableBody,
@@ -17,189 +15,172 @@ import {
   TableRow,
 } from '@/components/shadcn/table';
 import { Badge } from '@/components/shadcn/badge';
-import { Button } from '@/components/shadcn/button';
-import { PlusIcon } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { getTeamMembers, getTeamDetails } from '@/app/[locale]/[tenant]/team/actions';
+import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu';
 
-interface Member {
-  profile_id: string;
-  role: string;
-  user?: {
-    name?: string;
-    email?: string;
-  };
+import { TeamMember } from '@/types/context/team';
+import { getTeamMembers } from '@/app/[locale]/[tenant]/team/actions';
+import MembersTabSkeleton from '../MembersTabSkeleton';
+
+interface MembersTabProps {
+  teamId: string | null;
 }
 
-export function MembersTab({ teamId }: { teamId: string | null }) {
-  const [members, setMembers] = useState<Member[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [teamDetails, setTeamDetails] = useState<any>(null);
+export function MembersTab({ teamId }: MembersTabProps) {
+  const t = useTranslations('team');
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Check if current user is on trial tier
-  const isTrialTier = !teamId || teamDetails?.subscription_tier === 'trial';
-
-  // Get current user's profile ID
-  const currentUserId = teamDetails?.ownerId;
-
-  // Fetch team details and members in a single effect to reduce unnecessary rerenders
   useEffect(() => {
-    let isMounted = true;
-
-    async function fetchData() {
-      try {
-        setLoading(true);
-
-        // First get team details
-        const details = await getTeamDetails();
-
-        if (!isMounted) return;
-        setTeamDetails(details);
-
-        // If we have a teamId, fetch team members
-        if (teamId) {
-          const result = await getTeamMembers(teamId);
-
-          if (!isMounted) return;
-
-          if (result.success && result.data) {
-            // Process member data with owner email if available
-            const processedMembers = result.data.map((member) => {
-              if (details?.ownerId === member.profile_id && details?.ownerEmail) {
-                return {
-                  ...member,
-                  user: {
-                    ...member.user,
-                    email: details.ownerEmail,
-                  },
-                };
-              }
-              return member;
-            });
-
-            setMembers(processedMembers);
-            setError(null);
-          } else {
-            setError(result.error || 'Failed to load team members');
-            setMembers([]);
-          }
-        } else {
-          setMembers([]);
-        }
-      } catch (error) {
-        if (!isMounted) return;
-        console.error('Error fetching data:', error);
-        setError('Failed to load team data');
+    const fetchMembers = async () => {
+      if (!teamId) {
         setMembers([]);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setIsLoading(false);
+        return;
       }
-    }
 
-    fetchData();
-
-    // Cleanup function to handle component unmounting
-    return () => {
-      isMounted = false;
+      try {
+        setIsLoading(true);
+        const result = await getTeamMembers(teamId);
+        setMembers(result || []);
+      } catch (error) {
+        console.error('Failed to fetch team members:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
-  }, [teamId]); // Only depend on teamId to prevent unnecessary fetches
 
-  // Log whenever members state changes
-  useEffect(() => {
-    console.log('Current members state:', members);
-  }, [members]);
+    fetchMembers();
+  }, [teamId]);
 
-  if (!teamId) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Members</CardTitle>
-          <CardDescription>Create a team to add members</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center p-6">
-            <Button>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Create Team
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  const filteredMembers = members.filter(
+    (member) =>
+      member.profiles.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.role.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  if (isLoading) {
+    return <MembersTabSkeleton />;
   }
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role.toLowerCase()) {
+      case 'owner':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+      case 'admin':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'member':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'viewer':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+  };
+
+  const getInitials = (email: string | undefined) => {
+    if (!email) return '?';
+    const parts = email.split('@')[0].split('.');
+    if (parts.length > 1) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return email.substring(0, 2).toUpperCase();
+  };
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Team Members</CardTitle>
-          <CardDescription>Manage your team members and their roles</CardDescription>
-        </div>
-        {!isTrialTier && (
-          <Button size="sm">
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Add Member
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-center">
+          <CardTitle>{t('members.title')}</CardTitle>
+          <Button disabled={!teamId} size="sm">
+            <PlusIcon className="h-4 w-4 mr-1" />
+            {t('members.add')}
           </Button>
-        )}
+        </div>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center p-6">
-            <LoadingSpinner />
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder={t('members.search')}
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-        ) : error ? (
-          <div className="text-center p-6 text-red-500">{error}</div>
-        ) : members.length === 0 ? (
-          <div className="text-center p-6 text-muted-foreground">No team members found</div>
-        ) : (
-          <Table>
-            <TableHeader>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]"></TableHead>
+              <TableHead>{t('members.name')}</TableHead>
+              <TableHead>{t('members.email')}</TableHead>
+              <TableHead>{t('members.role')}</TableHead>
+              <TableHead className="text-right">{t('members.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
-                {!isTrialTier && <TableHead className="text-right">Actions</TableHead>}
+                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                  {searchQuery
+                    ? t('members.noSearchResults')
+                    : teamId
+                      ? t('members.noMembers')
+                      : t('members.noTeam')}
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((member) => (
+            ) : (
+              filteredMembers.map((member) => (
                 <TableRow key={member.profile_id}>
-                  <TableCell className="font-medium">{member.user?.name || 'Unknown'}</TableCell>
-                  <TableCell>{member.user?.email || 'No email'}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        member.role === 'admin'
-                          ? 'default'
-                          : member.role === 'developer'
-                            ? 'outline'
-                            : 'secondary'
-                      }
-                    >
+                    <Avatar>
+                      <AvatarImage
+                        src={member.profiles.avatar_url || ''}
+                        alt={member.profiles.email || ''}
+                      />
+                      <AvatarFallback>{getInitials(member.profiles.email)}</AvatarFallback>
+                    </Avatar>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {member.profiles.email?.split('@')[0] || 'Unknown User'}
+                  </TableCell>
+                  <TableCell>{member.profiles.email || 'No email'}</TableCell>
+                  <TableCell>
+                    <Badge className={getRoleBadgeColor(member.role)} variant="outline">
                       {member.role}
                     </Badge>
                   </TableCell>
-                  {!isTrialTier && (
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        Edit
-                      </Button>
-                      {/* Only show Remove button if not the current user */}
-                      {member.profile_id !== currentUserId && (
-                        <Button variant="ghost" size="sm" className="text-destructive">
-                          Remove
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
                         </Button>
-                      )}
-                    </TableCell>
-                  )}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>{t('members.actions.changeRole')}</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive">
+                          {t('members.actions.remove')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+              ))
+            )}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
