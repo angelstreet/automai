@@ -166,7 +166,7 @@ export async function getTeamMembers(teamId: string) {
     }
 
     // Get team members with profiles
-    const result = await dbGetTeamMembers(teamId);
+    const result = await dbGetTeamMembers(teamId, cookieStore);
     return result;
   } catch (error) {
     console.error('Error fetching team members:', error);
@@ -193,7 +193,8 @@ export async function addTeamMember(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const result = await dbAddTeamMember(input);
+    const cookieStore = cookies();
+    const result = await dbAddTeamMember(input, cookieStore);
 
     return result;
   } catch (error: any) {
@@ -221,7 +222,8 @@ export async function updateTeamMemberRole(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const result = await dbUpdateTeamMemberRole(teamId, profileId, role);
+    const cookieStore = cookies();
+    const result = await dbUpdateTeamMemberRole(teamId, profileId, role, cookieStore);
 
     return result;
   } catch (error: any) {
@@ -247,7 +249,8 @@ export async function removeTeamMember(
       return { success: false, error: 'Unauthorized' };
     }
 
-    const result = await dbRemoveTeamMember(teamId, profileId);
+    const cookieStore = cookies();
+    const result = await dbRemoveTeamMember(teamId, profileId, cookieStore);
 
     return result;
   } catch (error: any) {
@@ -332,11 +335,11 @@ export async function getTeamDetails() {
     const team = teamsResult.data[0];
 
     // Get member count
-    const membersResult = await dbGetTeamMembers(team.id);
+    const membersResult = await dbGetTeamMembers(team.id, cookieStore);
     const memberCount = membersResult.success ? membersResult.data?.length || 0 : 0;
 
     // For resource counts we would need specific functions in the db module
-    // This is a simplified example
+    // This is simplified example
     return {
       ...team,
       memberCount,
