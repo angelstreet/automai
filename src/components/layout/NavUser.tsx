@@ -13,7 +13,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { useSidebar, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/sidebar';
+import {
+  useSidebar,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/navigation/sidebar';
 import { useUser } from '@/context';
 import { cn } from '@/lib/utils';
 import { User as UserType } from '@/types/user';

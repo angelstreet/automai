@@ -1,5 +1,6 @@
-import { supabase } from '@/lib/supabase/browser-client';
+import { createServerClient } from '@/lib/supabase';
 import { PostgrestError } from '@supabase/supabase-js';
+import { createBrowserClient } from '@/lib/supabase';
 
 export type ResourceType =
   | 'hosts'
@@ -62,14 +63,20 @@ export type RoleTemplateResult = {
   error?: string;
 };
 
+// Function to get supabase client
+async function getSupabaseClient() {
+  return createBrowserClient();
+}
+
 /**
- * Get permissions for a user in a team
+ * Get all permissions for a user in a specific team
  */
 export async function getUserPermissions(
   profileId: string,
   teamId: string,
 ): Promise<PermissionsResult> {
   try {
+    const supabase = await getSupabaseClient();
     const { data, error } = await supabase
       .from('permission_matrix')
       .select('*')
@@ -80,13 +87,13 @@ export async function getUserPermissions(
 
     return {
       success: true,
-      data,
+      data: data,
     };
   } catch (error) {
-    console.error('Error fetching user permissions:', error);
+    console.error('Error getting user permissions:', error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to fetch user permissions',
+      error: error instanceof Error ? error.message : 'Unknown error getting permissions',
     };
   }
 }
@@ -96,6 +103,7 @@ export async function getUserPermissions(
  */
 export async function getRoleTemplates(): Promise<RoleTemplatesResult> {
   try {
+    const supabase = await getSupabaseClient();
     const { data, error } = await supabase.from('role_templates').select('*');
 
     if (error) throw error;
@@ -108,7 +116,7 @@ export async function getRoleTemplates(): Promise<RoleTemplatesResult> {
     console.error('Error fetching role templates:', error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to fetch role templates',
+      error: error instanceof Error ? error.message : 'Failed to fetch role templates',
     };
   }
 }
@@ -118,7 +126,7 @@ export async function getRoleTemplates(): Promise<RoleTemplatesResult> {
  */
 export async function getRoleTemplate(name: string): Promise<RoleTemplateResult> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('role_templates')
       .select('*')
       .eq('name', name)
@@ -148,7 +156,7 @@ export async function applyRoleTemplate(
   roleName: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase.rpc('apply_role_template', {
+    const { error } = await getSupabaseClient().rpc('apply_role_template', {
       p_team_id: teamId,
       p_profile_id: profileId,
       p_role_name: roleName,
@@ -187,7 +195,7 @@ export async function setUserPermission(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Check if permission exists
-    const { data: existingPermission, error: fetchError } = await supabase
+    const { data: existingPermission, error: fetchError } = await getSupabaseClient()
       .from('permission_matrix')
       .select('id')
       .eq('team_id', teamId)
@@ -204,19 +212,21 @@ export async function setUserPermission(
 
     if (existingPermission) {
       // Update existing permission
-      const { error: updateError } = await supabase
+      const { error: updateError } = await getSupabaseClient()
         .from('permission_matrix')
         .update(permissions)
         .eq('id', existingPermission.id);
       error = updateError;
     } else {
       // Insert new permission
-      const { error: insertError } = await supabase.from('permission_matrix').insert({
-        team_id: teamId,
-        profile_id: profileId,
-        resource_type: resourceType,
-        ...permissions,
-      });
+      const { error: insertError } = await getSupabaseClient()
+        .from('permission_matrix')
+        .insert({
+          team_id: teamId,
+          profile_id: profileId,
+          resource_type: resourceType,
+          ...permissions,
+        });
       error = insertError;
     }
 
@@ -258,7 +268,7 @@ export async function checkPermission(
       (operation === 'update' || operation === 'delete') && creatorId === profileId;
 
     // Call the database function
-    const { data, error } = await supabase.rpc('check_permission', {
+    const { data, error } = await getSupabaseClient().rpc('check_permission', {
       p_profile_id: profileId,
       p_team_id: teamId,
       p_resource_type: resourceType,

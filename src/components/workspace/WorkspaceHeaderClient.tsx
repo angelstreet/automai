@@ -8,7 +8,7 @@ import { RoleSwitcher } from '@/components/layout/RoleSwitcher';
 import { Button } from '@/components/shadcn/button';
 import { Search } from '@/components/shadcn/search';
 import { Separator } from '@/components/shadcn/separator';
-import { SidebarTrigger } from '@/components/sidebar';
+import { SidebarTrigger } from '@/components/navigation/sidebar';
 import { useSidebar, useUser } from '@/context';
 import { cn } from '@/lib/utils';
 import { User } from '@/types/user';

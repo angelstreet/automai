@@ -1,19 +1,23 @@
+'use client';
+
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
-import { useUser } from '@/context/UserContext';
-import {
-  Team,
-  getTeamById,
-  getUserTeams,
-  setUserActiveTeam,
-  getUserActiveTeam,
-} from '@/lib/supabase/db-teams/teams';
+
+// Import types and actions from server actions
 import {
   ResourceType,
   Operation,
   PermissionMatrix,
   checkPermission as checkPermissionFn,
   getUserPermissions,
-} from '@/lib/supabase/db-teams/permissions';
+} from '@/app/actions/permission';
+import {
+  Team,
+  getTeamById,
+  getUserTeams,
+  setUserActiveTeam,
+  getUserActiveTeam,
+} from '@/app/actions/team';
+import { useUser } from '@/context/UserContext';
 
 interface TeamContextState {
   teams: Team[];

@@ -15,7 +15,7 @@ import {
   SIDEBAR_COOKIE_NAME,
   SIDEBAR_WIDTH,
   SIDEBAR_WIDTH_ICON,
-} from '@/components/sidebar/constants';
+} from '@/components/navigation/sidebar/constants';
 import { SidebarContext as SidebarContextType } from '@/types/sidebar';
 
 // Singleton flag to prevent multiple instances

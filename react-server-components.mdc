@@ -1,8 +1,3 @@
----
-description: 
-globs: 
-alwaysApply: true
----
 # React Server Components Architecture Guidelines
 
 ## Database Access Pattern (CRITICAL)
@@ -151,4 +146,4 @@ If you encounter database access issues:
 1. Check that you're using `createClient` from `/lib/supabase/server.ts`
 2. Verify `cookieStore` is passed through the entire call chain
 3. Ensure API routes use `cookies()` from `next/headers`
-4. Confirm you're not importing browser-specific modules server-side
+4. Confirm you're not importing browser-specific modules server-side 

@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 
 import { ActivityItem, Task, Stats, ChatMessage } from '@/app/[locale]/[tenant]/dashboard/types';
-import { getUser } from '@/app/actions/user';
 import { logger } from '@/lib/logger';
 
 // Define action result type for consistent return values
@@ -19,18 +18,9 @@ type ActionResult<T> = {
  */
 export async function getDashboardStats(): Promise<Stats> {
   try {
-    // Get current user
-    const user = await getUser();
+    logger.info('Fetching dashboard stats');
 
-    if (!user) {
-      logger.error('Cannot fetch dashboard stats - user not authenticated');
-      return getEmptyStats();
-    }
-
-    logger.info('Fetching dashboard stats for tenant:', user.tenant_id);
-
-    // This is a placeholder for actual data fetching
-    // In a real implementation, you would fetch data from your database
+    // Static dashboard data
     const data: Stats = {
       projects: 12,
       testCases: 157,
@@ -40,7 +30,9 @@ export async function getDashboardStats(): Promise<Stats> {
 
     return data;
   } catch (error) {
-    logger.error('Error in getDashboardStats:', error);
+    logger.error('Error in getDashboardStats', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return getEmptyStats();
   }
 }
@@ -51,56 +43,35 @@ export async function getDashboardStats(): Promise<Stats> {
  */
 export async function getRecentActivity(): Promise<ActivityItem[]> {
   try {
-    // Get current user
-    const user = await getUser();
+    logger.info('Fetching recent activity');
 
-    if (!user) {
-      logger.error('Cannot fetch recent activity - user not authenticated');
-      return [];
-    }
-
-    logger.info('Fetching recent activity for tenant:', user.tenant_id);
-
-    // This is a placeholder for actual data fetching
+    // Static activity data
     const data: ActivityItem[] = [
       {
         id: '1',
-        user: {
-          name: 'John Doe',
-          avatar: '/avatars/01.svg',
-        },
+        user: 'John Doe',
         action: 'created',
-        target: 'deployment',
-        targetName: 'Frontend Deployment',
         timestamp: Date.now() - 20 * 60 * 1000, // 20 minutes ago
       },
       {
         id: '2',
-        user: {
-          name: 'Jane Smith',
-          avatar: '/avatars/02.svg',
-        },
+        user: 'Jane Smith',
         action: 'updated',
-        target: 'repository',
-        targetName: 'main-api',
         timestamp: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
       },
       {
         id: '3',
-        user: {
-          name: 'Robert Johnson',
-          avatar: '/avatars/03.svg',
-        },
+        user: 'Robert Johnson',
         action: 'connected',
-        target: 'host',
-        targetName: 'prod-server-1',
         timestamp: Date.now() - 1 * 24 * 60 * 60 * 1000, // 1 day ago
       },
     ];
 
     return data;
   } catch (error) {
-    logger.error('Error in getRecentActivity:', error);
+    logger.error('Error in getRecentActivity', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return [];
   }
 }
@@ -111,17 +82,9 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
  */
 export async function getTasks(): Promise<Task[]> {
   try {
-    // Get current user
-    const user = await getUser();
+    logger.info('Fetching tasks');
 
-    if (!user) {
-      logger.error('Cannot fetch tasks - user not authenticated');
-      return [];
-    }
-
-    logger.info('Fetching tasks for user:', user.id);
-
-    // This is a placeholder for actual data fetching
+    // Static task data
     const data: Task[] = [
       {
         id: '1',
@@ -145,7 +108,9 @@ export async function getTasks(): Promise<Task[]> {
 
     return data;
   } catch (error) {
-    logger.error('Error in getTasks:', error);
+    logger.error('Error in getTasks', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return [];
   }
 }
@@ -156,17 +121,9 @@ export async function getTasks(): Promise<Task[]> {
  */
 export async function getTeamChat(): Promise<ChatMessage[]> {
   try {
-    // Get current user
-    const user = await getUser();
+    logger.info('Fetching team chat');
 
-    if (!user) {
-      logger.error('Cannot fetch team chat - user not authenticated');
-      return [];
-    }
-
-    logger.info('Fetching team chat for tenant:', user.tenant_id);
-
-    // This is a placeholder for actual data fetching
+    // Static chat data
     const data: ChatMessage[] = [
       {
         id: '1',
@@ -190,7 +147,9 @@ export async function getTeamChat(): Promise<ChatMessage[]> {
 
     return data;
   } catch (error) {
-    logger.error('Error in getTeamChat:', error);
+    logger.error('Error in getTeamChat', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return [];
   }
 }
@@ -202,28 +161,17 @@ export async function getTeamChat(): Promise<ChatMessage[]> {
  */
 export async function addChatMessage(message: string): Promise<ActionResult<ChatMessage>> {
   try {
-    // Get current user
-    const user = await getUser();
-
-    if (!user) {
-      logger.error('Cannot add chat message - user not authenticated');
-      return { success: false, error: 'User not authenticated' };
-    }
-
     if (!message.trim()) {
       return { success: false, error: 'Message cannot be empty' };
     }
 
-    // This is a placeholder for actual message creation in database
+    // Create a static new message
     const newMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
-      name: user.name || 'Anonymous',
+      name: 'Current User',
       message: message.trim(),
       timestamp: Date.now(),
     };
-
-    // In a real implementation, you would save the message to your database
-    // const result = await saveMessageToDatabase(newMessage);
 
     // Revalidate the dashboard path to update chat messages
     revalidatePath('/[locale]/[tenant]/dashboard');
@@ -233,7 +181,9 @@ export async function addChatMessage(message: string): Promise<ActionResult<Chat
       data: newMessage,
     };
   } catch (error) {
-    logger.error('Error adding chat message:', error);
+    logger.error('Error adding chat message', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add message',
@@ -251,15 +201,6 @@ export async function clearDashboardCache(options?: {
   message: string;
 }> {
   try {
-    // Get current user
-    const user = await getUser();
-    if (!user) {
-      return {
-        success: false,
-        message: 'User not authenticated',
-      };
-    }
-
     // Revalidate dashboard path
     revalidatePath('/[locale]/[tenant]/dashboard');
 
@@ -269,7 +210,9 @@ export async function clearDashboardCache(options?: {
       message: `Dashboard ${section} cache cleared`,
     };
   } catch (error) {
-    logger.error('Error clearing dashboard cache:', error);
+    logger.error('Error clearing dashboard cache', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error occurred',

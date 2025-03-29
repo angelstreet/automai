@@ -1,72 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/session';
+import { cookies } from 'next/headers';
+import { getUser } from '@/app/actions/user';
 import { checkPermission } from '@/lib/supabase/db-teams/permissions';
-import { getUserActiveTeam } from '@/lib/supabase/db-teams/teams';
-import { supabase } from '@/lib/supabase/browser-client';
+import { getDeploymentById, updateDeployment, deleteDeployment } from '@/app/actions/deployments';
 
 /**
  * Example API route that demonstrates checking permissions before allowing resource operations
  */
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    const id = params.id;
+    if (!id) {
+      return NextResponse.json({ error: 'Deployment ID is required' }, { status: 400 });
     }
 
-    // Get active team
-    const teamResult = await getUserActiveTeam(user.id);
-    if (!teamResult.success || !teamResult.data) {
-      return NextResponse.json({ error: 'Failed to get active team' }, { status: 400 });
-    }
+    const deployment = await getDeploymentById(id);
 
-    // Check if user has permission to view deployments
-    const canSelect = await checkPermission(user.id, teamResult.data.id, 'deployments', 'select');
-
-    if (!canSelect) {
-      return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
-    }
-
-    // Fetch the deployment
-    const { data, error } = await supabase
-      .from('deployments')
-      .select('*')
-      .eq('id', params.id)
-      .eq('team_id', teamResult.data.id)
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    if (!data) {
+    if (!deployment) {
       return NextResponse.json({ error: 'Deployment not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ data });
+    return NextResponse.json(deployment);
   } catch (error) {
     console.error('Error in deployment API:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 },
+    );
   }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const user = await getCurrentUser();
+    const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    const id = params.id;
     // Get deployment to check team_id and creator_id
-    const { data: deployment, error: fetchError } = await supabase
-      .from('deployments')
-      .select('team_id, creator_id')
-      .eq('id', params.id)
-      .single();
-
-    if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
-    }
+    const deployment = await getDeploymentById(id);
 
     if (!deployment) {
       return NextResponse.json({ error: 'Deployment not found' }, { status: 404 });
@@ -75,10 +48,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     // Check if user has permission to update this deployment
     const canUpdate = await checkPermission(
       user.id,
-      deployment.team_id,
+      deployment.tenantId, // Using tenantId as team_id based on the structure
       'deployments',
       'update',
-      deployment.creator_id,
+      deployment.userId, // Using userId as creator_id
     );
 
     if (!canUpdate) {
@@ -88,19 +61,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     // Parse request body
     const body = await request.json();
 
-    // Update the deployment
-    const { data, error } = await supabase
-      .from('deployments')
-      .update(body)
-      .eq('id', params.id)
-      .select()
-      .single();
+    // Update the deployment using the actions layer
+    const updatedDeployment = await updateDeployment(id, body);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!updatedDeployment) {
+      return NextResponse.json({ error: 'Failed to update deployment' }, { status: 500 });
     }
 
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: updatedDeployment });
   } catch (error) {
     console.error('Error in deployment API:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -109,21 +77,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const user = await getCurrentUser();
+    const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    const id = params.id;
     // Get deployment to check team_id and creator_id
-    const { data: deployment, error: fetchError } = await supabase
-      .from('deployments')
-      .select('team_id, creator_id')
-      .eq('id', params.id)
-      .single();
-
-    if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
-    }
+    const deployment = await getDeploymentById(id);
 
     if (!deployment) {
       return NextResponse.json({ error: 'Deployment not found' }, { status: 404 });
@@ -132,21 +93,21 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // Check if user has permission to delete this deployment
     const canDelete = await checkPermission(
       user.id,
-      deployment.team_id,
+      deployment.tenantId, // Using tenantId as team_id
       'deployments',
       'delete',
-      deployment.creator_id,
+      deployment.userId, // Using userId as creator_id
     );
 
     if (!canDelete) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
 
-    // Delete the deployment
-    const { error } = await supabase.from('deployments').delete().eq('id', params.id);
+    // Delete the deployment using the actions layer
+    const success = await deleteDeployment(id);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!success) {
+      return NextResponse.json({ error: 'Failed to delete deployment' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

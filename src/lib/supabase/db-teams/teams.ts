@@ -1,5 +1,6 @@
-import { supabase } from '@/lib/supabase/browser-client';
+import { createClient } from '@/lib/supabase/server';
 import { PostgrestError } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 
 export interface Team {
   id: string;
@@ -59,8 +60,12 @@ export type TeamMembersResult = {
 /**
  * Create a new team
  */
-export async function createTeam(payload: CreateTeamPayload): Promise<TeamResult> {
+export async function createTeam(
+  payload: CreateTeamPayload,
+  cookieStore?: any,
+): Promise<TeamResult> {
   try {
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
       .from('teams')
       .insert({
@@ -88,8 +93,9 @@ export async function createTeam(payload: CreateTeamPayload): Promise<TeamResult
 /**
  * Get all teams for a tenant
  */
-export async function getTeams(tenantId: string): Promise<TeamsResult> {
+export async function getTeams(tenantId: string, cookieStore?: any): Promise<TeamsResult> {
   try {
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
       .from('teams')
       .select('*')
@@ -114,26 +120,29 @@ export async function getTeams(tenantId: string): Promise<TeamsResult> {
 /**
  * Get teams that a user belongs to
  */
-export async function getUserTeams(profileId: string): Promise<TeamsResult> {
+export async function getUserTeams(
+  profileId: string,
+  cookieStore?: any,
+): Promise<{ success: boolean; data?: Team[]; error?: string }> {
   try {
+    // Get user's teams (both owned and as a member)
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
-      .from('team_members')
-      .select('team:teams(*)')
-      .eq('profile_id', profileId);
+      .from('teams')
+      .select('*, team_members!inner(profile_id)')
+      .eq('team_members.profile_id', profileId);
 
     if (error) throw error;
 
-    const teams = data.map((item) => item.team as Team);
-
     return {
       success: true,
-      data: teams,
+      data,
     };
   } catch (error) {
     console.error('Error fetching user teams:', error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to fetch user teams',
+      error: error instanceof Error ? error.message : 'Failed to fetch user teams',
     };
   }
 }
@@ -141,8 +150,9 @@ export async function getUserTeams(profileId: string): Promise<TeamsResult> {
 /**
  * Get a team by ID
  */
-export async function getTeamById(teamId: string): Promise<TeamResult> {
+export async function getTeamById(teamId: string, cookieStore?: any): Promise<TeamResult> {
   try {
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase.from('teams').select('*').eq('id', teamId).single();
 
     if (error) throw error;
@@ -163,8 +173,13 @@ export async function getTeamById(teamId: string): Promise<TeamResult> {
 /**
  * Update a team
  */
-export async function updateTeam(teamId: string, payload: UpdateTeamPayload): Promise<TeamResult> {
+export async function updateTeam(
+  teamId: string,
+  payload: UpdateTeamPayload,
+  cookieStore?: any,
+): Promise<TeamResult> {
   try {
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
       .from('teams')
       .update(payload)
@@ -190,8 +205,12 @@ export async function updateTeam(teamId: string, payload: UpdateTeamPayload): Pr
 /**
  * Delete a team
  */
-export async function deleteTeam(teamId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteTeam(
+  teamId: string,
+  cookieStore?: any,
+): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = await createClient(cookieStore);
     const { error } = await supabase.from('teams').delete().eq('id', teamId);
 
     if (error) throw error;
@@ -211,8 +230,12 @@ export async function deleteTeam(teamId: string): Promise<{ success: boolean; er
 /**
  * Get members of a team
  */
-export async function getTeamMembers(teamId: string): Promise<TeamMembersResult> {
+export async function getTeamMembers(
+  teamId: string,
+  cookieStore?: any,
+): Promise<TeamMembersResult> {
   try {
+    const supabase = await createClient(cookieStore);
     const { data, error } = await supabase
       .from('team_members')
       .select('*, profile:profiles(id, full_name, email, avatar_url)')
@@ -242,6 +265,7 @@ export async function addTeamMember(
   role: 'admin' | 'member' = 'member',
 ): Promise<TeamMemberResult> {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from('team_members')
       .insert({
@@ -276,6 +300,7 @@ export async function updateTeamMember(
   role: 'admin' | 'member',
 ): Promise<TeamMemberResult> {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from('team_members')
       .update({ role })
@@ -307,6 +332,7 @@ export async function removeTeamMember(
   profileId: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = await createClient();
     const { error } = await supabase
       .from('team_members')
       .delete()
@@ -330,8 +356,9 @@ export async function removeTeamMember(
 /**
  * Get user's active team
  */
-export async function getUserActiveTeam(profileId: string): Promise<TeamResult> {
+export async function getUserActiveTeam(profileId: string, cookieStore?: any): Promise<TeamResult> {
   try {
+    const supabase = await createClient(cookieStore);
     const { data: activeTeamId, error: teamError } = await supabase.rpc('get_user_active_team', {
       p_profile_id: profileId,
     });
@@ -361,9 +388,11 @@ export async function getUserActiveTeam(profileId: string): Promise<TeamResult> 
 export async function setUserActiveTeam(
   profileId: string,
   teamId: string,
+  cookieStore?: any,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // We store the active team in the profile's metadata
+    const supabase = await createClient(cookieStore);
     const { error } = await supabase
       .from('profiles')
       .update({

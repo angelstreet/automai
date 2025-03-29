@@ -10,7 +10,8 @@ export { createClient as createServerClient } from './server';
 export { createClient as createMiddlewareClient } from './middleware';
 export { createClient as createAdminClient } from './admin';
 
-// Export DB modules
+// Export DB modules - only import these in server components
+// Client components should only import from db-teams directly
 export { default as db } from './db';
 export * from './db-repositories';
 export * from './db-hosts';

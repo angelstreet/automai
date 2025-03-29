@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase/browser-client';
+import { cookies } from 'next/headers';
+import { createServerClient } from '@/lib/supabase';
 import { PostgrestError } from '@supabase/supabase-js';
 import { ResourceType } from './permissions';
 
@@ -37,6 +38,12 @@ export type ResourceLimitCheckResult = {
   error?: string;
 };
 
+// Function to get supabase client
+async function getSupabaseClient() {
+  const cookieStore = cookies();
+  return await createServerClient(cookieStore);
+}
+
 /**
  * Get all resource limits for a subscription tier
  */
@@ -67,7 +74,7 @@ export async function getResourceLimits(tierId: string): Promise<ResourceLimitsR
  */
 export async function getResourceLimit(
   tierId: string,
-  resourceType: ResourceType
+  resourceType: ResourceType,
 ): Promise<ResourceLimitResult> {
   try {
     const { data, error } = await supabase
@@ -97,9 +104,11 @@ export async function getResourceLimit(
  */
 export async function checkResourceLimit(
   tenantId: string,
-  resourceType: ResourceType
-): Promise<ResourceLimitCheckResult> {
+  resourceType: string,
+): Promise<ResourceLimitResult> {
   try {
+    // Call the RPC function to check the resource limit
+    const supabase = await getSupabaseClient();
     const { data, error } = await supabase.rpc('check_resource_limit', {
       p_tenant_id: tenantId,
       p_resource_type: resourceType,
@@ -109,13 +118,13 @@ export async function checkResourceLimit(
 
     return {
       success: true,
-      data: data as ResourceLimitCheck,
+      data,
     };
   } catch (error) {
-    console.error('Error checking resource limit:', error);
+    console.error(`Error checking resource limit for ${resourceType}:`, error);
     return {
       success: false,
-      error: (error as PostgrestError).message || 'Failed to check resource limit',
+      error: error instanceof Error ? error.message : 'Failed to check resource limit',
     };
   }
 }
@@ -127,7 +136,7 @@ export async function updateResourceLimit(
   tierId: string,
   resourceType: ResourceType,
   maxCount: number,
-  isUnlimited: boolean
+  isUnlimited: boolean,
 ): Promise<ResourceLimitResult> {
   try {
     // Check if resource limit exists
