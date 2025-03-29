@@ -47,7 +47,7 @@ export default function TeamOverview({
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 border rounded-md">
+            <div className="p-4 border rounded-md text-center">
               <h3 className="font-medium">Repositories</h3>
               <p className="text-2xl">{resourceCounts.repositories}</p>
               {hasUnassignedRepos && (
@@ -56,15 +56,15 @@ export default function TeamOverview({
                 </p>
               )}
             </div>
-            <div className="p-4 border rounded-md">
+            <div className="p-4 border rounded-md text-center">
               <h3 className="font-medium">Hosts</h3>
               <p className="text-2xl">{resourceCounts.hosts}</p>
             </div>
-            <div className="p-4 border rounded-md">
+            <div className="p-4 border rounded-md text-center">
               <h3 className="font-medium">CI/CD</h3>
               <p className="text-2xl">{resourceCounts.cicd}</p>
             </div>
-            <div className="p-4 border rounded-md">
+            <div className="p-4 border rounded-md text-center">
               <h3 className="font-medium">Deployments</h3>
               <p className="text-2xl">0</p>
             </div>
