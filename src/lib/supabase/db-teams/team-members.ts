@@ -204,9 +204,10 @@ export async function updateTeamMemberRole(
 export async function removeTeamMember(
   teamId: string,
   profileId: string,
+  cookieStore?: any,
 ): Promise<DbResponse<null>> {
   try {
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     const { error } = await supabase
       .from('team_members')
