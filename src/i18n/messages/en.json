@@ -383,7 +383,37 @@
     "team": "Team",
     "addMember": "Add Member",
     "overview": "Overview",
-    "members": "Members"
+    "members": "Team Members",
+    "membersTab": {
+      "title": "Team Members",
+      "add": "Add Member",
+      "search": "Search members...",
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "actions": "Actions",
+      "noMembers": "No members found in this team",
+      "noTeam": "Create a team to add members",
+      "noSearchResults": "No members match your search",
+      "memberActions": {
+        "changeRole": "Change Role",
+        "remove": "Remove Member"
+      }
+    },
+    "settings": "Settings",
+    "createTeam": "Create Team",
+    "noRole": "No role",
+    "tabs": {
+      "resources": "Resources"
+    },
+    "resources": {
+      "title": "Team Resources",
+      "overview": "Manage and track resources assigned to your team",
+      "repositories": "Repositories",
+      "hosts": "Hosts",
+      "cicd": "CI/CD Providers",
+      "deployments": "Deployments"
+    }
   },
   "cicd": {
     "title": "CI/CD Integration",

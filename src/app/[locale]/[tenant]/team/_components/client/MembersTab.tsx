@@ -1,10 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
+
+import { getTeamMembers } from '@/app/[locale]/[tenant]/team/actions';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
+import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/shadcn/dropdown-menu';
 import { Input } from '@/components/shadcn/input';
 import {
   Table,
@@ -14,17 +24,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { Badge } from '@/components/shadcn/badge';
-import { MoreHorizontal, PlusIcon, Search } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
-
 import { TeamMember } from '@/types/context/team';
-import { getTeamMembers } from '@/app/[locale]/[tenant]/team/actions';
+
 import MembersTabSkeleton from '../MembersTabSkeleton';
 
 interface MembersTabProps {
@@ -107,11 +108,11 @@ export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabPro
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle>{t('members.title')}</CardTitle>
+          <CardTitle>{t('membersTab.title')}</CardTitle>
           {canManageMembers && (
             <Button disabled={!teamId} size="sm">
               <PlusIcon className="h-4 w-4 mr-1" />
-              {t('members.add')}
+              {t('membersTab.add')}
             </Button>
           )}
         </div>
@@ -122,7 +123,7 @@ export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabPro
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder={t('members.search')}
+              placeholder={t('membersTab.search')}
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -134,11 +135,11 @@ export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabPro
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]"></TableHead>
-              <TableHead>{t('members.name')}</TableHead>
-              <TableHead>{t('members.email')}</TableHead>
-              <TableHead>{t('members.role')}</TableHead>
+              <TableHead>{t('membersTab.name')}</TableHead>
+              <TableHead>{t('membersTab.email')}</TableHead>
+              <TableHead>{t('membersTab.role')}</TableHead>
               {canManageMembers && (
-                <TableHead className="text-right">{t('members.actions')}</TableHead>
+                <TableHead className="text-right">{t('membersTab.actions')}</TableHead>
               )}
             </TableRow>
           </TableHeader>
@@ -150,10 +151,10 @@ export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabPro
                   className="text-center py-10 text-muted-foreground"
                 >
                   {searchQuery
-                    ? t('members.noSearchResults')
+                    ? t('membersTab.noSearchResults')
                     : teamId
-                      ? t('members.noMembers')
-                      : t('members.noTeam')}
+                      ? t('membersTab.noMembers')
+                      : t('membersTab.noTeam')}
                 </TableCell>
               </TableRow>
             ) : (
@@ -188,10 +189,10 @@ export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabPro
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>
-                            {t('members.memberActions.changeRole')}
+                            {t('membersTab.memberActions.changeRole')}
                           </DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive">
-                            {t('members.memberActions.remove')}
+                            {t('membersTab.memberActions.remove')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

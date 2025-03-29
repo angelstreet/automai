@@ -347,7 +347,37 @@
     "team": "Équipe",
     "addMember": "Ajouter un membre",
     "overview": "Aperçu",
-    "members": "Membres"
+    "members": "Membres de l'équipe",
+    "membersTab": {
+      "title": "Membres de l'équipe",
+      "add": "Ajouter un membre",
+      "search": "Rechercher des membres...",
+      "name": "Nom",
+      "email": "Email",
+      "role": "Rôle",
+      "actions": "Actions",
+      "noMembers": "Aucun membre trouvé dans cette équipe",
+      "noTeam": "Créez une équipe pour ajouter des membres",
+      "noSearchResults": "Aucun membre ne correspond à votre recherche",
+      "memberActions": {
+        "changeRole": "Changer de rôle",
+        "remove": "Supprimer le membre"
+      }
+    },
+    "settings": "Paramètres",
+    "createTeam": "Créer une équipe",
+    "noRole": "Aucun rôle",
+    "tabs": {
+      "resources": "Ressources"
+    },
+    "resources": {
+      "title": "Ressources d'équipe",
+      "overview": "Gérez et suivez les ressources attribuées à votre équipe",
+      "repositories": "Dépôts",
+      "hosts": "Hôtes",
+      "cicd": "Fournisseurs CI/CD",
+      "deployments": "Déploiements"
+    }
   },
   "Projects": {
     "projects": "Projets",

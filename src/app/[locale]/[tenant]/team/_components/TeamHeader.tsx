@@ -2,31 +2,22 @@
 
 import { PlusIcon, Settings } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
-interface TeamDetails {
-  id: string | null;
-  name: string;
-  subscription_tier: string;
-  memberCount: number;
-  userRole?: string;
-  ownerId: string | null;
-  ownerEmail?: string | null;
-  resourceCounts: {
-    repositories: number;
-    hosts: number;
-    cicd: number;
-  };
-}
+import { TeamDetails } from '../types';
 
 export default function TeamHeader({ team }: { team: TeamDetails }) {
+  const t = useTranslations('team');
   const hasTeam = Boolean(team.id);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
+
+  const userRole = team.role || t('noRole');
 
   const handleTabChange = (tab: string) => {
     router.push(`${pathname}?tab=${tab}`);
@@ -57,7 +48,7 @@ export default function TeamHeader({ team }: { team: TeamDetails }) {
           <div>
             <h2 className="text-xl font-semibold">{team.name}</h2>
             <p className="text-sm text-muted-foreground">
-              {team.userRole || 'No role'}
+              {userRole}
               {team.id && <span className="ml-1">- {team.id}</span>}
             </p>
           </div>
@@ -69,18 +60,18 @@ export default function TeamHeader({ team }: { team: TeamDetails }) {
             <>
               <Button variant="outline" size="sm" disabled={!hasTeam}>
                 <PlusIcon className="h-4 w-4 mr-1" />
-                Add Member
+                {t('addMember')}
               </Button>
               <Button variant="outline" size="sm" disabled={!hasTeam}>
                 <Settings className="h-4 w-4 mr-1" />
-                Settings
+                {t('settings')}
               </Button>
             </>
           )}
           {!hasTeam && (
             <Button variant="default" size="sm">
               <PlusIcon className="h-4 w-4 mr-1" />
-              Create Team
+              {t('createTeam')}
             </Button>
           )}
         </div>
@@ -89,9 +80,9 @@ export default function TeamHeader({ team }: { team: TeamDetails }) {
       {/* Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-3 mb-8">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="members">Members</TabsTrigger>
-          <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsTrigger value="overview">{t('overview')}</TabsTrigger>
+          <TabsTrigger value="members">{t('membersTab.title')}</TabsTrigger>
+          <TabsTrigger value="resources">{t('tabs.resources')}</TabsTrigger>
         </TabsList>
       </Tabs>
     </div>
