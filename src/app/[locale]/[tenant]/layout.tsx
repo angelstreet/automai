@@ -5,7 +5,6 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkeleton';
-import { ToasterProvider } from '@/components/shadcn/toaster';
 import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { UserProvider } from '@/context/UserContext';
 import { mapAuthUserToUser } from '@/utils/user';
@@ -29,7 +28,6 @@ export default async function TenantLayout({
     <UserProvider initialUser={user}>
       <TenantLayoutClient user={user}>
         <TooltipProvider>
-          <ToasterProvider />
           <div className="relative flex min-h-screen w-full">
             <Suspense fallback={<AppSidebarSkeleton />}>
               <AppSidebar user={user} />
