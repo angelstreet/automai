@@ -2,9 +2,15 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
+import { v4 as uuidv4 } from 'uuid';
 
 import { getUser } from '@/app/actions/user';
 import { CICDPipelineConfig } from '@/lib/services/cicd/interfaces';
+import { getCurrentUser } from '@/lib/session';
+import { supabase } from '@/lib/supabase/browser-client';
+import { checkPermission } from '@/lib/supabase/db-teams/permissions';
+import { checkResourceLimit } from '@/lib/supabase/db-teams/resource-limits';
+import { getUserActiveTeam } from '@/lib/supabase/db-teams/teams';
 import { AuthUser } from '@/types/user';
 
 import {
@@ -12,13 +18,6 @@ import {
   DeploymentFormData,
   DeploymentStatus,
 } from '../[locale]/[tenant]/deployment/types';
-
-import { getCurrentUser } from '@/lib/session';
-import { v4 as uuidv4 } from 'uuid';
-import { checkPermission } from '@/lib/supabase/db-teams/permissions';
-import { getUserActiveTeam } from '@/lib/supabase/db-teams/teams';
-import { checkResourceLimit } from '@/lib/supabase/db-teams/resource-limits';
-import { supabase } from '@/lib/supabase/browser-client';
 
 // Generic server action result type
 type ServerActionResult<T> = {
@@ -419,43 +418,51 @@ export async function getDeployments(user?: AuthUser | null): Promise<Deployment
 }
 
 /**
- * Get a specific deployment by ID
- * @param id Deployment ID
- * @returns Deployment object or null if not found
+ * Fetch a single deployment by ID (legacy implementation)
  */
-export async function getDeploymentById(id: string): Promise<Deployment | null> {
+export async function fetchDeploymentById(id: string): Promise<Deployment | null> {
   try {
-    // Make sure we have an actual ID
-    if (!id) {
-      console.error('Actions layer: Cannot fetch deployment - ID is required');
-      return null;
-    }
-
-    // Get user for tenant isolation
     const user = await getUser();
-
     if (!user) {
       console.error('Actions layer: Cannot fetch deployment - user not authenticated');
       return null;
     }
 
-    console.log(`Fetching deployment with ID: ${id}`);
-
     // Import the deployment database module
     const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
 
-    // Fetch the deployment from the database
-    const cookieStore = cookies();
-    const result = await deploymentDb.findUnique(id, cookieStore);
+    // Fetch deployment from the database
+    const cookieStore = await cookies();
+    const result = await deploymentDb.findUnique({ id }, cookieStore);
 
-    // Handle the result
-    if (!result) {
-      return null;
+    // Handle the result based on its structure
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false) {
+        console.error('Actions layer: Error fetching deployment:', result.error);
+        return null;
+      }
+
+      let dbDeployment: any = null;
+
+      if ('data' in result) {
+        dbDeployment = result.data;
+      } else if (result && !('success' in result)) {
+        dbDeployment = result;
+      }
+
+      if (!dbDeployment) {
+        console.log('Actions layer: No deployment found with ID:', id);
+        return null;
+      }
+
+      // Map database result to Deployment type
+      return mapDbDeploymentToDeployment(dbDeployment);
     }
 
-    return mapDbDeploymentToDeployment(result);
+    console.error('Actions layer: Unexpected result structure from database');
+    return null;
   } catch (error) {
-    console.error(`Error fetching deployment with ID ${id}:`, error);
+    console.error('Error in fetchDeploymentById:', error);
     return null;
   }
 }
@@ -891,16 +898,13 @@ export async function refreshDeployment(id: string): Promise<{
   try {
     console.log(`Actions layer: Refreshing deployment with ID: ${id}`);
 
-    // Fetch updated deployment
-    const deployment = await getDeploymentById(id);
-
-    if (!deployment) {
-      console.error(`Actions layer: Deployment with ID ${id} not found`);
-      return {
-        success: false,
-        error: 'Deployment not found',
-      };
+    // Use the team-based getDeploymentById
+    const deploymentResult = await getDeploymentById(id);
+    if (!deploymentResult.success || !deploymentResult.data) {
+      return { success: false, error: deploymentResult.error || 'Deployment not found' };
     }
+
+    const deployment = deploymentResult.data;
 
     // Revalidate relevant paths
     revalidatePath('/[locale]/[tenant]/deployment');
@@ -1057,12 +1061,13 @@ export async function runDeployment(
       return { success: false, error: 'User not authenticated' };
     }
 
-    // Get deployment details
-    const deployment = await getDeploymentById(deploymentId);
-    if (!deployment) {
-      console.error(`Actions layer: Deployment ${deploymentId} not found`);
-      return { success: false, error: 'Deployment not found' };
+    // Use the team-based getDeploymentById
+    const deploymentResult = await getDeploymentById(deploymentId);
+    if (!deploymentResult.success || !deploymentResult.data) {
+      return { success: false, error: deploymentResult.error || 'Deployment not found' };
     }
+
+    const deployment = deploymentResult.data;
 
     // Get CICD mapping if it exists
     const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
@@ -1156,5 +1161,61 @@ export async function clearDeploymentCache(): Promise<{
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error occurred',
     };
+  }
+}
+
+/**
+ * Get all deployments for a user without team filtering
+ */
+export async function getAllDeployments(user?: AuthUser | null): Promise<Deployment[]> {
+  try {
+    // Get current user if not provided
+    if (!user) {
+      user = await getUser();
+    }
+
+    if (!user) {
+      console.error('Actions layer: Cannot fetch deployments - user not authenticated');
+      return [];
+    }
+
+    console.log('Fetching deployments for tenant:', user.tenant_id);
+
+    // Import the deployment database module
+    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
+
+    // Fetch deployments from the database
+    const where = { tenant_id: user.tenant_id };
+    const cookieStore = await cookies();
+    const result = await deploymentDb.findMany({ where }, cookieStore);
+
+    // Handle the result based on its structure
+    if (result && typeof result === 'object') {
+      if ('success' in result && result.success === false && 'error' in result) {
+        console.error('Actions layer: Error fetching deployments:', result.error);
+        return [];
+      }
+
+      let dbDeployments: any[] = [];
+
+      if ('data' in result && Array.isArray(result.data)) {
+        dbDeployments = result.data;
+      } else if (Array.isArray(result)) {
+        dbDeployments = result;
+      }
+
+      // Map database results to Deployment type
+      const deployments: Deployment[] = dbDeployments.map(mapDbDeploymentToDeployment);
+
+      console.log('Actions layer: Fetched deployments count:', deployments.length);
+
+      return deployments;
+    }
+
+    console.error('Actions layer: Unexpected result structure from database');
+    return [];
+  } catch (error) {
+    console.error('Error in getAllDeployments:', error);
+    return [];
   }
 }

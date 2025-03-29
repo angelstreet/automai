@@ -2,12 +2,11 @@
 
 export type DeploymentStatus =
   | 'pending'
-  | 'scheduled'
-  | 'in_progress'
-  | 'success'
+  | 'running'
+  | 'completed'
   | 'failed'
-  | 'cancelled'
-  | 'partial_success';
+  | 'aborted'
+  | 'scheduled';
 
 export interface ScriptParameter {
   id: string;
@@ -71,21 +70,23 @@ export interface Deployment {
   id: string;
   name: string;
   description?: string;
-  repositoryId: string;
+  repositoryId?: string;
+  scriptsPath?: string[];
+  scriptsParameters?: string[];
+  hostIds?: string[];
   status: DeploymentStatus;
-  userId: string;
-  tenantId: string;
-  createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
-  scheduledTime?: string;
-  scheduleType: string;
-  cronExpression?: string;
+  scheduleType?: 'now' | 'later' | 'cron';
+  scheduledTime?: string | null;
+  cronExpression?: string | null;
   repeatCount?: number;
-  scriptsPath: string[];
-  scriptsParameters: string[];
-  hostIds: string[];
-  environmentVars?: any[];
+  environmentVars?: { name: string; value: string }[];
+  tenantId: string;
+  userId: string;
+  team_id?: string;
+  creator_id?: string;
+  createdAt: string;
+  startedAt?: string | null;
+  completedAt?: string | null;
 }
 
 export interface DeploymentConfig {
@@ -132,22 +133,17 @@ export interface CICDJob {
 export interface DeploymentFormData {
   name: string;
   description?: string;
-  repository: string;
+  repository?: string;
+  tenant_id: string;
+  provider_id?: string;
   selectedScripts?: string[];
   selectedHosts?: string[];
-  schedule: 'now' | 'later' | 'cron';
-  schedule_type?: 'now' | 'later' | 'cron';
+  parameters?: { script_path: string; raw: string }[];
+  schedule?: string;
   scheduledTime?: string;
   cronExpression?: string;
   repeatCount?: number;
-  environmentVars?: Array<{ key: string; value: string }>;
-  parameters?: Array<{ script_path: string; raw: string }>;
-  notifications?: {
-    email: boolean;
-    slack: boolean;
-  };
-  provider_id?: string;
-  scriptMapping?: Record<string, { path: string; name: string; type: string }>;
+  environmentVars?: { name: string; value: string }[];
 }
 
 // Add to deployment data

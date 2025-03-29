@@ -15,3 +15,6 @@ export { default as db } from './db';
 export * from './db-repositories';
 export * from './db-hosts';
 export * from './db-deployment';
+export * from './db-cicd';
+export * from './db-teams';
+export * from './db-users';
