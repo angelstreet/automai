@@ -26,12 +26,12 @@ export default async function TenantLayout({
   return (
     <UserProvider initialUser={user}>
       <TenantLayoutClient user={user}>
-        <div className="relative flex min-h-screen w-full">
+        <div className="relative flex w-full overflow-hidden">
           <Suspense fallback={<AppSidebarSkeleton />}>
             <AppSidebar user={user} />
           </Suspense>
           <div
-            className="flex-1 flex flex-col min-w- w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
+            className="flex-1 flex flex-col w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
             style={{
               marginLeft: 'var(--sidebar-width-offset, 0)',
               width: 'calc(100% - var(--sidebar-width-offset, 0))',
@@ -41,9 +41,11 @@ export default async function TenantLayout({
             <Suspense fallback={<WorkspaceHeaderSkeleton />}>
               <WorkspaceHeader user={user} />
             </Suspense>
-            <main className="flex-1 px-3 py-0 w-full max-w-full border border-gray-30 rounded-md">
-              {children}
-            </main>
+            <div className="flex-1 px-3 pb-3 overflow-hidden mb-2">
+              <main className="h-full w-full max-w-full border border-gray-30 rounded-md overflow-auto">
+                {children}
+              </main>
+            </div>
           </div>
         </div>
       </TenantLayoutClient>
