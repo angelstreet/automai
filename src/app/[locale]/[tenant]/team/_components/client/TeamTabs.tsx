@@ -1,12 +1,13 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
+
 import TeamOverview from '../TeamOverview';
 
 import { MembersTab } from './MembersTab';
 import { ResourcesTab } from './ResourcesTab';
 
 interface TeamTabsProps {
-  activeTab: string;
   teamDetails: {
     id: string | null;
     name: string;
@@ -26,11 +27,14 @@ interface TeamTabsProps {
   };
 }
 
-export default function TeamTabs({ activeTab, teamDetails, unassignedResources }: TeamTabsProps) {
+export default function TeamTabs({ teamDetails, unassignedResources }: TeamTabsProps) {
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'overview';
+
   return (
     <div className="space-y-6">
       {activeTab === 'overview' && (
-        <TeamOverview team={teamDetails} unassignedResources={unassignedResources} />
+        <TeamOverview team={teamDetails} _unassignedResources={unassignedResources} />
       )}
 
       {activeTab === 'members' && (

@@ -1,7 +1,7 @@
 'use client';
 
 import { PlusIcon, Settings } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
@@ -21,10 +21,12 @@ interface TeamDetails {
   };
 }
 
-export default function TeamHeader({ team, activeTab }: { team: TeamDetails; activeTab: string }) {
+export default function TeamHeader({ team }: { team: TeamDetails }) {
   const hasTeam = Boolean(team.id);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'overview';
 
   const handleTabChange = (tab: string) => {
     router.push(`${pathname}?tab=${tab}`);

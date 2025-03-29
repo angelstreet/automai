@@ -23,7 +23,7 @@ export function FeaturePageContainer({
       </div>
 
       {/* Content Container */}
-      <div className="border rounded-lg overflow-auto h-[calc(100vh-200px)]">{children}</div>
+      <div className="overflow-auto h-[calc(100vh-200px)]">{children}</div>
     </div>
   );
 }

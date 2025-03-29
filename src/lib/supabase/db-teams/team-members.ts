@@ -25,11 +25,7 @@ export async function getTeamMembers(
         role,
         created_at,
         updated_at,
-        profiles:profiles(
-          id,
-          email,
-          avatar_url
-        )
+        profiles:profiles(id, avatar_url, tenant_id, tenant_name, role)
       `,
       )
       .eq('team_id', teamId);
@@ -208,10 +204,9 @@ export async function updateTeamMemberRole(
 export async function removeTeamMember(
   teamId: string,
   profileId: string,
-  cookieStore?: any,
 ): Promise<DbResponse<null>> {
   try {
-    const supabase = await createClient(cookieStore);
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from('team_members')
