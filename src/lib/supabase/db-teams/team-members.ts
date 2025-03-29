@@ -8,9 +8,12 @@ import type { TeamMember, TeamMemberCreateInput } from '@/types/context/team';
  * @param cookieStore Cookie store from server action
  * @returns Team members with their profile data
  */
-export async function getTeamMembers(teamId: string): Promise<DbResponse<TeamMember[]>> {
+export async function getTeamMembers(
+  teamId: string,
+  cookieStore?: any,
+): Promise<DbResponse<TeamMember[]>> {
   try {
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     // Get team members with profiles
     const { data, error } = await supabase
@@ -67,9 +70,12 @@ export async function getTeamMembers(teamId: string): Promise<DbResponse<TeamMem
  * @param cookieStore Cookie store for authentication
  * @returns Created team member data
  */
-export async function addTeamMember(input: TeamMemberCreateInput): Promise<DbResponse<TeamMember>> {
+export async function addTeamMember(
+  input: TeamMemberCreateInput,
+  cookieStore?: any,
+): Promise<DbResponse<TeamMember>> {
   try {
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     // Check if the user exists in the profiles table
     const { data: profileExists, error: profileError } = await supabase
@@ -147,9 +153,10 @@ export async function updateTeamMemberRole(
   teamId: string,
   profileId: string,
   role: string,
+  cookieStore?: any,
 ): Promise<DbResponse<TeamMember>> {
   try {
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     const { data, error } = await supabase
       .from('team_members')
@@ -197,9 +204,10 @@ export async function updateTeamMemberRole(
 export async function removeTeamMember(
   teamId: string,
   profileId: string,
+  cookieStore?: any,
 ): Promise<DbResponse<null>> {
   try {
-    const supabase = await createClient();
+    const supabase = await createClient(cookieStore);
 
     const { error } = await supabase
       .from('team_members')
