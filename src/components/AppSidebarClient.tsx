@@ -13,15 +13,12 @@ import {
   SidebarHeader,
   SidebarRail,
   useSidebar,
-} from '@/components/navigation/sidebar';
-import { sidebarData } from '@/components/navigation/sidebar/sidebarData';
+} from '@/components/sidebar';
+import { sidebarData } from '@/components/sidebar/sidebarData';
 import { useUser } from '@/context';
 import { User } from '@/types/user';
 
-import {
-  APP_SIDEBAR_WIDTH,
-  APP_SIDEBAR_WIDTH_ICON,
-} from '@/components/navigation/sidebar/constants';
+import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
 
 interface AppSidebarClientProps {
   user?: User | null;

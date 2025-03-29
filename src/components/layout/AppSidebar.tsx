@@ -1,6 +1,6 @@
 import { User } from '@/types/user';
 
-import { AppSidebarClient } from '@/components/navigation/AppSidebarClient';
+import { AppSidebarClient } from '@/components/AppSidebarClient';
 
 interface AppSidebarProps {
   user?: User | null;

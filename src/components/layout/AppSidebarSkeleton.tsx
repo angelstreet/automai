@@ -5,11 +5,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-} from '@/components/navigation/sidebar';
-import {
-  APP_SIDEBAR_WIDTH,
-  APP_SIDEBAR_WIDTH_ICON,
-} from '@/components/navigation/sidebar/constants';
+  SidebarRail,
+} from '@/components/sidebar';
+import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '@/components/sidebar/constants';
 
 export function AppSidebarSkeleton() {
   return (
