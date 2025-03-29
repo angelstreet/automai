@@ -39,7 +39,7 @@
     "src/**/*.tsx",
     ".next/types/**/*.ts",
     "global.d.ts"
-  ],
+, "src/app/metadata.ts"  ],
   "exclude": [
     "node_modules",
     ".next",
