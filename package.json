@@ -12,6 +12,7 @@
     "start": "next start",
     "prod": "next build && next start",
     "lint": "next lint",
+    "info": "next info",
     "browser-tools": "npx @agentdeskai/browser-tools-server",
     "dev:http": "NODE_ENV=development ts-node server.ts",
     "build:structure": "node scripts/generate-structure.js",
