@@ -15,7 +15,7 @@ export async function getTeamMembers(
   try {
     const supabase = await createClient(cookieStore);
 
-    // Get team members with profiles (using correct join syntax)
+    // Get team members with profiles
     const { data, error } = await supabase
       .from('team_members')
       .select(
@@ -25,7 +25,7 @@ export async function getTeamMembers(
         role,
         created_at,
         updated_at,
-        profiles:profiles(id, avatar_url, tenant_id)
+        profiles:profiles(id, avatar_url, tenant_id, tenant_name, role)
       `,
       )
       .eq('team_id', teamId);
@@ -35,8 +35,22 @@ export async function getTeamMembers(
       return { success: false, error: error.message };
     }
 
-    // If we need email data, we would need to properly access auth.users
-    // but for now, we'll return what we have and let the component handle it
+    // Since we can't directly access auth.users, we'll use the profile data we have
+    // Add a user property with available information
+    if (data && data.length > 0) {
+      data.forEach((member) => {
+        // Create user object with available data
+        member.user = {
+          id: member.profile_id,
+          name: member.profiles?.tenant_name || 'User',
+          email: 'Email unavailable in profiles table', // We can't get this directly
+          avatar_url: member.profiles?.avatar_url,
+        };
+      });
+    }
+
+    console.log('Team members with user info:', data);
+
     return {
       success: true,
       data: data as TeamMember[],

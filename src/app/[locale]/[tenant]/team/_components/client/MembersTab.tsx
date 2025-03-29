@@ -43,61 +43,69 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
   // Get current user's profile ID
   const currentUserId = teamDetails?.ownerId;
 
+  // Fetch team details and members in a single effect to reduce unnecessary rerenders
   useEffect(() => {
-    async function fetchTeamDetails() {
-      try {
-        const details = await getTeamDetails();
-        setTeamDetails(details);
-        console.log('Team details:', details);
-      } catch (error) {
-        console.error('Error fetching team details:', error);
-      }
-    }
+    let isMounted = true;
 
-    fetchTeamDetails();
-  }, []);
-
-  useEffect(() => {
-    async function fetchMembers() {
-      if (!teamId) {
-        setMembers([]);
-        setLoading(false);
-        return;
-      }
-
+    async function fetchData() {
       try {
         setLoading(true);
-        const result = await getTeamMembers(teamId);
 
-        if (result.success && result.data) {
-          // Process members data - add any missing fields that UI might need
-          const processedMembers = result.data.map((member) => ({
-            ...member,
-            user: {
-              name: member.profiles?.tenant_name || 'User', // Use available profile data
-              email: 'Not available', // Email not directly available from profiles
-              ...member.user, // Preserve any user data that might be present
-            },
-          }));
+        // First get team details
+        const details = await getTeamDetails();
 
-          setMembers(processedMembers);
-          console.log('Members data fetched:', processedMembers);
+        if (!isMounted) return;
+        setTeamDetails(details);
+
+        // If we have a teamId, fetch team members
+        if (teamId) {
+          const result = await getTeamMembers(teamId);
+
+          if (!isMounted) return;
+
+          if (result.success && result.data) {
+            // Process member data with owner email if available
+            const processedMembers = result.data.map((member) => {
+              if (details?.ownerId === member.profile_id && details?.ownerEmail) {
+                return {
+                  ...member,
+                  user: {
+                    ...member.user,
+                    email: details.ownerEmail,
+                  },
+                };
+              }
+              return member;
+            });
+
+            setMembers(processedMembers);
+            setError(null);
+          } else {
+            setError(result.error || 'Failed to load team members');
+            setMembers([]);
+          }
         } else {
-          setError(result.error || 'Failed to load team members');
           setMembers([]);
-          console.error('Failed to load team members:', result.error);
         }
       } catch (error) {
-        console.error('Error fetching members:', error);
-        setError('Failed to load team members');
+        if (!isMounted) return;
+        console.error('Error fetching data:', error);
+        setError('Failed to load team data');
         setMembers([]);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     }
 
-    fetchMembers();
-  }, [teamId]);
+    fetchData();
+
+    // Cleanup function to handle component unmounting
+    return () => {
+      isMounted = false;
+    };
+  }, [teamId]); // Only depend on teamId to prevent unnecessary fetches
 
   // Log whenever members state changes
   useEffect(() => {

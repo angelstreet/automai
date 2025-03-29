@@ -155,7 +155,7 @@ export async function deleteTeam(
  * @param teamId Team ID to get members for
  * @returns Action result containing team members or error
  */
-export async function getTeamMembers(teamId: string) {
+export const getTeamMembers = cache(async (teamId: string) => {
   try {
     // First check if the team exists
     const cookieStore = cookies();
@@ -175,7 +175,7 @@ export async function getTeamMembers(teamId: string) {
       error: error instanceof Error ? error.message : 'Failed to fetch team members',
     };
   }
-}
+});
 
 /**
  * Add a member to a team
@@ -302,7 +302,7 @@ export const checkResourceLimit = cache(
 /**
  * Gets basic details about the user's team
  */
-export async function getTeamDetails() {
+export const getTeamDetails = cache(async () => {
   try {
     const user = await getUser();
     if (!user) {
@@ -312,6 +312,7 @@ export async function getTeamDetails() {
         subscription_tier: 'trial',
         memberCount: 0,
         ownerId: null,
+        ownerEmail: null,
         resourceCounts: { repositories: 0, hosts: 0, cicd: 0 },
       };
     }
@@ -328,6 +329,7 @@ export async function getTeamDetails() {
         subscription_tier: 'trial',
         memberCount: 0,
         ownerId: user.id,
+        ownerEmail: user.email, // Include the user's email if available
         resourceCounts: { repositories: 0, hosts: 0, cicd: 0 },
       };
     }
@@ -344,6 +346,7 @@ export async function getTeamDetails() {
       ...team,
       memberCount,
       ownerId: user.id,
+      ownerEmail: user.email, // Include the user's email if available
       resourceCounts: {
         repositories: 0, // Replace with actual counts from db
         hosts: 0,
@@ -354,7 +357,7 @@ export async function getTeamDetails() {
     console.error('Error fetching team details', { error });
     throw new Error('Failed to fetch team details');
   }
-}
+});
 
 /**
  * Gets resources that aren't assigned to any team but are
