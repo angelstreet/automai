@@ -1,12 +1,13 @@
-import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
-import TeamSkeleton from './_components/TeamSkeleton';
+
 import MembersTabSkeleton from './_components/MembersTabSkeleton';
 import OverviewTabSkeleton from './_components/OverviewTabSkeleton';
-import { MembersTab } from './_components/client/MembersTab';
 import TeamHeader from './_components/TeamHeader';
+import TeamSkeleton from './_components/TeamSkeleton';
+import { MembersTab } from './_components/client/MembersTab';
 import TeamTabs from './_components/client/TeamTabs';
 import { getTeamDetails, getUnassignedResources } from './actions';
 

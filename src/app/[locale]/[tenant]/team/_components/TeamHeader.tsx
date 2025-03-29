@@ -4,7 +4,6 @@ import { PlusIcon, Settings } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 
 import { Button } from '@/components/shadcn/button';
-import { Card } from '@/components/shadcn/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 
 interface TeamDetails {
@@ -84,38 +83,6 @@ export default function TeamHeader({ team, activeTab }: { team: TeamDetails; act
           )}
         </div>
       </div>
-
-      {/* Subscription Info */}
-      <Card className="p-4 bg-muted/50">
-        <div className="flex flex-col md:flex-row md:justify-between gap-4 text-center">
-          <div>
-            <p className="text-sm font-medium">Subscription</p>
-            <p className="text-xl font-semibold capitalize">{team.subscription_tier}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium">Team Members</p>
-            <p className="text-xl font-semibold">{team.memberCount}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium">Resources</p>
-            <p className="text-xl font-semibold">
-              {team.resourceCounts.repositories +
-                team.resourceCounts.hosts +
-                team.resourceCounts.cicd}
-            </p>
-          </div>
-
-          {hasTeam && (
-            <div className="flex items-end">
-              <Button variant="link" size="sm">
-                View Billing
-              </Button>
-            </div>
-          )}
-        </div>
-      </Card>
 
       {/* Navigation Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
