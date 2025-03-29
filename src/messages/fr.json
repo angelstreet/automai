@@ -10,8 +10,8 @@
       "name": "Nom",
       "email": "Email",
       "role": "Rôle",
-      "actions": {
-        "title": "Actions",
+      "actions": "Actions",
+      "memberActions": {
         "changeRole": "Changer le Rôle",
         "remove": "Retirer le Membre"
       },

@@ -3,9 +3,8 @@ import { Suspense } from 'react';
 import { getUser } from '@/app/actions/user';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
-import { Main } from '@/components/layout/Main';
-import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader';
 import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkeleton';
+import { WorkspaceHeader } from '@/components/workspace/WorkspaceHeader';
 import { UserProvider } from '@/context/UserContext';
 import { mapAuthUserToUser } from '@/utils/user';
 
@@ -42,8 +41,8 @@ export default async function TenantLayout({
             <Suspense fallback={<WorkspaceHeaderSkeleton />}>
               <WorkspaceHeader user={user} />
             </Suspense>
-            <div className="flex-1 px-3 pb-3 overflow-hidden mb-2">
-              <main className="h-full w-full max-w-full border border-gray-30 rounded-md overflow-auto">
+            <div className="flex-1 p-6 overflow-hidden">
+              <main className="h-full w-full max-w-full border border-gray-30 rounded-md overflow-auto p-6">
                 {children}
               </main>
             </div>

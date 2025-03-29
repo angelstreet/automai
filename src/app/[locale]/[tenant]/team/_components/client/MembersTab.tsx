@@ -29,13 +29,18 @@ import MembersTabSkeleton from '../MembersTabSkeleton';
 
 interface MembersTabProps {
   teamId: string | null;
+  userRole?: string;
+  subscriptionTier?: string;
 }
 
-export function MembersTab({ teamId }: MembersTabProps) {
+export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabProps) {
   const t = useTranslations('team');
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const canManageMembers =
+    userRole && ['owner', 'admin'].includes(userRole.toLowerCase()) && subscriptionTier !== 'trial';
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -103,10 +108,12 @@ export function MembersTab({ teamId }: MembersTabProps) {
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
           <CardTitle>{t('members.title')}</CardTitle>
-          <Button disabled={!teamId} size="sm">
-            <PlusIcon className="h-4 w-4 mr-1" />
-            {t('members.add')}
-          </Button>
+          {canManageMembers && (
+            <Button disabled={!teamId} size="sm">
+              <PlusIcon className="h-4 w-4 mr-1" />
+              {t('members.add')}
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -130,13 +137,18 @@ export function MembersTab({ teamId }: MembersTabProps) {
               <TableHead>{t('members.name')}</TableHead>
               <TableHead>{t('members.email')}</TableHead>
               <TableHead>{t('members.role')}</TableHead>
-              <TableHead className="text-right">{t('members.actions')}</TableHead>
+              {canManageMembers && (
+                <TableHead className="text-right">{t('members.actions')}</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredMembers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                <TableCell
+                  colSpan={canManageMembers ? 5 : 4}
+                  className="text-center py-10 text-muted-foreground"
+                >
                   {searchQuery
                     ? t('members.noSearchResults')
                     : teamId
@@ -165,22 +177,26 @@ export function MembersTab({ teamId }: MembersTabProps) {
                       {member.role}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>{t('members.actions.changeRole')}</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          {t('members.actions.remove')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {canManageMembers && (
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            {t('members.memberActions.changeRole')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive">
+                            {t('members.memberActions.remove')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

@@ -1,15 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import TeamOverview from '../TeamOverview';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from '@/components/shadcn/card';
-import { ResourceCard } from '@/components/ui/resource-card';
 
 import { MembersTab } from './MembersTab';
 import { ResourcesTab } from './ResourcesTab';
@@ -36,15 +27,19 @@ interface TeamTabsProps {
 }
 
 export default function TeamTabs({ activeTab, teamDetails, unassignedResources }: TeamTabsProps) {
-  const t = useTranslations('team');
-
   return (
     <div className="space-y-6">
       {activeTab === 'overview' && (
         <TeamOverview team={teamDetails} unassignedResources={unassignedResources} />
       )}
 
-      {activeTab === 'members' && <MembersTab teamId={teamDetails?.id || null} />}
+      {activeTab === 'members' && (
+        <MembersTab
+          teamId={teamDetails?.id || null}
+          userRole={teamDetails?.userRole}
+          subscriptionTier={teamDetails?.subscription_tier}
+        />
+      )}
 
       {activeTab === 'resources' && (
         <ResourcesTab

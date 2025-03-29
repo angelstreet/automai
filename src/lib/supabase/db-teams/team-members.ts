@@ -25,7 +25,11 @@ export async function getTeamMembers(
         role,
         created_at,
         updated_at,
-        profiles:profiles(id, avatar_url, tenant_id, tenant_name, role)
+        profiles:profiles(
+          id,
+          email,
+          avatar_url
+        )
       `,
       )
       .eq('team_id', teamId);

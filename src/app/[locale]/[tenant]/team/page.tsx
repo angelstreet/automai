@@ -32,7 +32,11 @@ export default async function TeamPage({ searchParams }: { searchParams: { tab?:
 
         {tab === 'members' ? (
           <Suspense fallback={<MembersTabSkeleton />}>
-            <MembersTab teamId={teamDetails?.id} />
+            <MembersTab
+              teamId={teamDetails?.id}
+              userRole={teamDetails?.userRole}
+              subscriptionTier={teamDetails?.subscription_tier}
+            />
           </Suspense>
         ) : (
           <Suspense fallback={<OverviewTabSkeleton />}>
