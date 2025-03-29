@@ -10,6 +10,7 @@
     "build": "next build",
     "analyze": "ANALYZE=true next build",
     "start": "next start",
+    "prod": "next build && next start",
     "lint": "next lint",
     "browser-tools": "npx @agentdeskai/browser-tools-server",
     "dev:http": "NODE_ENV=development ts-node server.ts",
