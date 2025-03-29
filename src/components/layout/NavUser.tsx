@@ -63,7 +63,7 @@ export function NavUser({ user }: NavUserProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
-              size={isCollapsed ? 'sm' : 'default'}
+              size="sm"
               className={cn(
                 'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground',
                 isCollapsed ? 'justify-center py-1' : 'py-1.5 px-2 w-full max-w-[150px]',

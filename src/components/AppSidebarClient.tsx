@@ -34,10 +34,10 @@ const AppSidebarClient = React.memo(function AppSidebarClient({
   const { open } = useSidebar();
 
   // Use state for isCollapsed to ensure hydration consistency
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isCollapsed, setIsCollapsed] = React.useState(true);
 
   // Update isCollapsed after initial render to prevent hydration mismatch
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     setIsCollapsed(!open);
   }, [open]);
 

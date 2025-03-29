@@ -28,7 +28,7 @@ const sidebarMenuButtonVariants = cva(
     },
     defaultVariants: {
       variant: 'default',
-      size: 'default',
+      size: 'sm',
     },
   },
 );
@@ -42,31 +42,53 @@ export const SidebarMenuButton = React.forwardRef<
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(
   (
-    {
-      asChild = false,
-      isActive = false,
-      variant = 'default',
-      size = 'default',
-      tooltip,
-      className,
-      ...props
-    },
+    { asChild = false, isActive = false, variant = 'default', size, tooltip, className, ...props },
     ref,
   ) => {
     const Comp = asChild ? Slot : 'button';
-    const { isOpen } = useSidebar();
+    const sidebarContext = useSidebar();
+    const isOpen = sidebarContext?.isOpen ?? false;
     const isMobile = useIsMobile();
+
+    // Use a ref to safely update attributes after initial render
+    const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+    const mergedRef = useMergedRef(ref, buttonRef);
+
+    // Update data attributes after mount to match client state
+    React.useLayoutEffect(() => {
+      const buttonEl = buttonRef.current;
+      if (buttonEl) {
+        // These are the attributes that were causing hydration issues
+        buttonEl.setAttribute('data-size', size || 'sm');
+      }
+    }, [size]);
 
     const button = (
       <Comp
-        ref={ref}
+        ref={mergedRef}
         data-sidebar="menu-button"
-        data-size={size}
+        data-size="sm" // Always start with sm for SSR
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
         {...props}
       />
     );
+
+    // useMergedRef helper function
+    function useMergedRef<T>(...refs: React.Ref<T>[]) {
+      return React.useCallback(
+        (element: T) => {
+          refs.forEach((ref) => {
+            if (typeof ref === 'function') {
+              ref(element);
+            } else if (ref != null) {
+              (ref as React.MutableRefObject<T>).current = element;
+            }
+          });
+        },
+        [refs],
+      );
+    }
 
     if (!tooltip) {
       return button;

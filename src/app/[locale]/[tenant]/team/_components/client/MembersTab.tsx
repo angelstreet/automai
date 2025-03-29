@@ -48,6 +48,7 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
       try {
         const details = await getTeamDetails();
         setTeamDetails(details);
+        console.log('Team details:', details);
       } catch (error) {
         console.error('Error fetching team details:', error);
       }
@@ -70,9 +71,11 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
 
         if (result.success && result.data) {
           setMembers(result.data);
+          console.log('Members data fetched:', result.data);
         } else {
           setError(result.error || 'Failed to load team members');
           setMembers([]);
+          console.error('Failed to load team members:', result.error);
         }
       } catch (error) {
         console.error('Error fetching members:', error);
@@ -85,6 +88,11 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
 
     fetchMembers();
   }, [teamId]);
+
+  // Log whenever members state changes
+  useEffect(() => {
+    console.log('Current members state:', members);
+  }, [members]);
 
   if (!teamId) {
     return (

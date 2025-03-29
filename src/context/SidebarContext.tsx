@@ -49,39 +49,51 @@ export function SidebarProvider({ children, defaultOpen = true }: SidebarProvide
     };
   }, []);
 
-  // Use a function for initial state that's consistent between server and client
-  const [open, setOpen] = useState(() => {
-    // For SSR, always use defaultOpen as fallback
-    if (typeof window === 'undefined') {
-      return defaultOpen;
-    }
-
-    // For client, try to get the state from localStorage first, then cookie as fallback
-    try {
-      const storedValue = localStorage.getItem(SIDEBAR_COOKIE_NAME);
-      if (storedValue !== null) {
-        return storedValue !== 'false';
-      }
-
-      const cookieValue = Cookies.get(SIDEBAR_COOKIE_NAME);
-      if (cookieValue !== undefined) {
-        // Also store in localStorage for future use
-        localStorage.setItem(SIDEBAR_COOKIE_NAME, cookieValue);
-        return cookieValue !== 'false';
-      }
-    } catch (e) {
-      // In case of any localStorage errors, fall back to defaultOpen
-      console.error('Error accessing localStorage', e);
-    }
-
-    return defaultOpen;
-  });
-
+  // Start with a known state for SSR
+  const [open, setOpen] = useState(false); // Always start with false/collapsed for SSR
+  const [state, setState] = useState<'expanded' | 'collapsed'>('collapsed');
   const [openMobile, setOpenMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [state, setState] = useState<'expanded' | 'collapsed'>(() => {
-    return open ? 'expanded' : 'collapsed';
-  });
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Only update state on client-side after first render to prevent hydration mismatches
+  useEffect(() => {
+    if (typeof window === 'undefined' || isInitialized) return;
+
+    try {
+      // Try to read from localStorage first (faster)
+      const storedValue = localStorage.getItem(SIDEBAR_COOKIE_NAME);
+      if (storedValue !== null) {
+        const newOpenState = storedValue !== 'false';
+        setOpen(newOpenState);
+        setState(newOpenState ? 'expanded' : 'collapsed');
+        setIsInitialized(true);
+        return;
+      }
+
+      // Fall back to cookies
+      const cookieValue = Cookies.get(SIDEBAR_COOKIE_NAME);
+      if (cookieValue !== undefined) {
+        localStorage.setItem(SIDEBAR_COOKIE_NAME, cookieValue);
+        const newOpenState = cookieValue !== 'false';
+        setOpen(newOpenState);
+        setState(newOpenState ? 'expanded' : 'collapsed');
+        setIsInitialized(true);
+        return;
+      }
+
+      // If no stored state, use the defaultOpen
+      setOpen(defaultOpen);
+      setState(defaultOpen ? 'expanded' : 'collapsed');
+    } catch (e) {
+      // Fall back to default if errors
+      console.error('Error accessing localStorage', e);
+      setOpen(defaultOpen);
+      setState(defaultOpen ? 'expanded' : 'collapsed');
+    }
+
+    setIsInitialized(true);
+  }, [defaultOpen, isInitialized]);
 
   // Use useCallback for the resize handler to prevent recreation on each render
   const checkIsMobile = useCallback(() => {
