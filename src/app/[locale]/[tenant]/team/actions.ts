@@ -303,9 +303,17 @@ export const checkResourceLimit = cache(
 /**
  * Gets basic details about the user's team
  */
-export const getTeamDetails = cache(async () => {
+export const getTeamDetails = cache(async (userId?: string) => {
   try {
-    const user = await getUser();
+    let user;
+    if (userId) {
+      // If userId is provided, use it directly
+      user = { id: userId };
+    } else {
+      // Otherwise get from the session
+      user = await getUser();
+    }
+
     if (!user) {
       return {
         id: null,

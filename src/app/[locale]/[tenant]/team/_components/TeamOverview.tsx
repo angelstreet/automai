@@ -9,14 +9,16 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 import { ResourceCard } from '@/components/ui/resource-card';
+import { User } from '@/types/user';
 import { TeamDetails, UnassignedResources } from '../types';
 
 interface TeamOverviewProps {
   team: TeamDetails | null;
   _unassignedResources: UnassignedResources;
+  user?: User | null;
 }
 
-export default function TeamOverview({ team, _unassignedResources }: TeamOverviewProps) {
+export default function TeamOverview({ team, _unassignedResources, user }: TeamOverviewProps) {
   const t = useTranslations('team');
   const hasTeam = Boolean(team?.id);
 

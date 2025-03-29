@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
+import { User } from '@/types/user';
 import ResourcesTabSkeleton from '../ResourcesTabSkeleton';
 
 // Mock resource data types
@@ -54,9 +55,10 @@ interface Deployment {
 
 interface ResourcesTabProps {
   teamDetails: Partial<TeamDetails>;
+  user?: User | null;
 }
 
-export function ResourcesTab({ teamDetails }: ResourcesTabProps) {
+export function ResourcesTab({ teamDetails, user }: ResourcesTabProps) {
   const t = useTranslations('team');
   const [isLoading, setIsLoading] = useState(true);
 

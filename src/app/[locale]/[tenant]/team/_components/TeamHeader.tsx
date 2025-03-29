@@ -6,10 +6,17 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/shadcn/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
+import { User } from '@/types/user';
 
 import { TeamDetails } from '../types';
 
-export default function TeamHeader({ team }: { team: TeamDetails }) {
+export default function TeamHeader({
+  team,
+  user: _user,
+}: {
+  team: TeamDetails;
+  user?: User | null;
+}) {
   const t = useTranslations('team');
   const hasTeam = Boolean(team.id);
   const router = useRouter();
@@ -18,9 +25,9 @@ export default function TeamHeader({ team }: { team: TeamDetails }) {
   const activeTab = searchParams.get('tab') || 'overview';
 
   // Use role property from team data
-  const userRole = team.role || '';
+  const _userRole = team.role || '';
 
-  const getRoleBadgeColor = (role: string) => {
+  const _getRoleBadgeColor = (role: string) => {
     if (!role) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
 
     switch (role.toLowerCase()) {
@@ -37,7 +44,7 @@ export default function TeamHeader({ team }: { team: TeamDetails }) {
     }
   };
 
-  const getInitials = (name: string) => {
+  const _getInitials = (name: string) => {
     if (!name) return '?';
     return name.substring(0, 2).toUpperCase();
   };

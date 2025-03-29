@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
+import { User } from '@/types/user';
 
 import MembersTabSkeleton from '../MembersTabSkeleton';
 
@@ -32,9 +33,10 @@ interface MembersTabProps {
   teamId: string | null;
   userRole?: string;
   subscriptionTier?: string;
+  user?: User | null;
 }
 
-export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabProps) {
+export function MembersTab({ teamId, userRole, subscriptionTier, user: _user }: MembersTabProps) {
   const t = useTranslations('team');
   const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
