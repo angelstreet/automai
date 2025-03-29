@@ -10,7 +10,6 @@ export { ThemeProvider } from './ThemeContext';
 export { FontProvider, useFont } from './FontContext';
 export { SearchProvider, useSearch } from './SearchContext';
 export { TeamProvider, useTeam, usePermission } from './TeamContext';
-export { PinProvider, usePin } from './PinContext';
 
 export type { UserContextType } from '@/types/context/user';
 export type { SidebarContext as SidebarContextType } from '@/types/sidebar';

@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { forwardRef } from 'react';
 
 import { cn } from '@/lib/utils';
-import { usePin } from '@/context';
 
+import { PinInputContext } from './context';
 import { PinInputFieldProps, _PinInputFieldProps } from './types';
 
 export const PinInputField = <T extends React.ElementType = 'input'>({
@@ -15,7 +14,7 @@ export const PinInputField = <T extends React.ElementType = 'input'>({
   const { mask, type, inputKey, ...rest } = props as _PinInputFieldProps & React.ComponentProps<T>;
 
   // Check if PinInputField is used within PinInput
-  const { isInsidePinInput } = usePin();
+  const isInsidePinInput = React.useContext(PinInputContext);
   if (!isInsidePinInput) {
     throw new Error(`PinInputField must be used within PinInput.`);
   }

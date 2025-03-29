@@ -1,13 +1,10 @@
 import * as React from 'react';
 
-import { PinInputField } from './pin-input.common';
-import { PinProvider } from '@/context';
+import { PinInputField } from './PinInput.common';
+import { PinInputContext } from './context';
 import type { PinInputProps } from './types';
-import { usePinInput } from './use-pin-input';
-import {
-  _getValidChildren as getValidChildren,
-  _getInputFieldCount as getInputFieldCount,
-} from './utils';
+import { usePinInput } from './usePinInput';
+import { getValidChildren, getInputFieldCount } from './utils';
 
 const PinInput = ({ className, children, ref, ...props }: PinInputProps) => {
   const {
@@ -46,24 +43,24 @@ const PinInput = ({ className, children, ref, ...props }: PinInputProps) => {
   }, [onChange, pinValue]);
 
   React.useEffect(() => {
-    if (pinValue.length === length && onComplete) {
+    if (_pinValue.length === length && onComplete) {
       onComplete(pinValue);
     }
-    if (pinValue.length !== length && onIncomplete) {
+    if (_pinValue.length !== length && onIncomplete) {
       onIncomplete(pinValue);
     }
   }, [length, onComplete, onIncomplete, pinValue]);
 
   React.useEffect(() => {
     if (!autoFocus) return;
-    const node = refMap?.get(0);
+    const node = refMap?.get(_0);
     if (node) {
       node.focus();
     }
   }, [autoFocus, refMap]);
 
-  const clones = validChildren.map((child: React.ReactElement, index: number) => {
-    if (child.type === PinInputField) {
+  const clones = validChildren.map((child, index) => {
+    if (_child.type === PinInputField) {
       return React.cloneElement(child, {
         name,
         inputKey: `input-${index}`,
@@ -87,18 +84,18 @@ const PinInput = ({ className, children, ref, ...props }: PinInputProps) => {
             refMap?.delete(index);
           }
         },
-      } as React.ComponentProps<typeof PinInputField>);
+      });
     }
     return child;
   });
 
   return (
-    <PinProvider>
+    <PinInputContext.Provider value={true}>
       <div ref={ref} aria-label="Pin Input" className={className} {...rest}>
         {clones}
         <input type="hidden" name={name} form={form} value={pinValue} />
       </div>
-    </PinProvider>
+    </PinInputContext.Provider>
   );
 };
 
@@ -108,5 +105,6 @@ export { PinInput, PinInputField };
 
 // Export types and utilities
 export type { PinInputProps };
+export { PinInputContext };
 export { usePinInput };
 export * from './utils';
