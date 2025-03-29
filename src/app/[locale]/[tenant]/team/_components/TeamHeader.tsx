@@ -63,7 +63,7 @@ export default function TeamHeader({ team, activeTab }: { team: TeamDetails; act
 
         {/* Actions */}
         <div className="flex gap-2 items-center">
-          {hasTeam && (
+          {hasTeam && team.subscription_tier !== 'trial' && (
             <>
               <Button variant="outline" size="sm" disabled={!hasTeam}>
                 <PlusIcon className="h-4 w-4 mr-1" />

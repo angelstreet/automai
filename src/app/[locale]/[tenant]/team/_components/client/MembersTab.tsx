@@ -20,7 +20,7 @@ import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { PlusIcon } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import { getTeamMembers } from '@/app/[locale]/[tenant]/team/actions';
+import { getTeamMembers, getTeamDetails } from '@/app/[locale]/[tenant]/team/actions';
 
 interface Member {
   profile_id: string;
@@ -35,6 +35,26 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [teamDetails, setTeamDetails] = useState<any>(null);
+
+  // Check if current user is on trial tier
+  const isTrialTier = !teamId || teamDetails?.subscription_tier === 'trial';
+
+  // Get current user's profile ID
+  const currentUserId = teamDetails?.ownerId;
+
+  useEffect(() => {
+    async function fetchTeamDetails() {
+      try {
+        const details = await getTeamDetails();
+        setTeamDetails(details);
+      } catch (error) {
+        console.error('Error fetching team details:', error);
+      }
+    }
+
+    fetchTeamDetails();
+  }, []);
 
   useEffect(() => {
     async function fetchMembers() {
@@ -92,10 +112,12 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
           <CardTitle>Team Members</CardTitle>
           <CardDescription>Manage your team members and their roles</CardDescription>
         </div>
-        <Button size="sm">
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Add Member
-        </Button>
+        {!isTrialTier && (
+          <Button size="sm">
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Add Member
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -113,7 +135,7 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {!isTrialTier && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -134,14 +156,19 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
                       {member.role}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      Edit
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive">
-                      Remove
-                    </Button>
-                  </TableCell>
+                  {!isTrialTier && (
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">
+                        Edit
+                      </Button>
+                      {/* Only show Remove button if not the current user */}
+                      {member.profile_id !== currentUserId && (
+                        <Button variant="ghost" size="sm" className="text-destructive">
+                          Remove
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
