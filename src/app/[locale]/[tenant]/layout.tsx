@@ -5,7 +5,6 @@ import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppSidebarSkeleton } from '@/components/layout/AppSidebarSkeleton';
 import { WorkspaceHeader } from '@/components/layout/WorkspaceHeader';
 import { WorkspaceHeaderSkeleton } from '@/components/layout/WorkspaceHeaderSkeleton';
-import { TooltipProvider } from '@/components/shadcn/tooltip';
 import { UserProvider } from '@/context/UserContext';
 import { mapAuthUserToUser } from '@/utils/user';
 
@@ -27,28 +26,26 @@ export default async function TenantLayout({
   return (
     <UserProvider initialUser={user}>
       <TenantLayoutClient user={user}>
-        <TooltipProvider>
-          <div className="relative flex min-h-screen w-full">
-            <Suspense fallback={<AppSidebarSkeleton />}>
-              <AppSidebar user={user} />
+        <div className="relative flex min-h-screen w-full">
+          <Suspense fallback={<AppSidebarSkeleton />}>
+            <AppSidebar user={user} />
+          </Suspense>
+          <div
+            className="flex-1 flex flex-col min-w-0 w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
+            style={{
+              marginLeft: 'var(--sidebar-width-offset, 0)',
+              width: 'calc(100% - var(--sidebar-width-offset, 0))',
+              opacity: 1,
+            }}
+          >
+            <Suspense fallback={<WorkspaceHeaderSkeleton />}>
+              <WorkspaceHeader user={user} />
             </Suspense>
-            <div
-              className="flex-1 flex flex-col min-w-0 w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
-              style={{
-                marginLeft: 'var(--sidebar-width-offset, 0)',
-                width: 'calc(100% - var(--sidebar-width-offset, 0))',
-                opacity: 1,
-              }}
-            >
-              <Suspense fallback={<WorkspaceHeaderSkeleton />}>
-                <WorkspaceHeader user={user} />
-              </Suspense>
-              <main className="flex-1 px-3 py-0 w-full max-w-full border border-gray-30 rounded-md">
-                {children}
-              </main>
-            </div>
+            <main className="flex-1 px-3 py-0 w-full max-w-full border border-gray-30 rounded-md">
+              {children}
+            </main>
           </div>
-        </TooltipProvider>
+        </div>
       </TenantLayoutClient>
     </UserProvider>
   );
