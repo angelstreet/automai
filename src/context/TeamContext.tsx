@@ -281,5 +281,3 @@ export function usePermission() {
 
   return { hasPermission };
 }
-
-export default TeamContext;

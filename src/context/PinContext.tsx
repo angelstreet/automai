@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 
 interface PinContextState {
@@ -21,5 +23,3 @@ export function usePin() {
   }
   return context;
 }
-
-export default PinContext;
