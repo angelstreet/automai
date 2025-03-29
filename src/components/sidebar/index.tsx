@@ -2,19 +2,31 @@ export { default as Sidebar } from './Sidebar';
 export { SidebarProvider, useSidebar } from '@/context/SidebarContext';
 export { SidebarTrigger } from './SidebarTrigger';
 export { SidebarRail } from './SidebarRail';
-export { SidebarInset } from './SidebarInset';
-export { SidebarInput } from './SidebarInput';
-export { SidebarHeader } from './SidebarHeader';
-export { SidebarFooter } from './SidebarFooter';
-export { SidebarSeparator } from './SidebarSeparator';
-export { SidebarContent } from './SidebarContent';
-export { SidebarGroup } from './SidebarGroup';
-export { SidebarGroupLabel } from './SidebarGroupLabel';
-export { SidebarGroupAction } from './SidebarGroupAction';
-export { SidebarGroupContent } from './SidebarGroupContent';
-export { SidebarMenu } from './SidebarMenu';
-export { SidebarMenuItem } from './SidebarMenuItem';
+
+// Layout components - consolidated exports
+export {
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarSeparator,
+  SidebarInset,
+} from './SidebarLayout';
+
+// Group components - consolidated exports
+export {
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupAction,
+  SidebarGroupContent,
+} from './SidebarGroups';
+
+// Menu components - consolidated exports
+export { SidebarMenu, SidebarMenuItem, SidebarMenuSub } from './SidebarMenuItems';
+
+// Larger standalone components
 export { SidebarMenuButton } from './SidebarMenuButton';
-export { SidebarMenuSub } from './SidebarMenuSub';
 export { SidebarMenuSubButton } from './SidebarMenuSubButton';
+export { SidebarInput } from './SidebarInput';
+
+// Data exports
 export { sidebarData, type SidebarData } from './sidebarData';
