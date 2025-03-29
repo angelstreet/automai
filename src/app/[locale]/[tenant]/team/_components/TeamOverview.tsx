@@ -9,25 +9,7 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 import { ResourceCard } from '@/components/ui/resource-card';
-
-interface TeamDetails {
-  id: string | null;
-  name: string;
-  subscription_tier: string;
-  memberCount: number;
-  userRole?: string;
-  ownerId: string | null;
-  ownerEmail?: string | null;
-  resourceCounts: {
-    repositories: number;
-    hosts: number;
-    cicd: number;
-  };
-}
-
-interface UnassignedResources {
-  repositories: any[];
-}
+import { TeamDetails, UnassignedResources } from '../types';
 
 interface TeamOverviewProps {
   team: TeamDetails | null;

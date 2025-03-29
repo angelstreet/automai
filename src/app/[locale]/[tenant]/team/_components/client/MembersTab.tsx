@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 
 import { getTeamMembers } from '@/app/[locale]/[tenant]/team/actions';
+import { TeamMemberDetails } from '@/app/[locale]/[tenant]/team/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
@@ -24,7 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/shadcn/table';
-import { TeamMember } from '@/types/context/team';
 
 import MembersTabSkeleton from '../MembersTabSkeleton';
 
@@ -36,7 +36,7 @@ interface MembersTabProps {
 
 export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabProps) {
   const t = useTranslations('team');
-  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [members, setMembers] = useState<TeamMemberDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 

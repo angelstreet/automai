@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Code, GitBranch, Rocket, Server } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Server, Code, GitBranch, Rocket } from 'lucide-react';
 
+import { TeamDetails } from '../../types';
 import {
   Card,
   CardContent,
@@ -52,14 +53,7 @@ interface Deployment {
 }
 
 interface ResourcesTabProps {
-  teamDetails: {
-    id: string | null;
-    resourceCounts: {
-      repositories: number;
-      hosts: number;
-      cicd: number;
-    };
-  };
+  teamDetails: Partial<TeamDetails>;
 }
 
 export function ResourcesTab({ teamDetails }: ResourcesTabProps) {

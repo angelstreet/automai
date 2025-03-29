@@ -29,7 +29,7 @@ export default async function TeamPage() {
         <Suspense fallback={<OverviewTabSkeleton />}>
           <TeamTabs teamDetails={teamDetails} unassignedResources={unassignedResources} />
         </Suspense>
-      </Suspense>
+      </Suspensepes>
     </FeaturePageContainer>
   );
 }

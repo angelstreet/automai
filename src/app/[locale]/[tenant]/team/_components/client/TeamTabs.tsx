@@ -3,28 +3,14 @@
 import { useSearchParams } from 'next/navigation';
 
 import TeamOverview from '../TeamOverview';
+import { TeamDetails, UnassignedResources } from '../../types';
 
 import { MembersTab } from './MembersTab';
 import { ResourcesTab } from './ResourcesTab';
 
 interface TeamTabsProps {
-  teamDetails: {
-    id: string | null;
-    name: string;
-    subscription_tier: string;
-    memberCount: number;
-    userRole?: string;
-    ownerId: string | null;
-    ownerEmail?: string | null;
-    resourceCounts: {
-      repositories: number;
-      hosts: number;
-      cicd: number;
-    };
-  } | null;
-  unassignedResources: {
-    repositories: any[];
-  };
+  teamDetails: TeamDetails | null;
+  unassignedResources: UnassignedResources;
 }
 
 export default function TeamTabs({ teamDetails, unassignedResources }: TeamTabsProps) {
@@ -40,7 +26,7 @@ export default function TeamTabs({ teamDetails, unassignedResources }: TeamTabsP
       {activeTab === 'members' && (
         <MembersTab
           teamId={teamDetails?.id || null}
-          userRole={teamDetails?.userRole}
+          userRole={teamDetails?.role}
           subscriptionTier={teamDetails?.subscription_tier}
         />
       )}
