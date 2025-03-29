@@ -1,4 +1,5 @@
 import { getHosts } from '@/app/actions/hosts';
+
 import ClientHostList from './client/ClientHostList';
 
 export default async function HostContent() {

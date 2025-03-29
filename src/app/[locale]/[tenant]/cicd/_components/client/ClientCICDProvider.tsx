@@ -218,7 +218,6 @@ export default function ClientCICDProvider({
                   <TableHead>{t('provider_name', { fallback: 'Name' })}</TableHead>
                   <TableHead>{t('provider_type', { fallback: 'Type' })}</TableHead>
                   <TableHead>{t('provider_url', { fallback: 'URL' })}</TableHead>
-                  <TableHead>{t('provider_auth_type', { fallback: 'Auth Type' })}</TableHead>
                   <TableHead className="w-[80px]">
                     {t('actions', { fallback: 'Actions' })}
                   </TableHead>
@@ -243,16 +242,6 @@ export default function ClientCICDProvider({
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">{provider.url}</TableCell>
-                    <TableCell>
-                      {provider.config?.auth_type === 'token' &&
-                        t('auth_type_token', { fallback: 'API Token' })}
-                      {provider.config?.auth_type === 'basic_auth' &&
-                        t('auth_type_basic', { fallback: 'Username & Password' })}
-                      {provider.config?.auth_type === 'oauth' &&
-                        t('auth_type_oauth', { fallback: 'OAuth' })}
-                      {!provider.config?.auth_type &&
-                        t('auth_type_not_specified', { fallback: 'Not specified' })}
-                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

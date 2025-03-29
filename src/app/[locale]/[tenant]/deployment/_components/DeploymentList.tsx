@@ -4,10 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Search,
   Clock,
-  RefreshCw,
   Play,
-  MoreHorizontal,
-  Trash,
   Eye,
   PlayCircle,
   Trash2,
@@ -21,12 +18,6 @@ import {
   deleteDeployment as deleteDeploymentAction,
 } from '@/app/actions/deployments';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/shadcn/dropdown-menu';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -37,7 +28,6 @@ import {
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
 import { useToast } from '@/components/shadcn/use-toast';
-import { DeploymentActions } from './client/DeploymentActions';
 import { Button } from '@/components/shadcn/button';
 
 interface DeploymentListProps {
@@ -66,8 +56,6 @@ export function DeploymentList({
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<string | null>(null);
 
-  const hasAttemptedRepoFetchRef = React.useRef(false);
-
   useEffect(() => {
     console.log('[DeploymentList] Loading state:', {
       isRefreshing,
@@ -89,17 +77,6 @@ export function DeploymentList({
       setRepositoriesMap(repoMap);
     }
   }, [repositories]);
-
-  const handleRefresh = () => {
-    if (isRefreshing) {
-      console.log('[DeploymentList] Refresh in progress, ignoring request');
-      return;
-    }
-    console.log('[DeploymentList] Manually triggering refresh');
-    setIsRefreshing(true);
-    router.refresh();
-    setTimeout(() => setIsRefreshing(false), 1000);
-  };
 
   const handleViewDeployment = (deployment: Deployment, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();

@@ -1,5 +1,6 @@
-import { Card, CardContent } from '@/components/shadcn/card';
 import { getRepositories } from '@/app/actions/repositories';
+import { Card, CardContent } from '@/components/shadcn/card';
+
 import { ClientRepositoryList } from './client/ClientRepositoryList';
 
 export async function RepositoryContent() {

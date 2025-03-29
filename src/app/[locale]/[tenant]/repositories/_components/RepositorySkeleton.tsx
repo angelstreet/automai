@@ -5,7 +5,7 @@ import { Skeleton } from '@/components/shadcn/skeleton';
 
 export function RepositorySkeleton() {
   return (
-    <Card>
+    <Card className="w-full border-0 shadow-none">
       <CardContent>
         {/* Header with tabs and search */}
         <div className="flex justify-between items-center py-4 mb-4 relative">

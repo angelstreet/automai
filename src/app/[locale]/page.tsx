@@ -1,6 +1,7 @@
-import { Hero } from './(marketing)/_components/Hero';
-import { Features } from './(marketing)/_components/Features';
 import { SiteHeader } from '@/components/layout/SiteHeader';
+
+import { Features } from './(marketing)/_components/Features';
+import { Hero } from './(marketing)/_components/Hero';
 
 export default async function Page() {
   return (
