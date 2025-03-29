@@ -1,6 +1,8 @@
 'use server';
 
 import { cache } from 'react';
+import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 
 import { getUser } from '@/app/actions/user';
 import {
@@ -282,3 +284,168 @@ export const checkResourceLimit = cache(
     }
   },
 );
+
+/**
+ * Gets basic details about the user's team
+ */
+export async function getTeamDetails() {
+  const cookieStore = cookies();
+  const supabase = await createClient(cookieStore);
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Get the user's team from team_members
+    const { data: teamMember } = await supabase
+      .from('team_members')
+      .select('team_id, role')
+      .eq('profile_id', user?.id)
+      .single();
+
+    if (!teamMember?.team_id) {
+      console.info('No team found for user', { userId: user?.id });
+      return {
+        id: null,
+        name: 'No Team',
+        subscription_tier: 'trial',
+        memberCount: 0,
+        ownerId: user?.id,
+        resourceCounts: { repositories: 0, hosts: 0, cicd: 0 },
+      };
+    }
+
+    // Get team details
+    const { data: team } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('id', teamMember.team_id)
+      .single();
+
+    // Get member count
+    const { count: memberCount } = await supabase
+      .from('team_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', teamMember.team_id);
+
+    // Get resource counts
+    const { count: repoCount } = await supabase
+      .from('repositories')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', teamMember.team_id);
+
+    const { count: hostCount } = await supabase
+      .from('hosts')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', teamMember.team_id);
+
+    const { count: cicdCount } = await supabase
+      .from('cicd_providers')
+      .select('*', { count: 'exact', head: true })
+      .eq('team_id', teamMember.team_id);
+
+    return {
+      ...team,
+      memberCount: memberCount || 0,
+      userRole: teamMember.role,
+      ownerId: user?.id,
+      resourceCounts: {
+        repositories: repoCount || 0,
+        hosts: hostCount || 0,
+        cicd: cicdCount || 0,
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching team details', { error });
+    throw new Error('Failed to fetch team details');
+  }
+}
+
+/**
+ * Gets resources that aren't assigned to any team but are
+ * linked to the user's providers
+ */
+export async function getUnassignedResources() {
+  const cookieStore = cookies();
+  const supabase = await createClient(cookieStore);
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Get repositories linked to user's git providers but not assigned to teams
+    const { data: providers } = await supabase
+      .from('git_providers')
+      .select('id')
+      .eq('profile_id', user?.id);
+
+    const providerIds = providers?.map((p) => p.id) || [];
+
+    if (providerIds.length === 0) {
+      return { repositories: [] };
+    }
+
+    // Find repositories with null team_id that belong to user's providers
+    const { data: repositories } = await supabase
+      .from('repositories')
+      .select('*')
+      .in('provider_id', providerIds)
+      .is('team_id', null);
+
+    console.info('Found unassigned repositories', {
+      count: repositories?.length || 0,
+      userId: user?.id,
+    });
+
+    return {
+      repositories: repositories || [],
+    };
+  } catch (error) {
+    console.error('Error fetching unassigned resources', { error });
+    throw new Error('Failed to fetch unassigned resources');
+  }
+}
+
+/**
+ * Assigns a resource to a team and sets the creator
+ */
+export async function assignResourceToTeam(resourceId, resourceType, teamId) {
+  const cookieStore = cookies();
+  const supabase = await createClient(cookieStore);
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      throw new Error('User not authenticated');
+    }
+
+    if (resourceType === 'repository') {
+      const { error } = await supabase
+        .from('repositories')
+        .update({
+          team_id: teamId,
+          creator_id: user.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', resourceId);
+
+      if (error) throw error;
+
+      console.info('Repository assigned to team', {
+        repositoryId: resourceId,
+        teamId,
+        userId: user.id,
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error assigning resource to team', { error, resourceId, resourceType, teamId });
+    throw new Error('Failed to assign resource to team');
+  }
+}

@@ -1,6 +1,6 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Team Management',
-  description: 'Manage teams and team members',
+  title: 'Team Management | AutomAI',
+  description: 'Manage your teams, members and resource allocations',
 };

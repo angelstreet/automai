@@ -1,39 +1,24 @@
-import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
+import { getTeamDetails, getUnassignedResources } from './actions';
+import TeamOverview from './_components/TeamOverview';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
-import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
-
-// Simple team content component
-function TeamContent() {
-  return (
-    <div className="p-4">
-      <p>Team management will be available here.</p>
-    </div>
-  );
-}
-
-// Simple loading skeleton
-function TeamSkeleton() {
-  return (
-    <div className="p-4 w-full">
-      <div className="h-8 bg-muted animate-pulse rounded w-1/4 mb-4"></div>
-      <div className="h-32 bg-muted animate-pulse rounded"></div>
-    </div>
-  );
-}
+export const dynamic = 'force-dynamic';
 
 export default async function TeamPage() {
-  const t = await getTranslations('team');
+  const teamDetails = await getTeamDetails();
+  const unassignedResources = await getUnassignedResources();
 
   return (
-    <FeaturePageContainer
-      title={t('title', { defaultValue: 'Team Management' })}
-      description={t('description', { defaultValue: 'Manage teams, members, and resource limits' })}
-      actions={<div />}
-    >
-      <Suspense fallback={<TeamSkeleton />}>
-        <TeamContent />
+    <div className="container px-4 py-6 mx-auto space-y-8">
+      <h1 className="text-2xl font-semibold flex items-center">
+        Team Management
+        {teamDetails.id && <span className="ml-2 text-muted-foreground">- {teamDetails.name}</span>}
+      </h1>
+
+      <Suspense fallback={<LoadingSpinner />}>
+        <TeamOverview team={teamDetails} unassignedResources={unassignedResources} />
       </Suspense>
-    </FeaturePageContainer>
+    </div>
   );
 }
