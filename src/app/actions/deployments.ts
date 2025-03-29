@@ -13,6 +13,13 @@ import {
   DeploymentStatus,
 } from '../[locale]/[tenant]/deployment/types';
 
+import { getCurrentUser } from '@/lib/session';
+import { v4 as uuidv4 } from 'uuid';
+import { checkPermission } from '@/lib/supabase/db-teams/permissions';
+import { getUserActiveTeam } from '@/lib/supabase/db-teams/teams';
+import { checkResourceLimit } from '@/lib/supabase/db-teams/resource-limits';
+import { supabase } from '@/lib/supabase/browser-client';
+
 // Generic server action result type
 type ServerActionResult<T> = {
   success: boolean;
@@ -42,6 +49,317 @@ function mapDbDeploymentToDeployment(dbDeployment: any): Deployment {
     startedAt: dbDeployment.started_at,
     completedAt: dbDeployment.completed_at,
   };
+}
+
+/**
+ * Get deployments with team-based filtering
+ */
+export async function getDeployments(): Promise<ServerActionResult<Deployment[]>> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Get the user's active team
+    const teamResult = await getUserActiveTeam(user.id);
+    if (!teamResult.success || !teamResult.data) {
+      return { success: false, error: 'Failed to get active team' };
+    }
+
+    // Check if user has permission to select deployments
+    const canSelect = await checkPermission(user.id, teamResult.data.id, 'deployments', 'select');
+
+    if (!canSelect) {
+      return { success: false, error: 'Permission denied' };
+    }
+
+    // Fetch deployments for the active team
+    const { data, error } = await supabase
+      .from('deployments')
+      .select('*')
+      .eq('team_id', teamResult.data.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      data: data as Deployment[],
+    };
+  } catch (error) {
+    console.error('Error fetching deployments:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch deployments',
+    };
+  }
+}
+
+/**
+ * Get a single deployment by ID
+ */
+export async function getDeploymentById(id: string): Promise<ServerActionResult<Deployment>> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Fetch deployment
+    const { data, error } = await supabase.from('deployments').select('*').eq('id', id).single();
+
+    if (error) throw error;
+
+    const deployment = data as Deployment;
+
+    // Check if user has permission to view this deployment
+    const canSelect = await checkPermission(user.id, deployment.team_id, 'deployments', 'select');
+
+    if (!canSelect) {
+      return { success: false, error: 'Permission denied' };
+    }
+
+    return {
+      success: true,
+      data: deployment,
+    };
+  } catch (error) {
+    console.error('Error fetching deployment:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch deployment',
+    };
+  }
+}
+
+/**
+ * Create a new deployment
+ */
+export async function createDeployment(
+  payload: DeploymentFormData,
+): Promise<ServerActionResult<{ deploymentId?: string; error?: string }>> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Get the user's active team
+    const teamResult = await getUserActiveTeam(user.id);
+    if (!teamResult.success || !teamResult.data) {
+      return { success: false, error: 'Failed to get active team' };
+    }
+
+    // Check permission to create deployments
+    const canInsert = await checkPermission(user.id, teamResult.data.id, 'deployments', 'insert');
+
+    if (!canInsert) {
+      return { success: false, error: 'Permission denied' };
+    }
+
+    // Check resource limit
+    const limitCheck = await checkResourceLimit(payload.tenant_id, 'deployments');
+
+    if (!limitCheck.success || !limitCheck.data) {
+      return { success: false, error: 'Failed to check resource limits' };
+    }
+
+    if (!limitCheck.data.allowed) {
+      return {
+        success: false,
+        error: `Resource limit reached: ${limitCheck.data.current}/${limitCheck.data.maximum === 'unlimited' ? 'unlimited' : limitCheck.data.maximum}`,
+      };
+    }
+
+    // Create the deployment
+    const deploymentId = uuidv4();
+    const { data, error } = await supabase
+      .from('deployments')
+      .insert({
+        id: deploymentId,
+        ...payload,
+        status: 'pending',
+        user_id: user.id,
+        creator_id: user.id, // Track who created this resource
+        team_id: teamResult.data.id, // Assign to the active team
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      data: { deploymentId: data.id },
+    };
+  } catch (error) {
+    console.error('Error creating deployment:', error);
+    return {
+      success: false,
+      error: 'Failed to create deployment',
+    };
+  }
+}
+
+/**
+ * Update a deployment
+ */
+export async function updateDeployment(
+  id: string,
+  payload: Partial<DeploymentFormData>,
+): Promise<ServerActionResult<Deployment>> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Fetch the deployment to get team_id and creator_id
+    const { data: existingDeployment, error: fetchError } = await supabase
+      .from('deployments')
+      .select('team_id, creator_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Check if user has permission to update this deployment
+    const canUpdate = await checkPermission(
+      user.id,
+      existingDeployment.team_id,
+      'deployments',
+      'update',
+      existingDeployment.creator_id,
+    );
+
+    if (!canUpdate) {
+      return { success: false, error: 'Permission denied' };
+    }
+
+    // Update the deployment
+    const { data, error } = await supabase
+      .from('deployments')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      data: data as Deployment,
+    };
+  } catch (error) {
+    console.error('Error updating deployment:', error);
+    return {
+      success: false,
+      error: 'Failed to update deployment',
+    };
+  }
+}
+
+/**
+ * Delete a deployment
+ */
+export async function deleteDeployment(id: string): Promise<ServerActionResult<boolean>> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Fetch the deployment to get team_id and creator_id
+    const { data: existingDeployment, error: fetchError } = await supabase
+      .from('deployments')
+      .select('team_id, creator_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Check if user has permission to delete this deployment
+    const canDelete = await checkPermission(
+      user.id,
+      existingDeployment.team_id,
+      'deployments',
+      'delete',
+      existingDeployment.creator_id,
+    );
+
+    if (!canDelete) {
+      return { success: false, error: 'Permission denied' };
+    }
+
+    // Delete the deployment
+    const { error } = await supabase.from('deployments').delete().eq('id', id);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting deployment:', error);
+    return {
+      success: false,
+      error: 'Failed to delete deployment',
+    };
+  }
+}
+
+/**
+ * Execute a deployment (run it)
+ */
+export async function executeDeployment(id: string): Promise<ServerActionResult<boolean>> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Fetch the deployment to get team_id
+    const { data: existingDeployment, error: fetchError } = await supabase
+      .from('deployments')
+      .select('team_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Check if user has permission to execute deployments
+    const canExecute = await checkPermission(
+      user.id,
+      existingDeployment.team_id,
+      'deployments',
+      'execute',
+    );
+
+    if (!canExecute) {
+      return { success: false, error: 'Permission denied: You do not have execution rights' };
+    }
+
+    // Start the deployment
+    const { error } = await supabase
+      .from('deployments')
+      .update({
+        status: 'running',
+        started_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    // Here you would trigger the actual deployment job
+    // This could be an RPC call to a function, a webhook, etc.
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error executing deployment:', error);
+    return {
+      success: false,
+      error: 'Failed to execute deployment',
+    };
+  }
 }
 
 /**
@@ -500,148 +818,6 @@ export async function updateDeployment(
   } catch (error) {
     console.error(`Error updating deployment with ID ${id}:`, error);
     return null;
-  }
-}
-
-/**
- * Delete a deployment by ID
- * @param id Deployment ID
- * @returns True if deleted successfully, false otherwise
- */
-export async function deleteDeployment(id: string): Promise<boolean> {
-  console.log(`\n---------------------------------------`);
-  console.log(`Actions layer: DELETION START - Deployment ID: ${id}`);
-  console.log(`---------------------------------------`);
-
-  try {
-    console.log(`Actions layer: Deleting deployment with ID: ${id}`);
-
-    if (!id) {
-      console.error('Actions layer: Cannot delete deployment - deployment ID is required');
-      return false;
-    }
-
-    // Get the user for tenant information and proper cache invalidation
-    const user = await getUser();
-    if (!user) {
-      console.error('Actions layer: Cannot delete deployment - user not authenticated');
-      return false;
-    }
-
-    // Get cookie store
-    const cookieStore = await cookies();
-    console.log(`Actions layer: Cookie store obtained`);
-
-    // Import the required database modules
-    console.log(`Actions layer: Importing database modules...`);
-    const { default: deploymentDb } = await import('@/lib/supabase/db-deployment/deployment');
-    const { default: cicdDb } = await import('@/lib/supabase/db-cicd');
-    console.log(`Actions layer: Database modules imported successfully`);
-
-    // Get the deployment first (for tenant validation and to have its data for cache key generation)
-    const deployment = await getDeploymentById(id);
-    if (!deployment) {
-      console.error(`Actions layer: Deployment with ID ${id} not found`);
-      return false;
-    }
-
-    // Validate tenant (important security check)
-    if (deployment.tenantId !== user.tenant_id) {
-      console.error(`Actions layer: Deployment belongs to a different tenant`);
-      return false;
-    }
-
-    // 1. Get the CICD mapping first to get job information
-    console.log(`Actions layer: Getting CICD mapping for deployment ${id}`);
-    const mappingResult = await cicdDb.getDeploymentCICDMappings(
-      {
-        where: { deployment_id: id },
-      },
-      cookieStore,
-    );
-
-    if (mappingResult.success && mappingResult.data && mappingResult.data.length > 0) {
-      const mapping = mappingResult.data[0];
-
-      // 2. Delete the job from Jenkins if it exists
-      if (mapping.provider_id) {
-        console.log(`Actions layer: Deleting Jenkins job for deployment ${id}`);
-        const { getCICDProvider } = await import('@/lib/services/cicd');
-        const providerResult = await getCICDProvider(mapping.provider_id, user.tenant_id);
-
-        if (providerResult.success && providerResult.data) {
-          const provider = providerResult.data;
-          // Get the CICD job to get its external_id (Jenkins job name)
-          const jobResult = await cicdDb.getCICDJob(
-            {
-              where: { id: mapping.job_id },
-            },
-            cookieStore,
-          );
-
-          if (jobResult.success && jobResult.data) {
-            // Delete the job from Jenkins
-            await provider.deleteJob(jobResult.data.external_id);
-            console.log(`Actions layer: Deleted Jenkins job ${jobResult.data.external_id}`);
-          }
-        }
-      }
-
-      // 3. Delete the CICD job from database
-      if (mapping.job_id) {
-        console.log(`Actions layer: Deleting CICD job record ${mapping.job_id}`);
-        await cicdDb.deleteCICDJob(
-          {
-            where: { id: mapping.job_id },
-          },
-          cookieStore,
-        );
-      }
-
-      // 4. Delete the mapping
-      console.log(`Actions layer: Deleting CICD mapping ${mapping.id}`);
-      await cicdDb.deleteDeploymentCICDMapping(mapping.id, cookieStore);
-    }
-
-    // 5. Delete the deployment from the database
-    console.log(`Actions layer: Deleting deployment record ${id}`);
-    const result = await deploymentDb.delete(id, cookieStore);
-
-    // Log detailed result for debugging
-    console.log(`Actions layer: Delete deployment result:`, JSON.stringify(result, null, 2));
-
-    // Revalidate relevant paths
-    revalidatePath('/[locale]/[tenant]/deployment');
-
-    console.log(`Actions layer: Cache invalidation completed`);
-
-    // Return success status with better validation
-    const success =
-      result && typeof result === 'object' && 'success' in result && result.success === true;
-    if (success) {
-      console.log(`Actions layer: Successfully deleted deployment with ID: ${id}`);
-    } else {
-      const errorMsg =
-        result && typeof result === 'object' && 'error' in result ? result.error : 'Unknown error';
-      console.error(
-        `Actions layer: Failed to delete deployment with ID: ${id}. Error: ${errorMsg}`,
-      );
-    }
-
-    console.log(`\n---------------------------------------`);
-    console.log(`Actions layer: DELETION END - Result: ${success ? 'SUCCESS' : 'FAILURE'}`);
-    console.log(`---------------------------------------`);
-    return success;
-  } catch (error) {
-    console.error(`Actions layer: Error deleting deployment with ID ${id}:`, error);
-    console.error(
-      `Actions layer: Error details:`,
-      error instanceof Error ? error.stack : JSON.stringify(error, null, 2),
-    );
-    console.log(`\n---------------------------------------`);
-    console.log(`Actions layer: DELETION END - Result: EXCEPTION`);
-    console.log(`---------------------------------------`);
-    return false;
   }
 }
 

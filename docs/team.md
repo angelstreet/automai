@@ -39,6 +39,9 @@ The AutomAI platform uses a flexible team-based permission system that supports 
                     │ can_insert        │
                     │ can_update        │
                     │ can_delete        │
+                    │ can_update_own    │ ──► New field for own resource permissions
+                    │ can_delete_own    │ ──► New field for own resource permissions
+                    │ can_execute       │ ──► New field for execution permissions
                     └───────────────────┘
 ```
 
@@ -50,7 +53,7 @@ The AutomAI platform uses a flexible team-based permission system that supports 
 ├───────────────────┤
 │ id                │
 │ team_id           │ ────► Determines which team owns this resource
-│ creator_id        │ ────► Links back to the user who created it
+│ creator_id        │ ────► Links back to the user who created it (critical for own-resource permissions)
 │ [resource fields] │
 └───────────────────┘
 ```
@@ -68,6 +71,8 @@ The AutomAI platform uses a flexible team-based permission system that supports 
 │ Filtered│          │ Row-Level    │          │  Resources    │
 │ Results │◄──────── │  Security    │◄──────── │    Tables     │
 └─────────┘          └──────────────┘          └───────────────┘
+                     (checks creator_id
+                      for own resources)
 ```
 
 ## Subscription Tiers
@@ -121,6 +126,16 @@ The AutomAI platform uses a flexible team-based permission system that supports 
 - **Context Switching**: Eve can switch active team context for creating new resources
 - **Cross-team Access**: Some resources can be shared across teams (subject to permissions)
 
+### Creator-Specific Permission Scenario
+
+- **Team**: DevTeam (Pro)
+- **Member**: Mike (Contributor role)
+- **Permission Pattern**: Mike can create new resources and fully manage (update/delete) resources he creates, but can only view resources created by other team members
+- **Example Flow**:
+  - Mike creates a host → Mike has full control over this host
+  - Another team member creates a host → Mike can view but not modify this host
+  - This pattern is useful for collaborative teams where members should have autonomy over their own resources
+
 ### Cross-Tier Membership
 
 - **User**: Frank
@@ -133,16 +148,36 @@ The AutomAI platform uses a flexible team-based permission system that supports 
 
 ### Basic Roles
 
-- **Admin**: Full access to team resources (SELECT, INSERT, UPDATE, DELETE)
-- **Developer**: Create and modify resources (SELECT, INSERT, UPDATE)
+- **Admin**: Full access to team resources (SELECT, INSERT, UPDATE, DELETE, EXECUTE)
+- **Developer**: Create and modify resources (SELECT, INSERT, UPDATE, EXECUTE)
 - **Viewer**: Read-only access (SELECT)
+- **Contributor**: Can create resources and manage their own resources (SELECT, INSERT, UPDATE_OWN, DELETE_OWN, EXECUTE)
+- **Tester**: Can create resources, manage their own resources, and execute operations (SELECT, INSERT, UPDATE_OWN, DELETE_OWN, EXECUTE)
 
 ### Granular Permissions
 
 - Per-resource type permissions
 - Specific database operations (SELECT, INSERT, UPDATE, DELETE)
+- Own-resource specific permissions (UPDATE_OWN, DELETE_OWN)
+- Execution permissions (EXECUTE) for running deployments, jobs, and other operations
 - Customizable per team member
 - Inherited from roles with override capability
+
+#### Permission Types
+
+The permission system distinguishes between:
+
+- **Team-wide permissions** (can_select, can_insert, can_update, can_delete): Apply to all resources in the team
+- **Own-resource permissions** (can_update_own, can_delete_own): Apply only to resources created by the user
+- **Execution permissions** (can_execute): Control the ability to run operations like deployments, CI/CD jobs, etc.
+
+This allows for more nuanced access control patterns, such as:
+
+- Team members who can create resources but only modify their own
+- Team members who can view all resources but only delete their own
+- Temporary contributors who should have limited impact on team resources
+- Users who can view and create resources but not execute operations
+- Testers who can run but not modify team-wide resources
 
 ## Implementation Details
 
@@ -152,14 +187,19 @@ The AutomAI platform uses a flexible team-based permission system that supports 
 - Automatic filtering of queries based on team membership
 - Prevents unauthorized data access at database level
 - Operation-specific policies (SELECT, INSERT, UPDATE, DELETE)
+- Creator-specific policies for resources created by the user
 
 ### Permission Resolution Process
 
 1. User makes request → profile_id extracted from authentication
 2. System finds all teams user belongs to
 3. For each resource type, permissions are determined from matrix
-4. RLS policies filter resources based on team membership and permissions
-5. Only authorized resources are returned
+4. For UPDATE/DELETE operations, system checks:
+   - If user has team-wide permission, OR
+   - If user is the creator AND has own-resource permission
+5. For EXECUTE operations, system checks if user has execute permission
+6. RLS policies filter resources based on team membership and permissions
+7. Only authorized resources are returned
 
 ### Team Context Management
 
@@ -167,6 +207,7 @@ The AutomAI platform uses a flexible team-based permission system that supports 
 - UI provides team selector for context switching
 - New resources are created in active team context
 - Resource listings show resources from all accessible teams (can be filtered)
+- UI indicates which resources the user created and can therefore manage
 
 ## Security Considerations
 
@@ -175,6 +216,7 @@ The AutomAI platform uses a flexible team-based permission system that supports 
 - Client UI adapts to user permissions
 - Cross-team access strictly controlled
 - No permission elevation across teams
+- Own-resource permissions strictly limited to creator of the resource
 
 ## Implementation Roadmap
 
@@ -185,3 +227,4 @@ The AutomAI platform uses a flexible team-based permission system that supports 
 5. UI components for team management
 6. Resource permission visualization
 7. Team switching functionality
+8. Own-resource permission indicators in UI
