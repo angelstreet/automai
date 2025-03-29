@@ -1,7 +1,6 @@
 'use client';
 
 import { User } from 'lucide-react';
-import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 
