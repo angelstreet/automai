@@ -1,3 +1,4 @@
+import { UnassignedResourcesList } from '@/app/[locale]/[tenant]/team/_components/client/UnassignedResourcesList';
 import {
   Card,
   CardContent,
@@ -5,8 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-
-import { UnassignedResourcesList } from './client/UnassignedResourcesList';
 
 interface ResourceCount {
   repositories: number;

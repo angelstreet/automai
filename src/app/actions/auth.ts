@@ -9,9 +9,15 @@ import { invalidateUserCache } from './user';
  */
 export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl: string) {
   try {
+    // Use standard OAuth flow
     const result = await supabaseAuth.signInWithOAuth(provider, {
       redirectTo: redirectUrl,
     });
+
+    // Add debug log
+    if (result.success && result.data?.url) {
+      console.log('🔐 OAUTH: Successfully initiated OAuth flow');
+    }
 
     return {
       success: result.success,
@@ -44,9 +50,9 @@ export async function handleAuthCallback(url: string) {
     await invalidateUserCache();
     console.log('⭐ AUTH CALLBACK - User cache invalidated');
 
-    // Handle the OAuth callback
+    // Handle the OAuth callback - use the full URL
     console.log('⭐ AUTH CALLBACK - Exchanging code for session');
-    const result = await supabaseAuth.handleOAuthCallback(code);
+    const result = await supabaseAuth.handleOAuthCallback(url);
 
     if (result.error) {
       console.error('⭐ AUTH CALLBACK ERROR - Failed to exchange code:', result.error);

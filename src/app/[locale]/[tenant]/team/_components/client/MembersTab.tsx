@@ -20,6 +20,7 @@ import { Badge } from '@/components/shadcn/badge';
 import { Button } from '@/components/shadcn/button';
 import { PlusIcon } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { getTeamMembers } from '@/app/[locale]/[tenant]/team/actions';
 
 interface Member {
   profile_id: string;
@@ -33,6 +34,7 @@ interface Member {
 export function MembersTab({ teamId }: { teamId: string | null }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchMembers() {
@@ -43,32 +45,20 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
       }
 
       try {
-        // In a real implementation, this would call an API endpoint
         setLoading(true);
+        const result = await getTeamMembers(teamId);
 
-        // Mock data for now
-        setTimeout(() => {
-          setMembers([
-            {
-              profile_id: '1',
-              role: 'admin',
-              user: { name: 'Alice Smith', email: 'alice@example.com' },
-            },
-            {
-              profile_id: '2',
-              role: 'developer',
-              user: { name: 'Bob Johnson', email: 'bob@example.com' },
-            },
-            {
-              profile_id: '3',
-              role: 'viewer',
-              user: { name: 'Carol Williams', email: 'carol@example.com' },
-            },
-          ]);
-          setLoading(false);
-        }, 500);
+        if (result.success && result.data) {
+          setMembers(result.data);
+        } else {
+          setError(result.error || 'Failed to load team members');
+          setMembers([]);
+        }
       } catch (error) {
         console.error('Error fetching members:', error);
+        setError('Failed to load team members');
+        setMembers([]);
+      } finally {
         setLoading(false);
       }
     }
@@ -112,6 +102,8 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
           <div className="flex justify-center p-6">
             <LoadingSpinner />
           </div>
+        ) : error ? (
+          <div className="text-center p-6 text-red-500">{error}</div>
         ) : members.length === 0 ? (
           <div className="text-center p-6 text-muted-foreground">No team members found</div>
         ) : (

@@ -20,7 +20,17 @@ async function getIntlMiddleware() {
 }
 
 // Public paths (no auth required)
-const PUBLIC_PATHS = ['/', '/features', '/pricing', '/docs', '/login', '/signup'];
+const PUBLIC_PATHS = [
+  '/',
+  '/features',
+  '/pricing',
+  '/docs',
+  '/login',
+  '/signup',
+  '/auth-redirect',
+  '/forgot-password',
+  '/reset-password',
+];
 
 export default async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -38,6 +48,12 @@ export default async function middleware(request: NextRequest) {
     if (path === '/') {
       return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url));
     }
+    return NextResponse.next();
+  }
+
+  // Check for auth-redirect path with locale
+  if (path.includes('/auth-redirect')) {
+    console.log('[MIDDLEWARE] Bypassing auth check for auth-redirect path:', path);
     return NextResponse.next();
   }
 

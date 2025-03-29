@@ -146,27 +146,73 @@ export async function deleteTeam(
 }
 
 /**
- * Get members of a team
- * @param teamId Team ID to get members for
- * @param providedUser Optional user object to avoid redundant getUser calls
- * @returns Action result containing team members or error
+ * Fix to properly get team members with profile data
  */
-export const getTeamMembers = cache(
-  async (teamId: string, providedUser?: User | null): Promise<ActionResult<TeamMember[]>> => {
-    try {
-      const user = providedUser || (await getUser());
-      if (!user || !user.tenant_id) {
-        return { success: false, error: 'Unauthorized' };
-      }
+export async function getTeamMembers(teamId: string) {
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
 
-      const result = await dbGetTeamMembers(teamId);
+  try {
+    // First check if the team exists
+    const { data: team } = await supabase.from('teams').select('id').eq('id', teamId).single();
 
-      return result;
-    } catch (error: any) {
-      return { success: false, error: error.message || 'Failed to fetch team members' };
+    if (!team) {
+      return { success: false, error: 'Team not found' };
     }
-  },
-);
+
+    // Get members without joining to profiles
+    const { data: members, error } = await supabase
+      .from('team_members')
+      .select(
+        `
+        profile_id,
+        role,
+        created_at
+      `,
+      )
+      .eq('team_id', teamId);
+
+    if (error) {
+      throw error;
+    }
+
+    // Get profiles separately to avoid issues with column naming
+    if (members && members.length > 0) {
+      const profileIds = members.map((member) => member.profile_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', profileIds);
+
+      // Map profiles to members
+      const membersWithProfiles = members.map((member) => {
+        const profile = profiles?.find((p) => p.id === member.profile_id);
+        return {
+          ...member,
+          user: profile
+            ? {
+                name: profile.name,
+                email: profile.email,
+              }
+            : undefined,
+        };
+      });
+
+      return {
+        success: true,
+        data: membersWithProfiles,
+      };
+    }
+
+    return { success: true, data: members || [] };
+  } catch (error) {
+    console.error('Error fetching team members:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch team members',
+    };
+  }
+}
 
 /**
  * Add a member to a team
