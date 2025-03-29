@@ -13,7 +13,7 @@ type Props = {
 export default async function LocaleLayout({ children, params }: Props) {
   const resolvedParams = 'then' in params ? await params : params;
   const { locale } = resolvedParams;
-  
+
   // Fetch messages for the valid locale
   const messages = await getMessages(locale);
 

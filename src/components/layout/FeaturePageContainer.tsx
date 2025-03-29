@@ -16,14 +16,14 @@ export function FeaturePageContainer({
   return (
     <div className="container mx-auto py-6 px-4">
       {/* Header Section */}
-      <div className="mb-8">
+      <div className="mb-2">
         <PageHeader title={title} description={description}>
           {actions}
         </PageHeader>
       </div>
 
       {/* Content Container */}
-      <div className="border rounded-lg overflow-auto h-[calc(100vh-250px)]">{children}</div>
+      <div className="border rounded-lg overflow-auto h-[calc(100vh-200px)]">{children}</div>
     </div>
   );
 }
