@@ -175,4 +175,6 @@ export interface DeploymentData {
     jobId?: string;
     parameters?: Record<string, any>;
   };
+  autoStart?: boolean;
+  cicdProviderId?: string;
 }

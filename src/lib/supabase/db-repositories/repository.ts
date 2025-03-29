@@ -60,18 +60,50 @@ const repository = {
       const cookieStore = await cookies();
       const supabase = await createClient(cookieStore);
 
-      const { data, error } = await supabase.from('repositories').select('*');
+      // Get the current user's profile ID
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error('[DB] Error getting current user:', userError);
+        return { success: false, error: userError.message };
+      }
+
+      const profileId = userData.user?.id;
+
+      if (!profileId) {
+        console.error('[DB] No user profile found');
+        return { success: false, error: 'User not authenticated' };
+      }
+
+      console.log(`[DB] Fetching repositories for profile ID: ${profileId}`);
+
+      // Join with git_providers to enforce tenant isolation
+      const { data, error } = await supabase
+        .from('repositories')
+        .select(
+          `
+          *,
+          git_providers!inner(*)
+        `,
+        )
+        .eq('git_providers.profile_id', profileId);
 
       if (error) {
         console.error('[DB] Error fetching repositories:', error);
         return { success: false, error: error.message };
       }
 
-      console.log('[DB] Successfully fetched repositories:', {
-        count: data?.length || 0,
+      // Process the data to remove the git_providers nested object
+      const repositories = data.map((repo) => {
+        const { git_providers, ...repoData } = repo;
+        return repoData;
       });
 
-      return { success: true, data };
+      console.log('[DB] Successfully fetched repositories:', {
+        count: repositories?.length || 0,
+      });
+
+      return { success: true, data: repositories };
     } catch (error) {
       console.error('[DB] Unexpected error in getRepositories:', error);
       return {

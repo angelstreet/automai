@@ -52,6 +52,8 @@ const initialDeploymentData: DeploymentData = {
     email: false,
     slack: false,
   },
+  autoStart: true,
+  cicdProviderId: '',
 };
 
 // Declare a type for selected repository that includes providerId and url
@@ -555,44 +557,64 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           {/* Step 1: Basic Deployment Information */}
           {step === 1 && (
             <DeploymentWizardStep1
-              data={deploymentData}
-              onUpdateData={handleInputChange}
+              name={deploymentData.name}
+              description={deploymentData.description}
+              repositoryId={deploymentData.repositoryId}
               repositories={repositories}
-              onNext={handleNextStep}
+              repositoryError={null}
+              onInputChange={handleInputChange}
+              onNextStep={handleNextStep}
+              isStepValid={isStepValid}
+              onRefreshRepositories={() => {
+                // Just a placeholder refresh function
+                // Can be updated later with actual repository refresh logic
+                console.log('Refreshing repositories...');
+              }}
             />
           )}
 
           {/* Step 2: Select Scripts with Parameters */}
           {step === 2 && (
             <DeploymentWizardStep2
-              data={deploymentData}
+              selectedRepository={deploymentData.selectedRepository}
+              scriptIds={deploymentData.scriptIds}
               repositoryScripts={repositoryScripts}
               isLoadingScripts={isLoadingScripts}
+              scriptsError={scriptsError}
+              scriptParameters={deploymentData.scriptParameters}
               onScriptsChange={handleScriptsChange}
               onScriptParameterChange={handleScriptParameterChange}
-              onBack={handlePrevStep}
-              onNext={handleNextStep}
+              onPrevStep={handlePrevStep}
+              onNextStep={handleNextStep}
+              isStepValid={isStepValid}
             />
           )}
 
           {/* Step 3: Select Target Hosts */}
           {step === 3 && (
             <DeploymentWizardStep3
-              data={deploymentData}
-              hosts={availableHosts}
+              hostIds={deploymentData.hostIds}
+              availableHosts={availableHosts}
+              isLoadingHosts={false}
+              hostsError={null}
               onHostToggle={handleHostsChange}
-              onBack={handlePrevStep}
-              onNext={handleNextStep}
+              onPrevStep={handlePrevStep}
+              onNextStep={handleNextStep}
+              isStepValid={isStepValid}
             />
           )}
 
           {/* Step 4: Schedule */}
           {step === 4 && (
             <DeploymentWizardStep4
-              data={deploymentData}
-              onUpdateData={handleInputChange}
-              onBack={handlePrevStep}
-              onNext={handleNextStep}
+              schedule={deploymentData.schedule}
+              scheduledTime={deploymentData.scheduledTime}
+              cronExpression={deploymentData.cronExpression}
+              repeatCount={deploymentData.repeatCount}
+              onInputChange={handleInputChange}
+              onPrevStep={handlePrevStep}
+              onNextStep={handleNextStep}
+              isStepValid={isStepValid}
             />
           )}
 
@@ -600,13 +622,15 @@ const DeploymentWizard: React.FC<DeploymentWizardProps> = React.memo(
           {step === 5 && (
             <DeploymentWizardStep5
               data={deploymentData}
-              scriptParameters={deploymentData.scriptParameters}
-              repositoryScripts={repositoryScripts}
-              hosts={availableHosts}
-              cicdProviders={cicdProviders}
-              isSubmitting={isCreating}
+              onUpdateData={(partialData) => {
+                setDeploymentData((prev) => ({ ...prev, ...partialData }));
+              }}
+              onNext={() => {}} // Step 5 doesn't have a next step
               onBack={handlePrevStep}
+              onCancel={onCancel}
               onSubmit={handleSubmit}
+              isPending={isCreating}
+              cicdProviders={cicdProviders}
             />
           )}
         </form>

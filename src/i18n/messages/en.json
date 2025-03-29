@@ -415,7 +415,7 @@
     "provider_type_azure": "Azure DevOps"
   },
   "deployment": {
-    "new_deployment": "Add Deployment",
+    "new_deployment": "New Deployment",
     "refresh": "Refresh",
     "error": "Error",
     "refresh_error": "Failed to refresh deployments",
@@ -467,7 +467,7 @@
   "deployments": {
     "title": "Deployments",
     "description": "Manage and monitor your deployments",
-    "create": "Add Deployment",
+    "create": "New Deployment",
     "refresh": "Refresh",
     "deployments": "Deployments",
     "deployments_description": "Manage and monitor your deployments",

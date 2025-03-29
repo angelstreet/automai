@@ -33,8 +33,8 @@ export function ClientRepositoryList({
   const [starredIds, setStarredIds] = useState<string[]>(initialStarredIds);
   const [activeTab, setActiveTab] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(initialStarredIds.length === 0);
+  const [isDeleting, _setIsDeleting] = useState<string | null>(null);
+  const [_loading, setLoading] = useState<boolean>(initialStarredIds.length === 0);
   const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 12;
 
