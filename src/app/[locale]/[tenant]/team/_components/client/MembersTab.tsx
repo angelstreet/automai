@@ -70,8 +70,18 @@ export function MembersTab({ teamId }: { teamId: string | null }) {
         const result = await getTeamMembers(teamId);
 
         if (result.success && result.data) {
-          setMembers(result.data);
-          console.log('Members data fetched:', result.data);
+          // Process members data - add any missing fields that UI might need
+          const processedMembers = result.data.map((member) => ({
+            ...member,
+            user: {
+              name: member.profiles?.tenant_name || 'User', // Use available profile data
+              email: 'Not available', // Email not directly available from profiles
+              ...member.user, // Preserve any user data that might be present
+            },
+          }));
+
+          setMembers(processedMembers);
+          console.log('Members data fetched:', processedMembers);
         } else {
           setError(result.error || 'Failed to load team members');
           setMembers([]);

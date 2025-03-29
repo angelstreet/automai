@@ -364,12 +364,12 @@ export async function getUnassignedResources() {
       return { repositories: [] };
     }
 
+    console.log('[getUnassignedResources] Not fully implemented, returning empty repository list');
     // In a real implementation, you would have a dbGetUnassignedResources function
     // in the appropriate database module
-    // This is simplified for the example
     return { repositories: [] };
   } catch (error) {
-    console.error('Error fetching unassigned resources', { error });
+    console.error('Error fetching unassigned resources:', error);
     throw new Error('Failed to fetch unassigned resources');
   }
 }

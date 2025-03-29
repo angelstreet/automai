@@ -5,14 +5,13 @@ import type { TeamMember, TeamMemberCreateInput } from '@/types/context/team';
 /**
  * Get team members for a specific team
  * @param teamId Team ID
- * @param cookieStore Cookie store for authentication
  * @returns Team members with their profile data
  */
 export async function getTeamMembers(teamId: string): Promise<DbResponse<TeamMember[]>> {
   try {
     const supabase = await createClient();
 
-    // Now query team members with direct filtering
+    // Get team members with profiles (using correct join syntax)
     const { data, error } = await supabase
       .from('team_members')
       .select(
@@ -22,20 +21,24 @@ export async function getTeamMembers(teamId: string): Promise<DbResponse<TeamMem
         role,
         created_at,
         updated_at,
-        profiles:profile_id (id, email, avatar_url)
+        profiles:profiles(id, avatar_url, tenant_id)
       `,
       )
       .eq('team_id', teamId);
 
     if (error) {
+      console.error('Error fetching team members:', error);
       return { success: false, error: error.message };
     }
 
+    // If we need email data, we would need to properly access auth.users
+    // but for now, we'll return what we have and let the component handle it
     return {
       success: true,
       data: data as TeamMember[],
     };
   } catch (error: any) {
+    console.error('Error in getTeamMembers:', error);
     return {
       success: false,
       error: error.message || 'Failed to fetch team members',
