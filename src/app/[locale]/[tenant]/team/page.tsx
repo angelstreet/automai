@@ -1,16 +1,13 @@
 import { Suspense } from 'react';
-import { getTeamDetails, getUnassignedResources } from './actions';
-import TeamHeader from './_components/TeamHeader';
-import TeamOverview from './_components/TeamOverview';
-import { MembersTab } from './_components/client/MembersTab';
-import { ResourcesTab } from './_components/client/ResourcesTab';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
-import TeamTabs from './_components/client/TeamTabs';
 
-export const dynamic = 'force-dynamic';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+
+import TeamHeader from './_components/TeamHeader';
+import TeamTabs from './_components/client/TeamTabs';
+import { getTeamDetails, getUnassignedResources } from './actions';
 
 export default async function TeamPage({ searchParams }: { searchParams: { tab?: string } }) {
-  const activeTab = (await searchParams).tab || 'overview';
+  const activeTab = searchParams.tab || 'overview';
   const teamDetails = await getTeamDetails();
   const unassignedResources = await getUnassignedResources();
 
@@ -28,3 +25,6 @@ export default async function TeamPage({ searchParams }: { searchParams: { tab?:
     </div>
   );
 }
+
+// Add dynamic property to the component
+TeamPage.dynamic = 'force-dynamic';

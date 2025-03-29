@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
+
 import { UnassignedResourcesList } from './client/UnassignedResourcesList';
 
 interface ResourceCount {
@@ -38,30 +39,6 @@ export default function TeamOverview({
 
   return (
     <div className="space-y-6">
-      {/* Team Info Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>{team.id ? team.name : 'No Team'}</CardTitle>
-          <CardDescription>
-            {team.id
-              ? `Subscription tier: ${team.subscription_tier}`
-              : 'No team associated with this account'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col space-y-1">
-              <span className="text-sm text-muted-foreground">Members</span>
-              <span className="text-2xl font-semibold">{team.memberCount}</span>
-            </div>
-            <div className="flex flex-col space-y-1">
-              <span className="text-sm text-muted-foreground">Your Role</span>
-              <span className="text-2xl font-semibold">{team.userRole || 'N/A'}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Resources Card */}
       <Card>
         <CardHeader className="pb-3">

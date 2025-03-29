@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
 import TeamOverview from '../TeamOverview';
+
 import { MembersTab } from './MembersTab';
 import { ResourcesTab } from './ResourcesTab';
 
@@ -12,17 +12,10 @@ interface TeamTabsProps {
 }
 
 export default function TeamTabs({ activeTab, teamDetails, unassignedResources }: TeamTabsProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const handleTabChange = (tab: string) => {
-    router.push(`${pathname}?tab=${tab}`);
-  };
-
   return (
     <>
       {activeTab === 'overview' && (
-        <TeamOverview team={teamDetails} unassignedResources={unassignedResources} />
+        <TeamOverview unassignedResources={unassignedResources} />
       )}
 
       {activeTab === 'members' && <MembersTab teamId={teamDetails.id} />}
