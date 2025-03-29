@@ -31,23 +31,8 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
   const tenant = (params.tenant as string) || 'trial';
   const { signOut } = useUser();
 
-  const getInitials = (name: string) => {
-    if (!name) return '';
-    return name
-      .split(' ')
-      .map((part) => part?.[0] || '')
-      .join('')
-      .toUpperCase();
-  };
-
   const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
-  const initials = getInitials(userName);
   const avatarUrl = user?.avatar_url || user?.user_metadata?.avatar_url;
-
-  console.log('UserProfileDropdown user:', user);
-  console.log('Avatar URL:', avatarUrl);
-  console.log('User metadata:', user?.user_metadata);
-  console.log('User metadata avatar:', user?.user_metadata?.avatar_url);
 
   const handleSignOut = async () => {
     try {
