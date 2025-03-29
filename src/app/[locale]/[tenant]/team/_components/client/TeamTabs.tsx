@@ -2,8 +2,8 @@
 
 import { useSearchParams } from 'next/navigation';
 
-import TeamOverview from '../TeamOverview';
 import { TeamDetails, UnassignedResources } from '../../types';
+import TeamOverview from '../TeamOverview';
 
 import { MembersTab } from './MembersTab';
 import { ResourcesTab } from './ResourcesTab';
@@ -36,6 +36,8 @@ export default function TeamTabs({ teamDetails, unassignedResources }: TeamTabsP
           teamDetails={
             teamDetails || {
               id: null,
+              name: 'Personal Team',
+              subscription_tier: 'trial',
               resourceCounts: { repositories: 0, hosts: 0, cicd: 0 },
             }
           }

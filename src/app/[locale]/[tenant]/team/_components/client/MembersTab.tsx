@@ -72,7 +72,9 @@ export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabPro
 
   const filteredMembers = members.filter(
     (member) =>
-      member.profiles.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (member.profiles?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (member.user?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (member.user?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       member.role.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
@@ -95,13 +97,17 @@ export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabPro
     }
   };
 
-  const getInitials = (email: string | undefined) => {
-    if (!email) return '?';
-    const parts = email.split('@')[0].split('.');
-    if (parts.length > 1) {
-      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  const getInitials = (name?: string) => {
+    if (!name) return '?';
+
+    // Handle names with spaces (first and last name)
+    if (name.includes(' ')) {
+      const nameParts = name.split(' ');
+      return (nameParts[0].charAt(0) + nameParts[nameParts.length - 1].charAt(0)).toUpperCase();
     }
-    return email.substring(0, 2).toUpperCase();
+
+    // Handle single name (use first two characters)
+    return name.substring(0, 2).toUpperCase();
   };
 
   return (
@@ -163,16 +169,21 @@ export function MembersTab({ teamId, userRole, subscriptionTier }: MembersTabPro
                   <TableCell>
                     <Avatar>
                       <AvatarImage
-                        src={member.profiles.avatar_url || ''}
-                        alt={member.profiles.email || ''}
+                        src={member.user?.avatar_url || member.profiles?.avatar_url || ''}
+                        alt={member.user?.name || ''}
                       />
-                      <AvatarFallback>{getInitials(member.profiles.email)}</AvatarFallback>
+                      <AvatarFallback>{getInitials(member.user?.name)}</AvatarFallback>
                     </Avatar>
                   </TableCell>
                   <TableCell className="font-medium">
-                    {member.profiles.email?.split('@')[0] || 'Unknown User'}
+                    {member.user?.name || t('membersTab.unknownUser')}
                   </TableCell>
-                  <TableCell>{member.profiles.email || 'No email'}</TableCell>
+                  <TableCell>
+                    {member.user?.email &&
+                    member.user.email !== 'Email unavailable in profiles table'
+                      ? member.user.email
+                      : t('membersTab.noEmail')}
+                  </TableCell>
                   <TableCell>
                     <Badge className={getRoleBadgeColor(member.role)} variant="outline">
                       {member.role}

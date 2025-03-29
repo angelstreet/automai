@@ -2,6 +2,39 @@ import type { DbResponse } from '@/lib/supabase/db';
 import { createClient } from '@/lib/supabase/server';
 import type { TeamMember, TeamMemberCreateInput } from '@/types/context/team';
 
+// Define user data structure
+interface UserData {
+  id: string;
+  email?: string;
+  user_metadata?: {
+    full_name?: string;
+    name?: string;
+    avatar_url?: string;
+  };
+}
+
+// Define member data structure from database
+interface MemberData {
+  team_id: string;
+  profile_id: string;
+  role: string;
+  created_at: string;
+  updated_at: string;
+  profiles: {
+    id: string;
+    avatar_url?: string | null;
+    tenant_id?: string;
+    tenant_name?: string;
+    role?: string;
+  };
+  user?: {
+    id: string;
+    name?: string;
+    email?: string;
+    avatar_url?: string | null;
+  };
+}
+
 /**
  * Get team members for a specific team
  * @param teamId Team ID
@@ -15,37 +48,38 @@ export async function getTeamMembers(
   try {
     const supabase = await createClient(cookieStore);
 
-    // Get team members with profiles
-    const { data, error } = await supabase
-      .from('team_members')
-      .select(
-        `
-        team_id,
-        profile_id,
-        role,
-        created_at,
-        updated_at,
-        profiles:profiles(id, avatar_url, tenant_id, tenant_name, role)
-      `,
-      )
-      .eq('team_id', teamId);
+    // Get team members with profiles and attempt to join with auth data
+    // Using direct SQL to access auth.users through a join
+    const { data, error } = await supabase.rpc('get_team_members_with_user_data', {
+      p_team_id: teamId,
+    });
 
     if (error) {
       console.error('Error fetching team members:', error);
       return { success: false, error: error.message };
     }
 
-    // Since we can't directly access auth.users, we'll use the profile data we have
-    // Add a user property with available information
+    // Process the results to match the expected format
     if (data && data.length > 0) {
       data.forEach((member) => {
-        // Create user object with available data
-        member.user = {
-          id: member.profile_id,
-          name: member.profiles?.tenant_name || 'User',
-          email: 'Email unavailable in profiles table', // We can't get this directly
-          avatar_url: member.profiles?.avatar_url,
-        };
+        // Use email username if name is not available
+        if (member.email && (!member.user || !member.user.name)) {
+          const username = member.email.split('@')[0];
+          if (!member.user) {
+            member.user = { id: member.profile_id };
+          }
+          member.user.name = username;
+        }
+
+        // Ensure user object exists
+        if (!member.user) {
+          member.user = {
+            id: member.profile_id,
+            name: member.profiles?.tenant_name || 'User',
+            email: 'Email unavailable',
+            avatar_url: member.profiles?.avatar_url,
+          };
+        }
       });
     }
 
@@ -72,7 +106,7 @@ export async function getTeamMembers(
  */
 export async function addTeamMember(
   input: TeamMemberCreateInput,
-  cookieStore?: any,
+  cookieStore: any,
 ): Promise<DbResponse<TeamMember>> {
   try {
     const supabase = await createClient(cookieStore);
@@ -131,7 +165,7 @@ export async function addTeamMember(
 
     return {
       success: true,
-      data: data as TeamMember,
+      data: data as unknown as TeamMember,
     };
   } catch (error: any) {
     return {

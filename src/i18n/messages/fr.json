@@ -359,6 +359,8 @@
       "noMembers": "Aucun membre trouvé dans cette équipe",
       "noTeam": "Créez une équipe pour ajouter des membres",
       "noSearchResults": "Aucun membre ne correspond à votre recherche",
+      "unknownUser": "Utilisateur inconnu",
+      "noEmail": "Pas d'email",
       "memberActions": {
         "changeRole": "Changer de rôle",
         "remove": "Supprimer le membre"

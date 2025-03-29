@@ -17,43 +17,41 @@ export default function TeamHeader({ team }: { team: TeamDetails }) {
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'overview';
 
-  const userRole = team.role || t('noRole');
+  // Use role property from team data
+  const userRole = team.role || '';
+
+  const getRoleBadgeColor = (role: string) => {
+    if (!role) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+
+    switch (role.toLowerCase()) {
+      case 'owner':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+      case 'admin':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'member':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'viewer':
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return '?';
+    return name.substring(0, 2).toUpperCase();
+  };
 
   const handleTabChange = (tab: string) => {
     router.push(`${pathname}?tab=${tab}`);
   };
 
+  // Log the team data to debug
+  console.log('TeamHeader received team:', JSON.stringify(team, null, 2));
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-        {/* Team Selector */}
-        <div className="flex items-center">
-          <div className="bg-primary/10 p-2 rounded-md mr-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-6 w-6 text-primary"
-            >
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold">{team.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {userRole}
-              {team.id && <span className="ml-1">- {team.id}</span>}
-            </p>
-          </div>
-        </div>
-
         {/* Actions */}
         <div className="flex gap-2 items-center">
           {hasTeam && team.subscription_tier !== 'trial' && (

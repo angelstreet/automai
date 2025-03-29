@@ -395,6 +395,8 @@
       "noMembers": "No members found in this team",
       "noTeam": "Create a team to add members",
       "noSearchResults": "No members match your search",
+      "unknownUser": "Unknown User",
+      "noEmail": "No email",
       "memberActions": {
         "changeRole": "Change Role",
         "remove": "Remove Member"

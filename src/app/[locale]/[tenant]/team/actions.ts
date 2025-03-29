@@ -15,6 +15,7 @@ import {
   updateTeamMemberRole as dbUpdateTeamMemberRole,
   removeTeamMember as dbRemoveTeamMember,
   getTeamsByUser,
+  TeamMemberType as TeamMember,
 } from '@/lib/supabase/db-teams';
 import { checkResourceLimit as dbCheckResourceLimit } from '@/lib/supabase/db-teams/resource-limits';
 import type { ActionResult } from '@/types/context/cicd';
@@ -22,7 +23,7 @@ import type {
   Team,
   TeamCreateInput,
   TeamUpdateInput,
-  TeamMember,
+  TeamMember as TeamMemberFromContext,
   TeamMemberCreateInput,
   ResourceLimit,
 } from '@/types/context/team';
@@ -336,9 +337,23 @@ export const getTeamDetails = cache(async () => {
 
     const team = teamsResult.data[0];
 
-    // Get member count
+    // Get member count and user's role
     const membersResult = await dbGetTeamMembers(team.id, cookieStore);
     const memberCount = membersResult.success ? membersResult.data?.length || 0 : 0;
+
+    // Find the user's role in the team
+    let role = null;
+    if (membersResult.success && membersResult.data) {
+      const userMember = membersResult.data.find(
+        (member: TeamMember) => member.profile_id === user.id,
+      );
+      if (userMember) {
+        role = userMember.role;
+        console.log(`Found user role: ${role} for user ${user.id} in team ${team.id}`);
+      }
+    }
+
+    console.log(`Returning team details with role: ${role}`);
 
     // For resource counts we would need specific functions in the db module
     // This is simplified example
@@ -347,6 +362,7 @@ export const getTeamDetails = cache(async () => {
       memberCount,
       ownerId: user.id,
       ownerEmail: user.email, // Include the user's email if available
+      role, // Add the user's role
       resourceCounts: {
         repositories: 0, // Replace with actual counts from db
         hosts: 0,
