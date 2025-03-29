@@ -4,7 +4,8 @@
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { exchangeCodeForSession } from '@/app/actions/auth';
+import { signInWithPassword, exchangeCodeForSession } from '@/app/actions/auth';
+import { handleOAuthCallback } from '@/lib/supabase/auth';
 import { useUser } from '@/context/UserContext';
 import { User } from '@/types/user';
 
@@ -90,9 +91,6 @@ export default function AuthRedirectPage() {
             setLoading(false);
             return;
           }
-
-          // Import the auth functions
-          const { signInWithPassword } = await import('@/app/actions/auth');
 
           // Attempt to sign in
           const result = await signInWithPassword(email, password);
@@ -180,31 +178,42 @@ export default function AuthRedirectPage() {
           return;
         }
 
-        // Get the full URL for the auth callback
-        const fullUrl = typeof window !== 'undefined' ? window.location.href : '';
-        setLoading(true);
-
-        // Process the OAuth callback
-        const result = await exchangeCodeForSession(fullUrl);
-
-        if (!result.success) {
-          console.error('AUTH REDIRECT: Code exchange failed:', result.error);
-          setAuthError(new Error(result.error || 'Authentication failed'));
+        // Get the code parameter directly - this is more reliable than passing the full URL
+        if (!code) {
+          setAuthError(new Error('No code parameter found in URL'));
           setIsProcessing(false);
           return;
         }
 
-        // After successful auth, refresh user data
+        setLoading(true);
+        console.log('🔐 AUTH REDIRECT: Processing code:', code.substring(0, 6) + '...');
+
+        // DIRECT APPROACH: Call handleOAuthCallback directly
+        // This bypasses the server action entirely, which could be causing PKCE issues
+        const result = await handleOAuthCallback(code);
+
+        if (!result.success) {
+          console.error(
+            'AUTH REDIRECT: Code exchange failed:',
+            'error' in result ? result.error : 'Authentication failed',
+          );
+          setAuthError(new Error('error' in result ? result.error : 'Authentication failed'));
+          setIsProcessing(false);
+          return;
+        }
+
+        // Basic redirect handling
         await refreshUser();
 
         // Add delay to ensure session is stable
         await new Promise((resolve) => setTimeout(resolve, 1200));
 
-        // Handle redirect using Next.js router
-        if (result.redirectUrl) {
-          setHasRedirected(true);
-          router.push(result.redirectUrl);
-        }
+        const userData = result.data?.session?.user;
+        const tenantName = userData?.user_metadata?.tenant_name || 'trial';
+
+        // Redirect to dashboard
+        setHasRedirected(true);
+        router.push(`/${locale}/${tenantName}/dashboard`);
       } catch (err) {
         console.error('Error in auth process:', err);
         setAuthError(err instanceof Error ? err : new Error('Authentication failed'));

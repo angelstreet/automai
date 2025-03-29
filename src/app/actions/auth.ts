@@ -33,92 +33,42 @@ export async function signInWithOAuth(provider: 'google' | 'github', redirectUrl
 /**
  * Handle OAuth callback from Supabase Auth
  */
-export async function handleAuthCallback(url: string) {
+export async function handleAuthCallback(urlOrCode: string) {
   try {
-    // Parse the URL to get the code
-    const { searchParams } = new URL(url);
-    const code = searchParams.get('code');
-
-    console.log('⭐ AUTH CALLBACK - Processing code from URL');
-
-    if (!code) {
-      console.error('⭐ AUTH CALLBACK ERROR - No code provided in URL');
-      throw new Error('No code provided in URL');
+    // If this is a URL, extract the code
+    let code = urlOrCode;
+    if (urlOrCode.startsWith('http')) {
+      const url = new URL(urlOrCode);
+      const codeParam = url.searchParams.get('code');
+      if (codeParam) {
+        code = codeParam;
+        console.log('⭐ AUTH CALLBACK - Extracted code from URL:', code.substring(0, 6) + '...');
+      } else {
+        console.error('⭐ AUTH CALLBACK ERROR - No code provided in URL');
+        throw new Error('No code provided in URL');
+      }
+    } else {
+      console.log('⭐ AUTH CALLBACK - Using provided code:', code.substring(0, 6) + '...');
     }
 
     // Invalidate user cache before processing callback
     await invalidateUserCache();
     console.log('⭐ AUTH CALLBACK - User cache invalidated');
 
-    // Handle the OAuth callback - use the full URL
+    // Exchange the code for a session
     console.log('⭐ AUTH CALLBACK - Exchanging code for session');
-    const result = await supabaseAuth.handleOAuthCallback(url);
+    const result = await supabaseAuth.handleOAuthCallback(code);
 
-    if (result.error) {
-      console.error('⭐ AUTH CALLBACK ERROR - Failed to exchange code:', result.error);
-    }
-
-    if (result.success && result.data) {
-      console.log('⭐ AUTH CALLBACK SUCCESS - Session obtained');
-
-      // Log session details for debugging
-      const session = result.data.session;
-      console.log('⭐ AUTH CALLBACK - Session present:', !!session);
-
-      if (session) {
-        console.log(
-          '⭐ AUTH CALLBACK - Session expires at:',
-          new Date(session.expires_at * 1000).toISOString(),
-        );
-        console.log('⭐ AUTH CALLBACK - User ID:', session.user.id);
-        console.log('⭐ AUTH CALLBACK - User email:', session.user.email);
-      }
-
-      // Get the tenant information for redirection
-      const userData = result.data.session?.user;
-
-      // Use tenant_name or default to 'trial'
-      const tenantName = userData?.user_metadata?.tenant_name || 'trial';
-
-      // Get the locale from URL or default to 'en'
-      // Try to extract locale from the URL path
-      const pathParts = url.split('/');
-      const localeIndex = pathParts.findIndex((part) => part === 'auth-redirect') - 1;
-
-      // If we're at the root URL (which happens on Vercel), use the default locale
-      // or try to extract from user preferences if available
-      let locale = 'en';
-
-      // First check if we can extract it from the URL path
-      if (localeIndex >= 0) {
-        locale = pathParts[localeIndex];
-      }
-      // For root URL authentication on Vercel, use tenant locale if available
-      else if (userData?.user_metadata?.locale) {
-        locale = userData.user_metadata.locale;
-      }
-
-      console.log('⭐ AUTH CALLBACK - Using locale:', locale);
-
-      // Log for debugging
-      console.log('⭐ AUTH CALLBACK - Redirect using tenant:', tenantName);
-
-      // Redirect URL for after authentication
-      const redirectUrl = `/${locale}/${tenantName}/dashboard`;
-
+    if (!result.success) {
+      console.error('⭐ AUTH CALLBACK ERROR - Authentication failed:', result.error);
       return {
-        success: true,
-        redirectUrl,
+        success: false,
+        error: result.error || 'Failed to authenticate',
+        redirectUrl: '/login?error=Authentication+failed',
       };
     }
 
-    // Handle authentication failure
-    console.error('⭐ AUTH CALLBACK ERROR - Authentication failed:', result.error);
-    return {
-      success: false,
-      error: result.error || 'Failed to authenticate',
-      redirectUrl: '/login?error=Authentication+failed',
-    };
+    return handleAuthSuccess(result, urlOrCode);
   } catch (error: any) {
     console.error('⭐ AUTH CALLBACK ERROR - Exception:', error);
     return {
@@ -127,6 +77,63 @@ export async function handleAuthCallback(url: string) {
       redirectUrl: '/login?error=Authentication+failed',
     };
   }
+}
+
+/**
+ * Handle successful authentication and prepare redirect
+ */
+function handleAuthSuccess(result: any, url: string) {
+  console.log('⭐ AUTH CALLBACK SUCCESS - Session obtained');
+
+  // Log session details for debugging
+  const session = result.data.session;
+  console.log('⭐ AUTH CALLBACK - Session present:', !!session);
+
+  if (session) {
+    console.log(
+      '⭐ AUTH CALLBACK - Session expires at:',
+      new Date(session.expires_at * 1000).toISOString(),
+    );
+    console.log('⭐ AUTH CALLBACK - User ID:', session.user.id);
+    console.log('⭐ AUTH CALLBACK - User email:', session.user.email);
+  }
+
+  // Get the tenant information for redirection
+  const userData = result.data.session?.user;
+
+  // Use tenant_name or default to 'trial'
+  const tenantName = userData?.user_metadata?.tenant_name || 'trial';
+
+  // Get the locale from URL or default to 'en'
+  // Try to extract locale from the URL path
+  const pathParts = url.split('/');
+  const localeIndex = pathParts.findIndex((part) => part === 'auth-redirect') - 1;
+
+  // If we're at the root URL (which happens on Vercel), use the default locale
+  // or try to extract from user preferences if available
+  let locale = 'en';
+
+  // First check if we can extract it from the URL path
+  if (localeIndex >= 0) {
+    locale = pathParts[localeIndex];
+  }
+  // For root URL authentication on Vercel, use tenant locale if available
+  else if (userData?.user_metadata?.locale) {
+    locale = userData.user_metadata.locale;
+  }
+
+  console.log('⭐ AUTH CALLBACK - Using locale:', locale);
+
+  // Log for debugging
+  console.log('⭐ AUTH CALLBACK - Redirect using tenant:', tenantName);
+
+  // Redirect URL for after authentication
+  const redirectUrl = `/${locale}/${tenantName}/dashboard`;
+
+  return {
+    success: true,
+    redirectUrl,
+  };
 }
 
 /**
