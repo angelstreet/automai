@@ -1,13 +1,8 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/shadcn/skeleton';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/shadcn/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import {
   Table,
   TableBody,
@@ -18,11 +13,13 @@ import {
 } from '@/components/shadcn/table';
 
 export default function MembersTabSkeleton() {
+  const t = useTranslations('team');
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-center">
-          <CardTitle>Team Members</CardTitle>
+          <CardTitle>{t('membersTab.title')}</CardTitle>
           <Skeleton className="h-9 w-32" />
         </div>
       </CardHeader>

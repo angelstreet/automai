@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/components/shadcn/skeleton';
 import {
   Card,
@@ -10,10 +11,12 @@ import {
 } from '@/components/shadcn/card';
 
 export default function OverviewTabSkeleton() {
+  const t = useTranslations('team');
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Resources</CardTitle>
+        <CardTitle>{t('resources.title')}</CardTitle>
         <Skeleton className="h-4 w-72" />
       </CardHeader>
       <CardContent>
