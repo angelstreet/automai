@@ -15,9 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { signOut } from '@/app/actions/auth';
-import { cn } from '@/lib/utils';
 import { useUser } from '@/context';
+import { cn } from '@/lib/utils';
 
 interface NavUserProps {
   user: UserType;
@@ -29,7 +28,7 @@ export function NavUser({ user }: NavUserProps) {
   const locale = params.locale as string;
   const tenant = params.tenant as string;
   const { open } = useSidebar();
-  const { clearCache } = useUser();
+  const { signOut } = useUser();
   const isCollapsed = !open;
 
   // Use the actual user role for display
@@ -37,23 +36,20 @@ export function NavUser({ user }: NavUserProps) {
 
   const handleSignOut = async () => {
     try {
-      // Clear all caches first - with proper null safety
-      if (clearCache && typeof clearCache === 'function') {
-        await clearCache();
-      } else {
-        console.warn('NavUser: clearCache function not available from useUser context');
-      }
-
-      // Then sign out
-      const formData = new FormData();
-      formData.append('locale', locale);
-      const result = await signOut(formData);
-
+      // Use the signOut method from context which handles cache clearing and sign out
+      const result = await signOut(locale);
+      
+      // Use router navigation based on result
       if (result.success && result.redirectUrl) {
         router.push(result.redirectUrl);
+      } else {
+        // Fallback redirect if no URL provided
+        router.push(`/${locale}/login`);
       }
     } catch (error) {
       console.error('Error signing out:', error);
+      // Attempt to redirect to login even if there's an error
+      router.push(`/${locale}/login`);
     }
   };
 

@@ -4,6 +4,7 @@ import { LogOut, Settings, User as UserIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import * as React from 'react';
+import { useState } from 'react';
 
 import { Button } from '@/components/shadcn/button';
 import {
@@ -15,21 +16,21 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/shadcn/dropdown-menu';
-import { signOut } from '@/app/actions/auth';
+import { useUser } from '@/context';
 import { User } from '@/types/user';
 
 interface UserProfileDropdownProps {
   user: User | null;
-  clearCache?: () => Promise<void>;
 }
 
-export function UserProfileDropdown({ user, clearCache }: UserProfileDropdownProps) {
+export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
+  const [imageError, setImageError] = useState(false);
   const router = useRouter();
   const params = useParams();
   const locale = (params.locale as string) || 'en';
   const tenant = (params.tenant as string) || 'trial';
+  const { signOut } = useUser();
 
-  // Get user's initials for avatar fallback
   const getInitials = (name: string) => {
     if (!name) return '';
     return name
@@ -39,50 +40,32 @@ export function UserProfileDropdown({ user, clearCache }: UserProfileDropdownPro
       .toUpperCase();
   };
 
-  // Extract user information with null safety
   const userName = user?.name || user?.email?.split('@')[0] || 'Guest';
-  const avatarUrl = user?.avatar_url || user?.user_metadata?.avatar_url;
   const initials = getInitials(userName);
+  const avatarUrl = user?.avatar_url || user?.user_metadata?.avatar_url;
+
+  console.log('UserProfileDropdown user:', user);
+  console.log('Avatar URL:', avatarUrl);
+  console.log('User metadata:', user?.user_metadata);
+  console.log('User metadata avatar:', user?.user_metadata?.avatar_url);
 
   const handleSignOut = async () => {
     try {
-      // Try to clear cache, but don't block the logout process if it fails
-      if (clearCache) {
-        try {
-          await clearCache();
-        } catch (cacheError) {
-          console.warn('Error clearing cache during logout:', cacheError);
-        }
-      }
-
-      // Then sign out
-      const formData = new FormData();
-      formData.append('locale', locale);
-      const result = await signOut(formData);
-
-      // Try to clear localStorage manually as a backup
-      try {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('cached_user');
-          localStorage.removeItem('cached_user_time');
-        }
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-
-      // Let the server action handle the redirect
+      const result = await signOut(locale);
       if (result.success && result.redirectUrl) {
         router.push(result.redirectUrl);
       } else {
-        // Fallback redirect if server action doesn't provide a URL
         router.push(`/${locale}/login`);
       }
     } catch (error) {
       console.error('Error signing out:', error);
-      // Attempt to redirect to login even if there's an error
       router.push(`/${locale}/login`);
     }
   };
+
+  React.useEffect(() => {
+    setImageError(false);
+  }, [avatarUrl]);
 
   return (
     <DropdownMenu>
@@ -91,18 +74,18 @@ export function UserProfileDropdown({ user, clearCache }: UserProfileDropdownPro
           variant="ghost"
           className="relative h-8 w-8 rounded-full hover:bg-accent hover:text-accent-foreground"
         >
-          <div className="h-8 w-8 rounded-full border border-border dark:border-gray-600 shadow-sm overflow-hidden flex items-center justify-center bg-accent text-accent-foreground dark:bg-gray-700 dark:text-gray-200">
-            {avatarUrl ? (
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background">
+            {avatarUrl && !imageError ? (
               <Image
                 src={avatarUrl}
                 alt={userName}
                 width={32}
                 height={32}
-                priority
                 className="h-8 w-8 rounded-full"
+                onError={() => setImageError(true)}
               />
             ) : (
-              initials || <UserIcon className="h-4 w-4" />
+              <UserIcon className="h-5 w-5 text-foreground" />
             )}
           </div>
         </Button>

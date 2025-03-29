@@ -1,9 +1,11 @@
-import { Suspense } from 'react';
 import { cookies } from 'next/headers';
-import { User } from '@/types/user';
-import { WorkspaceHeaderClient } from './client/WorkspaceHeaderClient';
+import { Suspense } from 'react';
+
 import { ThemeToggleStatic } from '@/components/theme/ThemeToggleStatic';
-import { UserProfileWrapper } from './UserProfileWrapper';
+import { User } from '@/types/user';
+
+import { UserProfileDropdown } from './client/UserProfileDropdown';
+import { WorkspaceHeaderClient } from './client/WorkspaceHeaderClient';
 
 interface WorkspaceHeaderProps {
   className?: string;
@@ -34,7 +36,7 @@ export async function WorkspaceHeader({
         <ThemeToggleStatic />
       </Suspense>
       <Suspense fallback={<div className="h-8 w-8 bg-muted/30 rounded-full animate-pulse" />}>
-        <UserProfileWrapper user={user} />
+        <UserProfileDropdown user={user || null} />
       </Suspense>
     </WorkspaceHeaderClient>
   );

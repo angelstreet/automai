@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import {
   signUp as signUpAction,
   signInWithOAuth as signInWithOAuthAction,
+  signOut as signOutAction,
 } from '@/app/actions/auth';
 import {
   updateProfile as updateProfileAction,
@@ -28,6 +29,7 @@ interface UserContextType {
   isInitialized: boolean;
   signUp: (email: string, password: string, name: string, redirectUrl: string) => Promise<any>;
   signInWithOAuth: (provider: 'google' | 'github', redirectUrl: string) => Promise<any>;
+  signOut: (locale?: string) => Promise<{ success: boolean; redirectUrl?: string }>;
   teams: UserTeam[];
   selectedTeam: UserTeam | null;
   teamMembers: TeamMember[];
@@ -47,6 +49,7 @@ const UserContext = createContext<UserContextType>({
   isInitialized: false,
   signUp: async () => {},
   signInWithOAuth: async () => {},
+  signOut: async () => ({ success: false }),
   teams: [],
   selectedTeam: null,
   teamMembers: [],
@@ -153,6 +156,33 @@ export function UserProvider({
     [refreshUser],
   );
 
+  const signOut = useCallback(async (locale: string = 'en') => {
+    try {
+      // First clear cache
+      await clearRequestCache();
+      await mutateUser(null, { revalidate: false });
+
+      // Clear localStorage as a backup
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('cached_user');
+          localStorage.removeItem('cached_user_time');
+        }
+      } catch {
+        // Ignore localStorage errors
+      }
+
+      // Then sign out with the server
+      const formData = new FormData();
+      formData.append('locale', locale);
+      const result = await signOutAction(formData);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Sign out failed'));
+      return { success: false };
+    }
+  }, [mutateUser]);
+
   // User management methods
   const updateProfile = useCallback(
     async (formData: FormData) => {
@@ -202,6 +232,7 @@ export function UserProvider({
       isInitialized: true, // No async init needed
       signUp,
       signInWithOAuth,
+      signOut,
       teams: user?.teams || [],
       selectedTeam: user?.teams?.find((team) => team.id === user.selectedTeamId) || null,
       teamMembers: user?.teamMembers || [],
@@ -218,6 +249,7 @@ export function UserProvider({
       clearCache,
       signUp,
       signInWithOAuth,
+      signOut,
       setSelectedTeam,
       checkResourceLimit,
     ],
