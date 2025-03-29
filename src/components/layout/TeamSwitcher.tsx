@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import type { Team } from '@/types/context/team';
 import type { User } from '@/types/user';
 
-import TeamSwitcherClient from './client/TeamSwitcherClient';
+import TeamSwitcherClient from '@/components/team/TeamSwitcherClient';
 
 interface TeamSwitcherProps {
   defaultCollapsed?: boolean;

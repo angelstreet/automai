@@ -1,4 +1,6 @@
-import React from 'react';
+import * as React from 'react';
+
+import { PinInputFieldProps } from './types';
 
 interface PinInputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   inputKey?: string;

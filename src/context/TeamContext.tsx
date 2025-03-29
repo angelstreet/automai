@@ -28,6 +28,7 @@ interface TeamContextState {
     operation: Operation,
     creatorId?: string,
   ) => Promise<boolean>;
+  syncWithUserContext: () => Promise<void>;
 }
 
 const defaultState: TeamContextState = {
@@ -39,12 +40,19 @@ const defaultState: TeamContextState = {
   switchTeam: async () => false,
   refreshTeams: async () => {},
   checkPermission: async () => false,
+  syncWithUserContext: async () => {},
 };
 
 const TeamContext = createContext<TeamContextState>(defaultState);
 
 export function TeamProvider({ children }: { children: React.ReactNode }) {
-  const { user, isLoading: userLoading } = useUser();
+  const {
+    user,
+    isLoading: userLoading,
+    teams: userTeams,
+    selectedTeam,
+    setSelectedTeam,
+  } = useUser();
   const [teams, setTeams] = useState<Team[]>([]);
   const [activeTeam, setActiveTeam] = useState<Team | null>(null);
   const [permissions, setPermissions] = useState<PermissionMatrix[]>([]);
@@ -78,6 +86,20 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
 
     loadPermissions();
   }, [user, activeTeam]);
+
+  // Sync the selected team from UserContext to TeamContext
+  useEffect(() => {
+    if (selectedTeam && (!activeTeam || selectedTeam.id !== activeTeam.id)) {
+      switchTeam(selectedTeam.id);
+    }
+  }, [selectedTeam]);
+
+  // Sync the active team from TeamContext to UserContext
+  useEffect(() => {
+    if (activeTeam && (!selectedTeam || activeTeam.id !== selectedTeam.id)) {
+      setSelectedTeam(activeTeam.id);
+    }
+  }, [activeTeam, selectedTeam, setSelectedTeam]);
 
   const loadTeams = async () => {
     if (!user) return;
@@ -201,6 +223,20 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     [user, activeTeam],
   );
 
+  // Force sync between contexts
+  const syncWithUserContext = useCallback(async () => {
+    if (user && userTeams.length > 0) {
+      // If selectedTeam exists, use it, otherwise use the first team
+      const teamToSelect = selectedTeam || userTeams[0];
+
+      // Update both contexts
+      if (teamToSelect) {
+        await switchTeam(teamToSelect.id);
+        setSelectedTeam(teamToSelect.id);
+      }
+    }
+  }, [user, userTeams, selectedTeam, setSelectedTeam]);
+
   const value: TeamContextState = {
     teams,
     activeTeam,
@@ -210,6 +246,7 @@ export function TeamProvider({ children }: { children: React.ReactNode }) {
     switchTeam,
     refreshTeams,
     checkPermission,
+    syncWithUserContext,
   };
 
   return <TeamContext.Provider value={value}>{children}</TeamContext.Provider>;

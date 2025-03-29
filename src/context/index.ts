@@ -7,6 +7,10 @@ export { useSidebar } from './SidebarContext';
 export { SidebarProvider } from './SidebarContext';
 export { useTheme } from './ThemeContext';
 export { ThemeProvider } from './ThemeContext';
+export { default as FontProvider, useFont } from './FontContext';
+export { default as SearchProvider, useSearch } from './SearchContext';
+export { default as TeamProvider, useTeam, usePermission } from './TeamContext';
+export { default as PinProvider, usePin } from './PinContext';
 
 export type { UserContextType } from '@/types/context/user';
 export type { SidebarContext as SidebarContextType } from '@/types/sidebar';

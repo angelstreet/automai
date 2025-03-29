@@ -1,6 +1,13 @@
 'use client';
 
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from '@/components/sidebar';
+import { Loader2 } from 'lucide-react';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+} from '@/components/navigation/sidebar';
+import SidebarLogo from '@/components/navigation/sidebar/SidebarLogo';
 
 import { APP_SIDEBAR_WIDTH, APP_SIDEBAR_WIDTH_ICON } from '../sidebar/constants';
 

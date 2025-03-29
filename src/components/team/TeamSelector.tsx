@@ -1,46 +1,82 @@
-import React from 'react';
+'use client';
+
+import { Check, ChevronsUpDown, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
+import { Button } from '@/components/shadcn/button';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useTeam } from '@/context/TeamContext';
-import { Loader2 } from 'lucide-react';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/shadcn/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/shadcn/popover';
+import { useUser, useTeam } from '@/context';
+import { cn } from '@/lib/utils';
 
-export function TeamSelector() {
-  const { teams, activeTeam, switchTeam, loading } = useTeam();
+export default function TeamSelector() {
+  const { user, teams: userTeams, selectedTeam, setSelectedTeam, refreshUser } = useUser();
+  const { syncWithUserContext } = useTeam();
+  const [open, setOpen] = useState(false);
 
-  const handleTeamChange = async (teamId: string) => {
-    await switchTeam(teamId);
+  useEffect(() => {
+    if (user && user.tenant_name === 'enterprise') {
+      refreshUser();
+    }
+  }, [user, refreshUser]);
+
+  // Only show for enterprise users with multiple teams
+  if (!user || user.tenant_name !== 'enterprise' || userTeams.length <= 1) {
+    return null;
+  }
+
+  const handleTeamSelect = async (teamId: string) => {
+    await setSelectedTeam(teamId);
+    // Make sure the permission system is aware of the team change
+    await syncWithUserContext();
+    setOpen(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-2 p-2">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span>Loading teams...</span>
-      </div>
-    );
-  }
-
-  if (!teams.length) {
-    return <div className="p-2 text-sm text-muted-foreground">No teams available</div>;
-  }
-
   return (
-    <Select value={activeTeam?.id} onValueChange={handleTeamChange} disabled={loading}>
-      <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Select team" />
-      </SelectTrigger>
-      <SelectContent>
-        {teams.map((team) => (
-          <SelectItem key={team.id} value={team.id}>
-            {team.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="justify-between w-full"
+        >
+          <div className="flex items-center">
+            <Users className="mr-2 h-4 w-4" />
+            <span className="truncate">{selectedTeam ? selectedTeam.name : 'Select team...'}</span>
+          </div>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[200px]">
+        <Command>
+          <CommandInput placeholder="Search team..." />
+          <CommandEmpty>No team found.</CommandEmpty>
+          <CommandGroup>
+            {userTeams.map((team) => (
+              <CommandItem
+                key={team.id}
+                value={team.name}
+                onSelect={() => handleTeamSelect(team.id)}
+              >
+                <Check
+                  className={cn(
+                    'mr-2 h-4 w-4',
+                    selectedTeam?.id === team.id ? 'opacity-100' : 'opacity-0',
+                  )}
+                />
+                {team.name}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

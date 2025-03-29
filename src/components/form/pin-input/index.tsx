@@ -1,9 +1,9 @@
 import * as React from 'react';
 
-import { PinInputField } from './PinInput.common';
-import { PinInputContext } from './context';
+import { PinInputField } from './pin-input.common';
+import { PinProvider } from '@/context';
 import type { PinInputProps } from './types';
-import { usePinInput } from './usePinInput';
+import { usePinInput } from './use-pin-input';
 import {
   _getValidChildren as getValidChildren,
   _getInputFieldCount as getInputFieldCount,
@@ -93,12 +93,12 @@ const PinInput = ({ className, children, ref, ...props }: PinInputProps) => {
   });
 
   return (
-    <PinInputContext.Provider value={true}>
+    <PinProvider>
       <div ref={ref} aria-label="Pin Input" className={className} {...rest}>
         {clones}
         <input type="hidden" name={name} form={form} value={pinValue} />
       </div>
-    </PinInputContext.Provider>
+    </PinProvider>
   );
 };
 
@@ -108,6 +108,5 @@ export { PinInput, PinInputField };
 
 // Export types and utilities
 export type { PinInputProps };
-export { PinInputContext };
 export { usePinInput };
 export * from './utils';
