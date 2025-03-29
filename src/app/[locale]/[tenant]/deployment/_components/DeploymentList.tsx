@@ -227,7 +227,7 @@ export function DeploymentList({
               <input
                 type="text"
                 placeholder="Search deployments..."
-                className="pl-10 pr-4 py-1.5 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-10 pr-4 py-1.5 w-full border border-gray-600 rounded-md bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -238,7 +238,7 @@ export function DeploymentList({
               </label>
               <select
                 id="sortBy"
-                className="pl-3 pr-10 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-3 pr-10 py-1.5 border border-gray-600 rounded-md bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
@@ -252,7 +252,7 @@ export function DeploymentList({
               </label>
               <select
                 id="filterStatus"
-                className="pl-3 pr-10 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-3 pr-10 py-1.5 border border-gray-600 rounded-md bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >

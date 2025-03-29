@@ -1,43 +1,76 @@
 import { Skeleton } from '@/components/shadcn/skeleton';
 
 export function DeploymentSkeleton() {
-  // Create an array to represent 6 deployment items
-  const skeletonItems = Array.from({ length: 6 }, (_, i) => i);
+  // Create an array to represent 5 deployment items
+  const skeletonItems = Array.from({ length: 5 }, (_, i) => i);
 
   return (
-    <div className="w-full space-y-4">
-      {/* Header skeleton */}
-      <div className="flex justify-between items-center mb-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-24" />
-          <Skeleton className="h-8 w-36" />
-        </div>
-      </div>
-
-      {/* List skeleton */}
-      <div className="rounded-md border">
-        <div className="border-b p-4 bg-muted/30">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-5 w-20" />
-          </div>
-        </div>
-
-        {skeletonItems.map((index) => (
-          <div key={index} className="p-4 border-b last:border-0">
-            <div className="flex justify-between items-center">
-              <div className="space-y-2">
-                <Skeleton className="h-5 w-48" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-              <div className="flex space-x-2 items-center">
-                <Skeleton className="h-8 w-24 rounded-full" />
-                <Skeleton className="h-8 w-8 rounded-md" />
-              </div>
+    <div className="w-full">
+      <div className="bg-transparent dark:bg-transparent rounded-lg border-0 shadow-none">
+        {/* Search and filters area */}
+        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Skeleton className="h-9 w-full sm:w-64 rounded-md" />
+            <div className="flex items-center space-x-2">
+              <Skeleton className="h-5 w-16" />
+              <Skeleton className="h-9 w-32 rounded-md" />
+              <Skeleton className="h-5 w-16" />
+              <Skeleton className="h-9 w-32 rounded-md" />
             </div>
           </div>
-        ))}
+        </div>
+
+        {/* Tabs area */}
+        <div className="p-4">
+          <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex -mb-px">
+              {['All', 'Scheduled', 'Pending', 'Active', 'Completed'].map((tab, _index) => (
+                <Skeleton key={tab} className="h-8 w-24 mr-2" />
+              ))}
+            </div>
+          </div>
+
+          {/* Table area */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-transparent dark:bg-transparent">
+                <tr>
+                  {['Name', 'Repository', 'Status', 'Created', 'Runtime', 'Actions'].map((header) => (
+                    <th key={header} className="px-2 py-1 text-left text-xs font-medium">
+                      <Skeleton className="h-4 w-full max-w-[80px]" />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">
+                {skeletonItems.map((index) => (
+                  <tr key={index} className="animate-pulse">
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      <Skeleton className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      <Skeleton className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32" />
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      <Skeleton className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20" />
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      <Skeleton className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap">
+                      <Skeleton className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16" />
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap flex justify-center space-x-2">
+                      <Skeleton className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+                      <Skeleton className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+                      <Skeleton className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
