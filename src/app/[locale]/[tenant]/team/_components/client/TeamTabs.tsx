@@ -14,9 +14,7 @@ interface TeamTabsProps {
 export default function TeamTabs({ activeTab, teamDetails, unassignedResources }: TeamTabsProps) {
   return (
     <>
-      {activeTab === 'overview' && (
-        <TeamOverview unassignedResources={unassignedResources} />
-      )}
+      {activeTab === 'overview' && <TeamOverview unassignedResources={unassignedResources} />}
 
       {activeTab === 'members' && <MembersTab teamId={teamDetails.id} />}
 

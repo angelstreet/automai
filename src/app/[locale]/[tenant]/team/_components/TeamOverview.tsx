@@ -35,7 +35,8 @@ export default function TeamOverview({
   team: TeamDetails;
   unassignedResources: UnassignedResources;
 }) {
-  const hasUnassignedRepos = unassignedResources.repositories.length > 0;
+  const hasUnassignedRepos = unassignedResources?.repositories?.length > 0;
+  const resourceCounts = team?.resourceCounts || { repositories: 0, hosts: 0, cicd: 0 };
 
   return (
     <div className="space-y-6">
@@ -49,7 +50,7 @@ export default function TeamOverview({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="p-4 border rounded-md">
               <h3 className="font-medium">Repositories</h3>
-              <p className="text-2xl">{team.resourceCounts.repositories}</p>
+              <p className="text-2xl">{resourceCounts.repositories}</p>
               {hasUnassignedRepos && (
                 <p className="text-sm text-amber-500">
                   {unassignedResources.repositories.length} unassigned
@@ -58,11 +59,11 @@ export default function TeamOverview({
             </div>
             <div className="p-4 border rounded-md">
               <h3 className="font-medium">Hosts</h3>
-              <p className="text-2xl">{team.resourceCounts.hosts}</p>
+              <p className="text-2xl">{resourceCounts.hosts}</p>
             </div>
             <div className="p-4 border rounded-md">
               <h3 className="font-medium">CI/CD</h3>
-              <p className="text-2xl">{team.resourceCounts.cicd}</p>
+              <p className="text-2xl">{resourceCounts.cicd}</p>
             </div>
             <div className="p-4 border rounded-md">
               <h3 className="font-medium">Deployments</h3>
@@ -82,8 +83,8 @@ export default function TeamOverview({
           <CardContent>
             <UnassignedResourcesList
               repositories={unassignedResources.repositories}
-              teamId={team.id}
-              teamName={team.name}
+              teamId={team?.id}
+              teamName={team?.name}
             />
           </CardContent>
         </Card>

@@ -7,7 +7,10 @@ import TeamTabs from './_components/client/TeamTabs';
 import { getTeamDetails, getUnassignedResources } from './actions';
 
 export default async function TeamPage({ searchParams }: { searchParams: { tab?: string } }) {
-  const activeTab = searchParams.tab || 'overview';
+  // Use Promise.resolve to await searchParams
+  const params = await Promise.resolve(searchParams);
+  const activeTab = params.tab || 'overview';
+
   const teamDetails = await getTeamDetails();
   const unassignedResources = await getUnassignedResources();
 
