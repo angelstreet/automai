@@ -41,20 +41,13 @@ export function NavUser({ user }: NavUserProps) {
 
   const handleSignOut = async () => {
     try {
-      // Use the signOut method from context which handles cache clearing and sign out
-      const result = await signOut(locale);
+      // First immediately redirect to login
+      router.push(`/${locale}/login`);
 
-      // Use router navigation based on result
-      if (result.success && result.redirectUrl) {
-        router.push(result.redirectUrl);
-      } else {
-        // Fallback redirect if no URL provided
-        router.push(`/${locale}/login`);
-      }
+      // Then handle signOut in the background
+      await signOut(locale);
     } catch (error) {
       console.error('Error signing out:', error);
-      // Attempt to redirect to login even if there's an error
-      router.push(`/${locale}/login`);
     }
   };
 

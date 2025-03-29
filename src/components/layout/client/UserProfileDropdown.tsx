@@ -36,15 +36,13 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
 
   const handleSignOut = async () => {
     try {
-      const result = await signOut(locale);
-      if (result.success && result.redirectUrl) {
-        router.push(result.redirectUrl);
-      } else {
-        router.push(`/${locale}/login`);
-      }
+      // First immediately redirect to login
+      router.push(`/${locale}/login`);
+
+      // Then handle signOut in the background
+      await signOut(locale);
     } catch (error) {
       console.error('Error signing out:', error);
-      router.push(`/${locale}/login`);
     }
   };
 
