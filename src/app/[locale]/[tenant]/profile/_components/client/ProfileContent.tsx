@@ -95,7 +95,7 @@ export function ProfileContent({
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 space-y-6">
+    <div className="container mx-auto py-4 px-4 space-y-6">
       <PageHeader title={t('title')} description={t('settings')} />
       <div className="space-y-6">
         <div className="grid gap-6">

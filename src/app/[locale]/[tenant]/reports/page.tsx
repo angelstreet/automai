@@ -1,12 +1,7 @@
-import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { Metadata } from 'next';
-import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
+import { Suspense } from 'react';
 
-export const metadata: Metadata = {
-  title: 'Reports',
-  description: 'Reports for your deployments',
-};
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 // Simple reports content component
 function ReportsContent() {

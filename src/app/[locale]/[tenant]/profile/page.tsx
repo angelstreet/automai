@@ -1,5 +1,7 @@
 import { Suspense } from 'react';
+
 import { getUser } from '@/app/actions/user';
+
 import { ProfileContent, ProfileSkeleton } from './_components';
 
 export default async function ProfilePage() {

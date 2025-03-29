@@ -5,8 +5,6 @@ import { cookies } from 'next/headers';
 import { ThemeProviders, SWRProvider } from '@/components/providers';
 import { SidebarProvider } from '@/context/SidebarContext';
 
-import { metadata } from './metadata';
-
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
@@ -53,5 +51,3 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     </html>
   );
 }
-
-export { metadata }; // Export metadata here as well

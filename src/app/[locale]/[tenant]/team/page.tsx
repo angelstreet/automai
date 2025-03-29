@@ -1,12 +1,7 @@
-import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { Metadata } from 'next';
-import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
+import { Suspense } from 'react';
 
-export const metadata: Metadata = {
-  title: 'Team Management',
-  description: 'Manage teams and team members',
-};
+import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 // Simple team content component
 function TeamContent() {

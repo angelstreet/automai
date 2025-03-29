@@ -14,7 +14,7 @@ export function FeaturePageContainer({
   children,
 }: FeaturePageContainerProps) {
   return (
-    <div className="container mx-auto py-6 px-4">
+    <div className="container mx-auto py-4 px-4">
       {/* Header Section */}
       <div className="mb-2">
         <PageHeader title={title} description={description}>

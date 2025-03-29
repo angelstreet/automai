@@ -1,18 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-  Search,
-  Clock,
-  Play,
-  Eye,
-  PlayCircle,
-  Trash2,
-} from 'lucide-react';
+import { Search, Clock, Play, Eye, PlayCircle, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Deployment, Repository } from '../types';
-import StatusBadge from './StatusBadge';
-import { getFormattedTime } from '../utils';
+import React, { useState, useEffect } from 'react';
+
 import {
   runDeployment as runDeploymentAction,
   deleteDeployment as deleteDeploymentAction,
@@ -27,8 +18,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/shadcn/alert-dialog';
-import { useToast } from '@/components/shadcn/use-toast';
 import { Button } from '@/components/shadcn/button';
+import { useToast } from '@/components/shadcn/use-toast';
+
+import { Deployment, Repository } from '../types';
+import { getFormattedTime } from '../utils';
+
+import StatusBadge from './StatusBadge';
 
 interface DeploymentListProps {
   deployments: Deployment[];
@@ -52,7 +48,7 @@ export function DeploymentList({
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [hasAttemptedLoad, setHasAttemptedLoad] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshing, _setIsRefreshing] = useState(false);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState<string | null>(null);
 
@@ -63,7 +59,7 @@ export function DeploymentList({
       hasAttemptedLoad,
     });
     setHasAttemptedLoad(true);
-  }, [isRefreshing, deployments.length]);
+  }, [isRefreshing, deployments.length, hasAttemptedLoad]);
 
   useEffect(() => {
     if (repositories && repositories.length > 0) {
@@ -221,9 +217,9 @@ export function DeploymentList({
 
   return (
     <div className="w-full">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col sm:flex-row gap-4">
+      <div className="bg-transparent dark:bg-transparent rounded-lg border-0 shadow-none">
+        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-4 w-4 text-gray-400" />
@@ -231,7 +227,7 @@ export function DeploymentList({
               <input
                 type="text"
                 placeholder="Search deployments..."
-                className="pl-10 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-10 pr-4 py-1.5 w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -242,7 +238,7 @@ export function DeploymentList({
               </label>
               <select
                 id="sortBy"
-                className="pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-3 pr-10 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
               >
@@ -256,7 +252,7 @@ export function DeploymentList({
               </label>
               <select
                 id="filterStatus"
-                className="pl-3 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-3 pr-10 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
               >
@@ -274,37 +270,37 @@ export function DeploymentList({
           <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex -mb-px">
               <button
-                className={`mr-1 py-2 px-4 text-sm font-medium ${activeTab === 'all' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                className={`mr-1 py-1.5 px-3 text-sm font-medium ${activeTab === 'all' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('all')}
               >
                 All
               </button>
               <button
-                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${activeTab === 'scheduled' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                className={`mr-1 py-1.5 px-3 text-sm font-medium flex items-center ${activeTab === 'scheduled' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('scheduled')}
               >
-                <Clock className="h-4 w-4 mr-2" />
+                <Clock className="h-3.5 w-3.5 mr-1.5" />
                 Scheduled
               </button>
               <button
-                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${activeTab === 'pending' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                className={`mr-1 py-1.5 px-3 text-sm font-medium flex items-center ${activeTab === 'pending' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('pending')}
               >
-                <Clock className="h-4 w-4 mr-2" />
+                <Clock className="h-3.5 w-3.5 mr-1.5" />
                 Pending
               </button>
               <button
-                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${activeTab === 'active' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                className={`mr-1 py-1.5 px-3 text-sm font-medium flex items-center ${activeTab === 'active' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('active')}
               >
-                <Play className="h-4 w-4 mr-2" />
+                <Play className="h-3.5 w-3.5 mr-1.5" />
                 Active
               </button>
               <button
-                className={`mr-1 py-2 px-4 text-sm font-medium flex items-center ${activeTab === 'completed' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                className={`mr-1 py-1.5 px-3 text-sm font-medium flex items-center ${activeTab === 'completed' ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                 onClick={() => setActiveTab('completed')}
               >
-                <Clock className="h-4 w-4 mr-2" />
+                <Clock className="h-3.5 w-3.5 mr-1.5" />
                 Completed
               </button>
             </div>
@@ -312,7 +308,7 @@ export function DeploymentList({
           {isRefreshing ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+                <thead className="bg-transparent dark:bg-transparent">
                   <tr>
                     <th
                       scope="col"
@@ -352,7 +348,7 @@ export function DeploymentList({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">
                   {renderSkeletonRows()}
                 </tbody>
               </table>
@@ -360,7 +356,7 @@ export function DeploymentList({
           ) : displayDeployments.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+                <thead className="bg-transparent dark:bg-transparent">
                   <tr>
                     <th
                       scope="col"
@@ -400,11 +396,11 @@ export function DeploymentList({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">
                   {displayDeployments.map((deployment) => (
                     <tr
                       key={deployment.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      className="hover:bg-gray-800/10 dark:hover:bg-gray-700/30 cursor-pointer"
                       onClick={(e) => handleViewDeployment(deployment, e)}
                     >
                       <td className="px-2 py-1 whitespace-nowrap">
@@ -491,7 +487,7 @@ export function DeploymentList({
               </table>
             </div>
           ) : hasAttemptedLoad ? (
-            <div className="text-center py-8">
+            <div className="text-center py-8 bg-transparent dark:bg-transparent">
               <div className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4">
                 {activeTab === 'scheduled' ? (
                   <Clock className="h-12 w-12" />
@@ -517,7 +513,7 @@ export function DeploymentList({
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+                <thead className="bg-transparent dark:bg-transparent">
                   <tr>
                     <th
                       scope="col"
@@ -557,7 +553,7 @@ export function DeploymentList({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-transparent dark:bg-transparent divide-y divide-gray-200 dark:divide-gray-700">
                   {renderSkeletonRows()}
                 </tbody>
               </table>

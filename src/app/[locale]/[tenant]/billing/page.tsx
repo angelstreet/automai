@@ -1,21 +1,15 @@
-import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { Metadata } from 'next';
-import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
-import { BillingContent, BillingSkeleton } from './_components';
-import { BillingActions } from './_components/client/BillingActions';
+import { Suspense } from 'react';
+
 import { PageHeader } from '@/components/layout/PageHeader';
 
-export const metadata: Metadata = {
-  title: 'Billing & Plans',
-  description: 'Manage your billing and subscription plans',
-};
+import { BillingContent, BillingSkeleton } from './_components';
 
 export default async function BillingPage() {
   const t = await getTranslations('billing');
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <div className="container mx-auto py-4 px-4">
       <PageHeader title={t('title')} description={t('description')} />
       <Suspense fallback={<BillingSkeleton />}>
         <BillingContent />

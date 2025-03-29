@@ -1,5 +1,7 @@
 'use client';
+import { useTranslations } from 'next-intl';
 
+import { PageHeader } from '@/components/layout/PageHeader';
 import {
   Card,
   CardContent,
@@ -7,15 +9,13 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/shadcn/card';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Skeleton } from '@/components/shadcn/skeleton';
-import { useTranslations } from 'next-intl';
 
 export function SettingsSkeleton() {
   const t = useTranslations('Settings');
 
   return (
-    <div className="container mx-auto py-6 px-4 space-y-6">
+    <div className="container mx-auto py-4 px-4 space-y-6">
       <PageHeader title={t('title')} description={t('description')} />
       <div className="space-y-6">
         <div className="grid gap-6">

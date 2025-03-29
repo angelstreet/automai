@@ -31,7 +31,7 @@ export default async function TenantLayout({
             <AppSidebar user={user} />
           </Suspense>
           <div
-            className="flex-1 flex flex-col min-w-0 w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
+            className="flex-1 flex flex-col min-w- w-full overflow-hidden transition-[margin,width] duration-300 ease-in-out"
             style={{
               marginLeft: 'var(--sidebar-width-offset, 0)',
               width: 'calc(100% - var(--sidebar-width-offset, 0))',

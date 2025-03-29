@@ -27,7 +27,7 @@ export default function SignUpPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [redirectCountdown, setRedirectCountdown] = React.useState(3);
 
-  const { user, loading, error: authError, signUp, signInWithOAuth } = useUser();
+  const { user, loading, error: authError } = useUser();
 
   React.useEffect(() => {
     if (user && !loading) {
