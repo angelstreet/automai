@@ -79,18 +79,20 @@ export async function setSelectedTeam(teamId: string) {
     // Get current user
     const user = await userDB.getCurrentUser();
     if (!user) {
-      throw new Error('User not authenticated');
+      console.error('User not authenticated');
+      return { success: false, message: 'User not authenticated' };
     }
 
     // Verify the team exists and the user has access to it
     if (!user.teams?.some((team) => team.id === teamId)) {
-      throw new Error('Team not found or access denied');
+      console.error('Team not found or access denied');
+      return { success: false, message: 'Team not found or access denied' };
     }
 
     // Call the db-users module to handle setting the team
     return userDB.setSelectedTeam(user.id, teamId);
   } catch (error) {
     console.error('Error selecting team:', error);
-    throw new Error(error instanceof Error ? error.message : 'Failed to select team');
+    return { success: false, message: 'Failed to select team' };
   }
 }
