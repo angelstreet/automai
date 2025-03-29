@@ -1,38 +1,40 @@
-"team": {
-  "title": "Team Management",
-  "description": "Manage teams, members, and resource limits",
-  "overview": "Overview",
-  "members": {
-    "title": "Team Members",
-    "add": "Add Member",
-    "search": "Search by name, email or role...",
-    "name": "Name",
-    "email": "Email",
-    "role": "Role",
-    "actions": {
-      "title": "Actions",
-      "changeRole": "Change Role",
-      "remove": "Remove Member"
+{
+  "team": {
+    "title": "Team Management",
+    "description": "Manage teams, members, and resource limits",
+    "overview": "Overview",
+    "members": {
+      "title": "Team Members",
+      "add": "Add Member",
+      "search": "Search by name, email or role...",
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "actions": {
+        "title": "Actions",
+        "changeRole": "Change Role",
+        "remove": "Remove Member"
+      },
+      "noSearchResults": "No members found matching your search",
+      "noMembers": "No members found in this team",
+      "noTeam": "Create a team to add members"
     },
-    "noSearchResults": "No members found matching your search",
-    "noMembers": "No members found in this team",
-    "noTeam": "Create a team to add members"
-  },
-  "resources": {
-    "title": "Resources",
-    "overview": "Overview of team resources",
-    "hosts": "Hosts",
-    "repositories": "Repositories",
-    "cicd": "CI/CD",
-    "deployments": "Deployments",
-    "add": "Add Resource",
-    "noResources": "No resources found",
-    "ip": "IP Address",
-    "status": "Status",
-    "name": "Name",
-    "url": "URL",
-    "visibility": "Visibility",
-    "type": "Type",
-    "environment": "Environment"
+    "resources": {
+      "title": "Resources",
+      "overview": "Overview of team resources",
+      "hosts": "Hosts",
+      "repositories": "Repositories",
+      "cicd": "CI/CD",
+      "deployments": "Deployments",
+      "add": "Add Resource",
+      "noResources": "No resources found",
+      "ip": "IP Address",
+      "status": "Status",
+      "name": "Name",
+      "url": "URL",
+      "visibility": "Visibility",
+      "type": "Type",
+      "environment": "Environment"
+    }
   }
-} 
+}

@@ -1,7 +1,7 @@
 import { GitBranch, Server, Rocket, Code } from 'lucide-react';
-import { Card, CardContent, CardFooter } from '@/components/shadcn/card';
-import { Button } from '@/components/shadcn/button';
+
 import { Badge } from '@/components/shadcn/badge';
+import { Card, CardContent } from '@/components/shadcn/card';
 
 interface ResourceProps {
   type: string;
@@ -50,8 +50,8 @@ export function ResourceCard({ resource }: { resource: ResourceProps }) {
 
   return (
     <Card className="overflow-hidden">
-      <CardContent className="p-6">
-        <div className="flex items-center gap-2 mb-4">
+      <CardContent className="p-6 text-center">
+        <div className="flex items-center gap-2 mb-4 justify-center">
           {getIcon()}
           <h3 className="font-semibold">{resource.name}</h3>
         </div>
@@ -87,12 +87,6 @@ export function ResourceCard({ resource }: { resource: ResourceProps }) {
           )}
         </div>
       </CardContent>
-
-      <CardFooter className="bg-muted/50 p-3">
-        <Button variant="outline" size="sm" className="w-full">
-          View Details
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

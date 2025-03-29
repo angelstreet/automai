@@ -48,7 +48,12 @@ export function MembersTab({ teamId }: MembersTabProps) {
       try {
         setIsLoading(true);
         const result = await getTeamMembers(teamId);
-        setMembers(result || []);
+        if (result.success && result.data) {
+          setMembers(result.data);
+        } else {
+          console.error('Failed to fetch team members:', result.error);
+          setMembers([]);
+        }
       } catch (error) {
         console.error('Failed to fetch team members:', error);
       } finally {
