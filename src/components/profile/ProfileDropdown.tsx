@@ -41,10 +41,7 @@ export function ProfileDropdown() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage
-              src={session.user.image || '/avatars/01.svg'}
-              alt={session.user.name || 'User'}
-            />
+            <AvatarImage src={session.user.image || undefined} alt={session.user.name || 'User'} />
             <AvatarFallback>{getInitials(session.user.name || 'U')}</AvatarFallback>
           </Avatar>
         </Button>

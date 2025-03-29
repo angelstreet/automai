@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import * as React from 'react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/shadcn/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,15 +35,26 @@ export function NavUser({ user }: NavUserProps) {
   // Use the actual user role for display
   const displayRole = user.role;
 
+  // Get user's initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase();
+  };
+
   const handleSignOut = async () => {
     try {
-      // First immediately redirect to login
-      router.push(`/${locale}/login`);
-
-      // Then handle signOut in the background
+      // First sign out
       await signOut(locale);
+
+      // Then redirect to login (making sure it's awaited properly)
+      router.push(`/${locale}/login`);
     } catch (error) {
       console.error('Error signing out:', error);
+      // Ensure we still redirect in case of error
+      router.push(`/${locale}/login`);
     }
   };
 
@@ -58,19 +70,10 @@ export function NavUser({ user }: NavUserProps) {
                 isCollapsed ? 'justify-center py-1' : 'py-1.5 px-2 w-full max-w-[150px]',
               )}
             >
-              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-background">
-                {user.avatar_url ? (
-                  <Image
-                    src={user.avatar_url}
-                    alt={user.name}
-                    width={24}
-                    height={24}
-                    className="h-6 w-6 rounded-full"
-                  />
-                ) : (
-                  <User className="h-3 w-3 text-foreground" />
-                )}
-              </div>
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={user.avatar_url || undefined} alt={user.name || 'User'} />
+                <AvatarFallback>{getInitials(user.name || 'U')}</AvatarFallback>
+              </Avatar>
               {!isCollapsed && (
                 <div className="grid flex-1 text-left text-xs leading-tight ml-2 max-w-[100px]">
                   <span className="font-semibold truncate">{user.name}</span>
